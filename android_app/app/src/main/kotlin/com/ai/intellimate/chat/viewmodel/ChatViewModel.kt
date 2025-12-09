@@ -1293,4 +1293,25 @@ class ChatViewModel : BaseVM() {
             )
         chatRepository.addMessage(agent.id, message)
     }
+
+    suspend fun reset() {
+        val agentId = agentInfo.value?.id ?: return
+
+        // 1. 删除本地历史消息
+        chatRepository.clearChatData(agentId)
+        // 2. 清理 ViewModel 中的状态
+        _msgs.value = emptyList()
+        _isLoadingMore.value = false
+        _hasMoreMessages.value = true
+        _isQueryMsgsCompleted.value = false
+
+        // 3. 重新绑定消息流（因为 clearChatData 会清理内存缓存）
+        // 注意：如果使用了 RoomDataSource，消息流会自动更新
+
+        // 4. 拉取最新消息
+        chatRepository.ensureInitialHistory(agentId, PAGE_SIZE)
+        _isQueryMsgsCompleted.value = true
+
+        LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
+    }
 }

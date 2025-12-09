@@ -5,11 +5,14 @@ import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.tmp.BottomSheetDialog
 import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
+import android.widget.Button
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,8 +23,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +39,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -43,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
@@ -60,6 +71,7 @@ fun ChatMorePanel(
     chatViewModel: ChatViewModel,
     onDismiss: () -> Unit,
     onHeightChange: (Dp) -> Unit,
+    onReset: () -> Unit,
 ) {
     if (!visible) {
         onHeightChange(0.dp)
@@ -72,10 +84,21 @@ fun ChatMorePanel(
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     // reply的vip拦截弹窗标记
     var showDialog by remember { mutableStateOf(false) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showResetConfirmDialog) {
+        ResetConfirmDialog(
+            onReset = {
+                onReset()
+                showResetConfirmDialog = false
+            },
+            onDismiss = { showResetConfirmDialog = false}
+        )
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         DiaAmountLayout {
             SetDiaAmount(0f)
@@ -83,7 +106,8 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
@@ -118,23 +142,22 @@ fun ChatMorePanel(
                                 }
                             },
                         )
-                        /*Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(16.dp))
                         MorePanelItem(
                             icon = R.drawable.icon_reset_chat,
                             text = stringResource(R.string.str_reset),
                             onClick = {
                                 // 检查是否已登录
-                                if (IntySetting.isLogin() && IntySetting.getCurToken()
-                                        .isNotEmpty()
-                                ) {
+                                if (IntySetting.isLogin()) {
                                     //清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
                                     //相当于重新开始和agent初次聊天
                                     //todo 需要接口
+                                    showResetConfirmDialog = true
                                 } else {
                                     // 未登录或游客时不执行操作（MainActivity已会显示登录界面）
                                 }
                             },
-                        )*/
+                        )
                         Spacer(Modifier.width(16.dp))
                         MorePanelItem(
                             icon = R.drawable.icon_feedback,
@@ -238,17 +261,22 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -259,3 +287,77 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         Spacer(Modifier.height(60.dp))
     }
 }
+
+@Composable
+private fun ResetConfirmDialog(
+    onReset: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF322341),
+                            Color(0xFF120E24)
+                        )
+                    )
+                )
+        ) {
+            Column() {
+                Text(
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    text = stringResource(R.string.chat_reset_tips),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
+                )
+                HorizontalDivider(thickness = .5.dp, color = Color(0xFF201731))
+                Row {
+                    TextButton(
+                        onClick = onDismiss,
+                        shape = RectangleShape,
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f)
+                    ) {
+                        Text(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.W700,
+                            text = stringResource(R.string.cancel),
+                            color = Color.White
+                        )
+                    }
+                    TextButton(
+                        onClick = onReset,
+                        shape = RectangleShape,
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.reset),
+                            fontSize = 14.sp,
+                            color = Color(0xFFFF3B30)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ResetConfirmDialogPreview() {
+    IntelliMateTheme {
+        ResetConfirmDialog(
+            onReset = {},
+            onDismiss = {}
+        )
+    }
+}
+
