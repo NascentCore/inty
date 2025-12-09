@@ -18,12 +18,26 @@ class ChatRemoteDataSource {
         offset: Int,
     ): HttpResult<QueryMsgsResponse> {
         return try {
-            LogUtils.i(
-                "ChatRemoteDataSource.getMessages: agentId=$agentId, pageSize=$pageSize, offset=$offset"
-            )
-            NetServiceMgr.getChatApi().getMsgs(agentId, pageSize, offset)
+            val result = NetServiceMgr.getChatApi().getMsgs(agentId, pageSize, offset)
+            when (result) {
+                is HttpResult.Success -> {
+                    val messages = result.data.messages ?: emptyList()
+                    val messagesCount = messages.size
+                    val messagesPreview = messages.take(3).joinToString(separator = " | ") { msg ->
+                        "[${msg.role}] ${msg.content.take(50)}"
+                    }
+                    LogUtils.i(
+                        "聊天接口数据",
+                        "getMsgs 调用成功: agentId=$agentId, messagesCount=$messagesCount, hasMore=${result.data.hasMore}, preview=$messagesPreview"
+                    )
+                }
+                is HttpResult.Failure -> {
+                    LogUtils.e("聊天接口数据", "getMsgs 调用失败: agentId=$agentId, error=${result.message}, code=${result.code}")
+                }
+            }
+            result
         } catch (e: Exception) {
-            LogUtils.e("ChatRemoteDataSource.getMessages exception: ${e.message}")
+            LogUtils.e("聊天接口数据", "getMsgs 调用异常: agentId=$agentId, exception=${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
         }
     }
