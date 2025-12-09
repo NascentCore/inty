@@ -341,7 +341,8 @@ internal fun ChatPage(
                     agentInfo?.let { info ->
                         val storedEnergyPoints = boostState.boostsByAgent[info.id]?.pointsInvested
                         val fallbackEnergyPoints = remember(info.id) { Random.nextInt(0, 101) }
-                        val displayedEnergyPoints = storedEnergyPoints ?: fallbackEnergyPoints
+                        val displayedEnergyPoints =
+                            (storedEnergyPoints ?: fallbackEnergyPoints).takeIf { isDebugMode }
 
                         ChatTopBar(
                             modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
