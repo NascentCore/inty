@@ -111,9 +111,9 @@ import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 //import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.xb.navigation.Routes
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
-import kotlinx.coroutines.launch
 
 /** "我的"页面 */
 @Composable
@@ -221,7 +221,7 @@ internal fun ProfilePage(
                         // 只有当 LazyGrid 在顶部时，才展开 header
                         if (
                             listState.firstVisibleItemIndex == 0 &&
-                                listState.firstVisibleItemScrollOffset == 0
+                            listState.firstVisibleItemScrollOffset == 0
                         ) {
                             val toConsume = min(available.y, collapseOffset.value)
                             scope.launch { collapseOffset.snapTo(collapseOffset.value - toConsume) }
@@ -253,7 +253,7 @@ internal fun ProfilePage(
                         // 只有当 LazyGrid 在顶部时才展开
                         if (
                             listState.firstVisibleItemIndex == 0 &&
-                                listState.firstVisibleItemScrollOffset == 0
+                            listState.firstVisibleItemScrollOffset == 0
                         ) {
                             scope.launch {
                                 collapseOffset.animateTo(0f, animationSpec = tween(300))
@@ -277,10 +277,14 @@ internal fun ProfilePage(
             contentDescription = null,
         )
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
         ) { innerPadding ->
-            Column(modifier = Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection)) {
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .nestedScroll(nestedScrollConnection)) {
                 // Header 区域 - 可折叠
                 ProfileHeader(
                     navController,
@@ -309,7 +313,8 @@ internal fun ProfilePage(
 
                     Text(
                         modifier =
-                            Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
+                            Modifier
+                                .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                                 .align(Alignment.CenterHorizontally),
                         text = stringResource(R.string.no_agent),
                         color = Color.White.copy(0.55f),
@@ -330,10 +335,10 @@ internal fun ProfilePage(
 
                                 if (
                                     lastVisibleItem != null &&
-                                        lastVisibleItem.index >=
-                                            totalItems - 3 && // Trigger 3 items before end
-                                        !isLoading &&
-                                        agents.isNotEmpty()
+                                    lastVisibleItem.index >=
+                                    totalItems - 3 && // Trigger 3 items before end
+                                    !isLoading &&
+                                    agents.isNotEmpty()
                                 ) {
                                     onLoadMore()
                                 }
@@ -349,7 +354,7 @@ internal fun ProfilePage(
                             PaddingValues(
                                 bottom =
                                     innerPadding.calculateBottomPadding() +
-                                        UiConfigs.MePage.GridContentBottomPadding
+                                            UiConfigs.MePage.GridContentBottomPadding
                             ),
                         horizontalArrangement =
                             Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
@@ -370,21 +375,21 @@ internal fun ProfilePage(
                         }
 
                         runCatching {
-                                if (agents.isNotEmpty()) {
-                                    itemsIndexed(
-                                        items = agents,
-                                        key = { index, agent -> "${agent.id}_$index" },
-                                    ) { index, agent ->
-                                        MyAgentCard(
-                                            modifier =
-                                                Modifier.noRippleClickable { onClickAgent(agent) },
-                                            agentInfo = agent,
-                                            onEditAgent = onEditAgent,
-                                            onDeleteAgent = onDeleteAgent,
-                                        )
-                                    }
+                            if (agents.isNotEmpty()) {
+                                itemsIndexed(
+                                    items = agents,
+                                    key = { index, agent -> "${agent.id}_$index" },
+                                ) { index, agent ->
+                                    MyAgentCard(
+                                        modifier =
+                                            Modifier.noRippleClickable { onClickAgent(agent) },
+                                        agentInfo = agent,
+                                        onEditAgent = onEditAgent,
+                                        onDeleteAgent = onDeleteAgent,
+                                    )
                                 }
                             }
+                        }
                             .onFailure { it.printStackTrace() }
 
                         // Loading indicator when loading more (only show when there's no data)
@@ -474,20 +479,25 @@ private fun ProfileHeader(
 
             Icon(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.HelpCenter.toUri())
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
+                    Modifier
+                        .size(UiConfigs.MePage.TopIconsRow.Size)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                try {
+                                    val intent =
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            UiConfigs.Urls.HelpCenter.toUri()
+                                        )
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    ToastUtils.showLargeText(e.toString())
+                                }
                             }
-                        }
-                    },
+                        },
                 imageVector = Icons.AutoMirrored.Rounded.HelpCenter,
                 contentDescription = stringResource(R.string.me_icons_row_help),
                 tint = Color.White,
@@ -497,21 +507,26 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.DiscordInvite.toUri())
-                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
+                    Modifier
+                        .size(UiConfigs.MePage.TopIconsRow.Size)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                try {
+                                    val intent =
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            UiConfigs.Urls.DiscordInvite.toUri()
+                                        )
+                                    // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    ToastUtils.showLargeText(e.toString())
+                                }
                             }
-                        }
-                    },
+                        },
                 model = R.drawable.ic_discord,
                 contentDescription = stringResource(R.string.me_icons_row_discord),
             )
@@ -520,24 +535,26 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
-                                    )
-                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
+                    Modifier
+                        .size(UiConfigs.MePage.TopIconsRow.Size)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                try {
+                                    val intent =
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
+                                        )
+                                    // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    ToastUtils.showLargeText(e.toString())
+                                }
                             }
-                        }
-                    },
+                        },
                 model = R.drawable.ic_whatsapp,
                 contentDescription = stringResource(R.string.me_icons_row_whatsapp),
             )
@@ -545,20 +562,22 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(24.dp).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            //                                            try {
-                            //
-                            // ToastUtils.showShort("Not Implementation！")
-                            //                                            } catch (e: Exception) {
-                            //
-                            // ToastUtils.showLargeText(e.toString())
-                            //                                            }
-                            CheckInActivity.launch(context)
-                        }
-                    },
+                    Modifier
+                        .size(24.dp)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                //                                            try {
+                                //
+                                // ToastUtils.showShort("Not Implementation！")
+                                //                                            } catch (e: Exception) {
+                                //
+                                // ToastUtils.showLargeText(e.toString())
+                                //                                            }
+                                CheckInActivity.launch(context)
+                            }
+                        },
                 model = R.drawable.ic_checkin,
                 contentDescription = null,
             )
@@ -566,15 +585,19 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                navController.navigate(Routes.Settings)
+                    Modifier
+                        .size(UiConfigs.MePage.TopIconsRow.Size)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    navController.navigate(Routes.Settings)
+                                }
                             }
-                        }
-                    },
+                        },
                 model = R.drawable.icon_setting,
                 contentDescription = stringResource(R.string.me_icons_row_settings),
             )
@@ -599,42 +622,18 @@ private fun ProfileHeader(
 
             Box(
                 modifier =
-                    Modifier.size(avatarSize)
+                    Modifier
+                        .size(avatarSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
-                // fixme clickable 为临时测试代码，需要删除
-                //                        .clickable{
-                //                            if (AppUtils.isAppDebug()){
-                //                                val currentTime = System.currentTimeMillis()
-                //                                if (AntiClick.isValidClick(lastClickTimeAvatar)) {
-                //                                    lastClickTimeAvatar = currentTime
-                //                                    // 使用预加载的推荐agents数据（explore agents），取前 12
-                // 个用于展示
-                //                                    val recommendedAgents =
-                // UnifiedStartupManager.getCurrentRecommendedAgents()
-                //                                    val agentsToShow = recommendedAgents.take(12)
-                //                                    if (agentsToShow.isNotEmpty()) {
-                //                                        SpecialDetailActivity.launch(
-                //                                            context = context,
-                //                                            themeId = "profile_preview_theme",
-                //                                            themeTitle = "# Merry Christmas",
-                //                                            themeDescription = "Ready for some
-                // holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly,
-                // cheerful, and here to light up your winter feed. Come take a look and get into
-                // the festive spirit!Ready for some holiday EndOfText.",
-                //                                            isChristmas = true,
-                //                                            agents = agentsToShow,
-                //                                        )
-                //                                    }
-                //                                }
-                //                            }
-                //                        }
             ) {
                 // 使用头像 URL 作为 key，确保头像更新时重新加载
                 val avatarUrl = getCdnImageUrl(userProfile.avatar, width = 512)
                 key(avatarUrl) { // 使用 key 确保 URL 变化时重新创建组件
                     AsyncImage(
-                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
                         model = ImageRequest.Builder(context).data(avatarUrl).build(),
                         placeholder = painterResource(R.drawable.app_icon),
                         error = painterResource(R.drawable.app_icon),
@@ -670,21 +669,24 @@ private fun ProfileHeader(
         // Intro 和编辑按钮 - 折叠时隐藏编辑按钮，但可以显示一行 intro
         Row(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                     .height(
                         if (collapseProgress >= 1f)
                             UiConfigs.MePage.IntroSectionCollapsedHeight // 折叠时只显示一行 intro 的高度
                         else
                             UiConfigs.MePage.IntroSectionExpandedHeight *
-                                (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
+                                    (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
                     ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Intro 文本 - 折叠时只显示一行，展开时显示两行
             Text(
                 modifier =
-                    Modifier.weight(1f).alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
+                    Modifier
+                        .weight(1f)
+                        .alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
                 text = userProfile.description ?: stringResource(R.string.persona_placeholder),
                 color = Color.White,
                 fontSize = 14.sp,
@@ -701,22 +703,28 @@ private fun ProfileHeader(
 
                 AsyncImage(
                     modifier =
-                        Modifier.size(UiConfigs.MePage.EditButtonSize).clickable {
-                            val currentTime = System.currentTimeMillis()
-                            if (AntiClick.isValidClick(lastClickTimeEdit)) {
-                                lastClickTimeEdit = currentTime
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
-                                    val intent =
-                                        Intent(context, ModifyProfileActivity::class.java).apply {
-                                            putExtra("intent_key_agent_info", userProfile)
-                                        }
-                                    editProfileLauncher.launch(intent)
+                        Modifier
+                            .size(UiConfigs.MePage.EditButtonSize)
+                            .clickable {
+                                val currentTime = System.currentTimeMillis()
+                                if (AntiClick.isValidClick(lastClickTimeEdit)) {
+                                    lastClickTimeEdit = currentTime
+                                    if (
+                                        IntySetting.isLogin() && IntySetting.getCurToken()
+                                            .isNotEmpty()
+                                    ) {
+                                        // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
+                                        val intent =
+                                            Intent(
+                                                context,
+                                                ModifyProfileActivity::class.java
+                                            ).apply {
+                                                putExtra("intent_key_agent_info", userProfile)
+                                            }
+                                        editProfileLauncher.launch(intent)
+                                    }
                                 }
-                            }
-                        },
+                            },
                     model = R.drawable.icon_edit,
                     contentDescription = null,
                 )
@@ -730,7 +738,8 @@ private fun ProfileHeader(
         if (collapseProgress < 1f) {
             Box(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .alpha(1f - collapseProgress)
                         .height(UiConfigs.MePage.VipBannerHeight * (1f - collapseProgress)),
                 contentAlignment = Alignment.Center,
@@ -751,7 +760,8 @@ private fun ProfileHeader(
 
                 VibeModeBanner(
                     modifier =
-                        Modifier.alpha(1f - collapseProgress)
+                        Modifier
+                            .alpha(1f - collapseProgress)
                             .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
                     isSubscribed = isSubscribed,
                     onRequestSubscribe = { showSubscribeDialog = true },
@@ -762,7 +772,8 @@ private fun ProfileHeader(
                 Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
                 NewVersionBanner(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                 )
             }
@@ -816,7 +827,8 @@ private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
 
         Box(
             modifier =
-                Modifier.align(Alignment.TopStart)
+                Modifier
+                    .align(Alignment.TopStart)
                     .padding(UiConfigs.MePage.AgentCardPadding)
                     .background(Color.Black.copy(alpha = 0.65f), badgeShape)
                     .padding(horizontal = UiConfigs.Spacing.Small, vertical = badgeVerticalPadding)
@@ -831,7 +843,8 @@ private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
 
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(UiConfigs.MePage.AgentCardPadding)
                     .align(Alignment.BottomCenter),
@@ -916,7 +929,8 @@ private fun MyAgentCard(
         }
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(UiConfigs.MePage.AgentCardPadding)
                     .align(Alignment.BottomCenter),
@@ -944,11 +958,14 @@ private fun MyAgentCard(
         if (onEditAgent != null || onDeleteAgent != null) {
             Box(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd).padding(UiConfigs.MePage.AvatarPadding)
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(UiConfigs.MePage.AvatarPadding)
             ) {
                 Box(
                     modifier =
-                        Modifier.size(UiConfigs.MePage.AgentCardMenuButtonSize)
+                        Modifier
+                            .size(UiConfigs.MePage.AgentCardMenuButtonSize)
                             .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(UiConfigs.MePage.AgentCardMenuButtonCornerRadius),
@@ -1082,26 +1099,32 @@ private fun PremiumBanner(
     // 使用 fillMaxWidth 适配屏幕宽度（不含padding），高度保持 120.dp
     Box(
         modifier =
-            Modifier.fillMaxWidth().height(UiConfigs.MePage.VipBannerHeight).clickable {
-                val currentTime = System.currentTimeMillis()
-                if (AntiClick.isValidClick(lastClickTimePremium)) {
-                    lastClickTimePremium = currentTime
-                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                        onClick()
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .height(UiConfigs.MePage.VipBannerHeight)
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    if (AntiClick.isValidClick(lastClickTimePremium)) {
+                        lastClickTimePremium = currentTime
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            onClick()
+                        }
                     }
                 }
-            }
     ) {
         // 使用 FillBounds 填充整个区域，适配屏幕宽度
         Image(
             painter = painterResource(R.drawable.img_vip_banner),
             contentDescription = "",
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize(),
         )
 
         Row(
-            Modifier.border(
+            Modifier
+                .border(
                     width = 0.5.dp,
                     color = Color(0x61D523FF),
                     shape = RoundedCornerShape(size = UiConfigs.MePage.AgentCardCornerRadius),
