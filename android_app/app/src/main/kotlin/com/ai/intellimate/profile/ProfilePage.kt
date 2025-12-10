@@ -53,7 +53,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -126,7 +125,6 @@ internal fun ProfilePage(
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
     isLoading: Boolean = false,
     onLoadMore: () -> Unit = {},
-    onShowSettings: () -> Unit,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
     profileViewModel: ProfileViewModel? = null, // 用于刷新用户信息
     appUpdateTips: Boolean = false, // 是否有更新提示
@@ -268,139 +266,98 @@ internal fun ProfilePage(
         }
 
     Box(modifier = modifier) {
-        AsyncImage(
-            modifier = Modifier.align(Alignment.TopEnd),
-            model = R.drawable.img_profile_header_bg,
-            contentDescription = null,
-        )
-        Scaffold(
+        //背景图区域
+        ProfileHeaderBg(Modifier.fillMaxWidth())
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
-            containerColor = Color.Transparent,
-        ) { innerPadding ->
-            Column(modifier = Modifier
                 .fillMaxWidth()
-                .nestedScroll(nestedScrollConnection)) {
-                // Header 区域 - 可折叠
-                ProfileHeader(
-                    navController,
-                    modifier = Modifier,
-                    collapseProgress = collapseProgress,
-                    userProfile = userProfile,
-                    onShowSettings = onShowSettings,
-                    innerPadding = innerPadding,
-                    context = context,
-                    vipStatus = vipStatus,
-                    editProfileLauncher = editProfileLauncher,
-                    appUpdateTips = appUpdateTips,
-                )
+                .nestedScroll(nestedScrollConnection)
+        ) {
+            // Header 区域 - 可折叠
+            ProfileHeader(
+                navController,
+                modifier = Modifier,
+                collapseProgress = collapseProgress,
+                userProfile = userProfile,
+                context = context,
+                vipStatus = vipStatus,
+                editProfileLauncher = editProfileLauncher,
+                appUpdateTips = appUpdateTips,
+            )
 
-                // LazyGrid 区域
-                if (validDrafts.isEmpty() && agents.isEmpty()) {
-                    Spacer(Modifier.height(UiConfigs.MePage.EmptyStateTopSpacing))
+            // LazyGrid 区域
+            if (validDrafts.isEmpty() && agents.isEmpty()) {
+                AgentsEmptyUI(modifier = Modifier.fillMaxWidth())
+            } else {
+                Spacer(Modifier.height(UiConfigs.MePage.EmptyStateContentSpacing))
 
-                    AsyncImage(
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        model = R.drawable.img_content_empty,
-                        contentDescription = null,
-                    )
-
-                    Spacer(Modifier.height(UiConfigs.MePage.EmptyStateBottomSpacing))
-
-                    Text(
-                        modifier =
-                            Modifier
-                                .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
-                                .align(Alignment.CenterHorizontally),
-                        text = stringResource(R.string.no_agent),
-                        color = Color.White.copy(0.55f),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                } else {
-                    Spacer(Modifier.height(UiConfigs.MePage.EmptyStateContentSpacing))
-
-                    // Detect when user scrolls to bottom
-                    LaunchedEffect(listState) {
-                        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
-                            .collect { visibleItems ->
-                                val lastVisibleItem = visibleItems.lastOrNull()
-                                val totalItems = listState.layoutInfo.totalItemsCount
-
-                                if (
-                                    lastVisibleItem != null &&
-                                    lastVisibleItem.index >=
-                                    totalItems - 3 && // Trigger 3 items before end
-                                    !isLoading &&
-                                    agents.isNotEmpty()
-                                ) {
-                                    onLoadMore()
-                                }
+                // Detect when user scrolls to bottom
+                LaunchedEffect(listState) {
+                    snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+                        .collect { visibleItems ->
+                            val lastVisibleItem = visibleItems.lastOrNull()
+                            val totalItems = listState.layoutInfo.totalItemsCount
+                            // Trigger 3 items before end
+                            if (lastVisibleItem != null && lastVisibleItem.index >= totalItems - 3
+                                && !isLoading && agents.isNotEmpty()
+                            ) {
+                                onLoadMore()
                             }
+                        }
+                }
+
+                LazyVerticalGrid(
+                    state = listState,
+                    modifier =
+                        Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
+                    columns = GridCells.Fixed(2),
+                    contentPadding =
+                        PaddingValues(bottom = UiConfigs.MePage.GridContentBottomPadding),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
+                    verticalArrangement =
+                        Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
+                ) {
+                    // 显示所有草稿卡片
+                    if (validDrafts.isNotEmpty() && onClickDraft != null) {
+                        validDrafts.forEach { draft ->
+                            item(key = "draft_${draft.id}") {
+                                DraftAgentCard(
+                                    modifier = Modifier.noRippleClickable { onClickDraft(draft.id) },
+                                    draft = draft,
+                                )
+                            }
+                        }
                     }
 
-                    LazyVerticalGrid(
-                        state = listState,
-                        modifier =
-                            Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
-                        columns = GridCells.Fixed(2),
-                        contentPadding =
-                            PaddingValues(
-                                bottom =
-                                    innerPadding.calculateBottomPadding() +
-                                            UiConfigs.MePage.GridContentBottomPadding
-                            ),
-                        horizontalArrangement =
-                            Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
-                        verticalArrangement =
-                            Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
-                    ) {
-                        // 显示所有草稿卡片
-                        if (validDrafts.isNotEmpty() && onClickDraft != null) {
-                            validDrafts.forEach { draft ->
-                                item(key = "draft_${draft.id}") {
-                                    DraftAgentCard(
-                                        modifier =
-                                            Modifier.noRippleClickable { onClickDraft(draft.id) },
-                                        draft = draft,
-                                    )
-                                }
+                    runCatching {
+                        if (agents.isNotEmpty()) {
+                            itemsIndexed(
+                                items = agents,
+                                key = { index, agent -> "${agent.id}_$index" },
+                            ) { index, agent ->
+                                MyAgentCard(
+                                    modifier =
+                                        Modifier.noRippleClickable { onClickAgent(agent) },
+                                    agentInfo = agent,
+                                    onEditAgent = onEditAgent,
+                                    onDeleteAgent = onDeleteAgent,
+                                )
                             }
                         }
+                    }.onFailure { it.printStackTrace() }
 
-                        runCatching {
-                            if (agents.isNotEmpty()) {
-                                itemsIndexed(
-                                    items = agents,
-                                    key = { index, agent -> "${agent.id}_$index" },
-                                ) { index, agent ->
-                                    MyAgentCard(
-                                        modifier =
-                                            Modifier.noRippleClickable { onClickAgent(agent) },
-                                        agentInfo = agent,
-                                        onEditAgent = onEditAgent,
-                                        onDeleteAgent = onDeleteAgent,
-                                    )
-                                }
-                            }
-                        }
-                            .onFailure { it.printStackTrace() }
-
-                        // Loading indicator when loading more (only show when there's no data)
-                        if (isLoading && agents.isEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                Box(
-                                    modifier = Modifier.padding(UiConfigs.Padding.ScreenHorizontal),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularProgressIndicator(
-                                        color = Color.White,
-                                        modifier = Modifier.size(UiConfigs.MePage.TopIconsRow.Size),
-                                    )
-                                }
+                    // Loading indicator when loading more (only show when there's no data)
+                    if (isLoading && agents.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Box(
+                                modifier = Modifier.padding(UiConfigs.Padding.ScreenHorizontal),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(UiConfigs.MePage.TopIconsRow.Size),
+                                )
                             }
                         }
                     }
@@ -417,8 +374,6 @@ private fun ProfileHeader(
     modifier: Modifier,
     collapseProgress: Float, // 0f = 展开, 1f = 折叠
     userProfile: UserProfile,
-    onShowSettings: () -> Unit,
-    innerPadding: PaddingValues,
     context: Context,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
     editProfileLauncher: ActivityResultLauncher<Intent>, // 编辑个人资料的 launcher
@@ -462,12 +417,9 @@ private fun ProfileHeader(
         )
     }
 
-    // Settings 图标位置固定，不响应折叠状态
-    val topSpacerHeight = innerPadding.calculateTopPadding() + UiConfigs.MePage.TopSpacerOffset
-
     Column(modifier = modifier.fillMaxWidth()) {
         // 顶部间距和设置按钮 - 始终显示，位置固定
-        Spacer(Modifier.height(topSpacerHeight))
+        Spacer(Modifier.height(UiConfigs.MePage.TopSpacerOffset))
 
         // 设置按钮行 - 始终显示
         Row(verticalAlignment = Alignment.CenterVertically) {

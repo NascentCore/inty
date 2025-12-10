@@ -40,7 +40,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.agent.report.ReportActivity
-import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.explore.ExplorePage
@@ -54,7 +53,6 @@ import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.UpgradeDialog
-import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
 import com.inty.api.models.api.v1.version.VersionCheckResponse
@@ -408,7 +406,6 @@ private fun HomeContent(
             val appUpdateTips by mainViewModel.appUpdateTips.collectAsState()
             ProfileTabContent(
                 navController,
-                onShowSettings = { mainViewModel.showSettings() },
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
                 appUpdateTips = appUpdateTips,
@@ -504,7 +501,6 @@ private fun ExploreTabContent(navController: NavController, innerPadding: Paddin
 @Composable
 private fun ProfileTabContent(
     navController: NavController,
-    onShowSettings: () -> Unit,
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
     appUpdateTips: Boolean,
@@ -629,7 +625,6 @@ private fun ProfileTabContent(
             )
         },
         onLoadMore = { profileViewModel.loadMoreUserCreatedAgents() },
-        onShowSettings = onShowSettings,
         profileViewModel = profileViewModel, // 传递 ViewModel 以便 ProfilePage 内部处理刷新
     )
 }

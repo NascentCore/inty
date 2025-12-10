@@ -3,13 +3,16 @@ package com.ai.intellimate.profile
 import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
+import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,16 +27,76 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
+@Composable
+internal fun AgentsEmptyUI(modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Spacer(Modifier.height(UiConfigs.MePage.EmptyStateTopSpacing))
+
+        AsyncImage(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            model = R.drawable.img_empty_magic,
+            contentDescription = null,
+        )
+
+        Spacer(Modifier.height(UiConfigs.MePage.EmptyStateBottomSpacing))
+
+        Text(
+            modifier =
+                Modifier
+                    .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
+                    .align(Alignment.CenterHorizontally),
+            text = stringResource(R.string.no_agent),
+            color = Color.White.copy(0.55f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+
+}
+@Preview
+@Composable
+internal fun ProfileHeaderBg(modifier: Modifier = Modifier) {
+    Box(modifier) {
+        AsyncImage(
+            modifier = Modifier.fillMaxWidth(),
+            model = R.drawable.img_profile_header_bg,
+            contentDescription = null,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            HeartColor.primaryColor.copy(.0f),
+                            HeartColor.primaryColor.copy(.3f),
+                            HeartColor.primaryColor.copy(.7f),
+                            HeartColor.primaryColor.copy(.9f),
+                        )
+                    )
+                )
+        )
+    }
+
+}
 
 /** Premium Banner 组件 */
 @Composable
