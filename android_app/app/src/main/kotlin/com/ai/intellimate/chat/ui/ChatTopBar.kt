@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,15 +37,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.info.AgentInfoActivity
+import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.launch
-
-private const val CHAT_TOP_BAR_AVATAR_SIZE = 30
-private const val CHAT_TOP_BAR_AVATAR_PADDING = 3
-private const val CHAT_TOP_BAR_CORNER_RADIUS = 20
-private val CHAT_TOP_BAR_BACKGROUND_COLOR = Color(33, 0, 0, 77)
-
-private const val BACK_BUTTON_SIZE = 24
-private const val MORE_BUTTON_SIZE = 20
 
 /** 聊天页面顶部栏组件 */
 @Composable
@@ -56,7 +48,7 @@ fun ChatTopBar(
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
     onClickMore: () -> Unit,
-    avatarWidth: Dp = 30.dp,
+    avatarWidth: Dp = UiConfigs.ChatTopBar.AvatarSize,
     fontSize: TextUnit = 14.sp,
     earnedPoints: Int? = null,
 ) {
@@ -68,18 +60,19 @@ fun ChatTopBar(
         if (showBackButton) {
             AsyncImage(
                 modifier =
-                    Modifier.size(BACK_BUTTON_SIZE.dp).noRippleClickable { onBack?.invoke() },
+                    Modifier.size(UiConfigs.ChatTopBar.BackButtonIconSize)
+                        .noRippleClickable { onBack?.invoke() },
                 model = R.drawable.back,
                 contentDescription = null,
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.BackButtonToAvatarSpacing))
         }
 
         Row(
             modifier =
                 Modifier.background(
-                        color = CHAT_TOP_BAR_BACKGROUND_COLOR,
-                        shape = RoundedCornerShape(avatarWidth),
+                        color = UiConfigs.ChatTopBar.BackgroundColor,
+                        shape = RoundedCornerShape(UiConfigs.ChatTopBar.CornerRadius),
                     )
                     .noRippleClickable {
                         scope.launch {
@@ -95,7 +88,7 @@ fun ChatTopBar(
         ) {
             AsyncImage(
                 modifier =
-                    Modifier.padding(CHAT_TOP_BAR_AVATAR_PADDING.dp)
+                    Modifier.padding(UiConfigs.ChatTopBar.AvatarPadding)
                         .size(avatarWidth)
                         .clip(CircleShape),
                 model =
@@ -109,7 +102,7 @@ fun ChatTopBar(
                 contentScale = ContentScale.Crop,
             )
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.AvatarToContentSpacing))
 
             val showPoints = earnedPoints != null
 
@@ -120,23 +113,22 @@ fun ChatTopBar(
                             imageVector = Icons.Rounded.EnergySavingsLeaf,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(UiConfigs.ChatTopBar.EnergyIconSize),
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing))
                         Text(
                             text =
                                 stringResource(
                                     id = R.string.energy_points_counter,
-                                    earnedPoints ?: 0,
+                                    earnedPoints,
                                 ),
-                            fontSize = 10.sp,
+                            fontSize = UiConfigs.ChatTopBar.EnergyPointsFontSize,
                             color = Color.White.copy(alpha = 0.9f),
                             fontWeight = FontWeight.Medium,
                         )
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
+                    // Spacer(modifier = Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing))
                 }
-
                 Text(
                     text = agentInfo.name,
                     fontSize = fontSize,
@@ -144,8 +136,7 @@ fun ChatTopBar(
                     color = Color.White,
                 )
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
+//            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ContentRightPadding))
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -160,7 +151,9 @@ fun ChatTopBar(
             contentAlignment = Alignment.Center,
         ) {
             AsyncImage(
-                modifier = Modifier.size(MORE_BUTTON_SIZE.dp).noRippleClickable { onClickMore() },
+                modifier =
+                    Modifier.size(UiConfigs.ChatTopBar.MoreButtonIconSize)
+                        .noRippleClickable { onClickMore() },
                 model = R.drawable.icon_more,
                 contentDescription = null,
             )

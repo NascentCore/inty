@@ -356,13 +356,12 @@ internal fun ChatPage(
                     agentInfo?.let { info ->
                         ChatTopBar(
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .padding(start = 18.dp),
                             agentInfo = info,
                             showBackButton = showBackButton,
                             onBack = onBack,
                             fontSize = 15.sp,
-                            avatarWidth = 40.dp,
+                            avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
                             earnedPoints = characterEnergy,
                             onClickMore = {
                                 scope.launch {

@@ -409,6 +409,51 @@ object UiConfigs {
         val AudioPlayerMinWidth = 38.dp
     }
 
+    /** 聊天顶部栏配置 - 适用于聊天页面顶部栏的尺寸、间距、字体等设置 */
+    object ChatTopBar {
+        /** 头像大小 */
+        val AvatarSize = 50.dp
+
+        /** 头像内边距 */
+        val AvatarPadding = 3.dp
+
+        /** 顶部栏圆角半径 */
+        val CornerRadius = 28.dp
+
+        /** 顶部栏背景颜色 */
+        val BackgroundColor = Color(33, 0, 0, 77)
+
+        /** 返回按钮图标大小 */
+        val BackButtonIconSize = 24.dp
+
+        /** 更多按钮图标大小 */
+        val MoreButtonIconSize = 20.dp
+
+        /** 返回按钮与头像之间的间距 */
+        val BackButtonToAvatarSpacing = 8.dp
+
+        /** 头像与内容之间的间距 */
+        val AvatarToContentSpacing = 6.dp
+
+        /** 能量图标大小 */
+        val EnergyIconSize = 14.dp
+
+        /** 能量图标与文字之间的间距 */
+        val EnergyIconToTextSpacing = 4.dp
+
+        /** 能量点数与名称之间的间距 */
+        val EnergyPointsToNameSpacing = 0.dp
+
+        /** 内容区域右侧内边距 */
+        val ContentRightPadding = 16.dp
+
+        /** 名称字体大小 */
+        val NameFontSize = 14.sp
+
+        /** 能量点数字体大小 */
+        val EnergyPointsFontSize = 10.sp
+    }
+
     /** 聊天页面配置 - 适用于聊天页面的功能开关，如 Remix 按钮可见性等 */
     object ChatPage {
         @Composable
