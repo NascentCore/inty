@@ -198,6 +198,20 @@ object AgentService {
         agentId: String,
         energyPointsDelta: Int
     ): ApiResult<AgentInfo> {
+        // 参数验证
+        if (agentId.isBlank()) {
+            return ApiResult.Error(
+                code = 400,
+                message = "Agent ID cannot be empty",
+            )
+        }
+        if (energyPointsDelta <= 0) {
+            return ApiResult.Error(
+                code = 400,
+                message = "Energy points delta must be positive",
+            )
+        }
+
         return IntyNetworkManager.executeRequest("Update Agent Energy Points") {
             val params =
                 com.inty.api.models.api.v1.ai.agents.AgentUpdateParams.builder()
