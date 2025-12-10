@@ -53,6 +53,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -68,63 +69,60 @@ import com.ai.intellimate.ui.components.SmartTagsLayout
 internal object ThemedDetailConfig {
     /** EventCard 和图片的圆角半径 */
     val EventCardCornerRadius = 6.dp
-    
+
     /** EventCard 中事件描述文本的默认最大折叠行数 */
     const val EventDescriptionMaxLines = 4
 
     // ========== 专题详情界面的角色卡片配置（ThemedCharacterCard） ==========
-    
+
     /** 专题详情界面角色卡片的高度 */
     val CharacterCardHeight = 142.dp
-    
+
     /** 专题详情界面角色卡片中图片的宽度 */
     val CharacterImageWidth = 80.dp
-    
+
     /** 专题详情界面角色卡片中图片和信息之间的间距 */
     val CharacterCardSpacing = 8.dp
-    
+
     /** 专题详情界面角色卡片内部内容的 padding */
     val CharacterCardPadding = 8.dp
-    
+
     /** 专题详情界面角色卡片的圆角半径 */
     val CharacterCardCornerRadius = 6.dp
 
     // ========== 主题专区的横向角色卡片列表配置（HorizontalAgentCardList） ==========
-    
-    /** 主题专区横向卡片列表的高度（已废弃，现在高度自适应） */
-    val HorizontalCardListHeight = 242.dp
-    
+
     /** 主题专区横向卡片列表内部内容的 padding */
     val HorizontalCardListPadding = 16.dp
-    
+
     /** 主题专区横向列表中单个角色卡片项的宽度 */
     val HorizontalCardItemWidth = 80.dp
-    
+
     /** 主题专区横向列表中单个角色卡片项的高度 */
     val HorizontalCardItemHeight = 142.dp
-    
+
     /** 主题专区横向列表中角色卡片项之间的间距 */
     val HorizontalCardItemSpacing = 12.dp
-    
+
     /** 主题专区横向列表中角色卡片项的圆角半径 */
     val HorizontalCardItemCornerRadius = 8.dp
-    
+
     /** 主题专区横向卡片列表中标题和描述之间的间距 */
     val HorizontalCardTitleSpacing = 8.dp
-    
+
     /** 主题专区横向卡片列表中描述和角色列表之间的间距 */
     val HorizontalCardDescriptionSpacing = 4.dp
 }
 
 /**
  * 专题详情界面的事件描述卡片
- * 
+ *
  * 用途：显示在专题详情界面（SpecialDetailScreen）顶部，展示该专题的事件描述信息
  * 特点：
  * - 使用 ThemedEventCard 作为容器，支持圣诞主题装饰
  * - 内部使用 ExpandableText 实现文本折叠/展开功能
  * - 默认显示4行，超出部分可展开查看
- * 
+ *
  * @param description 事件描述文本
  * @param isChristmas 是否为圣诞主题，true 时显示圣诞装饰元素
  * @param modifier 修饰符，可用于设置位置、大小等
@@ -159,14 +157,14 @@ internal fun EventCard(
 
 /**
  * 专题详情界面的角色卡片（横向布局）
- * 
+ *
  * 用途：显示在专题详情界面（SpecialDetailScreen）的 LazyColumn 列表中，展示单个 AI 角色信息
  * 特点：
  * - 横向布局：左侧为角色图片，右侧为角色信息（名称、简介、标签）
  * - 固定高度，宽度自适应
  * - 支持图片加载状态（占位符、加载失败处理）
  * - 点击可跳转到角色详情
- * 
+ *
  * @param agent AI 角色信息
  * @param onClick 点击回调，用于跳转到角色详情页面
  */
@@ -304,14 +302,14 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
 
 /**
  * 主题专区的横向角色卡片列表容器
- * 
+ *
  * 用途：显示在主题专区界面（如 ExploreContent），展示某个主题下的多个 AI 角色
  * 特点：
  * - 使用 ThemedEventCard 作为容器，支持圣诞主题装饰
  * - 包含标题、描述和横向滚动的角色卡片列表
  * - 标题和整个卡片区域都支持点击事件
  * - 内部使用 LazyRow 实现横向滚动
- * 
+ *
  * @param title 列表标题，如 "# Merry Christmas"
  * @param description 列表描述文本
  * @param agents AI 角色列表
@@ -409,14 +407,14 @@ internal fun HorizontalAgentCardList(
 
 /**
  * 主题专区横向列表中的单个角色卡片项
- * 
+ *
  * 用途：作为 HorizontalAgentCardList 中 LazyRow 的单个 item，展示一个 AI 角色
  * 特点：
  * - 固定尺寸的卡片（宽度 80dp，高度 142dp）
  * - 角色图片作为背景，角色名称叠加在底部
  * - 底部有渐变遮罩，确保文字可读性
  * - 点击可跳转到角色详情
- * 
+ *
  * @param agent AI 角色信息
  * @param onClick 点击回调，用于跳转到角色详情页面
  */
@@ -599,18 +597,18 @@ private fun PreviewHorizontalAgentCardList() {
 
 /**
  * 带主题装饰的卡片容器组件
- * 
+ *
  * 用途：作为 EventCard 和 HorizontalAgentCardList 的容器，提供统一的卡片样式和主题装饰
  * 特点：
  * - 使用 BlurBgCard 作为背景，提供模糊背景效果
  * - 支持圣诞主题装饰（松枝、雪花等装饰元素）
  * - 使用 ConstraintLayout 实现装饰元素的精确定位
  * - 高度自适应内容
- * 
+ *
  * 使用场景：
  * 1. EventCard - 专题详情界面的事件描述卡片
  * 2. HorizontalAgentCardList - 主题专区的横向角色卡片列表
- * 
+ *
  * @param modifier 修饰符
  * @param isChristmas 是否为圣诞主题，true 时显示圣诞装饰元素（松枝、雪花）
  * @param contentAlignment 内容对齐方式
@@ -710,18 +708,18 @@ private fun PreviewThemedEventCard() {
 
 /**
  * 可折叠文本组件
- * 
+ *
  * 用途：用于显示长文本，支持折叠/展开功能，节省界面空间
  * 特点：
  * - 默认最多显示指定行数，超出部分显示省略号
  * - 在文本末尾或右下角显示展开/收起按钮
  * - 支持两种按钮位置：文本末尾（TextEnd）和右下角（BottomEnd）
  * - 支持两种动画方式：旋转动画和图标切换
- * 
+ *
  * 使用场景：
  * 1. EventCard - 专题详情界面的事件描述文本
  * 2. ChatItem - 聊天消息中的长文本（使用 BottomEnd 位置）
- * 
+ *
  * @param text 文本内容（String 或 AnnotatedString）
  * @param modifier 修饰符
  * @param collapsedMaxLines 折叠状态下最大显示行数，默认4行
@@ -764,8 +762,8 @@ private fun ExpandableText(
     collapsedMaxLines: Int = 4,
     textStyle: TextStyle = TextStyle.Default,
     buttonPosition: ExpandableTextButtonPosition = ExpandableTextButtonPosition.TextEnd,
-    iconSize: androidx.compose.ui.unit.Dp = 24.dp,
-    iconSpacing: androidx.compose.ui.unit.Dp = 4.dp,
+    iconSize: Dp = 24.dp,
+    iconSpacing: Dp = 4.dp,
     iconTint: Color = Color.White,
     useRotationAnimation: Boolean = true,
 ) {
@@ -887,13 +885,13 @@ private fun ExpandableText(
  * 用于 ExpandableText 组件，控制展开/收起按钮的显示位置
  */
 enum class ExpandableTextButtonPosition {
-    /** 
+    /**
      * 按钮定位在文本最后一行的末尾（紧跟在省略号后）
      * 适用于：EventCard 中的事件描述文本
      */
     TextEnd,
 
-    /** 
+    /**
      * 按钮定位在容器的右下角
      * 适用于：ChatItem 中的聊天消息文本
      */
