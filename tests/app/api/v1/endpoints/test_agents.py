@@ -227,33 +227,25 @@ def test_recommend_agents_energy_points_sorting(
 
         items = data["list"]
         assert isinstance(items, list), "List should be a list"
+        assert all(
+            "energy_points" in item for item in items
+        ), "Each agent should expose energy_points"
 
         # 查找我们创建的 agents（可能还有其他公开的 agents）
-        our_agents = [
-            item for item in items if item["id"] in agent_ids
-        ]
+        our_agents = [item for item in items if item["id"] in agent_ids]
+        expected_points_map = dict(zip(agent_ids, points_values))
 
-        # 验证我们的 agents 按 points 降序排列
-        # 由于 points 字段不在 API 响应中，我们需要从数据库查询 points 值
+        for agent in our_agents:
+            assert (
+                agent["energy_points"] == expected_points_map[agent["id"]]
+            ), "API energy_points should match database values"
+
+        # 验证我们的 agents 按 energy_points 降序排列
         if len(our_agents) >= 2:
-            # 创建一个 agent_id 到 points 的映射
-            agent_points_map = {}
-            for agent_id in agent_ids:
-                agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
-                if agent:
-                    agent_points_map[agent_id] = agent.points
-
-            # 验证排序：每个 agent 的 points 应该大于或等于下一个 agent 的 points
-            for i in range(len(our_agents) - 1):
-                current_agent_id = our_agents[i]["id"]
-                next_agent_id = our_agents[i + 1]["id"]
-                current_points = agent_points_map.get(current_agent_id, 0)
-                next_points = agent_points_map.get(next_agent_id, 0)
-                assert (
-                    current_points >= next_points
-                ), f"Agents should be sorted in descending order by points. "
-                f"Agent {current_agent_id} (points={current_points}) should come before "
-                f"Agent {next_agent_id} (points={next_points})"
+            energy_values = [agent["energy_points"] for agent in our_agents]
+            assert energy_values == sorted(
+                energy_values, reverse=True
+            ), f"Agents should be sorted by energy_points desc, got {energy_values}"
 
         # 验证分页功能
         response_page2 = integration_client.client.get(
@@ -301,6 +293,10 @@ def test_update_agent_adds_energy_points(
         assert (
             first_response.status_code == 200
         ), f"Failed to add energy points: {first_response.text}"
+        first_payload = first_response.json()
+        assert (
+            first_payload.get("energy_points") == 25
+        ), f"API should report 25 energy points, got {first_payload}"
 
         db_session.expire_all()
         agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
@@ -314,6 +310,10 @@ def test_update_agent_adds_energy_points(
         assert (
             second_response.status_code == 200
         ), f"Failed to add more energy points: {second_response.text}"
+        second_payload = second_response.json()
+        assert (
+            second_payload.get("energy_points") == 35
+        ), f"API should report 35 energy points, got {second_payload}"
 
         db_session.expire_all()
         agent = db_session.query(Agent).filter(Agent.id == agent_id).first()

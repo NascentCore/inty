@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator
 
 from app.core.agent.prompt_template import (
     has_template_variable,
@@ -281,6 +281,12 @@ class AgentInDB(AgentBase):
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
     version: int
+    energy_points: int = Field(
+        default=0,
+        ge=0,
+        description="Agent 当前能量点数，对应数据库 points 列",
+        validation_alias=AliasChoices("energy_points", "points"),
+    )
 
     @field_serializer("created_at")
     def serialize_created_at(self, created_at: datetime) -> int:
