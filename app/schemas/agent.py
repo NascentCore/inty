@@ -254,6 +254,12 @@ class AgentUpdate(AgentBase):
     extensions: Optional[Dict[str, Any]] = None
     voice_id: Optional[str] = None
 
+    energy_points: Optional[int] = Field(
+        None,
+        gt=0,
+        description="需要新增的能量点数，会累加到 agent 的积分列中",
+    )
+
     # 模型配置
     llm_config: Optional[ModelConfig] = None
 
