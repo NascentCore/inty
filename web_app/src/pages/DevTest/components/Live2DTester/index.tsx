@@ -24,14 +24,13 @@ import {
   Divider,
   Form,
   Input,
-  InputNumber,
   List,
   Select,
   Space,
   Typography,
   message,
 } from 'antd';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Live2DViewer, { ILive2DViewerRef } from '@/components/Live2DViewer';
 
 import './index.less';
@@ -40,6 +39,24 @@ interface ILive2dModelOption {
   label: string;
   value: string;
   description: string;
+}
+
+interface IModel3Json {
+  /** motion 定义 */
+  motions?: Record<string, Array<Record<string, unknown>>>;
+}
+
+interface IMotionGroupInfo {
+  /** motion 组名称 */
+  group: string;
+  /** 该组包含的 motion 数量 */
+  count: number;
+}
+
+interface IMotionHistoryItem {
+  group: string;
+  index: number;
+  timestamp: number;
 }
 
 const LOCAL_MODEL_OPTIONS: ILive2dModelOption[] = [
@@ -58,15 +75,25 @@ const LOCAL_MODEL_OPTIONS: ILive2dModelOption[] = [
 const STREAMING_PLACEHOLDER =
   'LONG_PLACEHOLDER_TEXT_TO_KEEP_MOUTH_MOVING_DURING_STREAMING_RESPONSE';
 
+interface ILive2DInternalModel {
+  settings?: IModel3Json;
+}
+
 const Live2DTester: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<string>(LOCAL_MODEL_OPTIONS[0]?.value);
   const [inputText, setInputText] = useState<string>('');
-  const [motionGroup, setMotionGroup] = useState<string>('TapBody');
+  const [motionGroup, setMotionGroup] = useState<string>('');
   const [motionIndex, setMotionIndex] = useState<number>(0);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [viewerReady, setViewerReady] = useState<boolean>(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [motionGroups, setMotionGroups] = useState<IMotionGroupInfo[]>([]);
+  const [currentMotion, setCurrentMotion] = useState<IMotionHistoryItem | null>(null);
+  const [motionHistory, setMotionHistory] = useState<IMotionHistoryItem[]>([]);
+  const [isMonitoring, setIsMonitoring] = useState<boolean>(false);
+  const [parameterData, setParameterData] = useState<Array<{ id: string; value: number }> | null>(null);
   const viewerRef = useRef<ILive2DViewerRef | null>(null);
+  const monitoringIntervalRef = useRef<number | null>(null);
 
   const currentModel = useMemo(
     () => LOCAL_MODEL_OPTIONS.find((option) => option.value === selectedModel),
@@ -76,6 +103,46 @@ const Live2DTester: React.FC = () => {
   useEffect(() => {
     setViewerReady(false);
   }, [selectedModel]);
+
+  const syncMotionMetadata = useCallback(() => {
+    const internalSettings = (viewerRef.current?.internalModel?.internalModel as ILive2DInternalModel)?.settings;
+    const groups: IMotionGroupInfo[] = Object.entries(internalSettings?.motions ?? {}).reduce<IMotionGroupInfo[]>(
+      (acc, [groupName, entries]) => {
+        const count = entries?.length ?? 0;
+        if (count > 0) {
+          acc.push({ group: groupName, count });
+        }
+        return acc;
+      },
+      [],
+    );
+    setMotionGroups(groups);
+    if (groups.length > 0) {
+      setMotionGroup(groups[0].group);
+      setMotionIndex(0);
+      return;
+    }
+    setMotionGroup('');
+    setMotionIndex(0);
+  }, []);
+
+  useEffect(() => {
+    if (!viewerReady) {
+      setMotionGroups([]);
+      setMotionGroup('');
+      setMotionIndex(0);
+      return;
+    }
+    syncMotionMetadata();
+  }, [viewerReady, selectedModel, syncMotionMetadata]);
+
+  const motionIndexOptions = useMemo(() => {
+    const matchedGroup = motionGroups.find((item) => item.group === motionGroup);
+    if (!matchedGroup) {
+      return [];
+    }
+    return Array.from({ length: matchedGroup.count }, (_, index) => index);
+  }, [motionGroups, motionGroup]);
 
   const appendLog = (messageText: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -113,7 +180,58 @@ const Live2DTester: React.FC = () => {
     }
     viewerRef.current?.motion(motionGroup.trim(), motionIndex);
     appendLog(`Triggered motion ${motionGroup}#${motionIndex}.`);
+    const motionInfo: IMotionHistoryItem = {
+      group: motionGroup.trim(),
+      index: motionIndex,
+      timestamp: Date.now(),
+    };
+    setCurrentMotion(motionInfo);
+    setMotionHistory((prev) => [motionInfo, ...prev].slice(0, 20));
   };
+
+  const startMonitoring = () => {
+    if (monitoringIntervalRef.current) {
+      return;
+    }
+    setIsMonitoring(true);
+    const interval = window.setInterval(() => {
+      if (!viewerRef.current) {
+        return;
+      }
+      const motion = viewerRef.current.getCurrentMotion();
+      if (motion) {
+        const motionInfo: IMotionHistoryItem = {
+          group: motion.group ?? '',
+          index: motion.index ?? 0,
+          timestamp: motion.timestamp,
+        };
+        setCurrentMotion(motionInfo);
+        const params = viewerRef.current.getAllParameters();
+        if (params) {
+          setParameterData(params);
+        }
+      }
+    }, 100);
+    monitoringIntervalRef.current = interval;
+    appendLog('Motion monitoring started.');
+  };
+
+  const stopMonitoring = () => {
+    if (monitoringIntervalRef.current) {
+      clearInterval(monitoringIntervalRef.current);
+      monitoringIntervalRef.current = null;
+    }
+    setIsMonitoring(false);
+    appendLog('Motion monitoring stopped.');
+  };
+
+  useEffect(() => {
+    return () => {
+      if (monitoringIntervalRef.current) {
+        clearInterval(monitoringIntervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="live2d-tester">
@@ -164,21 +282,126 @@ const Live2DTester: React.FC = () => {
             <Divider />
 
             <Form.Item label="Motion group">
-              <Input
-                placeholder="TapBody / Idle / custom motion group name"
-                value={motionGroup}
-                onChange={(event) => setMotionGroup(event.target.value)}
+              <Select<string>
+                placeholder="Select motion group"
+                options={motionGroups.map((groupInfo) => ({
+                  label: `${groupInfo.group} (${groupInfo.count})`,
+                  value: groupInfo.group,
+                }))}
+                value={motionGroup || undefined}
+                disabled={!motionGroups.length}
+                onChange={(value) => setMotionGroup(value)}
               />
             </Form.Item>
 
             <Form.Item label="Motion index">
-              <InputNumber min={0} value={motionIndex} onChange={(value) => setMotionIndex(value ?? 0)} />
+              <Select<number>
+                placeholder="Select motion index"
+                options={motionIndexOptions.map((index) => ({
+                  label: `Motion #${index}`,
+                  value: index,
+                }))}
+                value={motionIndexOptions.includes(motionIndex) ? motionIndex : undefined}
+                onChange={(value) => setMotionIndex(value)}
+                disabled={!motionIndexOptions.length}
+              />
             </Form.Item>
 
             <Button onClick={handleTriggerMotion} block disabled={!viewerReady}>
               Trigger motion
             </Button>
           </Form>
+        </Card>
+
+        <Card title="Motion Monitor" className="live2d-tester__panel">
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Space>
+              <Button
+                type={isMonitoring ? 'default' : 'primary'}
+                onClick={isMonitoring ? stopMonitoring : startMonitoring}
+                disabled={!viewerReady}
+              >
+                {isMonitoring ? 'Stop monitoring' : 'Start monitoring'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setMotionHistory([]);
+                  setCurrentMotion(null);
+                  setParameterData(null);
+                }}
+                disabled={!isMonitoring}
+              >
+                Clear history
+              </Button>
+            </Space>
+
+            <Divider style={{ margin: '12px 0' }} />
+
+            <div>
+              <Typography.Text strong>Current Motion:</Typography.Text>
+              {currentMotion ? (
+                <div style={{ marginTop: 8 }}>
+                  <Typography.Text code>
+                    {currentMotion.group}#{currentMotion.index}
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                    {new Date(currentMotion.timestamp).toLocaleTimeString()}
+                  </Typography.Text>
+                </div>
+              ) : (
+                <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
+                  No motion playing
+                </Typography.Text>
+              )}
+            </div>
+
+            <Divider style={{ margin: '12px 0' }} />
+
+            <div>
+              <Typography.Text strong>Motion History:</Typography.Text>
+              <List
+                dataSource={motionHistory}
+                locale={{ emptyText: 'No motion history' }}
+                renderItem={(item, index) => (
+                  <List.Item style={{ padding: '4px 0' }}>
+                    <Typography.Text code>
+                      {item.group}#{item.index}
+                    </Typography.Text>
+                    <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                      {new Date(item.timestamp).toLocaleTimeString()}
+                    </Typography.Text>
+                  </List.Item>
+                )}
+                size="small"
+                style={{ maxHeight: 200, overflowY: 'auto', marginTop: 8 }}
+              />
+            </div>
+
+            {parameterData && parameterData.length > 0 && (
+              <>
+                <Divider style={{ margin: '12px 0' }} />
+                <div>
+                  <Typography.Text strong>Parameters ({parameterData.length}):</Typography.Text>
+                  <List
+                    dataSource={parameterData.filter((p) => Math.abs(p.value) > 0.01).slice(0, 10)}
+                    locale={{ emptyText: 'No active parameters' }}
+                    renderItem={(item) => (
+                      <List.Item style={{ padding: '4px 0' }}>
+                        <Typography.Text code style={{ fontSize: 11 }}>
+                          {item.id}
+                        </Typography.Text>
+                        <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                          {item.value.toFixed(3)}
+                        </Typography.Text>
+                      </List.Item>
+                    )}
+                    size="small"
+                    style={{ maxHeight: 150, overflowY: 'auto', marginTop: 8 }}
+                  />
+                </div>
+              </>
+            )}
+          </Space>
         </Card>
 
         <Card title="Viewer">

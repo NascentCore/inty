@@ -76,6 +76,15 @@ const MOUTH_PARAM_ID = 'ParamMouthOpenY';
 
 interface ILive2DCoreModel {
   setParameterValueById: (parameterId: string, value: number) => void;
+  getParameterValueById: (parameterId: string) => number;
+  getParameterCount: () => number;
+  getParameterId: (index: number) => string;
+}
+
+interface ICurrentMotionInfo {
+  group: string | null;
+  index: number | null;
+  timestamp: number;
 }
 
 export interface ILive2DViewerRef {
@@ -83,6 +92,9 @@ export interface ILive2DViewerRef {
   stopSpeaking: () => void;
   motion: (group: string, index?: number) => void;
   internalModel: ILive2DModel | null;
+  getCurrentMotion: () => ICurrentMotionInfo | null;
+  getParameterValue: (parameterId: string) => number | null;
+  getAllParameters: () => Array<{ id: string; value: number }> | null;
 }
 
 interface ILive2DViewerProps {
@@ -114,6 +126,7 @@ const Live2DViewer = React.forwardRef(
     const scriptsReady = useLive2dScripts();
     const [error, setError] = useState<string | null>(null);
     const onReadyRef = useRef<(() => void) | undefined>(onReady);
+    const currentMotionRef = useRef<ICurrentMotionInfo | null>(null);
 
     useEffect(() => {
       onReadyRef.current = onReady;
@@ -170,8 +183,47 @@ const Live2DViewer = React.forwardRef(
             return;
           }
           modelRef.current.motion(group, index);
+          currentMotionRef.current = {
+            group,
+            index: index ?? 0,
+            timestamp: Date.now(),
+          };
         },
-        internalModel: modelRef.current,
+        get internalModel() {
+          return modelRef.current;
+        },
+        getCurrentMotion: () => currentMotionRef.current,
+        getParameterValue: (parameterId: string) => {
+          const coreModel = modelRef.current?.internalModel?.coreModel as
+            | ILive2DCoreModel
+            | undefined;
+          if (!coreModel) {
+            return null;
+          }
+          try {
+            return coreModel.getParameterValueById(parameterId);
+          } catch {
+            return null;
+          }
+        },
+        getAllParameters: () => {
+          const coreModel = modelRef.current?.internalModel?.coreModel as
+            | ILive2DCoreModel
+            | undefined;
+          if (!coreModel) {
+            return null;
+          }
+          try {
+            const count = coreModel.getParameterCount();
+            return Array.from({ length: count }, (_, index) => {
+              const id = coreModel.getParameterId(index);
+              const value = coreModel.getParameterValueById(id);
+              return { id, value };
+            });
+          } catch {
+            return null;
+          }
+        },
       }),
       [],
     );
@@ -218,10 +270,16 @@ const Live2DViewer = React.forwardRef(
           model.on('hit', (hitAreas: string[]) => {
             if (hitAreas.includes('body')) {
               model.motion('TapBody');
+              currentMotionRef.current = {
+                group: 'TapBody',
+                index: 0,
+                timestamp: Date.now(),
+              };
             }
           });
           app.stage.addChild(model);
           modelRef.current = model;
+          currentMotionRef.current = null;
           onReadyRef.current?.();
         } catch (err) {
           console.error('[Live2DViewer] failed to load model:', err);

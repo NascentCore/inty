@@ -1,0 +1,26 @@
+.live2d-tester {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.live2d-tester .live2d-tester__workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 16px;
+}
+.live2d-tester .live2d-tester__panel .live2d-tester__button-group {
+  margin-top: 12px;
+  width: 100%;
+  display: flex;
+  gap: 8px;
+}
+.live2d-tester .live2d-tester__panel .live2d-tester__button-group button {
+  flex: 1;
+}
+.live2d-tester .live2d-tester__hint {
+  margin-top: 8px;
+}
+.live2d-tester .live2d-tester__viewer {
+  height: 420px;
+  max-height: 520px;
+}
