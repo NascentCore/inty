@@ -15,6 +15,7 @@ import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.http.BusinessErrorCodes
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -25,6 +26,7 @@ import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
+import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -201,14 +203,31 @@ class ChatViewModel : BaseVM() {
         val hasLocalData = chatRepository.getMessagesFlow(agentInfo.id).value.isNotEmpty()
 
         if (hasLocalData) {
-            // 有本地数据，立即标记为完成，然后后台同步
-            _isQueryMsgsCompleted.value = true
-            // 后台同步最新数据
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    syncChatDataUseCase(agentInfo.id)
-                } catch (e: Exception) {
-                    LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+            if (forceSync) {
+                // 🔧 修复：从通知进入时（forceSync=true），先同步最新数据，等待完成后再标记为完成
+                // 确保UI显示的是最新消息，而不是旧的本地缓存
+                _isQueryMsgsCompleted.value = false
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        syncChatDataUseCase(agentInfo.id)
+                        _isQueryMsgsCompleted.value = true
+                        LogUtils.i("ChatViewModel.setAgentInfo forceSync completed for ${agentInfo.id}")
+                    } catch (e: Exception) {
+                        LogUtils.e("ChatViewModel.setAgentInfo forceSync error: ${e.message}")
+                        // 即使同步失败，也标记为完成，避免UI一直等待
+                        _isQueryMsgsCompleted.value = true
+                    }
+                }
+            } else {
+                // 有本地数据，立即标记为完成，然后后台同步
+                _isQueryMsgsCompleted.value = true
+                // 后台同步最新数据
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        syncChatDataUseCase(agentInfo.id)
+                    } catch (e: Exception) {
+                        LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+                    }
                 }
             }
         } else {
@@ -1288,6 +1307,7 @@ class ChatViewModel : BaseVM() {
                 val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 when (result) {
                     is HttpResult.Success -> {
+                        AgentStore.addAgent(result.data)
                         setAgentInfo(result.data, forceSync = forceSync)
                     }
 
@@ -1347,5 +1367,31 @@ class ChatViewModel : BaseVM() {
                 meta_data = MsgInfo.MsgMetaData(agentId = agent.id),
             )
         chatRepository.addMessage(agent.id, message)
+    }
+
+    suspend fun reset() {
+        val agentId = agentInfo.value?.id ?: throw Exception("Agent is null")
+
+        if (!chatRepository.clearMessage(agentId)) {
+            throw Exception("Reset Failed")
+        }
+
+        // 1. 删除本地历史消息
+        chatRepository.clearChatData(agentId)
+        // 2. 清理 ViewModel 中的状态
+        _msgs.value = emptyList()
+        _isLoadingMore.value = false
+        _hasMoreMessages.value = true
+        _isQueryMsgsCompleted.value = false
+
+        // 3. 重新绑定消息流（因为 clearChatData 会清理内存缓存）
+        // 注意：如果使用了 RoomDataSource，消息流会自动更新
+
+        // 4. 拉取最新消息
+        chatRepository.ensureInitialHistory(agentId, PAGE_SIZE)
+        _isQueryMsgsCompleted.value = true
+
+        LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
+
     }
 }

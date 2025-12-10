@@ -55,6 +55,8 @@ import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.helper.AgentStore
+import com.ai.intellimate.xb.navigation.Routes
 import com.inty.api.models.api.v1.version.VersionCheckResponse
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -224,7 +226,7 @@ fun HomeScreen(
             onRefreshProfileHandled = { shouldRefreshProfile = false },
         )
 
-        ExpiredDialogLogic(mainViewModel)
+        ExpiredDialogLogic(navController,mainViewModel)
         AppVersionLogic(mainViewModel)
         FeedbackRequestDialogLogic(mainViewModel)
     }
@@ -265,7 +267,7 @@ private val MAX_RESUB_REMINDER_MULTIPLIER =
     (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
 
 @Composable
-private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
+private fun ExpiredDialogLogic(navController: NavController, mainViewModel: MainViewModel) {
     // 感知vip订阅过期的提示弹窗
     var showExpiredDialog by remember { mutableStateOf(false) }
     val vipStatue by mainViewModel.vipStatusFlow.collectAsState()
@@ -313,7 +315,8 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
                         // 跳转到订阅中心
-                        VipCenterActivity.launch(context, VipCenterActivity.HOME_EXPIRED_DIALOG)
+                        navController.navigate(Routes.VipCenter)
+//                        VipCenterActivity.launch(context, VipCenterActivity.HOME_EXPIRED_DIALOG)
                     }
                 }
 
@@ -386,11 +389,11 @@ private fun HomeContent(
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {
-            ChatTabContent(mainViewModel = mainViewModel, viewModelFactory = viewModelFactory)
+            ChatTabContent(navController, mainViewModel = mainViewModel, viewModelFactory = viewModelFactory)
         }
 
         HomeTabIndex.Messages -> {
-            MessagesTabContent()
+            MessagesTabContent(navController)
         }
 
         HomeTabIndex.Create -> {
@@ -398,7 +401,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            ExploreTabContent(innerPadding = innerPadding, mainViewModel = mainViewModel)
+            ExploreTabContent(navController, innerPadding = innerPadding, mainViewModel = mainViewModel)
         }
 
         HomeTabIndex.Profile -> {
@@ -417,6 +420,7 @@ private fun HomeContent(
 /** 聊天Tab内容 */
 @Composable
 private fun ChatTabContent(
+    navController: NavController,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
 ) {
@@ -431,6 +435,7 @@ private fun ChatTabContent(
     }
 
     ChatPageContainer(
+        navController,
         modifier = Modifier,
         viewModelFactory = viewModelFactory,
         chatTabViewModel = chatTabViewModel,
@@ -442,7 +447,7 @@ private fun ChatTabContent(
 
 /** 会话列表Tab内容 */
 @Composable
-private fun MessagesTabContent() {
+private fun MessagesTabContent(navController: NavController) {
     val context = LocalContext.current
     val messagesViewModel: MessagesViewModel = viewModel()
 
@@ -452,11 +457,13 @@ private fun MessagesTabContent() {
         modifier = Modifier,
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
-            ChatActivity.launch(
-                context,
-                conversation.convertToAgentInfo(),
-                pageSource = ChatActivity.MESSAGES_TAB,
-            )
+            AgentStore.addAgent(conversation.convertToAgentInfo())
+            navController.navigate(Routes.chatPage(conversation.convertToAgentInfo().id, false))
+//            ChatActivity.launch(
+//                context,
+//                conversation.convertToAgentInfo(),
+//                pageSource = ChatActivity.MESSAGES_TAB,
+//            )
         },
         pageTrackingContext = "MainActivity",
     )
@@ -464,7 +471,7 @@ private fun MessagesTabContent() {
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainViewModel) {
+private fun ExploreTabContent(navController: NavController, innerPadding: PaddingValues, mainViewModel: MainViewModel) {
     val context = LocalContext.current
     val exploreViewModel: ExploreViewModel = viewModel()
     val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()
@@ -477,10 +484,13 @@ private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainVi
     }
 
     ExplorePage(
+        navController,
         modifier = Modifier,
         innerPadding = innerPadding,
         onClickAgent = { agent ->
-            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
+            AgentStore.addAgent(agent);
+            navController.navigate(Routes.chatPage(agent.id, false))
+//            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,
@@ -594,7 +604,9 @@ private fun ProfileTabContent(
         drafts = uiState.drafts,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
-            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+            AgentStore.addAgent(agent)
+            navController.navigate(Routes.chatPage(agent.id, false))
+//            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
         },
         onClickDraft = { draftId ->
             val intent = CreateRoleActivity.getIntent(context, null, draftId)
@@ -625,7 +637,7 @@ private val defaultTabItems =
         HeartBottomTabItem(
             index = 0,
             selectedIcon = R.drawable.tab_icon_home_selected,
-            unselectedIcon = R.drawable.tab_icon_home,
+            unselectedIcon = R.drawable.tab_icon_chat,
             labelResId = R.string.tab_home,
         ),
         HeartBottomTabItem(
@@ -659,31 +671,31 @@ private val christmasTabItems =
     listOf(
         HeartBottomTabItem(
             index = 0,
-            selectedIcon = R.drawable.icon_chat_tab_christmas,
-            unselectedIcon = R.drawable.tab_icon_home,
+            selectedIcon = R.drawable.tab_icon_chat_christmas,
+            unselectedIcon = R.drawable.tab_icon_chat,
             labelResId = R.string.tab_home,
         ),
         HeartBottomTabItem(
             index = 1,
-            selectedIcon = R.drawable.icon_msg_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_messages_christmas,
             unselectedIcon = R.drawable.tab_icon_messages,
             labelResId = R.string.tab_messages,
         ),
         HeartBottomTabItem(
             index = 2,
-            selectedIcon = R.drawable.icon_create_tab_christmas,
-            unselectedIcon = R.drawable.icon_create_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_create_christmas,
+            unselectedIcon = R.drawable.tab_icon_create_christmas,
             labelResId = R.string.tab_create,
         ),
         HeartBottomTabItem(
             index = 3,
-            selectedIcon = R.drawable.icon_explore_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_explore_christmas,
             unselectedIcon = R.drawable.tab_icon_explore,
             labelResId = R.string.tab_explore,
         ),
         HeartBottomTabItem(
             index = 4,
-            selectedIcon = R.drawable.icon_profile_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_me_christmas,
             unselectedIcon = R.drawable.tab_icon_me,
             labelResId = R.string.tab_me,
         ),

@@ -191,7 +191,10 @@ fun ExploreContent(
             // 添加小延迟确保LazyVerticalGrid已经布局完成
             delay(50)
             // scrollToItem 会自动处理超出范围的索引（会滚动到最接近的有效索引）
-            gridState.scrollToItem(index = targetGridIndex, scrollOffset = targetOffset)
+            gridState.scrollToItem(
+                index = targetGridIndex,
+                scrollOffset = targetOffset,
+            )
             // 等待滚动完成后再清除恢复标志
             // 轮询检查滚动状态，直到滚动完成（最多等待1秒，防止无限等待）
             var waitTime = 0L

@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.PersonaPreferenceStore
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
@@ -35,6 +36,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -58,6 +61,7 @@ import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -71,6 +75,7 @@ fun ChatSettingsDrawer(
     onKeepTalkingChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
 
@@ -85,6 +90,8 @@ fun ChatSettingsDrawer(
     val chatFontSize by SettingStateManager.chatFontSizeFlow.collectAsState()
 
     val horizontalPadding = 16
+    val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
+    val userPreference by preferenceFlow.collectAsState(initial = "")
 
     // 在组件初始化时立即更新用户信息,未添加这部分触发更新userInfo的时候，会因为在chatViewModel中虽然更新了userProfile
     // 但是userProfileState并没有正确触发数据流的更新，引起UI层数据不能正确显示真实数据的问题。
@@ -205,6 +212,35 @@ fun ChatSettingsDrawer(
                                     editKey = EditKey.Pronouns
                                     editValue = userProfileState.gender ?: ""
                                 }
+                            },
+                        )
+                        IntelliMateDivider()
+                        SettingsArrowItem(
+                            item =
+                                SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.chat_settings_preference_title),
+                                    content =
+                                        userPreference.ifBlank {
+                                            stringResource(
+                                                R.string.chat_settings_preference_placeholder
+                                            )
+                                        },
+                                    arrow = true,
+                                ),
+                            isInGroup = true,
+                            fontLight = true,
+                            horizontalPadding = horizontalPadding,
+                            contentMaxLines = 1,
+                            onItemClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_preference",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                editKey = EditKey.Preference
+                                editValue = userPreference
                             },
                         )
                         IntelliMateDivider()
@@ -520,10 +556,23 @@ fun ChatSettingsDrawer(
                     editValue = editValue,
                     onDismiss = { editKey = EditKey.None },
                     onSave = { key, value ->
-                        modifyProfileViewModel.changeUserProfile(key, value)
-                        editKey = EditKey.None
-                        // 直接保存，事件监听会自动刷新UI
-                        modifyProfileViewModel.onSave()
+                        when (key) {
+                            EditKey.Preference -> {
+                                editKey = EditKey.None
+                                coroutineScope.launch {
+                                    PersonaPreferenceStore.savePreference(
+                                        context,
+                                        value.trim(),
+                                    )
+                                }
+                            }
+                            else -> {
+                                modifyProfileViewModel.changeUserProfile(key, value)
+                                editKey = EditKey.None
+                                // 直接保存，事件监听会自动刷新UI
+                                modifyProfileViewModel.onSave()
+                            }
+                        }
                     },
                     onValueChange = { value -> editValue = value },
                 )

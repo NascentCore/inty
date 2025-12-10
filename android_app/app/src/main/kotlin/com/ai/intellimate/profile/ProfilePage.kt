@@ -109,7 +109,7 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
-import com.ai.intellimate.vip.VipCenterActivity
+//import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.math.abs
 import kotlin.math.min
@@ -445,13 +445,15 @@ private fun ProfileHeader(
             onCancel = { showSubscribeDialog = false },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
                 }
                 showSubscribeDialog = false
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
                 }
                 showSubscribeDialog = false
             },
@@ -738,7 +740,8 @@ private fun ProfileHeader(
                     purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
                     expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
                     onClick = {
-                        VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
+                        navController.navigate(Routes.VipCenter)
+//                        VipCenterActivity.launch(context, VipCenterActivity.PROFILE_UPGRADE)
                     },
                 )
             }

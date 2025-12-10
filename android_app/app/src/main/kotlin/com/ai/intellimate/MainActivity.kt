@@ -45,6 +45,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.EmailLoginButton
 import com.ai.intellimate.ui.components.EnterEmailScreen
@@ -269,12 +270,13 @@ class MainActivity : BaseActivity() {
                     "page_source" to com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
                 ),
             )
-            // 跳转到 ChatActivity
+            // 跳转到 ChatActivity todo需要验证有效性
             com.ai.intellimate.chat.ChatActivity.launch(
                 context = this,
                 agentId = agentId,
                 pageSource = com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
             )
+
             // 清除 Intent extras，避免重复处理
             intent.removeExtra(FCMConstants.DATA_KEY_TYPE)
             intent.removeExtra(FCMConstants.DATA_KEY_AGENT_ID)

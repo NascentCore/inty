@@ -29,6 +29,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -56,6 +60,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
@@ -74,6 +79,8 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.navigation.Routes
+import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -94,6 +101,7 @@ object ChatPageSource {
 
 @Composable
 internal fun ChatPage(
+    navController: NavController,
     modifier: Modifier,
     chatViewModel: ChatViewModel,
     showBackButton: Boolean = false,
@@ -301,6 +309,9 @@ internal fun ChatPage(
     var showPremiumDialog by remember { mutableStateOf(false) }
 
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+
 
     Box(
         modifier =
@@ -330,17 +341,23 @@ internal fun ChatPage(
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }
 
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
-            contentWindowInsets = WindowInsets(0),
+            contentWindowInsets = WindowInsets(0)
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.padding(innerPadding).imePadding()) {
+                Column(modifier = Modifier
+                    .padding(innerPadding)
+                    .imePadding()) {
                     Spacer(Modifier.height(48.dp))
 
                     agentInfo?.let { info ->
                         ChatTopBar(
-                            modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 18.dp),
                             agentInfo = info,
                             showBackButton = showBackButton,
                             onBack = onBack,
@@ -372,88 +389,93 @@ internal fun ChatPage(
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Box {
+                        Column {
+                            Spacer(Modifier.height(16.dp))
 
-                    if (agentInfo != null && !vipStatus.isSubscribed) {
-                        PremiumModelTag(
-                            onClick = {
-                                scope.launch {
-                                    if (agentInfo?.isDeleted == true) {
-                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                    } else {
-                                        showPremiumDialog = true
+                            if (agentInfo != null && !vipStatus.isSubscribed) {
+                                PremiumModelTag(
+                                    onClick = {
+                                        scope.launch {
+                                            if (agentInfo?.isDeleted == true) {
+                                                ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                            } else {
+                                                showPremiumDialog = true
+                                            }
+                                        }
                                     }
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                if (showPremiumDialog) {
+                                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                        navController.navigate(Routes.VipCenter)
+//                                        VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                                    }
+                                    showPremiumDialog = false
                                 }
                             }
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        if (showPremiumDialog) {
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
-                            }
-                            showPremiumDialog = false
-                        }
-                    }
 
-                    val chatMessages by chatViewModel.msgs.collectAsState()
-                    val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
-                    val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
-                    val listState = rememberLazyListState()
+                            val chatMessages by chatViewModel.msgs.collectAsState()
+                            val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
+                            val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
+                            val listState = rememberLazyListState()
 
-                    val layoutInfo = listState.layoutInfo
-                    val visibleItemsForUi = layoutInfo.visibleItemsInfo
-                    val totalItemsForUi = layoutInfo.totalItemsCount
-                    val lastVisibleIndexForUi = visibleItemsForUi.maxOfOrNull { it.index } ?: -1
-                    val hasEnoughDataForUi =
-                        totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                    val isNearTopForUi =
-                        totalItemsForUi > 0 &&
-                            lastVisibleIndexForUi >=
-                                (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                    val hasScrolledForUi =
-                        listState.firstVisibleItemIndex > 0 ||
-                            listState.firstVisibleItemScrollOffset > 0
-                    val showLoadMoreUi =
-                        hasMoreMessages &&
-                            (isLoadingMore ||
-                                (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
+                            val layoutInfo = listState.layoutInfo
+                            val visibleItemsForUi = layoutInfo.visibleItemsInfo
+                            val totalItemsForUi = layoutInfo.totalItemsCount
+                            val lastVisibleIndexForUi = visibleItemsForUi.maxOfOrNull { it.index } ?: -1
+                            val hasEnoughDataForUi =
+                                totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
+                            val isNearTopForUi =
+                                totalItemsForUi > 0 &&
+                                        lastVisibleIndexForUi >=
+                                        (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                            val hasScrolledForUi =
+                                listState.firstVisibleItemIndex > 0 ||
+                                        listState.firstVisibleItemScrollOffset > 0
+                            val showLoadMoreUi =
+                                hasMoreMessages &&
+                                        (isLoadingMore ||
+                                                (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
-                    LazyColumn(
-                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                        state = listState,
-                        reverseLayout = true,
-                    ) {
-                        item { Spacer(Modifier.height(16.dp)) }
-                        val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-                        runCatching {
-                                if (filteredChatMessages.isNotEmpty()) {
-                                    val messagesCopy = filteredChatMessages.toList()
-                                    val items =
-                                        messagesCopy.filter {
-                                            !(it.role == "user" && it.content == "continue")
-                                        }
-                                    if (items.isNotEmpty()) {
-                                        itemsIndexed(
-                                            items,
-                                            key = { index, info ->
-                                                info.localMsgId.ifEmpty {
-                                                    "${index}_${info.role}_${info.content.hashCode()}_${index}"
-                                                }
-                                            },
-                                        ) { index, item ->
-                                            runCatching {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 16.dp),
+                                state = listState,
+                                reverseLayout = true,
+                            ) {
+                                item { Spacer(Modifier.height(16.dp)) }
+                                val filteredChatMessages = chatMessages.filter { !it.isOpening() }
+                                runCatching {
+                                    if (filteredChatMessages.isNotEmpty()) {
+                                        val messagesCopy = filteredChatMessages.toList()
+                                        val items =
+                                            messagesCopy.filter {
+                                                !(it.role == "user" && it.content == "continue")
+                                            }
+                                        if (items.isNotEmpty()) {
+                                            itemsIndexed(
+                                                items,
+                                                key = { index, info ->
+                                                    info.localMsgId.ifEmpty {
+                                                        "${index}_${info.role}_${info.content.hashCode()}_${index}"
+                                                    }
+                                                },
+                                            ) { index, item ->
+                                                runCatching {
                                                     if (index < items.size) {
                                                         val hasGeneratedImage =
                                                             item.hasGeneratedImage()
                                                         val isImageMessage =
                                                             item.content.isEmpty() &&
-                                                                hasGeneratedImage
+                                                                    hasGeneratedImage
                                                         val isLatestAssistantTextMessage =
                                                             index == 0 &&
-                                                                item.role == "assistant" &&
-                                                                item.content !=
+                                                                    item.role == "assistant" &&
+                                                                    item.content !=
                                                                     "loading_animation" &&
-                                                                !isImageMessage
+                                                                    !isImageMessage
 
                                                         ChatItem(
                                                             item,
@@ -467,178 +489,195 @@ internal fun ChatPage(
                                                     }
                                                     Spacer(Modifier.height(16.dp))
                                                 }
-                                                .onFailure { e ->
-                                                    // 渲染失败时显示错误占位符
-                                                    Box(
-                                                        modifier =
-                                                            Modifier.fillMaxWidth()
-                                                                .height(60.dp)
-                                                                .background(
-                                                                    Color.Red.copy(alpha = 0.1f)
-                                                                )
-                                                    ) {
-                                                        Text(
-                                                            text = "Message loading failed",
-                                                            color = Color.White,
+                                                    .onFailure { e ->
+                                                        // 渲染失败时显示错误占位符
+                                                        Box(
                                                             modifier =
-                                                                Modifier.align(Alignment.Center),
-                                                        )
+                                                                Modifier
+                                                                    .fillMaxWidth()
+                                                                    .height(60.dp)
+                                                                    .background(
+                                                                        Color.Red.copy(alpha = 0.1f)
+                                                                    )
+                                                        ) {
+                                                            Text(
+                                                                text = "Message loading failed",
+                                                                color = Color.White,
+                                                                modifier =
+                                                                    Modifier.align(Alignment.Center),
+                                                            )
+                                                        }
+                                                        Spacer(Modifier.height(16.dp))
                                                     }
-                                                    Spacer(Modifier.height(16.dp))
-                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                    .onFailure { e ->
+                                        item {
+                                            Box(
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .height(100.dp)
+                                                        .background(Color.Red.copy(alpha = 0.1f))
+                                            ) {
+                                                Text(
+                                                    text = "Chat history loading failed, please retry",
+                                                    color = Color.White,
+                                                    modifier = Modifier.align(Alignment.Center),
+                                                )
+                                            }
+                                        }
+                                    }
+                                val showIntroOpeningTop =
+                                    isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
+                                if (showIntroOpeningTop) {
+                                    item {
+                                        agentInfo?.let { agent ->
+                                            val shouldShowOpening = agent.opening.isNotEmpty()
+                                            if (shouldShowOpening) {
+                                                val openingMessage =
+                                                    MsgInfo(
+                                                        content = agent.opening,
+                                                        role = "assistant",
+                                                        meta_data =
+                                                            MsgInfo.MsgMetaData(
+                                                                agentId = agent.id,
+                                                                isOpening = true,
+                                                            ),
+                                                        audio_url = agent.opening_audio_url,
+                                                    )
+                                                ChatItem(
+                                                    openingMessage,
+                                                    isCurrentPage = isCurrentPage,
+                                                    chatViewModel = chatViewModel,
+                                                    isGuideVisible = isGuideVisible,
+                                                    messageFontSizeSp = chatFontSizeSp,
+                                                )
+                                                Spacer(Modifier.height(16.dp))
+                                            }
+                                        }
+                                    }
+                                    item {
+                                        agentInfo?.intro?.let { info ->
+                                            if (info.isNotEmpty()) {
+                                                AgentInfoChatCard(info)
+                                                Spacer(Modifier.height(16.dp))
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (showLoadMoreUi) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(60.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            if (isLoadingMore) {
+                                                CircularProgressIndicator(
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier
+                                                        .width(24.dp)
+                                                        .height(24.dp),
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "Pull to load more",
+                                                    color =
+                                                        MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.6f
+                                                        ),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                            .onFailure { e ->
-                                item {
-                                    Box(
-                                        modifier =
-                                            Modifier.fillMaxWidth()
-                                                .height(100.dp)
-                                                .background(Color.Red.copy(alpha = 0.1f))
-                                    ) {
-                                        Text(
-                                            text = "Chat history loading failed, please retry",
-                                            color = Color.White,
-                                            modifier = Modifier.align(Alignment.Center),
-                                        )
-                                    }
-                                }
-                            }
-                        val showIntroOpeningTop =
-                            isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
-                        if (showIntroOpeningTop) {
-                            item {
-                                agentInfo?.let { agent ->
-                                    val shouldShowOpening = agent.opening.isNotEmpty()
-                                    if (shouldShowOpening) {
-                                        val openingMessage =
-                                            MsgInfo(
-                                                content = agent.opening,
-                                                role = "assistant",
-                                                meta_data =
-                                                    MsgInfo.MsgMetaData(
-                                                        agentId = agent.id,
-                                                        isOpening = true,
-                                                    ),
-                                                audio_url = agent.opening_audio_url,
-                                            )
-                                        ChatItem(
-                                            openingMessage,
-                                            isCurrentPage = isCurrentPage,
-                                            chatViewModel = chatViewModel,
-                                            isGuideVisible = isGuideVisible,
-                                            messageFontSizeSp = chatFontSizeSp,
-                                        )
-                                        Spacer(Modifier.height(16.dp))
-                                    }
-                                }
-                            }
-                            item {
-                                agentInfo?.intro?.let { info ->
-                                    if (info.isNotEmpty()) {
-                                        AgentInfoChatCard(info)
-                                        Spacer(Modifier.height(16.dp))
-                                    }
-                                }
-                            }
-                        }
 
-                        if (showLoadMoreUi) {
-                            item {
+                            LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
+                                snapshotFlow {
+                                    listState.firstVisibleItemIndex to
+                                            listState.firstVisibleItemScrollOffset
+                                }
+                                    .collect { (firstVisibleIndex, scrollOffset) ->
+                                        delay(100)
+                                        val layoutInfo = listState.layoutInfo
+                                        val visibleItems = layoutInfo.visibleItemsInfo
+                                        val totalItemsCount = layoutInfo.totalItemsCount
+                                        val lastVisibleIndex = visibleItems.maxOfOrNull { it.index } ?: 0
+
+                                        val hasEnoughData =
+                                            totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
+                                        val isNearTop =
+                                            totalItemsCount > 0 &&
+                                                    lastVisibleIndex >=
+                                                    (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
+                                        val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
+                                        val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
+
+                                        if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
+                                            chatViewModel.loadMoreMessages()
+                                        }
+                                    }
+                            }
+
+                            if (agentInfo?.isDeleted == true) {
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .padding(horizontal = 16.dp)
+                                            .clip(RoundedCornerShape(24.dp))
+                                            .background(Color(0x9937303D)),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    if (isLoadingMore) {
-                                        CircularProgressIndicator(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.width(24.dp).height(24.dp),
-                                        )
-                                    } else {
-                                        Text(
-                                            text = "Pull to load more",
-                                            color =
-                                                MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.6f
-                                                ),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                    }
+                                    Text(
+                                        text = stringResource(R.string.str_chat_disabled),
+                                        color = Color(0x8CFFFFFF),
+                                    )
+                                }
+                            } else {
+                                val effectiveBottomPadding =
+                                    if (showMorePanel) morePanelHeight else bottomPadding
+
+                                CompositionLocalProvider(
+                                    LocalDensity provides
+                                            Density(
+                                                density = LocalDensity.current.density,
+                                                fontScale = 1f, // 核心：禁用字体缩放
+                                            )
+                                ) {
+                                    ChatInput(
+                                        chatViewModel = chatViewModel,
+                                        onSendMessage = { chatViewModel.sendMsg() },
+                                        onToggleMorePanel = { showMorePanel = !showMorePanel },
+                                        showMorePanel = showMorePanel,
+                                        bottomPadding = effectiveBottomPadding,
+                                        focusRequester = inputFocusRequester,
+                                        onFocusChange = { focused ->
+                                            if (!isCurrentPage) return@ChatInput
+                                            if (suppressFocusCallback.value) {
+                                                suppressFocusCallback.value = false
+                                                return@ChatInput
+                                            }
+                                            onInputFocusChange(focused)
+                                        },
+                                    )
                                 }
                             }
                         }
-                    }
 
-                    LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
-                        snapshotFlow {
-                                listState.firstVisibleItemIndex to
-                                    listState.firstVisibleItemScrollOffset
-                            }
-                            .collect { (firstVisibleIndex, scrollOffset) ->
-                                delay(100)
-                                val layoutInfo = listState.layoutInfo
-                                val visibleItems = layoutInfo.visibleItemsInfo
-                                val totalItemsCount = layoutInfo.totalItemsCount
-                                val lastVisibleIndex = visibleItems.maxOfOrNull { it.index } ?: 0
-
-                                val hasEnoughData =
-                                    totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                                val isNearTop =
-                                    totalItemsCount > 0 &&
-                                        lastVisibleIndex >=
-                                            (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                                val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
-                                val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
-
-                                if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
-                                    chatViewModel.loadMoreMessages()
-                                }
-                            }
-                    }
-
-                    if (agentInfo?.isDeleted == true) {
-                        Box(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(48.dp)
-                                    .padding(horizontal = 16.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color(0x9937303D)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.str_chat_disabled),
-                                color = Color(0x8CFFFFFF),
-                            )
-                        }
-                    } else {
-                        val effectiveBottomPadding =
-                            if (showMorePanel) morePanelHeight else bottomPadding
-
-                        CompositionLocalProvider(
-                            LocalDensity provides
-                                Density(
-                                    density = LocalDensity.current.density,
-                                    fontScale = 1f, // 核心：禁用字体缩放
-                                )
-                        ) {
-                            ChatInput(
-                                chatViewModel = chatViewModel,
-                                onSendMessage = { chatViewModel.sendMsg() },
-                                onToggleMorePanel = { showMorePanel = !showMorePanel },
-                                showMorePanel = showMorePanel,
-                                bottomPadding = effectiveBottomPadding,
-                                focusRequester = inputFocusRequester,
-                                onFocusChange = { focused ->
-                                    if (!isCurrentPage) return@ChatInput
-                                    if (suppressFocusCallback.value) {
-                                        suppressFocusCallback.value = false
-                                        return@ChatInput
-                                    }
-                                    onInputFocusChange(focused)
-                                },
+                        SnackbarHost(snackbarHostState) {
+                            Snackbar(
+                                snackbarData = it,
+                                containerColor = Color(0xFF322F35),
+                                contentColor = Color.White
                             )
                         }
                     }
@@ -680,7 +719,9 @@ internal fun ChatPage(
 
                 KeepTalkingFloatingButton(
                     modifier =
-                        Modifier.align(Alignment.BottomEnd).padding(bottom = buttonBottomOffset),
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = buttonBottomOffset),
                     visible = showKeepTalkingButton,
                     enabled = isKeepTalkingEnabled,
                     onClick = { chatViewModel.sendKeepTalkingMessage() },
@@ -688,12 +729,27 @@ internal fun ChatPage(
             }
         }
 
+        val resetSucMsg = stringResource(R.string.reset_suc_msg)
+
         ChatMorePanel(
+            navController,
             visible = showMorePanel,
             agentInfo = agentInfo,
             chatViewModel = chatViewModel,
             onDismiss = { showMorePanel = false },
             onHeightChange = { h -> morePanelHeight = h },
+            onReset = {
+                scope.launch {
+                    showMorePanel = false
+
+                    try {
+                        chatViewModel.reset()
+                        snackbarHostState.showSnackbar(message = resetSucMsg)
+                    } catch (_: Throwable) {
+                        ToastUtils.showShort(R.string.reset_failed_msg)
+                    }
+                }
+            }
         )
 
         ChatSettingsDrawer(
@@ -707,11 +763,13 @@ internal fun ChatPage(
             totalPoints = boostState.chatMessagePoints,
             enabled = isCurrentPage,
             modifier =
-                Modifier.align(Alignment.TopCenter).padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
 
-        ShowLimitDialog(chatViewModel)
-        ShowImageGenerationDialog(chatViewModel)
+        ShowLimitDialog(navController,chatViewModel)
+        ShowImageGenerationDialog(navController, chatViewModel)
 
         // Boost 功能弹窗：显示半屏底部弹窗，允许用户投入积分
         // 触发场景：
@@ -805,9 +863,9 @@ private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agen
 
 /** 聊天消息受限的dialog */
 @Composable
-private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
+private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatViewModel) {
     val showDialog by chatViewModel.showLimitDialog.collectAsState()
-    val context = LocalContext.current
+//    val context = LocalContext.current
     if (showDialog) {
         val data =
             ChatDialogData(
@@ -820,13 +878,15 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
             onCancel = { chatViewModel.dismissDialog() },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                 }
                 chatViewModel.dismissDialog()
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                 }
                 chatViewModel.dismissDialog()
             },
@@ -836,7 +896,7 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
 
 /** 消息生图接口受限时候的弹窗dialog */
 @Composable
-private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
+private fun ShowImageGenerationDialog(navController: NavController, chatViewModel: ChatViewModel) {
     val context = LocalContext.current
     val dialogData by chatViewModel.showImageGenerationDialog.collectAsState()
 
@@ -866,7 +926,8 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(Routes.VipCenter)
+//                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                         }
                     }
 
@@ -878,7 +939,8 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(Routes.VipCenter)
+//                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                         }
                     }
 

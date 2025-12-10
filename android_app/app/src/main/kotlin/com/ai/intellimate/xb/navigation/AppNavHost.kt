@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,8 +12,11 @@ import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.SplashLoginUI
+import com.ai.intellimate.chat.ChatScreen
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.settings.SettingScreen
+import com.ai.intellimate.vip.VipCenterContent
+import com.ai.intellimate.xb.helper.AgentStore
 
 /**
  * 应用导航宿主组件
@@ -74,6 +78,37 @@ fun AppNavHost(
                 navController,
                 mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
+            )
+        }
+
+        // 定义vip订阅页面路由
+        composable(Routes.VipCenter) {
+            VipCenterContent(navController)
+        }
+
+        // 定义聊天页面路由
+        composable(Routes.ChatPage) { backStackEntry ->
+
+            val agentId = backStackEntry.arguments?.getString("agentId")
+            val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
+            LaunchedEffect(agentId) {
+                val agent = AgentStore.getAgent(agentId = agentId)
+                if(agentId != null) {
+                    if (agent != null) {
+                        chatViewModel.setAgentInfo(agent, true)
+                    } else {
+                        chatViewModel.setAgentID(agentId)
+                    }
+                    chatViewModel.updateUserInfo()
+                }
+            }
+
+            ChatScreen(
+                navController,
+                chatViewModel = chatViewModel,
+                showBackButton = true,
+                shouldShowBoostSheetOnOpen = showBoost == true,
+                agentId = agentId
             )
         }
     }
