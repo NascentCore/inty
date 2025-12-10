@@ -74,7 +74,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.vip.VipCenterActivity
-import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -113,6 +112,7 @@ internal fun ChatPage(
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
+    val characterEnergy by chatViewModel.characterEnergy.collectAsState()
 
     // 为角色应援/Boost 功能
     // 这里是 AI 生成代码，不清楚 UI 上有什么影响
@@ -339,11 +339,6 @@ internal fun ChatPage(
                     Spacer(Modifier.height(48.dp))
 
                     agentInfo?.let { info ->
-                        val storedEnergyPoints = boostState.boostsByAgent[info.id]?.pointsInvested
-                        val fallbackEnergyPoints = remember(info.id) { Random.nextInt(0, 101) }
-                        val displayedEnergyPoints =
-                            (storedEnergyPoints ?: fallbackEnergyPoints).takeIf { isDebugMode }
-
                         ChatTopBar(
                             modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                             agentInfo = info,
@@ -351,7 +346,7 @@ internal fun ChatPage(
                             onBack = onBack,
                             fontSize = 15.sp,
                             avatarWidth = 40.dp,
-                            earnedPoints = displayedEnergyPoints,
+                            earnedPoints = characterEnergy,
                             onClickMore = {
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {

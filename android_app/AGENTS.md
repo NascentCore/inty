@@ -33,6 +33,12 @@
 - 处理用户数据时遵循 GDPR/CCPA，执行数据最小化、加密存储/传输，并提供删除、修改能力。
 - 角色主页（`AgentInfoScreen`）已接入聊天记录中的 `generatedImage` 数据，必须展示 “AI-Generated Images” 画廊，并使用明确的 AI 标签提示用户内容来源；画廊数据通过 `ChatRepository.getMessagesFlow(agentId)` 提供的历史消息实时更新。
 
+## Character Room 组件
+
+- 本地角色元数据与能量值统一持久化在 `core/data/src/main/kotlin/ai/sxwl/android/data/character`。
+- `CharacterDatabase` 为单库入口，`CharacterRepository` 负责暴露 `Flow` 订阅与同步方法，app 层通过 `DataModule.getCharacterRepository()` 获取实例。
+- 聊天页通过 Room 统计 AI 回复次数并实时刷新顶部能量，禁止绕过仓库直接访问数据库。
+
 ## Kotlin / Compose UI 规范
 
 - 禁止使用魔法值（如 `10.dp`）——将 UI 常量定义在 `core/design` token 或 `MaterialTheme` 中，通过入参传递并提供合理默认值。

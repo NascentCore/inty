@@ -13,6 +13,7 @@ import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
@@ -34,10 +35,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
+
 class ChatViewModel : BaseVM() {
 
     // 依赖注入 - 使用新的架构
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
+    private val characterRepository: CharacterRepository = DataModule.getCharacterRepository()
     private val sendMessageUseCase = DataModule.sendMessageUseCase
     private val loadChatHistoryUseCase = DataModule.loadChatHistoryUseCase
     private val syncChatDataUseCase = DataModule.syncChatDataUseCase
@@ -77,6 +81,9 @@ class ChatViewModel : BaseVM() {
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
+    private val _characterEnergy = MutableStateFlow(0)
+    val characterEnergy = _characterEnergy.asStateFlow()
+
     // 防抖机制：避免快速点击发送按钮
     private var lastSendTime = 0L
     private val SEND_DEBOUNCE_TIME = 1000L // 1秒防抖
@@ -97,7 +104,9 @@ class ChatViewModel : BaseVM() {
     private var messagesJob: Job? = null
     private var loadingMoreJob: Job? = null
     private var hasMoreJob: Job? = null
+    private var characterEnergyJob: Job? = null
     private var boundAgentId: String? = null
+    private var lastSyncedEnergyPoints = 0
 
     fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
 
@@ -129,6 +138,9 @@ class ChatViewModel : BaseVM() {
             _isQueryMsgsCompleted.value = false
             // 停止语音播放
             audioManager?.stopAllPlayback()
+            characterEnergyJob?.cancel()
+            _characterEnergy.value = 0
+            lastSyncedEnergyPoints = 0
             return
         }
 
@@ -136,6 +148,9 @@ class ChatViewModel : BaseVM() {
         // syncLatestMessages 内部已经有逻辑判断是否有新消息，如果没有新消息不会更新本地数据
         if (_agentInfo.value?.id == agentInfo.id) {
             _agentInfo.value = agentInfo
+            viewModelScope.launch(Dispatchers.IO) {
+                characterRepository.syncCharacterSnapshot(agentInfo, lastSyncedEnergyPoints)
+            }
             // 总是触发后台同步，确保用户看到最新消息
             viewModelScope.launch(Dispatchers.IO) {
                 try {
@@ -165,6 +180,12 @@ class ChatViewModel : BaseVM() {
         )
 
         _agentInfo.value = agentInfo
+        lastSyncedEnergyPoints = 0
+        _characterEnergy.value = 0
+        observeCharacterEnergy(agentInfo.id)
+        viewModelScope.launch(Dispatchers.IO) {
+            characterRepository.syncCharacterSnapshot(agentInfo, lastSyncedEnergyPoints)
+        }
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
 
@@ -234,6 +255,11 @@ class ChatViewModel : BaseVM() {
                         lastAiMsgInfo != null && latestAiMsg?.id != lastAiMsgInfo?.id
 
                     lastAiMsgInfo = latestAiMsg
+
+                    val currentAgent = _agentInfo.value
+                    if (currentAgent != null && currentAgent.id == agentId) {
+                        syncCharacterEnergyFromMessages(currentAgent, list)
+                    }
                 }
             }
         loadingMoreJob =
@@ -248,6 +274,32 @@ class ChatViewModel : BaseVM() {
                     _hasMoreMessages.value = more
                 }
             }
+    }
+
+    private fun observeCharacterEnergy(agentId: String) {
+        characterEnergyJob?.cancel()
+        characterEnergyJob =
+            viewModelScope.launch {
+                characterRepository.observeCharacter(agentId).collect { entity ->
+                    val points = entity?.energyPoints ?: 0
+                    _characterEnergy.value = points
+                    lastSyncedEnergyPoints = points
+                }
+            }
+    }
+
+    private fun syncCharacterEnergyFromMessages(agent: AgentInfo, messages: List<MsgInfo>) {
+        val energyPoints =
+            messages.count { msg ->
+                msg.role == "assistant" &&
+                    !msg.isOpening() &&
+                    msg.content != LOADING_PLACEHOLDER_CONTENT
+            }
+        if (energyPoints <= lastSyncedEnergyPoints) return
+        lastSyncedEnergyPoints = energyPoints
+        viewModelScope.launch(Dispatchers.IO) {
+            characterRepository.syncCharacterSnapshot(agent, energyPoints)
+        }
     }
 
     /** 加载聊天历史 - 使用增量同步优化体验 */
@@ -1262,6 +1314,9 @@ class ChatViewModel : BaseVM() {
         lastQueryAgentId = null
         lastQueryTime = 0L
         lastSendTime = 0L
+        characterEnergyJob?.cancel()
+        _characterEnergy.value = 0
+        lastSyncedEnergyPoints = 0
 
         // 清理chatSettings
         _chatSettings.value = emptyMap()
