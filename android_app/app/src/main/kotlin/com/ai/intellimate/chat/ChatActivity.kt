@@ -12,8 +12,6 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -174,7 +172,6 @@ class ChatActivity : BaseActivity() {
             )
 
 //            ChatPage(
-//                navController = navController,
 //                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
 //                chatViewModel = chatViewModel,
 //                showBackButton = true,
