@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
@@ -78,6 +79,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.navigation.Routes
 import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -99,6 +101,7 @@ object ChatPageSource {
 
 @Composable
 internal fun ChatPage(
+    navController: NavController,
     modifier: Modifier,
     chatViewModel: ChatViewModel,
     showBackButton: Boolean = false,
@@ -409,7 +412,8 @@ internal fun ChatPage(
                                 Spacer(Modifier.height(8.dp))
                                 if (showPremiumDialog) {
                                     if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                        VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                                        navController.navigate(Routes.VipCenter)
+//                                        VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                                     }
                                     showPremiumDialog = false
                                 }
@@ -732,6 +736,7 @@ internal fun ChatPage(
         val resetSucMsg = stringResource(R.string.reset_suc_msg)
 
         ChatMorePanel(
+            navController,
             visible = showMorePanel,
             agentInfo = agentInfo,
             chatViewModel = chatViewModel,
@@ -767,8 +772,8 @@ internal fun ChatPage(
                     .padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
 
-        ShowLimitDialog(chatViewModel)
-        ShowImageGenerationDialog(chatViewModel)
+        ShowLimitDialog(navController,chatViewModel)
+        ShowImageGenerationDialog(navController, chatViewModel)
 
         // Boost 功能弹窗：显示半屏底部弹窗，允许用户投入积分
         // 触发场景：
@@ -862,9 +867,9 @@ private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agen
 
 /** 聊天消息受限的dialog */
 @Composable
-private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
+private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatViewModel) {
     val showDialog by chatViewModel.showLimitDialog.collectAsState()
-    val context = LocalContext.current
+//    val context = LocalContext.current
     if (showDialog) {
         val data =
             ChatDialogData(
@@ -877,13 +882,15 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
             onCancel = { chatViewModel.dismissDialog() },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                 }
                 chatViewModel.dismissDialog()
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                    navController.navigate(Routes.VipCenter)
+//                    VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                 }
                 chatViewModel.dismissDialog()
             },
@@ -893,7 +900,7 @@ private fun ShowLimitDialog(chatViewModel: ChatViewModel) {
 
 /** 消息生图接口受限时候的弹窗dialog */
 @Composable
-private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
+private fun ShowImageGenerationDialog(navController: NavController, chatViewModel: ChatViewModel) {
     val context = LocalContext.current
     val dialogData by chatViewModel.showImageGenerationDialog.collectAsState()
 
@@ -923,7 +930,8 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(Routes.VipCenter)
+//                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                         }
                     }
 
@@ -935,7 +943,8 @@ private fun ShowImageGenerationDialog(chatViewModel: ChatViewModel) {
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(Routes.VipCenter)
+//                            VipCenterActivity.launch(context, VipCenterActivity.CHAT_PAGE)
                         }
                     }
 

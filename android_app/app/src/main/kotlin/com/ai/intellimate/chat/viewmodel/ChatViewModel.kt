@@ -24,6 +24,7 @@ import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
+import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -1253,6 +1254,7 @@ class ChatViewModel : BaseVM() {
                 val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 when (result) {
                     is HttpResult.Success -> {
+                        AgentStore.addAgent(result.data)
                         setAgentInfo(result.data, forceSync = forceSync)
                     }
 
