@@ -267,7 +267,6 @@ private val MAX_RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(32)
 private val MAX_RESUB_REMINDER_MULTIPLIER =
     (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
 private val FEEDBACK_DIALOG_MIN_INTERVAL_MS = TimeUnit.HOURS.toMillis(12)
-private const val FEEDBACK_DIALOG_RANDOM_THRESHOLD = 0.2f
 
 @Composable
 private fun ExpiredDialogLogic(navController: NavController, mainViewModel: MainViewModel) {
@@ -338,18 +337,14 @@ private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
     LaunchedEffect(Unit) {
         if (!hasEvaluatedRandomPrompt) {
             hasEvaluatedRandomPrompt = true
-            // 检查是否已请求过反馈，如果已请求过则不显示
-            if (!IntySetting.get_feedback_requested() && !showDialog && shouldTriggerRandomFeedbackPrompt()) {
-                mainViewModel.showFeedbackRequestDialog()
+            // 使用原子方法检查并标记反馈请求，防止并发竞态条件
+            if (!showDialog && shouldTriggerRandomFeedbackPrompt()) {
+                // tryMarkFeedbackRequested() 原子性地检查并设置标志，返回 true 表示成功标记（之前未请求）
+                if (IntySetting.tryMarkFeedbackRequested()) {
+                    IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+                    mainViewModel.showFeedbackRequestDialog()
+                }
             }
-        }
-    }
-
-    LaunchedEffect(showDialog) {
-        if (showDialog) {
-            IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
-            // 标记已请求过反馈，防止再次显示
-            IntySetting.set_feedback_requested(true)
         }
     }
 
@@ -370,7 +365,8 @@ private fun shouldTriggerRandomFeedbackPrompt(): Boolean {
     if (now - lastShowTime < FEEDBACK_DIALOG_MIN_INTERVAL_MS) {
         return false
     }
-    return Random.nextFloat() < FEEDBACK_DIALOG_RANDOM_THRESHOLD
+    // 使用统一的配置值，与 ChatViewModel 保持一致
+    return Random.nextFloat() < UiConfigs.FeedbackDialog.RANDOM_THRESHOLD
 }
 
 private fun shouldShowResubReminderDialog(

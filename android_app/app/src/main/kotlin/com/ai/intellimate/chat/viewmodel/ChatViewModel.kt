@@ -499,14 +499,15 @@ class ChatViewModel : BaseVM() {
 
                         // 增加总消息数并检查是否需要显示反馈对话框
                         val newMessageCount = IntySetting.incrementTotalMessageCount()
-                        if (!IntySetting.get_feedback_requested() && 
-                            newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD == 0 &&
+                        if (newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD == 0 &&
                             pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)) {
-                            LogUtils.d("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount")
-                            // 标记已请求过反馈，防止再次显示
-                            IntySetting.set_feedback_requested(true)
-                            IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
-                            _showFeedbackDialog.value = true
+                            // 使用原子方法检查并标记反馈请求，防止并发竞态条件
+                            // tryMarkFeedbackRequested() 原子性地检查并设置标志，返回 true 表示成功标记（之前未请求）
+                            if (IntySetting.tryMarkFeedbackRequested()) {
+                                LogUtils.d("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount")
+                                IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+                                _showFeedbackDialog.value = true
+                            }
                         }
 
                         runCatching {
