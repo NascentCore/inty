@@ -358,13 +358,33 @@ object IntySetting {
     /** 设置 Explore 页面角色卡的收藏状态 */
     fun setExploreAgentFavorite(agentId: String, favorite: Boolean) {
         if (agentId.isBlank()) return
-        curUserSetting.putBoolean("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", favorite)
+        val key = "$KEY_PREFIX_EXPLORE_FAVORITE$agentId"
+        if (favorite) {
+            curUserSetting.putBoolean(key, true)
+        } else {
+            curUserSetting.removeValueForKey(key)
+        }
     }
 
     /** 获取 Explore 页面角色卡的收藏状态 */
     fun isExploreAgentFavorite(agentId: String): Boolean {
         if (agentId.isBlank()) return false
         return curUserSetting.decodeBool("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", false)
+    }
+
+    /** 获取所有已收藏的 Explore 角色ID */
+    fun getExploreFavoriteAgentIds(): List<String> {
+        val keys = curUserSetting.allKeys() ?: return emptyList()
+        return keys
+            .asSequence()
+            .filter { it.startsWith(KEY_PREFIX_EXPLORE_FAVORITE) }
+            .mapNotNull { key ->
+                val agentId = key.removePrefix(KEY_PREFIX_EXPLORE_FAVORITE)
+                if (curUserSetting.decodeBool(key, false)) agentId else null
+            }
+            .distinct()
+            .sorted()
+            .toList()
     }
 
     // endregion

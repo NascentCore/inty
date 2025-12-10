@@ -448,7 +448,6 @@ private fun ChatTabContent(
 /** 会话列表Tab内容 */
 @Composable
 private fun MessagesTabContent(navController: NavController) {
-    val context = LocalContext.current
     val messagesViewModel: MessagesViewModel = viewModel()
 
     LaunchedEffect(Unit) { messagesViewModel.getConversations() }
@@ -464,6 +463,10 @@ private fun MessagesTabContent(navController: NavController) {
 //                conversation.convertToAgentInfo(),
 //                pageSource = ChatActivity.MESSAGES_TAB,
 //            )
+        },
+        onClickFavoriteAgent = { agent ->
+            AgentStore.addAgent(agent)
+            navController.navigate(Routes.chatPage(agent.id, false))
         },
         pageTrackingContext = "MainActivity",
     )

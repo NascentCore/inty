@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.LinkedHashMap
+import java.util.Locale
 
 /** Messages页面ViewModel 负责管理会话列表的状态和业务逻辑 */
 class MessagesViewModel : BaseVM() {
@@ -62,6 +64,61 @@ class MessagesViewModel : BaseVM() {
         val agentId = event.data[FCMConstants.DATA_KEY_AGENT_ID]
         if (agentId.isNullOrBlank()) return
         viewModelScope.launch(Dispatchers.Main) { markConversationHasPush(agentId) }
+    }
+
+    /** 加载用户收藏的角色列表 */
+    fun loadFavoriteAgents() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isLoadingFavorites = true) }
+            try {
+                val favoriteIds = IntySetting.getExploreFavoriteAgentIds()
+                if (favoriteIds.isEmpty()) {
+                    _uiState.update { it.copy(favoriteAgents = emptyList()) }
+                    return@launch
+                }
+
+                val favoriteIdSet = favoriteIds.toSet()
+                val agentMap = LinkedHashMap<String, AgentInfo>()
+
+                fun collectAgents(source: List<AgentInfo>) {
+                    source.forEach { agent ->
+                        if (agent.id in favoriteIdSet) {
+                            agentMap[agent.id] = agent
+                        }
+                    }
+                }
+
+                collectAgents(AgentCacheManager.getCachedAgents())
+                collectAgents(AgentCacheManager.getCachedChatAgents())
+                collectAgents(AgentCacheManager.getCachedUserCreatedAgents())
+
+                val missingIds = favoriteIds.filterNot { agentMap.containsKey(it) }
+                missingIds.forEach { agentId ->
+                    try {
+                        when (val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)) {
+                            is HttpResult.Success -> agentMap[agentId] = result.data
+                            is HttpResult.Failure -> {
+                                LogUtils.w("MessagesViewModel - 获取收藏 agent 失败: ${result.message}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        LogUtils.e("MessagesViewModel - 获取收藏 agent 异常: ${e.message}")
+                    }
+                }
+
+                val orderedAgents =
+                    if (agentMap.isEmpty()) {
+                        emptyList()
+                    } else {
+                        val ordered = favoriteIds.mapNotNull { agentMap[it] }
+                        if (ordered.isNotEmpty()) ordered else agentMap.values.sortedBy { it.name.lowercase(Locale.getDefault()) }
+                    }
+
+                _uiState.update { it.copy(favoriteAgents = orderedAgents) }
+            } finally {
+                _uiState.update { it.copy(isLoadingFavorites = false) }
+            }
+        }
     }
 
     /**
