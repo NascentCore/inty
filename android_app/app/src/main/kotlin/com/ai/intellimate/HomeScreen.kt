@@ -338,7 +338,8 @@ private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
     LaunchedEffect(Unit) {
         if (!hasEvaluatedRandomPrompt) {
             hasEvaluatedRandomPrompt = true
-            if (!showDialog && shouldTriggerRandomFeedbackPrompt()) {
+            // 检查是否已请求过反馈，如果已请求过则不显示
+            if (!IntySetting.get_feedback_requested() && !showDialog && shouldTriggerRandomFeedbackPrompt()) {
                 mainViewModel.showFeedbackRequestDialog()
             }
         }
@@ -347,6 +348,8 @@ private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
     LaunchedEffect(showDialog) {
         if (showDialog) {
             IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+            // 标记已请求过反馈，防止再次显示
+            IntySetting.set_feedback_requested(true)
         }
     }
 

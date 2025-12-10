@@ -18,8 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.AgentBackground
+import com.ai.intellimate.ui.FeedbackRequestDialog
 
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
@@ -145,6 +148,8 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
+        val showFeedbackDialog by chatViewModel.showFeedbackDialog.collectAsState()
+        val context = LocalContext.current
         val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
         val hasLoadingMessage =
             chatMessages.any { msg ->
@@ -166,14 +171,25 @@ class ChatActivity : BaseActivity() {
                 enableAnimatedBackground = autoPlayAnimation,
             )
 
-//            ChatPage(
-//                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
-//                chatViewModel = chatViewModel,
-//                showBackButton = true,
-//                onBack = { finish() },
-//                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
-//                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
-//            )
+            ChatPage(
+                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
+                chatViewModel = chatViewModel,
+                showBackButton = true,
+                onBack = { finish() },
+                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
+                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
+            )
+
+            // 反馈请求对话框
+            if (showFeedbackDialog) {
+                FeedbackRequestDialog(
+                    onCancel = { chatViewModel.hideFeedbackDialog() },
+                    onSendSuggestions = {
+                        chatViewModel.hideFeedbackDialog()
+                        ReportActivity.launchFeedback(context)
+                    },
+                )
+            }
         }
     }
 

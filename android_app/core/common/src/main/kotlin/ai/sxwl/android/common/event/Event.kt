@@ -36,6 +36,9 @@ sealed class SystemEvent : BaseEvent() {
     data class AppStateChanged(val isForeground: Boolean) : SystemEvent()
 
     data class ErrorOccurred(val error: Throwable, val context: String) : SystemEvent()
+
+    /** 反馈对话框请求事件 - 当满足条件时触发显示反馈请求对话框 */
+    object FeedbackDialogRequest : SystemEvent()
 }
 
 /** FCM 推送通知相关事件 */

@@ -16,6 +16,8 @@ private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
+private const val KEY_FEEDBACK_REQUESTED = "feedback_requested"
+private const val KEY_TOTAL_MESSAGE_COUNT = "total_message_count"
 
 object IntySetting {
 
@@ -187,6 +189,29 @@ object IntySetting {
 
     fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
         curUserSetting.putLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
+    }
+
+    /** 获取是否已请求过反馈 */
+    fun get_feedback_requested(): Boolean {
+        return curUserSetting.decodeBool(KEY_FEEDBACK_REQUESTED, false)
+    }
+
+    /** 设置是否已请求过反馈 */
+    fun set_feedback_requested(value: Boolean) {
+        curUserSetting.putBoolean(KEY_FEEDBACK_REQUESTED, value)
+    }
+
+    /** 获取总消息数（跨所有AI角色） */
+    fun getTotalMessageCount(): Int {
+        return curUserSetting.decodeInt(KEY_TOTAL_MESSAGE_COUNT, 0)
+    }
+
+    /** 增加总消息数并返回新的计数 */
+    fun incrementTotalMessageCount(): Int {
+        val currentCount = getTotalMessageCount()
+        val newCount = currentCount + 1
+        curUserSetting.putInt(KEY_TOTAL_MESSAGE_COUNT, newCount)
+        return newCount
     }
 
     /** 记录消息Tab是否需要显示推送红点 */
