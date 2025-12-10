@@ -19,21 +19,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 
-/** 姓名编辑字段 */
+val NameInputKeyBoardOption = KeyboardOptions(capitalization = KeyboardCapitalization.Words);
+
+/** 单行文本输入框框 */
 @Composable
-fun NameEditField(
+fun SingleLineInputField(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String? = null,
+    keyboardOptions: KeyboardOptions,
+    title: String? = null,
     placeholder: String? = null,
 ) {
     Column {
-        label?.let {
+        title?.let {
             Text(text = it, fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -48,7 +53,7 @@ fun NameEditField(
             Row(
                 modifier =
                     Modifier.padding(
-                            horizontal = if (label != null) 0.dp else 16.dp,
+                            horizontal = if (title != null) 0.dp else 16.dp,
                             vertical = 0.dp,
                         )
                         .fillMaxWidth()
@@ -75,6 +80,7 @@ fun NameEditField(
                             fontWeight = FontWeight.Normal,
                         )
                     },
+                    keyboardOptions = keyboardOptions,
                 )
             }
         }
