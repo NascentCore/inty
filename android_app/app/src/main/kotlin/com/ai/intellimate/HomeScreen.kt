@@ -60,7 +60,6 @@ import com.ai.intellimate.xb.navigation.Routes
 import com.inty.api.models.api.v1.version.VersionCheckResponse
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
-import kotlin.random.Random
 
 /** 主页面，包含五个tab */
 @Composable
@@ -266,7 +265,6 @@ private val RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(1)
 private val MAX_RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(32)
 private val MAX_RESUB_REMINDER_MULTIPLIER =
     (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
-private val FEEDBACK_DIALOG_MIN_INTERVAL_MS = TimeUnit.HOURS.toMillis(12)
 
 @Composable
 private fun ExpiredDialogLogic(navController: NavController, mainViewModel: MainViewModel) {
@@ -332,21 +330,6 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
 private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
     val showDialog by mainViewModel.showFeedbackRequestDialog.collectAsState()
     val context = LocalContext.current
-    var hasEvaluatedRandomPrompt by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        if (!hasEvaluatedRandomPrompt) {
-            hasEvaluatedRandomPrompt = true
-            // 使用原子方法检查并标记反馈请求，防止并发竞态条件
-            if (!showDialog && shouldTriggerRandomFeedbackPrompt()) {
-                // tryMarkFeedbackRequested() 原子性地检查并设置标志，返回 true 表示成功标记（之前未请求）
-                if (IntySetting.tryMarkFeedbackRequested()) {
-                    IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
-                    mainViewModel.showFeedbackRequestDialog()
-                }
-            }
-        }
-    }
 
     if (showDialog) {
         FeedbackRequestDialog(
@@ -357,16 +340,6 @@ private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
             },
         )
     }
-}
-
-private fun shouldTriggerRandomFeedbackPrompt(): Boolean {
-    val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
-    val now = System.currentTimeMillis()
-    if (now - lastShowTime < FEEDBACK_DIALOG_MIN_INTERVAL_MS) {
-        return false
-    }
-    // 使用统一的配置值，与 ChatViewModel 保持一致
-    return Random.nextFloat() < UiConfigs.FeedbackDialog.RANDOM_THRESHOLD
 }
 
 private fun shouldShowResubReminderDialog(
