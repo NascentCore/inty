@@ -56,6 +56,11 @@ object AgentService {
                                             .Sort
                                             .CREATED_DESC
 
+                                    "energy_points" ->
+                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
+                                            .Sort
+                                            .ENERGY_POINTS
+
                                     else ->
                                         com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
                                             .Sort
@@ -184,6 +189,27 @@ object AgentService {
                     .ai()
                     .agents()
                     .update(agentId, paramsBuilder.build())
+            response.toAgentInfo()
+        }
+    }
+
+    /** 更新智能体的 energy points（增量） */
+    suspend fun updateAgentEnergyPoints(
+        agentId: String,
+        energyPointsDelta: Int
+    ): ApiResult<AgentInfo> {
+        return IntyNetworkManager.executeRequest("Update Agent Energy Points") {
+            val params =
+                com.inty.api.models.api.v1.ai.agents.AgentUpdateParams.builder()
+                    .energyPoints(energyPointsDelta.toLong())
+                    .build()
+            val response =
+                IntyNetworkManager.getClient()
+                    .api()
+                    .v1()
+                    .ai()
+                    .agents()
+                    .update(agentId, params)
             response.toAgentInfo()
         }
     }
