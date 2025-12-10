@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List, Optional
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
 from sqlalchemy import and_, desc, func, select, update
@@ -877,6 +877,68 @@ def get_all_messages(session_id: str) -> List[Dict[str, Any]]:
 
     except Exception as e:
         logger.error(f"获取所有消息失败 {session_id}: {str(e)}")
+        return []
+
+
+def get_history_messages(session_id: str) -> List[BaseMessage]:
+    """
+    获取会话的历史消息，返回 LangChain BaseMessage 格式（排除已软删除的）
+
+    用于 Agent 对话时获取上下文历史，替代 PostgresChatMessageHistory.messages
+    以支持软删除过滤。
+
+    Args:
+        session_id: 会话ID
+
+    Returns:
+        LangChain BaseMessage 列表，按时间正序排列（最早的在前）
+    """
+    try:
+        conn = get_chat_history_connection()
+
+        query = """
+            SELECT message
+            FROM chat_history 
+            WHERE session_id = %s AND deleted_at IS NULL
+            ORDER BY created_at ASC
+        """
+
+        messages: List[BaseMessage] = []
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id,))
+            rows = cur.fetchall()
+
+            for row in rows:
+                try:
+                    message_raw = row[0]
+                    if isinstance(message_raw, str):
+                        message_data = json.loads(message_raw)
+                    elif isinstance(message_raw, dict):
+                        message_data = message_raw
+                    else:
+                        message_data = json.loads(str(message_raw))
+
+                    message_type = message_data.get("type", "human")
+                    content = ""
+
+                    if "data" in message_data and "content" in message_data["data"]:
+                        content = message_data["data"]["content"]
+                    elif "content" in message_data:
+                        content = message_data["content"]
+
+                    if message_type in ["human", "HumanMessage"]:
+                        messages.append(HumanMessage(content=content))
+                    else:
+                        messages.append(AIMessage(content=content))
+
+                except Exception as e:
+                    logger.warning(f"解析历史消息失败: {str(e)}")
+                    continue
+
+        return messages
+
+    except Exception as e:
+        logger.error(f"获取历史消息失败 {session_id}: {str(e)}")
         return []
 
 

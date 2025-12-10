@@ -23,6 +23,7 @@ from app import models
 from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
+from app.services import chat_history_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
     get_base_openai_client,
@@ -737,11 +738,12 @@ class Agent:
                     f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 获取相关的历史消息
+                # 获取相关的历史消息（排除已软删除的）
                 get_history_start = time.time()
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
-                recent_history = self._get_relevant_history(history.messages)
+                history_messages = chat_history_service.get_history_messages(session_id)
+                recent_history = self._get_relevant_history(history_messages)
                 get_history_time = time.time() - get_history_start
                 logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
@@ -960,19 +962,10 @@ class Agent:
 
         with pool.connection() as conn_local:
             try:
-                # 创建历史记录对象（仅用于读取历史消息，不保存新消息）
-                history_start = time.time()
-                history = PostgresChatMessageHistory(
-                    chat_history.TABLE_NAME, session_id, sync_connection=conn_local
-                )
-                history_init_time = time.time() - history_start
-                logger.debug(
-                    f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 获取相关的历史消息
+                # 获取相关的历史消息（排除已软删除的）
                 get_history_start = time.time()
-                recent_history = self._get_relevant_history(history.messages)
+                history_messages = chat_history_service.get_history_messages(session_id)
+                recent_history = self._get_relevant_history(history_messages)
                 get_history_time = time.time() - get_history_start
                 logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
