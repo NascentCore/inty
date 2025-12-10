@@ -338,16 +338,28 @@ class ChatDeletionResponse(BaseModel):
 
 
 class ClearMessagesRequest(BaseModel):
-    """清除消息请求"""
+    """
+    清除消息请求（软删除）
 
-    message_id: Optional[int] = None  # 消息ID，清除该ID之后的所有消息
+    支持三种模式：
+    1. 提供 message_id：清除该ID及其之后的所有消息
+    2. 提供 timestamp：清除该时间之后的所有消息
+    3. 都不提供：清除全部消息
+
+    注意：message_id 和 timestamp 不能同时提供
+    """
+
+    message_id: Optional[int] = None  # 消息ID，清除该ID及其之后的所有消息
     timestamp: Optional[str] = None  # 时间戳，清除该时间之后的所有消息（ISO格式）
     request_id: Optional[str] = None
 
     class Config:
-        # 确保至少有一个字段被提供
         json_schema_extra = {
-            "example": {"message_id": 123, "timestamp": "2024-01-01T10:00:00Z"}
+            "examples": [
+                {"message_id": 123},
+                {"timestamp": "2024-01-01T10:00:00Z"},
+                {},
+            ]
         }
 
 

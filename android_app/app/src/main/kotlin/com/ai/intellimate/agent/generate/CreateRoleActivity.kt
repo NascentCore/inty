@@ -103,7 +103,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
-import com.ai.intellimate.ui.NameEditField
+import com.ai.intellimate.ui.NameInputKeyBoardOption
+import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
@@ -946,11 +947,11 @@ private fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Name Field
-            NameEditField(
+            SingleLineInputField(
                 value = name,
                 onValueChange = { name = it },
-                label = "Name *",
+                keyboardOptions = NameInputKeyBoardOption,
+                title = "Name *",
                 placeholder = "Name your IntelliMate",
             )
 

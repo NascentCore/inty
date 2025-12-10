@@ -911,22 +911,18 @@ async def clear_agent_chat_messages(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    清除指定Agent聊天会话中的部分消息记录
-    支持两种方式：
+    清除指定Agent聊天会话中的消息记录（软删除）
+    支持三种方式：
     1. 通过消息ID清除该ID之后的所有消息
     2. 通过时间戳清除该时间之后的所有消息
+    3. 不传参数时清除全部消息
     """
     try:
         logger.info(
             f"清除Agent聊天消息 - Agent ID: {agent_id}, User ID: {current_user.id}"
         )
 
-        # 验证请求参数
-        if not request.message_id and not request.timestamp:
-            raise HTTPException(
-                status_code=400, detail="必须提供 message_id 或 timestamp 中的一个参数"
-            )
-
+        # 验证请求参数：不能同时提供 message_id 和 timestamp
         if request.message_id and request.timestamp:
             raise HTTPException(
                 status_code=400,
@@ -955,11 +951,14 @@ async def clear_agent_chat_messages(
             result = chat_history_service.clear_messages_after_id(
                 session_id=session_id, message_id=request.message_id
             )
-        else:
+        elif request.timestamp is not None:
             # 按时间戳清除
             result = chat_history_service.clear_messages_after_timestamp(
                 session_id=session_id, timestamp=request.timestamp
             )
+        else:
+            # 清除全部消息
+            result = chat_history_service.clear_all_messages(session_id=session_id)
 
         # 如果清除操作成功，同时清空 debug_messages 字段
         if result.get("success", False):
