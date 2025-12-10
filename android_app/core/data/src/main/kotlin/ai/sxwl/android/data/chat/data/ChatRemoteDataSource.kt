@@ -8,11 +8,15 @@ import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.api.model.VoteMessageReq
 import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
+import com.inty.api.core.RequestOptions
 import com.inty.api.models.api.v1.chats.agents.AgentClearMessagesParams
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
@@ -136,7 +140,6 @@ class ChatRemoteDataSource {
         return withContext(Dispatchers.IO) {
             val result = runCatching {
 
-
                 IntyNetworkManager
                     .getClient()
                     .async()
@@ -145,7 +148,10 @@ class ChatRemoteDataSource {
                     .chats()
                     .agents()
                     .clearMessages(
-                        agentId
+                        agentId = agentId,
+                        requestOptions = RequestOptions.builder()
+                            .timeout(Duration.ofMillis(NetworkConfig.getCurrentEnvironmentConfig().timeout.connectTimeoutMs))
+                            .build()
                     )
             }.onFailure {
                 LogUtils.e(it.localizedMessage)
