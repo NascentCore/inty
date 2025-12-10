@@ -32,6 +32,9 @@ object IntySetting {
     // 当前UserId
     private var curUid: String = ""
 
+    // 用于同步 incrementTotalMessageCount 操作的锁对象
+    private val messageCountLock = Any()
+
     init {
 
         curUid = getCurUserID()
@@ -206,12 +209,19 @@ object IntySetting {
         return curUserSetting.decodeInt(KEY_TOTAL_MESSAGE_COUNT, 0)
     }
 
-    /** 增加总消息数并返回新的计数 */
+    /** 增加总消息数并返回新的计数
+     * 
+     * 使用同步锁确保读-改-写操作的原子性，防止并发调用时丢失增量。
+     * 这对于反馈对话框触发逻辑至关重要，因为它依赖于消息计数达到100的倍数。
+     */
     fun incrementTotalMessageCount(): Int {
-        val currentCount = getTotalMessageCount()
-        val newCount = currentCount + 1
-        curUserSetting.putInt(KEY_TOTAL_MESSAGE_COUNT, newCount)
-        return newCount
+        synchronized(messageCountLock) {
+            // TODO: DataStore 是否能提供同步？
+            val currentCount = getTotalMessageCount()
+            val newCount = currentCount + 1
+            curUserSetting.putInt(KEY_TOTAL_MESSAGE_COUNT, newCount)
+            return newCount
+        }
     }
 
     /** 记录消息Tab是否需要显示推送红点 */

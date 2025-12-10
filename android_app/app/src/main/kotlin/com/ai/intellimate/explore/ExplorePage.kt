@@ -49,8 +49,11 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostLeaderboardActivity
-import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.boost.BoostLeaderboardEntry
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostState
+import com.ai.intellimate.boost.ui.BoostLeaderboardTab
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 
 /** Explore页面 - 推荐agents展示 */

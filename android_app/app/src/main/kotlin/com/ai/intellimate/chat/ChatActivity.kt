@@ -19,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.components.AgentBackground
@@ -151,6 +152,7 @@ class ChatActivity : BaseActivity() {
         val showFeedbackDialog by chatViewModel.showFeedbackDialog.collectAsState()
         val context = LocalContext.current
         val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
+        val navController = rememberNavController()
         val hasLoadingMessage =
             chatMessages.any { msg ->
                 val hasGeneratedImage = msg.hasGeneratedImage()
@@ -172,6 +174,7 @@ class ChatActivity : BaseActivity() {
             )
 
             ChatPage(
+                navController = navController,
                 modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
                 chatViewModel = chatViewModel,
                 showBackButton = true,
