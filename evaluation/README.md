@@ -1,9 +1,10 @@
 # evaluation - 评测运营工具
 
 Inty Evaluation（评测与运营工具），基于 React/TypeScript 与 Vite 构建。
-当前前端在构建后被拷贝至后端 `FastAPI` 静态目录，并由后端统一在 `/evaluation` 路由提供访问。
+当前前端在构建后被拷贝至 IntyEval 应用 (`eval_app/`) 的静态目录，并由 IntyEval 统一在 `/evaluation` 路由提供访问。
 
 - **⚠️ 注意：所有人操作的都是同一份后端数据，使用同样的 API key（仅用于 dev 环境）。请勿泄露或在公网展示。**
+- **架构变更**: Evaluation 端点已从主 Inty 应用分离到 IntyEval 应用，详见 `eval_app/README.md`
 
 ## Repo 初始化
 
@@ -15,27 +16,29 @@ git submodule update --init --recursive
 
 ## 快速开始（后端集成方式）
 
-方式一：本地直接运行后端并访问集成页面
+方式一：本地直接运行 IntyEval 并访问集成页面
 
 ```bash
-# 构建前端并拷贝到 app/static/evaluation
+# 构建前端并拷贝到 eval_app/static/evaluation
 ./evaluation/build.sh
 
-# 启动后端
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# 启动 IntyEval（开发模式）
+./start_eval.sh --dev
 
 # 浏览器访问（集成静态资源）
-# http://localhost:8000/evaluation
+# http://localhost:8001/evaluation
 ```
 
 方式二：使用 Docker 构建（多阶段构建自动产出并拷入静态资源）
 
 ```bash
-docker build --build-arg CONFIG_FILE=config.yaml -t inty-backend .
-docker run -p 8000:8000 -v $(pwd)/config.yaml:/config.yaml inty-backend
+# 注意：需要更新 Dockerfile 以支持 IntyEval
+# 当前 Dockerfile 可能需要调整以构建和运行 IntyEval
+docker build --build-arg CONFIG_FILE=config.yaml -t inty-eval .
+docker run -p 8001:8001 -v $(pwd)/config.yaml:/config.yaml inty-eval
 
 # 浏览器访问
-# http://localhost:8000/evaluation
+# http://localhost:8001/evaluation
 ```
 
 ## 开发模式（HMR）
@@ -46,8 +49,8 @@ docker run -p 8000:8000 -v $(pwd)/config.yaml:/config.yaml inty-backend
 # 默认对接 `https://dev.inty.sxwl.ai/api/v1`
 evaluation/start.sh
 
-# 或指定本地后端
-evaluation/start.sh --backend-url http://localhost:8000/api/v1
+# 或指定本地 IntyEval 后端
+evaluation/start.sh --backend-url http://localhost:8001/api/v1
 ```
 
 ## 构建与预览（仅前端）
@@ -143,14 +146,14 @@ git push
 
 ## 与后端集成（代码位置）
 
-- 构建与拷贝脚本：`evaluation/build.sh`（构建 `evaluation/`，拷贝至 `app/static/evaluation/`）
-- FastAPI 路由：`app/main.py`
-  - 静态资源挂载：`/static` 指向 `app/static`
-  - 页面入口：`GET /evaluation` 返回 `app/static/evaluation/index.html`
+- 构建与拷贝脚本：`evaluation/build.sh`（构建 `evaluation/`，拷贝至 `eval_app/static/evaluation/`）
+- FastAPI 路由：`eval_app/main.py`
+  - 静态资源挂载：`/static` 指向 `eval_app/static`
+  - 页面入口：`GET /evaluation` 返回 `eval_app/static/evaluation/index.html`
   - 资源访问：`GET /evaluation/{path}` 返回对应静态文件
-- Docker 多阶段构建：`Dockerfile`
-  - 第一阶段构建前端并将产物置于 `/app/static/evaluation/`
-  - 第二阶段复制上述产物到后端镜像的 `app/static/evaluation/`
+- Docker 多阶段构建：`Dockerfile`（需要更新以支持 IntyEval）
+  - 第一阶段构建前端并将产物置于 `/eval_app/static/evaluation/`
+  - 第二阶段复制上述产物到 IntyEval 镜像的 `eval_app/static/evaluation/`
 
 ## Cursor Summary
 
