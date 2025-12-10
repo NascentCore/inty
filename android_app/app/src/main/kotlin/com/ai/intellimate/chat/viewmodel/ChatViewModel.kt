@@ -180,14 +180,31 @@ class ChatViewModel : BaseVM() {
         val hasLocalData = chatRepository.getMessagesFlow(agentInfo.id).value.isNotEmpty()
 
         if (hasLocalData) {
-            // 有本地数据，立即标记为完成，然后后台同步
-            _isQueryMsgsCompleted.value = true
-            // 后台同步最新数据
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    syncChatDataUseCase(agentInfo.id)
-                } catch (e: Exception) {
-                    LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+            if (forceSync) {
+                // 🔧 修复：从通知进入时（forceSync=true），先同步最新数据，等待完成后再标记为完成
+                // 确保UI显示的是最新消息，而不是旧的本地缓存
+                _isQueryMsgsCompleted.value = false
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        syncChatDataUseCase(agentInfo.id)
+                        _isQueryMsgsCompleted.value = true
+                        LogUtils.i("ChatViewModel.setAgentInfo forceSync completed for ${agentInfo.id}")
+                    } catch (e: Exception) {
+                        LogUtils.e("ChatViewModel.setAgentInfo forceSync error: ${e.message}")
+                        // 即使同步失败，也标记为完成，避免UI一直等待
+                        _isQueryMsgsCompleted.value = true
+                    }
+                }
+            } else {
+                // 有本地数据，立即标记为完成，然后后台同步
+                _isQueryMsgsCompleted.value = true
+                // 后台同步最新数据
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        syncChatDataUseCase(agentInfo.id)
+                    } catch (e: Exception) {
+                        LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+                    }
                 }
             }
         } else {
