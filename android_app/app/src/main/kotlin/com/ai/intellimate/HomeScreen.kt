@@ -625,7 +625,7 @@ private val defaultTabItems =
         HeartBottomTabItem(
             index = 0,
             selectedIcon = R.drawable.tab_icon_home_selected,
-            unselectedIcon = R.drawable.tab_icon_home,
+            unselectedIcon = R.drawable.tab_icon_chat,
             labelResId = R.string.tab_home,
         ),
         HeartBottomTabItem(
@@ -659,31 +659,31 @@ private val christmasTabItems =
     listOf(
         HeartBottomTabItem(
             index = 0,
-            selectedIcon = R.drawable.icon_chat_tab_christmas,
-            unselectedIcon = R.drawable.tab_icon_home,
+            selectedIcon = R.drawable.tab_icon_chat_christmas,
+            unselectedIcon = R.drawable.tab_icon_chat,
             labelResId = R.string.tab_home,
         ),
         HeartBottomTabItem(
             index = 1,
-            selectedIcon = R.drawable.icon_msg_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_messages_christmas,
             unselectedIcon = R.drawable.tab_icon_messages,
             labelResId = R.string.tab_messages,
         ),
         HeartBottomTabItem(
             index = 2,
-            selectedIcon = R.drawable.icon_create_tab_christmas,
-            unselectedIcon = R.drawable.icon_create_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_create_christmas,
+            unselectedIcon = R.drawable.tab_icon_create_christmas,
             labelResId = R.string.tab_create,
         ),
         HeartBottomTabItem(
             index = 3,
-            selectedIcon = R.drawable.icon_explore_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_explore_christmas,
             unselectedIcon = R.drawable.tab_icon_explore,
             labelResId = R.string.tab_explore,
         ),
         HeartBottomTabItem(
             index = 4,
-            selectedIcon = R.drawable.icon_profile_tab_christmas,
+            selectedIcon = R.drawable.tab_icon_me_christmas,
             unselectedIcon = R.drawable.tab_icon_me,
             labelResId = R.string.tab_me,
         ),
