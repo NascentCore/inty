@@ -371,7 +371,10 @@ async def get_user_agents(
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
-            .order_by(desc(models.Agent.created_at))
+            .order_by(
+                desc(func.coalesce(models.Agent.points, 0)),
+                desc(models.Agent.created_at),
+            )
         )
 
         result = await db.execute(query)
@@ -427,7 +430,7 @@ async def get_recommended_agents(
     current_user_id: Optional[str] = None,
 ) -> List[models.Agent]:
     """
-    Get recommended AI agents list (public and approved agents, ordered by creation time desc)
+    Get recommended AI agents list (public and approved agents, ordered by energy points desc)
     """
     try:
         # Validate parameters
@@ -458,7 +461,10 @@ async def get_recommended_agents(
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
-            .order_by(desc(models.Agent.created_at))
+            .order_by(
+                desc(func.coalesce(models.Agent.points, 0)),
+                desc(models.Agent.created_at),
+            )
         )
 
         result = await db.execute(query)
@@ -640,22 +646,25 @@ async def get_recommended_agents_paginated(
             skip = (page - 1) * page_size
 
             # 确定排序方式
-            sort_order = None
+            order_by_clauses = []
             if sort_by == AgentSortOption.CREATED_ASC:
-                sort_order = models.Agent.created_at.asc()
+                order_by_clauses = [models.Agent.created_at.asc()]
             elif sort_by == AgentSortOption.RANDOM:
-                sort_order = get_deterministic_random_order(sort_seed)
+                order_by_clauses = [get_deterministic_random_order(sort_seed)]
             elif sort_by == AgentSortOption.ENERGY_POINTS:
-                sort_order = desc(models.Agent.points)
+                order_by_clauses = [
+                    desc(func.coalesce(models.Agent.points, 0)),
+                    desc(models.Agent.created_at),
+                ]
             else:  # 默认为 CREATED_DESC
-                sort_order = desc(models.Agent.created_at)
+                order_by_clauses = [desc(models.Agent.created_at)]
 
             # 获取分页数据，同时获取头像和背景图的尺寸信息
             data_query = (
                 _select_agents_with_sizes()
                 .offset(skip)
                 .limit(page_size)
-                .order_by(sort_order)
+                .order_by(*order_by_clauses)
             )
 
             result = await db.execute(data_query)

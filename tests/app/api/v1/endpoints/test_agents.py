@@ -184,10 +184,16 @@ def db_session():
 def test_recommend_agents_energy_points_sorting(
     integration_client: TestClient, db_session
 ):
-    """测试按 energy_points 排序推荐角色列表"""
-    # 创建多个 agent，设置不同的 points 值
+    """测试 /recommend 默认及显式 energy_points 排序"""
+    # 创建多个 agent，设置不同的 points 值（确保位于排行榜顶部）
     agent_ids = []
-    points_values = [100, 50, 200, 0, 150]  # 降序应该是: 200, 150, 100, 50, 0
+    points_values = [
+        1_000_000,
+        900_000,
+        800_000,
+        100,
+        700_000,
+    ]  # 降序: 1_000_000, 900_000, 800_000, 700_000, 100
 
     for i, points in enumerate(points_values):
         agent_id = integration_client.create_agent(
@@ -203,49 +209,63 @@ def test_recommend_agents_energy_points_sorting(
         db_session.commit()
 
     try:
-        # 调用 recommend API，使用 energy_points 排序
-        response = integration_client.client.get(
-            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
-            params={
-                "page": 1,
-                "page_size": 10,
-                "sort": "energy_points",
-            },
-        )
-
-        # 验证响应
-        assert response.status_code == 200, f"Request failed: {response.text}"
-        response_data = response.json()
-        assert response_data.get("code") == 200, f"API error: {response_data}"
-
-        # 验证返回的数据结构
-        data = response_data["data"]
-        assert "list" in data, "Response should contain 'list' field"
-        assert "total" in data, "Response should contain 'total' field"
-        assert "page" in data, "Response should contain 'page' field"
-        assert "page_size" in data, "Response should contain 'page_size' field"
-
-        items = data["list"]
-        assert isinstance(items, list), "List should be a list"
-        assert all(
-            "energy_points" in item for item in items
-        ), "Each agent should expose energy_points"
-
-        # 查找我们创建的 agents（可能还有其他公开的 agents）
-        our_agents = [item for item in items if item["id"] in agent_ids]
         expected_points_map = dict(zip(agent_ids, points_values))
 
-        for agent in our_agents:
-            assert (
-                agent["energy_points"] == expected_points_map[agent["id"]]
-            ), "API energy_points should match database values"
+        def fetch_and_validate(params):
+            response = integration_client.client.get(
+                f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+                params=params,
+            )
+            assert response.status_code == 200, f"Request failed: {response.text}"
+            response_data = response.json()
+            assert response_data.get("code") == 200, f"API error: {response_data}"
 
-        # 验证我们的 agents 按 energy_points 降序排列
-        if len(our_agents) >= 2:
-            energy_values = [agent["energy_points"] for agent in our_agents]
-            assert energy_values == sorted(
-                energy_values, reverse=True
-            ), f"Agents should be sorted by energy_points desc, got {energy_values}"
+            data = response_data["data"]
+            assert "list" in data, "Response should contain 'list' field"
+            assert "total" in data, "Response should contain 'total' field"
+            assert "page" in data, "Response should contain 'page' field"
+            assert "page_size" in data, "Response should contain 'page_size' field"
+
+            items = data["list"]
+            assert isinstance(items, list), "List should be a list"
+            assert all(
+                "energy_points" in item for item in items
+            ), "Each agent should expose energy_points"
+            return items, data
+
+        def assert_our_agents_sorted(items, context: str):
+            our_agents = [item for item in items if item["id"] in agent_ids]
+            for agent in our_agents:
+                assert (
+                    agent["energy_points"] == expected_points_map[agent["id"]]
+                ), f"[{context}] API energy_points should match database values"
+
+            if len(our_agents) >= 2:
+                energy_values = [agent["energy_points"] for agent in our_agents]
+                assert energy_values == sorted(
+                    energy_values, reverse=True
+                ), f"[{context}] Agents should be sorted by energy_points desc, got {energy_values}"
+
+            return our_agents
+
+        # 默认排序（未提供 sort 参数）应按 energy_points 降序
+        default_items, default_data = fetch_and_validate(
+            {"page": 1, "page_size": 10}
+        )
+        default_agents = assert_our_agents_sorted(default_items, "default")
+        assert (
+            default_data["page"] == 1 and default_data["page_size"] == 10
+        ), "Default pagination metadata mismatch"
+
+        # 显式指定 energy_points 排序与默认结果一致
+        energy_items, _ = fetch_and_validate(
+            {"page": 1, "page_size": 10, "sort": "energy_points"}
+        )
+        energy_agents = assert_our_agents_sorted(energy_items, "explicit-energy")
+        assert (
+            [agent["id"] for agent in energy_agents]
+            == [agent["id"] for agent in default_agents]
+        ), "Explicit energy_points sort should match default ordering"
 
         # 验证分页功能
         response_page2 = integration_client.client.get(

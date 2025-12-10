@@ -80,7 +80,7 @@ class AgentRecommendationRequest(BaseModel):
         description="Items per page, maximum 100",
     )
     sort: AgentSortOption = Field(
-        default=AgentSortOption.CREATED_DESC,
+        default=AgentSortOption.ENERGY_POINTS,
         description=(
             "Sort order: created_asc, created_desc, random, score_based_random, energy_points"
         ),
