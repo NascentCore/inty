@@ -18,7 +18,6 @@ from app.services.push_notification_service import (
     discover_new_users_for_push,
     discover_users_with_updated_tokens,
     initialize_push_system,
-    process_feedback_push_batch,
     process_push_batch,
 )
 
@@ -149,18 +148,6 @@ class PushSchedulerService:
                 next_run_time=datetime.datetime.now(),
             )
 
-            # Feedback 推送：每小时检查一次，启动后立即执行一次
-            self.scheduler.add_job(
-                self._check_feedback_push,
-                trigger=IntervalTrigger(hours=1),
-                id="check_feedback_push",
-                name="检查 Feedback 推送",
-                replace_existing=True,
-                coalesce=True,
-                max_instances=1,
-                next_run_time=datetime.datetime.now(),
-            )
-
             logger.info("已添加所有推送检查任务，将在启动后立即执行一次")
 
             logger.info("推送调度器启动成功")
@@ -278,38 +265,6 @@ class PushSchedulerService:
 
         except Exception as e:
             logger.error(f"token 更新扫描任务执行失败: {str(e)}")
-
-    async def _check_feedback_push(self) -> None:
-        """
-        检查并处理 feedback 推送
-
-        这个任务每小时执行一次，检查用户是否达到聊天轮数阈值，并发送 feedback 推送。
-        """
-        try:
-            logger.info("[Feedback 推送] 开始检查 feedback 推送...")
-
-            # 获取配置
-            config = global_config_loaded_from_config_yaml.push_notification
-            batch_size = config.batch_size
-
-            # 创建数据库会话
-            async with AsyncSessionLocal() as db:
-                try:
-                    # 批量处理 feedback 推送
-                    success_count, fail_count = await process_feedback_push_batch(
-                        db=db,
-                        batch_size=batch_size,
-                    )
-
-                    logger.info(
-                        f"[Feedback 推送] 处理完成: 成功={success_count}, 失败={fail_count}"
-                    )
-
-                except Exception as e:
-                    logger.error(f"处理 feedback 推送失败: {str(e)}")
-
-        except Exception as e:
-            logger.error(f"Feedback 推送任务执行失败: {str(e)}")
 
 
 # 全局调度器实例

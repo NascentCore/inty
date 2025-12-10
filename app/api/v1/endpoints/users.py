@@ -6,7 +6,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, EVALUATION_APP_TAG, WEB_APP_TAG, NOT_USED_TAG
+from app.api.tags import ANDROID_APP_TAG, EVALUATION_APP_TAG, NOT_USED_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.schemas.response import APIResponse
@@ -16,7 +16,7 @@ from app.schemas.user_deletion import (
     AccountDeletionResponse,
     DeletionCheckResponse,
 )
-from app.services import user_service
+from app.services import user_action_service, user_service
 from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/users", route_class=LoggerRoute)
@@ -79,10 +79,9 @@ async def get_me(
     """
     Get current user profile.
     """
-    # 计算connector_count
     connector_count = await user_service.get_user_connector_count(db, current_user.id)
+    actions = await user_action_service.get_user_actions(db, current_user.id)
 
-    # 创建用户响应对象，包含connector_count
     user_dict = {
         "id": current_user.id,
         # DEPRECATED: app 显示 ID 而非 readable_id
@@ -100,10 +99,11 @@ async def get_me(
         "created_at": current_user.created_at,
         "updated_at": current_user.updated_at,
         "is_superuser": current_user.is_superuser,
-        "public_agents_count": 0,  # 这些字段可能需要其他查询来获取
+        "public_agents_count": 0,
         "total_public_agents_follows": 0,
         "followers_count": 0,
         "connector_count": connector_count,
+        "actions": actions,
     }
 
     return APIResponse.success(data=User(**user_dict))
