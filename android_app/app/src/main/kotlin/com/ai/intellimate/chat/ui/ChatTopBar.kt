@@ -62,8 +62,9 @@ fun ChatTopBar(
         if (showBackButton) {
             AsyncImage(
                 modifier =
-                    Modifier.size(UiConfigs.ChatTopBar.BackButtonIconSize)
-                        .noRippleClickable { onBack?.invoke() },
+                    Modifier.size(UiConfigs.ChatTopBar.BackButtonIconSize).noRippleClickable {
+                        onBack?.invoke()
+                    },
                 model = R.drawable.back,
                 contentDescription = null,
             )
@@ -108,9 +109,7 @@ fun ChatTopBar(
 
             val showPoints = earnedPoints != null
 
-            Column(
-                modifier = Modifier.padding(end = UiConfigs.ChatTopBar.ContentRightPadding),
-            ) {
+            Column(modifier = Modifier.padding(end = UiConfigs.ChatTopBar.ContentRightPadding)) {
                 if (showPoints) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -119,19 +118,20 @@ fun ChatTopBar(
                             tint = Color.White,
                             modifier = Modifier.size(UiConfigs.ChatTopBar.EnergyIconSize),
                         )
-                        Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing))
+                        Spacer(
+                            modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing)
+                        )
                         Text(
                             text =
-                                stringResource(
-                                    id = R.string.energy_points_counter,
-                                    earnedPoints,
-                                ),
+                                stringResource(id = R.string.energy_points_counter, earnedPoints),
                             fontSize = UiConfigs.ChatTopBar.EnergyPointsFontSize,
                             color = Color.White.copy(alpha = 0.9f),
                             fontWeight = FontWeight.Medium,
                         )
                     }
-                    Spacer(modifier = Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing))
+                    Spacer(
+                        modifier = Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing)
+                    )
                 }
                 Text(
                     text = agentInfo.name,
@@ -157,8 +157,9 @@ fun ChatTopBar(
         ) {
             AsyncImage(
                 modifier =
-                    Modifier.size(UiConfigs.ChatTopBar.MoreButtonIconSize)
-                        .noRippleClickable { onClickMore() },
+                    Modifier.size(UiConfigs.ChatTopBar.MoreButtonIconSize).noRippleClickable {
+                        onClickMore()
+                    },
                 model = R.drawable.icon_more,
                 contentDescription = null,
             )

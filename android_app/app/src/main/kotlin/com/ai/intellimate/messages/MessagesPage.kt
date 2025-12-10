@@ -34,11 +34,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -300,7 +300,8 @@ private fun ConversationList(
                                             onLongClick = {
                                                 showMenuForConversationId =
                                                     if (
-                                                        showMenuForConversationId == conversion.agentId
+                                                        showMenuForConversationId ==
+                                                            conversion.agentId
                                                     ) {
                                                         null
                                                     } else {
@@ -371,7 +372,8 @@ private fun MessagesTabSwitcher(
 ) {
     val tabs =
         listOf(
-            MessageSecondaryTab.Conversations to stringResource(R.string.messages_tab_conversations),
+            MessageSecondaryTab.Conversations to
+                stringResource(R.string.messages_tab_conversations),
             MessageSecondaryTab.Favorites to stringResource(R.string.messages_tab_favorites),
         )
     val selectedIndex = tabs.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
@@ -447,10 +449,7 @@ private fun FavoriteAgentsContent(
 }
 
 @Composable
-private fun FavoriteAgentItem(
-    agent: AgentInfo,
-    onClick: (AgentInfo) -> Unit,
-) {
+private fun FavoriteAgentItem(agent: AgentInfo, onClick: (AgentInfo) -> Unit) {
     val avatarRes = getCdnImageUrl(agent.avatar, width = 128) ?: R.drawable.img_default_avatar
     Row(
         modifier =
@@ -480,11 +479,12 @@ private fun FavoriteAgentItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            val subtitle = when {
-                agent.intro.isNotBlank() -> agent.intro
-                agent.opening.isNotBlank() -> agent.opening
-                else -> null
-            }
+            val subtitle =
+                when {
+                    agent.intro.isNotBlank() -> agent.intro
+                    agent.opening.isNotBlank() -> agent.opening
+                    else -> null
+                }
             subtitle?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(

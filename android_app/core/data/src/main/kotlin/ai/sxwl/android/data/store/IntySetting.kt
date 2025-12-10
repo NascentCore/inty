@@ -207,14 +207,13 @@ object IntySetting {
         curUserSetting.putBoolean(KEY_FEEDBACK_REQUESTED, value)
     }
 
-    /** 原子性地尝试标记反馈为已请求
-     * 
-     * 如果反馈尚未被请求，则标记为已请求并返回 true。
-     * 如果反馈已被请求，则返回 false。
-     * 
-     * 此方法使用同步锁确保原子性，防止并发调用时出现竞态条件。
-     * 这对于防止多个触发点（如 ChatViewModel 和 HomeScreen）同时显示反馈对话框至关重要。
-     * 
+    /**
+     * 原子性地尝试标记反馈为已请求
+     *
+     * 如果反馈尚未被请求，则标记为已请求并返回 true。 如果反馈已被请求，则返回 false。
+     *
+     * 此方法使用同步锁确保原子性，防止并发调用时出现竞态条件。 这对于防止多个触发点（如 ChatViewModel 和 HomeScreen）同时显示反馈对话框至关重要。
+     *
      * @return true 如果成功标记为已请求（之前未请求），false 如果已经被请求过
      */
     fun tryMarkFeedbackRequested(): Boolean {
@@ -232,10 +231,10 @@ object IntySetting {
         return curUserSetting.decodeInt(KEY_TOTAL_MESSAGE_COUNT, 0)
     }
 
-    /** 增加总消息数并返回新的计数
-     * 
-     * 使用同步锁确保读-改-写操作的原子性，防止并发调用时丢失增量。
-     * 这对于反馈对话框触发逻辑至关重要，因为它依赖于消息计数达到100的倍数。
+    /**
+     * 增加总消息数并返回新的计数
+     *
+     * 使用同步锁确保读-改-写操作的原子性，防止并发调用时丢失增量。 这对于反馈对话框触发逻辑至关重要，因为它依赖于消息计数达到100的倍数。
      */
     fun incrementTotalMessageCount(): Int {
         synchronized(messageCountLock) {

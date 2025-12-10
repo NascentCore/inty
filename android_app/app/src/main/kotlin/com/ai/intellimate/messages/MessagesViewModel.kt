@@ -15,14 +15,14 @@ import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.utils.AgentCacheManager
 import com.architecture.httplib.core.HttpResult
+import java.util.LinkedHashMap
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.LinkedHashMap
-import java.util.Locale
 
 /** Messages页面ViewModel 负责管理会话列表的状态和业务逻辑 */
 class MessagesViewModel : BaseVM() {
@@ -111,7 +111,8 @@ class MessagesViewModel : BaseVM() {
                         emptyList()
                     } else {
                         val ordered = favoriteIds.mapNotNull { agentMap[it] }
-                        if (ordered.isNotEmpty()) ordered else agentMap.values.sortedBy { it.name.lowercase(Locale.getDefault()) }
+                        if (ordered.isNotEmpty()) ordered
+                        else agentMap.values.sortedBy { it.name.lowercase(Locale.getDefault()) }
                     }
 
                 _uiState.update { it.copy(favoriteAgents = orderedAgents) }

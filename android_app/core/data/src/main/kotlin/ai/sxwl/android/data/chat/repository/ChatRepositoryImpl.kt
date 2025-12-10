@@ -7,7 +7,6 @@ import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
-import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
@@ -253,18 +252,19 @@ class ChatRepositoryImpl(
                                 "聊天接口数据",
                                 "syncLatestMessages REVERSING messages: " +
                                     "original first=${serverMessages.first().id.take(8)}, last=${serverMessages.last().id.take(8)} | " +
-                                    "reversed first=${reversedServerMessages.first().id.take(8)}, last=${reversedServerMessages.last().id.take(8)}"
+                                    "reversed first=${reversedServerMessages.first().id.take(8)}, last=${reversedServerMessages.last().id.take(8)}",
                             )
                         }
-                        
+
                         // 🔧 修复：合并服务器消息和本地消息，而不是只使用服务器消息
                         // 因为服务器只返回最新的20条消息，如果只使用服务器消息，会丢失历史消息
                         // 合并策略：保留本地消息，用服务器消息更新或追加
                         val allMessages = mutableListOf<MsgInfo>()
-                        val serverMessageKeys = serverMessages.mapNotNull {
-                            it.id.ifEmpty { it.localMsgId.ifEmpty { null } }
-                        }.toSet()
-                        
+                        val serverMessageKeys =
+                            serverMessages
+                                .mapNotNull { it.id.ifEmpty { it.localMsgId.ifEmpty { null } } }
+                                .toSet()
+
                         // 先添加本地消息中不在服务器消息列表中的消息（历史消息）
                         currentLocalMessages.forEach { localMsg ->
                             val localKey = localMsg.id.ifEmpty { localMsg.localMsgId }
@@ -272,10 +272,10 @@ class ChatRepositoryImpl(
                                 allMessages.add(localMsg)
                             }
                         }
-                        
+
                         // 然后添加服务器消息（已反转，确保顺序正确）
                         allMessages.addAll(reversedServerMessages)
-                        
+
                         localDataSource.updateMessages(agentId, allMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(
@@ -285,7 +285,7 @@ class ChatRepositoryImpl(
 
                         LogUtils.i(
                             "聊天接口数据",
-                            "syncLatestMessages 更新消息: agentId=$agentId, merged ${allMessages.size} messages (${currentLocalMessages.size} local + ${serverMessages.size} server)"
+                            "syncLatestMessages 更新消息: agentId=$agentId, merged ${allMessages.size} messages (${currentLocalMessages.size} local + ${serverMessages.size} server)",
                         )
                     }
                 }

@@ -109,7 +109,9 @@ fun ExplorePage(
                 actions = {
                     if (isDebugMode) {
                         Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
-                            BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
+                            BoostShortcutButton(
+                                onClick = { BoostLeaderboardActivity.launch(context) }
+                            )
                         }
                     }
                 },
@@ -120,8 +122,7 @@ fun ExplorePage(
 
             LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing) {
                 val currentTime = System.currentTimeMillis()
-                val elapsedTime =
-                    if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
+                val elapsedTime = if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
 
                 when (lazyPagingItems?.loadState?.refresh) {
                     is LoadState.Loading -> {
@@ -192,10 +193,6 @@ private fun BoostShortcutButton(onClick: () -> Unit) {
             tint = Color.White,
         )
         Spacer(Modifier.width(6.dp))
-        Text(
-            text = label,
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Text(text = label, color = Color.White, fontWeight = FontWeight.SemiBold)
     }
 }

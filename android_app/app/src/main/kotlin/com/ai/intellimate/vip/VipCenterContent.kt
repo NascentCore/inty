@@ -75,8 +75,8 @@ private fun SubscriptionDescriptionText(text: String) {
 @Composable
 fun VipCenterContent(
     navController: NavController,
-//    onClose: () -> Unit,
-//    onPurchase: () -> Unit,
+    //    onClose: () -> Unit,
+    //    onPurchase: () -> Unit,
     viewModel: VipCenterViewModel = viewModel(),
 ) {
     val plans by viewModel.plansFlow.collectAsState()
@@ -245,7 +245,7 @@ private fun VipCenterBenefits() {
 @Preview(showBackground = true)
 @Composable
 private fun VipCenterContentPreview() {
-//    VipCenterContent(onClose = {}, onPurchase = {})
+    //    VipCenterContent(onClose = {}, onPurchase = {})
 }
 
 @Composable
@@ -281,8 +281,9 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
 }
 
 // Context 扩展函数：安全地查找 Activity
-fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this // 已经是 Activity，直接返回
-    is ContextWrapper -> baseContext.findActivity() // 继续解包 baseContext
-    else -> null // 无法找到
-}
+fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this // 已经是 Activity，直接返回
+        is ContextWrapper -> baseContext.findActivity() // 继续解包 baseContext
+        else -> null // 无法找到
+    }

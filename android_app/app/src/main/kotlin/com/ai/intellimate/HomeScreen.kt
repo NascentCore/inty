@@ -40,7 +40,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.agent.report.ReportActivity
-import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.explore.ExplorePage
@@ -54,7 +53,6 @@ import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.UpgradeDialog
-import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
 import com.inty.api.models.api.v1.version.VersionCheckResponse
@@ -226,7 +224,7 @@ fun HomeScreen(
             onRefreshProfileHandled = { shouldRefreshProfile = false },
         )
 
-        ExpiredDialogLogic(navController,mainViewModel)
+        ExpiredDialogLogic(navController, mainViewModel)
         AppVersionLogic(mainViewModel)
         FeedbackRequestDialogLogic(mainViewModel)
     }
@@ -316,7 +314,8 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
                     } else {
                         // 跳转到订阅中心
                         navController.navigate(Routes.VipCenter)
-//                        VipCenterActivity.launch(context, VipCenterActivity.HOME_EXPIRED_DIALOG)
+                        //                        VipCenterActivity.launch(context,
+                        // VipCenterActivity.HOME_EXPIRED_DIALOG)
                     }
                 }
 
@@ -389,7 +388,11 @@ private fun HomeContent(
 ) {
     when (selectedTab) {
         HomeTabIndex.Chat -> {
-            ChatTabContent(navController, mainViewModel = mainViewModel, viewModelFactory = viewModelFactory)
+            ChatTabContent(
+                navController,
+                mainViewModel = mainViewModel,
+                viewModelFactory = viewModelFactory,
+            )
         }
 
         HomeTabIndex.Messages -> {
@@ -401,7 +404,11 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            ExploreTabContent(navController, innerPadding = innerPadding, mainViewModel = mainViewModel)
+            ExploreTabContent(
+                navController,
+                innerPadding = innerPadding,
+                mainViewModel = mainViewModel,
+            )
         }
 
         HomeTabIndex.Profile -> {
@@ -458,11 +465,11 @@ private fun MessagesTabContent(navController: NavController) {
         onClickConversationItem = { conversation ->
             AgentStore.addAgent(conversation.convertToAgentInfo())
             navController.navigate(Routes.chatPage(conversation.convertToAgentInfo().id, false))
-//            ChatActivity.launch(
-//                context,
-//                conversation.convertToAgentInfo(),
-//                pageSource = ChatActivity.MESSAGES_TAB,
-//            )
+            //            ChatActivity.launch(
+            //                context,
+            //                conversation.convertToAgentInfo(),
+            //                pageSource = ChatActivity.MESSAGES_TAB,
+            //            )
         },
         onClickFavoriteAgent = { agent ->
             AgentStore.addAgent(agent)
@@ -474,7 +481,11 @@ private fun MessagesTabContent(navController: NavController) {
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(navController: NavController, innerPadding: PaddingValues, mainViewModel: MainViewModel) {
+private fun ExploreTabContent(
+    navController: NavController,
+    innerPadding: PaddingValues,
+    mainViewModel: MainViewModel,
+) {
     val context = LocalContext.current
     val exploreViewModel: ExploreViewModel = viewModel()
     val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()
@@ -491,9 +502,9 @@ private fun ExploreTabContent(navController: NavController, innerPadding: Paddin
         modifier = Modifier,
         innerPadding = innerPadding,
         onClickAgent = { agent ->
-            AgentStore.addAgent(agent);
+            AgentStore.addAgent(agent)
             navController.navigate(Routes.chatPage(agent.id, false))
-//            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
+            //            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,
@@ -609,7 +620,7 @@ private fun ProfileTabContent(
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
             navController.navigate(Routes.chatPage(agent.id, false))
-//            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+            //            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
         },
         onClickDraft = { draftId ->
             val intent = CreateRoleActivity.getIntent(context, null, draftId)

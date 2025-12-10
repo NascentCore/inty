@@ -350,9 +350,7 @@ fun ChatSettingsDrawer(
                             item =
                                 SettingsItemData.SwitchItemData(
                                     title =
-                                        stringResource(
-                                            R.string.chat_settings_auto_play_animation
-                                        ),
+                                        stringResource(R.string.chat_settings_auto_play_animation),
                                     checked = autoPlayAnimation,
                                 ),
                             fontLight = true,
@@ -560,10 +558,7 @@ fun ChatSettingsDrawer(
                             EditKey.Preference -> {
                                 editKey = EditKey.None
                                 coroutineScope.launch {
-                                    PersonaPreferenceStore.savePreference(
-                                        context,
-                                        value.trim(),
-                                    )
+                                    PersonaPreferenceStore.savePreference(context, value.trim())
                                 }
                             }
                             else -> {

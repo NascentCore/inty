@@ -82,18 +82,15 @@ fun AppNavHost(
         }
 
         // 定义vip订阅页面路由
-        composable(Routes.VipCenter) {
-            VipCenterContent(navController)
-        }
+        composable(Routes.VipCenter) { VipCenterContent(navController) }
 
         // 定义聊天页面路由
         composable(Routes.ChatPage) { backStackEntry ->
-
             val agentId = backStackEntry.arguments?.getString("agentId")
             val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
             LaunchedEffect(agentId) {
                 val agent = AgentStore.getAgent(agentId = agentId)
-                if(agentId != null) {
+                if (agentId != null) {
                     if (agent != null) {
                         chatViewModel.setAgentInfo(agent, true)
                     } else {
@@ -108,7 +105,7 @@ fun AppNavHost(
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 shouldShowBoostSheetOnOpen = showBoost == true,
-                agentId = agentId
+                agentId = agentId,
             )
         }
     }
