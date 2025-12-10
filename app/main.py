@@ -133,8 +133,35 @@ app.add_exception_handler(ValidationError, validation_error_handler)
 app.include_router(api_router)
 app.include_router(api_v2_router)
 
-# Evaluation frontend has been moved to IntyEval (eval_app/)
-# See eval_app/main.py for the evaluation frontend service
+# 配置静态文件服务 - 用于评测系统前端
+import os
+
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# 添加前端应用路由
+from fastapi.responses import FileResponse
+
+
+@app.get(
+    "/evaluation",
+    # 此为内部运营使用 API，不对外展示
+    include_in_schema=False,
+)
+async def evaluation_frontend():
+    evaluation_index = os.path.join(static_dir, "evaluation", "index.html")
+    return FileResponse(evaluation_index)
+
+
+@app.get(
+    "/evaluation/{path:path}",
+    # 此为内部运营使用 API，不对外展示
+    include_in_schema=False,
+)
+async def evaluation_static_files(path: str):
+    file_path = os.path.join(static_dir, "evaluation", path)
+    return FileResponse(file_path)
 
 
 # 初始化 Firebase
