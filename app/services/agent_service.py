@@ -371,10 +371,7 @@ async def get_user_agents(
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
-            .order_by(
-                desc(func.coalesce(models.Agent.points, 0)),
-                desc(models.Agent.created_at),
-            )
+            .order_by(desc(models.Agent.created_at))
         )
 
         result = await db.execute(query)
