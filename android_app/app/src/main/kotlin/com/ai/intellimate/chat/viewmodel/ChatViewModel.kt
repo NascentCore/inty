@@ -150,6 +150,8 @@ class ChatViewModel : BaseVM() {
         // syncLatestMessages 内部已经有逻辑判断是否有新消息，如果没有新消息不会更新本地数据
         if (_agentInfo.value?.id == agentInfo.id) {
             _agentInfo.value = agentInfo
+            // 重新启动能量点数观察，确保数据实时更新
+            observeCharacterEnergy(agentInfo.id)
             viewModelScope.launch(Dispatchers.IO) {
                 characterRepository.syncCharacterSnapshot(agentInfo, lastSyncedEnergyPoints)
             }

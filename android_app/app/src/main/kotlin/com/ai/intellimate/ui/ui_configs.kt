@@ -412,7 +412,7 @@ object UiConfigs {
     /** 聊天顶部栏配置 - 适用于聊天页面顶部栏的尺寸、间距、字体等设置 */
     object ChatTopBar {
         /** 头像大小 */
-        val AvatarSize = 50.dp
+        val AvatarSize = 40.dp
 
         /** 头像内边距 */
         val AvatarPadding = 3.dp
