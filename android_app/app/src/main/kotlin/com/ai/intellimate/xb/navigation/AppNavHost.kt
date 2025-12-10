@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -87,16 +88,19 @@ fun AppNavHost(
 
         // 定义聊天页面路由
         composable(Routes.ChatPage) { backStackEntry ->
+
             val agentId = backStackEntry.arguments?.getString("agentId")
             val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
-            val agent = AgentStore.getAgent(agentId = agentId)
-            if(agentId != null) {
-                if (agent != null) {
-                    chatViewModel.setAgentInfo(agent, true)
-                } else {
-                    chatViewModel.setAgentID(agentId)
+            LaunchedEffect(agentId) {
+                val agent = AgentStore.getAgent(agentId = agentId)
+                if(agentId != null) {
+                    if (agent != null) {
+                        chatViewModel.setAgentInfo(agent, true)
+                    } else {
+                        chatViewModel.setAgentID(agentId)
+                    }
+                    chatViewModel.updateUserInfo()
                 }
-                chatViewModel.updateUserInfo()
             }
 
             ChatScreen(

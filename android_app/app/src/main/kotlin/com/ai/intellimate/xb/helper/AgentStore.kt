@@ -8,13 +8,15 @@ object AgentStore {
 
     // 添加AgentInfo
     fun addAgent(agentInfo: AgentInfo) {
-        var hasAgent = false
-        val count = agents.count();
-        for (i in 0 until count) {
-            val a = agents[i]
-            if (a.id == agentInfo.id) hasAgent = true
+        synchronized(this) {
+            var hasAgent = false
+            val count = agents.count();
+            for (i in 0 until count) {
+                val a = agents[i]
+                if (a.id == agentInfo.id) hasAgent = true
+            }
+            if (!hasAgent) agents.add(agentInfo)
         }
-        if (!hasAgent) agents.add(agentInfo)
     }
 
     // 获取缓存中的AgentInfo

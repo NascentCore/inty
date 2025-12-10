@@ -4,7 +4,7 @@ object Routes {
     const val SplashLogin = "splash_login"
     const val HomeTab = "home_screen"
 
-    const val ChatPage = "chat_page/{agentId}/{show}"
+    const val ChatPage = "chat_page/{agentId}/{showBoost}"
     const val Settings = "settings"
     const val VipCenter = "vip_center"
     const val CheckIn = "check_in"
