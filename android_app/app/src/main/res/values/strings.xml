@@ -450,4 +450,8 @@
     <string name="boost_toast_success_points">%1$d energy points sent to %2$s!</string>
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
+    <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
+    <string name="reset">Reset</string>
+    <string name="reset_failed_msg">Reset failed. Please try again.</string>
+    <string name="reset_suc_msg">A new conversation has started.</string>
 </resources>
