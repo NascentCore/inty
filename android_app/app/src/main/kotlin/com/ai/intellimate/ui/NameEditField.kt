@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +33,8 @@ fun NameEditField(
     onValueChange: (String) -> Unit,
     label: String? = null,
     placeholder: String? = null,
+    keyboardOptions: KeyboardOptions =
+        KeyboardOptions(capitalization = KeyboardCapitalization.Words),
 ) {
     Column {
         label?.let {
@@ -75,6 +79,7 @@ fun NameEditField(
                             fontWeight = FontWeight.Normal,
                         )
                     },
+                    keyboardOptions = keyboardOptions,
                 )
             }
         }
