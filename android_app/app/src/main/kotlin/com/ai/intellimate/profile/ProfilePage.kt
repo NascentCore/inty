@@ -1,5 +1,6 @@
 package com.ai.intellimate.profile
 
+//import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -70,7 +71,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -89,9 +89,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,7 +107,6 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
-//import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -273,7 +270,7 @@ internal fun ProfilePage(
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
-            model = R.drawable.notify_header_bg,
+            model = R.drawable.img_profile_header_bg,
             contentDescription = null,
         )
         Scaffold(
@@ -616,9 +613,6 @@ private fun ProfileHeader(
                 remember(collapseProgress) {
                     UiConfigs.MePage.AvatarFullSize * (1f - collapseProgress * 0.5f)
                 }
-
-            // 头像点击防抖
-            var lastClickTimeAvatar by remember { mutableLongStateOf(0L) }
 
             Box(
                 modifier =
@@ -1086,71 +1080,6 @@ private fun CreateRoleDraft.primaryImageUrl(): String? {
     return avatarUrl?.takeIf { it.isNotBlank() }
 }
 
-/** Premium Banner 组件 */
-@Composable
-private fun PremiumBanner(
-    status: String? = "Activate Now",
-    purchaseTime: String? = null, // 购买日期
-    expireTime: String? = null, // 过期时间
-    onClick: () -> Unit = {},
-) {
-    var lastClickTimePremium by remember { mutableLongStateOf(0L) }
-
-    // 使用 fillMaxWidth 适配屏幕宽度（不含padding），高度保持 120.dp
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .height(UiConfigs.MePage.VipBannerHeight)
-                .clickable {
-                    val currentTime = System.currentTimeMillis()
-                    if (AntiClick.isValidClick(lastClickTimePremium)) {
-                        lastClickTimePremium = currentTime
-                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            onClick()
-                        }
-                    }
-                }
-    ) {
-        // 使用 FillBounds 填充整个区域，适配屏幕宽度
-        Image(
-            painter = painterResource(R.drawable.img_vip_banner),
-            contentDescription = "",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize(),
-        )
-
-        Row(
-            Modifier
-                .border(
-                    width = 0.5.dp,
-                    color = Color(0x61D523FF),
-                    shape = RoundedCornerShape(size = UiConfigs.MePage.AgentCardCornerRadius),
-                )
-                .background(
-                    color = Color(0x33D216FF),
-                    shape = RoundedCornerShape(size = UiConfigs.MePage.AgentCardCornerRadius),
-                )
-                .padding(horizontal = UiConfigs.MePage.TopIconsRow.Spacing)
-                .align(BiasAlignment(.95f, .1f)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            // 三种UI状态显示，1. 无有效订阅 显示Activate Now；2. 有效订阅 显示Since 日期；3. 有订阅快过期 显示Expires ON 日期
-            val str =
-                when (status) {
-                    VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
-                    VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expires on $expireTime"
-                    else -> "Activate now"
-                }
-
-            Text(text = str, fontSize = 16.sp, color = Color.White, textAlign = TextAlign.Center)
-        }
-    }
-}
-
 // TODO: 当前是一个 on/off 滑动开关，改为点了之后直接打开/关闭的整体条幅。
 @Composable
 private fun VibeModeBanner(
@@ -1269,85 +1198,6 @@ private fun VibeModeBanner(
     }
 }
 
-/** ProfilePage 预览 */
-@Preview(showBackground = true, backgroundColor = 0xFF000000)
-@Composable
-private fun ProfilePagePreview() {
-    // 创建预览用的 VIP 状态
-    val previewVipStatus =
-        VipStatus(
-            isSubscribed = false,
-            subscriptionStatus = VipStatus.UI_UNSUBSCRIBED,
-            purchaseTime = null,
-            expiryTime = null,
-        )
-
-    // 创建预览用的用户数据
-    val previewUserProfile =
-        UserProfile(
-            id = "preview_user_123",
-            nickname = "Preview User",
-            avatar = "",
-            description =
-                "This is a preview user profile description. It can be quite long to test the text truncation and layout.",
-            email = "preview@example.com",
-            gender = "MALE",
-            ageGroup = "25-30",
-            systemLanguage = "en",
-            isActive = true,
-            isSuperuser = false,
-            publicAgentsCount = 5,
-            totalAgentsFollows = 10,
-            followerCount = 20,
-            connectorCount = 15,
-        )
-
-    // 创建预览用的 Agent 列表
-    val previewAgents =
-        listOf(
-            AgentInfo(
-                id = "agent_1",
-                name = "Agent One",
-                intro = "This is the first agent with a longer description to test text overflow.",
-                avatar = "",
-                background = "",
-                category = "Fantasy",
-                gender = "FEMALE",
-                tags = listOf("romance", "fantasy", "adventure"),
-            ),
-            AgentInfo(
-                id = "agent_2",
-                name = "Agent Two",
-                intro = "Second agent description.",
-                avatar = "",
-                background = "",
-                category = "Sci-Fi",
-                gender = "MALE",
-                tags = listOf("sci-fi", "action"),
-            ),
-            AgentInfo(
-                id = "agent_3",
-                name = "Agent Three",
-                intro =
-                    "Third agent with a very long description that should be truncated properly in the card layout.",
-                avatar = "",
-                background = "",
-                category = "Romance",
-                gender = "FEMALE",
-                tags = listOf("romance", "drama"),
-            ),
-            AgentInfo(
-                id = "agent_4",
-                name = "Agent Four",
-                intro = "Fourth agent.",
-                avatar = "",
-                background = "",
-                category = "Mystery",
-                gender = "MALE",
-                tags = listOf("mystery", "thriller"),
-            ),
-        )
-}
 
 /** 新版本提示 Banner */
 @Composable

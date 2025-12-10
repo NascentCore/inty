@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Slider
@@ -60,8 +62,8 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -137,10 +139,13 @@ fun ChatSettingsDrawer(
         modifier = Modifier,
         drawerState = drawerState,
         drawerContent = {
+
             Column(
                 modifier =
                     Modifier.width(319.dp)
                         .fillMaxHeight()
+                        .padding(bottom = 56.dp)
+                        .verticalScroll(rememberScrollState())
                         .background(
                             brush =
                                 Brush.verticalGradient(
@@ -156,7 +161,7 @@ fun ChatSettingsDrawer(
                     color = Color.White,
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup(modifier = Modifier) {
                         SettingsArrowItem(
@@ -274,7 +279,7 @@ fun ChatSettingsDrawer(
                     }
                 }
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(20.dp))
 
                 Text(
                     text = stringResource(R.string.chat_settings_settings_title),
@@ -284,7 +289,7 @@ fun ChatSettingsDrawer(
                     color = Color.White,
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
 
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup {
@@ -435,7 +440,7 @@ fun ChatSettingsDrawer(
                     }
                 }
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(20.dp))
 
                 Text(
                     text = stringResource(R.string.chat_settings_support_resources_title),
@@ -445,7 +450,7 @@ fun ChatSettingsDrawer(
                     color = Color.White,
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
 
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup {
@@ -541,6 +546,8 @@ fun ChatSettingsDrawer(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(20.dp))
             }
         },
     ) {
