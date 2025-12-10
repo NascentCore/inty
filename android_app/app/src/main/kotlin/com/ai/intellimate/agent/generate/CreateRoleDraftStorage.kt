@@ -11,8 +11,7 @@ import java.util.UUID
 /**
  * CREATED_BY_AGENT
  *
- * 管理创建 IntelliMate 过程中填写的草稿数据，负责序列化到本地和从本地恢复。
- * 支持多个草稿的保存和管理。
+ * 管理创建 IntelliMate 过程中填写的草稿数据，负责序列化到本地和从本地恢复。 支持多个草稿的保存和管理。
  */
 object CreateRoleDraftStorage {
 
@@ -28,9 +27,7 @@ object CreateRoleDraftStorage {
 
     // ========== 草稿列表相关方法 ==========
 
-    /**
-     * 保存草稿到列表（如果已存在则更新，否则添加）
-     */
+    /** 保存草稿到列表（如果已存在则更新，否则添加） */
     fun saveDraftToList(draft: CreateRoleDraft) {
         if (draft.isEmpty()) {
             deleteDraft(draft.id)
@@ -38,68 +35,62 @@ object CreateRoleDraftStorage {
         }
         val updatedDraft = draft.withUpdatedTimestamp()
         runCatching {
-            val allDrafts = getAllDrafts().toMutableList()
-            val existingIndex = allDrafts.indexOfFirst { it.id == updatedDraft.id }
-            if (existingIndex >= 0) {
-                allDrafts[existingIndex] = updatedDraft
-            } else {
-                allDrafts.add(updatedDraft)
+                val allDrafts = getAllDrafts().toMutableList()
+                val existingIndex = allDrafts.indexOfFirst { it.id == updatedDraft.id }
+                if (existingIndex >= 0) {
+                    allDrafts[existingIndex] = updatedDraft
+                } else {
+                    allDrafts.add(updatedDraft)
+                }
+                val json = draftsListAdapter.toJson(allDrafts)
+                IntySetting.setUserProfileData(KEY_CREATE_ROLE_DRAFTS_LIST, json)
+                LogUtils.d("CreateRoleDraftStorage - draft saved to list: ${updatedDraft.id}")
             }
-            val json = draftsListAdapter.toJson(allDrafts)
-            IntySetting.setUserProfileData(KEY_CREATE_ROLE_DRAFTS_LIST, json)
-            LogUtils.d("CreateRoleDraftStorage - draft saved to list: ${updatedDraft.id}")
-        }.onFailure { throwable ->
-            LogUtils.e("CreateRoleDraftStorage - save draft to list failed: ${throwable.message}")
-        }
+            .onFailure { throwable ->
+                LogUtils.e(
+                    "CreateRoleDraftStorage - save draft to list failed: ${throwable.message}"
+                )
+            }
     }
 
-    /**
-     * 获取所有草稿列表
-     */
+    /** 获取所有草稿列表 */
     fun getAllDrafts(): List<CreateRoleDraft> {
         val json = IntySetting.getUserProfileData(KEY_CREATE_ROLE_DRAFTS_LIST) ?: return emptyList()
-        return runCatching {
-            draftsListAdapter.fromJson(json)
-        }.onFailure { throwable ->
-            LogUtils.e("CreateRoleDraftStorage - load drafts list failed: ${throwable.message}")
-            clearAllDrafts()
-        }.getOrNull() ?: emptyList()
+        return runCatching { draftsListAdapter.fromJson(json) }
+            .onFailure { throwable ->
+                LogUtils.e("CreateRoleDraftStorage - load drafts list failed: ${throwable.message}")
+                clearAllDrafts()
+            }
+            .getOrNull() ?: emptyList()
     }
 
-    /**
-     * 根据ID获取特定草稿，ID 为 UUID 字符串
-     */
+    /** 根据ID获取特定草稿，ID 为 UUID 字符串 */
     fun getDraftById(id: String): CreateRoleDraft? {
         return getAllDrafts().firstOrNull { it.id == id }
     }
 
-    /**
-     * 删除特定草稿，ID 为 UUID 字符串
-     */
+    /** 删除特定草稿，ID 为 UUID 字符串 */
     fun deleteDraft(id: String) {
         runCatching {
-            val allDrafts = getAllDrafts().toMutableList()
-            allDrafts.removeAll { it.id == id }
-            val json = draftsListAdapter.toJson(allDrafts)
-            IntySetting.setUserProfileData(KEY_CREATE_ROLE_DRAFTS_LIST, json)
-            LogUtils.d("CreateRoleDraftStorage - draft deleted: $id")
-        }.onFailure { throwable ->
-            LogUtils.e("CreateRoleDraftStorage - delete draft failed: ${throwable.message}")
-        }
+                val allDrafts = getAllDrafts().toMutableList()
+                allDrafts.removeAll { it.id == id }
+                val json = draftsListAdapter.toJson(allDrafts)
+                IntySetting.setUserProfileData(KEY_CREATE_ROLE_DRAFTS_LIST, json)
+                LogUtils.d("CreateRoleDraftStorage - draft deleted: $id")
+            }
+            .onFailure { throwable ->
+                LogUtils.e("CreateRoleDraftStorage - delete draft failed: ${throwable.message}")
+            }
     }
 
-    /**
-     * 清除所有草稿。
-     */
+    /** 清除所有草稿。 */
     fun clearAllDrafts() {
         IntySetting.clearUserProfileData(KEY_CREATE_ROLE_DRAFTS_LIST)
     }
 
     // ========== 临时草稿相关方法（用于自动保存当前编辑状态） ==========
 
-    /**
-     * 保存当前编辑的临时草稿（用于自动保存）
-     */
+    /** 保存当前编辑的临时草稿（用于自动保存） */
     fun saveCurrentDraft(draft: CreateRoleDraft) {
         if (draft.isEmpty()) {
             clearCurrentDraft()
@@ -111,51 +102,45 @@ object CreateRoleDraftStorage {
                 LogUtils.d("CreateRoleDraftStorage - current draft saved")
             }
             .onFailure { throwable ->
-                LogUtils.e("CreateRoleDraftStorage - save current draft failed: ${throwable.message}")
+                LogUtils.e(
+                    "CreateRoleDraftStorage - save current draft failed: ${throwable.message}"
+                )
             }
     }
 
-    /**
-     * 加载当前编辑的临时草稿
-     */
+    /** 加载当前编辑的临时草稿 */
     fun loadCurrentDraft(): CreateRoleDraft? {
         val json = IntySetting.getUserProfileData(KEY_CREATE_ROLE_DRAFT_CURRENT) ?: return null
         return runCatching { adapter.fromJson(json) }
             .onFailure { throwable ->
-                LogUtils.e("CreateRoleDraftStorage - load current draft failed: ${throwable.message}")
+                LogUtils.e(
+                    "CreateRoleDraftStorage - load current draft failed: ${throwable.message}"
+                )
                 clearCurrentDraft()
             }
             .getOrNull()
     }
 
-    /**
-     * 清除当前编辑的临时草稿
-     */
+    /** 清除当前编辑的临时草稿 */
     fun clearCurrentDraft() {
         IntySetting.clearUserProfileData(KEY_CREATE_ROLE_DRAFT_CURRENT)
     }
 
     // ========== 向后兼容的旧方法（保留但标记为废弃） ==========
 
-    /**
-     * @deprecated 使用 saveDraftToList 或 saveCurrentDraft 替代
-     */
+    /** @deprecated 使用 saveDraftToList 或 saveCurrentDraft 替代 */
     @Deprecated("Use saveDraftToList or saveCurrentDraft instead")
     fun saveDraft(draft: CreateRoleDraft) {
         saveCurrentDraft(draft)
     }
 
-    /**
-     * @deprecated 使用 loadCurrentDraft 替代
-     */
+    /** @deprecated 使用 loadCurrentDraft 替代 */
     @Deprecated("Use loadCurrentDraft instead")
     fun loadDraft(): CreateRoleDraft? {
         return loadCurrentDraft()
     }
 
-    /**
-     * @deprecated 使用 clearCurrentDraft 替代
-     */
+    /** @deprecated 使用 clearCurrentDraft 替代 */
     @Deprecated("Use clearCurrentDraft instead")
     fun clearDraft() {
         clearCurrentDraft()
@@ -190,9 +175,7 @@ data class CreateRoleDraft(
         return !(hasTextFields || hasAvatars || hasMeta || hasAvatarPrompt)
     }
 
-    /**
-     * 更新 lastModifiedAt 时间戳
-     */
+    /** 更新 lastModifiedAt 时间戳 */
     fun withUpdatedTimestamp(): CreateRoleDraft {
         return copy(lastModifiedAt = System.currentTimeMillis())
     }

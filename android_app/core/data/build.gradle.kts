@@ -68,6 +68,10 @@ dependencies {
     implementation(projects.library.utils)
     implementation(projects.library.network)
 
+    // ===== Moshi 代码生成（用于 @JsonClass(generateAdapter = true)）=====
+    // 注意：需要在每个使用 @JsonClass 注解的模块中单独配置 ksp
+    ksp(libs.moshi.kotlin.codegen)
+
     // ===== 网络调试工具 =====
     debugImplementation(libs.chucker.library)
     "localImplementation"(libs.chucker.library)

@@ -5,12 +5,14 @@ import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.models.toAgentInfo
 import ai.sxwl.android.utils.LogUtils
+import com.squareup.moshi.JsonClass
 import kotlinx.coroutines.withContext
 
 /** 智能体服务 封装所有智能体相关的API调用 替换原有的 IAgentApi */
 object AgentService {
 
     /** 主题专区数据项 */
+    @JsonClass(generateAdapter = true)
     data class CharacterThemeItem(
         val id: String,
         val name: String,
@@ -249,36 +251,34 @@ object AgentService {
      * @param skip 跳过的记录数（分页参数）
      * @param limit 返回的记录数（分页参数）
      */
-    suspend fun getCharacterThemes(
-        skip: Int = 0,
-        limit: Int,
-    ): ApiResult<List<CharacterThemeItem>> {
+    suspend fun getCharacterThemes(skip: Int = 0, limit: Int): ApiResult<List<CharacterThemeItem>> {
         return IntyNetworkManager.executeRequest("Get Character Themes") {
             LogUtils.d("AgentService - 请求主题专区列表: skip=$skip, limit=$limit")
 
             // 使用 inty_sdk 同步 API，与其他接口保持一致（如 getRecommendAgents, getAgentInfo）
             // 注意：同步阻塞调用必须在 IO 线程执行，避免 NetworkOnMainThreadException
-            val response = try {
-                withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    IntyNetworkManager.getClient()
-                        .api()
-                        .v1()
-                        .characterThemes()
-                        .list(
-                            com.inty.api.models.api.v1.characterthemes.CharacterThemeListParams
-                                .builder()
-                                .skip(skip.toLong())
-                                .limit(limit.toLong())
-                                .build()
-                        )
+            val response =
+                try {
+                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        IntyNetworkManager.getClient()
+                            .api()
+                            .v1()
+                            .characterThemes()
+                            .list(
+                                com.inty.api.models.api.v1.characterthemes.CharacterThemeListParams
+                                    .builder()
+                                    .skip(skip.toLong())
+                                    .limit(limit.toLong())
+                                    .build()
+                            )
+                    }
+                } catch (e: Exception) {
+                    LogUtils.e(
+                        "AgentService - 请求主题专区列表异常: ${e.javaClass.simpleName}, message=${e.message}",
+                        e,
+                    )
+                    throw e
                 }
-            } catch (e: Exception) {
-                LogUtils.e(
-                    "AgentService - 请求主题专区列表异常: ${e.javaClass.simpleName}, message=${e.message}",
-                    e
-                )
-                throw e
-            }
 
             LogUtils.d(
                 "AgentService - 主题专区接口响应: code=${response.code()}, message=${response.message()}, data=${response.data()?.size ?: 0} 条"
@@ -286,7 +286,9 @@ object AgentService {
 
             // 详细日志：检查响应对象的各个字段
             try {
-                LogUtils.d("AgentService - 响应详情: code=${response.code()}, message=${response.message()}, data是否为null=${response.data() == null}")
+                LogUtils.d(
+                    "AgentService - 响应详情: code=${response.code()}, message=${response.message()}, data是否为null=${response.data() == null}"
+                )
                 if (response.data() != null) {
                     LogUtils.d("AgentService - data列表大小: ${response.data()!!.size}")
                 }
@@ -309,7 +311,9 @@ object AgentService {
                     throw Exception("获取主题专区列表失败: code=$responseCode, message=$errorMessage")
                 } else {
                     // code 为 null 或等于 200，但 data 为 null，可能是正常情况（空列表）或解析失败
-                    LogUtils.w("AgentService - 主题专区列表数据为空: code=$responseCode, message=$errorMessage")
+                    LogUtils.w(
+                        "AgentService - 主题专区列表数据为空: code=$responseCode, message=$errorMessage"
+                    )
                     return@executeRequest emptyList()
                 }
             }
@@ -324,10 +328,10 @@ object AgentService {
                             val visibility = theme.visibility()
                             val isVisible =
                                 visibility ==
-                                        com.inty.api.models.api.v1.characterthemes
-                                            .CharacterThemeVisibility
-                                            .PRIMARY ||
-                                        visibility ==
+                                    com.inty.api.models.api.v1.characterthemes
+                                        .CharacterThemeVisibility
+                                        .PRIMARY ||
+                                    visibility ==
                                         com.inty.api.models.api.v1.characterthemes
                                             .CharacterThemeVisibility
                                             .SECONDARY
@@ -347,9 +351,7 @@ object AgentService {
                                     try {
                                         themeAgent.agent()?.toAgentInfo()
                                     } catch (e: Exception) {
-                                        LogUtils.w(
-                                            "AgentService - 转换 Agent 失败: ${e.message}"
-                                        )
+                                        LogUtils.w("AgentService - 转换 Agent 失败: ${e.message}")
                                         null
                                     }
                                 } ?: emptyList()
@@ -384,9 +386,9 @@ object AgentService {
             val name = theme.name().lowercase()
             val description = theme.description()?.lowercase() ?: ""
             name.contains("christmas") ||
-                    name.contains("圣诞") ||
-                    description.contains("christmas") ||
-                    description.contains("圣诞")
+                name.contains("圣诞") ||
+                description.contains("christmas") ||
+                description.contains("圣诞")
         } catch (e: Exception) {
             LogUtils.w("AgentService - 判断圣诞主题失败: ${e.message}")
             false

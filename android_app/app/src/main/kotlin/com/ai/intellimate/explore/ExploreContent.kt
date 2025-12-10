@@ -59,15 +59,16 @@ private fun isAnimatedImageUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lowerUrl = url.lowercase()
     return lowerUrl.endsWith(".gif") ||
-            lowerUrl.endsWith(".webp") ||
-            lowerUrl.endsWith(".avif") ||
-            lowerUrl.contains(".gif?") ||
-            lowerUrl.contains(".webp?") ||
-            lowerUrl.contains(".avif?")
+        lowerUrl.endsWith(".webp") ||
+        lowerUrl.endsWith(".avif") ||
+        lowerUrl.contains(".gif?") ||
+        lowerUrl.contains(".webp?") ||
+        lowerUrl.contains(".avif?")
 }
 
 /**
  * 创建全屏宽度的 Modifier，突破 LazyVerticalGrid 的 contentPadding 限制
+ *
  * @param screenWidthPx 屏幕宽度（像素）
  */
 private fun Modifier.fullWidthLayout(screenWidthPx: Float): Modifier {
@@ -81,9 +82,7 @@ private fun Modifier.fullWidthLayout(screenWidthPx: Float): Modifier {
                 maxHeight = constraints.maxHeight,
             )
         val placeable = measurable.measure(fullWidthConstraints)
-        layout(placeable.width, placeable.height) {
-            placeable.placeRelative(0, 0)
-        }
+        layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
     }
 }
 
@@ -111,9 +110,7 @@ fun ExploreContent(
     val isCacheLoaded by vm.isCacheLoaded.collectAsState()
 
     // 计算全屏宽度（在 Composable 顶层计算，避免在 item lambda 中调用 CompositionLocal）
-    val screenWidthPx = with(density) {
-        configuration.screenWidthDp.dp.toPx()
-    }
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
 
     // 加载主题专区列表
     // 1. ViewModel 创建时从缓存加载（在 ViewModel.init 中已处理），确保快速显示
@@ -145,16 +142,68 @@ fun ExploreContent(
     }
 
     // 计算主题专区的 item 数量（每个有 agents 的 theme 是一个 item）
-    val themeItemCount = remember(characterThemes) {
-        characterThemes.count { it.agents.isNotEmpty() }
-    }
+    val themeItemCount =
+        remember(characterThemes) { characterThemes.count { it.agents.isNotEmpty() } }
+
+    // 获取保存的滚动位置
+    val savedGridIndex by vm.savedFirstVisibleGridIndex.collectAsState()
+    val savedOffset by vm.savedFirstVisibleOffset.collectAsState()
 
     val gridState =
         rememberLazyGridState(
-            // 将保存的 agent 索引转换为网格索引（加上当前主题项数量）
+            // 直接使用保存的网格索引，如果没有保存位置（默认是0），会显示第一个item（theme或agent）
             initialFirstVisibleItemIndex = vm.getRestoredGridIndex(themeItemCount),
-            initialFirstVisibleItemScrollOffset = vm.savedFirstVisibleOffset.collectAsState().value,
+            initialFirstVisibleItemScrollOffset = savedOffset,
         )
+
+    // 标记是否正在恢复滚动位置，用于防止在恢复期间保存错误的位置
+    var isRestoringScrollPosition by remember { mutableStateOf(false) }
+
+    // 当缓存加载完成且themeItemCount确定后，恢复滚动位置
+    // 这确保了在characterThemes加载完成后，能够正确恢复之前的位置（包括theme项的位置）
+    // 使用基于isCacheLoaded和themeItemCount的key，确保每次这些值变化时都重新评估是否需要恢复位置
+    LaunchedEffect(isCacheLoaded, themeItemCount) {
+        // 只有在缓存加载完成后才恢复位置
+        if (!isCacheLoaded) {
+            return@LaunchedEffect
+        }
+
+        // 检查保存的网格索引是否有效（非负数）
+        // 注意：scrollToItem 会自动处理超出范围的索引，所以不需要手动检查上限
+        if (savedGridIndex < 0) {
+            // 如果保存的索引是负数，重置为0（显示第一个item）
+            vm.saveScrollPosition(gridIndex = 0, offset = 0)
+            return@LaunchedEffect
+        }
+
+        // 检查当前显示的位置是否与保存的位置一致
+        val currentIndex = gridState.firstVisibleItemIndex
+        val currentOffset = gridState.firstVisibleItemScrollOffset
+
+        // 如果保存的位置与当前显示的位置不一致，需要恢复位置
+        // 注意：这里不检查savedGridIndex是否为0，因为0也可能是有效的位置（第一个theme的位置或第一个agent的位置）
+        if (savedGridIndex != currentIndex || savedOffset != currentOffset) {
+            // 在延迟之前捕获保存的位置值，避免在延迟期间响应式状态被更新导致恢复错误的位置
+            val targetGridIndex = savedGridIndex
+            val targetOffset = savedOffset
+            // 设置恢复标志，防止在恢复期间保存位置
+            isRestoringScrollPosition = true
+            // 添加小延迟确保LazyVerticalGrid已经布局完成
+            delay(50)
+            // scrollToItem 会自动处理超出范围的索引（会滚动到最接近的有效索引）
+            gridState.scrollToItem(index = targetGridIndex, scrollOffset = targetOffset)
+            // 等待滚动完成后再清除恢复标志
+            // 轮询检查滚动状态，直到滚动完成（最多等待1秒，防止无限等待）
+            var waitTime = 0L
+            val maxWaitTime = 1000L // 最多等待1秒
+            while (gridState.isScrollInProgress && waitTime < maxWaitTime) {
+                delay(16) // 约一帧的时间
+                waitTime += 16
+            }
+            // 滚动已完成或超时，清除恢复标志
+            isRestoringScrollPosition = false
+        }
+    }
 
     val scrollConnection =
         rememberExploreScrollConnection(
@@ -185,53 +234,58 @@ fun ExploreContent(
 
     // 检测应该播放动图的 item 索引列表（所有可见区域>=70%的item，按位置从上到下排序）
     // 注意：返回的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
-    val visibleItemIndices by remember(themeItemCount) {
-        derivedStateOf {
-            val layoutInfo = gridState.layoutInfo
-            val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
-            if (viewportHeight <= 0) return@derivedStateOf emptyList<Int>()
+    val visibleItemIndices by
+        remember(themeItemCount) {
+            derivedStateOf {
+                val layoutInfo = gridState.layoutInfo
+                val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                if (viewportHeight <= 0) return@derivedStateOf emptyList<Int>()
 
-            val agentItemCount = lazyPagingItems?.itemCount ?: 0
-            if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
+                val agentItemCount = lazyPagingItems?.itemCount ?: 0
+                if (agentItemCount == 0) return@derivedStateOf emptyList<Int>()
 
-            // 过滤出 agent items（排除 theme items、加载状态指示器和 Spacer）
-            // 网格索引范围：themeItemCount 到 themeItemCount + agentItemCount - 1
-            val agentItems =
-                layoutInfo.visibleItemsInfo.filter { itemInfo ->
-                    val gridIndex = itemInfo.index
-                    // agent items 的网格索引范围是 [themeItemCount, themeItemCount + agentItemCount)
-                    gridIndex >= themeItemCount && gridIndex < themeItemCount + agentItemCount
+                // 过滤出 agent items（排除 theme items、加载状态指示器和 Spacer）
+                // 网格索引范围：themeItemCount 到 themeItemCount + agentItemCount - 1
+                val agentItems =
+                    layoutInfo.visibleItemsInfo.filter { itemInfo ->
+                        val gridIndex = itemInfo.index
+                        // agent items 的网格索引范围是 [themeItemCount, themeItemCount + agentItemCount)
+                        gridIndex >= themeItemCount && gridIndex < themeItemCount + agentItemCount
+                    }
+
+                // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
+                // 注意：这里存储的是 lazyPagingItems 的索引（网格索引减去 themeItemCount）
+                val visibleIndices = mutableListOf<Int>()
+                for (itemInfo in agentItems.sortedBy { it.offset.y }) {
+                    val itemTop = itemInfo.offset.y
+                    val itemBottom = itemInfo.offset.y + itemInfo.size.height
+                    val viewportTop = layoutInfo.viewportStartOffset
+                    val viewportBottom = layoutInfo.viewportEndOffset
+
+                    // 计算可见区域
+                    val visibleTop = maxOf(itemTop, viewportTop)
+                    val visibleBottom = minOf(itemBottom, viewportBottom)
+                    val visibleHeight = maxOf(0, visibleBottom - visibleTop)
+                    val itemHeight = itemInfo.size.height
+
+                    // 计算可见比例
+                    val visibleRatio =
+                        if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
+
+                    // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
+                    // 将网格索引转换为 lazyPagingItems 索引
+                    if (visibleRatio >= 0.7f) {
+                        val agentIndex = itemInfo.index - themeItemCount
+                        // 确保 agentIndex 在有效范围内（双重检查，防止边界情况）
+                        if (agentIndex >= 0 && agentIndex < agentItemCount) {
+                            visibleIndices.add(agentIndex)
+                        }
+                    }
                 }
 
-            // 找到所有可见比例 >= 70% 的 item 索引（按位置排序，从上到下）
-            // 注意：这里存储的是 lazyPagingItems 的索引（网格索引减去 themeItemCount）
-            val visibleIndices = mutableListOf<Int>()
-            for (itemInfo in agentItems.sortedBy { it.offset.y }) {
-                val itemTop = itemInfo.offset.y
-                val itemBottom = itemInfo.offset.y + itemInfo.size.height
-                val viewportTop = layoutInfo.viewportStartOffset
-                val viewportBottom = layoutInfo.viewportEndOffset
-
-                // 计算可见区域
-                val visibleTop = maxOf(itemTop, viewportTop)
-                val visibleBottom = minOf(itemBottom, viewportBottom)
-                val visibleHeight = maxOf(0, visibleBottom - visibleTop)
-                val itemHeight = itemInfo.size.height
-
-                // 计算可见比例
-                val visibleRatio = if (itemHeight > 0) visibleHeight.toFloat() / itemHeight else 0f
-
-                // 如果可见比例 >= 70%，添加到列表中（保持从上到下的顺序）
-                // 将网格索引转换为 lazyPagingItems 索引
-                if (visibleRatio >= 0.7f) {
-                    val agentIndex = itemInfo.index - themeItemCount
-                    visibleIndices.add(agentIndex)
-                }
+                visibleIndices
             }
-
-            visibleIndices
         }
-    }
 
     // 找到第一个可见且有 backgroundAnimatedUrl 的 item 索引
     // 注意：存储的是 lazyPagingItems 的索引（从 0 开始），不是网格索引
@@ -280,17 +334,14 @@ fun ExploreContent(
                     hasUserScrolled = true // 标记用户已主动滚动
                 } else {
                     // 滚动停止时保存位置
-                    // 将网格索引转换为 agent 索引（如果第一个可见项是 agent 项）
-                    val agentIndex = if (firstVisibleItemIndex >= themeItemCount) {
-                        // 第一个可见项是 agent 项，转换为 agent 索引
-                        firstVisibleItemIndex - themeItemCount
-                    } else {
-                        // 第一个可见项是主题项或加载状态指示器，保存 0（表示滚动到顶部）
-                        0
+                    // 如果正在恢复滚动位置，跳过保存操作，避免覆盖正确的保存位置
+                    if (isRestoringScrollPosition) {
+                        return@collect
                     }
+                    // 直接保存网格索引，可以区分theme项和agent项
                     vm.saveScrollPosition(
-                        agentIndex,
-                        gridState.firstVisibleItemScrollOffset,
+                        gridIndex = firstVisibleItemIndex,
+                        offset = gridState.firstVisibleItemScrollOffset,
                     )
                 }
             }
@@ -300,15 +351,16 @@ fun ExploreContent(
     LaunchedEffect(isSpacerVisible, lazyPagingItems?.loadState?.append) {
         if (isSpacerVisible && hasUserScrolled) { // 只有用户主动滚动过才检查
             val currentTime = System.currentTimeMillis()
+            val pagingItems = lazyPagingItems ?: return@LaunchedEffect
 
             // 只有在Paging正在加载时才显示loading指示器
-            if (lazyPagingItems?.loadState?.append is LoadState.Loading) {
+            if (pagingItems.loadState.append is LoadState.Loading) {
                 // 只有在用户主动滚动且不是首次加载时才显示loading
                 // 首次进入时使用缓存数据，不应该显示加载更多loading
                 if (
                     currentTime - lastScrollTime < 1000 &&
-                    lazyPagingItems.itemCount > 0 &&
-                    lazyPagingItems.loadState.refresh is LoadState.NotLoading
+                        pagingItems.itemCount > 0 &&
+                        pagingItems.loadState.refresh is LoadState.NotLoading
                 ) {
                     showLoadMoreLoading = true
                     // 延迟隐藏loading
@@ -325,7 +377,8 @@ fun ExploreContent(
     LaunchedEffect(resetToTopSignal) {
         if (resetToTopSignal > 0) {
             gridState.scrollToItem(0)
-            vm.saveScrollPosition(0, 0)
+            // 重置时保存网格索引0，表示滚动到顶部（第一个theme的位置）
+            vm.saveScrollPosition(gridIndex = 0, offset = 0)
             if (lazyPagingItems != null) {
                 lazyPagingItems.refresh()
             } else {
@@ -427,10 +480,10 @@ fun ExploreContent(
                         } else {
                             // 显示加载占位符
                             ShimmerPlaceholder(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
                             )
                         }
                     }
@@ -450,11 +503,7 @@ fun ExploreContent(
 /** 空状态指示器 */
 @Composable
 private fun EmptyStateIndicator() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .height(200.dp), contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
     }
 }

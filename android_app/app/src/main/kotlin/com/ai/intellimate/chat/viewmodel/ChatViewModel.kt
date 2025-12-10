@@ -133,20 +133,16 @@ class ChatViewModel : BaseVM() {
             return
         }
 
-        // 如果是同一个 agent，根据 forceSync 参数决定是否重新查询消息
+        // 如果是同一个 agent，总是触发后台同步以确保获取最新消息
+        // syncLatestMessages 内部已经有逻辑判断是否有新消息，如果没有新消息不会更新本地数据
         if (_agentInfo.value?.id == agentInfo.id) {
             _agentInfo.value = agentInfo
-            // 如果强制同步，则触发消息同步（用于从通知进入等场景）
-            if (forceSync) {
-                LogUtils.i(
-                    "ChatViewModel.setAgentInfo: forceSync=true, syncing messages for agentId=${agentInfo.id}"
-                )
-                viewModelScope.launch(Dispatchers.IO) {
-                    try {
-                        syncChatDataUseCase(agentInfo.id)
-                    } catch (e: Exception) {
-                        LogUtils.e("ChatViewModel.setAgentInfo forceSync error: ${e.message}")
-                    }
+            // 总是触发后台同步，确保用户看到最新消息
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    syncChatDataUseCase(agentInfo.id)
+                } catch (e: Exception) {
+                    LogUtils.e("ChatViewModel.setAgentInfo sync error: ${e.message}")
                 }
             }
             return

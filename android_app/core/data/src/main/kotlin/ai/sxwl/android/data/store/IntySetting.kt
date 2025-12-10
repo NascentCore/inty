@@ -20,7 +20,8 @@ object IntySetting {
 
     // App级通用标记的存储 使用的对象
     // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
-    private val allUserSetting: MMKV = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
+    private val allUserSetting: MMKV =
+        MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
     // 当前用户级别的数据存储
     private var curUserSetting: MMKV
@@ -113,6 +114,25 @@ object IntySetting {
     /** 标记用户已手动设置过 Auto Play Voice */
     fun markUserSetAutoPlayVoice() {
         curUserSetting.putBoolean("user_set_auto_play_voice", true)
+    }
+
+    /** 自动播放背景动画（全局设置，默认开启） */
+    fun setAutoPlayAnimation(enabled: Boolean) {
+        curUserSetting.putBoolean("auto_play_animation", enabled)
+    }
+
+    fun isAutoPlayAnimation(): Boolean {
+        return curUserSetting.decodeBool("auto_play_animation", true)
+    }
+
+    /** 检查用户是否手动设置过 Auto Play Animation */
+    fun hasUserSetAutoPlayAnimation(): Boolean {
+        return curUserSetting.decodeBool("user_set_auto_play_animation", false)
+    }
+
+    /** 标记用户已手动设置过 Auto Play Animation */
+    fun markUserSetAutoPlayAnimation() {
+        curUserSetting.putBoolean("user_set_auto_play_animation", true)
     }
 
     /** 显示场景动作输入按钮（全局设置，默认关闭） */

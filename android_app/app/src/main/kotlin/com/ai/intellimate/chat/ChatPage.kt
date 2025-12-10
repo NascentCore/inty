@@ -76,6 +76,7 @@ import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.xb.navigation.Routes
+import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -150,6 +151,7 @@ internal fun ChatPage(
     // 获取开关状态用于页面曝光事件和 UI 显示
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
+    val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
     val chatFontSizeSp by SettingStateManager.chatFontSizeFlow.collectAsState()
 
     // 记录上次上报的 key，避免在同一页面状态下重复上报
@@ -197,7 +199,8 @@ internal fun ChatPage(
 
             // 生成唯一 key，用于判断是否需要上报（避免在同一状态下重复上报）
             // 包含 Agent ID、页面来源和开关状态，确保这些关键参数变化时会重新上报
-            val currentKey = "${agentInfo?.id}_${pageSource}_${showKeepTalking}_${autoPlayVoice}"
+            val currentKey =
+                "${agentInfo?.id}_${pageSource}_${showKeepTalking}_${autoPlayVoice}_${autoPlayAnimation}"
 
             // 如果 key 发生变化，说明需要上报新的事件
             // 这确保了：1) 首次曝光时上报 2) Agent 切换时上报 3) 页面来源变化时上报 4) 开关状态变化时上报
@@ -211,6 +214,7 @@ internal fun ChatPage(
                         "agent_name" to (agentInfo?.name ?: "unknown"),
                         "keep_talking_enabled" to showKeepTalking,
                         "auto_play_voice_enabled" to autoPlayVoice,
+                        "auto_play_animation_enabled" to autoPlayAnimation,
                     ),
                 )
 
@@ -238,6 +242,7 @@ internal fun ChatPage(
                     // 添加开关状态参数，用于分析不同配置下的用户行为
                     "keep_talking_enabled" to showKeepTalking,
                     "auto_play_voice_enabled" to autoPlayVoice,
+                    "auto_play_animation_enabled" to autoPlayAnimation,
                 ),
             )
         }
@@ -321,6 +326,7 @@ internal fun ChatPage(
                 showGradients = true,
                 isLoading = hasLoadingMessage,
                 isCurrentPage = isCurrentPage,
+                enableAnimatedBackground = autoPlayAnimation,
             )
         }
 
@@ -336,6 +342,11 @@ internal fun ChatPage(
                     Spacer(Modifier.height(48.dp))
 
                     agentInfo?.let { info ->
+                        val storedEnergyPoints = boostState.boostsByAgent[info.id]?.pointsInvested
+                        val fallbackEnergyPoints = remember(info.id) { Random.nextInt(0, 101) }
+                        val displayedEnergyPoints =
+                            (storedEnergyPoints ?: fallbackEnergyPoints).takeIf { isDebugMode }
+
                         ChatTopBar(
                             modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                             agentInfo = info,
@@ -343,7 +354,7 @@ internal fun ChatPage(
                             onBack = onBack,
                             fontSize = 15.sp,
                             avatarWidth = 40.dp,
-                            earnedPoints = boostState.chatMessagePoints,
+                            earnedPoints = displayedEnergyPoints,
                             onClickMore = {
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {

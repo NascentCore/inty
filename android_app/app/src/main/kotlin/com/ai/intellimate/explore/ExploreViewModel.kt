@@ -41,9 +41,9 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 是否已初始化
     private var isInitialized = false
 
-    // 保存滚动位置（保存的是 agent 索引，不是网格索引）
-    private val _savedFirstVisibleAgentIndex = MutableStateFlow(0)
-    val savedFirstVisibleAgentIndex = _savedFirstVisibleAgentIndex
+    // 保存滚动位置（保存的是网格索引，可以区分theme项和agent项）
+    private val _savedFirstVisibleGridIndex = MutableStateFlow(0)
+    val savedFirstVisibleGridIndex = _savedFirstVisibleGridIndex
     private val _savedFirstVisibleOffset = MutableStateFlow(0)
     val savedFirstVisibleOffset = _savedFirstVisibleOffset
 
@@ -158,24 +158,25 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
     /**
      * 保存滚动位置
-     * @param agentIndex agent 索引（lazyPagingItems 的索引，从 0 开始）
+     *
+     * @param gridIndex 网格索引（LazyVerticalGrid 的索引，从 0 开始，包括theme项和agent项）
      * @param offset 滚动偏移量
      */
-    fun saveScrollPosition(agentIndex: Int, offset: Int) {
-        _savedFirstVisibleAgentIndex.value = agentIndex
+    fun saveScrollPosition(gridIndex: Int, offset: Int) {
+        _savedFirstVisibleGridIndex.value = gridIndex
         _savedFirstVisibleOffset.value = offset
     }
 
     /**
      * 获取恢复滚动位置时的网格索引
-     * @param currentThemeItemCount 当前主题项数量
+     *
+     * @param currentThemeItemCount 当前主题项数量（用于向后兼容，如果保存的是旧格式的agent索引）
      * @return 网格索引（用于 LazyVerticalGrid 的 initialFirstVisibleItemIndex）
      */
     fun getRestoredGridIndex(currentThemeItemCount: Int): Int {
-        val agentIndex = _savedFirstVisibleAgentIndex.value
-        // 将 agent 索引转换为网格索引：agent 索引 + 主题项数量
-        // agent 0 在网格中的位置是 themeItemCount（如果有主题项）或 0（如果没有主题项）
-        return agentIndex + currentThemeItemCount
+        // 直接返回保存的网格索引
+        // 如果没有保存位置（默认是0），会显示第一个item（theme或agent）
+        return _savedFirstVisibleGridIndex.value
     }
 
     /** 更新当前UI中显示的agents总数 */
@@ -349,7 +350,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                         AgentCacheManager.cacheCharacterThemes(themes)
                     }
                     is ai.sxwl.android.data.http.ApiResult.Error -> {
-                        // 所有异常（包括网络异常、业务错误等）都会被 IntyNetworkManager.executeRequest 
+                        // 所有异常（包括网络异常、业务错误等）都会被 IntyNetworkManager.executeRequest
                         // 捕获并转换为 ApiResult.Error，这里安全处理，不会导致崩溃
                         LogUtils.w(
                             "ExploreViewModel - 获取主题专区列表失败: code=${result.code}, message=${result.message}"

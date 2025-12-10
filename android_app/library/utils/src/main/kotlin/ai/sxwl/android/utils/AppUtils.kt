@@ -1,21 +1,16 @@
 package ai.sxwl.android.utils
 
 import android.app.Activity
-import android.app.ActivityManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
-import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.os.Build
 import android.os.Process
 import android.provider.Settings
 import android.util.Log
-import androidx.core.content.getSystemService
 import androidx.core.content.pm.PackageInfoCompat
-import java.security.MessageDigest
 import kotlin.system.exitProcess
 
 /** 应用工具类 提供应用相关的工具方法 */

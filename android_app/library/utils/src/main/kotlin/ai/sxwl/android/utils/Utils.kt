@@ -1,9 +1,7 @@
 package ai.sxwl.android.utils
 
-import android.app.Activity
 import android.app.Application
 import android.util.Log
-import androidx.lifecycle.Lifecycle
 
 /** 工具类核心类，提供应用初始化和基础功能 */
 object Utils {

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import List, Optional, Union
 
 from fastapi import HTTPException
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app import models, schemas
+from app.core.config import global_config_loaded_from_config_yaml
 from app.models.user import AuthType
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
@@ -1166,6 +1168,173 @@ async def save_debug_messages(
         # 不抛出异常，避免影响正常的聊天流程
 
 
+def _is_network_error(error_message: str, error_type: str) -> bool:
+    """
+    检查是否是网络相关的错误
+
+    Args:
+        error_message: 错误消息
+        error_type: 错误类型名称
+
+    Returns:
+        是否是网络错误
+    """
+    error_message_lower = error_message.lower()
+    error_type_lower = error_type.lower()
+
+    network_keywords = [
+        "connection",
+        "timeout",
+        "network",
+        "socket",
+        "ssl",
+        "dns",
+        "refused",
+        "unreachable",
+        "reset",
+        "eof",
+        "connectionerror",
+        "timeouterror",
+        "socketerror",
+        "sslerror",
+        "gaierror",
+        "httpx",
+        "httpcore",
+        "transport",
+        "connect",
+    ]
+
+    # 检查错误消息中是否包含网络相关关键词
+    for keyword in network_keywords:
+        if keyword in error_message_lower or keyword in error_type_lower:
+            return True
+
+    return False
+
+
+async def _try_match_existing_image(
+    db: AsyncSession,
+    agent_id: str,
+    user_id: str,
+    message_id: int,
+    session_id: str,
+    current_prompt: str,
+    message_content: str,
+    is_network_error: bool = False,
+) -> Optional[schemas.ChatImageGenerationResponse]:
+    """
+    尝试匹配已生成的图片
+    优先匹配其他用户生成的图片，其次匹配当前用户的图片
+
+    Args:
+        db: 数据库会话
+        agent_id: Agent ID
+        user_id: 用户ID
+        message_id: 消息ID
+        session_id: 会话ID
+        current_prompt: 当前提示词
+        message_content: 消息内容
+        is_network_error: 是否是网络错误
+
+    Returns:
+        匹配到的图片响应，如果未找到则返回None
+    """
+    from app.services.image_generation_service import image_generation_service
+    from app.services.image_transform_service import image_transform_service
+
+    try:
+        logger.info(
+            f"图片生成失败（{'网络错误' if is_network_error else '安全过滤器'}），"
+            f"尝试匹配已生成图片 - Agent ID: {agent_id}, User ID: {user_id}"
+        )
+
+        similar_image = await image_generation_service.find_most_similar_image(
+            db=db,
+            agent_id=agent_id,
+            current_prompt=current_prompt,
+            current_user_id=user_id,
+        )
+
+        if similar_image:
+            matched_user_id = similar_image.get("user_id")
+            is_other_user = matched_user_id != user_id
+            logger.info(
+                f"找到匹配图片，相似度: {similar_image.get('similarity', 0):.3f}, "
+                f"来自{'其他用户' if is_other_user else '当前用户'}: {matched_user_id}"
+            )
+
+            # 获取GCS URI并转换为CDN URL
+            gcs_uri = similar_image.get("image_url", "")
+            cdn_url = image_transform_service.transform_desktop(gcs_uri)
+
+            # 更新消息的 meta_data，记录使用的是匹配的图片
+            metadata_update = {
+                "generated_image": {
+                    "image_url": gcs_uri,
+                    "width": similar_image.get("width"),
+                    "height": similar_image.get("height"),
+                    "format": similar_image.get("format", "jpeg"),
+                    "prompt": current_prompt,
+                    "generated_at": datetime.utcnow().isoformat(),
+                    "is_matched": True,
+                    "similarity": similar_image.get("similarity", 0),
+                    "matched_from_user_id": matched_user_id,
+                    "matched_from_image_url": gcs_uri,
+                }
+            }
+
+            await chat_history_service.update_message_metadata(
+                db=db,
+                session_id=session_id,
+                message_id=message_id,
+                metadata_update=metadata_update,
+            )
+
+            # 记录成功用量（匹配的图片也计入用量）
+            try:
+                await subscription_service.record_usage(
+                    db,
+                    user_id,
+                    "image_generation",
+                    1,
+                    extra_data={
+                        "agent_id": agent_id,
+                        "message_content": message_content[:100],
+                        "success": True,
+                        "is_matched": True,
+                        "similarity": similar_image.get("similarity", 0),
+                        "matched_from_user_id": matched_user_id,
+                        "is_from_other_user": is_other_user,
+                        "session_id": session_id,
+                        "message_id": message_id,
+                    },
+                )
+                logger.debug(f"匹配图片用量记录成功: user_id={user_id}")
+            except Exception as e:
+                logger.warning(f"记录匹配图片用量失败: {str(e)}")
+
+            return schemas.ChatImageGenerationResponse(
+                message_id=message_id,
+                image_url=cdn_url,
+                image_metadata={
+                    "width": similar_image.get("width"),
+                    "height": similar_image.get("height"),
+                    "format": similar_image.get("format", "jpeg"),
+                },
+                prompt=current_prompt,
+            )
+        else:
+            logger.info(f"未找到匹配的图片 - Agent ID: {agent_id}")
+            return None
+
+    except Exception as e:
+        logger.error(f"匹配已生成图片失败: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        return None
+
+
 async def generate_chat_image(
     db: AsyncSession,
     agent_id: str,
@@ -1294,6 +1463,25 @@ async def generate_chat_image(
     failure_reason = None
     failure_type = None
 
+    # 预先构建提示词，用于匹配已生成图片
+    current_prompt = None
+    try:
+        # 获取聊天历史以构建提示词
+        messages_data = chat_history_service.get_messages_paginated(
+            session_id=session_id,
+            limit=history_count
+            or global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
+            offset=0,
+        )
+        chat_history = messages_data.get("messages", [])
+        current_prompt = image_generation_service.build_image_prompt(
+            agent_data=agent_data,
+            chat_history=chat_history,
+            user_message=message_content,
+        )
+    except Exception as e:
+        logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
+
     try:
         image_generation_result = (
             await image_generation_service.generate_chat_image_with_gemini(
@@ -1302,27 +1490,44 @@ async def generate_chat_image(
                 message_id=message_id,  # 传入要更新的消息ID
                 agent_data=agent_data,
                 message_content=message_content,
+                user_id=user_id,  # 传入user_id用于保存到resources表
                 history_count=history_count,
             )
         )
     except ValueError as e:
         error_message = str(e)
-        # 检查错误消息是否包含被阻止相关的关键词
-        if (
+        # 检查是否是网络错误或安全过滤器阻止
+        is_network_error = _is_network_error(error_message, type(e).__name__)
+        is_safety_filter = (
             "被阻止" in error_message
             or "安全过滤器" in error_message
             or "blocked" in error_message.lower()
             or "safety filter" in error_message.lower()
-        ):
-            # 提取阻止原因（如果错误消息中包含）
+        )
+
+        # 如果是可匹配的错误类型，尝试匹配已生成图片
+        if (is_network_error or is_safety_filter) and current_prompt:
+            fallback_result = await _try_match_existing_image(
+                db=db,
+                agent_id=agent_id,
+                user_id=user_id,
+                message_id=message_id,
+                session_id=session_id,
+                current_prompt=current_prompt,
+                message_content=message_content,
+                is_network_error=is_network_error,
+            )
+            if fallback_result:
+                return fallback_result
+
+        # 如果是安全过滤器阻止，提取阻止原因
+        if is_safety_filter:
             block_reason = None
             if "原因:" in error_message:
-                # 提取冒号后的内容作为阻止原因
                 reason_part = error_message.split("原因:", 1)[1].strip()
                 if reason_part:
                     block_reason = reason_part
             elif ":" in error_message and "阻止" in error_message:
-                # 尝试提取冒号后的内容
                 parts = error_message.split(":", 1)
                 if len(parts) > 1:
                     block_reason = parts[1].strip()
@@ -1371,6 +1576,24 @@ async def generate_chat_image(
         error_message = str(e)
         failure_reason = error_message
         failure_type = type(e).__name__.lower()
+
+        # 检查是否是网络错误
+        is_network_error = _is_network_error(error_message, failure_type)
+
+        # 如果是网络错误且已构建提示词，尝试匹配已生成图片
+        if is_network_error and current_prompt:
+            fallback_result = await _try_match_existing_image(
+                db=db,
+                agent_id=agent_id,
+                user_id=user_id,
+                message_id=message_id,
+                session_id=session_id,
+                current_prompt=current_prompt,
+                message_content=message_content,
+                is_network_error=True,
+            )
+            if fallback_result:
+                return fallback_result
 
         logger.error(
             f"图片生成失败 - Agent ID: {agent_id}, "

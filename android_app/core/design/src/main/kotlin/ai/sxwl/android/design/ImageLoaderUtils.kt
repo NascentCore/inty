@@ -7,7 +7,6 @@ import coil3.request.crossfade
 import coil3.request.error
 import coil3.request.placeholder
 import coil3.size.Size
-import java.io.File
 
 /** 图片加载工具类 根据Coil 3.x官方文档优化，专门处理大图片加载的优化策略 */
 object ImageLoaderUtils {

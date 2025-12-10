@@ -775,16 +775,14 @@ private fun ProfileHeader(
 @Composable
 private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
     val previewImage = remember(draft) { draft.primaryImageUrl() }
-    val gradientBrush =
-        remember {
-            Brush.verticalGradient(
-                colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
-            )
-        }
+    val gradientBrush = remember {
+        Brush.verticalGradient(
+            colors = listOf(Color.Transparent, Color.Black.copy(.5f), Color.Black.copy(.9f))
+        )
+    }
     val badgeShape = RoundedCornerShape(percent = 50)
     val badgeVerticalPadding = UiConfigs.Spacing.Tiny / 2
-    val displayName =
-        draft.name.ifBlank { stringResource(R.string.draft_card_placeholder_name) }
+    val displayName = draft.name.ifBlank { stringResource(R.string.draft_card_placeholder_name) }
     val subtitle =
         when {
             draft.intro.isNotBlank() -> draft.intro
@@ -821,10 +819,7 @@ private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
                 Modifier.align(Alignment.TopStart)
                     .padding(UiConfigs.MePage.AgentCardPadding)
                     .background(Color.Black.copy(alpha = 0.65f), badgeShape)
-                    .padding(
-                        horizontal = UiConfigs.Spacing.Small,
-                        vertical = badgeVerticalPadding,
-                    ),
+                    .padding(horizontal = UiConfigs.Spacing.Small, vertical = badgeVerticalPadding)
         ) {
             Text(
                 text = stringResource(R.string.draft_badge_label),

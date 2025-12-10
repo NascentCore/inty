@@ -48,6 +48,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -155,7 +156,11 @@ class CreateRoleActivity : BaseActivity() {
          * @param draftId 草稿ID，如果提供则从草稿列表加载该草稿；UUID 字符串
          * @return 配置好的 Intent
          */
-        fun getIntent(context: Context, agentInfo: AgentInfo? = null, draftId: String? = null): Intent {
+        fun getIntent(
+            context: Context,
+            agentInfo: AgentInfo? = null,
+            draftId: String? = null,
+        ): Intent {
             return Intent(context, CreateRoleActivity::class.java).apply {
                 putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
                 draftId?.let { putExtra(INTENT_KEY_DRAFT_ID, it) }
@@ -820,96 +825,122 @@ private fun CreateRolePage(
                     val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
                     onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
                 },
-                onFaceEdit = faceEdit@{
-                    AvatarManager.clearAllAvatarData()
+                onRemoveImage = { index ->
+                    if (avatarUrls.isEmpty() || index !in avatarUrls.indices) {
+                        return@AvatarUploadSection
+                    }
 
-                    // Get the current avatar URL to crop
-                    val imageUrl =
-                        if (avatarUrls.isNotEmpty()) {
-                            // Defensive bounds checking
-                            val safeIndex =
-                                if (
-                                    selectedImageIndex >= 0 && selectedImageIndex < avatarUrls.size
-                                ) {
-                                    selectedImageIndex
-                                } else {
-                                    LogUtils.e(
-                                        "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}"
-                                    )
-                                    0 // Fall back to first image
-                                }
-
-                            val selectedUrl = avatarUrls.getOrNull(safeIndex)
-                            selectedUrl ?: avatarUrls.first()
+                    val updatedList = avatarUrls.toMutableList().apply { removeAt(index) }
+                    val newIndex =
+                        if (updatedList.isEmpty()) {
+                            0
                         } else {
-                            avatarUrl
+                            when {
+                                index < selectedImageIndex && selectedImageIndex > 0 -> {
+                                    (selectedImageIndex - 1).coerceAtMost(updatedList.lastIndex)
+                                }
+                                selectedImageIndex >= updatedList.size -> updatedList.lastIndex
+                                else -> selectedImageIndex.coerceIn(0, updatedList.lastIndex)
+                            }
                         }
 
-                    if (imageUrl.isNullOrBlank()) {
-                        ToastUtils.showShort(R.string.toast_no_avatar_image)
-                        return@faceEdit
-                    }
+                    avatarUrls = updatedList
+                    selectedImageIndex = newIndex
 
-                    if (
-                        tryStartCropWithLocalImage(
-                            context = context,
-                            imageUrl = imageUrl,
-                            cropLauncher = cropLauncher,
-                        )
-                    ) {
-                        return@faceEdit
-                    }
+                    AvatarManager.setGeneratedAvatarUrls(updatedList)
+                    AvatarManager.setSelectedImageIndex(newIndex)
+                },
+                onFaceEdit = faceEdit@{
+                        AvatarManager.clearAllAvatarData()
 
-                    val previewUrl =
-                        getCdnImageUrl(
-                            originUrl = imageUrl,
-                            width = Config.TextToImage.Preview.WIDTH,
-                            quality = Config.TextToImage.Preview.QUALITY,
-                        )
-
-                    createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        try {
-                            val imageLoader = SingletonImageLoader.get(context)
-                            val request =
-                                ImageRequest.Builder(context)
-                                    .data(previewUrl ?: imageUrl)
-                                    .build()
-                            val result = imageLoader.execute(request)
-
-                            if (result is SuccessResult) {
-                                val snapshot =
-                                    result.diskCacheKey?.let { key ->
-                                        imageLoader.diskCache?.openSnapshot(key)
+                        // Get the current avatar URL to crop
+                        val imageUrl =
+                            if (avatarUrls.isNotEmpty()) {
+                                // Defensive bounds checking
+                                val safeIndex =
+                                    if (
+                                        selectedImageIndex >= 0 &&
+                                            selectedImageIndex < avatarUrls.size
+                                    ) {
+                                        selectedImageIndex
+                                    } else {
+                                        LogUtils.e(
+                                            "Face edit - Index out of bounds! selectedImageIndex: $selectedImageIndex, avatarUrls.size: ${avatarUrls.size}"
+                                        )
+                                        0 // Fall back to first image
                                     }
 
-                                if (snapshot != null) {
-                                    snapshot.use {
-                                        startUCropWithLocalFile(
-                                            it.data.toFile(),
-                                            context,
-                                            cropLauncher,
-                                        )
-                                    }
-                                } else {
-                                    withContext(Dispatchers.Main) {
-                                        ToastUtils.showShort(
-                                            R.string.toast_failed_download_image_editing
-                                        )
+                                val selectedUrl = avatarUrls.getOrNull(safeIndex)
+                                selectedUrl ?: avatarUrls.first()
+                            } else {
+                                avatarUrl
+                            }
+
+                        if (imageUrl.isNullOrBlank()) {
+                            ToastUtils.showShort(R.string.toast_no_avatar_image)
+                            return@faceEdit
+                        }
+
+                        if (
+                            tryStartCropWithLocalImage(
+                                context = context,
+                                imageUrl = imageUrl,
+                                cropLauncher = cropLauncher,
+                            )
+                        ) {
+                            return@faceEdit
+                        }
+
+                        val previewUrl =
+                            getCdnImageUrl(
+                                originUrl = imageUrl,
+                                width = Config.TextToImage.Preview.WIDTH,
+                                quality = Config.TextToImage.Preview.QUALITY,
+                            )
+
+                        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                val imageLoader = SingletonImageLoader.get(context)
+                                val request =
+                                    ImageRequest.Builder(context)
+                                        .data(previewUrl ?: imageUrl)
+                                        .build()
+                                val result = imageLoader.execute(request)
+
+                                if (result is SuccessResult) {
+                                    val snapshot =
+                                        result.diskCacheKey?.let { key ->
+                                            imageLoader.diskCache?.openSnapshot(key)
+                                        }
+
+                                    if (snapshot != null) {
+                                        snapshot.use {
+                                            startUCropWithLocalFile(
+                                                it.data.toFile(),
+                                                context,
+                                                cropLauncher,
+                                            )
+                                        }
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            ToastUtils.showShort(
+                                                R.string.toast_failed_download_image_editing
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                        } catch (e: Exception) {
-                            LogUtils.e(
-                                "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
-                            )
-                            withContext(Dispatchers.Main) {
-                                ToastUtils.showShort(
-                                    R.string.toast_failed_download_image_editing
+                            } catch (e: Exception) {
+                                LogUtils.e(
+                                    "Failed to download image for cropping: $imageUrl Error details: ${e.message}"
                                 )
+                                withContext(Dispatchers.Main) {
+                                    ToastUtils.showShort(
+                                        R.string.toast_failed_download_image_editing
+                                    )
+                                }
                             }
                         }
-                    }
-                },
+                    },
                 onUploadFromGallery = { galleryLauncher.launch("image/*") },
             )
 
@@ -972,6 +1003,7 @@ private fun CreateRolePage(
                 isLoading = isLoading,
                 isEditMode = isEditMode,
                 onClick = {
+
                     // Validate required fields
                     if (
                         name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()
@@ -980,11 +1012,10 @@ private fun CreateRolePage(
                         return@CreateButton
                     }
 
+                    isLoading = true
+
                     scope.launch {
                         try {
-
-                            isLoading = true
-
                             avatarUrls =
                                 avatarUrls.map { url ->
                                     if (url.startsWith("http") || url.startsWith("https")) {
@@ -1043,14 +1074,12 @@ private fun CreateRolePage(
                                     agentId = editAgent.id,
                                     request = request,
                                     onSuccess = { agentInfo ->
-                                        isLoading = false
                                         ToastUtils.showShort(
                                             R.string.character_updated_successfully
                                         )
                                         onCreateSuccess()
                                     },
                                     onError = { error ->
-                                        isLoading = false
                                         val errorMessage =
                                             if (error.isBlank()) {
                                                 context.getString(
@@ -1067,13 +1096,14 @@ private fun CreateRolePage(
                                                 )
                                             }
                                         ToastUtils.showShort(errorMessage)
+
+                                        isLoading = false
                                     },
                                 )
                             } else {
                                 createRoleViewModel.createAgent(
                                     request = request,
                                     onSuccess = { agentInfo ->
-                                        isLoading = false
                                         // 如果是从草稿列表进入的，删除该草稿
                                         if (savedDraft != null && draftId != null) {
                                             CreateRoleDraftStorage.deleteDraft(draftId)
@@ -1086,7 +1116,6 @@ private fun CreateRolePage(
                                         onCreateSuccess()
                                     },
                                     onError = { error ->
-                                        isLoading = false
                                         val errorMessage =
                                             if (error.isBlank()) {
                                                 context.getString(
@@ -1103,6 +1132,8 @@ private fun CreateRolePage(
                                                 )
                                             }
                                         ToastUtils.showShort(errorMessage)
+
+                                        isLoading = false
                                     },
                                 )
                             }
@@ -1120,7 +1151,7 @@ private fun CreateRolePage(
                             LogUtils.e(
                                 "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
                             )
-                        } finally {
+
                             isLoading = false
                         }
                     }
@@ -1154,11 +1185,15 @@ private fun CreateRolePage(
                 Button(
                     onClick = {
                         // 保存到草稿列表（如果是新草稿会自动生成ID，如果是从草稿列表进入的会更新）
-                        val draftToSave = if (savedDraft != null) {
-                            latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
-                        } else {
-                            latestDraft
-                        }
+                        val draftToSave =
+                            if (savedDraft != null) {
+                                latestDraft.copy(
+                                    id = savedDraft.id,
+                                    createdAt = savedDraft.createdAt,
+                                )
+                            } else {
+                                latestDraft
+                            }
                         CreateRoleDraftStorage.saveDraftToList(draftToSave)
                         // 清除临时草稿，以便下次进入时创建新角色
                         CreateRoleDraftStorage.clearCurrentDraft()
@@ -1345,47 +1380,6 @@ private suspend fun uploadGallery(context: Context, uri: Uri): String? {
             }
         }
     }
-    /*runCatching {
-
-
-
-
-        // Upload original image first (as background)
-        // 只有在文件大小检查通过后才设置上传标志
-        isUploadingFromGallery = true
-        createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-            try {
-
-
-
-
-
-
-            } catch (e: Exception) {
-                LogUtils.e("Upload original image exception: ${e.message}")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(
-                        context.getString(
-                            R.string.toast_upload_failed_with_message,
-                            e.message ?: "Unknown error",
-                        )
-                    )
-                }
-            } finally {
-                isUploadingFromGallery = false
-            }
-        }
-    }
-    .onFailure { e ->
-        LogUtils.e("Gallery selection error: ${e.message}")
-        isUploadingFromGallery = false
-        ToastUtils.showShort(
-            context.getString(
-                R.string.toast_failed_prepare_upload_with_message,
-                e.message ?: "Unknown error",
-            )
-        )
-    }*/
 }
 
 // Helper function to start UCrop with a local file
@@ -1483,6 +1477,7 @@ private fun AvatarUploadSection(
     onRegenerate: (String) -> Unit = {},
     onFaceEdit: () -> Unit = {},
     onUploadFromGallery: () -> Unit = {},
+    onRemoveImage: (Int) -> Unit = {},
 ) {
     // 空状态检查：只有当所有头像 URL 都为空时才认为是空状态
     // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarUrl
@@ -1805,6 +1800,27 @@ private fun AvatarUploadSection(
                                                     .clip(RoundedCornerShape(8.dp)),
                                             contentScale = ContentScale.Crop,
                                         )
+
+                                        Box(
+                                            modifier =
+                                                Modifier.align(Alignment.TopEnd)
+                                                    .padding(4.dp)
+                                                    .size(22.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.Black.copy(alpha = 0.7f))
+                                                    .noRippleClickable { onRemoveImage(index) },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Close,
+                                                contentDescription =
+                                                    stringResource(
+                                                        R.string.remove_background_image
+                                                    ),
+                                                tint = Color.White,
+                                                modifier = Modifier.size(14.dp),
+                                            )
+                                        }
                                     }
                                 }
                             }
