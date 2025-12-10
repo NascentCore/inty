@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,6 +50,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostLeaderboardActivity
+import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.delay
 
 /** Explore页面 - 推荐agents展示 */
@@ -107,7 +109,9 @@ fun ExplorePage(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
                     if (isDebugMode) {
-                        BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
+                        Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
+                            BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
+                        }
                     }
                 },
             )
