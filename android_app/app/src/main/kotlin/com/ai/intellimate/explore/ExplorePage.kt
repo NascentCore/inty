@@ -2,6 +2,7 @@ package com.ai.intellimate.explore
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.startup.ImagePreloadManager
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
@@ -16,7 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Leaderboard
+import androidx.compose.material.icons.rounded.Rocket
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +28,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +65,7 @@ fun ExplorePage(
     externalResetSignal: Int = 0,
 ) {
     val context = LocalContext.current
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
 
     // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
@@ -103,7 +106,9 @@ fun ExplorePage(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
-                    BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
+                    if (isDebugMode) {
+                        BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
+                    }
                 },
             )
 
@@ -205,7 +210,7 @@ private fun BoostShortcutButton(onClick: () -> Unit) {
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
     ) {
         Icon(
-            imageVector = Icons.Rounded.Leaderboard,
+            imageVector = Icons.Rounded.Rocket,
             contentDescription = stringResource(R.string.explore_boost_shortcut_cd),
             modifier = Modifier.height(18.dp),
             tint = Color.White,
