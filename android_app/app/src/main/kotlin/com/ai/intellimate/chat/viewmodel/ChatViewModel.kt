@@ -14,6 +14,7 @@ import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -1314,6 +1315,10 @@ class ChatViewModel : BaseVM() {
     suspend fun reset() {
         val agentId = agentInfo.value?.id ?: throw Exception("Agent is null")
 
+        if (!chatRepository.clearMessage(agentId)) {
+            throw Exception("Reset Failed")
+        }
+
         // 1. 删除本地历史消息
         chatRepository.clearChatData(agentId)
         // 2. 清理 ViewModel 中的状态
@@ -1330,5 +1335,6 @@ class ChatViewModel : BaseVM() {
         _isQueryMsgsCompleted.value = true
 
         LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
+
     }
 }

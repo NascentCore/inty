@@ -514,4 +514,8 @@ class RoomImpl(
         localDataSource.clearAllChatData()
         LogUtils.i("RoomImpl.clearAllChatData completed")
     }
+
+    override suspend fun clearMessage(agentId: String): Boolean {
+        return remoteDataSource.clearMessage(agentId)
+    }
 }
