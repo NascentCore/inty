@@ -120,6 +120,11 @@
         <activity
             android:name=".explore.special.SpecialDetailActivity"
             android:launchMode="singleTop" />
+        <activity
+            android:name=".boost.BoostLeaderboardActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Inty" />
 
 <!--        <activity-->
 <!--            android:name=".vip.VipCenterActivity"-->
