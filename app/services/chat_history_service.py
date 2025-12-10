@@ -205,6 +205,41 @@ def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]
         return None
 
 
+def has_user_messages_ever(session_id: str) -> bool:
+    """
+    检查会话是否曾经有用户消息（包括已删除的）
+
+    用于判断聊天会话是否应该显示在列表中：
+    - 如果曾经有用户消息（即使后来被软删除），返回 True
+    - 如果只有开场白消息，返回 False
+
+    Args:
+        session_id: 会话ID
+
+    Returns:
+        是否曾经有用户消息
+    """
+    try:
+        conn = get_chat_history_connection()
+
+        query = """
+            SELECT EXISTS(
+                SELECT 1 FROM chat_history 
+                WHERE session_id = %s 
+                AND message->>'type' IN ('human', 'HumanMessage')
+            )
+        """
+
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id,))
+            result = cur.fetchone()
+            return result[0] if result else False
+
+    except Exception as e:
+        logger.error(f"检查用户消息历史失败 {session_id}: {str(e)}")
+        return False
+
+
 def add_user_message(session_id: str, message: str) -> None:
     """添加用户消息到聊天历史"""
     try:

@@ -126,20 +126,13 @@ async def get_chats(
                     chat.last_message = None
                     chat.last_message_time = None
 
-                # Check if chat has user messages (not just opening messages)
-                messages_data = chat_history_service.get_messages_paginated(
-                    session_id=session_id, limit=10, offset=0  # Check first 10 messages
+                # Check if chat has ever had user messages (including deleted ones)
+                # This ensures chats remain visible even after user deletes all messages
+                has_user_messages = chat_history_service.has_user_messages_ever(
+                    session_id
                 )
 
-                # Filter out chats that only have opening messages
-                has_user_messages = False
-                if messages_data and messages_data.get("messages"):
-                    for message in messages_data["messages"]:
-                        if message.get("role") == "user":
-                            has_user_messages = True
-                            break
-
-                # Only include chats that have user messages
+                # Only include chats that have (or ever had) user messages
                 if not has_user_messages:
                     logger.debug(f"过滤掉仅有开场白的聊天: chat_id={chat.id}")
                     continue
