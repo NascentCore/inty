@@ -587,4 +587,70 @@ object UiConfigs {
         /** 消息数阈值 - 当消息数达到此阈值时显示对话框 */
         const val MESSAGES_COUNT_THRESHOLD = 100
     }
+
+    /** 排行榜配置 - 适用于 Boost 排行榜页面的间距、尺寸、颜色等设置 */
+    object LeaderBoard {
+        /** 页面水平内边距 - 与 Explore 页面角色卡片保持一致 */
+        val HorizontalPadding = 16.dp
+
+        /** 页面垂直内边距 */
+        val VerticalPadding = 8.dp
+
+        /** 状态芯片与标题之间的间距 */
+        val StatusChipToTitleSpacing = 24.dp
+
+        /** 标题底部内边距 */
+        val TitleBottomPadding = 12.dp
+
+        /** 空状态卡片圆角半径 */
+        val EmptyStateCardCornerRadius = 16.dp
+
+        /** 空状态卡片内边距 */
+        val EmptyStateCardPadding = 24.dp
+
+        /** 列表项之间的垂直间距 */
+        val ListItemSpacing = 12.dp
+
+        /** 列表底部间距 */
+        val ListBottomSpacing = 32.dp
+
+        /** 排行榜行卡片圆角半径 */
+        val RowCardCornerRadius = 16.dp
+
+        /** 排行榜行卡片内边距 */
+        val RowCardPadding = 16.dp
+
+        /** 排名与头像之间的间距 */
+        val RankToAvatarSpacing = 12.dp
+
+        /** 头像尺寸 */
+        val AvatarSize = 48.dp
+
+        /** 头像与名称之间的间距 */
+        val AvatarToNameSpacing = 12.dp
+
+        /** 名称区域与按钮区域之间的间距 */
+        val NameToButtonSpacing = 12.dp
+
+        /** 按钮之间的水平间距 */
+        val ButtonSpacing = 12.dp
+
+        /** 行之间的分隔间距 */
+        val RowDividerSpacing = 4.dp
+
+        /** 趋势标签水平内边距 */
+        val TrendPillHorizontalPadding = 12.dp
+
+        /** 趋势标签垂直内边距 */
+        val TrendPillVerticalPadding = 4.dp
+
+        /** 趋势图标尺寸 */
+        val TrendIconSize = 14.dp
+
+        /** 趋势图标与文字之间的间距 */
+        val TrendIconToTextSpacing = 4.dp
+
+        /** Top 10 按钮右侧间距 - 与 Explore 页面角色卡片保持一致 */
+        val Top10ButtonRightPadding = 16.dp
+    }
 }

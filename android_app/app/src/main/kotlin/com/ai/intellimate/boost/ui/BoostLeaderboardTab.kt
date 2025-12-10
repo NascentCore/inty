@@ -39,6 +39,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostLeaderboardEntry
 import com.ai.intellimate.boost.BoostTrend
+import com.ai.intellimate.ui.UiConfigs
 
 @Composable
 fun BoostLeaderboardTab(
@@ -48,7 +49,13 @@ fun BoostLeaderboardTab(
     onChat: (BoostLeaderboardEntry) -> Unit,
     onBoost: (BoostLeaderboardEntry) -> Unit,
 ) {
-    Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(
+        modifier =
+            modifier.fillMaxSize().padding(
+                horizontal = UiConfigs.LeaderBoard.HorizontalPadding,
+                vertical = UiConfigs.LeaderBoard.VerticalPadding,
+            )
+    ) {
         BoostStatusChip(
             modifier = Modifier.fillMaxWidth(),
             availablePoints = availablePoints,
@@ -58,23 +65,23 @@ fun BoostLeaderboardTab(
             },
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToTitleSpacing))
 
         Text(
             text = stringResource(R.string.boost_leaderboard_title),
             color = Color.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp),
+            modifier = Modifier.padding(bottom = UiConfigs.LeaderBoard.TitleBottomPadding),
         )
 
         if (entries.isEmpty()) {
             Column(
                 modifier =
                     Modifier.fillMaxSize()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(UiConfigs.LeaderBoard.EmptyStateCardCornerRadius))
                         .background(Color(0xFF1A1A1F))
-                        .padding(24.dp),
+                        .padding(UiConfigs.LeaderBoard.EmptyStateCardPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -87,7 +94,8 @@ fun BoostLeaderboardTab(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement =
+                    Arrangement.spacedBy(UiConfigs.LeaderBoard.ListItemSpacing),
             ) {
                 itemsIndexed(entries, key = { _, item -> item.agentId + item.rank }) { index, entry
                     ->
@@ -98,7 +106,7 @@ fun BoostLeaderboardTab(
                         showDivider = index < entries.lastIndex,
                     )
                 }
-                item { Spacer(Modifier.height(32.dp)) }
+                item { Spacer(Modifier.height(UiConfigs.LeaderBoard.ListBottomSpacing)) }
             }
         }
     }

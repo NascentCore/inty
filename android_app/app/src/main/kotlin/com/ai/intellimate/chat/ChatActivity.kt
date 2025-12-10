@@ -173,15 +173,15 @@ class ChatActivity : BaseActivity() {
                 enableAnimatedBackground = autoPlayAnimation,
             )
 
-            ChatPage(
-                navController = navController,
-                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
-                chatViewModel = chatViewModel,
-                showBackButton = true,
-                onBack = { finish() },
-                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
-                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
-            )
+//            ChatPage(
+//                navController = navController,
+//                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
+//                chatViewModel = chatViewModel,
+//                showBackButton = true,
+//                onBack = { finish() },
+//                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
+//                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
+//            )
 
             // 反馈请求对话框
             if (showFeedbackDialog) {
