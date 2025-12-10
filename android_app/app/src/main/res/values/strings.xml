@@ -365,12 +365,6 @@
     <string name="explore_search_hint_text">Enter a character name and tap search</string>
     <string name="explore_search_clear_desc">Clear search text</string>
 
-    <!-- Messages Page -->
-    <string name="messages_tab_conversations">Messages</string>
-    <string name="messages_tab_favorites">Favorite</string>
-    <string name="messages_favorites_empty_title">No favorites yet</string>
-    <string name="messages_favorites_empty_subtitle">Tap the heart icon on any character to save it here.</string>
-
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>
     <string name="tab_messages">Messages</string>
