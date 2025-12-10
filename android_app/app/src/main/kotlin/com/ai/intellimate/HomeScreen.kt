@@ -60,6 +60,7 @@ import com.ai.intellimate.xb.navigation.Routes
 import com.inty.api.models.api.v1.version.VersionCheckResponse
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 /** 主页面，包含五个tab */
 @Composable
@@ -265,6 +266,8 @@ private val RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(1)
 private val MAX_RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(32)
 private val MAX_RESUB_REMINDER_MULTIPLIER =
     (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
+private val FEEDBACK_DIALOG_MIN_INTERVAL_MS = TimeUnit.HOURS.toMillis(12)
+private const val FEEDBACK_DIALOG_RANDOM_THRESHOLD = 0.2f
 
 @Composable
 private fun ExpiredDialogLogic(navController: NavController, mainViewModel: MainViewModel) {
@@ -330,6 +333,22 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
 private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
     val showDialog by mainViewModel.showFeedbackRequestDialog.collectAsState()
     val context = LocalContext.current
+    var hasEvaluatedRandomPrompt by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (!hasEvaluatedRandomPrompt) {
+            hasEvaluatedRandomPrompt = true
+            if (!showDialog && shouldTriggerRandomFeedbackPrompt()) {
+                mainViewModel.showFeedbackRequestDialog()
+            }
+        }
+    }
+
+    LaunchedEffect(showDialog) {
+        if (showDialog) {
+            IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+        }
+    }
 
     if (showDialog) {
         FeedbackRequestDialog(
@@ -340,6 +359,15 @@ private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
             },
         )
     }
+}
+
+private fun shouldTriggerRandomFeedbackPrompt(): Boolean {
+    val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+    val now = System.currentTimeMillis()
+    if (now - lastShowTime < FEEDBACK_DIALOG_MIN_INTERVAL_MS) {
+        return false
+    }
+    return Random.nextFloat() < FEEDBACK_DIALOG_RANDOM_THRESHOLD
 }
 
 private fun shouldShowResubReminderDialog(

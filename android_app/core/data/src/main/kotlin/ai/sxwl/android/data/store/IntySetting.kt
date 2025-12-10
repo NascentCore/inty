@@ -15,6 +15,7 @@ private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
+private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
 
 object IntySetting {
 
@@ -178,6 +179,14 @@ object IntySetting {
 
     fun setResubReminderDialogShowCount(count: Int) {
         curUserSetting.putInt(KEY_RESUB_REMINDER_SHOW_COUNT, count)
+    }
+
+    fun getFeedbackDialogLastShowTime(): Long {
+        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, 0L)
+    }
+
+    fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
+        curUserSetting.putLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
     }
 
     /** 记录消息Tab是否需要显示推送红点 */
