@@ -15,6 +15,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -68,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.content.getSystemService
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -81,6 +83,7 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.enableChristmasConfig
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
@@ -104,37 +107,40 @@ fun ChatItem(
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
     runCatching {
-            when (item.role) {
-                "assistant" -> {
-                    ChatItemAI(
-                        item,
-                        isCurrentPage,
-                        chatViewModel,
-                        isLatestMessage,
-                        isGuideVisible,
-                        messageFontSizeSp,
-                    )
-                }
+        when (item.role) {
+            "assistant" -> {
+                ChatItemAI(
+                    item,
+                    isCurrentPage,
+                    chatViewModel,
+                    isLatestMessage,
+                    isGuideVisible,
+                    messageFontSizeSp,
+                )
+            }
 
-                "user" -> {
-                    ChatItemUser(item, messageFontSizeSp)
-                }
+            "user" -> {
+                ChatItemUser(item, messageFontSizeSp)
+            }
 
-                "system" -> {
-                    ChatItemSystemTips(item, chatViewModel)
-                }
+            "system" -> {
+                ChatItemSystemTips(item, chatViewModel)
+            }
 
-                else -> {
-                    LogUtils.w("ChatItem - 未知角色: ${item.role}")
-                    ChatItemUser(item, messageFontSizeSp)
-                }
+            else -> {
+                LogUtils.w("ChatItem - 未知角色: ${item.role}")
+                ChatItemUser(item, messageFontSizeSp)
             }
         }
+    }
         .onFailure { e ->
             LogUtils.e("ChatItem - 渲染失败: ${e.message}")
             Box(
                 modifier =
-                    Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
+                    Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .background(Color.Red.copy(alpha = 0.1f))
             ) {
                 Text(
                     text = "Message display failed",
@@ -160,39 +166,39 @@ private fun ChatItemAI(
     val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                val hasGeneratedImage = item.hasGeneratedImage()
-                val generatedImageUrl = item.getGeneratedImageUrl()
-                val isImageLoading =
-                    (item.content == "loading_animation" &&
+        Column(modifier = Modifier.fillMaxWidth()) {
+            val hasGeneratedImage = item.hasGeneratedImage()
+            val generatedImageUrl = item.getGeneratedImageUrl()
+            val isImageLoading =
+                (item.content == "loading_animation" &&
                         item.localMsgId.contains("loading_image", ignoreCase = true)) ||
                         (generatedImageUrl == "loading")
-                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
+            val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
-                if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                    val vmAgentId = agentInfo?.id
-                    val metaAgentId = item.agentId()
-                    val safeAgentId = vmAgentId ?: metaAgentId ?: ""
+            if (item.content.isNotEmpty() && item.content != "loading_animation") {
+                val vmAgentId = agentInfo?.id
+                val metaAgentId = item.agentId()
+                val safeAgentId = vmAgentId ?: metaAgentId ?: ""
 
-                    val audioInfo =
-                        AudioInfo(
-                            url = item.audio_url ?: "",
-                            title = "Voice Message",
-                            artist = "AI Agent",
-                            messageId = item.localMsgId,
-                            agentId = safeAgentId,
-                            agentName = agentInfo?.name,
-                        )
+                val audioInfo =
+                    AudioInfo(
+                        url = item.audio_url ?: "",
+                        title = "Voice Message",
+                        artist = "AI Agent",
+                        messageId = item.localMsgId,
+                        agentId = safeAgentId,
+                        agentName = agentInfo?.name,
+                    )
 
-                    val allMessages by viewModel.msgs.collectAsState()
-                    val actualChatMessages =
-                        allMessages.filter { !it.isOpening() && it.role != "system" }
-                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
+                val allMessages by viewModel.msgs.collectAsState()
+                val actualChatMessages =
+                    allMessages.filter { !it.isOpening() && it.role != "system" }
+                val isOnlyOpeningMessage = actualChatMessages.isEmpty()
 
-                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
-                    val shouldAutoPlay =
-                        item.isOpening() &&
+                val shouldAutoPlay =
+                    item.isOpening() &&
                             isOnlyOpeningMessage &&
                             !hasPlayedOpening &&
                             isCurrentPage &&
@@ -202,229 +208,260 @@ private fun ChatItemAI(
                             IntySetting.isAutoPlayAudio() &&
                             !isGuideVisible // 未出现引导手势时
 
-                    // 消息气泡上方的辅助内容条
-                    Row(
-                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // 显示音频播放按钮
-                        if (safeAgentId.isNotEmpty()) {
-                            VoicePlayer(
-                                audioInfo = audioInfo,
-                                autoPlay = shouldAutoPlay,
-                                modifier =
-                                    Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
-                                onTtsGenerated = { audioUrl ->
-                                    viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                                },
-                                serverMessageId = item.id,
-                            )
-                        }
-                        // 显示时间戳
-                        if (timestampText != null) {
-                            Spacer(
-                                modifier =
-                                    Modifier.width(
-                                        UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing
-                                    )
-                            )
-                            ChatMessageTimestamp(
-                                timestampText = timestampText,
-                                fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,
-                            )
-                        }
+                // 消息气泡上方的辅助内容条
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 显示音频播放按钮
+                    if (safeAgentId.isNotEmpty()) {
+                        VoicePlayer(
+                            audioInfo = audioInfo,
+                            autoPlay = shouldAutoPlay,
+                            modifier =
+                                Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
+                            onTtsGenerated = { audioUrl ->
+                                viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                            },
+                            serverMessageId = item.id,
+                        )
+                    }
+                    // 显示时间戳
+                    if (timestampText != null) {
+                        Spacer(
+                            modifier =
+                                Modifier.width(
+                                    UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing
+                                )
+                        )
+                        ChatMessageTimestamp(
+                            timestampText = timestampText,
+                            fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,
+                        )
                     }
                 }
-                val msgShape =
-                    if (item.content.isNotEmpty() && item.content != "loading_animation")
-                        RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                    else RoundedCornerShape(12.dp)
+            }
+            val msgShape =
+                if (item.content.isNotEmpty() && item.content != "loading_animation")
+                    RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
+                else RoundedCornerShape(12.dp)
 
-                val isImageOnlyMessage =
-                    item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
+            val isImageOnlyMessage =
+                item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
 
-                var showFullScreenImage by remember { mutableStateOf(false) }
-                var imageLoadError by remember { mutableStateOf(false) }
+            var showFullScreenImage by remember { mutableStateOf(false) }
+            var imageLoadError by remember { mutableStateOf(false) }
 
-                val isNormalLoading =
-                    item.content == "loading_animation" &&
+            val isNormalLoading =
+                item.content == "loading_animation" &&
                         !hasGeneratedImage &&
                         generatedImageUrl != "loading"
 
-                val shouldHideText = isImageOnlyMessage || isNormalLoading
-                val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
+            val shouldHideText = isImageOnlyMessage || isNormalLoading
+            val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
 
-                if (isNormalLoading) {
+            if (isNormalLoading) {
+                Box(
+                    modifier =
+                        Modifier
+                            .background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(min = 1.dp)
+                ) {
+                    LoadingAnimation(agentInfo?.name)
+                }
+            } else if (!shouldHideText && item.content.isNotEmpty()) {
+                val allMessages by viewModel.msgs.collectAsState()
+                val agentId = agentInfo?.id ?: ""
+
+                // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
+                // 使用 LaunchedEffect 在查询完成的瞬间记录消息列表
+                // 使用 agentId 作为 key，确保切换会话时重置状态
+                var messagesAtQueryComplete by
+                remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
+
+                LaunchedEffect(isQueryMsgsCompleted, agentId) {
+                    if (isQueryMsgsCompleted) {
+                        if (messagesAtQueryComplete.isEmpty()) {
+                            // 查询完成的瞬间，记录当前所有消息的ID
+                            // 优先使用服务器ID，如果没有则使用localMsgId
+                            messagesAtQueryComplete =
+                                allMessages
+                                    .mapNotNull {
+                                        it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId
+                                    }
+                                    .toSet()
+                        }
+                    } else {
+                        // 查询未完成时，重置状态（切换会话时会触发）
+                        messagesAtQueryComplete = emptySet()
+                    }
+                }
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    val context = LocalContext.current
                     Box(
                         modifier =
-                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                 .padding(
                                     horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                     vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                                 )
-                                .widthIn(min = 1.dp)
-                    ) {
-                        LoadingAnimation(agentInfo?.name)
-                    }
-                } else if (!shouldHideText && item.content.isNotEmpty()) {
-                    val allMessages by viewModel.msgs.collectAsState()
-                    val agentId = agentInfo?.id ?: ""
-
-                    // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
-                    // 使用 LaunchedEffect 在查询完成的瞬间记录消息列表
-                    // 使用 agentId 作为 key，确保切换会话时重置状态
-                    var messagesAtQueryComplete by
-                        remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
-
-                    LaunchedEffect(isQueryMsgsCompleted, agentId) {
-                        if (isQueryMsgsCompleted) {
-                            if (messagesAtQueryComplete.isEmpty()) {
-                                // 查询完成的瞬间，记录当前所有消息的ID
-                                // 优先使用服务器ID，如果没有则使用localMsgId
-                                messagesAtQueryComplete =
-                                    allMessages
-                                        .mapNotNull {
-                                            it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId
+                                .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                                .pointerInput(item.content) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            debugOnlyCopyToClipboard(context, item.content)
                                         }
-                                        .toSet()
-                            }
-                        } else {
-                            // 查询未完成时，重置状态（切换会话时会触发）
-                            messagesAtQueryComplete = emptySet()
-                        }
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        val context = LocalContext.current
-                        Box(
-                            modifier =
-                                Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
-                                    .padding(
-                                        horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                        vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                                     )
-                                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
-                                    .pointerInput(item.content) {
-                                        detectTapGestures(
-                                            onLongPress = {
-                                                debugOnlyCopyToClipboard(context, item.content)
-                                            }
-                                        )
-                                    }
-                        ) {
-                            val isFlow =
-                                isLatestMessage &&
+                                }
+                    ) {
+                        val isFlow =
+                            isLatestMessage &&
                                     shouldFlowShow &&
                                     item.role == "assistant" &&
                                     item.content.isNotEmpty() &&
                                     item.content != "loading_animation"
 
-                            if (item.content.isNotEmpty()) {
-                                StyledMessageText(
-                                    text = item.content,
-                                    fontSize = messageFontSize,
-                                    fontWeight = FontWeight.Normal,
-                                    normalColor = Color.White,
-                                    actionColor = Color.White.copy(0.55f),
-                                    isFlow = isFlow,
-                                    onDisplayComplete = {
-                                        // 标记消息已完整显示，避免再次流式显示
-                                        viewModel.newMsgFlowFinish()
-                                    },
-                                )
-                            }
+                        if (item.content.isNotEmpty()) {
+                            StyledMessageText(
+                                text = item.content,
+                                fontSize = messageFontSize,
+                                fontWeight = FontWeight.Normal,
+                                normalColor = Color.White,
+                                actionColor = Color.White.copy(0.55f),
+                                isFlow = isFlow,
+                                onDisplayComplete = {
+                                    // 标记消息已完整显示，避免再次流式显示
+                                    viewModel.newMsgFlowFinish()
+                                },
+                            )
+                        }
 
-                            if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
-                                MessageCornerActions(
-                                    onImageGenerate = {
-                                        viewModel.generateImageForMessage(item.id)
+                        if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
+                            MessageCornerActions(
+                                onImageGenerate = {
+                                    viewModel.generateImageForMessage(item.id)
+                                },
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .offset(10.dp, 10.dp),
+                            )
+                        }
+
+                        //圣诞点缀
+                        if (enableChristmasConfig()){
+                            Image(
+                                painter = painterResource(R.drawable.img_omela),
+                                contentDescription = null,
+                                modifier = Modifier.align(Alignment.BottomStart).offset(x=(-10).dp, y = 10.dp)
+                            )
+                            Image(
+                                painter = painterResource(R.drawable.img_chat_snow_right),
+                                contentDescription = null,
+                                modifier = Modifier.align(Alignment.TopEnd).offset(x=15.dp, y = (-16).dp)
+                            )
+                        }
+                    }
+                    Spacer(
+                        modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f)
+                    )
+                }
+            }
+
+            if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
+                Spacer(modifier = Modifier.height(2.dp))
+                MessageActionBar(
+                    message = item,
+                    onLike = { viewModel.likeMessage(item.localMsgId) },
+                    onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                    onRecall = { viewModel.recallMessage() },
+                )
+            }
+
+            if (hasGeneratedImage || isImageLoading) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 获取图片尺寸，loading时也会从item中获取（已设置为9:16比例）
+                val imageWidth = item.getGeneratedImageWidth() ?: 300
+                val imageHeight = item.getGeneratedImageHeight() ?: 533 // 默认9:16比例
+                val aspectRatio =
+                    if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat()
+                    else (9f / 16f)
+
+                val targetWidth = 360
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (isImageLoading) {
+                        ShimmerPlaceholder(
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .aspectRatio(aspectRatio),
+                            cornerRadius = 12.dp,
+                            showLoadingDots = true,
+                        )
+                    } else if (imageLoadError) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.Black.copy(alpha = 0.3f))
+                                    .padding(16.dp)
+                                    .noRippleClickable {
+                                        viewModel.deleteMessage(item.localMsgId)
                                     },
-                                    modifier =
-                                        Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_warning_voice),
+                                    contentDescription = "Image load error",
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(24.dp),
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text =
+                                        stringResource(
+                                            R.string.image_generation_failed_tap_to_delete
+                                        ),
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 12.sp,
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
-                    }
-                }
-
-                if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    MessageActionBar(
-                        message = item,
-                        onLike = { viewModel.likeMessage(item.localMsgId) },
-                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
-                        onRecall = { viewModel.recallMessage() },
-                    )
-                }
-
-                if (hasGeneratedImage || isImageLoading) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 获取图片尺寸，loading时也会从item中获取（已设置为9:16比例）
-                    val imageWidth = item.getGeneratedImageWidth() ?: 300
-                    val imageHeight = item.getGeneratedImageHeight() ?: 533 // 默认9:16比例
-                    val aspectRatio =
-                        if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat()
-                        else (9f / 16f)
-
-                    val targetWidth = 360
-
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        if (isImageLoading) {
-                            ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
-                                cornerRadius = 12.dp,
-                                showLoadingDots = true,
-                            )
-                        } else if (imageLoadError) {
-                            Box(
-                                modifier =
-                                    Modifier.fillMaxWidth(0.35f)
-                                        .aspectRatio(aspectRatio)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color.Black.copy(alpha = 0.3f))
-                                        .padding(16.dp)
-                                        .noRippleClickable {
-                                            viewModel.deleteMessage(item.localMsgId)
-                                        },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_warning_voice),
-                                        contentDescription = "Image load error",
-                                        tint = Color.White.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                R.string.image_generation_failed_tap_to_delete
-                                            ),
-                                        color = Color.White.copy(alpha = 0.6f),
-                                        fontSize = 12.sp,
-                                    )
-                                }
-                            }
-                        } else if (!generatedImageUrl.isNullOrEmpty()) {
+                    } else if (!generatedImageUrl.isNullOrEmpty()) {
+                        //消息生图的结果图片
+                        ConstraintLayout(modifier = Modifier) {
+                            val (img, left, right) = createRefs()
                             AsyncImage(
-                                modifier =
-                                    Modifier.fillMaxWidth(0.35f)
-                                        .aspectRatio(aspectRatio)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onTap = { showFullScreenImage = true }
-                                            )
-                                        },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio)
+                                    .constrainAs(img) {}
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onTap = { showFullScreenImage = true }
+                                        )
+                                    },
                                 model =
                                     ImageRequest.Builder(LocalContext.current)
                                         .data(
@@ -440,65 +477,94 @@ private fun ChatItemAI(
                                 alignment = Alignment.CenterStart,
                                 onError = { imageLoadError = true },
                             )
-                        } else if (generatedImageUrl.isNullOrEmpty()) {
-                            ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
-                                cornerRadius = 12.dp,
-                            )
-                        }
-                    }
-
-                    if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
-                        Dialog(
-                            onDismissRequest = { showFullScreenImage = false },
-                            properties =
-                                DialogProperties(
-                                    usePlatformDefaultWidth = false,
-                                    dismissOnBackPress = true,
-                                    dismissOnClickOutside = true,
-                                ),
-                        ) {
-                            val agentId = agentInfo?.id ?: ""
-                            FullScreenImageViewer(
-                                imageUrl = generatedImageUrl,
-                                onDismiss = { showFullScreenImage = false },
-                                onAction = {
-                                    if (agentId.isNotBlank() && generatedImageUrl.isNotBlank()) {
-                                        IntySetting.setChatBackgroundImage(
-                                            agentId,
-                                            generatedImageUrl,
-                                        )
-                                        ToastUtils.showShort(
-                                            R.string.agent_gallery_background_set_success
-                                        )
-                                        showFullScreenImage = false
+                            //圣诞点缀
+                            if (enableChristmasConfig()){
+                                Image(
+                                    painter = painterResource(R.drawable.img_christmas_candy),
+                                    contentDescription = null,
+                                    modifier = Modifier.constrainAs(left) {
+                                        start.linkTo(img.start, (-15).dp)
+                                        bottom.linkTo(img.bottom, (-12).dp)
                                     }
-                                },
-                                actionLabel =
-                                    stringResource(R.string.agent_gallery_set_as_background),
-                            )
+                                )
+                                Image(
+                                    painter = painterResource(R.drawable.img_candy_christmas),
+                                    contentDescription = null,
+                                    modifier = Modifier.constrainAs(right) {
+                                        end.linkTo(img.end, (-25).dp)
+                                        bottom.linkTo(img.bottom, (-12).dp)
+                                    }
+                                )
+                            }
+
                         }
+
+                    } else if (generatedImageUrl.isNullOrEmpty()) {
+                        ShimmerPlaceholder(
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .aspectRatio(aspectRatio),
+                            cornerRadius = 12.dp,
+                        )
                     }
                 }
-
-                if (BuildConfig.DEBUG) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        DebugMessageMetadata(
-                            item = item,
-                            modifier =
-                                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
+                //消息生图的查看大图
+                if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
+                    Dialog(
+                        onDismissRequest = { showFullScreenImage = false },
+                        properties =
+                            DialogProperties(
+                                usePlatformDefaultWidth = false,
+                                dismissOnBackPress = true,
+                                dismissOnClickOutside = true,
+                            ),
+                    ) {
+                        val agentId = agentInfo?.id ?: ""
+                        FullScreenImageViewer(
+                            imageUrl = generatedImageUrl,
+                            onDismiss = { showFullScreenImage = false },
+                            onAction = {
+                                if (agentId.isNotBlank() && generatedImageUrl.isNotBlank()) {
+                                    IntySetting.setChatBackgroundImage(
+                                        agentId,
+                                        generatedImageUrl,
+                                    )
+                                    ToastUtils.showShort(
+                                        R.string.agent_gallery_background_set_success
+                                    )
+                                    showFullScreenImage = false
+                                }
+                            },
+                            actionLabel =
+                                stringResource(R.string.agent_gallery_set_as_background),
                         )
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
                     }
                 }
             }
+
+            if (BuildConfig.DEBUG) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    DebugMessageMetadata(
+                        item = item,
+                        modifier =
+                            Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f)
+                    )
+                }
+            }
         }
+    }
         .onFailure { e ->
             Row {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -518,7 +584,11 @@ private fun ChatItemAI(
                         fontSize = messageFontSize,
                     )
                 }
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(
+                    modifier = Modifier
+                        .widthIn(80.dp)
+                        .weight(1f)
+                )
             }
         }
 }
@@ -528,40 +598,50 @@ private fun ChatItemAI(
 private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                val context = LocalContext.current
-                Box(
-                    modifier =
-                        Modifier.background(
-                                Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            val context = LocalContext.current
+            Box(
+                modifier =
+                    Modifier
+                        .background(
+                            Color.White.copy(alpha = 0.6f),
+                            RoundedCornerShape(12.dp),
+                        )
+                        .padding(
+                            horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                            vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                        )
+                        .widthIn(
+                            min = 1.dp,
+                            max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                        )
+                        .pointerInput(item.content) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    debugOnlyCopyToClipboard(context, item.content)
+                                }
                             )
-                            .padding(
-                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
-                            )
-                            .widthIn(
-                                min = 1.dp,
-                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                            )
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
-                ) {
-                    StyledMessageText(
-                        text = item.content,
-                        fontSize = messageFontSize,
-                        fontWeight = FontWeight.Normal,
-                        normalColor = Color(0xff090909),
-                        actionColor = Color(0xff090909).copy(0.6f),
+                        }
+            ) {
+                StyledMessageText(
+                    text = item.content,
+                    fontSize = messageFontSize,
+                    fontWeight = FontWeight.Normal,
+                    normalColor = Color(0xff090909),
+                    actionColor = Color(0xff090909).copy(0.6f),
+                )
+                //圣诞点缀
+                if (enableChristmasConfig()){
+                    Image(
+                        painter = painterResource(R.drawable.img_christmas_tree),
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.TopStart).offset(x = (-20).dp)
                     )
                 }
+
             }
         }
+    }
         .also {
             if (BuildConfig.DEBUG) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -595,7 +675,8 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -637,7 +718,9 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
         }
 
     Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -665,28 +748,28 @@ private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
 
     val metadataLines =
         remember(item) {
-                buildList {
-                    val roleLabel = item.role.ifBlank { "unknown" }
-                    add("role=$roleLabel")
-                    item.id.takeIf { it.isNotBlank() }?.let { add("id=${it.debugEllipsize()}") }
-                    add("local=${item.localMsgId}")
-                    item.timestamp?.takeIf { it.isNotBlank() }?.let { add("ts=$it") }
-                    item.meta_data?.let { meta ->
-                        val metaParts = mutableListOf<String>()
-                        meta.agentId?.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
-                        if (meta.isOpening) metaParts += "opening=true"
-                        meta.generatedImage?.let { image ->
-                            metaParts +=
-                                "image=${image.imageUrl.debugEllipsize()} (${image.width}x${image.height})"
-                        }
-                        if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
+            buildList {
+                val roleLabel = item.role.ifBlank { "unknown" }
+                add("role=$roleLabel")
+                item.id.takeIf { it.isNotBlank() }?.let { add("id=${it.debugEllipsize()}") }
+                add("local=${item.localMsgId}")
+                item.timestamp?.takeIf { it.isNotBlank() }?.let { add("ts=$it") }
+                item.meta_data?.let { meta ->
+                    val metaParts = mutableListOf<String>()
+                    meta.agentId?.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
+                    if (meta.isOpening) metaParts += "opening=true"
+                    meta.generatedImage?.let { image ->
+                        metaParts +=
+                            "image=${image.imageUrl.debugEllipsize()} (${image.width}x${image.height})"
                     }
-                    item.audio_url
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { add("audio=${it.debugEllipsize()}") }
-                    item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
+                    if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
                 }
+                item.audio_url
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { add("audio=${it.debugEllipsize()}") }
+                item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
             }
+        }
             .filter { it.isNotBlank() }
 
     if (metadataLines.isEmpty()) {
@@ -710,7 +793,7 @@ private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
 }
 
 private fun String.debugEllipsize(maxLength: Int = DEBUG_METADATA_VALUE_MAX): String {
-    if (length <= maxLength || maxLength <= 3) {
+    if (maxLength !in 4..<length) {
         return this
     }
     return take(maxLength - 3) + "..."
@@ -858,6 +941,7 @@ private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
         when (char) {
             '(',
             '（' -> stack.add(Pair(char, index))
+
             ')',
             '）' -> {
                 val matchingStart = if (char == ')') '(' else '（'
@@ -895,17 +979,18 @@ private fun LoadingAnimation(agentName: String?) {
             repeat(3) { index ->
                 val delay = index * 200
                 val dotAlpha by
-                    infiniteTransition.animateFloat(
-                        initialValue = 0.3f,
-                        targetValue = 1.0f,
-                        animationSpec =
-                            infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                        label = "dot_alpha_$index",
-                    )
+                infiniteTransition.animateFloat(
+                    initialValue = 0.3f,
+                    targetValue = 1.0f,
+                    animationSpec =
+                        infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                    label = "dot_alpha_$index",
+                )
 
                 Box(
                     modifier =
-                        Modifier.size(6.dp)
+                        Modifier
+                            .size(6.dp)
                             .background(
                                 color = Color.White.copy(dotAlpha * 0.7f),
                                 shape = CircleShape,
@@ -929,7 +1014,8 @@ internal fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier.border(
+            Modifier
+                .border(
                     width = .5.dp,
                     brush = Brush.horizontalGradient(colors = listOf(purpleStart, purpleEnd)),
                     shape = RoundedCornerShape(12.dp),
@@ -965,7 +1051,9 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -986,7 +1074,8 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier.size(18.dp)
+                    Modifier
+                        .size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,
