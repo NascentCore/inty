@@ -6,7 +6,6 @@ from app.api.v1.endpoints import (
     character_themes,
     chat,
     chats,
-    evaluation,
     images,
     notification,
     report,
@@ -42,15 +41,9 @@ api_router.include_router(settings.router, tags=["settings"])
 
 api_router.include_router(subscription.router, tags=["subscription"])
 
-# TODO: Consider remove /evaluation endpoint.
-# This is used for evaluating AI characters, and is not part of the app's runtime.
-# Instead, we should have an internal service to evaluate AI characters.
-# Still keep the endpoint for now, as it's used for evaluating AI characters.
-api_router.include_router(
-    evaluation.router,
-    tags=["evaluation"],
-    include_in_schema=False,
-)
+# Evaluation endpoints have been moved to IntyEval (eval_app/)
+# See eval_app/main.py for the evaluation service
+
 api_router.include_router(version.router, tags=["version"])
 api_router.include_router(text_to_speech.router, tags=["text_to_speech"])
 api_router.include_router(character_themes.router, tags=["character-themes"])

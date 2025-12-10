@@ -7,8 +7,6 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/` | GET | `app/main.py` |
-| `/evaluation` | GET | `app/main.py` |
-| `/evaluation/{path:path}` | GET | `app/main.py` |
 
 ## API v1 端点 (`/api/v1`)
 
@@ -162,45 +160,8 @@
 
 ### 评测 (Evaluation)
 
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v1/evaluation/sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/start` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/results` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/cancel` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/questions/parse` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/models` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/scoring-criteria/validate` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/stats` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/monitor` | WebSocket | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}` | PUT | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/check-background-aspect-ratio` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/upload-cropped-background` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/deploy` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/templates` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/templates` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/batch` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/results/export` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/compare` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/new-users` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-activity` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/conversation-rounds` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-rounds-distribution` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/popular-agents` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/users-hitting-limit` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/agent-analytics` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-sessions-detail` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/conversations-detail` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/stats` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-daily-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/session-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
+**注意**: Evaluation 端点已迁移到 IntyEval 应用 (`eval_app/`)。  
+请参考 `eval_app/README.md` 了解如何访问这些端点。
 
 ## API v2 端点 (`/api/v2`)
 

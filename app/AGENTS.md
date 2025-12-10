@@ -4,8 +4,9 @@
 - 不要编辑 `stainless.yml` `openapi.json` 这两个自动生成的配置文件
 
 ## 范围与目标
-- 负责 FastAPI HTTP 服务与业务逻辑。
+- 负责 FastAPI HTTP 服务与业务逻辑（用户面向）。
 - 变更必须做到可测试、可回滚、可观测。
+- **注意**: Evaluation 相关端点和前端已迁移到 IntyEval 应用 (`eval_app/`)，详见 `eval_app/README.md`
 
 ## 代码与结构
 - 遵循根文件的 Python 风格要求：避免捕获笼统异常、优先早返回、避免魔法常量、日志使用 `logger.debug()`。
