@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
@@ -496,5 +497,9 @@ class ChatRepositoryImpl(
     override suspend fun clearAllChatData() {
         LogUtils.d("ChatRepositoryImpl.clearAllChatData called")
         localDataSource.clearAllChatData()
+    }
+
+    override suspend fun clearMessage(agentId: String): Boolean {
+        return remoteDataSource.clearMessage(agentId)
     }
 }
