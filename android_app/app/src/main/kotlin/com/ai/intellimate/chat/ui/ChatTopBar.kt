@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -106,7 +107,9 @@ fun ChatTopBar(
 
             val showPoints = earnedPoints != null
 
-            Column {
+            Column(
+                modifier = Modifier.padding(end = UiConfigs.ChatTopBar.ContentRightPadding),
+            ) {
                 if (showPoints) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -134,9 +137,10 @@ fun ChatTopBar(
                     fontSize = fontSize,
                     fontWeight = FontWeight.Medium,
                     color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-//            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ContentRightPadding))
         }
 
         Spacer(modifier = Modifier.weight(1f))
