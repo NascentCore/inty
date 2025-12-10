@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +23,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Rocket
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -44,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -51,6 +60,8 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostLeaderboardActivity
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.boost.BoostLeaderboardActivity
 import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.delay
@@ -96,6 +107,7 @@ fun ExplorePage(
         )
 
         Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
             TopAppBar(
                 title = {
                     Image(
@@ -121,6 +133,12 @@ fun ExplorePage(
                 val currentTime = System.currentTimeMillis()
                 val elapsedTime = if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
 
+                when (lazyPagingItems?.loadState?.refresh) {
+                    is LoadState.Loading -> {
+                        if (isRefreshing && refreshStartTime == 0L) {
+                            refreshStartTime = currentTime
+                        }
+                    }
                 when (lazyPagingItems?.loadState?.refresh) {
                     is LoadState.Loading -> {
                         if (isRefreshing && refreshStartTime == 0L) {
