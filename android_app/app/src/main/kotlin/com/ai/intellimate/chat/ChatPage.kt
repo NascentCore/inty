@@ -356,6 +356,7 @@ internal fun ChatPage(
                     agentInfo?.let { info ->
                         ChatTopBar(
                             modifier = Modifier
+                                .fillMaxWidth()
                                 .padding(start = 18.dp),
                             agentInfo = info,
                             showBackButton = showBackButton,

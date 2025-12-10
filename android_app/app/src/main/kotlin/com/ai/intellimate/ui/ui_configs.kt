@@ -442,7 +442,7 @@ object UiConfigs {
         val EnergyIconToTextSpacing = 4.dp
 
         /** 能量点数与名称之间的间距 */
-        val EnergyPointsToNameSpacing = 0.dp
+        val EnergyPointsToNameSpacing = 2.dp
 
         /** 内容区域右侧内边距 */
         val ContentRightPadding = 16.dp
