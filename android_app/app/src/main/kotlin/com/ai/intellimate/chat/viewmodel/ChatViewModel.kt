@@ -15,15 +15,17 @@ import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.http.BusinessErrorCodes
-import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
+import ai.sxwl.android.utils.pickWithProbability
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
@@ -69,6 +71,10 @@ class ChatViewModel : BaseVM() {
 
     private val _hasMoreMessages = MutableStateFlow(true)
     val hasMoreMessages = _hasMoreMessages.asStateFlow()
+
+    // 反馈对话框显示状态
+    private val _showFeedbackDialog = MutableStateFlow(false)
+    val showFeedbackDialog = _showFeedbackDialog.asStateFlow()
 
     private var currentOffset = 0
     private val PAGE_SIZE = 20
@@ -491,6 +497,19 @@ class ChatViewModel : BaseVM() {
                             BoostManager.recordAssistantMessage(agent)
                         }
 
+                        // 增加总消息数并检查是否需要显示反馈对话框
+                        val newMessageCount = IntySetting.incrementTotalMessageCount()
+                        if (newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD == 0 &&
+                            pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)) {
+                            // 使用原子方法检查并标记反馈请求，防止并发竞态条件
+                            // tryMarkFeedbackRequested() 原子性地检查并设置标志，返回 true 表示成功标记（之前未请求）
+                            if (IntySetting.tryMarkFeedbackRequested()) {
+                                LogUtils.d("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount")
+                                IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+                                _showFeedbackDialog.value = true
+                            }
+                        }
+
                         runCatching {
                                 // 有免费次数限制，需要vip订阅
                                 if (
@@ -711,6 +730,11 @@ class ChatViewModel : BaseVM() {
 
     // 关闭limit次数 拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+
+    /** 隐藏反馈对话框 */
+    fun hideFeedbackDialog() {
+        _showFeedbackDialog.value = false
+    }
 
     fun dismissImageGenerationDialog() =
         viewModelScope.launch { showImageGenerationDialog.emit(null) }

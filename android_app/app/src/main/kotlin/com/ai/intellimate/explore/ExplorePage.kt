@@ -53,6 +53,8 @@ import com.ai.intellimate.boost.BoostLeaderboardActivity
 import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.delay
 
+private const val MIN_REFRESH_DURATION_MS = 400L
+
 /** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("ConfigurationScreenWidthHeight")
@@ -69,11 +71,9 @@ fun ExplorePage(
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
 
-    // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
 
-    // 使用 PageTrackingHelper 进行页面跟踪
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView(
             "ExplorePage",
@@ -85,7 +85,6 @@ fun ExplorePage(
         )
     }
 
-    // 初始化图片尺寸缓存管理器和图片预加载管理器
     LaunchedEffect(Unit) { ImagePreloadManager.init(context) }
 
     Box(modifier = modifier) {
@@ -121,7 +120,6 @@ fun ExplorePage(
 
             LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing) {
                 val currentTime = System.currentTimeMillis()
-                val minRefreshDuration = 400L
                 val elapsedTime =
                     if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
 
@@ -132,39 +130,15 @@ fun ExplorePage(
                         }
                     }
 
-                    is LoadState.NotLoading -> {
-                        if (isRefreshing) {
-                            if (elapsedTime >= minRefreshDuration) {
-                                isRefreshing = false
-                                refreshStartTime = 0L
-                            } else {
-                                delay(minRefreshDuration - elapsedTime)
-                                isRefreshing = false
-                                refreshStartTime = 0L
-                            }
-                        }
-                    }
-
-                    is LoadState.Error -> {
-                        if (isRefreshing) {
-                            if (elapsedTime >= minRefreshDuration) {
-                                isRefreshing = false
-                                refreshStartTime = 0L
-                            } else {
-                                delay(minRefreshDuration - elapsedTime)
-                                isRefreshing = false
-                                refreshStartTime = 0L
-                            }
-                        }
-                    }
-
+                    is LoadState.NotLoading,
+                    is LoadState.Error,
                     null -> {
                         if (isRefreshing) {
-                            if (elapsedTime >= minRefreshDuration) {
+                            if (elapsedTime >= MIN_REFRESH_DURATION_MS) {
                                 isRefreshing = false
                                 refreshStartTime = 0L
                             } else {
-                                delay(minRefreshDuration - elapsedTime)
+                                delay(MIN_REFRESH_DURATION_MS - elapsedTime)
                                 isRefreshing = false
                                 refreshStartTime = 0L
                             }
@@ -178,9 +152,7 @@ fun ExplorePage(
                 onRefresh = {
                     refreshStartTime = System.currentTimeMillis()
                     isRefreshing = true
-                    // 刷新推荐 agents
                     viewModel.refreshRecommendAgents()
-                    // 刷新主题专区（只有在成功获取数据后才更新 UI）
                     viewModel.refreshCharacterThemes()
                 },
                 modifier = Modifier.fillMaxSize(),
