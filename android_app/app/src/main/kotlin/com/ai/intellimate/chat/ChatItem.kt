@@ -83,6 +83,7 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.enableChristmasConfig
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
@@ -356,16 +357,18 @@ private fun ChatItemAI(
                         }
 
                         //圣诞点缀
-                        Image(
-                            painter = painterResource(R.drawable.img_omela),
-                            contentDescription = null,
-                            modifier = Modifier.align(Alignment.BottomStart).offset(x=(-10).dp, y = 10.dp)
-                        )
-                        Image(
-                            painter = painterResource(R.drawable.img_chat_snow_right),
-                            contentDescription = null,
-                            modifier = Modifier.align(Alignment.TopEnd).offset(x=15.dp, y = (-16).dp)
-                        )
+                        if (enableChristmasConfig()){
+                            Image(
+                                painter = painterResource(R.drawable.img_omela),
+                                contentDescription = null,
+                                modifier = Modifier.align(Alignment.BottomStart).offset(x=(-10).dp, y = 10.dp)
+                            )
+                            Image(
+                                painter = painterResource(R.drawable.img_chat_snow_right),
+                                contentDescription = null,
+                                modifier = Modifier.align(Alignment.TopEnd).offset(x=15.dp, y = (-16).dp)
+                            )
+                        }
                     }
                     Spacer(
                         modifier = Modifier
@@ -475,22 +478,25 @@ private fun ChatItemAI(
                                 onError = { imageLoadError = true },
                             )
                             //圣诞点缀
-                            Image(
-                                painter = painterResource(R.drawable.img_christmas_candy),
-                                contentDescription = null,
-                                modifier = Modifier.constrainAs(left) {
-                                    start.linkTo(img.start, (-15).dp)
-                                    bottom.linkTo(img.bottom, (-12).dp)
-                                }
-                            )
-                            Image(
-                                painter = painterResource(R.drawable.img_candy_christmas),
-                                contentDescription = null,
-                                modifier = Modifier.constrainAs(right) {
-                                    end.linkTo(img.end, (-25).dp)
-                                    bottom.linkTo(img.bottom, (-12).dp)
-                                }
-                            )
+                            if (enableChristmasConfig()){
+                                Image(
+                                    painter = painterResource(R.drawable.img_christmas_candy),
+                                    contentDescription = null,
+                                    modifier = Modifier.constrainAs(left) {
+                                        start.linkTo(img.start, (-15).dp)
+                                        bottom.linkTo(img.bottom, (-12).dp)
+                                    }
+                                )
+                                Image(
+                                    painter = painterResource(R.drawable.img_candy_christmas),
+                                    contentDescription = null,
+                                    modifier = Modifier.constrainAs(right) {
+                                        end.linkTo(img.end, (-25).dp)
+                                        bottom.linkTo(img.bottom, (-12).dp)
+                                    }
+                                )
+                            }
+
                         }
 
                     } else if (generatedImageUrl.isNullOrEmpty()) {
@@ -625,11 +631,14 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                     actionColor = Color(0xff090909).copy(0.6f),
                 )
                 //圣诞点缀
-                Image(
-                    painter = painterResource(R.drawable.img_christmas_tree),
-                    contentDescription = null,
-                    modifier = Modifier.align(Alignment.TopStart).offset(x = (-20).dp)
-                )
+                if (enableChristmasConfig()){
+                    Image(
+                        painter = painterResource(R.drawable.img_christmas_tree),
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.TopStart).offset(x = (-20).dp)
+                    )
+                }
+
             }
         }
     }

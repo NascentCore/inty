@@ -702,7 +702,7 @@ private val christmasTabItems =
     )
 
 /** 简单的本地时间策略，12月20日～12月26日之间 欢度圣诞 */
-private fun enableChristmasConfig(): Boolean {
+internal fun enableChristmasConfig(): Boolean {
     val calendar = Calendar.getInstance()
     val month = calendar.get(Calendar.MONTH)
     val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
