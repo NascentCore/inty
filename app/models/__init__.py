@@ -33,6 +33,9 @@ from app.models.notification import (
 from app.models.push_notification import (
     PushNotificationHistory as PushNotificationHistory,
 )
+from app.models.feedback_push import (
+    FeedbackPushHistory as FeedbackPushHistory,
+)
 from app.models.report import Report as Report
 from app.models.resource import Resource as Resource
 from app.models.settings import Settings as Settings
