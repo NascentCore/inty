@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,12 +24,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,8 +41,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,10 +56,21 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostLeaderboardActivity
+import com.ai.intellimate.boost.BoostLeaderboardEntry
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostTrend
+import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.delay
 
 private const val MIN_REFRESH_DURATION_MS = 400L
+
+private enum class ExploreSubTab {
+    Recommended,
+    Boost,
+}
+
+private val ExploreTabSwipeThreshold = 72.dp
 
 /** Explore页面 - 推荐agents展示 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,9 +88,6 @@ fun ExplorePage(
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     var selectedTab by remember { mutableStateOf(ExploreSubTab.Recommended) }
-    val boostState by
-        if (isDebugMode) BoostManager.boostState.collectAsState()
-        else remember { mutableStateOf(BoostState()) }
     val localLeaderboard by
         if (isDebugMode) BoostManager.leaderboard.collectAsState()
         else remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
@@ -111,6 +125,10 @@ fun ExplorePage(
     
     // 优先使用 API 返回的排行榜，如果为空则使用本地排行榜
     val leaderboard = if (apiLeaderboard.isNotEmpty()) apiLeaderboard else localLeaderboard
+    val boostState by
+        if (isDebugMode) BoostManager.boostState.collectAsState()
+        else remember { mutableStateOf(com.ai.intellimate.boost.BoostState()) }
+    
     val density = LocalDensity.current
     val tabSwipeThresholdPx =
         remember(density) { with(density) { ExploreTabSwipeThreshold.toPx() } }
@@ -151,6 +169,14 @@ fun ExplorePage(
         } else {
             Modifier
         }
+    
+    val handleLeaderboardAction: (BoostLeaderboardEntry, Boolean) -> Unit = { entry, showSheet ->
+        if (entry.isSeed || entry.agentId.isBlank()) {
+            ai.sxwl.android.utils.ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
+        } else {
+            navController.navigate(com.ai.intellimate.xb.navigation.Routes.chatPage(entry.agentId, showSheet))
+        }
+    }
 
     // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
@@ -176,7 +202,9 @@ fun ExplorePage(
             contentDescription = null,
         )
 
-        Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+        Column(
+            modifier = Modifier.fillMaxSize().background(Color.Transparent).then(tabSwipeModifier)
+        ) {
             TopAppBar(
                 title = {
                     Image(
@@ -199,56 +227,92 @@ fun ExplorePage(
                 },
             )
 
-            var isRefreshing by remember { mutableStateOf(false) }
-            var refreshStartTime by remember { mutableLongStateOf(0L) }
-
-            LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing) {
-                val currentTime = System.currentTimeMillis()
-                val elapsedTime = if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
-
-                when (lazyPagingItems?.loadState?.refresh) {
-                    is LoadState.Loading -> {
-                        if (isRefreshing && refreshStartTime == 0L) {
-                            refreshStartTime = currentTime
-                        }
-                    }
-
-                    is LoadState.NotLoading,
-                    is LoadState.Error,
-                    null -> {
-                        if (isRefreshing) {
-                            if (elapsedTime >= MIN_REFRESH_DURATION_MS) {
-                                isRefreshing = false
-                                refreshStartTime = 0L
-                            } else {
-                                delay(MIN_REFRESH_DURATION_MS - elapsedTime)
-                                isRefreshing = false
-                                refreshStartTime = 0L
-                            }
-                        }
+            if (isDebugMode) {
+                TabRow(
+                    selectedTabIndex = selectedTab.ordinal,
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White,
+                ) {
+                    ExploreSubTab.entries.forEach { tab ->
+                        Tab(
+                            selected = selectedTab == tab,
+                            onClick = { selectedTab = tab },
+                            text = {
+                                Text(
+                                    text =
+                                        stringResource(
+                                            if (tab == ExploreSubTab.Recommended)
+                                                R.string.boost_tab_recommend
+                                            else R.string.boost_tab_leaderboard
+                                        ),
+                                    color = Color.White,
+                                )
+                            },
+                        )
                     }
                 }
             }
 
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = {
-                    refreshStartTime = System.currentTimeMillis()
-                    isRefreshing = true
-                    viewModel.refreshRecommendAgents()
-                    viewModel.refreshCharacterThemes()
-                },
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                ExploreContent(
-                    modifier = Modifier.fillMaxSize(),
-                    agentsFlow = agentsFlow,
-                    innerPadding = innerPadding,
-                    onClickAgent = onClickAgent,
+            if (!isDebugMode || selectedTab == ExploreSubTab.Recommended) {
+                var isRefreshing by remember { mutableStateOf(false) }
+                var refreshStartTime by remember { mutableLongStateOf(0L) }
+
+                LaunchedEffect(lazyPagingItems?.loadState?.refresh, isRefreshing) {
+                    val currentTime = System.currentTimeMillis()
+                    val elapsedTime = if (refreshStartTime > 0) currentTime - refreshStartTime else 0L
+
+                    when (lazyPagingItems?.loadState?.refresh) {
+                        is LoadState.Loading -> {
+                            if (isRefreshing && refreshStartTime == 0L) {
+                                refreshStartTime = currentTime
+                            }
+                        }
+
+                        is LoadState.NotLoading,
+                        is LoadState.Error,
+                        null -> {
+                            if (isRefreshing) {
+                                if (elapsedTime >= MIN_REFRESH_DURATION_MS) {
+                                    isRefreshing = false
+                                    refreshStartTime = 0L
+                                } else {
+                                    delay(MIN_REFRESH_DURATION_MS - elapsedTime)
+                                    isRefreshing = false
+                                    refreshStartTime = 0L
+                                }
+                            }
+                        }
+                    }
+                }
+
+                PullToRefreshBox(
                     isRefreshing = isRefreshing,
-                    onRetry = { viewModel.refreshRecommendAgents() },
-                    viewModel = viewModel,
-                    resetToTopSignal = externalResetSignal,
+                    onRefresh = {
+                        refreshStartTime = System.currentTimeMillis()
+                        isRefreshing = true
+                        viewModel.refreshRecommendAgents()
+                        viewModel.refreshCharacterThemes()
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    ExploreContent(
+                        modifier = Modifier.fillMaxSize(),
+                        agentsFlow = agentsFlow,
+                        innerPadding = innerPadding,
+                        onClickAgent = onClickAgent,
+                        isRefreshing = isRefreshing,
+                        onRetry = { viewModel.refreshRecommendAgents() },
+                        viewModel = viewModel,
+                        resetToTopSignal = externalResetSignal,
+                    )
+                }
+            } else if (isDebugMode && selectedTab == ExploreSubTab.Boost) {
+                BoostLeaderboardTab(
+                    modifier = Modifier.fillMaxSize(),
+                    availablePoints = boostState.availablePoints,
+                    entries = leaderboard,
+                    onChat = { entry -> handleLeaderboardAction(entry, false) },
+                    onBoost = { entry -> handleLeaderboardAction(entry, true) },
                 )
             }
         }
