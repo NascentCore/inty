@@ -130,8 +130,8 @@ async def recommend_agents(
     """
     Get recommended AI agents list (public and approved agents)
 
-    Sorting options:
-    - created_desc: Most recent first (default)
+    Sorting options (default: created_desc):
+    - created_desc: Most recent first
     - created_asc: Oldest first
     - random: Random order (uses sort_seed for deterministic results)
     - score_based_random: Score-based recommendation (6 high-score agents + 4 random agents)
