@@ -13,42 +13,42 @@ internal object BillingUtils {
         val googleApiAvailability = GoogleApiAvailability.getInstance()
         val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
 
-        LogUtils.i("Billing BillingUtils - Google Play 服务检查结果: $resultCode")
+        LogUtils.d("Billing BillingUtils - Google Play 服务检查结果: $resultCode")
 
         when (resultCode) {
             ConnectionResult.SUCCESS -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务可用")
+                LogUtils.d("Billing BillingUtils - Google Play 服务可用")
                 return true
             }
             ConnectionResult.SERVICE_MISSING -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务缺失")
+                LogUtils.d("Billing BillingUtils - Google Play 服务缺失")
             }
             ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务版本过低")
+                LogUtils.d("Billing BillingUtils - Google Play 服务版本过低")
             }
             ConnectionResult.SERVICE_DISABLED -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务被禁用")
+                LogUtils.d("Billing BillingUtils - Google Play 服务被禁用")
             }
             ConnectionResult.SERVICE_INVALID -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务无效")
+                LogUtils.d("Billing BillingUtils - Google Play 服务无效")
             }
             ConnectionResult.SERVICE_UPDATING -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务正在更新")
+                LogUtils.d("Billing BillingUtils - Google Play 服务正在更新")
             }
             ConnectionResult.TIMEOUT -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务连接超时")
+                LogUtils.d("Billing BillingUtils - Google Play 服务连接超时")
             }
             ConnectionResult.INTERRUPTED -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务连接被中断")
+                LogUtils.d("Billing BillingUtils - Google Play 服务连接被中断")
             }
             ConnectionResult.INVALID_ACCOUNT -> {
-                LogUtils.i("Billing BillingUtils - Google Play 账户无效")
+                LogUtils.d("Billing BillingUtils - Google Play 账户无效")
             }
             ConnectionResult.RESOLUTION_REQUIRED -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务需要用户操作解决")
+                LogUtils.d("Billing BillingUtils - Google Play 服务需要用户操作解决")
             }
             else -> {
-                LogUtils.i("Billing BillingUtils - Google Play 服务不可用，错误码: $resultCode")
+                LogUtils.e("Billing BillingUtils - Google Play 服务不可用，错误码: $resultCode")
             }
         }
 

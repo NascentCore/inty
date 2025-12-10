@@ -1,69 +1,42 @@
-#!/bin/bash
+#!/bin/bash -e
 
-# InTy 评测系统前端构建脚本
+set -o pipefail
 
-set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-echo "🎯 InTy 评测系统前端构建"
-echo "=========================="
+echo "🎯 构建 evaluation 并同步至 app/static/evaluation"
 
-# 检查 Node.js 和 npm
-if ! command -v node &> /dev/null; then
-    echo "❌ Node.js 未安装，请先安装 Node.js 16+"
-    exit 1
-fi
+echo "📦 构建 inty_sdk..."
+pushd "${SCRIPT_DIR}/inty_sdk" >/dev/null
+# tsc-multi 通过 tarball 安装，避免 yarn 解析问题
+yarn add -D tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz
+yarn install
+NODE_OPTIONS="--max-old-space-size=4096" yarn run build
+popd >/dev/null
 
-if ! command -v npm &> /dev/null; then
-    echo "❌ npm 未安装，请先安装 npm"
-    exit 1
-fi
-
-# 显示版本信息
-echo "📋 环境信息:"
-echo "  Node.js: $(node --version)"
-echo "  npm: $(npm --version)"
-echo ""
-
-# 进入评测系统目录
-cd "$(dirname "$0")"
-echo "📁 当前目录: $(pwd)"
-
-# 安装依赖
-echo "📦 安装依赖..."
+echo "📦 安装前端依赖..."
+pushd "${SCRIPT_DIR}" >/dev/null
 npm install
 
-# 类型检查
 echo "🔍 TypeScript 类型检查..."
 npm run type-check
 
-# 代码检查
-echo "🧹 ESLint 代码检查..."
+echo "🧹 ESLint 检查..."
 npm run lint
 
-# 构建生产版本
-echo "🏗️ 构建生产版本..."
-npm run build
+echo "🔨 构建前端应用..."
+NODE_OPTIONS="--max-old-space-size=4096" npm run build
+popd >/dev/null
 
-# 检查构建结果
-if [ -d "dist" ]; then
-    echo "✅ 构建成功！"
-    echo ""
-    echo "📊 构建结果:"
-    ls -la dist/
-    echo ""
-    echo "📁 构建文件大小:"
-    du -sh dist/*
-    echo ""
-    echo "🌐 部署说明:"
-    echo "  1. 构建文件在 ./dist/ 目录"
-    echo "  2. 将 dist/ 内容复制到静态文件服务器"
-    echo "  3. 或者使用 'npm run preview' 预览"
-    echo ""
-    echo "🚀 快速预览:"
-    echo "  npm run preview"
-else
-    echo "❌ 构建失败，请检查错误信息"
-    exit 1
+echo "📁 部署到 app/static/evaluation..."
+rm -rf "${REPO_ROOT}/app/static/evaluation"
+mkdir -p "${REPO_ROOT}/app/static/evaluation"
+cp -r "${SCRIPT_DIR}/dist/." "${REPO_ROOT}/app/static/evaluation/"
+
+if [ -d "${SCRIPT_DIR}/resources" ]; then
+  mkdir -p "${REPO_ROOT}/app/static/evaluation/resources"
+  cp -r "${SCRIPT_DIR}/resources/." "${REPO_ROOT}/app/static/evaluation/resources/"
 fi
 
-echo "🎉 构建完成！"
+echo "✅ 构建完成"

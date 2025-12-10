@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Context
@@ -27,6 +28,7 @@ class ChatActivity : BaseActivity() {
         private const val INTENT_KEY_AGENT_ID = "intent_key_agent_id"
         private const val INTENT_KEY_AGENT_INFO = "intent_key_agent_info"
         private const val INTENT_KEY_PAGE_SOURCE = "intent_key_page_source"
+        private const val INTENT_KEY_AUTO_BOOST = "intent_key_auto_boost"
         private const val DEFAULT_PAGE_SOURCE = "unknown"
 
         /** 页面来源常量 - 用于统计曝光事件 */
@@ -48,12 +50,14 @@ class ChatActivity : BaseActivity() {
             agentInfo: AgentInfo? = null,
             agentId: String? = null,
             pageSource: String = DEFAULT_PAGE_SOURCE,
+            showBoostSheet: Boolean = false,
         ) {
             context.startActivity(
                 Intent(context, ChatActivity::class.java).also { intent ->
                     intent.putExtra(INTENT_KEY_AGENT_ID, agentId)
                     intent.putExtra(INTENT_KEY_AGENT_INFO, agentInfo)
                     intent.putExtra(INTENT_KEY_PAGE_SOURCE, pageSource)
+                    intent.putExtra(INTENT_KEY_AUTO_BOOST, showBoostSheet)
                 }
             )
         }
@@ -71,9 +75,9 @@ class ChatActivity : BaseActivity() {
     private val chatViewModel: ChatViewModel by viewModels()
     private var agent: AgentInfo? = null
     private var agentId: String? = null
-    private val pageSource: String by lazy {
-        intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
-    }
+    private var pageSource: String = DEFAULT_PAGE_SOURCE
+    private var shouldShowBoostSheet: Boolean = false
+    private var isFromNotification: Boolean = false
 
     override fun getPageName(): String = "ChatPage"
 
@@ -84,6 +88,11 @@ class ChatActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
+        handleIntent(intent)
+    }
+
+    /** 处理 Intent 数据，提取 agent 信息和页面来源 */
+    private fun handleIntent(intent: Intent) {
         agent =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
@@ -91,9 +100,14 @@ class ChatActivity : BaseActivity() {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
         agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
+        pageSource = intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
+        shouldShowBoostSheet = intent.getBooleanExtra(INTENT_KEY_AUTO_BOOST, false)
+        isFromNotification = pageSource == PUSH_NOTIFICATION
+
         val resolvedAgent = agent
         if (resolvedAgent != null) {
-            chatViewModel.setAgentInfo(resolvedAgent)
+            // 如果是从通知进入，强制同步消息
+            chatViewModel.setAgentInfo(resolvedAgent, forceSync = isFromNotification)
         } else {
             val resolvedAgentId = agentId
             if (resolvedAgentId.isNullOrBlank()) {
@@ -101,12 +115,13 @@ class ChatActivity : BaseActivity() {
                 finish()
                 return
             }
-            chatViewModel.setAgentID(resolvedAgentId)
+            // 如果是从通知进入，先获取 agent 信息，然后强制同步
+            chatViewModel.setAgentID(resolvedAgentId, forceSync = isFromNotification)
         }
         chatViewModel.updateUserInfo()
 
         // 如果是从推送通知进入，记录推送通知点击事件
-        if (pageSource == PUSH_NOTIFICATION) {
+        if (isFromNotification) {
             FirebaseManager.logEvent(
                 FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
                 FirebaseManager.safeEventParams(
@@ -117,11 +132,20 @@ class ChatActivity : BaseActivity() {
         }
     }
 
+    /** 处理 Activity 复用场景（singleTop 模式） */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // 重新处理 Intent，确保从通知进入时能触发消息同步
+        handleIntent(intent)
+    }
+
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
+        val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
         val hasLoadingMessage =
             chatMessages.any { msg ->
                 val hasGeneratedImage = msg.hasGeneratedImage()
@@ -139,6 +163,7 @@ class ChatActivity : BaseActivity() {
                 isLoading = hasLoadingMessage,
                 isCurrentPage = true,
                 modifier = Modifier.fillMaxSize(),
+                enableAnimatedBackground = autoPlayAnimation,
             )
 
             ChatPage(
@@ -147,6 +172,7 @@ class ChatActivity : BaseActivity() {
                 showBackButton = true,
                 onBack = { finish() },
                 pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
+                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
             )
         }
     }

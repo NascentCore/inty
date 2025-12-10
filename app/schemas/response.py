@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel
@@ -61,6 +62,53 @@ class UsageLimitExceeded(BizError):
     # 用来进一步解释错误信息的详细信息
     used_count: int
     daily_limit: int
+
+
+# TODO：需要与前端确认错误码和错误消息是否一致，使用 enum 方便 Stainless SDK 自动生成错误码和错误消息
+# 代码仍在开发中，目前无效
+class WIPBusinessErrorCodeEnum(str, Enum):
+    """业务错误码枚举类型，用于返回错误信息给前端"""
+
+    SUBSCRIPTION_REQUIRED = "SUBSCRIPTION_REQUIRED"
+    IMAGE_GENERATION_LIMIT_REACHED = "IMAGE_GENERATION_LIMIT_REACHED"
+    AGENT_CREATION_LIMIT_REACHED = "AGENT_CREATION_LIMIT_REACHED"
+    VOICE_GENERATION_LIMIT_REACHED = "VOICE_GENERATION_LIMIT_REACHED"
+    GUEST_LOGIN_REQUIRED = "GUEST_LOGIN_REQUIRED"
+    IMAGE_GENERATION_BLOCKED = "IMAGE_GENERATION_BLOCKED"
+
+    @property
+    def code(self) -> int:
+        """返回对应的数字错误码"""
+        error_code_map = {
+            BusinessErrorCodeEnum.SUBSCRIPTION_REQUIRED: 10001001,
+            BusinessErrorCodeEnum.IMAGE_GENERATION_LIMIT_REACHED: 10001002,
+            BusinessErrorCodeEnum.AGENT_CREATION_LIMIT_REACHED: 10001003,
+            BusinessErrorCodeEnum.VOICE_GENERATION_LIMIT_REACHED: 10001004,
+            BusinessErrorCodeEnum.GUEST_LOGIN_REQUIRED: 10001005,
+            BusinessErrorCodeEnum.IMAGE_GENERATION_BLOCKED: 10001006,
+        }
+        return error_code_map[self]
+
+    @property
+    def message(self) -> str:
+        """返回对应的错误消息"""
+        error_message_map = {
+            BusinessErrorCodeEnum.SUBSCRIPTION_REQUIRED: "Subscription required",
+            BusinessErrorCodeEnum.IMAGE_GENERATION_LIMIT_REACHED: "Image generation limit reached",
+            BusinessErrorCodeEnum.AGENT_CREATION_LIMIT_REACHED: "Character creation limit reached",
+            BusinessErrorCodeEnum.VOICE_GENERATION_LIMIT_REACHED: "Voice generation limit reached",
+            BusinessErrorCodeEnum.GUEST_LOGIN_REQUIRED: "Guest login required - Please sign in with Google",
+            BusinessErrorCodeEnum.IMAGE_GENERATION_BLOCKED: "Image generation was blocked by safety filter",
+        }
+        return error_message_map[self]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典格式，兼容现有的 BusinessErrorCode 格式"""
+        return {
+            "code": self.code,
+            "error_code": self.value,
+            "message": self.message,
+        }
 
 
 # 业务错误码定义

@@ -20,9 +20,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 /** 配置一下kotlin编译Android的基本模块参数 */
 internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, *, *, *, *, *>) {
     commonExtension.apply {
-        compileSdk = ProjectConfig.compileVersion
+        compileSdk = ProjectConfig.COMPILER_VERSION
 
-        defaultConfig { minSdk = ProjectConfig.minSdkVersion }
+        defaultConfig { minSdk = ProjectConfig.MIN_SDK_VERSION }
 
         compileOptions {
             // Up to Java 11 APIs are available through desugaring

@@ -62,10 +62,11 @@ class ExplorePagingSource(
                 if (page == UiConfigs.Explore.INITIAL_PAGE && useCache && cacheProvider != null) {
                     val cachedAgents = cacheProvider.getCachedRecommendedAgents()
                     if (cachedAgents.isNotEmpty()) {
-                        val validCachedAgents = cachedAgents.filter { agent ->
-                            agent.id.isNotEmpty() &&
+                        val validCachedAgents =
+                            cachedAgents.filter { agent ->
+                                agent.id.isNotEmpty() &&
                                     !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                        }
+                            }
 
                         if (validCachedAgents.isNotEmpty()) {
                             if (cacheProvider.shouldUpdateFromNetwork()) {
@@ -103,26 +104,33 @@ class ExplorePagingSource(
                 when (result) {
                     is NetworkResult.Success -> {
                         val agents = result.data.list ?: emptyList()
-                        val validAgents = agents.filter { agent ->
-                            agent.id.isNotEmpty() &&
+                        val validAgents =
+                            agents.filter { agent ->
+                                agent.id.isNotEmpty() &&
                                     !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                        }
+                            }
 
-                        val hasMore = if (result.data.totalPages > 0) {
-                            page < result.data.totalPages
-                        } else {
-                            val estimatedLoadedCount = (page - 1) * pageSize + agents.size
-                            estimatedLoadedCount < result.data.total
-                        }
+                        val hasMore =
+                            if (result.data.totalPages > 0) {
+                                page < result.data.totalPages
+                            } else {
+                                val estimatedLoadedCount = (page - 1) * pageSize + agents.size
+                                estimatedLoadedCount < result.data.total
+                            }
 
-                        if (page == UiConfigs.Explore.INITIAL_PAGE && validAgents.isNotEmpty() && cacheProvider != null) {
+                        if (
+                            page == UiConfigs.Explore.INITIAL_PAGE &&
+                                validAgents.isNotEmpty() &&
+                                cacheProvider != null
+                        ) {
                             cacheProvider.cacheRecommendedAgents(validAgents)
                             cacheProvider.refreshRecommendedAgents()
                         }
 
                         LoadResult.Page(
                             data = validAgents,
-                            prevKey = if (page == UiConfigs.Explore.INITIAL_PAGE) null else page - 1,
+                            prevKey =
+                                if (page == UiConfigs.Explore.INITIAL_PAGE) null else page - 1,
                             nextKey = if (hasMore) page + 1 else null,
                         )
                     }
@@ -161,17 +169,18 @@ class ExplorePagingSource(
             when (result) {
                 is HttpResult.Success -> {
                     val agents = result.data.list ?: emptyList()
-                    val validAgents = agents.filter { agent ->
-                        agent.id.isNotEmpty() &&
+                    val validAgents =
+                        agents.filter { agent ->
+                            agent.id.isNotEmpty() &&
                                 !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                    }
+                        }
 
                     fetchCallback?.onSuccess(
                         page,
                         pageSize,
                         responseTime,
                         validAgents.size,
-                        sortSeed
+                        sortSeed,
                     )
                     NetworkResult.Success(result.data)
                 }
@@ -194,10 +203,11 @@ class ExplorePagingSource(
                 val result = loadFromNetwork(page, pageSize)
                 if (result is NetworkResult.Success) {
                     val agents = result.data.list ?: emptyList()
-                    val validAgents = agents.filter { agent ->
-                        agent.id.isNotEmpty() &&
+                    val validAgents =
+                        agents.filter { agent ->
+                            agent.id.isNotEmpty() &&
                                 !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
-                    }
+                        }
                     if (validAgents.isNotEmpty() && cacheProvider != null) {
                         cacheProvider.cacheRecommendedAgents(validAgents)
                         cacheProvider.refreshRecommendedAgents()

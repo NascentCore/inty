@@ -14,10 +14,24 @@
     <string name="app_name">IntelliMate</string>
     <string name="ID">ID:%s</string>
     <string name="no_agent">Create your own characters now!</string>
+    <string name="vibe_mode_title">The Vibe Mode</string>
+    <string name="vibe_mode_active_title">Enjoy the vibe</string>
+    <string name="vibe_mode_subtitle">Exclusive access to pre-release features and perks for Premium subscribers</string>
+    <string name="vibe_mode_toggle_content_desc">Toggle Vibe Mode</string>
+    <string name="me_icons_row_help">Help Center</string>
+    <string name="me_icons_row_discord">Discord</string>
+    <string name="me_icons_row_whatsapp">Whatsapp</string>
+    <string name="me_icons_row_settings">Settings</string>
     <string name="settings">Settings</string>
+    <string name="settings_help">Help Center</string>
     <string name="settings_email_support">Email Support</string>
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
-    <string name="settings_about">Version</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_rate_us">Rate IntelliMate</string>
+    <string name="settings_user_id">User ID</string>
+    <string name="settings_user_id_unavailable">Unavailable</string>
+    <string name="settings_user_email">User Email</string>
+    <string name="settings_user_email_unavailable">Unavailable</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="introduction">Introduction</string>
@@ -36,6 +50,7 @@
     <string name="character_updated_successfully">Updated</string>
     <string name="character_deleted_successfully">Deleted</string>
     <string name="saved_successfully">Saved</string>
+    <string name="avatar_upload_success">Avatar uploaded</string>
 
     <!-- Pin/Hide messages -->
     <string name="pin">Pin</string>
@@ -93,7 +108,7 @@
     <string name="settings_str_delete_account">Delete My Account</string>
     <string name="url_user_agreement">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
     <string name="url_privacy_policy">https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c</string>
-    <string name="str_expired_vip_dialog_content">Your Premium subscription has expired and you\'ll lose access to unlimited chat and other premium features. Resubscribe to resume the benefits!</string>
+    <string name="str_expired_vip_dialog_content">You have enjoyed IntelliMate Premium before. Come back and check out IntelliMate Premium\'s newest benefits and perks!</string>
     <string name="str_unlimit_dialog_content">Daily Free Chat Limit Reached! Go Premium for unlimited chats and exclusive features! Free chats refresh tomorrow — come back and keep chatting. ❤️</string>
     <string name="str_unlimit_btn_text">Unlimited Chat and More! 🔥</string>
     <!-- Image Generation Error Messages -->
@@ -106,6 +121,14 @@
     <string name="welcome_to_intellimate">Welcome to IntelliMate</string>
     <string name="create_account_or_login">Create an account or log in to continue</string>
     <string name="continue_with_google">Continue with Google</string>
+    <string name="continue_with_email">Continue with Email</string>
+    <string name="enter_email">Email</string>
+    <string name="enter_email_placeholder">Enter your Email</string>
+    <string name="enter_password_placeholder">Enter password</string>
+    <string name="login_with_email_password">Login with Email + Password</string>
+    <string name="continue_button">Continue</string>
+    <string name="login_button">Login</string>
+    <string name="invalid_email_format">Invalid Email</string>
     <string name="hello_wave">Hello 👋</string>
     <string name="tell_us_more">Tell us more for a better personalized experience</string>
     <string name="which_pronoun_use">Which pronoun do you use? *</string>
@@ -121,6 +144,7 @@
     <!-- Credential Manager Error Messages -->
     <string name="no_credentials_available">No credentials available</string>
     <string name="get_credential_failed">Failed to get credential</string>
+    <string name="invalid_google_token">Failed to parse Google ID token</string>
     <string name="login_failed">Login failed</string>
 
     <!-- Avatar Generation -->
@@ -131,6 +155,14 @@
 
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>
+    <string name="remove_background_image">Remove image</string>
+    <string name="save_draft_dialog_title">Save draft?</string>
+    <string name="save_draft_dialog_message">Save your progress as a draft so you can finish this character later from the Me page.</string>
+    <string name="save_draft_dialog_confirm">Save draft</string>
+    <string name="save_draft_dialog_discard">Don\&#39;t save</string>
+    <string name="draft_badge_label">Draft</string>
+    <string name="draft_card_placeholder_name">Untitled character</string>
+    <string name="draft_card_placeholder_intro">Add more details to finish this character.</string>
 
     <!-- Report -->
     <string name="report_description">Report description</string>
@@ -144,8 +176,8 @@
 
     <!-- Feedback -->
     <string name="str_feedback">Feedback</string>
-    <string name="share_feedback">Share Feedback</string>
-    <string name="tell_us_what_you_think">Tell us what you think</string>
+    <string name="feedback_title">Help Us Improve</string>
+    <string name="feedback_subtitle">Was everything to your satisfaction? </string>
     <string name="feedback_reason_chat_not_natural">Chat replies don\'t feel natural / off-topic</string>
     <string name="feedback_reason_character_mismatch">The character doesn\'t match its persona</string>
     <string name="feedback_reason_app_slow">The app is slow or gets stuck</string>
@@ -156,6 +188,8 @@
     <string name="feedback_description">Feedback description</string>
     <string name="feedback_description_placeholder">Please describe your experience or suggestions…</string>
     <string name="toast_feedback_submitted">Thanks for helping improve the experience.</string>
+    <string name="feedback_request_content">Is everything working as expected?  Let us know.Your feedback helps us build a better experience for you.</string>
+    <string name="send_suggestions">Send Suggestions</string>
 
     <!-- Settings -->
     <string name="he_him">He/Him</string>
@@ -170,11 +204,13 @@
     <string name="please_read_warning">Please read the warning carefully and proceed with caution.</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="logout_confirm_title">Log out?</string>
+    <string name="logout_confirm_description">You\'ll sign out of IntelliMate and need to log in again to keep chatting. Your chats and characters stay safe.</string>
 
 
     <!-- Subscription popup title -->
     <string name="premium_subscription_title">IntelliMate Premium</string>
-    <string name="auto_renews_cancel">Auto-renew, cancel at any time</string>
+    <string name="auto_renews_cancel">Auto-renews, cancel anytime</string>
     <string name="subscription_consent">By subscribing you agree to our</string>
     <string name="subscription_description_placeholder">Will be charged at the next billing date</string>
     <string name="subscription_description_fmt_str" formatted="false">%s will be charged %s, cancel at any time</string>
@@ -182,9 +218,22 @@
     <!-- Chat -->
     <string name="chat_settings_my_persona_title">My Persona</string>
     <string name="chat_settings_settings_title">Settings</string>
+    <string name="chat_settings_support_resources_title">Support</string>
+    <string name="chat_settings_user_manual_title">User Manual (Notion)</string>
     <string name="chat_settings_show_keep_talking">Show \"Keep Talking\" button</string>
     <string name="chat_settings_auto_play_voice">Auto-play voice messages</string>
-    <string name="chat_input_placeholder">Write something to your AI companion</string>
+    <string name="chat_settings_auto_play_animation">Auto-play animated background</string>
+    <string name="chat_settings_show_scene_action_button">Show action button</string>
+    <string name="chat_settings_font_size">Message font size</string>
+    <string name="chat_settings_font_size_value">%1$d sp</string>
+    <string name="chat_settings_font_size_dialog_title">Message font size</string>
+    <string name="chat_settings_font_size_dialog_description">Adjust how large chat bubbles look.</string>
+    <string name="chat_settings_font_size_preview_label">Preview</string>
+    <string name="chat_settings_font_size_preview_sample">This is how your messages appear.</string>
+    <string name="chat_input_placeholder">Write something to %1$s</string>
+    <string name="chat_input_with_scene_action_placeholder">Click () to describe actions, feelings, thoughts</string>
+    <string name="chat_ai_typing_placeholder">%1$s is typing</string>
+    <string name="chat_ai_typing_default_name">Your IntelliMate</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>
@@ -208,6 +257,7 @@
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
     <string name="toast_copied_to_clipboard">Copied to clipboard</string>
+    <string name="str_remix_feature_under_construction">Remix feature is under construction</string>
 
     <!-- Content Descriptions -->
     <string name="content_desc_google_login">Google Login</string>
@@ -233,11 +283,12 @@
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
     <string name="cancel_button">Cancel</string>
-    <string name="generate_avatar_title_full">Generate\nAvatar</string>
+    <string name="generate_avatar_title_full">Generate</string>
+    <string name="upload_from_gallery">Upload</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
     <string name="male_full">Male</string>
     <string name="female_full">Female</string>
-    <string name="non_binary_full">Non-Binary</string>
+    <string name="non_binary_full">They/Them</string>
     <string name="music_note_symbol">🎵</string>
     <string name="sound_required_full">Sound *</string>
     <string name="inty_voice_option_full">Inty Voice</string>
@@ -262,15 +313,24 @@
     <string name="custom_reply_style">Customize Conversation Style</string>
     <string name="custom_reply_successful">Style Updated</string>
     <string name="reply_hint_str">Customize the AI\'s chat style, like tone, language, else.</string>
-    <string name="str_upgrade_required">Update Required</string>
+    <string name="str_suggest_upgrade">New Version Available! 🚀</string>
+    <string name="str_force_upgrade">Your IntelliMate is out of date 😱</string>
     <string name="str_upgrade_content">We\'ve made some important improvements to make your IntelliMate experience even better! To ensure you have access to the latest features and security updates, please update your app now. This update is required to continue using IntelliMate.</string>
     <string name="str_upgrade_now">Update Now</string>
+    <string name="str_cancel_upgrade">Use Older Version</string>
 
     <string name="str_chat_disabled">Chat unavailable</string>
     <string name="str_agent_is_deleted">Character is no longer available</string>
     <string name="agent_gallery_ai_images_title">AI-Generated Images</string>
     <string name="agent_gallery_ai_images_description">Based on your chat history · showing the latest %1$d images</string>
     <string name="agent_gallery_ai_images_content_description">AI-generated chat image</string>
+    <string name="agent_gallery_set_as_background">Set as Chat Background</string>
+    <string name="agent_gallery_background_set_success">Background updated</string>
+    <string name="agent_gallery_reset_background">Reset to Default Background</string>
+    <string name="agent_gallery_background_reset_success">Background reset to default</string>
+    <string name="agent_photo_album_title">Photo Album</string>
+    <string name="agent_photo_album_see_all">See All</string>
+    <string name="agent_photo_album_set_as_background">Set as chat background</string>
 
     <!-- Empty State Messages -->
     <string name="empty_conversations">No conversations yet\nStart chatting with your favorite characters!</string>
@@ -291,7 +351,7 @@
     <string name="str_pronouns">Pronouns</string>
     <string name="str_persona">Persona Description</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
-    <string name="version_update_available">%s\n(new version available)</string>
+    <string name="version_update_available">%s\nClick to update</string>
 
     <!-- Toast Messages - Additional -->
     <string name="toast_avatar_cropped_uploaded">Avatar cropped and uploaded</string>
@@ -351,4 +411,43 @@
     <string name="billing_error_fallback_purchase">Purchase failed</string>
     <string name="billing_error_fallback_product_details">Failed to load product details</string>
     <string name="billing_error_fallback_google_play_service">Google Play services error</string>
+
+    <!-- Boost / Leaderboard -->
+    <string name="energy_points_first_title">You earned your FIRST energy point!</string>
+    <string name="energy_points_first_subtitle">Keep chatting to unlock more energy.</string>
+    <string name="energy_points_tens_title">You reached %1$d energy points!</string>
+    <string name="energy_points_tens_subtitle">Trophy unlocked - keep the streak going.</string>
+    <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
+    <string name="energy_points_thousands_subtitle">Legendary trophy unlocked. You\'re unstoppable.</string>
+    <string name="energy_points_counter">%1$d pts</string>
+    <string name="boost_points_label">Boost Points</string>
+    <string name="boost_points_value">%1$d pts</string>
+    <string name="boost_points_action">Boost</string>
+    <string name="boost_points_action_disabled">Earn points</string>
+    <string name="boost_sheet_title">Boost this character</string>
+    <string name="boost_points_available">Available: %1$d pts</string>
+    <string name="boost_points_to_invest">Planning to invest %1$d pts</string>
+    <string name="boost_selected_points">%1$d pts</string>
+    <string name="boost_points_step_hint">Each boost uses %1$d pts</string>
+    <string name="boost_sheet_not_enough_points">You need at least 100 pts to boost. Earn more by chatting, generating images, or listening to voices.</string>
+    <string name="boost_sheet_confirm">Boost now</string>
+    <string name="boost_sheet_cancel">Maybe later</string>
+    <string name="boost_daily_reward_cta">Claim daily energy (+200 pts)</string>
+    <string name="boost_daily_reward_claimed">Daily reward collected</string>
+    <string name="boost_daily_reward_already">Daily reward already claimed</string>
+    <string name="boost_leaderboard_title">Top boosted characters (local)</string>
+    <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
+    <string name="boost_leaderboard_chat">Chat</string>
+    <string name="boost_trend_up">Rising</string>
+    <string name="boost_trend_down">Cooling</string>
+    <string name="boost_trend_flat">Steady</string>
+    <string name="boost_tab_recommend">Featured</string>
+    <string name="boost_tab_leaderboard">Boost</string>
+    <string name="boost_system_message">You invested %1$d pts in %2$s. Total boosts: %3$d.</string>
+    <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
+    <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
+    <string name="boost_toast_success">Boost sent to %1$s!</string>
+    <string name="boost_toast_success_points">%1$d energy points sent to %2$s!</string>
+    <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
+    <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
 </resources>

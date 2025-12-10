@@ -37,8 +37,8 @@ python scripts/init_subscription_plans_simple.py
 if [ "$DEV" = true ]; then
   echo "Starting in development mode..."
   python scripts/init_admin_user.py --user-id user-testing --is-superuser false
-  # 在 CI 环境下下面的命令会导致服务器启动失败
-  # ./build_evaluation.sh
+  # 在 CI 环境下下面的命令会导致服务器启动失败，因此不再这里添加这个步骤，开发者需要自己运行这个脚本来构建前端静态文件
+  # ./evaluation/build.sh
   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."

@@ -200,12 +200,16 @@ fun ChatPageContainer(
 
             val isPageCurrent = currentPage == pageState.currentPage
             // 关键：为每个页面添加裁剪，防止视频超出边界影响相邻页面
+            // TODO：这个页面裁剪的功能还需要么？是否可以删除？
+            // https://github.com/NascentCore/inty/pull/1273 这个 PR 修复了视频显示比例不对的问题
+            // 是否有关联？因为原先产生视频超出边界的问题来自于缺少裁剪。
             Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 ChatPage(
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,
                     shouldAutoFocusInput = isKeyboardVisibleChatPage,
+                    isGuideVisible = shouldShowGuide,
                     onInputFocusChange = { focused ->
                         if (!isPageCurrent) return@ChatPage
                         if (focused != autoFocusEnabled) {
@@ -222,6 +226,11 @@ fun ChatPageContainer(
                             isKeyboardVisibleChatPage = nextState
                         }
                     },
+                    // 为角色应援/Boost 功能
+                    // 参数用途：shouldShowBoostSheetOnOpen 控制是否在打开聊天页面时自动显示 BoostSheet 弹窗
+                    // 这里默认不自动显示，因为从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，会自动打开 BoostSheet
+                    shouldShowBoostSheetOnOpen = false,
+                    debugAgentIndex = currentPage,
                 )
             }
         }

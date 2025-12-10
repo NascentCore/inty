@@ -107,8 +107,8 @@ private fun HeartSnackbarContent(
         when (data.type) {
             HeartSnackbarType.SUCCESS -> {
                 val bg = Color(0xFF1A472A) // 深绿色背景
-                val text = Color(0xFF4CAF50) // 绿色文字
-                val icon = Color(0xFF4CAF50) // 绿色图标
+                val text = ai.sxwl.android.design.theme.AppColors.Green500 // 绿色文字
+                val icon = ai.sxwl.android.design.theme.AppColors.Green500 // 绿色图标
                 val iconPainter = painterResource(R.drawable.icon_checked_circle)
                 SnackbarColors(bg, text, icon, iconPainter)
             }

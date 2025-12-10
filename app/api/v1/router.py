@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     agents,
     auth,
+    character_themes,
     chat,
     chats,
     evaluation,
@@ -52,3 +53,4 @@ api_router.include_router(
 )
 api_router.include_router(version.router, tags=["version"])
 api_router.include_router(text_to_speech.router, tags=["text_to_speech"])
+api_router.include_router(character_themes.router, tags=["character-themes"])

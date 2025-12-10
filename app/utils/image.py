@@ -53,3 +53,72 @@ def get_jpg_bytes_from_pil_image(pil_image: Image.Image, quality: int = 80) -> b
     output_buffer = io.BytesIO()
     pil_image.save(output_buffer, format="JPEG", quality=quality, optimize=True)
     return output_buffer.getvalue()
+
+
+def check_aspect_ratio_9_16(image_or_size) -> bool:
+    """
+    检查图片是否为 9:16 比例
+
+    Args:
+        image_or_size: PIL Image 对象或 (width, height) 元组
+
+    Returns:
+        bool: True 表示是 9:16 比例（允许 0.01 的误差）
+    """
+    if isinstance(image_or_size, Image.Image):
+        width, height = image_or_size.size
+    elif isinstance(image_or_size, tuple) and len(image_or_size) == 2:
+        width, height = image_or_size
+    else:
+        raise ValueError("参数必须是 PIL Image 对象或 (width, height) 元组")
+
+    target_aspect_ratio = 9 / 16  # 0.5625
+    current_aspect_ratio = width / height
+
+    return abs(current_aspect_ratio - target_aspect_ratio) < 0.01
+
+
+def crop_image_to_9_16(image: Image.Image) -> Image.Image:
+    """
+    将图片裁剪到 9:16 比例（居中裁剪）
+
+    Args:
+        image: PIL Image 对象
+
+    Returns:
+        裁剪后的 PIL Image 对象
+    """
+    width, height = image.size
+    target_aspect_ratio = 9 / 16  # 0.5625
+    current_aspect_ratio = width / height
+
+    # 如果已经是 9:16 比例（允许小误差），直接返回
+    if abs(current_aspect_ratio - target_aspect_ratio) < 0.01:
+        logger.debug(f"图片已经是 9:16 比例 ({width}x{height})，无需裁剪")
+        return image
+
+    # 计算裁剪尺寸
+    if current_aspect_ratio > target_aspect_ratio:
+        # 图片更宽，需要裁剪左右
+        # 保持高度不变，裁剪宽度
+        new_width = int(height * target_aspect_ratio)
+        left = (width - new_width) // 2
+        top = 0
+        right = left + new_width
+        bottom = height
+    else:
+        # 图片更高，需要裁剪上下
+        # 保持宽度不变，裁剪高度
+        new_height = int(width / target_aspect_ratio)
+        left = 0
+        top = (height - new_height) // 2
+        right = width
+        bottom = top + new_height
+
+    logger.debug(
+        f"裁剪图片: {width}x{height} -> {right-left}x{bottom-top} "
+        f"(裁剪区域: left={left}, top={top}, right={right}, bottom={bottom})"
+    )
+
+    cropped_image = image.crop((left, top, right, bottom))
+    return cropped_image

@@ -10,6 +10,7 @@ object DebugBackendEndpointStore {
 
     private const val PREF_NAME = "debug_network_config"
     private const val KEY_BASE_URL = "override_base_url"
+    private const val KEY_REMIX_BUTTON_VISIBLE = "char_remix_button_visible"
 
     private val prefs by lazy {
         Utils.getApp().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -45,5 +46,28 @@ object DebugBackendEndpointStore {
         if (!prefs.contains(KEY_BASE_URL)) return
         prefs.edit().remove(KEY_BASE_URL).apply()
         LogUtils.i("DebugBackendEndpointStore", "Runtime backend override cleared")
+    }
+
+    fun getRemixButtonOverride(): Boolean? {
+        if (!isRuntimeOverrideSupported()) return null
+        if (!prefs.contains(KEY_REMIX_BUTTON_VISIBLE)) return null
+        return prefs.getBoolean(KEY_REMIX_BUTTON_VISIBLE, true)
+    }
+
+    fun persistRemixButtonOverride(visible: Boolean) {
+        require(isRuntimeOverrideSupported()) {
+            "Runtime remix button override is only available for debug builds"
+        }
+        prefs.edit().putBoolean(KEY_REMIX_BUTTON_VISIBLE, visible).apply()
+        LogUtils.i(
+            "DebugBackendEndpointStore",
+            "Runtime remix button visibility updated to $visible",
+        )
+    }
+
+    fun clearRemixButtonOverride() {
+        if (!prefs.contains(KEY_REMIX_BUTTON_VISIBLE)) return
+        prefs.edit().remove(KEY_REMIX_BUTTON_VISIBLE).apply()
+        LogUtils.i("DebugBackendEndpointStore", "Runtime remix button override cleared")
     }
 }

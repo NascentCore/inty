@@ -10,6 +10,7 @@ from app.api import deps
 from app.api.v1.endpoints import users, version
 from app.models.user import AuthType
 from app.schemas import User as UserSchema
+from app.schemas.version import VersionReminderAction
 from app.services import user_service
 
 
@@ -62,6 +63,7 @@ def version_app(monkeypatch: pytest.MonkeyPatch):
                 "download_url": "https://play.google.com/store/apps/details?id=com.ai.inty",
                 "message": "ok",
                 "error": None,
+                "reminder_action": VersionReminderAction.POP_UP_REMINDER.value,
             }
 
     fake_service = FakeGooglePlayService()
@@ -117,6 +119,7 @@ def test_version_check_returns_google_play_result(version_app: FastAPI):
     assert body["code"] == 200
     assert body["data"]["current_version"] == "150"
     assert body["data"]["latest_version"] == "200"
+    assert body["data"]["reminder_action"] == VersionReminderAction.POP_UP_REMINDER.value
     assert version_app.state.fake_google_play_service.last_call == 150
 
 

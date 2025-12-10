@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.viewmodel
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatSettingsReq
@@ -13,7 +14,6 @@ import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -21,11 +21,14 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -49,6 +52,10 @@ class ChatViewModel : BaseVM() {
     // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
     private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
     val msgs = _msgs.asStateFlow()
+
+    private var lastAiMsgInfo: MsgInfo? = null
+    private val _shouldFlowShow = MutableStateFlow(false)
+    val shouldFlowShow = _shouldFlowShow.asStateFlow()
 
     // 分页相关状态
     private val _isLoadingMore = MutableStateFlow(false)
@@ -92,7 +99,7 @@ class ChatViewModel : BaseVM() {
     private var hasMoreJob: Job? = null
     private var boundAgentId: String? = null
 
-    fun setAgentInfo(agentInfo: AgentInfo?) {
+    fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
 
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
@@ -125,9 +132,18 @@ class ChatViewModel : BaseVM() {
             return
         }
 
-        // 如果是同一个 agent，只更新信息，不重新查询消息
+        // 如果是同一个 agent，总是触发后台同步以确保获取最新消息
+        // syncLatestMessages 内部已经有逻辑判断是否有新消息，如果没有新消息不会更新本地数据
         if (_agentInfo.value?.id == agentInfo.id) {
             _agentInfo.value = agentInfo
+            // 总是触发后台同步，确保用户看到最新消息
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    syncChatDataUseCase(agentInfo.id)
+                } catch (e: Exception) {
+                    LogUtils.e("ChatViewModel.setAgentInfo sync error: ${e.message}")
+                }
+            }
             return
         }
 
@@ -184,8 +200,19 @@ class ChatViewModel : BaseVM() {
         getChatSetting()
     }
 
+    /** 检查错误消息是否包含取消相关的关键字 用于避免在用户退出 Activity 后显示错误 Toast */
+    private fun isCancellationError(errorMessage: String?): Boolean {
+        if (errorMessage == null) return false
+        val message = errorMessage.lowercase()
+        return message.contains("cancel") ||
+            message.contains("interrupted") ||
+            message.contains("socket closed") ||
+            message.contains("connection reset")
+    }
+
     private fun bindToAgentSession(agentId: String) {
         if (boundAgentId == agentId) return
+        lastAiMsgInfo = null
         boundAgentId = agentId
         messagesJob?.cancel()
         loadingMoreJob?.cancel()
@@ -199,7 +226,15 @@ class ChatViewModel : BaseVM() {
 
         messagesJob =
             viewModelScope.launch(Dispatchers.IO) {
-                chatRepository.getMessagesFlow(agentId).collect { list -> _msgs.value = list }
+                chatRepository.getMessagesFlow(agentId).collect { list ->
+                    _msgs.value = list
+
+                    val latestAiMsg = list.find { msg -> msg.role == "assistant" }
+                    _shouldFlowShow.value =
+                        lastAiMsgInfo != null && latestAiMsg?.id != lastAiMsgInfo?.id
+
+                    lastAiMsgInfo = latestAiMsg
+                }
             }
         loadingMoreJob =
             viewModelScope.launch(Dispatchers.IO) {
@@ -240,6 +275,10 @@ class ChatViewModel : BaseVM() {
                 LogUtils.e("ChatViewModel.syncLatestMessages error: ${e.message}")
             }
         }
+    }
+
+    fun newMsgFlowFinish() {
+        _shouldFlowShow.value = false
     }
 
     /** 发送消息 - 使用新架构 */
@@ -367,6 +406,18 @@ class ChatViewModel : BaseVM() {
                             ),
                         )
 
+                        val assistantContent =
+                            result.data.data?.choices?.lastOrNull()?.message?.content
+                        if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                            BoostManager.recordChatTokens(agent, inputMsg)
+                        }
+                        val hasAssistantReply =
+                            !result.data.data?.choices.isNullOrEmpty() ||
+                                !assistantContent.isNullOrBlank()
+                        if (hasAssistantReply) {
+                            BoostManager.recordAssistantMessage(agent)
+                        }
+
                         runCatching {
                                 // 有免费次数限制，需要vip订阅
                                 if (
@@ -385,10 +436,6 @@ class ChatViewModel : BaseVM() {
                                     )
                                     showLimitDialog.emit(true)
                                 }
-                                result.data.data?.choices?.lastOrNull()?.message?.content?.let {
-                                    content ->
-                                    IntySetting.setConversationReaded(agentId, content)
-                                }
                             }
                             .onFailure {
                                 LogUtils.e("Error processing AI response: ${it.message}")
@@ -398,6 +445,17 @@ class ChatViewModel : BaseVM() {
                     }
 
                     is HttpResult.Failure -> {
+                        // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
+                        if (
+                            runCatching { ensureActive() }.isFailure ||
+                                isCancellationError(result.message)
+                        ) {
+                            LogUtils.d(
+                                "ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${result.message}"
+                            )
+                            return@launch
+                        }
+
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
@@ -434,6 +492,16 @@ class ChatViewModel : BaseVM() {
                     }
                 }
             } catch (e: Exception) {
+                // 检查是否是取消相关的异常，如果是则不显示错误 Toast
+                if (
+                    e is CancellationException ||
+                        runCatching { ensureActive() }.isFailure ||
+                        isCancellationError(e.message)
+                ) {
+                    LogUtils.d("ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${e.message}")
+                    return@launch
+                }
+
                 val endToEndTime = System.currentTimeMillis() - endToEndStartTime
                 LogUtils.e("Unexpected error in sendMsg: ${e.message}")
 
@@ -643,6 +711,18 @@ class ChatViewModel : BaseVM() {
                                 ),
                             )
 
+                            val assistantContent =
+                                result.data.data?.choices?.lastOrNull()?.message?.content
+                            if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                                BoostManager.recordChatTokens(agent, keepTalkingMsg)
+                            }
+                            val hasAssistantReply =
+                                !result.data.data?.choices.isNullOrEmpty() ||
+                                    !assistantContent.isNullOrBlank()
+                            if (hasAssistantReply) {
+                                BoostManager.recordAssistantMessage(agent)
+                            }
+
                             runCatching {
                                     // 有免费次数限制，需要vip订阅
                                     if (
@@ -651,14 +731,6 @@ class ChatViewModel : BaseVM() {
                                     ) {
                                         showLimitDialog.emit(true)
                                     }
-                                    result.data.data
-                                        ?.choices
-                                        ?.lastOrNull()
-                                        ?.message
-                                        ?.content
-                                        ?.let { str ->
-                                            IntySetting.setConversationReaded(agent.id, str)
-                                        }
                                 }
                                 .onFailure {
                                     LogUtils.e(
@@ -671,6 +743,17 @@ class ChatViewModel : BaseVM() {
                         }
 
                         is HttpResult.Failure -> {
+                            // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
+                            if (
+                                runCatching { ensureActive() }.isFailure ||
+                                    isCancellationError(result.message)
+                            ) {
+                                LogUtils.d(
+                                    "ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${result.message}"
+                                )
+                                return@launchBackground
+                            }
+
                             val responseTime = System.currentTimeMillis() - aiResponseStartTime
                             val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
 
@@ -695,6 +778,17 @@ class ChatViewModel : BaseVM() {
                         }
                     }
                 } catch (e: Exception) {
+                    // 检查是否是取消相关的异常，如果是则不显示错误 Toast
+                    if (
+                        e is CancellationException ||
+                            runCatching { ensureActive() }.isFailure ||
+                            isCancellationError(e.message)
+                    ) {
+                        LogUtils.d(
+                            "ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${e.message}"
+                        )
+                        return@launchBackground
+                    }
                     val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
                     LogUtils.e("Unexpected error in sendKeepTalkingMessage: ${e.message}")
 
@@ -774,7 +868,6 @@ class ChatViewModel : BaseVM() {
                 "has_generated_image" to targetMessage.hasGeneratedImage(),
                 "is_opening" to targetMessage.isOpening(),
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "message_timestamp" to (targetMessage.timestamp ?: ""),
                 "timestamp" to System.currentTimeMillis(),
             )
 
@@ -827,7 +920,6 @@ class ChatViewModel : BaseVM() {
                 "has_generated_image" to targetMessage.hasGeneratedImage(),
                 "is_opening" to targetMessage.isOpening(),
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "message_timestamp" to (targetMessage.timestamp ?: ""),
                 "timestamp" to System.currentTimeMillis(),
             )
 
@@ -928,7 +1020,9 @@ class ChatViewModel : BaseVM() {
 
                 when (result) {
                     is HttpResult.Success -> {
-
+                        if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
+                            agent?.let { BoostManager.recordImageGeneration(it) }
+                        }
                         // Firebase Analytics - 记录图片生成成功
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS,
@@ -1136,13 +1230,13 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    fun setAgentID(agentId: String) {
+    fun setAgentID(agentId: String, forceSync: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 when (result) {
                     is HttpResult.Success -> {
-                        setAgentInfo(result.data)
+                        setAgentInfo(result.data, forceSync = forceSync)
                     }
 
                     is HttpResult.Failure -> {
@@ -1185,5 +1279,18 @@ class ChatViewModel : BaseVM() {
         if (UserProfileManager.hasUserProfile()) {
             _userProfile.value = UserProfileManager.getUserProfile()
         }
+    }
+
+    suspend fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {
+        val message =
+            MsgInfo(
+                content =
+                    Utils.getApp()
+                        .getString(R.string.boost_system_message, points, agent.name, totalBoosts),
+                role = "system",
+                localMsgId = "boost_${System.nanoTime()}",
+                meta_data = MsgInfo.MsgMetaData(agentId = agent.id),
+            )
+        chatRepository.addMessage(agent.id, message)
     }
 }

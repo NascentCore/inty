@@ -91,7 +91,6 @@ async def create_guest_user(
             nickname=f"Guest_{user_id[-8:]}",
             system_language=system_language or "en",
             age_group=age_group,
-            is_active=True,
         )
         db.add(user)
         await db.commit()
@@ -138,7 +137,6 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
             "readable_id",
             "id",
             "auth_type",
-            "is_active",
             "is_superuser",
             "created_at",
             "updated_at",
@@ -353,7 +351,6 @@ async def delete_user_account(
         # 设置删除时间戳
         user.deleted_at = datetime.now(UTC)
         user.deletion_reason = deletion_reason
-        user.is_active = False
 
         # 提交用户数据更改
         await db.commit()

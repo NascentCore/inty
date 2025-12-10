@@ -29,6 +29,14 @@
 -keep class ai.sxwl.android.data.domain.** { *; }
 -keep class ai.sxwl.android.data.di.** { *; }
 
+# 保护 AgentService 内部类 CharacterThemeItem（用于 Moshi 序列化）
+# 内部类在 Java 字节码中会被编译为 AgentService$CharacterThemeItem
+-keep class ai.sxwl.android.data.http.services.AgentService$CharacterThemeItem { *; }
+-keepclassmembers class ai.sxwl.android.data.http.services.AgentService$CharacterThemeItem {
+    <fields>;
+    <init>(...);
+}
+
 # ===========================================
 # API接口保护
 # ===========================================

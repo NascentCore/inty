@@ -1,4 +1,4 @@
-name: CI - Backend
+name: CI - Inty 后端
 
 on:
   workflow_dispatch:
@@ -17,9 +17,10 @@ on:
       - "app/**/*.py"
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
-      - "scripts/init_admin_user.py"
+      - "scripts/"
       - "requirements.txt"
-      - "test_requirements.txt"
+      - "tests/requirements.txt"
+      - "Dockerfile"
       # Alembic files
       - "alembic/**/*"
       - "alembic.ini"
@@ -28,6 +29,10 @@ on:
       # 这个是测试用配置文件
       - "devops/config.yaml.test"
       - ".github/workflows/ci_backend.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   PG_USER: postgres
@@ -58,21 +63,36 @@ jobs:
           # Keep for posterity, we do want to use this such that we do not need to manage cache ourselves.
           # cache: 'pip'
 
+      # Cache pip packages for faster installs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'tests/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Cache virtual environment
       # Based on https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
       - uses: actions/cache@v4
         with:
           path: .venv
           # Unique key for the cache
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'test_requirements.txt') }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'tests/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
 
       - name: Install dependencies
         run: |
-          python -m venv .venv
+          # Create venv only if it doesn't exist (cache miss)
+          if [ ! -d .venv ]; then
+            python -m venv .venv
+          fi
           source .venv/bin/activate
+          # Upgrade pip to latest version for better caching
+          python -m pip install --upgrade pip
+          # Install dependencies (pip will use cached packages if available)
           python -m pip install -r requirements.txt
-          python -m pip install -r test_requirements.txt
+          python -m pip install -r tests/requirements.txt
           # https://stackoverflow.com/a/74669486
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV

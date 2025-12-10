@@ -95,7 +95,7 @@ class ReportActivity : BaseActivity() {
 @Composable
 private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, isFeedbackMode: Boolean) {
     val reasons = viewModel.reasons.collectAsState()
-    val selectIDs = viewModel.selectIDS
+    val selectedReasonCodes = viewModel.selectedReasonCodes
     val description = viewModel.description.collectAsState()
     val localImages = viewModel.localImages
     val isSubmitting = viewModel.isSubmitting.collectAsState()
@@ -107,13 +107,13 @@ private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, isFeed
 
     ReportScreen(
         reasons = reasons.value,
-        selectIDs = selectIDs,
-        onClickReason = { id, isSelect ->
-            LogUtils.i("onClickReason id = $id, isSelect = $isSelect")
+        selectedReasonCodes = selectedReasonCodes,
+        onClickReason = { reasonCode, isSelect ->
+            LogUtils.i("onClickReason reasonCode = ${reasonCode.asString()}, isSelect = $isSelect")
             if (isSelect) {
-                viewModel.selectIDS.add(id)
+                viewModel.selectedReasonCodes.add(reasonCode)
             } else {
-                viewModel.selectIDS.remove(id)
+                viewModel.selectedReasonCodes.remove(reasonCode)
             }
         },
         description = description.value,

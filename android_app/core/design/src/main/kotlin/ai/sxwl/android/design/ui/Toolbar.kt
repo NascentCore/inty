@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,6 +62,7 @@ fun HeartTopAppBar(
     @DrawableRes navIcon: Int? = R.drawable.ic_arrow_back, // 导航图标
     @DrawableRes moreIcon: Int? = null,
     onClickMore: () -> Unit = {}, // 点击设置按钮
+    titleTextStyle: TextStyle? = null, // 自定义标题文本样式（可用于添加阴影等效果）
     onBack: () -> Unit = {}, // 返回按钮的事件
 ) {
     TopAppBar(
@@ -72,10 +74,15 @@ fun HeartTopAppBar(
             ) {
                 if (title.isNotEmpty()) {
                     Text(
+                        modifier = Modifier,
                         text = title,
-                        fontSize = 20.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
+                        style =
+                            titleTextStyle
+                                ?: TextStyle(
+                                    fontSize = 20.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
                     )
                 }
             }

@@ -68,7 +68,7 @@ object PageTrackingHelper {
             if (currentPage != null) {
                 val duration = currentTime - pageStartTime
 
-                LogUtils.i("页面访问追踪: $currentPage 停留时长=${duration}ms")
+                LogUtils.d("页面访问追踪: $currentPage 停留时长=${duration}ms")
 
                 // 记录页面停留时长事件
                 FirebaseManager.logEvent(
@@ -123,7 +123,7 @@ object PageTrackingHelper {
             if (isVisible) {
                 // 页面变为可见
                 pageVisibleTime = currentTime
-                LogUtils.i("页面可见性追踪: $currentPage 变为可见")
+                LogUtils.d("页面可见性追踪: $currentPage 变为可见")
 
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.PAGE_VISIBLE,
@@ -137,7 +137,7 @@ object PageTrackingHelper {
                 // 页面变为不可见
                 if (pageVisibleTime > 0) {
                     val visibleTimeSpent = currentTime - pageVisibleTime
-                    LogUtils.i("页面可见性追踪: $currentPage 变为不可见，可见时长=${visibleTimeSpent}ms")
+                    LogUtils.d("页面可见性追踪: $currentPage 变为不可见，可见时长=${visibleTimeSpent}ms")
 
                     FirebaseManager.logEvent(
                         FirebaseManager.Events.PAGE_HIDDEN,
@@ -173,7 +173,7 @@ object PageTrackingHelper {
                 "onstop" -> {
                     if (pageLifecycleStartTime > 0) {
                         val lifecycleTimeSpent = currentTime - pageLifecycleStartTime
-                        LogUtils.i(
+                        LogUtils.d(
                             "页面生命周期追踪: $currentPage $lifecycleEvent，生命周期时长=${lifecycleTimeSpent}ms"
                         )
 
@@ -351,6 +351,6 @@ object PageTrackingHelper {
             }
         )
 
-        LogUtils.i("PageTrackingHelper - 已为 ${activity.javaClass.simpleName} 注册生命周期追踪")
+        LogUtils.d("PageTrackingHelper - 已为 ${activity.javaClass.simpleName} 注册生命周期追踪")
     }
 }

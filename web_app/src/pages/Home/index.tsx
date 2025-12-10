@@ -38,7 +38,8 @@ const HomePage: React.FC = () => {
     loading,
     pagination,
     loadMore: loadMoreRecommendAgents,
-    threshold: 200,
+    threshold: 100,
+    useWindow: true,
   });
 
   /**

@@ -9,9 +9,9 @@ from app.core.agent.prompt_template import (
     render_prompt_jinja2_template,
 )
 from app.models.agent import AgentStatus, AgentVisibility
+from app.schemas.response import APIResponse, PaginationData
 from app.schemas.user import User
 from app.utils.image import ImageSize
-from app.schemas.response import APIResponse, PaginationData
 
 
 class AgentMetaData(BaseModel):
@@ -40,6 +40,11 @@ class AgentSortOption(str, Enum):
     RANDOM = "random"
     # Score-based random recommendation: 6 high-score agents + 4 random agents
     SCORE_BASED_RANDOM = "score_based_random"
+
+    # 根据角色能量点数排序；用户使用 app 聊天获得能力点数、每天签到也获得能量点数，然后可以以给角色增加能量点数
+    # 从而提升角色在排行榜中的排名。
+    # 目的是增强用户与角色的情感链接，提升用户对角色的喜爱程度。因为他们的互动行为会获得能量点数，所以可以提升角色在排行榜中的排名。
+    ENERGY_POINTS = "energy_points"
 
 
 class AgentSortConfig(BaseModel):
@@ -77,7 +82,7 @@ class AgentRecommendationRequest(BaseModel):
     sort: AgentSortOption = Field(
         default=AgentSortOption.CREATED_DESC,
         description=(
-            "Sort order: created_asc, created_desc, random, score_based_random"
+            "Sort order: created_asc, created_desc, random, score_based_random, energy_points"
         ),
     )
     sort_seed: str = Field(
@@ -194,7 +199,10 @@ class AgentBase(BaseModel):
 
 
 class GenerateBackgroundAnimatedRequest(BaseModel):
-    """生成背景视频请求"""
+    """生成背景视频请求
+
+    注意：背景图必须是 9:16 比例，否则会返回错误提示。
+    """
 
     prompt: Optional[str] = Field(
         default=None, description="视频生成提示词（可选，如果为空则从背景图自动生成）"

@@ -9,7 +9,7 @@ from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.external_services.globals import google_play_service
 from app.schemas.response import APIResponse
-from app.schemas.version import VersionCheckResponse
+from app.schemas.version import VersionCheckResponse, VersionReminderAction
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
 
@@ -53,8 +53,7 @@ async def check_version(
         response = VersionCheckResponse(**version_check_result)
 
         logger.debug(
-            f"用户 {current_user.id} 版本检查完成: versionCode {client_version_code} -> "
-            f"需要更新: {response.update_required}, 强制更新: {response.force_update}"
+            f"用户 {current_user.id} 版本检查完成: versionCode {client_version_code} -> response={response}"
         )
 
         return APIResponse.success(data=response)
@@ -78,6 +77,7 @@ async def check_version(
             download_url=f"https://play.google.com/store/apps/details?id=com.ai.inty",
             message="Version check failed",
             error=str(e),
+            reminder_action=VersionReminderAction.SETTINGS_REMINDER,
         )
 
         return APIResponse.success(

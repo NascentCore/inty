@@ -29,20 +29,6 @@ object DeviceUtils {
         return ROOT_LOCATIONS.any { File("$it/su").exists() }
     }
 
-    /** 判断ADB是否启用 */
-    fun isAdbEnabled(): Boolean {
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                val app = Utils.getApp() ?: return false
-                Settings.Global.getInt(app.contentResolver, Settings.Global.ADB_ENABLED, 0) > 0
-            } else {
-                false // API 17以下不支持
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
-
     /** 获取设备系统版本名称 */
     fun getSDKVersionName(): String = Build.VERSION.RELEASE
 
@@ -72,12 +58,6 @@ object DeviceUtils {
 
     /** 获取设备产品名称 */
     fun getProduct(): String = Build.PRODUCT
-
-    /** 获取设备硬件名称 */
-    fun getDevice(): String = Build.DEVICE
-
-    /** 获取设备指纹 */
-    fun getFingerprint(): String = Build.FINGERPRINT
 
     /** 获取设备序列号 */
     @SuppressLint("HardwareIds")

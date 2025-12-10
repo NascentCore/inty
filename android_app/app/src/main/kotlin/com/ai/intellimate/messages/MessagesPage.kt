@@ -7,7 +7,6 @@ import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -160,10 +163,23 @@ private fun MessageTabContent(
 
     // 菜单状态（移到 LazyColumn 外部）
     var showMenuForConversationId by remember { mutableStateOf<String?>(null) }
-    var menuItemIndex by remember { mutableStateOf(-1) }
+    // 存储每个 item 的 Y 位置，key 为 agentId（相对于外层 Box）
+    val itemPositions = remember { mutableStateMapOf<String, Float>() }
+    // 存储 LazyColumn 的 Y 位置，用于计算 item 相对于外层 Box 的位置
+    var lazyColumnY by remember { mutableStateOf(0f) }
+
+    // 在 @Composable 函数中获取 density，以便在回调中使用
+    val density = LocalDensity.current
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(state = listState, modifier = Modifier.matchParentSize()) {
+        LazyColumn(
+            state = listState,
+            modifier =
+                Modifier.matchParentSize().onGloballyPositioned { coordinates ->
+                    // 获取 LazyColumn 相对于外层 Box 的位置
+                    lazyColumnY = with(density) { coordinates.positionInParent().y.toDp().value }
+                },
+        ) {
             // 刷新指示器
             if (uiState.isRefreshing) {
                 item {
@@ -197,44 +213,66 @@ private fun MessageTabContent(
                                 remember(conversion.agentId, uiState.refreshKey) {
                                     conversion.isPinned
                                 }
+                            val showPushIndicator = conversion.agentId in uiState.pushAgentIds
 
+                            val density = LocalDensity.current
                             // 使用 combinedClickable 同时处理点击和长按
                             Box(
                                 modifier =
                                     Modifier.fillMaxWidth()
+                                        .onGloballyPositioned { coordinates ->
+                                            // 持续更新 item 的位置，以便长按时能立即获取
+                                            // item 相对于 LazyColumn 的位置 + LazyColumn 相对于外层 Box 的位置 =
+                                            // item 相对于外层 Box 的位置
+                                            val itemYInLazyColumn =
+                                                with(density) {
+                                                    coordinates.positionInParent().y.toDp().value
+                                                }
+                                            itemPositions[conversion.agentId] =
+                                                itemYInLazyColumn + lazyColumnY
+                                        }
                                         .combinedClickable(
                                             onClick = {
-                                                // 正常点击：如果菜单未显示，则进入聊天
-                                                if (
-                                                    showMenuForConversationId != conversion.agentId
-                                                ) {
-                                                    val currentTime = System.currentTimeMillis()
-                                                    if (AntiClick.isValidClick(lastClickTime)) {
-                                                        lastClickTime = currentTime
-                                                        // 检查是否已登录
-                                                        if (
-                                                            IntySetting.isLogin() &&
-                                                                IntySetting.getCurToken()
-                                                                    .isNotEmpty()
-                                                        ) {
-                                                            onClickConversationItem(conversion)
-                                                        }
-                                                    }
-                                                } else {
-                                                    // 如果菜单显示，点击则关闭菜单
+                                                // 如果菜单显示，点击任何地方都关闭菜单
+                                                if (showMenuForConversationId != null) {
                                                     showMenuForConversationId = null
+                                                    return@combinedClickable
+                                                }
+
+                                                // 正常点击：进入聊天
+                                                val currentTime = System.currentTimeMillis()
+                                                if (AntiClick.isValidClick(lastClickTime)) {
+                                                    lastClickTime = currentTime
+                                                    // 检查是否已登录
+                                                    if (
+                                                        IntySetting.isLogin() &&
+                                                            IntySetting.getCurToken().isNotEmpty()
+                                                    ) {
+                                                        viewModel.clearConversationPush(
+                                                            conversion.agentId
+                                                        )
+                                                        onClickConversationItem(conversion)
+                                                    }
                                                 }
                                             },
                                             onLongClick = {
-                                                // 长按：显示菜单，记录 item 索引用于定位
-                                                showMenuForConversationId = conversion.agentId
-                                                menuItemIndex = index
+                                                // 长按：如果已经有菜单显示，切换到新菜单；如果是同一行，则关闭菜单
+                                                if (
+                                                    showMenuForConversationId == conversion.agentId
+                                                ) {
+                                                    // 长按同一行，关闭菜单
+                                                    showMenuForConversationId = null
+                                                } else {
+                                                    // 长按不同行，切换到新菜单（旧菜单会自动消失）
+                                                    showMenuForConversationId = conversion.agentId
+                                                }
                                             },
                                         )
                             ) {
                                 ChatHistoryItem(
                                     modifier = Modifier.fillMaxWidth(),
                                     conversation = conversion,
+                                    showPushIndicator = showPushIndicator,
                                 )
                             }
                         }
@@ -243,20 +281,21 @@ private fun MessageTabContent(
                     .onFailure { it.printStackTrace() }
             }
 
-            // 加载更多指示器
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(80.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                }
-            }
+            // 加载更多指示器；有多页的消息记录显示时显示加载更多指示器，就是一个转动的圆圈。
+            // 暂时隐藏，避免影响用户体验。可以随时恢复。
+            // if (uiState.isLoading) {
+            //     item {
+            //         Box(
+            //             modifier = Modifier.fillMaxWidth().height(80.dp),
+            //             contentAlignment = Alignment.Center,
+            //         ) {
+            //             CircularProgressIndicator(
+            //                 color = Color.White,
+            //                 modifier = Modifier.size(24.dp),
+            //             )
+            //         }
+            //     }
+            // }
         }
 
         // 显示菜单（在 LazyColumn 外部）
@@ -265,49 +304,33 @@ private fun MessageTabContent(
                 uiState.conversations.find { it.agentId == showMenuForConversationId }
             conversation?.let { conv ->
                 val isIntelliMate = conv.agentId in uiState.intelliMateAgentIds
-                // 遮罩层，点击外部关闭菜单（全屏）
-                Box(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .background(Color.Transparent)
-                            .clickable { showMenuForConversationId = null }
-                            .zIndex(999f)
-                )
-
                 // 菜单内容（显示在 item 位置附近）
-                // 计算菜单位置：基于 item 索引估算位置
-                val estimatedItemHeight = 88.dp
-                val menuY = (estimatedItemHeight * menuItemIndex) + estimatedItemHeight / 2
-
-                Box(
-                    modifier = Modifier.fillMaxSize().zIndex(1000f),
-                    contentAlignment = Alignment.TopStart,
-                ) {
-                    ConversationItemMenu(
-                        conversation = conv,
-                        isPinned = conv.isPinned,
-                        isHidden = conv.isHidden,
-                        onPinClick = {
-                            if (conv.isPinned) {
-                                viewModel.unpinConversation(conv.agentId)
-                            } else {
-                                viewModel.pinConversation(conv.agentId)
-                            }
-                            showMenuForConversationId = null
-                        },
-                        onHideClick = {
-                            if (conv.isHidden) {
-                                viewModel.unhideConversation(conv.agentId)
-                            } else {
-                                viewModel.hideConversation(conv.agentId)
-                            }
-                            showMenuForConversationId = null
-                        },
-                        onDismiss = { showMenuForConversationId = null },
-                        showHideOption = !isIntelliMate, // IntelliMate agent 不显示 hide 选项
-                        modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp),
-                    )
-                }
+                // 注意：移除了遮罩层，点击外部关闭菜单的功能通过 LazyColumn 的 onClick 处理
+                // 使用实际测量的 item Y 位置
+                val menuY = itemPositions[conv.agentId]?.let { it.dp } ?: 0.dp
+                ConversationItemMenu(
+                    isPinned = conv.isPinned,
+                    isHidden = conv.isHidden,
+                    onPinClick = {
+                        if (conv.isPinned) {
+                            viewModel.unpinConversation(conv.agentId)
+                        } else {
+                            viewModel.pinConversation(conv.agentId)
+                        }
+                        showMenuForConversationId = null
+                    },
+                    onHideClick = {
+                        if (conv.isHidden) {
+                            viewModel.unhideConversation(conv.agentId)
+                        } else {
+                            viewModel.hideConversation(conv.agentId)
+                        }
+                        showMenuForConversationId = null
+                    },
+                    onDismiss = { showMenuForConversationId = null },
+                    showHideOption = !isIntelliMate, // IntelliMate agent 不显示 hide 选项
+                    modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp).zIndex(1000f),
+                )
             }
         }
 
@@ -325,6 +348,7 @@ private fun ChatHistoryItem(
     modifier: Modifier,
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.img_default_avatar,
+    showPushIndicator: Boolean = false,
 ) {
     // 每次重组时重新读取 isPinned 值，确保获取最新状态
     val isPinned = conversation.isPinned
@@ -332,14 +356,24 @@ private fun ChatHistoryItem(
         Spacer(Modifier.width(16.dp))
 
         // 头像
-        AsyncImage(
-            modifier = Modifier.size(56.dp).clip(CircleShape),
-            model = getCdnImageUrl(conversation.agentAvatar, width = 128),
-            placeholder = painterResource(placeholderID),
-            contentDescription = null,
-            alignment = Alignment.TopCenter,
-            contentScale = ContentScale.Crop,
-        )
+        val avatarRes =
+            getCdnImageUrl(conversation.agentAvatar, width = 128) ?: R.drawable.img_default_avatar
+        Box(modifier = Modifier.size(56.dp)) {
+            AsyncImage(
+                modifier = Modifier.matchParentSize().clip(CircleShape),
+                model = avatarRes,
+                placeholder = painterResource(placeholderID),
+                contentDescription = null,
+                alignment = Alignment.TopCenter,
+                contentScale = ContentScale.Crop,
+            )
+            if (showPushIndicator) {
+                HeartRedDot(
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp),
+                    radius = 8,
+                )
+            }
+        }
 
         Spacer(Modifier.width(14.dp))
 
@@ -385,12 +419,6 @@ private fun ChatHistoryItem(
         // 右侧信息
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = conversation.getShowTime(), fontSize = 12.sp, color = Color(0x8CFFFFFF))
-            Spacer(Modifier.height(4.dp))
-            Box(modifier = Modifier.height(22.dp), contentAlignment = Alignment.Center) {
-                if (conversation.isNew) {
-                    HeartRedDot()
-                }
-            }
         }
         Spacer(Modifier.width(13.dp))
     }

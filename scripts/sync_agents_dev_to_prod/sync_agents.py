@@ -18,6 +18,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.agent import prompts
 from app.models.agent import Agent
 from app.models.user import AuthType, Gender, User
 
@@ -185,7 +186,6 @@ async def ensure_operator_user(session: AsyncSession, user_config: dict) -> User
         gender=Gender[user_config["gender"]],
         age_group=user_config["age_group"],
         description=user_config["description"],
-        is_active=True,
         is_superuser=True,
         auth_type=AuthType.GOOGLE,
         readable_id=generate_readable_id(),
@@ -283,6 +283,28 @@ FIELDS_TO_SYNC = [
 ]
 
 
+def is_custom_main_prompt(prompt_value: Optional[str]) -> bool:
+    """判断 main_prompt 是否为自定义文本（而非预设 ID）"""
+    if not prompt_value:
+        return False
+    try:
+        prompts.get_main_prompt_by_id(prompt_value)
+        return False
+    except ValueError:
+        return True
+
+
+def is_custom_mode_prompt(prompt_value: Optional[str]) -> bool:
+    """判断 mode_prompt 是否为自定义文本（而非预设 ID）"""
+    if not prompt_value:
+        return False
+    try:
+        prompts.get_mode_prompt_by_id(prompt_value)
+        return False
+    except ValueError:
+        return True
+
+
 def compare_agents(agent1: Agent, agent2: Agent) -> bool:
     """
     比较两个Agent对象是否相同
@@ -300,7 +322,13 @@ def compare_agents(agent1: Agent, agent2: Agent) -> bool:
 def copy_agent_fields(source: Agent, target: Agent) -> None:
     """将源Agent的字段复制到目标Agent"""
     for field in FIELDS_TO_SYNC:
-        setattr(target, field, getattr(source, field))
+        value = getattr(source, field)
+        # 如果 main_prompt 或 mode_prompt 是自定义文本，则设置为 None 使用默认值
+        if field == "main_prompt" and is_custom_main_prompt(value):
+            value = None
+        elif field == "mode_prompt" and is_custom_mode_prompt(value):
+            value = None
+        setattr(target, field, value)
 
 
 async def sync_agents(
@@ -350,14 +378,34 @@ async def sync_agents(
             logger.info("创建角色列表:")
             for agent_id in to_create_ids:
                 agent = dev_agents[agent_id]
-                logger.info(f"  ✨ 创建: {agent.name} (ID: {agent_id})")
+                custom_prompts = []
+                if is_custom_main_prompt(agent.main_prompt):
+                    custom_prompts.append("main_prompt")
+                if is_custom_mode_prompt(agent.mode_prompt):
+                    custom_prompts.append("mode_prompt")
+                prompt_note = (
+                    f" [自定义提示词将被忽略: {', '.join(custom_prompts)}]"
+                    if custom_prompts
+                    else ""
+                )
+                logger.info(f"  ✨ 创建: {agent.name} (ID: {agent_id}){prompt_note}")
 
         if to_update_ids:
             logger.info("")
             logger.info("更新角色列表:")
             for agent_id in to_update_ids:
                 agent = dev_agents[agent_id]
-                logger.info(f"  🔄 更新: {agent.name} (ID: {agent_id})")
+                custom_prompts = []
+                if is_custom_main_prompt(agent.main_prompt):
+                    custom_prompts.append("main_prompt")
+                if is_custom_mode_prompt(agent.mode_prompt):
+                    custom_prompts.append("mode_prompt")
+                prompt_note = (
+                    f" [自定义提示词将被忽略: {', '.join(custom_prompts)}]"
+                    if custom_prompts
+                    else ""
+                )
+                logger.info(f"  🔄 更新: {agent.name} (ID: {agent_id}){prompt_note}")
 
         logger.info("")
         logger.info("=" * 60)

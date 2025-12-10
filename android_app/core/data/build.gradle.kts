@@ -12,6 +12,32 @@ android {
     // room插件 配置scheme目录
     room { schemaDirectory("$projectDir/schemas") }
 
+    packaging {
+        resources {
+            // 解决 META-INF 文件冲突问题
+            //
+            // 问题原因：
+            // 多个依赖库（特别是 Apache HTTP Components 相关库，如 httpclient5、httpcore5、httpcore5-h2）
+            // 都在其 JAR 文件中包含了相同的 META-INF 文件（LICENSE、NOTICE、DEPENDENCIES 等）。
+            // 当 Android Gradle Plugin 合并这些资源时，会遇到重复文件错误：
+            // "3 files found with path 'META-INF/DEPENDENCIES' from inputs"
+            //
+            // 解决方案：
+            // 排除这些 META-INF 文件，因为：
+            // 1. 这些文件仅用于声明许可证和依赖信息，不影响运行时功能
+            // 2. 多个库使用相同的许可证（Apache 2.0、LGPL 2.1），内容基本相同
+            // 3. 排除后可以正常构建，不会影响应用功能
+            //
+            // 参考：https://developer.android.com/reference/tools/gradle-api/com/android/build/api/dsl/Packaging
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/NOTICE.txt"
+        }
+    }
+
     publishing {
         listOf("debug", "local", "playdebug", "release").forEach { variant ->
             singleVariant(variant) {
@@ -25,8 +51,8 @@ android {
 dependencies {
 
     // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
-    // 使用本地 library/inty_sdk 的版本，避免动态版本在测试时的依赖解析问题
-    implementation("com.inty.api:inty-kotlin:0.17.0")
+    // 注意：版本必须与 app/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理
+    implementation(libs.inty.kotlin)
 
     implementation(libs.androidx.dataStore.preferences)
     implementation(libs.mmkv)
@@ -42,6 +68,10 @@ dependencies {
     implementation(projects.library.utils)
     implementation(projects.library.network)
 
+    // ===== Moshi 代码生成（用于 @JsonClass(generateAdapter = true)）=====
+    // 注意：需要在每个使用 @JsonClass 注解的模块中单独配置 ksp
+    ksp(libs.moshi.kotlin.codegen)
+
     // ===== 网络调试工具 =====
     debugImplementation(libs.chucker.library)
     "localImplementation"(libs.chucker.library)
@@ -50,4 +80,15 @@ dependencies {
 
     // ===== Retrofit 协程支持 =====
     implementation(libs.retrofit2.kotlin.coroutines.adapter)
+
+    // ===== 测试依赖 =====
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
+
+    // ===== 日志库（不依赖 Android 环境）=====
+    implementation(libs.kotlin.logging)
+    implementation(libs.slf4j.api)
+    // 在测试环境中使用 slf4j-simple（轻量级实现）
+    testImplementation(libs.slf4j.simple)
 }

@@ -46,7 +46,6 @@ class TestUserDeletion:
                 auth_type=AuthType.GOOGLE,
                 nickname="Test User Real Function",
                 email=f"test_real_{uuid.uuid4().hex[:8]}@example.com",
-                is_active=True,
                 created_at=datetime.now(UTC),
             )
 

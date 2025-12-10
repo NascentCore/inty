@@ -7,7 +7,6 @@ import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
@@ -105,6 +104,8 @@ class ChatRepositoryImpl(
                         "ChatRepositoryImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
                     )
 
+                    // 注意：ChatLocalDataSource.updateMessages 只是直接替换消息列表，不涉及 sortKey 分配
+                    // 所以不需要反转消息列表，直接使用服务器返回的顺序即可
                     localDataSource.updateMessages(agentId, messages)
                     localDataSource.setHasMore(agentId, result.data.hasMore)
                     localDataSource.setOffset(agentId, if (messages.isNotEmpty()) pageSize else 0)
@@ -194,11 +195,6 @@ class ChatRepositoryImpl(
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message }
                 localDataSource.prependMessages(agentId, assistantMsgs)
-
-                // 会话已读更新
-                choices.lastOrNull()?.message?.content?.let { lastContent ->
-                    IntySetting.setConversationReaded(agentId, lastContent)
-                }
             }
         }
 
@@ -206,16 +202,12 @@ class ChatRepositoryImpl(
     }
 
     override suspend fun syncLatestMessages(agentId: String, pageSize: Int) {
-        LogUtils.d("ChatRepositoryImpl.syncLatestMessages called for $agentId")
+        val isInitialLoaded = localDataSource.isInitialLoaded(agentId)
+        val localMessages = localDataSource.getMessagesFlow(agentId).value
+        val hasLocalMessages = localMessages.isNotEmpty()
 
-        if (
-            !localDataSource.isInitialLoaded(agentId) ||
-                localDataSource.getMessagesFlow(agentId).value.isEmpty()
-        ) {
+        if (!isInitialLoaded || !hasLocalMessages) {
             // 如果没有初始化或没有本地数据，使用正常的初始化流程
-            LogUtils.i(
-                "ChatRepositoryImpl.syncLatestMessages calling ensureInitialHistory for $agentId"
-            )
             ensureInitialHistory(agentId, pageSize)
             return
         }
@@ -225,12 +217,12 @@ class ChatRepositoryImpl(
                 is HttpResult.Success -> {
                     val serverMessages =
                         convertUserVoteToFeedback(result.data.messages ?: emptyList())
-                    val localMessages = localDataSource.getMessagesFlow(agentId).value
+                    val currentLocalMessages = localDataSource.getMessagesFlow(agentId).value
 
                     // 检查是否有新消息或消息状态变化（如 user_vote）
                     val hasNewMessages =
                         serverMessages.any { serverMsg ->
-                            localMessages.none { localMsg ->
+                            currentLocalMessages.none { localMsg ->
                                 localMsg.id == serverMsg.id ||
                                     (localMsg.content == serverMsg.content &&
                                         localMsg.role == serverMsg.role)
@@ -240,7 +232,7 @@ class ChatRepositoryImpl(
                     // 检查是否有消息状态变化（如 user_vote 更新）
                     val hasStatusChanges =
                         serverMessages.any { serverMsg ->
-                            localMessages.any { localMsg ->
+                            currentLocalMessages.any { localMsg ->
                                 localMsg.id == serverMsg.id &&
                                     localMsg.user_vote != serverMsg.user_vote
                             }
@@ -256,22 +248,20 @@ class ChatRepositoryImpl(
                         )
 
                         LogUtils.i(
-                            "ChatRepositoryImpl.syncLatestMessages found new messages or status changes for $agentId, updated ${serverMessages.size} messages"
-                        )
-                    } else {
-                        LogUtils.i(
-                            "ChatRepositoryImpl.syncLatestMessages no new messages or status changes for $agentId"
+                            "聊天接口数据",
+                            "syncLatestMessages 更新消息: agentId=$agentId, updated ${serverMessages.size} messages",
                         )
                     }
                 }
                 is HttpResult.Failure -> {
                     LogUtils.e(
-                        "ChatRepositoryImpl.syncLatestMessages failure for $agentId: ${result.message}"
+                        "聊天接口数据",
+                        "syncLatestMessages 失败: agentId=$agentId, error=${result.message}",
                     )
                 }
             }
         } catch (e: Exception) {
-            LogUtils.e("ChatRepositoryImpl.syncLatestMessages exception: ${e.message}")
+            LogUtils.e("聊天接口数据", "syncLatestMessages 异常: agentId=$agentId, exception=${e.message}")
         }
     }
 
@@ -400,11 +390,6 @@ class ChatRepositoryImpl(
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message }
                 localDataSource.prependMessages(agentId, assistantMsgs)
-
-                // 会话已读更新
-                choices.lastOrNull()?.message?.content?.let { lastContent ->
-                    IntySetting.setConversationReaded(agentId, lastContent)
-                }
             }
         }
     }
@@ -432,11 +417,12 @@ class ChatRepositoryImpl(
 
         // 在触发消息上设置 loading 状态：通过设置一个临时的 generatedImage（imageUrl 为 "loading"）
         // 这样图片会显示在触发消息的下方，而不是创建新消息
+        // 使用 9:16 的宽高比（竖屏），与生成的图片尺寸匹配
         val loadingImage =
             MsgInfo.MsgMetaData.GeneratedImage(
                 imageUrl = "loading", // 特殊标记，表示正在生成图片
                 width = 300,
-                height = 300,
+                height = 533, // 9:16 比例 (300 * 16 / 9 ≈ 533)
             )
         localDataSource.updateMessageGeneratedImage(agentId, messageId, loadingImage)
 
@@ -467,12 +453,12 @@ class ChatRepositoryImpl(
         return result
     }
 
-    override fun clearChatData(agentId: String) {
+    override suspend fun clearChatData(agentId: String) {
         LogUtils.d("ChatRepositoryImpl.clearChatData called for $agentId")
         localDataSource.clearChatData(agentId)
     }
 
-    override fun clearAllChatData() {
+    override suspend fun clearAllChatData() {
         LogUtils.d("ChatRepositoryImpl.clearAllChatData called")
         localDataSource.clearAllChatData()
     }

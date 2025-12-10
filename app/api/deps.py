@@ -91,12 +91,6 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """获取当前活跃用户"""
-    if not current_user.is_active:
-        logger.error(f"用户未激活: {current_user.id}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
-        )
-
     # 检查用户是否已被删除
     if current_user.deleted_at:
         logger.error(

@@ -23,9 +23,13 @@ from app.models.associations import agent_followers
 class AuthType(str, enum.Enum):
     """认证类型"""
 
+    # 目前未使用
     PHONE = "PHONE"
     GOOGLE = "GOOGLE"
     GUEST = "GUEST"
+    # 使用 Email+Password 登录
+    # （2025-11-27）目前仅用于让 Google Play 审查员登录
+    EMAIL = "EMAIL"
 
 
 class Gender(str, enum.Enum):
@@ -46,9 +50,7 @@ class User(Base):
     id = Column(String, primary_key=True, comment="用户唯一标识符")
 
     # DEPRECATED: app 显示 ID 而非 readable_id
-    readable_id = Column(
-        String(8), unique=True, index=True, nullable=False, comment="用户可读ID"
-    )
+    readable_id = Column(String(8), comment="【已废弃】用户可读ID")
     # TODO: Use SERIAL instead of string.
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
@@ -70,9 +72,9 @@ class User(Base):
         Enum(AuthType), nullable=False, comment="认证类型：手机号/Google/游客"
     )
     google_id = Column(String, comment="Google账号ID，用于支持用户注册登录")
+    password = Column(String, nullable=True, comment="密码哈希，用于 email 登录")
     device_id = Column(String, unique=True, comment="设备ID，唯一，用于设备识别")
     system_language = Column(String, default="en", comment="系统语言偏好，默认英语")
-    is_active = Column(Boolean, default=True, comment="账号是否激活")
     is_superuser = Column(Boolean, default=False, comment="是否为超级管理员")
     created_at = Column(
         DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"
@@ -86,6 +88,11 @@ class User(Base):
     # DEPRECATED: This field is not needed anymore.
     anonymized_at = Column(DateTime(timezone=True), comment="数据匿名化时间")
     deletion_reason = Column(String(255), comment="删除原因")
+
+    @property
+    def is_active(self) -> bool:
+        """Derived活跃状态，仅当 deleted_at 为空时视为活跃。"""
+        return self.deleted_at is None
 
     # FCM token 相关字段
     fcm_token_invalid_at = Column(

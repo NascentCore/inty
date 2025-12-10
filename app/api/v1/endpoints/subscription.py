@@ -11,9 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import ANDROID_APP_TAG, INTERNAL_API_TAG, NOT_USED_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.config import global_config_loaded_from_config_yaml
+
+# SQLAlchemy 模型需要用不同的别名
+from app.models.subscription import UserSubscription as UserSubscriptionModel
 from app.schemas.response import APIResponse
 from app.schemas.subscription import (
     GooglePlayPurchaseRequest,
@@ -27,9 +30,6 @@ from app.schemas.subscription import (
     UsageStatisticsResponse,
     UserSubscription,
 )
-
-# SQLAlchemy 模型需要用不同的别名
-from app.models.subscription import UserSubscription as UserSubscriptionModel
 from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
@@ -96,7 +96,7 @@ async def get_subscription_plans(
 @router.get(
     "/status",
     response_model=APIResponse[SubscriptionStatusResponse],
-    tags=[WEB_APP_TAG],
+    tags=[WEB_APP_TAG, NOT_USED_TAG],
 )
 async def get_subscription_status(
     *,
@@ -122,7 +122,7 @@ async def get_subscription_status(
 @router.get(
     "/usage",
     response_model=APIResponse[UsageStatisticsResponse],
-    tags=[WEB_APP_TAG],
+    tags=[WEB_APP_TAG, NOT_USED_TAG],
 )
 async def get_usage_statistics(
     *,
@@ -150,7 +150,7 @@ async def get_usage_statistics(
     response_model=APIResponse[PurchaseVerificationResponse],
     summary="Verify Google Play purchase",
     description="Used by app to prove user has purchased a subscription",
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def verify_purchase(
     *,
@@ -187,7 +187,13 @@ async def verify_purchase(
 
 
 # Handles restoration and cancellation from Google Play.
-@router.post("/webhook", tags=[INTERNAL_API_TAG])
+@router.post(
+    "/webhook",
+    include_in_schema=False,
+    summary="Google Play Webhook",
+    description="用于让 Google Play 返回通知给服务器，处理订阅状态变化通知",
+    tags=[INTERNAL_API_TAG],
+)
 async def google_play_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -327,7 +333,10 @@ def _verify_webhook_signature(body: bytes, signature: str) -> bool:
 @router.post(
     "/admin/plans",
     response_model=APIResponse[SubscriptionPlan],
-    tags=[INTERNAL_API_TAG],
+    include_in_schema=False,
+    summary="创建订阅计划（管理员接口）",
+    description="用于创建订阅计划（管理员接口）",
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def create_subscription_plan(
     *,
@@ -357,7 +366,8 @@ async def create_subscription_plan(
 @router.get(
     "/admin/plans",
     response_model=APIResponse[List[SubscriptionPlan]],
-    tags=[INTERNAL_API_TAG],
+    include_in_schema=False,
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_all_subscription_plans(
     *,
@@ -383,7 +393,7 @@ async def get_all_subscription_plans(
 @router.get(
     "/admin/users/{user_id}/subscription",
     response_model=APIResponse[SubscriptionStatusResponse],
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_user_subscription_status_admin(
     *,
@@ -409,7 +419,7 @@ async def get_user_subscription_status_admin(
 @router.get(
     "/admin/users/{user_id}/usage",
     response_model=APIResponse[UsageStatisticsResponse],
-    tags=[INTERNAL_API_TAG],
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def get_user_usage_statistics_admin(
     *,
@@ -435,7 +445,8 @@ async def get_user_usage_statistics_admin(
 @router.post(
     "/admin/refund",
     response_model=APIResponse[RefundResponse],
-    tags=[INTERNAL_API_TAG],
+    include_in_schema=False,
+    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
 )
 async def process_manual_refund(
     *,

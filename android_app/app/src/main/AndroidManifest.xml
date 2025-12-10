@@ -118,12 +118,20 @@
             android:theme="@style/Theme.Inty.UCrop" />
 
         <activity
+            android:name=".explore.special.SpecialDetailActivity"
+            android:launchMode="singleTop" />
+
+        <activity
             android:name=".vip.VipCenterActivity"
             android:launchMode="singleTop" />
         <activity
             android:name=".vip.SubsManageActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
+
+        <activity
+            android:name=".settings.check.CheckInActivity"
+            android:launchMode="singleTop" />
 
     </application>
 

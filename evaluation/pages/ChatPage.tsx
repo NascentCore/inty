@@ -93,7 +93,7 @@ export const ChatPage: React.FC = () => {
     new Map(),
   );
   const backgroundImageUrl = selectedAgent?.background;
-  const backgroundVideoUrl = selectedAgent?.background_animated;
+  const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
 
   // Refs
@@ -1276,7 +1276,7 @@ export const ChatPage: React.FC = () => {
                     overflow: "hidden",
                   }}
                 >
-                  {(backgroundImageUrl || backgroundVideoUrl) && (
+                  {(backgroundImageUrl || backgroundAnimatedUrl) && (
                     <div
                       aria-hidden
                       style={{
@@ -1297,23 +1297,20 @@ export const ChatPage: React.FC = () => {
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
-                            filter: backgroundVideoUrl ? "blur(6px)" : "none",
+                            filter: backgroundAnimatedUrl
+                              ? "blur(6px)"
+                              : "none",
                             transform: "scale(1.05)",
-                            opacity: backgroundVideoUrl ? 0.4 : 0.85,
+                            opacity: backgroundAnimatedUrl ? 0.4 : 0.85,
                             transition: "opacity 0.3s ease",
                           }}
                         />
                       )}
-                      {backgroundVideoUrl && (
-                        <video
-                          key={backgroundVideoUrl}
-                          src={backgroundVideoUrl}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          preload="auto"
-                          poster={backgroundImageUrl || undefined}
+                      {backgroundAnimatedUrl && (
+                        <img
+                          key={backgroundAnimatedUrl}
+                          src={backgroundAnimatedUrl}
+                          alt={`${backgroundAltName} animated background`}
                           style={{
                             position: "absolute",
                             inset: 0,

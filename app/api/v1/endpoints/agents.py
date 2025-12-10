@@ -12,7 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, INTERNAL_API_TAG, WEB_APP_TAG
+from app.api.tags import (
+    ANDROID_APP_TAG,
+    INTERNAL_API_TAG,
+    INTY_EVAL_TAG,
+    NOT_USED_TAG,
+    WEB_APP_TAG,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
@@ -50,13 +56,6 @@ async def get_current_superuser(
 
 
 @router.get(
-    "/",
-    response_model=schemas.APIResponse[List[schemas.Agent]],
-    deprecated=True,
-    include_in_schema=False,
-    summary="[Deprecated, use /me, kept for v1.0.3 compatibility]",
-)
-@router.get(
     "/me",
     response_model=schemas.APIResponse[List[schemas.Agent]],
     summary="Get list of user's created AI characters",
@@ -85,7 +84,7 @@ async def list_agents(
     "/search",
     response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
     summary="Used by inty-eval to list all public AI characters",
-    tags=[INTY_EVAL_TAG, WEB_APP_TAG],
+    tags=[INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def search_agents(
     q: str = Query(..., description="Search keyword"),
@@ -121,7 +120,7 @@ async def recommend_agents(
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     sort: schemas.AgentSortOption = Query(
         schemas.AgentSortOption.CREATED_DESC,
-        description="Sort order: created_asc, created_desc, random, score_based_random",
+        description="Sort order: created_asc, created_desc, random, score_based_random, energy_points",
     ),
     sort_seed: str = Query(
         "", description="Sort seed for deterministic random ordering"
@@ -136,6 +135,7 @@ async def recommend_agents(
     - created_asc: Oldest first
     - random: Random order (uses sort_seed for deterministic results)
     - score_based_random: Score-based recommendation (6 high-score agents + 4 random agents)
+    - energy_points: Sort by energy points in descending order (highest first)
 
     For score_based_random algorithm:
     - Returns 6 agents with highest scores (5-star first, then 4-star, etc.)
@@ -149,26 +149,6 @@ async def recommend_agents(
         page_size=page_size,
         sort_by=sort,
         sort_seed=sort_seed,
-    )
-    return schemas.APIResponse.success(data=pagination_data)
-
-
-@router.get(
-    "/following",
-    response_model=schemas.APIResponse[schemas.PaginationData[schemas.Agent]],
-    tags=[WEB_APP_TAG],
-)
-async def get_following_agents(
-    db: AsyncSession = Depends(deps.get_async_db),
-    page: int = Query(1, ge=1, description="Page number, starting from 1"),
-    page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Get current user's followed AI agents list
-    """
-    pagination_data = await agent_service.get_user_followed_agents(
-        db, user_id=current_user.id, page=page, page_size=page_size
     )
     return schemas.APIResponse.success(data=pagination_data)
 
@@ -190,14 +170,6 @@ async def get_following_agents(
 #     "background": "<background_image_url>"
 #   }'
 ########################################################
-@router.post(
-    "/",
-    response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
-    deprecated=True,
-    include_in_schema=False,
-    summary="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
-    description="Deprecated, use /api/v1/ai/agents instead, kept for v1.0.3 compatibility",
-)
 @router.post(
     "",
     response_model=schemas.APIResponse[Union[schemas.Agent, Dict[str, Any]]],
@@ -270,56 +242,6 @@ async def get_agent(
     return agent
 
 
-@router.post(
-    "/{agent_id}/follow",
-    response_model=schemas.APIResponse[dict],
-    tags=[WEB_APP_TAG],
-)
-async def follow_agent(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Follow AI agent
-    """
-    try:
-        await agent_service.follow_agent(db, agent_id=agent_id, user_id=current_user.id)
-        return schemas.APIResponse.success(data={"message": "Successfully followed"})
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to follow AI agent: {str(e)}")
-        return schemas.APIResponse.error(message="Failed to follow")
-
-
-@router.delete(
-    "/{agent_id}/follow",
-    response_model=schemas.APIResponse[dict],
-    tags=[WEB_APP_TAG],
-)
-async def unfollow_agent(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    Unfollow AI agent
-    """
-    try:
-        await agent_service.unfollow_agent(
-            db, agent_id=agent_id, user_id=current_user.id
-        )
-        return schemas.APIResponse.success(data={"message": "Successfully unfollowed"})
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to unfollow AI agent: {str(e)}")
-        return schemas.APIResponse.error(message="Failed to unfollow")
-
-
 @router.put(
     "/{agent_id}",
     response_model=schemas.Agent,
@@ -377,9 +299,9 @@ async def delete_agent(
 @router.post(
     "/{agent_id}/generate-background-animated",
     response_model=schemas.APIResponse[schemas.Agent],
-    summary="生成背景视频",
-    description="通过 Google Veo3 API 生成视频并直接存储视频地址",
-    tags=[INTY_EVAL_TAG],
+    summary="生成背景动图（需要 9:16 比例背景图）",
+    description="通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储。背景图必须是 9:16 比例，否则会返回错误提示。",
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def generate_background_animated(
     *,
@@ -389,7 +311,10 @@ async def generate_background_animated(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    生成背景视频并更新到 Agent
+    生成背景动图并更新到 Agent
+
+    通过 Google Veo3 API 生成视频，然后转换为 webp 动图格式存储。
+    背景图必须是 9:16 比例，否则会返回错误提示。
     """
     # 验证 Agent 存在且用户有权限
     agent = await agent_service.get_agent(db, agent_id=agent_id)
@@ -464,19 +389,33 @@ async def generate_background_animated(
             image_uri=background_gcs_uri,
         )
 
-        # 4. 将 GCS URI 转换为 CDN URL
-        logger.info(f"开始转换视频 GCS URI 为 CDN URL: {video_gcs_uri}")
+        # 4. 将视频转换为 webp 动图
+        logger.info(f"开始将视频转换为 webp 动图: {video_gcs_uri}")
+        from app.utils.video_to_animated_image import (
+            convert_video_to_animated_image_and_upload,
+        )
+
+        # 将 GCS URI 转换为 CDN URL 用于下载
         video_url = image_transform_service.transform_desktop(video_gcs_uri)
+
+        # 转换为 webp 动图并上传
+        webp_url = await convert_video_to_animated_image_and_upload(
+            video_url=video_url,
+            user_id=current_user.id,
+            output_format="webp",
+            duration=4,
+            base_path="uploads/animated_images",
+        )
 
         # 5. 更新 Agent 的 background_animated 字段
         from app.schemas.agent import AgentUpdate
 
-        agent_update = AgentUpdate(background_animated=video_url)
+        agent_update = AgentUpdate(background_animated=webp_url)
         updated_agent = await agent_service.update_agent(
             db, db_agent=agent, agent_in=agent_update
         )
 
-        logger.info(f"背景视频生成成功，URL: {video_url}")
+        logger.info(f"背景动图生成成功，webp URL: {webp_url}")
         return schemas.APIResponse.success(data=updated_agent)
 
     except HTTPException:
@@ -548,19 +487,11 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
 
 
 @router.post(
-    "/generate_background",
-    response_model=APIResponse[dict],
-    deprecated=True,
-    include_in_schema=False,
-    summary="Deprecated, use /generate_background instead",
-    description="Deprecated, use /generate_background instead",
-)
-@router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
     summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
     deprecated=True,
-    include_in_schema=False,
+    include_in_schema=True,
     tags=[INTY_EVAL_TAG],
 )
 async def generate_background(
@@ -728,34 +659,6 @@ async def generate_background(
             )
 
 
-@router.get(
-    "/creator/{creator_id}/stats",
-    # Not used by anyone
-    deprecated=True,
-    include_in_schema=False,
-    response_model=schemas.APIResponse[schemas.CreatorAgentStats],
-    tags=[INTERNAL_API_TAG],
-)
-async def get_creator_agent_stats(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    creator_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    获取创建者的公共角色统计信息
-    返回创建者创建的公共角色数量和所有公共角色的总关注数
-    """
-    try:
-        stats = await agent_service.get_creator_agent_stats(db, creator_id=creator_id)
-        return schemas.APIResponse.success(data=stats)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取创建者角色统计失败: {str(e)}")
-        return schemas.APIResponse.error(message="Failed to get statistics")
-
-
 # ==================== 角色卡相关API端点 ====================
 
 
@@ -763,7 +666,7 @@ async def get_creator_agent_stats(
     "/import-character-card",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def import_character_card(
     request: CharacterCardImportRequest,
@@ -792,7 +695,7 @@ async def import_character_card(
     "/import-character-card-file",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def import_character_card_file(
     file: UploadFile = File(...),
@@ -835,7 +738,7 @@ async def import_character_card_file(
     "/export-character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def export_character_card(
     request: CharacterCardExportRequest,
@@ -868,7 +771,7 @@ async def export_character_card(
     "/{agent_id}/character-card",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_agent_character_card(
     agent_id: str,
@@ -904,7 +807,7 @@ async def get_agent_character_card(
     "/validate-character-card",
     response_model=APIResponse[CharacterCardValidationResponse],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def validate_character_card(
     card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
@@ -925,7 +828,7 @@ async def validate_character_card(
     "/character-card/features",
     response_model=APIResponse[dict],
     include_in_schema=False,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_character_card_features(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -1024,7 +927,7 @@ async def get_openrouter_models(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="获取图片生成配置",
     description="获取当前图片生成的提示词模板和默认参数配置",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_image_generation_config(
     current_user: schemas.User = Depends(deps.get_current_active_user),
@@ -1049,7 +952,7 @@ async def get_image_generation_config(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="获取可用的 prompt 列表",
     description="获取可用的主提示词和模式提示词列表，以及 force_default_prompts 配置状态",
-    tags=[INTY_EVAL_TAG, WEB_APP_TAG],
+    tags=[INTY_EVAL_TAG, WEB_APP_TAG, NOT_USED_TAG],
 )
 async def get_available_prompts(
     include_content: bool = Query(False, description="是否包含完整的 prompt 内容"),
@@ -1101,7 +1004,7 @@ async def get_available_prompts(
     response_model=schemas.APIResponse[Dict[str, Any]],
     summary="更新图片生成配置",
     description="更新图片生成的提示词模板和默认参数配置（仅超级用户）",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def update_image_generation_config(
     config: Dict[str, Any],

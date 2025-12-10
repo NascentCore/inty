@@ -17,4 +17,7 @@ object FCMConstants {
 
     /** 消息类型：系统通知 */
     const val TYPE_SYSTEM = "system"
+
+    /** 消息类型：反馈请求 */
+    const val TYPE_FEEDBACK_REQUEST = "feedback_request"
 }

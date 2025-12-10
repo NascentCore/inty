@@ -1,7 +1,6 @@
 package com.ai.intellimate.agent.report
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.model.ReportItem
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.ReportService
 import ai.sxwl.android.utils.ImageCompressUtils
@@ -14,6 +13,10 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
+import com.inty.api.models.api.v1.report.ReportCreateParams
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,9 +25,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
+
+/** 举报原因项，包含 SDK 的 ReasonCode 和对应的字符串资源ID */
+data class ReportReasonItem(val reasonCode: ReportCreateParams.ReasonCode, val stringResId: Int)
 
 class ReportViewModel : BaseVM() {
 
@@ -41,91 +44,32 @@ class ReportViewModel : BaseVM() {
     var targetID: String = ""
     var targetType: String = "USER"
 
-    // Hard-coded list of report reasons
-    private val _reportReasons =
-        MutableStateFlow(
-            listOf(
-                ReportItem(
-                    id = 1,
-                    description = "Sensitive or sexual content",
-                    code = "SENSITIVE_CONTENT",
-                ),
-                ReportItem(id = 2, description = "Misinformation", code = "MISINFORMATION"),
-                ReportItem(id = 3, description = "Fraud or scams", code = "FRAUD_SCAMS"),
-                ReportItem(
-                    id = 4,
-                    description = "Violation of privacy",
-                    code = "PRIVACY_VIOLATION",
-                ),
-                ReportItem(id = 5, description = "Harmful to minors", code = "HARMFUL_MINORS"),
-                ReportItem(
-                    id = 6,
-                    description = "Violations of my intellectual property",
-                    code = "IP_VIOLATION",
-                ),
-                ReportItem(
-                    id = 0,
-                    description = "Other, details in report description",
-                    code = "OTHER",
-                ),
-            )
-        )
+    // 使用 SDK 的 ReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
+    private val reportReasons =
+        ReportReasonMappings.REPORT_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
+            ReportReasonItem(reasonCode, stringResId)
+        }
 
-    // Hard-coded list of feedback reasons
-    // Note: These descriptions will be replaced with string resources in the UI layer
-    private val _feedbackReasons =
-        MutableStateFlow(
-            listOf(
-                ReportItem(
-                    id = 1,
-                    description = "Chat replies don't feel natural / off-topic",
-                    code = "CHAT_NOT_NATURAL",
-                ),
-                ReportItem(
-                    id = 2,
-                    description = "The character doesn't match its persona",
-                    code = "CHARACTER_MISMATCH",
-                ),
-                ReportItem(
-                    id = 3,
-                    description = "The app is slow or gets stuck",
-                    code = "APP_SLOW",
-                ),
-                ReportItem(
-                    id = 4,
-                    description = "I couldn't find / how to use this feature",
-                    code = "FEATURE_HARD_TO_FIND",
-                ),
-                ReportItem(
-                    id = 5,
-                    description = "UI or interaction feels inconvenient",
-                    code = "UI_INCONVENIENT",
-                ),
-                ReportItem(
-                    id = 6,
-                    description = "I'd like to see a new feature or improvement",
-                    code = "NEW_FEATURE",
-                ),
-                ReportItem(
-                    id = 0,
-                    description = "Other, please describe below",
-                    code = "OTHER",
-                ),
-            )
-        )
+    // 使用 SDK 的 ReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
+    private val feedbackReasons =
+        ReportReasonMappings.FEEDBACK_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
+            ReportReasonItem(reasonCode, stringResId)
+        }
 
-    private val _reasons = MutableStateFlow(_reportReasons.value)
+    private val _reasons = MutableStateFlow(reportReasons)
     val reasons = _reasons.asStateFlow()
 
     fun updateReasonsForMode() {
-        _reasons.value = if (isFeedbackMode) {
-            _feedbackReasons.value
-        } else {
-            _reportReasons.value
-        }
+        _reasons.value =
+            if (isFeedbackMode) {
+                feedbackReasons
+            } else {
+                reportReasons
+            }
     }
 
-    var selectIDS = mutableStateSetOf<Int>()
+    // 使用 ReasonCode 而不是 Int ID
+    var selectedReasonCodes = mutableStateSetOf<ReportCreateParams.ReasonCode>()
 
     private val _description = MutableStateFlow("")
     val description = _description.asStateFlow()
@@ -142,7 +86,7 @@ class ReportViewModel : BaseVM() {
     }
 
     fun submit() {
-        if (selectIDS.isEmpty()) {
+        if (selectedReasonCodes.isEmpty()) {
             ToastUtils.showShort(R.string.toast_please_select_reason)
             return
         }
@@ -158,7 +102,7 @@ class ReportViewModel : BaseVM() {
             try {
                 val uploadedImageUrls = mutableListOf<String>()
                 val context = Utils.getApp() ?: return@launchBackground
-                
+
                 for (imageUri in localImages) {
                     val uri = imageUri.toUri()
                     val uploadedUrl = uploadImageWithCompression(context, uri)
@@ -169,11 +113,17 @@ class ReportViewModel : BaseVM() {
 
                 val result =
                     ReportService.createReport(
-                        reasonIds = selectIDS.map { it.toLong() },
+                        reasonCodes = selectedReasonCodes.toList(),
                         targetId = if (isFeedbackMode) null else targetID,
                         targetType = if (isFeedbackMode) null else targetType,
                         description = description.value.trim(),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
+                        reportType =
+                            if (isFeedbackMode) {
+                                ReportService.ReportType.FEEDBACK
+                            } else {
+                                ReportService.ReportType.REPORT
+                            },
                     )
 
                 when (result) {
@@ -207,7 +157,7 @@ class ReportViewModel : BaseVM() {
 
     private suspend fun uploadImageWithCompression(
         context: android.content.Context,
-        uri: Uri
+        uri: Uri,
     ): String? {
         return withContext(Dispatchers.IO) {
             var tempFile: File? = null
@@ -239,13 +189,14 @@ class ReportViewModel : BaseVM() {
                 }
 
                 // 先尝试转换为 WebP 格式（通常能获得更好的压缩率）
-                var webpFile = ImageCompressUtils.convertToWebPSync(
-                    context = context,
-                    imageFile = tempFile,
-                    quality = 85,
-                    maxWidth = 1920,
-                    maxHeight = 1920
-                )
+                var webpFile =
+                    ImageCompressUtils.convertToWebPSync(
+                        context = context,
+                        imageFile = tempFile,
+                        quality = 85,
+                        maxWidth = 1920,
+                        maxHeight = 1920,
+                    )
 
                 // 如果 WebP 转换成功，检查文件大小
                 if (webpFile != null && webpFile.exists()) {
@@ -255,21 +206,23 @@ class ReportViewModel : BaseVM() {
                         compressedFile = webpFile
                     } else {
                         // WebP 文件还是太大，使用 Luban 进一步压缩
-                        compressedFile = ImageCompressUtils.compressImageSync(
-                            context = context,
-                            imageFile = webpFile,
-                            config = ImageCompressUtils.CompressConfig(maxSize = 800)
-                        )
+                        compressedFile =
+                            ImageCompressUtils.compressImageSync(
+                                context = context,
+                                imageFile = webpFile,
+                                config = ImageCompressUtils.CompressConfig(maxSize = 800),
+                            )
                         // 如果 Luban 压缩失败，使用更低质量的 WebP
                         if (compressedFile == null || !compressedFile.exists()) {
                             webpFile.delete()
-                            webpFile = ImageCompressUtils.convertToWebPSync(
-                                context = context,
-                                imageFile = tempFile,
-                                quality = 70,
-                                maxWidth = 1600,
-                                maxHeight = 1600
-                            )
+                            webpFile =
+                                ImageCompressUtils.convertToWebPSync(
+                                    context = context,
+                                    imageFile = tempFile,
+                                    quality = 70,
+                                    maxWidth = 1600,
+                                    maxHeight = 1600,
+                                )
                             compressedFile = webpFile
                         } else {
                             webpFile.delete() // 清理中间文件
@@ -277,11 +230,12 @@ class ReportViewModel : BaseVM() {
                     }
                 } else {
                     // WebP 转换失败，使用 Luban 压缩原图
-                    compressedFile = ImageCompressUtils.compressImageSync(
-                        context = context,
-                        imageFile = tempFile,
-                        config = ImageCompressUtils.CompressConfig(maxSize = 800)
-                    )
+                    compressedFile =
+                        ImageCompressUtils.compressImageSync(
+                            context = context,
+                            imageFile = tempFile,
+                            config = ImageCompressUtils.CompressConfig(maxSize = 800),
+                        )
                 }
 
                 if (compressedFile == null || !compressedFile.exists()) {
@@ -292,15 +246,18 @@ class ReportViewModel : BaseVM() {
                 // 检查最终文件大小
                 val compressedSizeKB = compressedFile.length() / 1024
                 if (compressedSizeKB > 1024) {
-                    LogUtils.w("Compressed image size ($compressedSizeKB KB) still exceeds 1024KB limit, trying more aggressive compression")
-                    // 如果还是太大，尝试更激进的 WebP 压缩
-                    val moreCompressedFile = ImageCompressUtils.convertToWebPSync(
-                        context = context,
-                        imageFile = tempFile,
-                        quality = 60,
-                        maxWidth = 1280,
-                        maxHeight = 1280
+                    LogUtils.w(
+                        "Compressed image size ($compressedSizeKB KB) still exceeds 1024KB limit, trying more aggressive compression"
                     )
+                    // 如果还是太大，尝试更激进的 WebP 压缩
+                    val moreCompressedFile =
+                        ImageCompressUtils.convertToWebPSync(
+                            context = context,
+                            imageFile = tempFile,
+                            quality = 60,
+                            maxWidth = 1280,
+                            maxHeight = 1280,
+                        )
                     if (moreCompressedFile != null && moreCompressedFile.exists()) {
                         val moreCompressedSizeKB = moreCompressedFile.length() / 1024
                         if (moreCompressedSizeKB <= 1024) {
@@ -314,11 +271,12 @@ class ReportViewModel : BaseVM() {
 
                 // 读取压缩后的文件并上传
                 // 根据文件扩展名确定上传的文件名
-                val filename = if (compressedFile.name.endsWith(".webp", ignoreCase = true)) {
-                    "report-image.webp"
-                } else {
-                    "report-image.jpg"
-                }
+                val filename =
+                    if (compressedFile.name.endsWith(".webp", ignoreCase = true)) {
+                        "report-image.webp"
+                    } else {
+                        "report-image.jpg"
+                    }
                 val inputStream = FileInputStream(compressedFile)
                 val result = ReportService.uploadImage(inputStream, filename)
                 inputStream.close()
@@ -326,7 +284,9 @@ class ReportViewModel : BaseVM() {
                 when (result) {
                     is ApiResult.Success -> {
                         val url = result.data
-                        LogUtils.i("Image uploaded successfully (compressed from ${originalSizeKB}KB to ${compressedFile.length() / 1024}KB): $url")
+                        LogUtils.i(
+                            "Image uploaded successfully (compressed from ${originalSizeKB}KB to ${compressedFile.length() / 1024}KB): $url"
+                        )
                         url
                     }
 
@@ -354,11 +314,7 @@ class ReportViewModel : BaseVM() {
                 val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
                 val outputStream = FileOutputStream(tempFile)
 
-                inputStream.use { input ->
-                    outputStream.use { output ->
-                        input.copyTo(output)
-                    }
-                }
+                inputStream.use { input -> outputStream.use { output -> input.copyTo(output) } }
 
                 tempFile
             } catch (e: Exception) {

@@ -267,7 +267,7 @@ private class PerformanceInterceptor : Interceptor {
 
         // 记录请求开始（仅在调试模式下）
         if (AppUtils.isAppDebug()) {
-            LogUtils.i("🌐 Starting request: ${request.method} ${request.url}")
+            LogUtils.d("🌐 Starting request: ${request.method} ${request.url}")
         }
 
         return try {
@@ -281,7 +281,6 @@ private class PerformanceInterceptor : Interceptor {
 
             // 记录性能指标（不影响请求结果）
             recordPerformanceMetrics(request, duration, response.isSuccessful)
-
             response
         } catch (e: Exception) {
             val endTime = System.currentTimeMillis()
@@ -306,7 +305,7 @@ private class PerformanceInterceptor : Interceptor {
                 when {
                     duration < FAST_REQUEST_THRESHOLD -> {
                         if (AppUtils.isAppDebug()) {
-                            LogUtils.i(
+                            LogUtils.d(
                                 "✅ Fast request: ${request.method} ${request.url} (${duration}ms)"
                             )
                         }
@@ -316,16 +315,10 @@ private class PerformanceInterceptor : Interceptor {
                         LogUtils.w(
                             "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)"
                         )
-
                         // 使用 Firebase Analytics 记录慢请求
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.SLOW_REQUEST,
-                            mapOf(
-                                "duration_ms" to duration,
-                                "method" to request.method,
-                                "url" to request.url.toString(),
-                                "success" to isSuccessful,
-                            ),
+                            mapOf("duration_ms" to duration),
                         )
                     }
 
@@ -337,12 +330,7 @@ private class PerformanceInterceptor : Interceptor {
                         // 使用 Firebase Analytics 记录极慢请求
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.VERY_SLOW_REQUEST,
-                            mapOf(
-                                "duration_ms" to duration,
-                                "method" to request.method,
-                                "url" to request.url.toString(),
-                                "success" to isSuccessful,
-                            ),
+                            mapOf("duration_ms" to duration),
                         )
 
                         // 使用 Firebase Crashlytics 记录性能问题
@@ -371,8 +359,6 @@ private class PerformanceInterceptor : Interceptor {
                     FirebaseManager.Events.REQUEST_FAILURE,
                     mapOf(
                         "duration_ms" to duration,
-                        "method" to request.method,
-                        "url" to request.url.toString(),
                         "error_message" to
                             "exception: ${exception.javaClass.simpleName}, ${exception.message ?: "unknown"}",
                     ),

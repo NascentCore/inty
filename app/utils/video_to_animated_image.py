@@ -1,5 +1,5 @@
 """
-视频转动图工具：将视频转换为 AVIF 或 GIF 格式的动图
+视频转动图工具：将视频转换为 AVIF、GIF 或 WebP 格式的动图
 """
 
 import subprocess
@@ -21,14 +21,14 @@ def convert_video_to_animated_image(
     max_width: Optional[int] = None,
 ) -> tuple[bytes, str]:
     """
-    将视频转换为动图（AVIF 或 GIF）
+    将视频转换为动图（AVIF、GIF 或 WebP）
 
     Args:
         video_url: 视频 URL（GCS URL 或 HTTP URL）
-        output_format: 输出格式，avif 或 gif
+        output_format: 输出格式，avif、gif 或 webp
         duration: 视频时长（秒）
-        fps: 帧率（可选，默认使用配置值）
-        max_width: 最大宽度（可选，默认使用配置值）
+        fps: 帧率（可选，默认使用配置值，webp 格式固定为 12）
+        max_width: 最大宽度（可选，默认使用配置值，webp 格式固定为 360）
 
     Returns:
         tuple: (动图文件的字节数据, 实际使用的格式)
@@ -36,11 +36,16 @@ def convert_video_to_animated_image(
     """
     config = global_config_loaded_from_config_yaml.agent
 
-    if fps is None:
-        fps = getattr(config, "animated_image_fps", 15)
+    # WebP 格式使用固定参数
+    if output_format == "webp":
+        fps = 12
+        max_width = 360
+    else:
+        if fps is None:
+            fps = getattr(config, "animated_image_fps", 15)
 
-    if max_width is None:
-        max_width = getattr(config, "animated_image_max_width", 720)
+        if max_width is None:
+            max_width = getattr(config, "animated_image_max_width", 720)
 
     # 下载视频到临时文件
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video:
@@ -72,7 +77,42 @@ def convert_video_to_animated_image(
                 output_path = temp_output.name
 
                 try:
-                    if output_format == "avif":
+                    if output_format == "webp":
+                        # 转换为 WebP 动图
+                        # 使用 filter_complex 确保首尾帧一致，实现无缝循环
+                        # 先处理视频，然后复制第一帧并转换为视频流，最后连接
+                        filter_complex = (
+                            f"[0:v]fps={fps},scale={max_width}:-1:flags=lanczos[main];"
+                            f"[main]split[stream1][stream2];"
+                            f"[stream2]select='eq(n,0)',loop=1:1:0[first];"
+                            f"[stream1][first]concat=n=2:v=1:a=0[out]"
+                        )
+                        cmd = [
+                            "ffmpeg",
+                            "-i",
+                            video_path,
+                            "-filter_complex",
+                            filter_complex,
+                            "-map",
+                            "[out]",
+                            "-c:v",
+                            "libwebp",
+                            "-q:v",
+                            "60",
+                            "-compression_level",
+                            "6",
+                            "-lossless",
+                            "0",
+                            "-preset",
+                            "default",
+                            "-loop",
+                            "0",
+                            "-t",
+                            str(duration),
+                            output_path,
+                            "-y",  # 覆盖输出文件
+                        ]
+                    elif output_format == "avif":
                         # 转换为 AVIF 动图
                         # 需要 ffmpeg 支持 libavif 编码器
                         # 先检查是否支持 libavif
@@ -200,7 +240,7 @@ async def convert_video_to_animated_image_and_upload(
     Args:
         video_url: 视频 URL
         user_id: 用户 ID
-        output_format: 输出格式，avif 或 gif
+        output_format: 输出格式，avif、gif 或 webp
         duration: 视频时长（秒）
         base_path: GCS 存储基础路径
 

@@ -1,8 +1,8 @@
 ---
 name: Android App 功能需求
-about: "【Android App】功能需求："
-title: "【功能需求】"
-labels: android, enhancement
+about: Android App 功能需求
+title: "【Android App】【功能需求】"
+labels: android, enhancement, feature
 assignees: yxzhao6
 
 ---

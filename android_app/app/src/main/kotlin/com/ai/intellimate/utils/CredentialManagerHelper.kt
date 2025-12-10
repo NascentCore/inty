@@ -72,9 +72,7 @@ object CredentialManagerHelper {
      */
     private fun handleSignInWithGoogleResponse(response: GetCredentialResponse): Result<String> {
         return try {
-            val credential = response.credential
-
-            when (credential) {
+            when (val credential = response.credential) {
                 // 自定义凭证类型 (Google ID Token)
                 is CustomCredential -> {
                     if (
@@ -88,14 +86,15 @@ object CredentialManagerHelper {
                             LogUtils.i("Google Sign-In successful via GetSignInWithGoogleOption")
                             Result.success(idToken)
                         } catch (e: GoogleIdTokenParsingException) {
-                            LogUtils.e("Received an invalid google id token response")
-                            Result.failure(Exception("Invalid Google ID token"))
+                            LogUtils.e("Received an invalid google id token response: ${e.message}")
+                            Result.failure(e)
                         }
                     } else {
                         LogUtils.i("Unexpected type of credential: ${credential.type}")
                         Result.failure(Exception("Unexpected credential type"))
                     }
                 }
+
                 else -> {
                     LogUtils.e(
                         "Unexpected type of credential: ${credential::class.java.simpleName}"

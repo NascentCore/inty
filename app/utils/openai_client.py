@@ -17,7 +17,8 @@ from loguru import logger
 from openai import OpenAI
 from typing_extensions import deprecated
 
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import Environment, global_config_loaded_from_config_yaml
+from app.external_services.fakes.openai import FakeOpenAI
 
 
 class Role(StrEnum):
@@ -65,6 +66,13 @@ _client_lock = threading.Lock()
 
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
+    # 在测试环境使用 FakeOpenAI
+    from app.core.config import Environment
+
+    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+        logger.info("Using FakeOpenAI in test environment")
+        return FakeOpenAI()
+
     return OpenAI(
         base_url=global_config_loaded_from_config_yaml.agent.base_url,
         api_key=global_config_loaded_from_config_yaml.agent.api_key,
@@ -107,6 +115,14 @@ def wrap_client_with_langsmith(
     Returns:
         包装后的OpenAI客户端，带有LangSmith追踪功能
     """
+    # 在测试环境，如果是 FakeOpenAI，直接返回，不进行 LangSmith 包装
+    if (
+        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
+        and isinstance(client, FakeOpenAI)
+    ):
+        logger.debug("Skipping LangSmith wrapper for FakeOpenAI in test environment")
+        return client
+
     tracing_extra = {
         "metadata": labels,
     }

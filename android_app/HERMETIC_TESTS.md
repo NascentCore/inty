@@ -54,11 +54,10 @@
 
 ### 6. 会话列表排序与隐藏规则
 - **位置**：`app/src/main/kotlin/com/ai/intellimate/messages/MessagesViewModel.kt`
-- **原因**：`processConversationsWithPinHide`、`checkAndUnhideConversations`、`setConversationReaded` 等方法仅处理集合和本地状态。
+- **原因**：`processConversationsWithPinHide`、`checkAndUnhideConversations` 等方法仅处理集合和本地状态。
 - **建议用例**：
   - 构造多条 `ConversationItem`，验证排序顺序：固定置顶 → 时间倒序 → 隐藏的仅在 `shouldShow()` 返回 `true` 时出现。
   - 模拟 `IntySetting` 标记隐藏/置顶，调用 `checkAndUnhideConversations` 后应自动取消隐藏并触发刷新。
-  - `setConversationReaded` 会立刻把对应会话 `isNew` 置 `false`，其余条目不受影响。
 
 ### 7. 聊天消息/会话数据模型辅助方法
 - **位置**：`core/data/src/main/kotlin/ai/sxwl/android/data/api/model/ChatBeans.kt`

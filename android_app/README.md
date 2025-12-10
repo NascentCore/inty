@@ -1,6 +1,7 @@
-# android_app - Android 应用
+# IntelliMate Android App 代码
 
-AI 驱动的、面向北美年轻男性的亲密体验模拟 Android app（AI-driven intimacy simulation for NA young male adults）
+IntelliMate Android App 全部代码位于本目录下。
+IntelliMate AI 驱动的、面向北美年轻男性的亲密体验模拟 Android app（AI-driven intimacy simulation for NA young male adults）
 
 ```text
 IntelliMate: Ultimate companionship, reimagined with AI
@@ -19,6 +20,18 @@ experience your own imagination.
   ![image](https://github.com/user-attachments/assets/cbd3f10f-f028-4103-a5f6-c997ba8b9eb9)
 - cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
 - [adb shell monkey](https://developer.android.com/studio/test/other-testing-tools/monkey)
+
+## 新人速览：产品概念与功能模式
+
+- **角色（Agent）模型**：后端定义基础人设（人格、口癖、价值观、剧情约束）并在 `core/data/agent` 内落地为 `AgentProfile` 与 `AgentState`，前端可在「探索页」展示精选角色，也可通过 `CharacterBuilder` 让用户自定义头像、语气、背景故事。Agent 的 prompt/traits 会同步影响聊天回复、动态背景、推荐语音包。
+- **主导航结构**：底部导航通常包含「探索/Discover」「聊天/Chat」「故事/Storylines」「个人/Me」。探索页是瀑布流列表（Compose `LazyVerticalGrid`），聊天页是会话列表+消息流（`ChatConversationScreen`），个人页负责资料、设置与快捷入口。理解每个 Tab 的数据来源（Repository 层）可以帮助快速定位问题。
+- **核心互动循环**：典型路径为 Onboarding → 选择/创建 Agent → 进入聊天（文本 + 语音 + 卡片行动）→触发 TTS/音频 → 推送提醒用户回流。聊天消息由流式接口返回，配合 `MessageTimelineState` 负责打字机动画、语音播放与多模态展示。
+- **情绪与排程机制**：Agent 会通过「心情状态」控件呈现情绪（开心、害羞、神秘等），并伴随「剧情节点」卡片引导用户解锁下一段剧情。`PushSchedulerService` 根据剧情进度安排推送，保持陪伴感。
+- **付费与解锁模式**：订阅（VIP）是主线变现点，位于「聊天顶部横幅」「付费墙弹窗」「个人页订阅卡」。免费用户有每日限额、语音锁定或高级剧情锁定，`BillingRepository` 与 `SubscriptionGate` 统一判断各功能是否可用。新人可先查 `core/data/subscription` 了解 entitlement 判定。
+- **内容安全与审核**：文本/语音在后端已做大部分审核，客户端侧仍提供「举报」「拉黑」「语气调节」入口（多在消息长按菜单或个人页）。设计上所有风险操作都需显式二次确认。
+- **媒体表现层**：角色头像、背景视频、语音播放为塑造沉浸感的关键；`AnimatedBackground` 根据 Agent 标签切换动态素材，TTS 音色与角色绑定，情绪 icon 与聊天泡泡颜色一致，保证视觉一致性。
+- **运营能力**：`AnnouncementBanner`、`InAppSurvey` 与 `EventBadge` 可在不发版情况下定向透出活动。工作流：远端配置（Firebase Remote Config/自研配置）→ `core/data/settings` 拉取 → Compose Banner 解析渲染。
+- **用户数据存储**：轻量状态（开关、最近播放音色）存 MMKV，重要状态（角色收藏、剧情进度）依赖后端。不要在纯前端状态上做关键判断，以免与服务器不一致。
 
 ## 媒体缓存速览
 
@@ -165,3 +178,13 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 - `core/data` 聚合网络、仓库、用例、支付、设置等领域逻辑，本身已经是跨 UI 层可复用的“数据内核”；即便暂时只有主 App，也能在实验模块或 UIAutomator 测试中直接复用。
 - `core/common` 收敛基类、埋点、事件系统、启动优化等基建，任何 Feature 需要的通用能力都从此获取，杜绝散落的 util/单例实现。
 - 若未来新增多端/多壳，现有模块可以直接被依赖；若没有，则也只增加了极小的 Gradle 配置成本，不会影响运行时体积或性能。
+
+## 模块依赖约束机制
+
+**禁止横向互调**（如 `core/data` 不能调用 `core/design`）通过以下机制实现：
+
+- **依赖层次结构**：`app` → `core/*` → `library/*`，单向依赖，禁止同级模块互调
+- **Gradle 配置约束**：在 `build.gradle.kts` 中不添加横向依赖，编译时 classpath 中不存在
+- **编译时检查**：Kotlin 编译器自动检查，尝试 `import` 未依赖模块的类会编译失败
+- **架构约定**：通过文档和代码审查确保依赖关系符合架构设计
+- **实际效果**：`core/data` 和 `core/design` 互不依赖，只能通过上层模块（如 `core/common` 或 `app`）间接使用

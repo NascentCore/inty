@@ -20,7 +20,7 @@ interface IPaginationInfo {
  */
 interface IUseInfiniteScrollParams<T extends HTMLElement = HTMLElement> {
   /** 滚动容器 ref */
-  containerRef: React.RefObject<T | null>;
+  containerRef?: React.RefObject<T | null>;
   /** 是否正在加载 */
   loading: boolean;
   /** 分页信息 */
@@ -31,6 +31,8 @@ interface IUseInfiniteScrollParams<T extends HTMLElement = HTMLElement> {
   threshold?: number;
   /** 是否启用，默认 true */
   enabled?: boolean;
+  /** 是否监听窗口滚动，默认 false */
+  useWindow?: boolean;
 }
 
 /**
@@ -64,6 +66,7 @@ export const useInfiniteScroll = <T extends HTMLElement = HTMLElement>({
   loadMore,
   threshold = 200,
   enabled = true,
+  useWindow = false,
 }: IUseInfiniteScrollParams<T>): void => {
   // 用于防止重复加载的标记
   const isLoadingMoreRef = useRef<boolean>(false);
@@ -72,8 +75,10 @@ export const useInfiniteScroll = <T extends HTMLElement = HTMLElement>({
    * 处理滚动事件，检测是否滚动到底部
    */
   const handleScroll = useCallback(() => {
-    const container = containerRef.current;
-    if (!container || !enabled || loading || isLoadingMoreRef.current) {
+    const container = containerRef?.current;
+    const docElement = document.documentElement;
+
+    if ((!useWindow && !container) || !enabled || loading || isLoadingMoreRef.current) {
       return;
     }
 
@@ -83,9 +88,11 @@ export const useInfiniteScroll = <T extends HTMLElement = HTMLElement>({
     }
 
     // 计算是否接近底部
-    const scrollTop = container.scrollTop;
-    const scrollHeight = container.scrollHeight;
-    const clientHeight = container.clientHeight;
+    const scrollTop = useWindow
+      ? window.scrollY || docElement.scrollTop
+      : container?.scrollTop || 0;
+    const scrollHeight = useWindow ? docElement.scrollHeight : container?.scrollHeight || 0;
+    const clientHeight = useWindow ? window.innerHeight : container?.clientHeight || 0;
     const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
     if (distanceToBottom < threshold) {
@@ -104,14 +111,23 @@ export const useInfiniteScroll = <T extends HTMLElement = HTMLElement>({
    * 添加滚动监听
    */
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !enabled) {
+    const container = containerRef?.current;
+    if ((!useWindow && !container) || !enabled) {
       return;
     }
 
-    container.addEventListener('scroll', handleScroll);
+    if (useWindow) {
+      window.addEventListener('scroll', handleScroll);
+    } else {
+      container.addEventListener('scroll', handleScroll);
+    }
+
     return () => {
-      container.removeEventListener('scroll', handleScroll);
+      if (useWindow) {
+        window.removeEventListener('scroll', handleScroll);
+      } else {
+        container?.removeEventListener('scroll', handleScroll);
+      }
     };
-  }, [containerRef, handleScroll, enabled]);
+  }, [containerRef, handleScroll, enabled, useWindow]);
 };

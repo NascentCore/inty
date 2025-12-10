@@ -35,11 +35,15 @@
 | `message_to_image_generation_success` | ChatViewModel.kt | 图片生成成功（包含图片信息和生成耗时） |
 | `message_to_image_generation_failure` | ChatViewModel.kt | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常，除生成数量上限超标以外的错误） |
 | `image_generation_limit_reached` | ChatViewModel.kt | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制，这个限制与其他生图操作累加） |
+| `avatar_generation_button_clicked` | AvatarGenerateViewModel.kt | 头像生成开始（创建角色时生成头像/背景图） |
+| `avatar_generation_success` | AvatarGenerateViewModel.kt | 头像生成成功 |
+| `avatar_generation_failure` | AvatarGenerateViewModel.kt | 头像生成失败 |
 
 ### 页面访问
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数。MainPage/HomePage 还包含 `default_home_tab_index`、`default_home_tab_name`、`current_tab_index`、`current_tab_name` 参数） |
+| `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数。MainPage/HomePage 还包含 `default_home_tab`、`current_tab` 参数） |
+| `chat_page_view` | ChatPage.kt | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，用于分析用户访问 ChatPage 的来源和配置） |
 | `duration` | PageTrackingHelper.kt | 页面停留时长（页面离开时上报，记录 `page_name` 和 `duration`） |
 
 **页面来源参数说明：**
@@ -48,10 +52,8 @@
   - **ChatPage**：`chat_activity`（在 ChatActivity 中）、`main_activity_home_tab`（在 MainActivity 的 HorizontalPager 中）、`from_previous_agent`（在 HorizontalPager 中从上一个 agent 滑动而来）
 
 **首页 Tab 参数说明（MainPage/HomePage）：**
-- `default_home_tab_index`：默认首页 tab 索引（数值类型，0=Chat, 3=Explore 等）
-- `default_home_tab_name`：默认首页 tab 名称（字符串类型，chat/explore/other）
-- `current_tab_index`：当前选中的 tab 索引（数值类型，HomePage 事件）
-- `current_tab_name`：当前选中的 tab 名称（字符串类型，chat/conversation/create/explore/profile，HomePage 事件）
+- `default_home_tab`：默认首页 tab 名称（字符串类型，值为 "chat"/"explore"/"other"，MainPage/HomePage 事件）
+- `current_tab`：当前选中的 tab 名称（字符串类型，值为 "chat"/"conversation"/"create"/"explore"/"profile"，HomePage 事件）
 
 ### Explore 数据加载
 | 事件名称 | 使用位置 | 业务含义 |
@@ -69,9 +71,10 @@
 ### 用户交互
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | 聊天页面点击（通过 `click_type` 区分：`voice_play`、`keep_talking`、`message_like`、`message_dislike`） |
+| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | 聊天页面点击（通过 `click_type` 区分：`voice_play`、`keep_talking`、`message_like`、`message_dislike`，参数包含：`agent_id`、`agent_name`、`message_id`、`message_length`、`has_generated_image`、`is_opening`、`user_type`、`is_auto_play`、`timestamp`） |
 | `chat_sidebar_click` | ChatSettingsDrawer.kt | 聊天侧边栏点击（通过 `click_type` 区分：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`） |
 | `chat_more_click` | ChatMorePanel.kt | 聊天更多面板点击（通过 `click_type` 区分：`reply_style`、`report`） |
+| `push_notification_click` | ChatActivity.kt | 推送通知点击 |
 
 ### 错误监控
 | 事件名称 | 使用位置 | 业务含义 |
@@ -117,8 +120,8 @@
 - `timestamp`：事件时间戳
 - `page_name`、`page_class`：页面名称和类名，用于页面追踪
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面（详见页面访问事件说明）
-- `default_home_tab_index`、`default_home_tab_name`：默认首页 tab 索引和名称（MainPage/HomePage 事件），用于分析用户默认进入的 tab（chat/explore 等）
-- `current_tab_index`、`current_tab_name`：当前选中的 tab 索引和名称（HomePage 事件），用于分析用户实际访问的 tab
+- `default_home_tab`：默认首页 tab 名称（MainPage/HomePage 事件，值为 "chat"/"explore"/"other"），用于分析用户默认进入的 tab
+- `current_tab`：当前选中的 tab 名称（HomePage 事件，值为 "chat"/"conversation"/"create"/"explore"/"profile"），用于分析用户实际访问的 tab
 - `remote_config_auto_enable_keep_talking`、`remote_config_auto_play_opening_voice`、`remote_config_home_page_default_tab_index`：Remote Config 配置参数（APP_OPEN 事件），用于分析 Remote Config 配置对用户行为的影响
 
 ### Explore 参数
@@ -136,7 +139,6 @@
 ### 图片生成参数
 - `agent_id`、`agent_name`：Agent信息
 - `message_id`：消息ID（要生成图片的消息）
-- `image_url`：生成的图片URL（成功时）
 - `image_width`、`image_height`：生成的图片尺寸（成功时）
 - `generation_time_ms`：图片生成耗时（毫秒，从发起请求到收到响应）
 - `error_code`、`error_message`：错误码和错误消息（失败时，异常类型信息在 `error_message` 中，格式：`exception: ClassName, ...`）
@@ -153,7 +155,7 @@
 - `has_generated_image`：是否有生成的图片
 - `is_opening`：是否为开场消息
 - `user_type`：用户类型（vip/free）
-- `message_timestamp`：消息时间戳
+- `is_auto_play`：是否自动播放（chat_page_click 事件中的 voice_play 类型）
 - `enabled`：开关状态（chat_sidebar_click事件中的开关操作）
 
 ### 性能参数

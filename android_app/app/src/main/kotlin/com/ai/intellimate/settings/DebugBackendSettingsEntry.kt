@@ -1,15 +1,18 @@
 package com.ai.intellimate.settings
 
+import ai.sxwl.android.design.ui.SettingsItemGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,10 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.intellimate.ui.components.SettingSection
 
 private object Spacing {
-    val SectionTopPadding = 16.dp
     val ContentHorizontalPadding = 12.dp
     val SmallSpacer = 4.dp
     val MediumSpacer = 12.dp
@@ -42,11 +43,8 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
     val viewModel: DebugBackendSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    SettingSection(modifier = modifier.padding(top = Spacing.SectionTopPadding)) {
-        Column(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = Spacing.ContentHorizontalPadding)
-        ) {
+    SettingsItemGroup {
+        Column(modifier = Modifier.fillMaxWidth().padding(Spacing.ContentHorizontalPadding)) {
             Text(
                 text = "当前构建类型：${uiState.buildType}",
                 color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
@@ -76,6 +74,33 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
 
             Spacer(Modifier.height(Spacing.MediumSpacer))
             TextButton(onClick = viewModel::resetOverride) {
+                Text(text = "恢复默认", color = Color.White)
+            }
+
+            // Remix 按钮可见性配置
+            Spacer(Modifier.height(Spacing.MediumSpacer * 2))
+            Text(
+                text = "Remix 按钮可见性",
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = if (uiState.remixButtonVisible) "可见" else "隐藏",
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                )
+                Switch(
+                    checked = uiState.remixButtonVisible,
+                    onCheckedChange = { viewModel.toggleRemixButton() },
+                )
+            }
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            TextButton(onClick = viewModel::resetRemixButtonOverride) {
                 Text(text = "恢复默认", color = Color.White)
             }
         }

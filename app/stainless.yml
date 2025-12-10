@@ -97,13 +97,10 @@ resources:
                   list: get /api/v1/ai/agents/me
                   search: get /api/v1/ai/agents/search
                   recommend: get /api/v1/ai/agents/recommend
-                  following: get /api/v1/ai/agents/following
                   create: post /api/v1/ai/agents
                   retrieve: get /api/v1/ai/agents/{agent_id}
                   update: put /api/v1/ai/agents/{agent_id}
                   delete: delete /api/v1/ai/agents/{agent_id}
-                  follow_agent: post /api/v1/ai/agents/{agent_id}/follow
-                  unfollow_agent: delete /api/v1/ai/agents/{agent_id}/follow
                 subresources:
                   image_generation:
                     subresources:
@@ -127,19 +124,9 @@ resources:
               get_status: get /api/v1/subscription/status
               get_usage: get /api/v1/subscription/usage
               verify: post /api/v1/subscription/verify
-              webhook: post /api/v1/subscription/webhook
             subresources:
               admin:
-                methods:
-                  process_refund: post /api/v1/subscription/admin/refund
                 subresources:
-                  plans:
-                    models:
-                      subscription_plan: "#/components/schemas/SubscriptionPlan"
-                      subscription_plan_type: "#/components/schemas/SubscriptionPlanType"
-                    methods:
-                      create: post /api/v1/subscription/admin/plans
-                      list: get /api/v1/subscription/admin/plans
                   users:
                     methods:
                       get_subscription_status: get /api/v1/subscription/admin/users/{user_id}/subscription
@@ -166,9 +153,18 @@ resources:
                   generate_message_voice: post /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice
                   update_settings: put /api/v1/chats/agents/{agent_id}/settings
                   get_settings: get /api/v1/chats/agents/{agent_id}/settings
+                  clear_messages: post /api/v1/chats/agents/{agent_id}/clear-messages
           text_to_speech:
             methods:
               list_voices: get /api/v1/text-to-speech/list-voices
+          character_themes:
+            models:
+              api_response_list_character_theme: "#/components/schemas/APIResponse_List_CharacterTheme__"
+              character_theme: "#/components/schemas/CharacterTheme"
+              character_theme_agent: "#/components/schemas/CharacterThemeAgent"
+              character_theme_visibility: "#/components/schemas/CharacterThemeVisibility"
+            methods:
+              list: get /api/v1/character-themes/
   v2:
     subresources:
       chat:

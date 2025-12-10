@@ -1,7 +1,11 @@
 package com.ai.intellimate
 
+import CheckInRepository
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.common.event.EventBus
+import ai.sxwl.android.common.event.EventSubscriber
+import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.GoogleLoginRequest
 import ai.sxwl.android.data.billing.BillingRepository
@@ -16,7 +20,6 @@ import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -41,16 +44,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.components.EmailLoginButton
+import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
+import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
+import com.ai.intellimate.xb.navigation.AppNavHost
+import com.ai.intellimate.xb.navigation.Routes
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -69,6 +79,14 @@ class MainActivity : BaseActivity() {
     private var hasInitializedUserData = false
     private var billingEventCollectJob: Job? = null
     private var hasHandledNotificationIntent = false // 防止重复处理通知 Intent
+    private var isAppInForeground = false // App是否在前台
+
+    private val feedbackRequestSubscriber =
+        object : EventSubscriber<PushNotificationEvent.MessageReceived> {
+            override fun onEvent(event: PushNotificationEvent.MessageReceived) {
+                handleFeedbackRequestMessage(event)
+            }
+        }
 
     // 延迟时间常量
     private companion object {
@@ -98,33 +116,42 @@ class MainActivity : BaseActivity() {
             return
         }
 
-        // 追踪页面访问，包含默认首页 tab index
+        // 追踪页面访问，包含默认首页 tab
         val defaultTabIndex =
             try {
                 FirebaseManager.getRemoteConfigLong(
-                    FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
-                ).toInt()
+                        FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
+                    )
+                    .toInt()
             } catch (e: Exception) {
                 0 // 默认值：Chat tab
+            }
+        val defaultTabName =
+            when (defaultTabIndex) {
+                0 -> "chat"
+                3 -> "explore"
+                else -> "other"
             }
         PageTrackingHelper.trackPageView(
             "MainPage",
             "MainActivity",
-            mapOf(
-                "default_home_tab_index" to defaultTabIndex,
-                "default_home_tab_name" to
-                        if (defaultTabIndex == 0) "chat" else if (defaultTabIndex == 3) "explore" else "other",
-            ),
+            mapOf("default_home_tab" to defaultTabName),
         )
 
         // 设置返回拦截功能
         setupBackInterception()
+
+        // 订阅反馈请求消息
+        EventBus.subscribe(PushNotificationEvent.MessageReceived::class, feedbackRequestSubscriber)
 
         hasInitializedConfig = true
 
         // 如果用户已登录，立即加载用户数据（应用恢复场景）
         // 如果用户未登录，数据加载会在 LaunchedEffect(isLoggedIn) 中处理
         loadUserDataIfLoggedIn()
+
+        // 用户签到数据初始化
+        CheckInRepository.initialize(this)
     }
 
     /** 检查登录状态是否有效 */
@@ -302,40 +329,42 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        when {
-            !isLoggedIn -> {
-                // 用户未登录，显示登录界面
-                SplashLoginUI(mainViewModel = mainViewModel)
-            }
-
-            showSettings -> {
-                // 显示设置界面
-                com.ai.intellimate.settings.SettingContent(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
-                    onBack = { mainViewModel.hideSettings() },
-                    onLogout = { isDelete ->
-                        mainViewModel.logout()
-                        chatViewModel.clearAllData()
-                        val str =
-                            if (isDelete) getString(R.string.delete_account_successfully)
-                            else getString(R.string.logout_successfully)
-                        ai.sxwl.android.utils.ToastUtils.showShort(str)
-                    },
-                )
-            }
-
-            else -> {
-                // 用户已登录，显示主界面
-                HomeScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    mainViewModel = mainViewModel,
-                    viewModelFactory = defaultViewModelProviderFactory,
-                )
-            }
-        }
+        //        when {
+        //            !isLoggedIn -> {
+        //                // 用户未登录，显示登录界面
+        //                SplashLoginUI(mainViewModel = mainViewModel)
+        //            }
+        //
+        //            showSettings -> {
+        //                // 显示设置界面
+        //                com.ai.intellimate.settings.SettingScreen(
+        //                    modifier =
+        //                        Modifier.fillMaxSize()
+        //
+        // .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
+        //                    onBack = { mainViewModel.hideSettings() },
+        //                    onLogout = { isDelete ->
+        //                        mainViewModel.logout()
+        //                        chatViewModel.clearAllData()
+        //                        val str =
+        //                            if (isDelete) getString(R.string.delete_account_successfully)
+        //                            else getString(R.string.logout_successfully)
+        //                        ai.sxwl.android.utils.ToastUtils.showShort(str)
+        //                    },
+        //                )
+        //            }
+        //
+        //            else -> {
+        //                // 用户已登录，显示主界面
+        //                HomeScreen(
+        //                    modifier = Modifier.fillMaxSize(),
+        //                    mainViewModel = mainViewModel,
+        //                    viewModelFactory = defaultViewModelProviderFactory,
+        //                )
+        //            }
+        //        }
+        val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
+        AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory)
     }
 
     /** 设置返回拦截功能 */
@@ -383,17 +412,21 @@ class MainActivity : BaseActivity() {
         velocityX: Float,
         velocityY: Float,
     ): Boolean {
-        // 检查是否从左边缘开始滑动
+        // 检查是否从左右边缘开始滑动
+        val screenWidth = resources.displayMetrics.widthPixels
         val isFromLeftEdge = e1.x <= EDGE_THRESHOLD
+        val isFromRightEdge = e1.x >= screenWidth - EDGE_THRESHOLD
 
         // 检查滑动距离和速度
         val deltaX = e2.x - e1.x
-        val isRightSwipe = deltaX > MIN_DISTANCE && velocityX > MIN_VELOCITY
+        val isLeftEdgeSwipe = isFromLeftEdge && deltaX > MIN_DISTANCE && velocityX > MIN_VELOCITY
+        val isRightEdgeSwipe =
+            isFromRightEdge && deltaX < -MIN_DISTANCE && velocityX < -MIN_VELOCITY
 
         // 确保是水平滑动（垂直速度不能太大）
         val isHorizontalSwipe = abs(velocityX) > abs(velocityY) * 2
 
-        return isFromLeftEdge && isRightSwipe && isHorizontalSwipe
+        return (isLeftEdgeSwipe || isRightEdgeSwipe) && isHorizontalSwipe
     }
 
     /** 处理返回事件（按键返回或手势返回） */
@@ -401,6 +434,9 @@ class MainActivity : BaseActivity() {
         // 如果显示设置界面，先关闭设置界面
         if (mainViewModel.showSettings.value) {
             mainViewModel.hideSettings()
+            return
+        }
+        if (mainViewModel.isLoggedIn.value && mainViewModel.navigateBackToPreviousTab()) {
             return
         }
         // 否则按原来的逻辑处理（双击退出）
@@ -414,6 +450,7 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        isAppInForeground = true
 
         // 检查登录状态变化（用于响应手动logout或401自动logout后的应用重启）
         val currentLoginState = isUserLoggedIn()
@@ -438,26 +475,72 @@ class MainActivity : BaseActivity() {
 
     override fun onPause() {
         super.onPause()
+        isAppInForeground = false
         // 暂停音频播放
         chatViewModel.pauseVoicePlayback()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        // 取消订阅反馈请求消息
+        EventBus.unsubscribe(
+            PushNotificationEvent.MessageReceived::class,
+            feedbackRequestSubscriber,
+        )
         // 清理返回按键处理器
         backPressHandler.cleanup()
         // 清理 Billing 事件监听
         billingEventCollectJob?.cancel()
         billingEventCollectJob = null
     }
+
+    /** 处理反馈请求消息 */
+    private fun handleFeedbackRequestMessage(event: PushNotificationEvent.MessageReceived) {
+        if (event.type != FCMConstants.TYPE_FEEDBACK_REQUEST) {
+            return
+        }
+
+        // 只有在App在前台时才显示弹窗
+        if (isAppInForeground) {
+            LogUtils.d("MainActivity", "收到 feedback_request 消息，App在前台，显示弹窗")
+            mainViewModel.showFeedbackRequestDialog()
+        } else {
+            LogUtils.d("MainActivity", "收到 feedback_request 消息，App不在前台，不显示弹窗")
+        }
+    }
+}
+
+private fun reportLoginFailure(errorType: String, errorMessage: String?, exception: Throwable?) {
+    FirebaseManager.logEvent(
+        FirebaseManager.Events.AUTH_FAILURE,
+        FirebaseManager.safeEventParams(
+            "error_type" to errorType,
+            "error_message" to (errorMessage?.take(100) ?: "unknown"),
+            "login_method" to "google",
+        ),
+    )
+    exception?.let { FirebaseManager.recordException(it, mapOf("error_type" to errorType)) }
+}
+
+/** 登录页面状态 */
+private enum class LoginScreenState {
+    MAIN,
+    ENTER_EMAIL,
+    LOGIN_WITH_EMAIL,
 }
 
 /** Splash 登录界面 - 集成 Google 登录按钮和隐私政策 */
 @Composable
-private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainViewModel) {
+fun SplashLoginUI(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    mainViewModel: MainViewModel,
+) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
+    var loginScreenState by remember { mutableStateOf(LoginScreenState.MAIN) }
+    var enteredEmail by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
     fun performGoogleSignIn() {
@@ -535,6 +618,7 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
 
                             is com.architecture.httplib.core.HttpResult.Failure -> {
                                 LogUtils.e("Google login failed: ${loginResult.message}")
+                                reportLoginFailure("backend_error", loginResult.message, null)
                                 com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
                                     loginResult.message
                                 )
@@ -542,32 +626,45 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
                         }
                     },
                     onFailure = { exception ->
-                        // 检查是否为用户取消操作，如果是则不显示错误提示
                         when (exception) {
                             is androidx.credentials.exceptions.GetCredentialCancellationException -> {
-                                // 用户取消登录，无需记录日志
+                                // 用户取消登录，无需处理
                             }
 
                             is androidx.credentials.exceptions.GetCredentialInterruptedException -> {
-                                // 登录过程被中断，无需记录日志
+                                // 登录过程被中断，无需处理
+                            }
+
+                            is GoogleIdTokenParsingException -> {
+                                val errorMessage = context.getString(R.string.invalid_google_token)
+                                LogUtils.e("Google ID token parsing failed: ${exception.message}")
+                                reportLoginFailure(
+                                    "token_parsing_error",
+                                    exception.message,
+                                    exception,
+                                )
+                                coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
 
                             is androidx.credentials.exceptions.NoCredentialException -> {
                                 val errorMessage =
                                     context.getString(R.string.no_credentials_available)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                reportLoginFailure("no_credential", errorMessage, exception)
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
 
                             is androidx.credentials.exceptions.GetCredentialException -> {
                                 val errorMessage = context.getString(R.string.get_credential_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                reportLoginFailure("get_credential_error", errorMessage, exception)
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
 
                             else -> {
                                 val errorMessage = context.getString(R.string.login_failed)
                                 LogUtils.e("Credential Manager sign-in failed: $errorMessage")
+                                reportLoginFailure("unknown_error", exception.message, exception)
                                 coroutineScope.launch { ToastUtils.showShort(errorMessage) }
                             }
                         }
@@ -579,37 +676,154 @@ private fun SplashLoginUI(modifier: Modifier = Modifier, mainViewModel: MainView
         }
     }
 
-    Box(modifier) {
-        Image(
-            modifier = Modifier.fillMaxSize(),
-            painter = painterResource(R.drawable.app_bg),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter,
-            contentDescription = "",
-        )
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Image(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(10.dp)),
-                painter = painterResource(R.drawable.icon_splash_icon),
-                contentDescription = "",
-                contentScale = ContentScale.Crop,
+    when (loginScreenState) {
+        LoginScreenState.MAIN -> {
+            Box(modifier) {
+                Image(
+                    modifier = Modifier.fillMaxSize(),
+                    painter = painterResource(R.drawable.app_bg),
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    contentDescription = "",
+                )
+                Column(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Image(
+                        modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
+                        painter = painterResource(R.drawable.icon_splash_icon),
+                        contentDescription = "",
+                        contentScale = ContentScale.Crop,
+                    )
+                    Spacer(modifier = Modifier.height(120.dp))
+
+                    // Google 登录按钮
+                    GoogleLoginButton(
+                        isLoading = isLoading,
+                        onLoginClick = { performGoogleSignIn() },
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Email 登录按钮
+                    EmailLoginButton(
+                        isLoading = isLoading,
+                        onLoginClick = { loginScreenState = LoginScreenState.ENTER_EMAIL },
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 隐私政策文本
+                    com.ai.intellimate.ui.components.PolicyText()
+
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
+            }
+        }
+
+        LoginScreenState.ENTER_EMAIL -> {
+            EnterEmailScreen(
+                onBack = { loginScreenState = LoginScreenState.MAIN },
+                onContinue = { email ->
+                    enteredEmail = email
+                    loginScreenState = LoginScreenState.LOGIN_WITH_EMAIL
+                },
+                initialEmail = enteredEmail,
             )
-            Spacer(modifier = Modifier.height(120.dp))
+        }
 
-            // Google 登录按钮
-            GoogleLoginButton(isLoading = isLoading, onLoginClick = { performGoogleSignIn() })
+        LoginScreenState.LOGIN_WITH_EMAIL -> {
+            LoginWithEmailScreen(
+                email = enteredEmail,
+                onBack = { loginScreenState = LoginScreenState.ENTER_EMAIL },
+                onLogin = { email, password ->
+                    performEmailLogin(email, password, context, mainViewModel, coroutineScope) {
+                        isLoading = it
+                    }
+                },
+                isLoading = isLoading,
+            )
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(24.dp))
+/** Email + Password 登录函数 */
+private fun performEmailLogin(
+    email: String,
+    password: String,
+    context: android.content.Context,
+    mainViewModel: MainViewModel,
+    coroutineScope: CoroutineScope,
+    setLoading: (Boolean) -> Unit,
+) {
+    coroutineScope.launch {
+        setLoading(true)
+        try {
+            val loginResult =
+                NetServiceMgr.getUserApi()
+                    .loginByGoogle(GoogleLoginRequest(email = email, password = password))
 
-            // 隐私政策文本
-            com.ai.intellimate.ui.components.PolicyText()
+            when (loginResult) {
+                is com.architecture.httplib.core.HttpResult.Success -> {
+                    val token = loginResult.data.token
+                    val userProfile = loginResult.data.user
 
-            Spacer(modifier = Modifier.height(80.dp))
+                    // 保存用户信息和 token
+                    IntySetting.login(userProfile.id, token)
+                    com.ai.intellimate.utils.UserProfileManager.saveUserProfile(userProfile)
+
+                    // 立即设置 Firebase user_id 用户属性
+                    FirebaseManager.setUserProperty(
+                        FirebaseManager.UserProperties.USER_ID,
+                        userProfile.id,
+                    )
+
+                    // 上报用户登录事件
+                    FirebaseManager.logEvent(
+                        FirebaseManager.Events.LOGIN,
+                        FirebaseManager.safeEventParams(
+                            "user_id" to userProfile.id,
+                            "user_name" to (userProfile.nickname),
+                            "login_method" to "email",
+                            "timestamp" to System.currentTimeMillis(),
+                        ),
+                    )
+
+                    // 登录成功后，主动获取并上报 FCM Token
+                    mainViewModel.uploadFCMTokenAfterLogin()
+
+                    // 检查用户信息是否完整（年龄和性别）
+                    val needsRegInfo =
+                        userProfile.gender.isNullOrEmpty() ||
+                            userProfile.ageGroup.isNullOrEmpty() ||
+                            userProfile.ageGroup == "<18"
+
+                    // 显示登录成功提示
+                    ToastUtils.showShort(R.string.login_successfully)
+
+                    mainViewModel.updateLoginState()
+                    UnifiedStartupManager.markUserAccountReady()
+
+                    if (needsRegInfo) {
+                        com.ai.intellimate.login.RegInfoActivity.launch(context)
+                    }
+                }
+
+                is com.architecture.httplib.core.HttpResult.Failure -> {
+                    LogUtils.e("Email login failed: ${loginResult.message}")
+                    reportLoginFailure("backend_error", loginResult.message, null)
+                    com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
+                        loginResult.message
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("Email login error: ${e.message}")
+            reportLoginFailure("unknown_error", e.message, e)
+            ToastUtils.showShort(R.string.login_failed)
+        } finally {
+            setLoading(false)
         }
     }
 }

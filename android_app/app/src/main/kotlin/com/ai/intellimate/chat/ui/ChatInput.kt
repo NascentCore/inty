@@ -1,11 +1,17 @@
 package com.ai.intellimate.chat.ui
 
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -47,7 +52,6 @@ fun ChatInput(
     focusRequester: FocusRequester? = null,
     onFocusChange: (Boolean) -> Unit = {},
 ) {
-    val context = LocalContext.current
     val inputData = chatViewModel.inputData.collectAsState()
     val inputSelection = chatViewModel.inputSelection.collectAsState()
     val isInputFocused = remember { mutableStateOf(false) }
@@ -55,6 +59,9 @@ fun ChatInput(
     // 键盘弹出状态跟踪
     // 获取agent信息用于事件上报
     val agentInfo by chatViewModel.agentInfo.collectAsState()
+
+    // Show scene action button全局设置
+    val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
 
     val horizontalPadding = 16.dp
     val topPadding = 16.dp
@@ -74,12 +81,21 @@ fun ChatInput(
         // 主输入区域
         Box(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).wrapContentHeight()) {
             IntySmallTextField(
-                modifier = Modifier.padding(end = 38.dp).align(Alignment.Center),
+                modifier = Modifier.padding(end = TrailingControlsPadding).align(Alignment.Center),
                 value = inputData.value,
                 singleLine = false,
                 placeholder = {
+                    val placeholderText =
+                        if (showSceneActionButton) {
+                            stringResource(R.string.chat_input_with_scene_action_placeholder)
+                        } else {
+                            val defaultName = stringResource(R.string.chat_ai_typing_default_name)
+                            val targetName = agentInfo.firstNameOrNull() ?: defaultName
+                            stringResource(R.string.chat_input_placeholder, targetName)
+                        }
+
                     Text(
-                        text = stringResource(R.string.chat_input_placeholder),
+                        text = placeholderText,
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.5f),
                     )
@@ -100,7 +116,7 @@ fun ChatInput(
                 },
                 selection = inputSelection.value,
                 maxLines = 4,
-                maxLength = 500,
+                maxLength = CHAT_INPUT_MAX_LENGTH,
                 focusRequester = focusRequester,
             )
 
@@ -110,7 +126,27 @@ fun ChatInput(
             val verticalPadding = 13.dp
             val rightPadding = 8.dp
             // 发送/更多按钮区域
-            MultiUseAccessButton(
+            val onSceneActionClick: () -> Unit = {
+                val templateLength = SCENE_ACTION_TEMPLATE.length
+                val currentText = chatViewModel.inputData.value
+                if (currentText.length > CHAT_INPUT_MAX_LENGTH - templateLength) {
+                    ToastUtils.showShort(R.string.str_message_is_too_long)
+                } else {
+                    val safeSelection = inputSelection.value.coerceIn(0, currentText.length)
+                    val newText =
+                        buildString(currentText.length + templateLength) {
+                            append(currentText.substring(0, safeSelection))
+                            append(SCENE_ACTION_TEMPLATE)
+                            append(currentText.substring(safeSelection))
+                        }
+                    chatViewModel.inputData.value = newText
+                    chatViewModel.inputSelection.value = safeSelection + 1
+                    focusRequester?.requestFocus()
+                }
+            }
+
+            val buttonSize = 30.dp
+            Row(
                 modifier =
                     Modifier.align(Alignment.BottomEnd)
                         .padding(
@@ -118,12 +154,20 @@ fun ChatInput(
                             top = verticalPadding,
                             bottom = verticalPadding,
                         ),
-                buttonSize = 30.dp,
-                hasInput = inputData.value.isNotEmpty(),
-                showMorePanel = showMorePanel,
-                onSendMessage = onSendMessage,
-                onToggleMorePanel = onToggleMorePanel,
-            )
+                horizontalArrangement = Arrangement.spacedBy(SceneActionButtonSpacing),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                if (showSceneActionButton) {
+                    SceneActionQuickButton(buttonHeight = buttonSize, onClick = onSceneActionClick)
+                }
+                MultiUseAccessButton(
+                    buttonSize = buttonSize,
+                    hasInput = inputData.value.isNotEmpty(),
+                    showMorePanel = showMorePanel,
+                    onSendMessage = onSendMessage,
+                    onToggleMorePanel = onToggleMorePanel,
+                )
+            }
         }
     }
 }
@@ -163,4 +207,41 @@ private fun MultiUseAccessButton(
             )
         }
     }
+}
+
+@Composable
+private fun SceneActionQuickButton(
+    modifier: Modifier = Modifier,
+    buttonHeight: Dp,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            modifier
+                .height(buttonHeight)
+                .clip(RoundedCornerShape(buttonHeight / 2))
+                .background(Color.White.copy(alpha = 0.12f))
+                .noRippleClickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            modifier = Modifier.padding(horizontal = 10.dp),
+            text = SCENE_ACTION_TEMPLATE,
+            color = Color.White,
+            fontSize = 14.sp,
+        )
+    }
+}
+
+private val TrailingControlsPadding = 104.dp
+private val SceneActionButtonSpacing = 6.dp
+private val NameDelimiterRegex = "\\s+".toRegex()
+private const val SCENE_ACTION_TEMPLATE = "()"
+private const val CHAT_INPUT_MAX_LENGTH = 500
+
+private fun AgentInfo?.firstNameOrNull(): String? {
+    val rawName = this?.name?.trim().orEmpty()
+    if (rawName.isBlank()) return null
+    val firstToken = NameDelimiterRegex.split(rawName).firstOrNull { it.isNotBlank() }
+    return firstToken ?: rawName
 }

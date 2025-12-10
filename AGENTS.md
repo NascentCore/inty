@@ -1,5 +1,11 @@
 # Inty 长期 AI 陪伴
 
+## Alembic
+
+- 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
+- 修改数据库表 schema 应该单独进行，不要与其他改动混合，这样保证 alembic version 可以快速同步，不会因为 2 个人改 version 文件，导致出现非线性线索。
+  比如，当前 alembic head revision 为 1，如果改动 A 改动 B 同时在修改数据库，则会导致 2 个并行 version 文件都依赖 revisoin 1
+
 ## 代码库结构
 
 - `android_app/` IntelliMate, android app code，kotlin compose jetpack
@@ -24,6 +30,8 @@
 - Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
 - Always review the changes afterwards
 - 新建任意文件时，需在适当格式中加入 `CREATED_BY_AGENT` 标记，用于记录创建者身份。
+- 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
+- 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
 
 ## 提交与变更请求记录规范
 
@@ -33,6 +41,8 @@
 - 不要写关于改动内容的 summary markdown 文件
 
 ## Coding style
+
+- 各类语言函数体不应该超过 50 行，100 行以上的函数应该拆分为细分函数，50-100 行之间酌情处理
 
 ### Do not repeat in comments what's already obvious in the code
 
@@ -81,6 +91,7 @@ else:
 - 测试用例目录不应被声明为包：包含 `test_*.py` 的测试目录不要放置 `__init__.py`；但用于复用的测试辅助库目录应当作为包存在，并包含 `__init__.py`。
 - 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）
 - 严进向已有的 __init__.py 内添加新的代码
+- 使用 cyclopts 来暴露 scripts 命令行界面
 
 ## Android App
 

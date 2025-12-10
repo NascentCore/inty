@@ -9,31 +9,38 @@ import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl
 
-# All config classes' fields should have default values.
-# These default value allow this to be used without an actual config file.
-# Since config object is used as a global singleton, most code depends on it,
-# but does not actually use the config values, so a default value is OK.
+# 所有配置项必须有默认值，防止出现校验失败。
+# 这些默认值允许在没有实际配置文件的情况下使用。
+# 因为 config 对象被用作全局单例，大部分代码依赖它，但并不实际使用配置值，所以默认值是可以的。
+# 但是所有默认值都应该假设在生产环境中使用。
 #
-# All default values should be assumed to be used in production environment.
-# config.yaml.example is a sample for development environment.
+# 废弃某个配置项时的步骤：
+# 1. 删除该配置项在 Python 代码中的使用，部署、发布验证一切正常。
+# 2. 删除该配置项在 devops/config.yaml.<env> 中的使用，部署、发布验证一切正常。
+# 3. 【如有必要】删除该配置项在 app 客户端相关的使用，部署、发布验证一切正常。
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-# API 路由前缀常量移动到 app.api.constants
-from app.api.constants import API_V1_PREFIX
 
 
 class Environment(str, Enum):
-    """Environment enum for application deployment environments."""
+    """指明该后端实例运行的环境，对应不同的配置文件，位于 devops/config.yaml.<environment>。"""
 
-    DEV = "dev"
-    PROD = "prod"
+    # 部署在测试环境中，用于测试。
+    # 使用本地数据库，依赖的外部服务均为假的本地实现（位于 app/external_services/fakes/），
+    # 只能返回固定结果，需要手动修改来改变其返回值。
     TEST = "test"
+
+    # 部署在本地与 app 同在同一个局域网内，用于本地开发、测试。
+    # 使用本地数据库，依赖的外部服务（GCS、Firebase、ElevenLabs等）仍然是真实的。
     LOCAL = "local"
-    UNSPECIFIED = "unspecified"
 
+    # 部署在共享的开发环境中，用于开发、测试。
+    # 使用共享的开发数据库，同时依赖的外部服务如 GCS、Firebase、ElevenLabs 与生产环境一致。
+    DEV = "dev"
 
-from app.api.constants import API_V2_PREFIX
+    # 部署在生产环境中，用于支持公开用户在互联网上访问。
+    PROD = "prod"
 
 
 @dataclass
@@ -95,6 +102,10 @@ class VerificationConfig:
 @dataclass
 class APIEndpointsConfig:
     disable_api_v1_chat_completions: bool = False
+    # 使用虚假的 Google 登录接口，用于测试，设为 True 时可以在 auth.py 中直接定义返回值来支持 app 前端测试。
+    use_dummy_api_v1_auth_google_login: bool = False
+    use_dummy_api_v1_character_themes_get: bool = False
+    use_dummy_api_v1_character_themes_id_get: bool = False
 
 
 @dataclass
@@ -106,12 +117,11 @@ class AppConfig:
     debug_messages: bool = True
     # Use JSON format for request/response logging. Default is True (JSON format).
     use_json_log_format: bool = True
-    # DEPRECATED: Do not use.
-    api_v1_prefix: str = API_V1_PREFIX
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
     environment: Environment = Environment.DEV
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
+    api_v1_prefix: str = "/api/v1"
 
     api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
 
@@ -209,6 +219,7 @@ class GooglePlayConfig:
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
     # 版本检查相关配置
     enable_version_check: bool = True  # 是否启用版本检查
+    # DEPRECATED: 未被使用过。使用 force_update_version_code_gap 替代，可以取得类似的效果。
     min_supported_version: int = 1  # 最低支持版本代码
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
@@ -216,12 +227,13 @@ class GooglePlayConfig:
     # DEPRECATED: 未被使用过。
     # 删除部署环境中的配置文件使用，然后删除这个代码。
     fallback_tracks: List[str] = None  # 备用轨道列表
-    # 新增版本检查配置
+    # DEPRECATED: 不检查 version name，只检查 version code，这样使用简单的线性递增逻辑，很容易理解。
     max_minor_version_gap: int = 10  # Minor版本号最大差距，超过则强制更新
-
-    def __post_init__(self):
-        if self.fallback_tracks is None:
-            self.fallback_tracks = ["production", "internal"]
+    # 版本代码差距阈值配置；线性递增的多个阈值，超过某个阈值意味着之前超越的阈值的动作都会在 app 端执行。
+    # 比如，触发 popup_reminder_version_code_gap 动作，意味着 settings reminder 与 popup reminder 都会在 app 端执行。
+    force_update_version_code_gap: int = 1000  # 版本代码差距超过此值则强制更新
+    popup_reminder_version_code_gap: int = 200  # 版本代码差距在此值以上则显示弹窗提醒
+    settings_reminder_version_code_gap: int = 10  # 版本代码差距在此值以上则显示设置提醒
 
 
 @dataclass

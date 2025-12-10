@@ -3,10 +3,12 @@ package ai.sxwl.android.design.ui
 import ai.sxwl.android.design.R
 import ai.sxwl.android.design.noRippleClickable
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +17,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -119,22 +124,36 @@ fun SettingsSwitchItem(
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .height(48.dp)
+                .heightIn(min = 48.dp)
                 .then(modifier)
-                .padding(horizontal = horizontalPadding.dp)
+                .padding(horizontal = horizontalPadding.dp, vertical = 12.dp)
                 .noRippleClickable { onCheckChanged(item.checked.not()) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = item.title,
-            fontSize = 14.sp,
-            lineHeight = 24.sp, // 根据设计稿，lineHeight应该是24sp
-            fontWeight = if (fontLight) FontWeight.Normal else FontWeight.Bold,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.weight(1f))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                fontWeight = if (fontLight) FontWeight.Normal else FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (item.content.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = item.content,
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp,
+                    fontWeight = FontWeight(400),
+                    color = Color(0x8CFFFFFF),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
         // 如果提供了图标资源，使用Image；否则使用Switch
         if (openedIconRes != null && closedIconRes != null) {
             Image(
@@ -163,8 +182,11 @@ fun SettingsSwitchItem(
 sealed class SettingsItemData {
 
     /** 开关设置 */
-    data class SwitchItemData(val title: String = "", val checked: Boolean = false) :
-        SettingsItemData()
+    data class SwitchItemData(
+        val title: String = "",
+        val content: String = "",
+        val checked: Boolean = false,
+    ) : SettingsItemData()
 
     /** 普通item数据 */
     data class CommonItemData(
@@ -185,26 +207,31 @@ sealed class SettingsItemData {
 @Composable
 private fun 预览设置开关() {
     Column {
-        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("开通VIP", true))
+        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("开通VIP", "", true))
         Spacer(Modifier.height(10.dp))
-        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("一键起飞", false))
+        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("一键起飞", "", false))
         Spacer(Modifier.height(10.dp))
-        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("轻灵字体", false), true)
+        SettingsSwitchItem(item = SettingsItemData.SwitchItemData("轻灵字体", "", false), true)
         Spacer(Modifier.height(10.dp))
-        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("一键起飞", true))
+        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("一键起飞", "", true))
         Spacer(Modifier.height(10.dp))
-        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("轻灵字体", false), true)
+        SettingsCheckBoxItem(item = SettingsItemData.SwitchItemData("轻灵字体", "", false), true)
     }
 }
 
 /** 有标题和描述以及箭头的item */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsArrowItem(
     item: SettingsItemData.CommonItemData,
     fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
     horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
+    selectableContent: Boolean = false, // 是否允许选择 content 文本
+    showRedDot: Boolean = false, // 是否显示红点提示
+    contentMaxLines: Int = 2, // 限制内容展示行数，默认与之前一致
     onItemClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}, // 长按回调
 ) {
 
     val modifier =
@@ -224,10 +251,10 @@ fun SettingsArrowItem(
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .height(48.dp)
+                .heightIn(min = 48.dp)
                 .then(modifier)
-                .clickable(onClick = onItemClick)
-                .padding(horizontal = horizontalPadding.dp),
+                .combinedClickable(onClick = onItemClick, onLongClick = onLongClick)
+                .padding(horizontal = horizontalPadding.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -240,17 +267,39 @@ fun SettingsArrowItem(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(8.dp))
-        Spacer(Modifier.weight(1f))
-        Text(
-            text = item.content,
-            fontSize = 14.sp,
-            lineHeight = 22.sp,
-            fontWeight = FontWeight(400),
-            color = Color(0x8CFFFFFF),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Right,
-        )
+        Box(modifier = Modifier.weight(1f).wrapContentHeight()) {
+            if (selectableContent && item.content.isNotEmpty()) {
+                SelectionContainer {
+                    Text(
+                        text = item.content,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontSize = 14.sp,
+                        lineHeight = 22.sp,
+                        fontWeight = FontWeight(400),
+                        color = Color(0x8CFFFFFF),
+                        maxLines = contentMaxLines,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Right,
+                    )
+                }
+            } else {
+                Text(
+                    text = item.content,
+                    modifier = Modifier.fillMaxWidth(),
+                    fontSize = 14.sp,
+                    lineHeight = 22.sp,
+                    fontWeight = FontWeight(400),
+                    color = Color(0x8CFFFFFF),
+                    maxLines = contentMaxLines,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Right,
+                )
+            }
+        }
+        if (showRedDot) {
+            Spacer(Modifier.width(8.dp))
+            HeartRedDot()
+        }
         if (item.arrow) {
             Spacer(Modifier.width(8.dp))
             Image(painter = painterResource(R.drawable.ic_arrow_forward), contentDescription = "")
@@ -268,7 +317,10 @@ private fun 预览普通设置条目() {
         Spacer(Modifier.height(10.dp))
         SettingsArrowItem(item = SettingsItemData.CommonItemData("Light用户协议", "欢迎查看"), true)
         Spacer(Modifier.height(10.dp))
-        SettingsArrowItem(item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false))
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false),
+            showRedDot = true,
+        )
     }
 }
 
@@ -376,7 +428,7 @@ private fun 预览设置分组容器() {
         )
         IntelliMateDivider()
         SettingsCheckBoxItem(
-            item = SettingsItemData.SwitchItemData("轻灵字体", true),
+            item = SettingsItemData.SwitchItemData("轻灵字体", "", true),
             fontLight = true,
             isInGroup = true,
         )

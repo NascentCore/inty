@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
-from app.api.tags import INTY_EVAL_TAG
+from app.api.tags import INTY_EVAL_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 @router.get(
     "/sessions",
     response_model=List[schemas.EvaluationSessionResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_sessions(
     *,
@@ -57,7 +57,7 @@ async def get_evaluation_sessions(
 @router.post(
     "/sessions",
     response_model=schemas.EvaluationSessionResponse,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_session(
     *,
@@ -99,7 +99,7 @@ async def create_evaluation_session(
 
 @router.post(
     "/sessions/{session_id}/start",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def start_evaluation_session(
     *,
@@ -141,7 +141,7 @@ async def start_evaluation_session(
 @router.get(
     "/sessions/{session_id}",
     response_model=schemas.EvaluationSessionDetail,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_session(
     *,
@@ -177,7 +177,7 @@ async def get_evaluation_session(
 @router.get(
     "/sessions/{session_id}/results",
     response_model=List[schemas.EvaluationResultResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_results(
     *,
@@ -214,7 +214,7 @@ async def get_evaluation_results(
 
 @router.post(
     "/sessions/{session_id}/cancel",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def cancel_evaluation_session(
     *,
@@ -254,7 +254,7 @@ async def cancel_evaluation_session(
 @router.post(
     "/questions/parse",
     response_model=schemas.QuestionFileUpload,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def parse_questions_file(
     *,
@@ -309,7 +309,7 @@ async def parse_questions_file(
 @router.get(
     "/models",
     response_model=List[schemas.ScoringModelInfo],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_scoring_models(
     *,
@@ -333,7 +333,7 @@ async def get_scoring_models(
 
 @router.post(
     "/scoring-criteria/validate",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def validate_scoring_criteria(
     *,
@@ -361,7 +361,7 @@ async def validate_scoring_criteria(
 @router.get(
     "/stats",
     response_model=schemas.EvaluationStats,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_stats(
     *,
@@ -461,7 +461,7 @@ async def monitor_evaluation_session(
 @router.get(
     "/agents",
     response_model=List[schemas.Agent],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_agents(
     *,
@@ -504,7 +504,7 @@ async def get_evaluation_agents(
 @router.post(
     "/agents",
     response_model=schemas.Agent,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_agent(
     *,
@@ -538,7 +538,7 @@ async def create_evaluation_agent(
 @router.put(
     "/agents/{agent_id}",
     response_model=schemas.Agent,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def update_evaluation_agent(
     *,
@@ -582,7 +582,7 @@ async def update_evaluation_agent(
 
 @router.delete(
     "/agents/{agent_id}",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def delete_evaluation_agent(
     *,
@@ -621,9 +621,158 @@ async def delete_evaluation_agent(
         raise HTTPException(status_code=500, detail="删除智能体失败")
 
 
+@router.get(
+    "/agents/{agent_id}/check-background-aspect-ratio",
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
+)
+async def check_background_aspect_ratio(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    检查背景图是否为 9:16 比例
+
+    用于生成背景动图前验证背景图比例
+    """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        import io
+
+        import PIL.Image
+
+        from app.external_services.gcs import download_from_gcs
+        from app.services import agent_service
+        from app.services.image_transform_service import image_transform_service
+        from app.utils.image import check_aspect_ratio_9_16
+
+        # 验证 Agent 存在且用户有权限
+        agent = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        if agent.creator_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+        # 验证背景图是否存在
+        if not agent.background:
+            raise HTTPException(status_code=400, detail="请先上传背景图")
+
+        # 将背景图 URL 转换为 GCS URI 格式
+        background_url = agent.background
+        background_gcs_uri = None
+
+        # 如果是 CDN URL，先转换为 GCS URL
+        if image_transform_service.is_cloudflare_url(background_url):
+            gcs_url = image_transform_service.cloudflare_to_gcs(background_url)
+            if gcs_url:
+                gcs_path = image_transform_service.extract_gcs_path(gcs_url)
+                if gcs_path:
+                    background_gcs_uri = f"gs://{gcs_path}"
+        elif image_transform_service.is_gcs_url(background_url):
+            gcs_path = image_transform_service.extract_gcs_path(background_url)
+            if gcs_path:
+                background_gcs_uri = f"gs://{gcs_path}"
+        else:
+            background_gcs_uri = background_url
+
+        if not background_gcs_uri:
+            raise HTTPException(
+                status_code=400, detail="无法获取背景图 URL，请重新上传背景图"
+            )
+
+        # 下载图片并检查尺寸
+        image_bytes = download_from_gcs(background_gcs_uri)
+        pil_image = PIL.Image.open(io.BytesIO(image_bytes))
+        width, height = pil_image.size
+        aspect_ratio = width / height
+        is_9_16 = check_aspect_ratio_9_16((width, height))
+
+        return {
+            "is_9_16": is_9_16,
+            "width": width,
+            "height": height,
+            "aspect_ratio": round(aspect_ratio, 4),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"检查背景图宽高比失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="检查背景图宽高比失败")
+
+
+@router.post(
+    "/agents/{agent_id}/upload-cropped-background",
+    response_model=schemas.APIResponse[schemas.Agent],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
+)
+async def upload_cropped_background(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    file: UploadFile = File(...),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    上传裁剪后的背景图
+
+    替换智能体的背景图为裁剪后的 9:16 比例图片
+    """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from app.services import agent_service
+        from app.schemas.agent import AgentUpdate
+        from app.utils.image_upload import process_image_upload
+
+        # 验证 Agent 存在且用户有权限
+        agent = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        if agent.creator_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+        # 上传裁剪后的图片
+        result = await process_image_upload(
+            file=file,
+            user_id=current_user.id,
+            async_db=db,
+            base_path="backgrounds",
+            cropping_avatar=False,
+        )
+
+        if not result.data:
+            raise HTTPException(
+                status_code=400, detail=result.message or "图片上传失败"
+            )
+
+        # 更新 Agent 的背景图
+        agent_update = AgentUpdate(background=result.data.url)
+        updated_agent = await agent_service.update_agent(
+            db, db_agent=agent, agent_in=agent_update
+        )
+
+        logger.info(
+            f"用户 {current_user.id} 为智能体 {agent_id} 上传裁剪后的背景图: {result.data.url}"
+        )
+        return schemas.APIResponse.success(data=updated_agent)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"上传裁剪后的背景图失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="上传裁剪后的背景图失败")
+
+
 @router.post(
     "/agents/{agent_id}/deploy",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def deploy_agent_to_production(
     *,
@@ -665,7 +814,7 @@ async def deploy_agent_to_production(
 @router.post(
     "/templates",
     response_model=schemas.EvaluationTemplateResponse,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_template(
     *,
@@ -716,7 +865,7 @@ async def create_evaluation_template(
 @router.get(
     "/templates",
     response_model=List[schemas.EvaluationTemplateResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_templates(
     *,
@@ -766,7 +915,7 @@ async def get_evaluation_templates(
 @router.post(
     "/sessions/batch",
     response_model=List[schemas.EvaluationSessionResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_batch_evaluation(
     *,
@@ -809,7 +958,7 @@ async def create_batch_evaluation(
 
 @router.post(
     "/results/export",
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def export_evaluation_results(
     *,
@@ -846,7 +995,7 @@ async def export_evaluation_results(
 @router.post(
     "/sessions/compare",
     response_model=schemas.EvaluationComparison,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def compare_evaluation_sessions(
     *,
@@ -891,7 +1040,7 @@ async def compare_evaluation_sessions(
 @router.get(
     "/user-analytics/new-users",
     response_model=List[schemas.user_analytics.DailyNewUsersResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_new_users(
     *,
@@ -941,7 +1090,7 @@ async def get_new_users(
 @router.get(
     "/user-analytics/user-activity",
     response_model=List[schemas.user_analytics.UserChatActivityItem],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_activity(
     *,
@@ -991,7 +1140,7 @@ async def get_user_activity(
 @router.get(
     "/user-analytics/conversation-rounds",
     response_model=List[schemas.user_analytics.ConversationRoundsResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_conversation_rounds(
     *,
@@ -1041,7 +1190,7 @@ async def get_conversation_rounds(
 @router.get(
     "/user-analytics/user-rounds-distribution",
     response_model=List[schemas.user_analytics.UserRoundsDistributionItem],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_rounds_distribution(
     *,
@@ -1091,7 +1240,7 @@ async def get_user_rounds_distribution(
 @router.get(
     "/user-analytics/popular-agents",
     response_model=List[schemas.user_analytics.PopularAgentsResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_popular_agents(
     *,
@@ -1222,7 +1371,7 @@ async def get_popular_agents(
 @router.get(
     "/user-analytics/users-hitting-limit",
     response_model=List[schemas.user_analytics.UsersHittingLimitResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_users_hitting_limit(
     *,
@@ -1272,7 +1421,7 @@ async def get_users_hitting_limit(
 @router.get(
     "/user-analytics/agent-analytics",
     response_model=List[schemas.user_analytics.AgentAnalyticsResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_agent_analytics(
     *,
@@ -1322,7 +1471,7 @@ async def get_agent_analytics(
 @router.get(
     "/user-analytics/user-sessions-detail",
     response_model=List[schemas.user_analytics.UserSessionsDetailResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_sessions_detail(
     *,
@@ -1372,7 +1521,7 @@ async def get_user_sessions_detail(
 @router.get(
     "/user-analytics/conversations-detail",
     response_model=List[schemas.user_analytics.ConversationsDetailResponse],
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_conversations_detail(
     *,
@@ -1468,7 +1617,7 @@ async def get_conversations_detail(
 @router.get(
     "/user-analytics/stats",
     response_model=schemas.user_analytics.UserAnalyticsStatsResponse,
-    tags=[INTY_EVAL_TAG],
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_analytics_stats(
     *,

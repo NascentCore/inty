@@ -8,8 +8,9 @@ import sys
 import logging
 from pathlib import Path
 from character_agent import CharacterAgent
-from models import CharacterGenerationRequest
+from models import CharacterGenerationRequest, MultiStageCharacterPayload
 from config import Config
+from multistage_generator import MultiStageCharacterGenerator
 
 
 def main():
@@ -100,6 +101,12 @@ Examples:
         help="Show only character summary, not full profile",
     )
 
+    parser.add_argument(
+        "--multistage",
+        action="store_true",
+        help="Use the multistage generator (name/intro/prompts/assets)",
+    )
+
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
@@ -144,6 +151,10 @@ Examples:
         print(f"Image Style: {args.image_style}")
         print(f"Number of Images: {args.num_images}")
         print("-" * 50)
+
+        if args.multistage:
+            _run_multistage_cli(request, args, logger)
+            return
 
         # Initialize character agent
         logger.info("Initializing Character Agent...")
@@ -229,6 +240,119 @@ Examples:
         logger.exception("Full exception details:")
         print(f"❌ Unexpected error: {e}")
         sys.exit(1)
+
+
+def _run_multistage_cli(args_request, args, logger):
+    generator = MultiStageCharacterGenerator()
+    result = generator.generate(args_request)
+
+    if not result.success or not result.payload:
+        logger.error(f"Multistage pipeline failed: {result.error}")
+        print(f"❌ Multistage error: {result.error}")
+        sys.exit(1)
+
+    print("🧩 Multistage pipeline summary")
+    for stage in result.stages:
+        print(f"- {stage.title}: {stage.status.value} ({stage.duration_seconds:.2f}s)")
+
+    payload = result.payload
+    if args.summary_only:
+        _print_multistage_summary(payload)
+        return
+
+    if args.export_format == "json":
+        output_data = payload.model_dump_json(indent=2)
+    else:
+        output_data = _format_multistage_text(payload)
+
+    if args.output:
+        Path(args.output).write_text(output_data)
+        print(f"💾 Multistage payload saved to: {args.output}")
+    else:
+        print(output_data)
+
+
+def _print_multistage_summary(payload: MultiStageCharacterPayload):
+    print("📇 Identity")
+    print(f"Name: {payload.identity.name} ({payload.identity.alias})")
+    print(f"Archetype: {payload.identity.archetype}")
+    print(f"Traits: {', '.join(payload.identity.key_traits)}")
+    print("\n🎬 Conversation hooks")
+    for hook in payload.introduction.conversation_openers[:3]:
+        print(f"- {hook}")
+    print("\n🎭 Role-play prompts")
+    for prompt in payload.roleplay_prompts[:3]:
+        print(f"- {prompt.title}: {prompt.player_hook}")
+    print("\n🎧 Audio archetype")
+    print(f"{payload.audio_profile.archetype} / {payload.audio_profile.timbre}")
+
+
+def _format_multistage_text(payload: MultiStageCharacterPayload) -> str:
+    lines = [
+        f"# {payload.identity.name} · Multistage Profile",
+        "",
+        "## Identity",
+        f"- Alias: {payload.identity.alias}",
+        f"- Archetype: {payload.identity.archetype}",
+        f"- Vibe: {payload.identity.vibe}",
+        f"- Traits: {', '.join(payload.identity.key_traits)}",
+        f"- Session goal: {payload.identity.session_goal}",
+        "",
+        "## Introduction",
+        payload.introduction.elevator_pitch,
+        "",
+        payload.introduction.detailed_introduction,
+        "",
+        "### Hooks",
+        *[f"- {hook}" for hook in payload.introduction.relationship_hooks],
+        "",
+        "### Boundaries",
+        *[f"- {rule}" for rule in payload.introduction.boundaries],
+        "",
+        "## Role-play prompts",
+    ]
+
+    for prompt in payload.roleplay_prompts:
+        lines.extend(
+            [
+                f"### {prompt.title}",
+                f"{prompt.prompt}",
+                f"- NPC goal: {prompt.npc_goal}",
+                f"- Player hook: {prompt.player_hook}",
+                f"- Opening line: {prompt.sample_dialogue}",
+                f"- Tags: {', '.join(prompt.tags)}",
+                "",
+            ]
+        )
+
+    lines.append("## Image prompts")
+    for image in payload.image_prompts:
+        lines.extend(
+            [
+                f"### {image.title}",
+                image.prompt,
+                f"- Style: {image.style}",
+                f"- Camera: {image.camera}",
+                f"- Lighting: {image.lighting}",
+                f"- Palette: {image.color_palette}",
+                "",
+            ]
+        )
+
+    audio = payload.audio_profile
+    lines.extend(
+        [
+            "## Audio profile",
+            f"- Archetype: {audio.archetype}",
+            f"- Accent: {audio.accent}",
+            f"- Energy/Pace: {audio.energy} / {audio.pace}",
+            f"- Timbre: {audio.timbre}",
+            "### Sample lines",
+            *[f'- "{line}"' for line in audio.sample_lines],
+        ]
+    )
+
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":

@@ -49,69 +49,48 @@ git submodule deinit -f .
 
 # 重新拉取子模块代码
 git submodule update --init --recursive
+
+# 使用下面步骤启动后端服务
+evaluation/build.sh # 构建评测 web ui 静态文件
+cp devops/config.yaml.local config.yaml
+# 创建虚拟环境供后端 python 代码运行
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+# 启动 postgres 数据库
+docker compose up pgvector -d
+# 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
+./start.sh --dev
 ```
 
-更新子模块使用 [update_inty_sdk_submodule.sh](update_inty_sdk_submodule.sh)
+<img width="1028" height="932" alt="image" src="https://github.com/user-attachments/assets/59c52323-9ee3-4042-85ca-39344815b71c" />
 
-## 使用 Docker 容器本地运行后端服务和 Android app（适用于 app 开发者）
+### 启动 Dummy 服务
 
-1. 访问 <https://docs.docker.com/desktop/setup/install/mac-install/> 安装 Docker Desktop。
-2. 拷贝配置文件（config.yaml）及密钥文件到 inty-backend 代码库顶层目录。
+```bash
+docker compose up pgvector -d
+cp devops/config.yaml.test config.yaml
 
-    ```bash
-    git clone git@github.com:NascentCore/inty-backend.git
-    cd inty-backend
+# 修改相关 py 代码，会自动加载，无需重启
+./start.sh --dev
+```
 
-    mkdir -p .secrets
+修改 app/core/config.py 中的 APIEndpointsConfig `use_dummy_*` 等相关开关；
+找到你需要返回特定测试值的 endpoints 文件
 
-    # 拷贝 config.yaml 文件到代码库顶层目录下
-    # 拷贝 cosmic-gizmo-424300-t1-6499a9d5bd94.json inty-firebase-key.json inty-backend-key.json
-    # 这三个文件到代码库顶层目录下 .secrets/ 目录下
-    # 然后运行下面的命令，服务在 http://localhost:8000
-    docker compose up --build --detach
+用 `local` build type 来构建 Android App IntelliMate 就能访问。
+记住打开本地反向代理 `adb -s 34181JEHN02316 reverse tcp:8000 tcp:8000`
 
-    # 删除所有容器及其挂载的存储卷
-    # 如果不删除数据库卷，旧数据可能导致数据库 schema 不兼容而无法启动
-    docker compose down --volumes
-    ```
 
-3. 创建端口映射后选择 local build type 构建 Android app：
-
-   ```bash
-   adb devices
-   adb -s emulator-5554 reverse tcp:8000 tcp:8000
-   ```
-
-   <img width="600" height="1850" alt="image" src="https://github.com/user-attachments/assets/9dc4e50d-91b5-4fbf-b04c-2c154db42b29" />
-
-## 项目结构
-
-- `app/` - InTy 后端服务（Python FastAPI）
-- `android_app/` - IntelliMate Android 应用（Kotlin Compose）
-- `web_app/` - IntelliMate Web 应用（React）
-- `evaluation/` - 运营工具（React）
-- `backend/` - 后端相关文档和规划
-- `alembic/` - 数据库迁移
-- `scripts/` - 各类脚本
-- `devops/` - 运维相关代码
-
-## 如何修改代码库中的文件内容
-
-以 [ui_configs.kt](android_app/app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt#L96)
-中的 `WhatsAppGroupInvite` 为例：
-
-1. 打开 GitHub 文件链接：ui_configs.kt，点击右上角铅笔图标编辑文件，可以按照路径从 https://github.com/NascentCore/inty 找到对应的目标文件
-   ![img_v3_02sa_4f309e3d-a334-4b25-8006-91f361222d5g](https://github.com/user-attachments/assets/18a2d9c0-a596-4095-bea3-18f376b33657)
-2. 定位要修改的地方，修改
-   ![img_v3_02sa_6259fdaf-e194-4d91-8120-56b79317f7ag](https://github.com/user-attachments/assets/af713402-c9da-4821-b46e-1a5eaeb7bc23)
-3. 修改完成点击 commit changes，弹窗填入改动标题，其他不用修改，点击右下角 propose changes
-   ![img_v3_02sa_f539d752-b939-405f-8ec7-98d696d47c8g](https://github.com/user-attachments/assets/bad0e20f-0b66-4265-8af0-4d18b152ee0d)
-4. 下一个页面点击 create pull request 生成改动
-   ![img_v3_02sa_a2fef23c-5902-4154-8ff6-9a97a1d384bg](https://github.com/user-attachments/assets/fa985e25-a821-4a14-91e9-5e164b387114)
-5. 生成改动链接，发给@赵亚雄 确认；之后就可以提交
-   ![img_v3_02sa_c2d1a841-1cbe-417f-a52b-04061565a83g](https://github.com/user-attachments/assets/165e57c6-b151-4968-9e67-cfbcff959d6f)
-
-## 说明
+## 代码库其他组件说明
 
 更多详细信息请参考各子目录的 README 文件：
+
 - 后端开发：参见 [backend/README.md](backend/README.md)
+
+### 相关链接
+
+1. [IntelliMate Figma 设计稿](https://www.figma.com/design/ASvjVuWFM13S3u5GdIJlTL/HeartMate?node-id=0-1&p=f&t=nxD7Qrq5d8fZXSYl-0)
+2. [IntelliMate 飞书需求池文档](https://tricorder.feishu.cn/wiki/Vx8zwSRiwigRUlkOyF5czkmdnDg?table=tblrLV9XLqUmPBu8&view=vewP2B92zv)
+3. [IntelliMate Firebase 崩溃报告](https://console.firebase.google.com/project/alien-paratext-461204-i9/crashlytics/app/android:com.ai.intellimate/issues?fb_gclid=CjwKCAjwwNbEBhBpEiwAFYLtGL7ajs2-xPHLL4coQR6eSTui8PqkfhB7tNmotp8PWywmhtvPMR2hKhoCr5QQAvD_BwE&time=24h&state=open&types=crash&tag=all&sort=eventCount)
+4. [IntelliMate Google Play Consle](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-dashboard)

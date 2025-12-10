@@ -1,12 +1,17 @@
 package com.ai.intellimate
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.common.event.EventBus
+import ai.sxwl.android.common.event.EventSubscriber
+import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -17,15 +22,19 @@ import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
-import com.architecture.httplib.core.HttpResult
+import com.inty.api.models.api.v1.version.VersionCheckResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 enum class HomeTabIndex {
     Chat,
@@ -58,9 +67,43 @@ class MainViewModel : BaseVM() {
     private val _showSettings = MutableStateFlow(false)
     val showSettings: StateFlow<Boolean> = _showSettings.asStateFlow()
 
+    // Explore页面重置到顶部信号（用于底部导航栏双击）
+    private val _exploreResetSignal = MutableStateFlow(0)
+    val exploreResetSignal: StateFlow<Int> = _exploreResetSignal.asStateFlow()
+
+    private val _messagesTabHasPush = MutableStateFlow(IntySetting.hasMessagesTabPush())
+    val messagesTabHasPush: StateFlow<Boolean> = _messagesTabHasPush.asStateFlow()
+
+    // appUpdateTips 只存在于内存中，每次重启都会重置为 false
+    private val _appUpdateTips = MutableStateFlow(false)
+    val appUpdateTips: StateFlow<Boolean> = _appUpdateTips.asStateFlow()
+    private val _appUpdateTipsRedDot = MutableStateFlow(false)
+    val appUpdateTipsRedDot: StateFlow<Boolean> = _appUpdateTipsRedDot.asStateFlow()
+
+    private val tabHistory = ArrayDeque<HomeTabIndex>()
+
+    // 标记用户是否已经手动切换过tab，如果已切换，则不再根据remote config自动更新
+    private var hasUserManuallySelectedTab = false
+
+    // 反馈请求弹窗显示状态
+    private val _showFeedbackRequestDialog = MutableStateFlow(false)
+    val showFeedbackRequestDialog: StateFlow<Boolean> = _showFeedbackRequestDialog.asStateFlow()
+
+    private val pushMessageSubscriber =
+        object : EventSubscriber<PushNotificationEvent.MessageReceived> {
+            override fun onEvent(event: PushNotificationEvent.MessageReceived) {
+                handlePushMessageEvent(event)
+            }
+        }
+
+    companion object {
+        private const val MAX_TAB_HISTORY = 10
+    }
+
     init {
         loadStartupData()
         updateLoginState()
+        subscribePushEvents()
 
         viewModelScope.launch(Dispatchers.IO) {
             val initialFetchTime = FirebaseManager.getRemoteConfigLastFetchTime()
@@ -76,24 +119,30 @@ class MainViewModel : BaseVM() {
                 waitCount++
             }
 
-            val newTab = getInitialTabFromRemoteConfig()
-            if (newTab != _selectedTab.value) {
-                LogUtils.d(
-                    "MainViewModel",
-                    "根据 Remote Config 更新 tab: ${_selectedTab.value.name} -> ${newTab.name}"
-                )
-                withContext(Dispatchers.Main) {
-                    _selectedTab.value = newTab
+            // 只有在用户没有手动切换过tab的情况下，才根据remote config更新
+            // 这样可以避免在界面显示后，remote config加载完成时强制切换tab
+            if (!hasUserManuallySelectedTab) {
+                val newTab = getInitialTabFromRemoteConfig()
+                if (newTab != _selectedTab.value) {
+                    LogUtils.d(
+                        "MainViewModel",
+                        "根据 Remote Config 更新 tab: ${_selectedTab.value.name} -> ${newTab.name}",
+                    )
+                    withContext(Dispatchers.Main) { _selectedTab.value = newTab }
                 }
+            } else {
+                LogUtils.d("MainViewModel", "用户已手动切换过tab，跳过 Remote Config 的自动更新")
             }
         }
     }
 
     private fun getInitialTabFromRemoteConfig(): HomeTabIndex {
         return try {
-            val tabIndex = FirebaseManager.getRemoteConfigLong(
-                FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
-            ).toInt()
+            val tabIndex =
+                FirebaseManager.getRemoteConfigLong(
+                        FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
+                    )
+                    .toInt()
 
             LogUtils.d("MainViewModel", "Remote Config home_page_default_tab_index = $tabIndex")
 
@@ -103,7 +152,7 @@ class MainViewModel : BaseVM() {
             } else {
                 LogUtils.w(
                     "MainViewModel",
-                    "Remote Config tab index ($tabIndex) 越界（有效范围: 0-${tabEntries.size - 1}），使用默认值 Chat tab"
+                    "Remote Config tab index ($tabIndex) 越界（有效范围: 0-${tabEntries.size - 1}），使用默认值 Chat tab",
                 )
                 HomeTabIndex.Chat
             }
@@ -142,7 +191,7 @@ class MainViewModel : BaseVM() {
         checkAppVersion()
     }
 
-    fun selectTab(tab: Int) {
+    fun selectTab(tab: Int, trackHistory: Boolean = true) {
         // 防止数组越界，确保tab索引在有效范围内
         val tabEntries = HomeTabIndex.entries.toTypedArray()
         if (tab < 0 || tab >= tabEntries.size) {
@@ -153,7 +202,36 @@ class MainViewModel : BaseVM() {
         // 切换tab时停止所有音频播放
         stopAllAudioPlayback()
 
-        _selectedTab.value = tabEntries[tab]
+        val targetTab = tabEntries[tab]
+        val previousTab = _selectedTab.value
+        if (previousTab == targetTab) {
+            return
+        }
+
+        // 如果trackHistory为true，表示这是用户手动切换，标记为已手动选择
+        // 这样后续remote config加载完成时，就不会再自动切换tab
+        if (trackHistory) {
+            hasUserManuallySelectedTab = true
+            tabHistory.addLast(previousTab)
+            if (tabHistory.size > MAX_TAB_HISTORY) {
+                tabHistory.removeFirst()
+            }
+        }
+        _selectedTab.value = targetTab
+
+        if (targetTab == HomeTabIndex.Messages) {
+            clearMessagesTabPush()
+        }
+    }
+
+    /** tab 返回：回到上一个访问的tab */
+    fun navigateBackToPreviousTab(): Boolean {
+        if (tabHistory.isEmpty()) {
+            return false
+        }
+        val previousTab = tabHistory.removeLast()
+        selectTab(previousTab.ordinal, trackHistory = false)
+        return true
     }
 
     /** 停止所有音频播放 用于tab切换时确保音频停止 */
@@ -169,6 +247,25 @@ class MainViewModel : BaseVM() {
 
     fun updateCurrentChatPageIndex(index: Int) {
         _currentChatPageIndex.value = index
+    }
+
+    /** 触发Explore页面重置到顶部（用于底部导航栏双击） */
+    fun triggerExploreReset() {
+        _exploreResetSignal.value += 1
+    }
+
+    /** 清除消息红点状态（进入消息Tab后调用） */
+    fun clearMessagesTabPush() {
+        if (_messagesTabHasPush.value) {
+            _messagesTabHasPush.value = false
+        }
+        IntySetting.setMessagesTabHasPush(false)
+    }
+
+    fun clearAppUpdateTipsRedDot() {
+        if (_appUpdateTipsRedDot.value) {
+            _appUpdateTipsRedDot.value = false
+        }
     }
 
     /** 接口请求获取用户信息 */
@@ -259,6 +356,7 @@ class MainViewModel : BaseVM() {
         // 清理内存数据
         followingAgents.clear()
         _userProfile.value = UserProfile()
+        tabHistory.clear()
 
         // 清理统一启动管理器的数据
         UnifiedStartupManager.clearAllData()
@@ -290,23 +388,96 @@ class MainViewModel : BaseVM() {
     }
 
     /** 检查app版本更新 */
-    val needForceUpgrade = MutableStateFlow<AppVersionRsp.AppVersionData?>(null)
+    private val _needForceUpgrade = Channel<AppVersionRsp.AppVersionData?>()
+    val needForceUpgrade = _needForceUpgrade.receiveAsFlow()
 
     private fun checkAppVersion() = launchBackground {
-        when (val result = NetServiceMgr.getCommonApi().checkAppUpgrade()) {
-            is HttpResult.Success -> {
-                val rsp = result.data
-                if (rsp.update_required && rsp.force_update) {
-                    // 有更新，且需要强制更新
-                    needForceUpgrade.emit(rsp)
+        val timeoutMs: Long = 10000
+        try {
+            when (
+                val result =
+                    withTimeout(timeoutMs) {
+                        IntyNetworkManager.version.checkAppUpgrade(
+                            appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+                            // 这个可以取消了，对后端没有意义，后端已经不根据 version name 判断是否更新了。
+                            appVersionName = BuildConfig.VERSION_NAME,
+                        )
+                    }
+            ) {
+                is ApiResult.Success -> {
+                    val rsp = result.data
+                    when (rsp.reminder_action) {
+                        VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS,
+                        VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER -> {
+                            // 设置更新提示（仅内存状态）
+                            _appUpdateTips.value = true
+                            _appUpdateTipsRedDot.value = true
+                            // 需要显示更新弹窗（强制拦截或弹窗提醒）
+                            _needForceUpgrade.send(rsp)
+                        }
+                        VersionCheckResponse.Data.ReminderAction.SETTINGS_REMINDER -> {
+                            // 设置更新提示（仅内存状态）
+                            _appUpdateTips.value = true
+                            _appUpdateTipsRedDot.value = true
+                        }
+                        VersionCheckResponse.Data.ReminderAction.NONE -> {
+                            // 当版本不需要更新时（reminder_action 为 NONE），清除更新提示
+                            if (_appUpdateTips.value) {
+                                _appUpdateTips.value = false
+                                _appUpdateTipsRedDot.value = false
+                            }
+                        }
+                    }
                 }
-                IntySetting.setAppUpdateTips(rsp.update_required)
-                IntySetting.setAppGooglePlayUrl(rsp.download_url ?: "")
-            }
 
-            is HttpResult.Failure -> {
-                LogUtils.w("result.message")
+                is ApiResult.Error -> {
+                    LogUtils.w("MainViewModel", "checkAppVersion: 版本检查失败 - ${result.message}")
+                    // 版本检查失败时，不清除更新提示（保持之前的状态，避免误清除）
+                    // 如果确实需要清除，应该等待下次成功的版本检查返回 NONE
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            LogUtils.w("Version check timeout after ${timeoutMs}ms")
+            // 版本检查超时时，不清除更新提示（保持之前的状态，避免误清除）
+        }
+    }
+
+    override fun onCleared() {
+        EventBus.unsubscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
+        super.onCleared()
+    }
+
+    private fun subscribePushEvents() {
+        EventBus.subscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
+    }
+
+    private fun handlePushMessageEvent(event: PushNotificationEvent.MessageReceived) {
+        when (event.type) {
+            FCMConstants.TYPE_AGENT_MESSAGE -> {
+                val agentId = event.data[FCMConstants.DATA_KEY_AGENT_ID]
+                if (!agentId.isNullOrBlank()) {
+                    IntySetting.setConversationHasPush(agentId, true)
+                }
+                if (!_messagesTabHasPush.value) {
+                    _messagesTabHasPush.value = true
+                }
+                IntySetting.setMessagesTabHasPush(true)
+            }
+            FCMConstants.TYPE_FEEDBACK_REQUEST -> {
+                // feedback_request 类型消息由 MainActivity 判断是否在前台后处理
+                // 这里只记录日志，不直接显示弹窗
+                LogUtils.d("MainViewModel", "收到 feedback_request 类型消息")
             }
         }
+    }
+
+    /** 显示反馈请求弹窗 */
+    fun showFeedbackRequestDialog() {
+        _showFeedbackRequestDialog.value = true
+    }
+
+    /** 隐藏反馈请求弹窗 */
+    fun hideFeedbackRequestDialog() {
+        _showFeedbackRequestDialog.value = false
     }
 }

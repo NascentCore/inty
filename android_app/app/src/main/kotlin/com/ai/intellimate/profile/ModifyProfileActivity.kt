@@ -9,7 +9,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,8 +21,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
@@ -62,9 +70,7 @@ class ModifyProfileActivity : BaseActivity() {
         lifecycleScope.launch {
             viewModel.events.collect { event ->
                 when (event) {
-                    is ViewModelEvent.UserProfileUpdated -> {
-                        finish()
-                    }
+                    is ViewModelEvent.UserProfileUpdated -> setResult(RESULT_OK)
                     else -> {
                         // 其他事件暂不处理
                     }
@@ -86,7 +92,11 @@ class ModifyProfileActivity : BaseActivity() {
                     runCatching {
                             result.data?.let { intentResult ->
                                 val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                                imageUri?.let { imageUriReal -> viewModel.setAvatar(imageUriReal) }
+                                imageUri?.let { imageUriReal ->
+                                    // 设置头像并立即保存（调用 onSave 方法）
+                                    viewModel.setAvatar(imageUriReal)
+                                    viewModel.onSave()
+                                }
                             }
                         }
                         .onFailure { e -> e.printStackTrace() }
@@ -131,11 +141,12 @@ class ModifyProfileActivity : BaseActivity() {
             }
 
         val userProfile = viewModel.userProfile.collectAsState()
-        val isSaving = viewModel.isSaving.collectAsState()
         var editKey by remember { mutableStateOf(EditKey.None) }
         var editValue by rememberSaveable { mutableStateOf("") }
 
-        Box {
+        val isSaving by viewModel.isSaving.collectAsState()
+
+        Box(modifier = Modifier.fillMaxSize()) {
             ProfileInfoScreen(
                 userProfile = userProfile.value,
                 onBack = { finish() },
@@ -152,8 +163,6 @@ class ModifyProfileActivity : BaseActivity() {
                     editValue = userProfile.value.gender ?: ""
                 },
                 onSelectAvatar = { galleryLauncher.launch("image/*") },
-                onSave = { viewModel.onSave() },
-                isSaving = isSaving.value,
             )
 
             if (editKey != EditKey.None) {
@@ -162,11 +171,29 @@ class ModifyProfileActivity : BaseActivity() {
                     editValue = editValue,
                     onDismiss = { editKey = EditKey.None },
                     onSave = { key, value ->
-                        viewModel.changeUserProfile(key, value)
+                        // 在各自的 sheet 中点击 save 时，立即调用接口更新
+                        // updateFieldAndSave 会判断是否变化，并更新本地状态
+                        viewModel.updateFieldAndSave(key, value)
                         editKey = EditKey.None
                     },
                     onValueChange = { editValue = it },
                 )
+            }
+
+            if (isSaving) {
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .background(
+                                Color.Black.copy(alpha = LoadingOverlayConfig.OverlayAlpha)
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(LoadingOverlayConfig.IndicatorSize),
+                    )
+                }
             }
         }
     }
@@ -180,4 +207,9 @@ class ModifyProfileActivity : BaseActivity() {
             0L
         }
     }
+}
+
+private object LoadingOverlayConfig {
+    const val OverlayAlpha = 0.55f
+    val IndicatorSize = 32.dp
 }

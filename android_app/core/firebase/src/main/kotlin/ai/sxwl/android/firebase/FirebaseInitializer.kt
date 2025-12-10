@@ -51,9 +51,9 @@ class FirebaseInitializer : Initializer<FirebaseManager> {
             val packageName = context.packageName
             setSystemProperty("debug.firebase.analytics.app", packageName)
 
-            LogUtils.i(TAG, "✅ Firebase DebugView 已启用（通过系统属性）")
-            LogUtils.i(TAG, "   包名: $packageName")
-            LogUtils.i(TAG, "   在 Firebase 控制台的 DebugView 中查看实时事件")
+            LogUtils.d(TAG, "✅ Firebase DebugView 已启用（通过系统属性）")
+            LogUtils.d(TAG, "   包名: $packageName")
+            LogUtils.d(TAG, "   在 Firebase 控制台的 DebugView 中查看实时事件")
         } catch (e: Exception) {
             LogUtils.w(TAG, "⚠️ 无法通过代码启用 DebugView，请使用 adb 命令：")
             LogUtils.w(

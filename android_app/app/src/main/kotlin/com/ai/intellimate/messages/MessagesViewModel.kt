@@ -2,11 +2,15 @@ package com.ai.intellimate.messages
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.common.event.EventBus
+import ai.sxwl.android.common.event.EventSubscriber
+import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.utils.AgentCacheManager
@@ -34,12 +38,30 @@ class MessagesViewModel : BaseVM() {
     // IntelliMate agent 缓存（只在启动时加载一次，避免频繁调用网络接口）
     private var cachedIntelliMateAgent: ConversationItem? = null
     private var intelliMateAgentLoaded = false // 标记是否已尝试加载过
+    private val pushMessageSubscriber =
+        object : EventSubscriber<PushNotificationEvent.MessageReceived> {
+            override fun onEvent(event: PushNotificationEvent.MessageReceived) {
+                handlePushMessageEvent(event)
+            }
+        }
 
     init {
         // 页面跟踪
         trackPageView()
         // 启动时加载 IntelliMate agent（只调用一次）
         loadIntelliMateAgentOnce()
+        subscribePushEvents()
+    }
+
+    private fun subscribePushEvents() {
+        EventBus.subscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
+    }
+
+    private fun handlePushMessageEvent(event: PushNotificationEvent.MessageReceived) {
+        if (event.type != FCMConstants.TYPE_AGENT_MESSAGE) return
+        val agentId = event.data[FCMConstants.DATA_KEY_AGENT_ID]
+        if (agentId.isNullOrBlank()) return
+        viewModelScope.launch(Dispatchers.Main) { markConversationHasPush(agentId) }
     }
 
     /**
@@ -109,7 +131,8 @@ class MessagesViewModel : BaseVM() {
                                 processConversationsWithPinHide(userInitiatedConversations)
                             // 静默更新数据，不显示loading
                             _uiState.update {
-                                it.copy(
+                                copyWithConversations(
+                                    baseState = it,
                                     conversations = processedConversations,
                                     intelliMateAgentIds = intelliMateAgentIds,
                                 )
@@ -167,7 +190,8 @@ class MessagesViewModel : BaseVM() {
                             if (currentConversationsPage == 0) {
                                 // 第一页，直接替换
                                 _uiState.update {
-                                    it.copy(
+                                    copyWithConversations(
+                                        baseState = it,
                                         conversations = processedConversations,
                                         intelliMateAgentIds = intelliMateAgentIds,
                                     )
@@ -180,7 +204,8 @@ class MessagesViewModel : BaseVM() {
                                 val (allProcessed, allIntelliMateAgentIds) =
                                     processConversationsWithPinHide(allConversations)
                                 _uiState.update {
-                                    it.copy(
+                                    copyWithConversations(
+                                        baseState = it,
                                         conversations = allProcessed,
                                         intelliMateAgentIds = allIntelliMateAgentIds,
                                     )
@@ -219,27 +244,6 @@ class MessagesViewModel : BaseVM() {
                     currentState.copy(isLoading = false)
                 }
             }
-        }
-    }
-
-    /** 标记会话消息已读 */
-    fun setConversationReaded(conversationItem: ConversationItem) {
-        IntySetting.setConversationReaded(conversationItem.agentId, conversationItem.lastMessage)
-
-        _uiState.update { currentState ->
-            currentState.copy(
-                conversations =
-                    currentState.conversations.map { conversation ->
-                        if (
-                            conversation.id == conversationItem.id &&
-                                conversation.agentId == conversationItem.agentId
-                        ) {
-                            conversation.copy(isNew = false)
-                        } else {
-                            conversation
-                        }
-                    }
-            )
         }
     }
 
@@ -435,6 +439,43 @@ class MessagesViewModel : BaseVM() {
         return Pair(sortedConversations, intelliMateAgentIds)
     }
 
+    fun clearConversationPush(agentId: String) {
+        if (agentId.isBlank()) return
+        viewModelScope.launch(Dispatchers.Main) {
+            IntySetting.setConversationHasPush(agentId, false)
+            _uiState.update { it.copy(pushAgentIds = it.pushAgentIds - agentId) }
+        }
+    }
+
+    private fun markConversationHasPush(agentId: String) {
+        IntySetting.setConversationHasPush(agentId, true)
+        _uiState.update { it.copy(pushAgentIds = it.pushAgentIds + agentId) }
+    }
+
+    private fun syncPushAgentIds(conversations: List<ConversationItem>): Set<String> {
+        if (conversations.isEmpty()) return emptySet()
+        return conversations
+            .mapNotNull { conversation ->
+                val agentId = conversation.agentId
+                if (agentId.isNotBlank() && IntySetting.hasConversationPush(agentId)) agentId
+                else null
+            }
+            .toSet()
+    }
+
+    private fun copyWithConversations(
+        baseState: MessagesUiState,
+        conversations: List<ConversationItem>,
+        intelliMateAgentIds: Set<String>,
+    ): MessagesUiState {
+        val pushAgentIds = syncPushAgentIds(conversations)
+        return baseState.copy(
+            conversations = conversations,
+            intelliMateAgentIds = intelliMateAgentIds,
+            pushAgentIds = pushAgentIds,
+        )
+    }
+
     /** 置顶会话 */
     fun pinConversation(agentId: String) {
         viewModelScope.launch(Dispatchers.Main) {
@@ -505,11 +546,15 @@ class MessagesViewModel : BaseVM() {
         withContext(Dispatchers.Main) {
             // 直接更新 StateFlow，确保 UI 立即刷新
             // 使用 refreshKey 强制 Compose 重新组合所有 item
-            _uiState.value =
-                _uiState.value.copy(
+            val updatedState =
+                copyWithConversations(
+                    baseState = _uiState.value,
                     conversations = processedConversations,
                     intelliMateAgentIds = intelliMateAgentIds,
-                    refreshKey = System.currentTimeMillis(), // 更新 refreshKey 强制刷新
+                )
+            _uiState.value =
+                updatedState.copy(
+                    refreshKey = System.currentTimeMillis() // 更新 refreshKey 强制刷新
                 )
         }
     }
@@ -532,6 +577,11 @@ class MessagesViewModel : BaseVM() {
                 refreshConversationsWithPinHide()
             }
         }
+    }
+
+    override fun onCleared() {
+        EventBus.unsubscribe(PushNotificationEvent.MessageReceived::class, pushMessageSubscriber)
+        super.onCleared()
     }
 
     /** 清理所有数据 */
@@ -565,7 +615,8 @@ class MessagesViewModel : BaseVM() {
                     val (processedConversations, intelliMateAgentIds) =
                         processConversationsWithPinHide(currentConversations)
                     _uiState.update {
-                        it.copy(
+                        copyWithConversations(
+                            baseState = it,
                             conversations = processedConversations,
                             intelliMateAgentIds = intelliMateAgentIds,
                         )

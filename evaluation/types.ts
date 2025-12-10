@@ -9,7 +9,7 @@ import type {
 // 扩展 Agent 类型以包含 meta_data 和 background_animated 字段
 export interface Agent extends BaseAgent {
   meta_data?: AgentMetaData;
-  background_animated?: string; // 视频URL
+  background_animated?: string; // webp 动图 URL
   description?: string; // 描述字段
 }
 
@@ -54,7 +54,7 @@ export interface AgentCreateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
-  background_animated?: string; // 视频URL
+  background_animated?: string; // webp 动图 URL
   voice_id?: string;
   llm_config?: LLMConfig;
   meta_data?: AgentMetaData;
@@ -74,7 +74,7 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
-  background_animated?: string; // 视频URL
+  background_animated?: string; // webp 动图 URL
   voice_id?: string;
   llm_config?: LLMConfig | null;
   meta_data?: AgentMetaData;
@@ -85,6 +85,46 @@ export interface AgentUpdateRequest {
 // 生成背景视频请求
 export interface GenerateBackgroundAnimatedRequest {
   prompt?: string; // 视频生成提示词（可选，如果为空则从背景图自动生成）
+}
+
+// 角色主题专区
+export interface CharacterThemeAgent {
+  agent_id: string;
+  order_index: number;
+  agent?: Agent;
+}
+
+export interface CharacterTheme {
+  id: string;
+  name: string;
+  description?: string;
+  background_image_url?: string;
+  visibility: "PRIMARY" | "SECONDARY" | "HIDDEN";
+  created_at: string;
+  updated_at?: string;
+  agents: CharacterThemeAgent[];
+}
+
+export interface CharacterThemeCreateRequest {
+  name: string;
+  description?: string;
+  background_image_url?: string;
+  visibility?: "PRIMARY" | "SECONDARY" | "HIDDEN";
+}
+
+export interface CharacterThemeUpdateRequest {
+  name?: string;
+  description?: string;
+  background_image_url?: string;
+  visibility?: "PRIMARY" | "SECONDARY" | "HIDDEN";
+}
+
+export interface AddAgentToThemeRequest {
+  agent_id: string;
+}
+
+export interface ReorderAgentsRequest {
+  agent_ids: string[];
 }
 
 // 聊天消息

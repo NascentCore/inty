@@ -1,4 +1,4 @@
-name: Android App Tests
+name: CI - 安卓 IntelliMate App
 
 on:
   push:
@@ -30,6 +30,10 @@ on:
       - "android_app/**/gradle.properties"
       - "android_app/gradlew"
       - ".github/workflows/ci_android_app.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:

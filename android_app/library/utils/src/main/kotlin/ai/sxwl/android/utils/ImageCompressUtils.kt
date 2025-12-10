@@ -3,14 +3,12 @@ package ai.sxwl.android.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
+import androidx.core.graphics.scale
+import java.io.File
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.zibin.luban.Luban
-import top.zibin.luban.OnCompressListener
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 
 /** 图片压缩工具类 基于Luban库封装，提供简洁的API供上层模块使用 */
 object ImageCompressUtils {
@@ -28,177 +26,6 @@ object ImageCompressUtils {
         /** 是否保留原文件，默认false */
         val keepOriginal: Boolean = false,
     )
-
-    /** 压缩结果回调接口 */
-    interface CompressCallback {
-        /** 压缩成功 */
-        fun onSuccess(compressedFile: File)
-
-        /** 压缩失败 */
-        fun onError(throwable: Throwable)
-
-        /** 压缩进度 */
-        fun onProgress(progress: Int) {}
-    }
-
-    /**
-     * 压缩单个图片文件
-     *
-     * @param context 上下文
-     * @param imageFile 要压缩的图片文件
-     * @param config 压缩配置
-     * @param callback 压缩结果回调
-     */
-    fun compressImage(
-        context: Context,
-        imageFile: File,
-        config: CompressConfig = CompressConfig(),
-        callback: CompressCallback,
-    ) {
-        try {
-            if (!imageFile.exists()) {
-                callback.onError(IOException("图片文件不存在: ${imageFile.absolutePath}"))
-                return
-            }
-
-            Luban.with(context)
-                .load(imageFile)
-                .ignoreBy(config.maxSize)
-                .setTargetDir(getCompressCacheDir(context))
-                .filter { path ->
-                    try {
-                        // 过滤条件：只处理图片文件
-                        val extension =
-                            if (path.contains('.')) {
-                                path.substringAfterLast('.', "").lowercase()
-                            } else {
-                                ""
-                            }
-                        extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
-                    } catch (e: Exception) {
-                        false
-                    }
-                }
-                .setCompressListener(
-                    object : OnCompressListener {
-                        override fun onStart() {
-                            // 压缩开始
-                        }
-
-                        override fun onSuccess(file: File) {
-                            callback.onSuccess(file)
-                        }
-
-                        override fun onError(e: Throwable) {
-                            callback.onError(e)
-                        }
-                    }
-                )
-                .launch()
-        } catch (e: Exception) {
-            callback.onError(e)
-        }
-    }
-
-    /**
-     * 压缩多个图片文件
-     *
-     * @param context 上下文
-     * @param imageFiles 要压缩的图片文件列表
-     * @param config 压缩配置
-     * @param callback 压缩结果回调
-     */
-    fun compressImages(
-        context: Context,
-        imageFiles: List<File>,
-        config: CompressConfig = CompressConfig(),
-        callback: CompressCallback,
-    ) {
-        try {
-            if (imageFiles.isEmpty()) {
-                callback.onError(kotlin.IllegalArgumentException("图片文件列表不能为空"))
-                return
-            }
-
-            val validFiles = imageFiles.filter { it.exists() }
-            if (validFiles.isEmpty()) {
-                callback.onError(IOException("没有找到有效的图片文件"))
-                return
-            }
-
-            Luban.with(context)
-                .load(validFiles)
-                .ignoreBy(config.maxSize)
-                .setTargetDir(getCompressCacheDir(context))
-                .filter { path ->
-                    try {
-                        val extension =
-                            if (path.contains('.')) {
-                                path.substringAfterLast('.', "").lowercase()
-                            } else {
-                                ""
-                            }
-                        extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
-                    } catch (e: Exception) {
-                        false
-                    }
-                }
-                .setCompressListener(
-                    object : OnCompressListener {
-                        override fun onStart() {
-                            // 压缩开始
-                        }
-
-                        override fun onSuccess(file: File) {
-                            callback.onSuccess(file)
-                        }
-
-                        override fun onError(e: Throwable) {
-                            callback.onError(e)
-                        }
-                    }
-                )
-                .launch()
-        } catch (e: Exception) {
-            callback.onError(e)
-        }
-    }
-
-    /**
-     * 压缩图片URI
-     *
-     * @param context 上下文
-     * @param imageUri 要压缩的图片URI
-     * @param config 压缩配置
-     * @param callback 压缩结果回调
-     */
-    fun compressImageUri(
-        context: Context,
-        imageUri: Uri,
-        config: CompressConfig = CompressConfig(),
-        callback: CompressCallback,
-    ) {
-        Luban.with(context)
-            .load(imageUri)
-            .ignoreBy(config.maxSize)
-            .setTargetDir(getCompressCacheDir(context))
-            .setCompressListener(
-                object : OnCompressListener {
-                    override fun onStart() {
-                        // 压缩开始
-                    }
-
-                    override fun onSuccess(file: File) {
-                        callback.onSuccess(file)
-                    }
-
-                    override fun onError(e: Throwable) {
-                        callback.onError(e)
-                    }
-                }
-            )
-            .launch()
-    }
 
     /**
      * 同步压缩图片（在协程中使用） 注意：Luban的get()方法可能返回List<File>，这里简化为返回第一个文件
@@ -257,74 +84,6 @@ object ImageCompressUtils {
     }
 
     /**
-     * 清理压缩缓存
-     *
-     * @param context 上下文
-     * @return 是否清理成功
-     */
-    fun clearCompressCache(context: Context): Boolean {
-        return try {
-            val cacheDir = File(context.cacheDir, "luban_compress")
-            if (cacheDir.exists()) {
-                cacheDir.deleteRecursively()
-            }
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    /**
-     * 获取压缩缓存大小
-     *
-     * @param context 上下文
-     * @return 缓存大小（字节）
-     */
-    fun getCompressCacheSize(context: Context): Long {
-        return try {
-            val cacheDir = File(context.cacheDir, "luban_compress")
-            if (cacheDir.exists()) {
-                cacheDir.walkTopDown().sumOf {
-                    try {
-                        it.length()
-                    } catch (e: Exception) {
-                        0L
-                    }
-                }
-            } else {
-                0L
-            }
-        } catch (e: Exception) {
-            0L
-        }
-    }
-
-    /**
-     * 检查文件是否为支持的图片格式
-     *
-     * @param file 文件
-     * @return 是否为支持的图片格式
-     */
-    fun isSupportedImageFormat(file: File): Boolean {
-        if (!file.exists() || !file.isFile) {
-            return false
-        }
-
-        val extension = file.extension.lowercase()
-        return extension in listOf("jpg", "jpeg", "png", "webp", "bmp")
-    }
-
-    /**
-     * 检查文件是否为支持的图片格式
-     *
-     * @param filePath 文件路径
-     * @return 是否为支持的图片格式
-     */
-    fun isSupportedImageFormat(filePath: String): Boolean {
-        return isSupportedImageFormat(File(filePath))
-    }
-
-    /**
      * 将图片转换为 WebP 格式（同步方法，在协程中使用）
      *
      * @param context 上下文
@@ -348,9 +107,7 @@ object ImageCompressUtils {
                 }
 
                 // 读取原始图片
-                val options = BitmapFactory.Options().apply {
-                    inJustDecodeBounds = true
-                }
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeFile(imageFile.absolutePath, options)
 
                 // 计算缩放比例
@@ -362,15 +119,18 @@ object ImageCompressUtils {
                 }
 
                 // 加载缩放后的 Bitmap
-                val decodeOptions = BitmapFactory.Options().apply {
-                    inSampleSize = sampleSize
-                }
-                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath, decodeOptions)
-                    ?: return@withContext null
+                val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                val bitmap =
+                    BitmapFactory.decodeFile(imageFile.absolutePath, decodeOptions)
+                        ?: return@withContext null
 
                 // 如果指定了最大尺寸，进一步缩放
                 val finalBitmap =
-                    if (maxWidth > 0 && maxHeight > 0 && (bitmap.width > maxWidth || bitmap.height > maxHeight)) {
+                    if (
+                        maxWidth > 0 &&
+                            maxHeight > 0 &&
+                            (bitmap.width > maxWidth || bitmap.height > maxHeight)
+                    ) {
                         val scale =
                             minOf(
                                 maxWidth.toFloat() / bitmap.width,
@@ -378,7 +138,7 @@ object ImageCompressUtils {
                             )
                         val scaledWidth = (bitmap.width * scale).toInt()
                         val scaledHeight = (bitmap.height * scale).toInt()
-                        Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+                        bitmap.scale(scaledWidth, scaledHeight)
                     } else {
                         bitmap
                     }

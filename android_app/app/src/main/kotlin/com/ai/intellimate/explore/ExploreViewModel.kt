@@ -4,14 +4,18 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
@@ -37,15 +41,29 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 是否已初始化
     private var isInitialized = false
 
-    // 保存滚动位置
-    private val _savedFirstVisibleIndex = MutableStateFlow(0)
-    val savedFirstVisibleIndex = _savedFirstVisibleIndex
+    // 保存滚动位置（保存的是网格索引，可以区分theme项和agent项）
+    private val _savedFirstVisibleGridIndex = MutableStateFlow(0)
+    val savedFirstVisibleGridIndex = _savedFirstVisibleGridIndex
     private val _savedFirstVisibleOffset = MutableStateFlow(0)
     val savedFirstVisibleOffset = _savedFirstVisibleOffset
 
     // 当前UI中显示的agents总数
     private val _currentUiAgentsCount = MutableStateFlow(0)
     val currentUiAgentsCount = _currentUiAgentsCount
+
+    // 主题专区列表（最多显示两个）
+    private val _characterThemes =
+        MutableStateFlow<List<AgentService.CharacterThemeItem>>(emptyList())
+    val characterThemes: StateFlow<List<AgentService.CharacterThemeItem>> =
+        _characterThemes.asStateFlow()
+
+    // 是否正在加载主题专区
+    private val _isLoadingThemes = MutableStateFlow(false)
+    val isLoadingThemes: StateFlow<Boolean> = _isLoadingThemes.asStateFlow()
+
+    // 缓存是否已加载完成（用于避免竞态条件）
+    private val _isCacheLoaded = MutableStateFlow(false)
+    val isCacheLoaded: StateFlow<Boolean> = _isCacheLoaded.asStateFlow()
 
     // 实现 ExploreFetchCallback 接口
     override suspend fun onSuccess(
@@ -99,11 +117,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         if (isInitialized) return
 
         // Firebase Analytics - 记录探索页面访问（使用 SCREEN_VIEW 事件）
-        PageTrackingHelper.trackPageView(
-            pageName = "ExplorePage",
-            pageClass = "ExploreViewModel",
-            additionalParams = mapOf("page_type" to "recommendations", "is_initial_load" to true),
-        )
+        PageTrackingHelper.trackPageView(pageName = "ExplorePage", pageClass = "ExploreViewModel")
 
         // 使用app层的ExplorePagingRepository，支持事件回调
         val initialFlow =
@@ -111,6 +125,9 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
         _agentsFlow.value = initialFlow
         isInitialized = true
+
+        // 初始化时从缓存加载主题专区数据，确保快速显示
+        loadCharacterThemesFromCache()
     }
 
     /** 获取推荐agents的Paging数据流 */
@@ -139,9 +156,27 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    fun saveScrollPosition(index: Int, offset: Int) {
-        _savedFirstVisibleIndex.value = index
+    /**
+     * 保存滚动位置
+     *
+     * @param gridIndex 网格索引（LazyVerticalGrid 的索引，从 0 开始，包括theme项和agent项）
+     * @param offset 滚动偏移量
+     */
+    fun saveScrollPosition(gridIndex: Int, offset: Int) {
+        _savedFirstVisibleGridIndex.value = gridIndex
         _savedFirstVisibleOffset.value = offset
+    }
+
+    /**
+     * 获取恢复滚动位置时的网格索引
+     *
+     * @param currentThemeItemCount 当前主题项数量（用于向后兼容，如果保存的是旧格式的agent索引）
+     * @return 网格索引（用于 LazyVerticalGrid 的 initialFirstVisibleItemIndex）
+     */
+    fun getRestoredGridIndex(currentThemeItemCount: Int): Int {
+        // 直接返回保存的网格索引
+        // 如果没有保存位置（默认是0），会显示第一个item（theme或agent）
+        return _savedFirstVisibleGridIndex.value
     }
 
     /** 更新当前UI中显示的agents总数 */
@@ -277,5 +312,95 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     fun clearData() {
         _agentsFlow.value = null
         isInitialized = false
+        _characterThemes.value = emptyList()
+        _isCacheLoaded.value = false
+    }
+
+    /** 从缓存加载主题专区列表（用于快速显示） */
+    private fun loadCharacterThemesFromCache() {
+        viewModelScope.launch {
+            try {
+                val cachedThemes = AgentCacheManager.getCachedCharacterThemes()
+                if (cachedThemes.isNotEmpty()) {
+                    LogUtils.d("ExploreViewModel - 从缓存加载主题专区列表: ${cachedThemes.size} 条")
+                    _characterThemes.value = cachedThemes
+                } else {
+                    LogUtils.d("ExploreViewModel - 缓存中没有主题专区数据")
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ExploreViewModel - 从缓存加载主题专区列表异常: ${e.message}", e)
+            } finally {
+                // 标记缓存加载已完成（无论是否有数据）
+                _isCacheLoaded.value = true
+            }
+        }
+    }
+
+    /** 加载主题专区列表（从网络加载，并更新缓存） */
+    fun loadCharacterThemes(skip: Int = 0, limit: Int = 100) {
+        viewModelScope.launch {
+            _isLoadingThemes.value = true
+            try {
+                when (val result = AgentService.getCharacterThemes(skip = skip, limit = limit)) {
+                    is ai.sxwl.android.data.http.ApiResult.Success -> {
+                        LogUtils.d("ExploreViewModel - 获取主题专区列表成功: ${result.data.size} 条")
+                        val themes = result.data
+                        _characterThemes.value = themes
+                        // 更新缓存，用于下次快速显示
+                        AgentCacheManager.cacheCharacterThemes(themes)
+                    }
+                    is ai.sxwl.android.data.http.ApiResult.Error -> {
+                        // 所有异常（包括网络异常、业务错误等）都会被 IntyNetworkManager.executeRequest
+                        // 捕获并转换为 ApiResult.Error，这里安全处理，不会导致崩溃
+                        LogUtils.w(
+                            "ExploreViewModel - 获取主题专区列表失败: code=${result.code}, message=${result.message}"
+                        )
+                        // 如果网络请求失败，保持缓存数据（如果有的话），不设置为空列表
+                        if (_characterThemes.value.isEmpty()) {
+                            _characterThemes.value = emptyList()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // 额外的保护层，防止意外异常（虽然理论上不会发生，因为 getCharacterThemes 返回 ApiResult）
+                LogUtils.e("ExploreViewModel - 加载主题专区列表异常: ${e.message}", e)
+                // 如果网络请求异常，保持缓存数据（如果有的话），不设置为空列表
+                if (_characterThemes.value.isEmpty()) {
+                    _characterThemes.value = emptyList()
+                }
+            } finally {
+                _isLoadingThemes.value = false
+            }
+        }
+    }
+
+    /** 刷新主题专区列表（用于下拉刷新，只有成功获取数据后才更新 UI） */
+    fun refreshCharacterThemes(skip: Int = 0, limit: Int = 100) {
+        viewModelScope.launch {
+            _isLoadingThemes.value = true
+            try {
+                when (val result = AgentService.getCharacterThemes(skip = skip, limit = limit)) {
+                    is ai.sxwl.android.data.http.ApiResult.Success -> {
+                        LogUtils.d("ExploreViewModel - 刷新主题专区列表成功: ${result.data.size} 条")
+                        val themes = result.data
+                        // 只有在成功获取数据后才更新 UI
+                        _characterThemes.value = themes
+                        // 更新缓存，用于下次快速显示
+                        AgentCacheManager.cacheCharacterThemes(themes)
+                    }
+                    is ai.sxwl.android.data.http.ApiResult.Error -> {
+                        // 刷新失败时，保持现有 UI 数据不变，不更新也不清空
+                        LogUtils.w(
+                            "ExploreViewModel - 刷新主题专区列表失败: code=${result.code}, message=${result.message}，保持现有数据"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // 刷新异常时，保持现有 UI 数据不变
+                LogUtils.e("ExploreViewModel - 刷新主题专区列表异常: ${e.message}，保持现有数据", e)
+            } finally {
+                _isLoadingThemes.value = false
+            }
+        }
     }
 }

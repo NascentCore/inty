@@ -1,5 +1,33 @@
 # Alembic - 数据库迁移
 
+## 增加新的 Alembic version 文件的步骤
+
+```
+# 删除现有的 postgres 实例及其存储卷，从而彻底清空；然后启动并确保数据库为空
+docker compose down pgvector -v
+docker compose up pgvector -d
+psql -h localhost -U postgres -d inty
+# 输入密码进入 psql
+inty=# \d+;
+Did not find any relations.
+
+# 运行 alembic 将数据库升级到最新状态，此时必须确保没有新增的 alembic verison 文件！！！
+cp devops/config.yaml.local config.yaml
+export PYTHONPATH=.
+alembic -x config=devops/config.yaml.local upgrade head
+psql -h localhost -U postgres -d inty
+# 输入密码进入 psql
+inty=# \d
+Schema |             Name              |   Type   |  Owner   
+--------+-------------------------------+----------+----------
+ public | agent_followers               | table    | postgres
+ public | agents                        | table    | postgres
+
+# 运行 alembic 生成新的 revision 文件；并验证其效果符合预期
+alembic -x config=devops/config.yaml.local revision --autogenerate -m "Users 表中增加 password 字段"
+alembic -x config=devops/config.yaml.local upgrade head
+```
+
 ## Generate version
 
 - `alembic upgrade head`: run this to make sure the local database is in sync with the newest version

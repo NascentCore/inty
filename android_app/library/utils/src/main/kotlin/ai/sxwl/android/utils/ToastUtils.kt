@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.Gravity
 import android.widget.Toast
 import androidx.annotation.StringRes
 import java.lang.ref.WeakReference
@@ -155,8 +154,10 @@ object ToastUtils {
 
             val toast = Toast.makeText(context, message, duration)
 
-            // 设置显示位置（居中显示）
-            toast.setGravity(Gravity.CENTER, 0, 0)
+            // 注意：setGravity() 不应在文本 Toast 上调用，会导致警告
+            // 文本 Toast 使用系统默认位置即可
+            // Android API level 30 (Android 11) 或更新，
+            // setGravity() 在标准文本Toast上调用是无效的。
 
             // 显示Toast
             toast.show()
@@ -214,9 +215,6 @@ object ToastUtils {
             // 这样可以避免使用已废弃的toast.view属性
             val toast = Toast.makeText(context, message, duration)
 
-            // 设置显示位置（居中显示）
-            toast.setGravity(Gravity.CENTER, 0, 0)
-
             // 显示Toast
             toast.show()
 
@@ -272,20 +270,12 @@ object ToastUtils {
     private fun getString(@StringRes resId: Int): String {
         return try {
             val context = safeAppContext()
-            if (context != null) {
-                context.getString(resId)
-            } else {
-                "Unknown"
-            }
+            context?.getString(resId) ?: "Unknown"
         } catch (e: Exception) {
             Log.e(TAG, "获取字符串资源失败: $resId", e)
             "Unknown"
         }
     }
-
-    /** 获取应用Context */
-    private val context: Context?
-        get() = safeAppContext()
 
     private fun safeAppContext(): Context? = runCatching { Utils.getApp() }.getOrNull()
 }

@@ -5,9 +5,8 @@ WORKDIR /
 
 # 复制前端代码和依赖文件
 COPY evaluation/ evaluation/
-COPY build_evaluation.sh .
 
-RUN ./build_evaluation.sh
+RUN ./evaluation/build.sh
 
 # 第二阶段：构建后端
 FROM python:3.12-slim AS base
@@ -30,9 +29,11 @@ RUN apt-get update && apt-get install -y \
 
 # 复制依赖文件
 COPY requirements.txt .
-
 # https://stackoverflow.com/a/58021389/31283770
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
+
+COPY scripts/requirements.txt scripts_requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r scripts_requirements.txt
 
 FROM base
 

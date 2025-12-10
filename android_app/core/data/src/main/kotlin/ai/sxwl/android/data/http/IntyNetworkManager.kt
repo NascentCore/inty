@@ -7,6 +7,7 @@ import ai.sxwl.android.data.http.services.ChatService
 import ai.sxwl.android.data.http.services.ReportService
 import ai.sxwl.android.data.http.services.SubscriptionService
 import ai.sxwl.android.data.http.services.UserService
+import ai.sxwl.android.data.http.services.VersionService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
@@ -328,6 +329,10 @@ object IntyNetworkManager {
     val report: ReportService
         get() = ReportService
 
+    /** 版本检查相关API 替换: ICommonApi.checkAppUpgrade() */
+    val version: VersionService
+        get() = VersionService
+
     /** 网络状态管理器 */
     val networkState: NetworkStateManager
         get() = getNetworkStateManager()
@@ -346,21 +351,10 @@ object IntyNetworkManager {
         val actualConfig = config ?: getDefaultRequestConfig()
 
         return try {
-            if (NetworkConfig.shouldEnableDetailedLogging()) {
-                LogUtils.i("🔄 Executing $operation")
-            }
-
             val result = withTimeout(actualConfig.timeoutMs) { apiCall() }
-
-            if (NetworkConfig.shouldEnableDetailedLogging()) {
-                LogUtils.i("✅ $operation succeeded")
-            }
-
             ApiResult.Success(result)
         } catch (e: Exception) {
-            if (NetworkConfig.shouldEnableDetailedLogging()) {
-                LogUtils.i("❌ $operation failed: ${e.message}")
-            }
+            LogUtils.e("❌ $operation failed: ${e.message}")
             e.toApiResult()
         }
     }

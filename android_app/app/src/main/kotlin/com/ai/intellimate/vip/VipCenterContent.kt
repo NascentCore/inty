@@ -7,12 +7,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -25,8 +27,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -37,11 +40,15 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.AutoRenewalNotice
-import com.ai.intellimate.ui.components.BackgroundVideoPlayer
 import com.ai.intellimate.ui.components.EmptyPlanState
 import com.ai.intellimate.ui.components.PremiumBenefitItem
 import com.ai.intellimate.ui.components.PremiumPlanList
 import com.ai.intellimate.ui.components.PurchaseButton
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 /** 订阅描述文本组件 */
 @Composable
@@ -110,76 +117,41 @@ fun VipCenterContent(
         modifier =
             Modifier.fillMaxSize().background(ai.sxwl.android.design.theme.HeartColor.primaryColor)
     ) {
-        // 全屏视频播放器
-        BackgroundVideoPlayer()
-
-        // 半透明遮罩层，确保内容可读性
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .fillMaxHeight(.77f)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        Color(0x001C1523),
-                                        Color(0xA81C1523),
-                                        Color(0xE31C1523),
-                                        Color(0xFF1C1523),
-                                    )
-                            )
-                    )
+        // 双层图片背景
+        val hazeState = rememberHazeState()
+        Image(
+            painter = painterResource(R.drawable.vip_bg),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)))
+        Image(
+            painter = painterResource(R.drawable.vip_female),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().padding(top = 100.dp).hazeSource(state = hazeState),
+            alignment = Alignment.BottomCenter,
+            contentScale = ContentScale.FillHeight,
         )
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        val scrollState = rememberScrollState()
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
             VipCenterTopBar(onClose = onClose)
 
-            Spacer(Modifier.height(110.dp))
+            Spacer(Modifier.weight(1f))
+            VipBenefitsDesc(hazeState)
 
-            VipCenterHeader()
-
-            VipCenterBenefits()
-
-            Spacer(Modifier.height(32.dp))
-
+            Spacer(Modifier.height(12.dp))
             // 动态显示订阅计划列表
             if (plans.isNotEmpty()) {
-                PremiumPlanList(
-                    plans = plans,
-                    selectedIndex = selectedPlanIndex,
-                    isSubscribed = vipStatus.isSubscribed,
-                    onPlanSelected = { index -> viewModel.selectPlan(index) },
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                // 动态显示选中计划的计费信息
-                val selectedPlan =
-                    if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
-                        plans[selectedPlanIndex]
-                    } else null
-
-                selectedPlan?.let { plan ->
-                    // 处理价格显示：去掉 .00 后缀
-                    val displayPrice = plan.price.replace(".00", "")
-                    SubscriptionDescriptionText(
-                        text =
-                            stringResource(
-                                R.string.subscription_description_fmt_str,
-                                displayPrice,
-                                plan.name.lowercase(),
-                            )
+                IgnoreSystemFontScaling {
+                    PremiumPlanList(
+                        plans = plans,
+                        selectedIndex = selectedPlanIndex,
+                        isSubscribed = vipStatus.isSubscribed,
+                        onPlanSelected = { index -> viewModel.selectPlan(index) },
                     )
                 }
-                    ?: run {
-                        SubscriptionDescriptionText(
-                            text = stringResource(R.string.subscription_description_placeholder)
-                        )
-                    }
-
-                Spacer(Modifier.height(32.dp))
 
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
@@ -191,9 +163,8 @@ fun VipCenterContent(
                 EmptyPlanState()
             }
 
-            Spacer(Modifier.height(16.dp))
             AutoRenewalNotice()
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(40.dp))
         }
     }
 }
@@ -203,13 +174,7 @@ fun VipCenterContent(
 @Composable
 private fun VipCenterTopBar(onClose: () -> Unit) {
     CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.premium_title),
-                fontWeight = FontWeight(600),
-                color = Color.White,
-            )
-        },
+        title = { Text(text = "", fontWeight = FontWeight(600), color = Color.White) },
         modifier = Modifier.fillMaxWidth(),
         navigationIcon = {
             IconButton(onClick = onClose) {
@@ -262,4 +227,36 @@ private fun VipCenterBenefits() {
 @Composable
 private fun VipCenterContentPreview() {
     VipCenterContent(onClose = {}, onPurchase = {})
+}
+
+@Composable
+private fun VipBenefitsDesc(hazeState: HazeState) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .background(Color(0x806E5289).copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(8.dp))
+                .hazeEffect(state = hazeState) { blurRadius = 4.dp }
+    ) {
+        Column {
+            Spacer(modifier = Modifier.height(16.dp))
+            Image(
+                painter = painterResource(R.drawable.vip_desc_title),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
+                contentScale = ContentScale.FillWidth,
+            )
+
+            Spacer(modifier = Modifier.height(30.dp))
+            Image(
+                painter = painterResource(R.drawable.vip_desc_content),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
+                contentScale = ContentScale.FillWidth,
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
 }

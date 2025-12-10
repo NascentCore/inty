@@ -5,18 +5,18 @@ from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import GooglePlayConfig
+from app.schemas.version import VersionReminderAction
 
 
 class GooglePlayService:
     """Google Play Developer API服务"""
 
-    def __init__(self, android_publisher_service: Resource):
+    def __init__(self, android_publisher_service: Resource, config: GooglePlayConfig):
         """初始化Google Play服务"""
         self.service = android_publisher_service
-        self.package_name = (
-            global_config_loaded_from_config_yaml.google_play.package_name
-        )
+        self.config = config
+        self.package_name = config.package_name
 
     def verify_subscription_purchase(
         self, product_id: str, purchase_token: str
@@ -57,9 +57,21 @@ class GooglePlayService:
             return is_valid, purchase_info
 
         except HttpError as e:
-            logger.error(
-                f"Google Play API调用失败: {e}, product_id: {product_id}, purchase_token: {purchase_token}"
+            # HttpError 400 通常是产品ID不匹配的预期情况，降级为 DEBUG
+            # 其他错误（401, 403, 500等）保持 ERROR 级别
+            status_code = (
+                e.resp.status
+                if hasattr(e, "resp") and hasattr(e.resp, "status")
+                else None
             )
+            if status_code == 400:
+                logger.debug(
+                    f"Google Play API调用失败 (产品ID不匹配): {e}, product_id: {product_id}, purchase_token: {purchase_token[:10]}..."
+                )
+            else:
+                logger.error(
+                    f"Google Play API调用失败: {e}, product_id: {product_id}, purchase_token: {purchase_token[:10]}..., status_code: {status_code}"
+                )
             return False, {"error": str(e)}
         except Exception as e:
             logger.error(f"订阅验证失败: {str(e)}")
@@ -398,12 +410,8 @@ class GooglePlayService:
 
             try:
                 # 尝试从配置的轨道获取版本信息
-                primary_track = (
-                    global_config_loaded_from_config_yaml.google_play.release_track
-                )
-                fallback_tracks = (
-                    global_config_loaded_from_config_yaml.google_play.fallback_tracks
-                )
+                primary_track = self.config.release_track
+                fallback_tracks = self.config.fallback_tracks
 
                 # 构建要尝试的轨道列表
                 tracks_to_try = [primary_track]
@@ -508,124 +516,87 @@ class GooglePlayService:
         Returns:
             Dict: 版本检查结果
         """
-        try:
-            # 如果版本检查被禁用
-            if (
-                not global_config_loaded_from_config_yaml.google_play.enable_version_check
-            ):
-                return {
-                    "update_required": False,
-                    "force_update": False,
-                    "message": "Version check disabled",
-                }
-
-            # 获取最新版本信息
-            version_info = self.get_app_version_info()
-
-            if "error" in version_info:
-                logger.warning(
-                    f"无法获取版本信息，跳过版本检查: {version_info['error']}"
-                )
-                return {
-                    "update_required": False,
-                    "force_update": False,
-                    "message": "Unable to fetch version info",
-                    "error": version_info["error"],
-                }
-
-            latest_version_name = version_info.get("version_name", "")
-            latest_version_code = version_info.get("version_code", 0)
-
-            # 版本比较
-            update_required = self._compare_versions(
-                client_version_code, latest_version_code
-            )
-
-            # 强制更新检查：扩展多种检查条件
-            force_update_reasons = []
-
-            # 1. 检查是否低于最低支持版本
-            try:
-                min_supported_version_code = int(
-                    global_config_loaded_from_config_yaml.google_play.min_supported_version
-                )
-            except (ValueError, TypeError):
-                logger.warning(
-                    f"最低支持版本配置无效: {global_config_loaded_from_config_yaml.google_play.min_supported_version}, 使用默认值 1"
-                )
-                min_supported_version_code = 1
-
-            if client_version_code < min_supported_version_code:
-                reason = f"Version code below minimum supported version: {client_version_code} < {min_supported_version_code}"
-                force_update_reasons.append(reason)
-                logger.info(f"最低版本检查触发强制更新: {reason}")
-
-            force_update = len(force_update_reasons) > 0
-
-            result = {
-                "current_version": str(client_version_code),
-                "latest_version": latest_version_name,
-                "latest_version_code": latest_version_code,
-                "update_required": update_required,
-                "force_update": force_update,
-                "minimum_version": str(min_supported_version_code),
-                "changelog": version_info.get("release_notes"),
-                "download_url": f"https://play.google.com/store/apps/details?id={self.package_name}",
-            }
-
-            # 添加详细的更新原因
-            if force_update:
-                result["force_update_reasons"] = force_update_reasons
-                result["message"] = (
-                    f"Force update required: {'; '.join(force_update_reasons)}"
-                )
-            elif update_required:
-                result["message"] = "New version available"
-            else:
-                result["message"] = "App is up to date"
-
-            # 详细日志记录
-            log_msg = (
-                f"版本检查完成: 客户端={client_version_code}, 最新={latest_version_code}, "
-                f"最低支持={min_supported_version_code}, "
-                f"需要更新={update_required}, 强制更新={force_update}"
-            )
-
-            if force_update_reasons:
-                log_msg += f" (强制更新原因: {'; '.join(force_update_reasons)})"
-
-            logger.info(log_msg)
-            return result
-
-        except Exception as e:
-            logger.error(f"版本检查失败: {str(e)}")
-            return {
+        download_url_value = (
+            f"https://play.google.com/store/apps/details?id={self.package_name}"
+        )
+        result = {
+            "current_version": str(client_version_code),
+            "latest_version": "unknown",
+            "latest_version_code": 0,
+            "minimum_version": str(self.config.min_supported_version) or "0",
+            "download_url": download_url_value,
+            "changelog": None,
+            "update_required": False,
+            "force_update": False,
+            "reminder_action": VersionReminderAction.NONE,
+        }
+        # 如果版本检查被禁用
+        if not self.config.enable_version_check:
+            logger.debug("版本检查被禁用，跳过检查，返回默认值")
+            return result | {
                 "update_required": False,
                 "force_update": False,
-                "message": "Version check failed",
-                "error": str(e),
+                "message": "Version check disabled",
+                "reminder_action": VersionReminderAction.NONE,
             }
 
-    def _compare_versions(self, version_code1, version_code2) -> bool:
-        """
-        比较版本号，直接比较versionCode，判断version_code1是否小于version_code2
+        version_info = self.get_app_version_info()
+        logger.debug(f"获取版本信息: {version_info}")
 
-        Args:
-            version_code1: 版本代码1 (客户端versionCode)
-            version_code2: 版本代码2 (服务端versionCode)
+        if "error" in version_info:
+            logger.warning(f"无法获取版本信息，跳过版本检查: {version_info['error']}")
+            return result | {
+                "error": version_info["error"],
+                "message": "Unable to fetch version info",
+                "reminder_action": VersionReminderAction.NONE,
+            }
 
-        Returns:
-            bool: version_code1 < version_code2 时返回True
-        """
+        latest_version_code_raw = version_info.get("version_code", 0)
+
+        # 将版本代码转换为整数
         try:
-            # 直接比较版本代码
-            client_code = int(version_code1)
-            server_code = int(version_code2)
+            latest_version_code = int(latest_version_code_raw)
+        except (ValueError, TypeError):
+            logger.warning(f"最新版本代码无效: {latest_version_code_raw}, 使用默认值 0")
+            latest_version_code = 0
 
-            logger.debug(f"版本代码比较: {client_code} vs {server_code}")
+        version_code_gap = latest_version_code - client_version_code
+        reminder_action = VersionReminderAction.NONE
+        # 按阈值从大到小检查，找到第一个匹配的阈值即返回对应的动作
+        for gap_threshold, action in [
+            (
+                self.config.force_update_version_code_gap,
+                VersionReminderAction.BLOCK_ACCESS,
+            ),
+            (
+                self.config.popup_reminder_version_code_gap,
+                VersionReminderAction.POP_UP_REMINDER,
+            ),
+            (
+                self.config.settings_reminder_version_code_gap,
+                VersionReminderAction.SETTINGS_REMINDER,
+            ),
+        ]:
+            if version_code_gap >= gap_threshold:
+                reminder_action = action
+                break
 
-            return client_code < server_code
+        # 获取版本信息用于返回
+        latest_version_name = version_info.get("version_name", "")
+        changelog_value = version_info.get("release_notes")
 
-        except Exception as e:
-            logger.warning(f"版本代码比较失败，将客户端版本视为需要更新: {e}")
-            return True  # 如果比较失败，保守起见要求更新
+        result = result | {
+            "latest_version": latest_version_name or str(latest_version_code),
+            "latest_version_code": latest_version_code,
+            "changelog": changelog_value,
+            "update_required": reminder_action != VersionReminderAction.NONE,
+            "force_update": reminder_action == VersionReminderAction.BLOCK_ACCESS,
+            "message": (
+                "New version available"
+                if reminder_action != VersionReminderAction.NONE
+                else "App is up to date"
+            ),
+            "reminder_action": reminder_action,
+        }
+        logger.debug(f"版本检查结果: {result}")
+        return result

@@ -15,6 +15,18 @@ object AvatarManager {
         generatedAvatarUrls = emptyList() // Clear multiple URLs when setting single URL
     }
 
+    fun appendAvatarUrls(urls: List<String>) {
+        if (urls.isNotEmpty()) {
+            val historySize = generatedAvatarUrls.size
+
+            generatedAvatarUrls += urls
+            selectedImageIndex = historySize
+            generatedAvatarUrl = null // Clear single URL when setting multiple URLs
+            isGenerating = false
+            generationError = null
+        }
+    }
+
     fun setGeneratedAvatarUrls(urls: List<String>) {
         generatedAvatarUrls = urls
         generatedAvatarUrl = null // Clear single URL when setting multiple URLs

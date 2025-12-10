@@ -3,6 +3,10 @@
 本文件覆盖并补充根 `AGENTS.md`，仅适用于 `scripts/`。
 
 ## 约定
+
 - 脚本需可重复执行（幂等），参数化（使用 `argparse`/配置），日志使用 `logger.debug()`。
 - 依赖在本目录 `requirements.txt` 中声明；禁止隐式外部依赖。
 - 修改数据的脚本需具备 Dry-Run 与明确确认机制。
+- 在代码库顶层目录 `export PYTHONPATH=.` 不要在 python 代码中添加设置引用路径的代码
+- `app/models/agent.py` 中的 Agent 表中的 readable_id 字段已被废弃，不要再使用
+- `scripts/requirements.txt` 中的依赖不要添加版本约束

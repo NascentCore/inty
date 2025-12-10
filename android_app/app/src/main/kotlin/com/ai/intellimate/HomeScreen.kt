@@ -23,20 +23,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.agent.generate.CreateRoleActivity
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
@@ -48,32 +51,46 @@ import com.ai.intellimate.profile.ProfilePage
 import com.ai.intellimate.profile.ProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
+import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.UiConfigs
-import com.ai.intellimate.ui.components.ForceUpgradeDialog
+import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.vip.VipCenterActivity
+import com.inty.api.models.api.v1.version.VersionCheckResponse
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 /** 主页面，包含五个tab */
 @Composable
 fun HomeScreen(
+    navController: NavController,
     modifier: Modifier = Modifier,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
 ) {
     val selectedTab = mainViewModel.selectedTab.collectAsState()
+    val messagesTabHasPush by mainViewModel.messagesTabHasPush.collectAsState()
+    val appUpdateTipsRedDot by mainViewModel.appUpdateTipsRedDot.collectAsState()
 
-    // 页面跟踪，包含默认首页 tab index（只在首次加载时上报）
+    // 页面跟踪，包含当前和默认首页 tab（只在首次加载时上报）
     LaunchedEffect(Unit) {
-        // 获取默认首页 tab index
+        // 获取默认首页 tab
         val defaultTabIndex =
             try {
                 ai.sxwl.android.firebase.FirebaseManager.getRemoteConfigLong(
-                    ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
-                ).toInt()
-            } catch (e: Exception) {
+                        ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys
+                            .HOME_PAGE_DEFAULT_TAB_INDEX
+                    )
+                    .toInt()
+            } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
+        val defaultTabName =
+            when (defaultTabIndex) {
+                0 -> "chat"
+                3 -> "explore"
+                else -> "other"
+            }
 
-        val currentTabIndex = selectedTab.value.ordinal
         val currentTabName =
             when (selectedTab.value) {
                 HomeTabIndex.Chat -> "chat"
@@ -86,13 +103,7 @@ fun HomeScreen(
         PageTrackingHelper.trackPageView(
             "HomePage",
             "MainActivity",
-            mapOf(
-                "current_tab_index" to currentTabIndex,
-                "current_tab_name" to currentTabName,
-                "default_home_tab_index" to defaultTabIndex,
-                "default_home_tab_name" to
-                        if (defaultTabIndex == 0) "chat" else if (defaultTabIndex == 3) "explore" else "other",
-            ),
+            mapOf("current_tab" to currentTabName, "default_home_tab" to defaultTabName),
         )
     }
 
@@ -104,31 +115,97 @@ fun HomeScreen(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
-                // 标记需要刷新 Profile 列表
+                // 标记需要刷新 Profile 列表，并切换回 “Me” 页面
                 shouldRefreshProfile = true
+                mainViewModel.selectTab(HomeTabIndex.Profile.ordinal)
             }
         }
 
+    // 双击检测：跟踪最后点击的tab和时间
+    var lastTabClickTime by remember { mutableLongStateOf(0L) }
+    var lastTabIndex by remember { mutableIntStateOf(-1) }
+    val doubleTapTimeoutMs = 300L // 双击检测时间窗口（毫秒）
+
+    // 圣诞配置状态，在 App 恢复时会重新检查日期
+    var enableChristmas by remember { mutableStateOf(enableChristmasConfig()) }
+
+    // 在 App 恢复时重新检查日期，更新圣诞配置状态
+    LifecycleResumeEffect(mainViewModel) {
+        enableChristmas = enableChristmasConfig()
+        onPauseOrDispose {}
+    }
+
+    // 根据圣诞配置状态动态选择 tab 图标配置
+    val homeTabItems = if (enableChristmas) christmasTabItems else defaultTabItems
+
+    val bottomBarItems =
+        remember(messagesTabHasPush, appUpdateTipsRedDot, enableChristmas) {
+            homeTabItems.map { tab ->
+                when (tab.index) {
+                    HomeTabIndex.Messages.ordinal -> {
+                        tab.copy(hasRedDot = messagesTabHasPush)
+                    }
+                    HomeTabIndex.Profile.ordinal -> {
+                        tab.copy(hasRedDot = appUpdateTipsRedDot)
+                    }
+                    else -> {
+                        tab
+                    }
+                }
+            }
+        }
+
+    LaunchedEffect(selectedTab.value) {
+        when (selectedTab.value) {
+            HomeTabIndex.Messages -> {
+                mainViewModel.clearMessagesTabPush()
+            }
+            HomeTabIndex.Profile -> {
+                // 当前 app 运行期间不会改变是否有新版的提示，所以不需要清除
+                mainViewModel.clearAppUpdateTipsRedDot()
+            }
+            else -> {}
+        }
+    }
+
     Scaffold(
         modifier =
-            modifier
-                .fillMaxSize()
-                .background(HeartColor.primaryColor)
-                .navigationBarsPadding(),
+            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
             HeartBottomAppBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
-                tabItems = homeTabItems,
+                tabItems = bottomBarItems,
                 onTabSelected = { tabIndex ->
-                    handleTabSelectionWithLauncher(
-                        tabIndex,
-                        context,
-                        mainViewModel,
-                        createRoleLauncher,
-                    )
+                    val currentTime = System.currentTimeMillis()
+                    val exploreTabIndex = HomeTabIndex.Explore.ordinal
+
+                    // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
+                    if (
+                        tabIndex == exploreTabIndex &&
+                            tabIndex == lastTabIndex &&
+                            currentTime - lastTabClickTime < doubleTapTimeoutMs
+                    ) {
+                        // 双击Explore tab，触发重置
+                        if (selectedTab.value == HomeTabIndex.Explore) {
+                            mainViewModel.triggerExploreReset()
+                        }
+                        // 重置计时器，避免连续触发
+                        lastTabClickTime = 0
+                        lastTabIndex = -1
+                    } else {
+                        // 正常点击，更新记录
+                        lastTabClickTime = currentTime
+                        lastTabIndex = tabIndex
+                        handleTabSelectionWithLauncher(
+                            tabIndex,
+                            context,
+                            mainViewModel,
+                            createRoleLauncher,
+                        )
+                    }
                 },
                 iconSize = UiConfigs.BottomBar.TabIconSize,
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
@@ -138,6 +215,7 @@ fun HomeScreen(
         },
     ) { innerPadding ->
         HomeContent(
+            navController,
             selectedTab = selectedTab.value,
             mainViewModel = mainViewModel,
             viewModelFactory = viewModelFactory,
@@ -148,23 +226,43 @@ fun HomeScreen(
 
         ExpiredDialogLogic(mainViewModel)
         AppVersionLogic(mainViewModel)
+        FeedbackRequestDialogLogic(mainViewModel)
     }
 }
 
 // App检查更新的逻辑，强制更新则弹窗
 @Composable
 private fun AppVersionLogic(mainViewModel: MainViewModel) {
-    val uriHandler = LocalUriHandler.current
-    val rsp by mainViewModel.needForceUpgrade.collectAsState()
-    if (rsp?.force_update == true) {
-        ForceUpgradeDialog(
-            content = rsp?.message ?: stringResource(R.string.str_upgrade_content),
-            onConfirm = {
-                runCatching { rsp?.download_url?.let { url -> uriHandler.openUri(url) } }
-            },
-        )
+    val rsp by mainViewModel.needForceUpgrade.collectAsState(null)
+
+    // 使用稳定的 key，避免 rsp 变化时重置状态；因为 rsp 会从 null 被赋值
+    var shouldShowUpgradeDialog by remember { mutableStateOf(false) }
+
+    // 只在首次收到非 null 的 rsp 时显示对话框
+    LaunchedEffect(rsp) {
+        if (rsp != null && !shouldShowUpgradeDialog) {
+            shouldShowUpgradeDialog = true
+        }
+    }
+
+    val isForced = rsp?.reminder_action == VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS
+    val title =
+        if (isForced) {
+            stringResource(id = R.string.str_force_upgrade)
+        } else {
+            stringResource(id = R.string.str_suggest_upgrade)
+        }
+    val content = stringResource(id = R.string.str_upgrade_content)
+
+    if (shouldShowUpgradeDialog && rsp != null) {
+        UpgradeDialog(title, content, { shouldShowUpgradeDialog = false }, isForced = isForced)
     }
 }
+
+private val RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(1)
+private val MAX_RESUB_REMINDER_CYCLE_SECONDS = TimeUnit.DAYS.toSeconds(32)
+private val MAX_RESUB_REMINDER_MULTIPLIER =
+    (MAX_RESUB_REMINDER_CYCLE_SECONDS / RESUB_REMINDER_CYCLE_SECONDS).toInt()
 
 @Composable
 private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
@@ -174,13 +272,17 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
     val vipPlan by mainViewModel.vipPlanFlow.collectAsState()
     LifecycleResumeEffect(mainViewModel) {
         if (!vipStatue.isSubscribed && vipStatue.everSubscribed) {
-            // 未订阅状态，且曾经订阅过，表示已过期;如果app未曾提示过一次，则弹窗。有过提示记录，则不弹窗
-            if (
-                !IntySetting.hasTipsVipExpired() &&
-                    IntySetting.isLogin() &&
-                    IntySetting.getCurToken().isNotEmpty()
-            ) {
-                showExpiredDialog = true
+            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                val nowSeconds = System.currentTimeMillis() / 1000
+                val lastShowTime = IntySetting.getLastResubReminderDialogShowTime()
+                val showCount = IntySetting.getResubReminderDialogShowCount()
+                val shouldShowReminder =
+                    shouldShowResubReminderDialog(nowSeconds, lastShowTime, showCount)
+                if (shouldShowReminder) {
+                    IntySetting.setLastResubReminderDialogShowTime(nowSeconds)
+                    IntySetting.setResubReminderDialogShowCount(showCount + 1)
+                    showExpiredDialog = true
+                }
             }
         }
         onPauseOrDispose {}
@@ -218,9 +320,39 @@ private fun ExpiredDialogLogic(mainViewModel: MainViewModel) {
                 showExpiredDialog = false
             },
         )
-        // 标记已经展示了tips的dialog
-        IntySetting.setTipsVipExpired(true)
     }
+}
+
+@Composable
+private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
+    val showDialog by mainViewModel.showFeedbackRequestDialog.collectAsState()
+    val context = LocalContext.current
+
+    if (showDialog) {
+        FeedbackRequestDialog(
+            onCancel = { mainViewModel.hideFeedbackRequestDialog() },
+            onSendSuggestions = {
+                mainViewModel.hideFeedbackRequestDialog()
+                ReportActivity.launchFeedback(context)
+            },
+        )
+    }
+}
+
+private fun shouldShowResubReminderDialog(
+    nowSeconds: Long,
+    lastShowTimeSeconds: Long,
+    showCount: Int,
+): Boolean {
+    if (lastShowTimeSeconds == 0L) return true
+    val delaySeconds = calculateResubReminderDelaySeconds(showCount)
+    return nowSeconds - lastShowTimeSeconds >= delaySeconds
+}
+
+private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
+    val safeCount = showCount.coerceAtMost(30)
+    val multiplier = (1 shl safeCount).coerceAtMost(MAX_RESUB_REMINDER_MULTIPLIER)
+    return RESUB_REMINDER_CYCLE_SECONDS * multiplier
 }
 
 /** 处理Tab选择逻辑（带 launcher） */
@@ -244,6 +376,7 @@ private fun handleTabSelectionWithLauncher(
 /** 主页面内容 */
 @Composable
 private fun HomeContent(
+    navController: NavController,
     selectedTab: HomeTabIndex,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
@@ -265,14 +398,17 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Explore -> {
-            ExploreTabContent(innerPadding = innerPadding)
+            ExploreTabContent(innerPadding = innerPadding, mainViewModel = mainViewModel)
         }
 
         HomeTabIndex.Profile -> {
+            val appUpdateTips by mainViewModel.appUpdateTips.collectAsState()
             ProfileTabContent(
+                navController,
                 onShowSettings = { mainViewModel.showSettings() },
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
+                appUpdateTips = appUpdateTips,
             )
         }
     }
@@ -316,7 +452,6 @@ private fun MessagesTabContent() {
         modifier = Modifier,
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
-            messagesViewModel.setConversationReaded(conversation)
             ChatActivity.launch(
                 context,
                 conversation.convertToAgentInfo(),
@@ -329,9 +464,10 @@ private fun MessagesTabContent() {
 
 /** 推荐Tab内容 */
 @Composable
-private fun ExploreTabContent(innerPadding: PaddingValues) {
+private fun ExploreTabContent(innerPadding: PaddingValues, mainViewModel: MainViewModel) {
     val context = LocalContext.current
     val exploreViewModel: ExploreViewModel = viewModel()
+    val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()
 
     // 初始化 ExploreTab 数据
     LaunchedEffect(Unit) {
@@ -347,15 +483,18 @@ private fun ExploreTabContent(innerPadding: PaddingValues) {
             ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
         },
         viewModel = exploreViewModel,
+        externalResetSignal = exploreResetSignal,
     )
 }
 
 /** 我的Tab内容 */
 @Composable
 private fun ProfileTabContent(
+    navController: NavController,
     onShowSettings: () -> Unit,
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
+    appUpdateTips: Boolean,
 ) {
     val context = LocalContext.current
     val profileViewModel: ProfileViewModel = viewModel()
@@ -380,8 +519,20 @@ private fun ProfileTabContent(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             // 编辑成功后刷新列表
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
+            if (result.resultCode == Activity.RESULT_OK) {
                 profileViewModel.refreshCreatedAgents()
+            }
+        }
+
+    // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
+    val createFromProfileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            // 创建成功后刷新列表和草稿
+            if (result.resultCode == Activity.RESULT_OK) {
+                profileViewModel.refreshCreatedAgents()
+                profileViewModel.refreshAgentDrafts()
             }
         }
 
@@ -393,6 +544,7 @@ private fun ProfileTabContent(
             profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
+            profileViewModel.refreshAgentDrafts()
             profileViewModel.trackPageView("MainPage")
         }
     }
@@ -401,6 +553,7 @@ private fun ProfileTabContent(
     LaunchedEffect(shouldRefreshProfile) {
         if (shouldRefreshProfile) {
             profileViewModel.refreshCreatedAgents()
+            profileViewModel.refreshAgentDrafts()
             onRefreshProfileHandled()
         }
     }
@@ -408,6 +561,7 @@ private fun ProfileTabContent(
     // 生命周期管理：页面恢复时刷新用户信息，但不频繁刷新列表
     LifecycleResumeEffect(profileViewModel) {
         profileViewModel.loadUserProfile()
+        profileViewModel.refreshAgentDrafts()
         VipStatusHelper.refreshSubscriptionStatus()
         // 不再频繁刷新列表，只在首次加载或从 CreateRoleActivity 返回时刷新
         onPauseOrDispose {}
@@ -433,18 +587,25 @@ private fun ProfileTabContent(
     }
 
     ProfilePage(
+        navController,
         modifier = Modifier,
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
+        drafts = uiState.drafts,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+        },
+        onClickDraft = { draftId ->
+            val intent = CreateRoleActivity.getIntent(context, null, draftId)
+            createFromProfileLauncher.launch(intent)
         },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
             val intent = CreateRoleActivity.getIntent(context, agent)
             editAgentLauncher.launch(intent)
         },
+        appUpdateTips = appUpdateTips,
         onDeleteAgent = { agent ->
             profileViewModel.deleteAgent(
                 agentId = agent.id,
@@ -454,10 +615,12 @@ private fun ProfileTabContent(
         },
         onLoadMore = { profileViewModel.loadMoreUserCreatedAgents() },
         onShowSettings = onShowSettings,
+        profileViewModel = profileViewModel, // 传递 ViewModel 以便 ProfilePage 内部处理刷新
     )
 }
 
-private val homeTabItems =
+// 默认tab的图标配置
+private val defaultTabItems =
     listOf(
         HeartBottomTabItem(
             index = 0,
@@ -490,3 +653,49 @@ private val homeTabItems =
             labelResId = R.string.tab_me,
         ),
     )
+
+// 圣诞节的图标配置
+private val christmasTabItems =
+    listOf(
+        HeartBottomTabItem(
+            index = 0,
+            selectedIcon = R.drawable.icon_chat_tab_christmas,
+            unselectedIcon = R.drawable.tab_icon_home,
+            labelResId = R.string.tab_home,
+        ),
+        HeartBottomTabItem(
+            index = 1,
+            selectedIcon = R.drawable.icon_msg_tab_christmas,
+            unselectedIcon = R.drawable.tab_icon_messages,
+            labelResId = R.string.tab_messages,
+        ),
+        HeartBottomTabItem(
+            index = 2,
+            selectedIcon = R.drawable.icon_create_tab_christmas,
+            unselectedIcon = R.drawable.icon_create_tab_christmas,
+            labelResId = R.string.tab_create,
+        ),
+        HeartBottomTabItem(
+            index = 3,
+            selectedIcon = R.drawable.icon_explore_tab_christmas,
+            unselectedIcon = R.drawable.tab_icon_explore,
+            labelResId = R.string.tab_explore,
+        ),
+        HeartBottomTabItem(
+            index = 4,
+            selectedIcon = R.drawable.icon_profile_tab_christmas,
+            unselectedIcon = R.drawable.tab_icon_me,
+            labelResId = R.string.tab_me,
+        ),
+    )
+
+/** 简单的本地时间策略，12月20日～12月26日之间 欢度圣诞 */
+private fun enableChristmasConfig(): Boolean {
+    val calendar = Calendar.getInstance()
+    val month = calendar.get(Calendar.MONTH)
+    val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+
+    // Calendar.MONTH 从 0 开始，12 月对应 11
+    // 检查是否为 12 月，且日期在 20 到 26 之间
+    return month == Calendar.DECEMBER && dayOfMonth in 20..26
+}

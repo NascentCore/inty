@@ -16,7 +16,7 @@ object IntyUserProfileSDK {
             when (result) {
                 is ApiResult.Success -> {
                     val userProfile = result.data
-                    LogUtils.i("Updated user profile from inty-sdk: ${userProfile.nickname}")
+                    LogUtils.d("Updated user profile from inty-sdk: ${userProfile.nickname}")
                     userProfile
                 }
                 is ApiResult.Error -> {

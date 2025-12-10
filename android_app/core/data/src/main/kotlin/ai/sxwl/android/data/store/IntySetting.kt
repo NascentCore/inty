@@ -3,16 +3,25 @@ package ai.sxwl.android.data.store
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
-import ai.sxwl.android.utils.Utils
 import android.os.Handler
 import android.os.Looper
 import com.tencent.mmkv.MMKV
 import kotlin.random.Random
 
+private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
+private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
+private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
+private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
+private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
+private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
+private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
+
 object IntySetting {
 
     // App级通用标记的存储 使用的对象
-    private val allUserSetting: MMKV
+    // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
+    private val allUserSetting: MMKV =
+        MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
     // 当前用户级别的数据存储
     private var curUserSetting: MMKV
@@ -21,8 +30,6 @@ object IntySetting {
     private var curUid: String = ""
 
     init {
-        MMKV.initialize(Utils.getApp())
-        allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
 
         curUid = getCurUserID()
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
@@ -70,19 +77,6 @@ object IntySetting {
         NetServiceMgr.clearCache()
     }
 
-    /** 用于业务标记消息已读的最后一条消息的判断 */
-    fun isConversationReaded(agentID: String, lastMessage: String): Boolean {
-        val configLastMsg = curUserSetting.decodeString("conversation_last_$agentID", agentID)
-        //        LogUtils.d("$agentID = $configLastMsg, new=$lastMessage")
-        return (configLastMsg == lastMessage)
-    }
-
-    /** 用于业务标记消息已读的最后一条消息 */
-    fun setConversationReaded(agentID: String, lastMessage: String) {
-        //        LogUtils.d("$agentID = $lastMessage")
-        curUserSetting.putString("conversation_last_$agentID", lastMessage)
-    }
-
     /** 记录是否显示keepTalking按钮（全局设置） */
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)
@@ -122,13 +116,91 @@ object IntySetting {
         curUserSetting.putBoolean("user_set_auto_play_voice", true)
     }
 
-    // 标记是否已经提示过订阅过期的弹窗
-    fun hasTipsVipExpired(): Boolean {
-        return curUserSetting.getBoolean("has_tips_vip_expired", false)
+    /** 自动播放背景动画（全局设置，默认开启） */
+    fun setAutoPlayAnimation(enabled: Boolean) {
+        curUserSetting.putBoolean("auto_play_animation", enabled)
     }
 
-    fun setTipsVipExpired(showed: Boolean) {
-        curUserSetting.putBoolean("has_tips_vip_expired", showed)
+    fun isAutoPlayAnimation(): Boolean {
+        return curUserSetting.decodeBool("auto_play_animation", true)
+    }
+
+    /** 检查用户是否手动设置过 Auto Play Animation */
+    fun hasUserSetAutoPlayAnimation(): Boolean {
+        return curUserSetting.decodeBool("user_set_auto_play_animation", false)
+    }
+
+    /** 标记用户已手动设置过 Auto Play Animation */
+    fun markUserSetAutoPlayAnimation() {
+        curUserSetting.putBoolean("user_set_auto_play_animation", true)
+    }
+
+    /** 显示场景动作输入按钮（全局设置，默认关闭） */
+    fun setShowSceneActionButton(show: Boolean) {
+        curUserSetting.putBoolean("show_scene_action_button", show)
+    }
+
+    fun isShowSceneActionButton(): Boolean {
+        // 默认值为false（关闭）
+        return curUserSetting.decodeBool("show_scene_action_button", false)
+    }
+
+    /** 检查用户是否手动设置过 Show Scene Action Button（用于判断是否使用 Remote Config 默认值） */
+    fun hasUserSetSceneActionButton(): Boolean {
+        return curUserSetting.decodeBool("user_set_scene_action_button", false)
+    }
+
+    /** 标记用户已手动设置过 Show Scene Action Button */
+    fun markUserSetSceneActionButton() {
+        curUserSetting.putBoolean("user_set_scene_action_button", true)
+    }
+
+    /** 聊天消息字体大小（单位 sp，默认 14f） */
+    fun setChatFontSizeSp(size: Float) {
+        curUserSetting.putFloat(KEY_CHAT_FONT_SIZE_SP, size)
+    }
+
+    fun getChatFontSizeSp(): Float {
+        return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
+    }
+
+    fun getLastResubReminderDialogShowTime(): Long {
+        return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
+    }
+
+    fun setLastResubReminderDialogShowTime(timestampSeconds: Long) {
+        curUserSetting.putLong(KEY_RESUB_REMINDER_LAST_TIME, timestampSeconds)
+    }
+
+    fun getResubReminderDialogShowCount(): Int {
+        return curUserSetting.decodeInt(KEY_RESUB_REMINDER_SHOW_COUNT, 0)
+    }
+
+    fun setResubReminderDialogShowCount(count: Int) {
+        curUserSetting.putInt(KEY_RESUB_REMINDER_SHOW_COUNT, count)
+    }
+
+    /** 记录消息Tab是否需要显示推送红点 */
+    fun setMessagesTabHasPush(hasPush: Boolean) {
+        curUserSetting.putBoolean(KEY_MESSAGES_TAB_HAS_PUSH, hasPush)
+    }
+
+    fun hasMessagesTabPush(): Boolean {
+        return curUserSetting.decodeBool(KEY_MESSAGES_TAB_HAS_PUSH, false)
+    }
+
+    /** 记录特定会话是否有推送未读 */
+    fun setConversationHasPush(agentId: String, hasPush: Boolean) {
+        val key = "$KEY_CONVERSATION_PUSH_PREFIX$agentId"
+        if (hasPush) {
+            curUserSetting.putBoolean(key, true)
+        } else {
+            curUserSetting.removeValueForKey(key)
+        }
+    }
+
+    fun hasConversationPush(agentId: String): Boolean {
+        return curUserSetting.decodeBool("$KEY_CONVERSATION_PUSH_PREFIX$agentId", false)
     }
 
     // 标记是否已经有可用的App更新，用于红点标记
@@ -138,14 +210,6 @@ object IntySetting {
 
     fun setAppUpdateTips(showed: Boolean) {
         curUserSetting.putBoolean("has_app_update_tips", showed)
-    }
-
-    fun appGooglePlayUrl(): String {
-        return curUserSetting.getString("app_google_play_url", "") ?: ""
-    }
-
-    fun setAppGooglePlayUrl(url: String) {
-        curUserSetting.putString("app_google_play_url", url)
     }
 
     private var isLoggingOut = false
@@ -285,6 +349,46 @@ object IntySetting {
                 curUserSetting.removeValueForKey(key)
             }
         }
+    }
+
+    // endregion
+
+    // region Explore收藏状态
+
+    /** 设置 Explore 页面角色卡的收藏状态 */
+    fun setExploreAgentFavorite(agentId: String, favorite: Boolean) {
+        if (agentId.isBlank()) return
+        curUserSetting.putBoolean("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", favorite)
+    }
+
+    /** 获取 Explore 页面角色卡的收藏状态 */
+    fun isExploreAgentFavorite(agentId: String): Boolean {
+        if (agentId.isBlank()) return false
+        return curUserSetting.decodeBool("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", false)
+    }
+
+    // endregion
+
+    // region 聊天背景图片相关设置
+
+    /** 设置指定agent的自定义聊天背景图片 */
+    fun setChatBackgroundImage(agentId: String, imageUrl: String) {
+        setUserProfileData("chat_background_$agentId", imageUrl)
+    }
+
+    /** 获取指定agent的自定义聊天背景图片 */
+    fun getChatBackgroundImage(agentId: String): String? {
+        return getUserProfileData("chat_background_$agentId")?.takeIf { it.isNotBlank() }
+    }
+
+    /** 清除指定agent的自定义聊天背景图片（恢复为默认） */
+    fun clearChatBackgroundImage(agentId: String) {
+        clearUserProfileData("chat_background_$agentId")
+    }
+
+    /** 检查指定agent是否有自定义聊天背景图片 */
+    fun hasCustomChatBackground(agentId: String): Boolean {
+        return hasUserProfileData("chat_background_$agentId")
     }
 
     // endregion
