@@ -27,6 +27,7 @@ import {
   List,
   Select,
   Space,
+  Tabs,
   Typography,
   message,
 } from 'antd';
@@ -313,97 +314,6 @@ const Live2DTester: React.FC = () => {
           </Form>
         </Card>
 
-        <Card title="Motion Monitor" className="live2d-tester__panel">
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <Space>
-              <Button
-                type={isMonitoring ? 'default' : 'primary'}
-                onClick={isMonitoring ? stopMonitoring : startMonitoring}
-                disabled={!viewerReady}
-              >
-                {isMonitoring ? 'Stop monitoring' : 'Start monitoring'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setMotionHistory([]);
-                  setCurrentMotion(null);
-                  setParameterData(null);
-                }}
-                disabled={!isMonitoring}
-              >
-                Clear history
-              </Button>
-            </Space>
-
-            <Divider style={{ margin: '12px 0' }} />
-
-            <div>
-              <Typography.Text strong>Current Motion:</Typography.Text>
-              {currentMotion ? (
-                <div style={{ marginTop: 8 }}>
-                  <Typography.Text code>
-                    {currentMotion.group}#{currentMotion.index}
-                  </Typography.Text>
-                  <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                    {new Date(currentMotion.timestamp).toLocaleTimeString()}
-                  </Typography.Text>
-                </div>
-              ) : (
-                <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
-                  No motion playing
-                </Typography.Text>
-              )}
-            </div>
-
-            <Divider style={{ margin: '12px 0' }} />
-
-            <div>
-              <Typography.Text strong>Motion History:</Typography.Text>
-              <List
-                dataSource={motionHistory}
-                locale={{ emptyText: 'No motion history' }}
-                renderItem={(item, index) => (
-                  <List.Item style={{ padding: '4px 0' }}>
-                    <Typography.Text code>
-                      {item.group}#{item.index}
-                    </Typography.Text>
-                    <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                      {new Date(item.timestamp).toLocaleTimeString()}
-                    </Typography.Text>
-                  </List.Item>
-                )}
-                size="small"
-                style={{ maxHeight: 200, overflowY: 'auto', marginTop: 8 }}
-              />
-            </div>
-
-            {parameterData && parameterData.length > 0 && (
-              <>
-                <Divider style={{ margin: '12px 0' }} />
-                <div>
-                  <Typography.Text strong>Parameters ({parameterData.length}):</Typography.Text>
-                  <List
-                    dataSource={parameterData.filter((p) => Math.abs(p.value) > 0.01).slice(0, 10)}
-                    locale={{ emptyText: 'No active parameters' }}
-                    renderItem={(item) => (
-                      <List.Item style={{ padding: '4px 0' }}>
-                        <Typography.Text code style={{ fontSize: 11 }}>
-                          {item.id}
-                        </Typography.Text>
-                        <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                          {item.value.toFixed(3)}
-                        </Typography.Text>
-                      </List.Item>
-                    )}
-                    size="small"
-                    style={{ maxHeight: 150, overflowY: 'auto', marginTop: 8 }}
-                  />
-                </div>
-              </>
-            )}
-          </Space>
-        </Card>
-
         <Card title="Viewer">
           <div className="live2d-tester__viewer">
             <Live2DViewer
@@ -425,12 +335,117 @@ const Live2DTester: React.FC = () => {
         </Card>
       </div>
 
-      <Card title="Action logs">
-        <List
-          dataSource={logs}
-          locale={{ emptyText: 'No actions yet.' }}
-          renderItem={(item) => <List.Item>{item}</List.Item>}
-          size="small"
+      <Card>
+        <Tabs
+          defaultActiveKey="logs"
+          items={[
+            {
+              key: 'logs',
+              label: 'Action logs',
+              children: (
+                <List
+                  dataSource={logs}
+                  locale={{ emptyText: 'No actions yet.' }}
+                  renderItem={(item) => <List.Item>{item}</List.Item>}
+                  size="small"
+                />
+              ),
+            },
+            {
+              key: 'monitor',
+              label: 'Motion Monitor',
+              children: (
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space>
+                    <Button
+                      type={isMonitoring ? 'default' : 'primary'}
+                      onClick={isMonitoring ? stopMonitoring : startMonitoring}
+                      disabled={!viewerReady}
+                    >
+                      {isMonitoring ? 'Stop monitoring' : 'Start monitoring'}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setMotionHistory([]);
+                        setCurrentMotion(null);
+                        setParameterData(null);
+                      }}
+                      disabled={!isMonitoring}
+                    >
+                      Clear history
+                    </Button>
+                  </Space>
+
+                  <Divider style={{ margin: '12px 0' }} />
+
+                  <div>
+                    <Typography.Text strong>Current Motion:</Typography.Text>
+                    {currentMotion ? (
+                      <div style={{ marginTop: 8 }}>
+                        <Typography.Text code>
+                          {currentMotion.group}#{currentMotion.index}
+                        </Typography.Text>
+                        <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                          {new Date(currentMotion.timestamp).toLocaleTimeString()}
+                        </Typography.Text>
+                      </div>
+                    ) : (
+                      <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
+                        No motion playing
+                      </Typography.Text>
+                    )}
+                  </div>
+
+                  <Divider style={{ margin: '12px 0' }} />
+
+                  <div>
+                    <Typography.Text strong>Motion History:</Typography.Text>
+                    <List
+                      dataSource={motionHistory}
+                      locale={{ emptyText: 'No motion history' }}
+                      renderItem={(item, index) => (
+                        <List.Item style={{ padding: '4px 0' }}>
+                          <Typography.Text code>
+                            {item.group}#{item.index}
+                          </Typography.Text>
+                          <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                            {new Date(item.timestamp).toLocaleTimeString()}
+                          </Typography.Text>
+                        </List.Item>
+                      )}
+                      size="small"
+                      style={{ maxHeight: 200, overflowY: 'auto', marginTop: 8 }}
+                    />
+                  </div>
+
+                  {parameterData && parameterData.length > 0 && (
+                    <>
+                      <Divider style={{ margin: '12px 0' }} />
+                      <div>
+                        <Typography.Text strong>Parameters ({parameterData.length}):</Typography.Text>
+                        <List
+                          dataSource={parameterData.filter((p) => Math.abs(p.value) > 0.01).slice(0, 10)}
+                          locale={{ emptyText: 'No active parameters' }}
+                          renderItem={(item) => (
+                            <List.Item style={{ padding: '4px 0' }}>
+                              <Typography.Text code style={{ fontSize: 11 }}>
+                                {item.id}
+                              </Typography.Text>
+                              <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                                {item.value.toFixed(3)}
+                              </Typography.Text>
+                            </List.Item>
+                          )}
+                          size="small"
+                          style={{ maxHeight: 150, overflowY: 'auto', marginTop: 8 }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </Space>
+              ),
+            },
+          ]}
         />
       </Card>
     </div>
