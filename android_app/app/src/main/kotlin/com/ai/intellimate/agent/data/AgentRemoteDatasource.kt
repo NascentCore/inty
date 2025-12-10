@@ -6,33 +6,27 @@ import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.data.api.model.UploadAvatarResponse
 import com.ai.intellimate.utils.HttpErrorHandler
 import com.architecture.httplib.core.HttpResult
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.HttpException
-import java.io.File
 
 class AgentRemoteDatasource {
 
-    /**
-     * 创建Agent
-     */
+    /** 创建Agent */
     suspend fun createAgent(params: CreateAgentRequest): AgentInfo {
         return request { NetServiceMgr.getAgentApi().createAgent(params) }
     }
 
-    /**
-     * 更新Agent
-     */
+    /** 更新Agent */
     suspend fun updateAgent(agentId: String, params: CreateAgentRequest): AgentInfo {
         return request { NetServiceMgr.getAgentApi().updateAgent(agentId, params) }
     }
 
-    /**
-     * 上传图片
-     */
+    /** 上传图片 */
     suspend fun uploadImage(file: File): UploadAvatarResponse {
         return request {
             val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
@@ -43,17 +37,20 @@ class AgentRemoteDatasource {
     }
 }
 
-private suspend fun <T: Any> request(
+private suspend fun <T : Any> request(
     operation: String = "operation",
-    action: suspend () -> HttpResult<T>
+    action: suspend () -> HttpResult<T>,
 ): T {
     return withContext(Dispatchers.IO) {
         try {
             when (val result = action()) {
                 is HttpResult.Success -> result.data
-                is HttpResult.Failure -> throw Exception(result.message.ifBlank {
-                    "Creation failed, please check network connection"
-                })
+                is HttpResult.Failure ->
+                    throw Exception(
+                        result.message.ifBlank {
+                            "Creation failed, please check network connection"
+                        }
+                    )
             }
         } catch (e: HttpException) {
             throw Exception(HttpErrorHandler.handleHttpException(e, operation))

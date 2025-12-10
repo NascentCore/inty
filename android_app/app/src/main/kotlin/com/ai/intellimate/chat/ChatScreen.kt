@@ -27,7 +27,7 @@ internal fun ChatScreen(
     pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
     isGuideVisible: Boolean = false,
     shouldShowBoostSheetOnOpen: Boolean = false,
-    agentId: String? = null
+    agentId: String? = null,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
@@ -36,8 +36,8 @@ internal fun ChatScreen(
             val hasGeneratedImage = msg.hasGeneratedImage()
             val generatedImageUrl = msg.getGeneratedImageUrl()
             msg.content == "loading_animation" &&
-                    !hasGeneratedImage &&
-                    generatedImageUrl != "loading"
+                !hasGeneratedImage &&
+                generatedImageUrl != "loading"
         }
 
     Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {

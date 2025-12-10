@@ -51,10 +51,12 @@ fun BoostLeaderboardTab(
 ) {
     Column(
         modifier =
-            modifier.fillMaxSize().padding(
-                horizontal = UiConfigs.LeaderBoard.HorizontalPadding,
-                vertical = UiConfigs.LeaderBoard.VerticalPadding,
-            )
+            modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = UiConfigs.LeaderBoard.HorizontalPadding,
+                    vertical = UiConfigs.LeaderBoard.VerticalPadding,
+                )
     ) {
         BoostStatusChip(
             modifier = Modifier.fillMaxWidth(),
@@ -94,8 +96,7 @@ fun BoostLeaderboardTab(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement =
-                    Arrangement.spacedBy(UiConfigs.LeaderBoard.ListItemSpacing),
+                verticalArrangement = Arrangement.spacedBy(UiConfigs.LeaderBoard.ListItemSpacing),
             ) {
                 itemsIndexed(entries, key = { _, item -> item.agentId + item.rank }) { index, entry
                     ->

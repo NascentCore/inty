@@ -1,5 +1,6 @@
 package com.ai.intellimate.settings
 
+// import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -40,7 +41,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.vip.SubsManageActivity
-//import com.ai.intellimate.vip.VipCenterActivity
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
 
@@ -306,7 +306,8 @@ private fun SupportAndHelpSection(
                     SubsManageActivity.launch(context)
                 } else {
                     navController.navigate(Routes.VipCenter)
-//                    VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
+                    //                    VipCenterActivity.launch(context,
+                    // VipCenterActivity.SETTINGS_SUBSCRIPTION)
                 }
             },
         )

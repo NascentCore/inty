@@ -10,7 +10,7 @@ object AgentStore {
     fun addAgent(agentInfo: AgentInfo) {
         synchronized(this) {
             var hasAgent = false
-            val count = agents.count();
+            val count = agents.count()
             for (i in 0 until count) {
                 val a = agents[i]
                 if (a.id == agentInfo.id) hasAgent = true
@@ -25,10 +25,8 @@ object AgentStore {
         var index = -1
         for (i in 0 until agents.count()) {
             val a = agents[i]
-            if (a.id == agentId) index = i;
+            if (a.id == agentId) index = i
         }
         return if (index > -1) agents[index] else null
     }
-
-
 }

@@ -11,9 +11,9 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
-import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
@@ -219,7 +219,9 @@ class ChatViewModel : BaseVM() {
                     try {
                         syncChatDataUseCase(agentInfo.id)
                         _isQueryMsgsCompleted.value = true
-                        LogUtils.i("ChatViewModel.setAgentInfo forceSync completed for ${agentInfo.id}")
+                        LogUtils.i(
+                            "ChatViewModel.setAgentInfo forceSync completed for ${agentInfo.id}"
+                        )
                     } catch (e: Exception) {
                         LogUtils.e("ChatViewModel.setAgentInfo forceSync error: ${e.message}")
                         // 即使同步失败，也标记为完成，避免UI一直等待
@@ -499,13 +501,17 @@ class ChatViewModel : BaseVM() {
 
                         // 增加总消息数并检查是否需要显示反馈对话框
                         val newMessageCount = IntySetting.incrementTotalMessageCount()
-                        if (newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD == 0 &&
-                            pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)) {
+                        if (
+                            newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD ==
+                                0 && pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)
+                        ) {
                             // 使用原子方法检查并标记反馈请求，防止并发竞态条件
                             // tryMarkFeedbackRequested() 原子性地检查并设置标志，返回 true 表示成功标记（之前未请求）
                             if (IntySetting.tryMarkFeedbackRequested()) {
                                 LogUtils.d("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount")
-                                IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+                                IntySetting.setFeedbackDialogLastShowTime(
+                                    System.currentTimeMillis()
+                                )
                                 _showFeedbackDialog.value = true
                             }
                         }
@@ -1418,6 +1424,5 @@ class ChatViewModel : BaseVM() {
         _isQueryMsgsCompleted.value = true
 
         LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
-
     }
 }

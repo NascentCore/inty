@@ -1015,94 +1015,93 @@ private fun CreateRolePage(
 
                     isLoading = true
 
-                    scope.launch {
-                        try {
-                            // Prepare avatar and background fields according to new logic
-                            val backgroundUrl =
-                                if (avatarUrls.isNotEmpty()) {
-                                    // Use selected image from generated grid as background
-                                    avatarUrls.getOrNull(selectedImageIndex) ?: avatarUrls.first()
-                                } else {
-                                    // Use single generated image as background
-                                    avatarUrl
-                                }
+                    scope
+                        .launch {
+                            try {
+                                // Prepare avatar and background fields according to new logic
+                                val backgroundUrl =
+                                    if (avatarUrls.isNotEmpty()) {
+                                        // Use selected image from generated grid as background
+                                        avatarUrls.getOrNull(selectedImageIndex)
+                                            ?: avatarUrls.first()
+                                    } else {
+                                        // Use single generated image as background
+                                        avatarUrl
+                                    }
 
-                            // 头像数据更新
-                            if (isEditMode) {
-                                // 更新ai 形象的背景选择
-                                if (backgroundUrl != editAgent.background) {
-                                    // 此时如果头像数据还是旧的，则手动更新为最新背景的
-                                    if (croppedAvatarUrl == editAgent.avatar) {
-                                        croppedAvatarUrl = backgroundUrl
+                                // 头像数据更新
+                                if (isEditMode) {
+                                    // 更新ai 形象的背景选择
+                                    if (backgroundUrl != editAgent.background) {
+                                        // 此时如果头像数据还是旧的，则手动更新为最新背景的
+                                        if (croppedAvatarUrl == editAgent.avatar) {
+                                            croppedAvatarUrl = backgroundUrl
+                                        }
                                     }
                                 }
-                            }
-                            val finalAvatarUrl = croppedAvatarUrl
-                            val backgroundImagesList =
-                                avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
+                                val finalAvatarUrl = croppedAvatarUrl
+                                val backgroundImagesList =
+                                    avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
 
-                            // Save background for chat usage
-                            if (backgroundUrl != null) {
-                                AvatarManager.setChatBackgroundUrl(backgroundUrl)
-                            }
-
-                            val request =
-                                CreateAgentRequest(
-                                    name = name,
-                                    gender = gender,
-                                    avatar = finalAvatarUrl,
-                                    background = backgroundUrl,
-                                    backgroundImages = backgroundImagesList,
-                                    settings = mapOf("description" to settings),
-                                    intro = intro,
-                                    opening = opening,
-                                    visibility = visibility,
-                                    prompt = settings,
-                                )
-
-                            // Call API through ViewModel
-                            createRoleViewModel.updateAgent(
-                                agentId = editAgent?.id.takeIf { isEditMode },
-                                request = request
-                            ) {
-                                context.createTempFile(it)
-                            }
-
-                            if (isEditMode) {
-                                ToastUtils.showShort(
-                                    R.string.character_updated_successfully
-                                )
-                                onCreateSuccess()
-                            } else {
-                                // 如果是从草稿列表进入的，删除该草稿
-                                if (savedDraft != null && draftId != null) {
-                                    CreateRoleDraftStorage.deleteDraft(draftId)
+                                // Save background for chat usage
+                                if (backgroundUrl != null) {
+                                    AvatarManager.setChatBackgroundUrl(backgroundUrl)
                                 }
-                                // 清除临时草稿
-                                CreateRoleDraftStorage.clearCurrentDraft()
-                                ToastUtils.showShort(
-                                    context.getString(R.string.create_ai_successfully)
+
+                                val request =
+                                    CreateAgentRequest(
+                                        name = name,
+                                        gender = gender,
+                                        avatar = finalAvatarUrl,
+                                        background = backgroundUrl,
+                                        backgroundImages = backgroundImagesList,
+                                        settings = mapOf("description" to settings),
+                                        intro = intro,
+                                        opening = opening,
+                                        visibility = visibility,
+                                        prompt = settings,
+                                    )
+
+                                // Call API through ViewModel
+                                createRoleViewModel.updateAgent(
+                                    agentId = editAgent?.id.takeIf { isEditMode },
+                                    request = request,
+                                ) {
+                                    context.createTempFile(it)
+                                }
+
+                                if (isEditMode) {
+                                    ToastUtils.showShort(R.string.character_updated_successfully)
+                                    onCreateSuccess()
+                                } else {
+                                    // 如果是从草稿列表进入的，删除该草稿
+                                    if (savedDraft != null && draftId != null) {
+                                        CreateRoleDraftStorage.deleteDraft(draftId)
+                                    }
+                                    // 清除临时草稿
+                                    CreateRoleDraftStorage.clearCurrentDraft()
+                                    ToastUtils.showShort(
+                                        context.getString(R.string.create_ai_successfully)
+                                    )
+                                    onCreateSuccess()
+                                }
+                            } catch (e: Exception) {
+                                val operation =
+                                    if (isEditMode) context.getString(R.string.update_failed)
+                                    else context.getString(R.string.creation_failed)
+                                val errorMessage =
+                                    context.getString(
+                                        R.string.operation_error_with_reason,
+                                        operation,
+                                        e.message ?: context.getString(R.string.unknown_error),
+                                    )
+                                ToastUtils.showShort(errorMessage)
+                                LogUtils.e(
+                                    "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
                                 )
-                                onCreateSuccess()
                             }
-                        } catch (e: Exception) {
-                            val operation =
-                                if (isEditMode) context.getString(R.string.update_failed)
-                                else context.getString(R.string.creation_failed)
-                            val errorMessage =
-                                context.getString(
-                                    R.string.operation_error_with_reason,
-                                    operation,
-                                    e.message ?: context.getString(R.string.unknown_error),
-                                )
-                            ToastUtils.showShort(errorMessage)
-                            LogUtils.e(
-                                "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
-                            )
                         }
-                    }.invokeOnCompletion {
-                        isLoading = false
-                    }
+                        .invokeOnCompletion { isLoading = false }
                 },
             )
 
@@ -1229,10 +1228,12 @@ private fun Context.createTempFile(uri: Uri): File {
 
     // 如果无法确定文件大小（返回 0），拒绝上传以确保安全
     if (fileSize == 0L) {
-        throw Exception(getString(
-            R.string.toast_failed_prepare_upload_with_message,
-            "Unable to determine file size",
-        ))
+        throw Exception(
+            getString(
+                R.string.toast_failed_prepare_upload_with_message,
+                "Unable to determine file size",
+            )
+        )
     }
 
     if (fileSize > maxSizeBytes) {
@@ -1240,20 +1241,24 @@ private fun Context.createTempFile(uri: Uri): File {
         val fileSizeMBStr =
             String.format(Locale.getDefault(), "%.1fMB", fileSize / (1024.0 * 1024.0))
 
-        throw Exception(getString(
-            R.string.user_avatar_size_too_large_with_size_format,
-            maxSizeMBStr,
-            fileSizeMBStr,
-        ))
+        throw Exception(
+            getString(
+                R.string.user_avatar_size_too_large_with_size_format,
+                maxSizeMBStr,
+                fileSizeMBStr,
+            )
+        )
     }
 
     // Copy URI to temp file for upload
-    val tempFile = copyUriToTempFile(this, uri) ?: throw Exception(
-        getString(
-            R.string.toast_failed_prepare_upload_with_message,
-            "Failed to read image file",
-        )
-    )
+    val tempFile =
+        copyUriToTempFile(this, uri)
+            ?: throw Exception(
+                getString(
+                    R.string.toast_failed_prepare_upload_with_message,
+                    "Failed to read image file",
+                )
+            )
 
     // 验证临时文件大小（双重检查，确保文件大小限制）
     val tempFileSize = tempFile.length()
@@ -1262,16 +1267,17 @@ private fun Context.createTempFile(uri: Uri): File {
         val fileSizeMBStr =
             String.format(Locale.getDefault(), "%.1fMB", tempFileSize / (1024.0 * 1024.0))
 
-        throw Exception(getString(
-            R.string.user_avatar_size_too_large_with_size_format,
-            maxSizeMBStr,
-            fileSizeMBStr,
-        ))
+        throw Exception(
+            getString(
+                R.string.user_avatar_size_too_large_with_size_format,
+                maxSizeMBStr,
+                fileSizeMBStr,
+            )
+        )
     }
 
     return tempFile
 }
-
 
 // Helper function to copy URI to temporary file
 private fun copyUriToTempFile(context: Context, uri: Uri): File? {

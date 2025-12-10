@@ -91,7 +91,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
-        },
+        }
     ) { innerPadding ->
         BoostLeaderboardTab(
             modifier = Modifier.padding(innerPadding).fillMaxSize(),
