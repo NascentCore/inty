@@ -218,6 +218,35 @@ fun ChatSettingsDrawer(
                         SettingsArrowItem(
                             item =
                                 SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.chat_settings_preference_title),
+                                    content =
+                                        userPreference.ifBlank {
+                                            stringResource(
+                                                R.string.chat_settings_preference_placeholder
+                                            )
+                                        },
+                                    arrow = true,
+                                ),
+                            isInGroup = true,
+                            fontLight = true,
+                            horizontalPadding = horizontalPadding,
+                            contentMaxLines = 1,
+                            onItemClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_preference",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                editKey = EditKey.Preference
+                                editValue = userPreference
+                            },
+                        )
+                        IntelliMateDivider()
+                        SettingsArrowItem(
+                            item =
+                                SettingsItemData.CommonItemData(
                                     title = stringResource(R.string.str_persona),
                                     content = userProfileState.description ?: "Edit",
                                 ),
@@ -240,37 +269,6 @@ fun ChatSettingsDrawer(
                                     editKey = EditKey.Persona
                                     editValue = userProfileState.description ?: ""
                                 }
-                            },
-                        )
-                        IntelliMateDivider()
-                        SettingsArrowItem(
-                            item =
-                                SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.chat_settings_preference_title),
-                                    content =
-                                        if (userPreference.isBlank()) {
-                                            stringResource(
-                                                R.string.chat_settings_preference_placeholder
-                                            )
-                                        } else {
-                                            userPreference
-                                        },
-                                    arrow = true,
-                                ),
-                            isInGroup = true,
-                            fontLight = true,
-                            horizontalPadding = horizontalPadding,
-                            contentMaxLines = 1,
-                            onItemClick = {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_preference",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                editKey = EditKey.Preference
-                                editValue = userPreference
                             },
                         )
                     }

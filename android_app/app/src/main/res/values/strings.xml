@@ -230,9 +230,9 @@
     <string name="chat_settings_font_size_dialog_description">Adjust how large chat bubbles look.</string>
     <string name="chat_settings_font_size_preview_label">Preview</string>
     <string name="chat_settings_font_size_preview_sample">This is how your messages appear.</string>
-    <string name="chat_settings_preference_title">Preference</string>
-    <string name="chat_settings_preference_placeholder">Add a preference</string>
-    <string name="chat_settings_preference_hint">I like sweet/charming/bold/...</string>
+    <string name="chat_settings_preference_title">Personality</string>
+    <string name="chat_settings_preference_placeholder">I am …</string>
+    <string name="chat_settings_preference_hint">charming, bold, adventurous…</string>
     <string name="chat_input_placeholder">Write something to %1$s</string>
     <string name="chat_input_with_scene_action_placeholder">Click () to describe actions, feelings, thoughts</string>
     <string name="chat_ai_typing_placeholder">%1$s is typing</string>

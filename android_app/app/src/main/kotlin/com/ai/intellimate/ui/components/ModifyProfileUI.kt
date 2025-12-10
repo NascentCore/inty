@@ -49,14 +49,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.IntySmallTextField2
-import com.ai.intellimate.ui.NameEditField
+import com.ai.intellimate.ui.NameInputKeyBoardOption
+import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 
 /** 编辑类型枚举 */
@@ -75,8 +76,8 @@ private fun EditKey.toDisplayName(): String {
         EditKey.None -> ""
         EditKey.Name -> stringResource(R.string.str_name)
         EditKey.Pronouns -> stringResource(R.string.str_pronouns)
-        EditKey.Persona -> stringResource(R.string.str_persona)
         EditKey.Preference -> stringResource(R.string.chat_settings_preference_title)
+        EditKey.Persona -> stringResource(R.string.str_persona)
     }
 }
 
@@ -254,7 +255,11 @@ fun EditDialog(
 private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (String) -> Unit) {
     when (editKey) {
         EditKey.Name -> {
-            NameEditField(value = editValue, onValueChange = onValueChange)
+            SingleLineInputField(
+                value = editValue,
+                onValueChange = onValueChange,
+                keyboardOptions = NameInputKeyBoardOption
+            )
         }
 
         EditKey.Persona -> {
@@ -275,7 +280,7 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
         }
 
         EditKey.Preference -> {
-            NameEditField(
+            SingleLineInputField(
                 value = editValue,
                 onValueChange = onValueChange,
                 placeholder = stringResource(R.string.chat_settings_preference_hint),
