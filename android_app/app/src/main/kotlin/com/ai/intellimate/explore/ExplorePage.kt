@@ -70,7 +70,89 @@ fun ExplorePage(
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
+    var selectedTab by remember { mutableStateOf(ExploreSubTab.Recommended) }
+    val boostState by
+        if (isDebugMode) BoostManager.boostState.collectAsState()
+        else remember { mutableStateOf(BoostState()) }
+    val localLeaderboard by
+        if (isDebugMode) BoostManager.leaderboard.collectAsState()
+        else remember { mutableStateOf(emptyList<BoostLeaderboardEntry>()) }
+    
+    // 从 API 获取的能量排行榜
+    val energyLeaderboard by viewModel.energyLeaderboard.collectAsState()
+    val isLoadingEnergyLeaderboard by viewModel.isLoadingEnergyLeaderboard.collectAsState()
+    
+    // 当切换到 Boost tab 时，加载能量排行榜
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == ExploreSubTab.Boost) {
+            viewModel.loadEnergyLeaderboard()
+        }
+    }
+    
+    // 将 API 返回的 AgentInfo 转换为 BoostLeaderboardEntry
+    val apiLeaderboard = remember(energyLeaderboard) {
+        energyLeaderboard.mapIndexed { index, agentInfo ->
+            // 暂时使用 0 作为 points，因为 AgentInfo 中可能还没有 points 字段
+            // TODO: 当 SDK 更新后，从 agentInfo 中获取 points 值
+            val points = 0 // agentInfo.points ?: 0
+            val boostCount = points / com.ai.intellimate.boost.BoostConfig.BOOST_STEP_POINTS
+            BoostLeaderboardEntry(
+                rank = index + 1,
+                agentId = agentInfo.id,
+                agentName = agentInfo.name,
+                avatarUrl = agentInfo.avatar,
+                boostCount = boostCount,
+                pointsInvested = points,
+                trend = com.ai.intellimate.boost.BoostTrend.FLAT,
+                isSeed = false,
+            )
+        }
+    }
+    
+    // 优先使用 API 返回的排行榜，如果为空则使用本地排行榜
+    val leaderboard = if (apiLeaderboard.isNotEmpty()) apiLeaderboard else localLeaderboard
+    val density = LocalDensity.current
+    val tabSwipeThresholdPx =
+        remember(density) { with(density) { ExploreTabSwipeThreshold.toPx() } }
+    val tabSwipeModifier =
+        if (isDebugMode) {
+            Modifier.pointerInput(selectedTab, tabSwipeThresholdPx) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { totalDrag = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        totalDrag += dragAmount
+                    },
+                    onDragCancel = { totalDrag = 0f },
+                    onDragEnd = {
+                        when {
+                            totalDrag <= -tabSwipeThresholdPx -> {
+                                val nextIndex =
+                                    (selectedTab.ordinal + 1).coerceAtMost(
+                                        ExploreSubTab.entries.lastIndex
+                                    )
+                                if (nextIndex != selectedTab.ordinal) {
+                                    selectedTab = ExploreSubTab.entries[nextIndex]
+                                }
+                            }
 
+                            totalDrag >= tabSwipeThresholdPx -> {
+                                val previousIndex = (selectedTab.ordinal - 1).coerceAtLeast(0)
+                                if (previousIndex != selectedTab.ordinal) {
+                                    selectedTab = ExploreSubTab.entries[previousIndex]
+                                }
+                            }
+                        }
+                        totalDrag = 0f
+                    },
+                )
+            }
+        } else {
+            Modifier
+        }
+
+    // 获取Paging数据流
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
 

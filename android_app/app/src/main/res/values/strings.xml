@@ -444,7 +444,7 @@
     <string name="boost_daily_reward_cta">Claim daily energy (+200 pts)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
-    <string name="boost_leaderboard_title">Top boosted characters (local)</string>
+    <string name="boost_leaderboard_title">Energy Points Leaderboard</string>
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
     <string name="boost_leaderboard_back_cd">Back to Explore</string>

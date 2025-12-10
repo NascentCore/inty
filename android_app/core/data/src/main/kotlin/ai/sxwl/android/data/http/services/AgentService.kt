@@ -56,6 +56,11 @@ object AgentService {
                                             .Sort
                                             .CREATED_DESC
 
+                                    "energy_points" ->
+                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
+                                            .Sort
+                                            .ENERGY_POINTS
+
                                     else ->
                                         com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
                                             .Sort

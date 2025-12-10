@@ -403,4 +403,47 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             }
         }
     }
+
+    // 能量排行榜相关状态
+    private val _energyLeaderboard = MutableStateFlow<List<AgentInfo>>(emptyList())
+    val energyLeaderboard: StateFlow<List<AgentInfo>> = _energyLeaderboard.asStateFlow()
+
+    private val _isLoadingEnergyLeaderboard = MutableStateFlow(false)
+    val isLoadingEnergyLeaderboard: StateFlow<Boolean> = _isLoadingEnergyLeaderboard.asStateFlow()
+
+    /** 获取能量排行榜（按能量值降序排列的前 10 个角色） */
+    fun loadEnergyLeaderboard() {
+        viewModelScope.launch {
+            _isLoadingEnergyLeaderboard.value = true
+            try {
+                when (
+                    val result =
+                        AgentService.getRecommendAgents(
+                            page = 1,
+                            pageSize = 10,
+                            sort = "energy_points",
+                            sortSeed = "",
+                        )
+                ) {
+                    is ai.sxwl.android.data.http.ApiResult.Success -> {
+                        LogUtils.d(
+                            "ExploreViewModel - 获取能量排行榜成功: ${result.data.size} 条"
+                        )
+                        _energyLeaderboard.value = result.data
+                    }
+                    is ai.sxwl.android.data.http.ApiResult.Error -> {
+                        LogUtils.w(
+                            "ExploreViewModel - 获取能量排行榜失败: code=${result.code}, message=${result.message}"
+                        )
+                        _energyLeaderboard.value = emptyList()
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ExploreViewModel - 获取能量排行榜异常: ${e.message}", e)
+                _energyLeaderboard.value = emptyList()
+            } finally {
+                _isLoadingEnergyLeaderboard.value = false
+            }
+        }
+    }
 }
