@@ -591,9 +591,14 @@ export interface GeneratedImage {
   height: number | null;
   created_at: string | null;
   user_id: string | null;
+  user_nickname: string | null;
 }
 
 export interface GeneratedImagesResponse {
   images: GeneratedImage[];
   total: number;
+}
+
+export interface ImageCountsResponse {
+  counts: Record<string, number>;
 }

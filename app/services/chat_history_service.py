@@ -799,6 +799,11 @@ def get_messages_paginated(
                                 "image_url": cdn_url,
                                 "width": generated_image.get("width"),
                                 "height": generated_image.get("height"),
+                                "is_matched": generated_image.get("is_matched"),
+                                "similarity": generated_image.get("similarity"),
+                                "matched_from_user_id": generated_image.get(
+                                    "matched_from_user_id"
+                                ),
                             }
                             # 不包含 prompt 字段
 
