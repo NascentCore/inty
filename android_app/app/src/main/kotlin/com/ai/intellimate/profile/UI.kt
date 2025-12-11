@@ -219,9 +219,10 @@ internal fun PremiumBanner(
                     if (isChristmas) {
                         Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFFFFE898).copy(alpha = 0.8f),
                                 Color(0xFFFFE898).copy(alpha = 0.5f),
-                                Color.Transparent
+                                Color(0xFFFFE898).copy(alpha = 0.2f),
+                                Color.Transparent,
+                                Color.Transparent,
                             ),
                             center = Offset(boxSize.width / 2f, boxSize.height / 2f),
                             radius = radius
@@ -230,7 +231,9 @@ internal fun PremiumBanner(
                         Brush.radialGradient(
                             colors = listOf(
                                 Color(0xFFC122FF).copy(.5f),
-                                Color.Transparent
+                                Color(0xFFC122FF).copy(.2f),
+                                Color.Transparent,
+                                Color.Transparent,
                             ),
                             center = Offset(boxSize.width / 2f, boxSize.height / 2f),
                             radius = radius
@@ -240,8 +243,10 @@ internal fun PremiumBanner(
             }
 
         Column(
-            modifier = Modifier.fillMaxHeight().background(brush = backgroundBrush)
-                .onSizeChanged{size ->
+            modifier = Modifier
+                .fillMaxHeight()
+                .background(brush = backgroundBrush)
+                .onSizeChanged { size ->
                     boxSize = Size(size.width.toFloat(), size.height.toFloat())
                 }
                 .padding(end = 8.dp)
@@ -344,7 +349,7 @@ fun SnowPiece(modifier: Modifier = Modifier) {
 private fun LeftParticleEffects(isChristmas: Boolean) {
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(Size.Zero) }
-    
+
     val particleCount = if (isChristmas) 15 else 12
     val particles = remember(particleCount, isChristmas) {
         (0 until particleCount).map { index ->
@@ -352,7 +357,7 @@ private fun LeftParticleEffects(isChristmas: Boolean) {
                 initialX = Random.nextFloat() * 0.5f,
                 initialY = -0.2f - (index * 0.15f),
                 size = if (isChristmas) {
-                    (8f + Random.nextFloat() * 12f).dp
+                    (24f + Random.nextFloat() * 36f).dp
                 } else {
                     (6f + Random.nextFloat() * 10f).dp
                 },
@@ -388,7 +393,7 @@ private fun LeftParticleEffects(isChristmas: Boolean) {
 private fun RightParticleEffects() {
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(Size.Zero) }
-    
+
     val particleCount = 12
     val particles = remember(particleCount) {
         (0 until particleCount).map { index ->
@@ -429,8 +434,9 @@ private fun FloatingParticle(
     containerSize: Size,
     isChristmas: Boolean,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "particle_float_${particle.hashCode()}")
-    
+    val infiniteTransition =
+        rememberInfiniteTransition(label = "particle_float_${particle.hashCode()}")
+
     val animateY by infiniteTransition.animateFloat(
         initialValue = particle.initialY,
         targetValue = 1.2f,
@@ -444,7 +450,7 @@ private fun FloatingParticle(
         ),
         label = "float_y"
     )
-    
+
     val animateX by infiniteTransition.animateFloat(
         initialValue = -0.3f,
         targetValue = 0.3f,
@@ -458,7 +464,7 @@ private fun FloatingParticle(
         ),
         label = "float_x"
     )
-    
+
     val animateScale by infiniteTransition.animateFloat(
         initialValue = 0.6f,
         targetValue = 1.2f,
@@ -498,8 +504,9 @@ private fun FloatingGoldDot(
     particle: ParticleConfig,
     containerSize: Size,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "gold_dot_float_${particle.hashCode()}")
-    
+    val infiniteTransition =
+        rememberInfiniteTransition(label = "gold_dot_float_${particle.hashCode()}")
+
     val animateY by infiniteTransition.animateFloat(
         initialValue = particle.initialY,
         targetValue = 1.2f,
@@ -513,7 +520,7 @@ private fun FloatingGoldDot(
         ),
         label = "float_y"
     )
-    
+
     val animateX by infiniteTransition.animateFloat(
         initialValue = -0.2f,
         targetValue = 0.2f,
@@ -527,7 +534,7 @@ private fun FloatingGoldDot(
         ),
         label = "float_x"
     )
-    
+
     val animateScale by infiniteTransition.animateFloat(
         initialValue = 0.6f,
         targetValue = 1.2f,
@@ -674,11 +681,5 @@ private fun PreviewActionButton() {
 @Preview
 @Composable
 private fun PreviewPremiumBanner() {
-    PremiumBanner()
-}
-
-@Preview
-@Composable
-private fun PreviewPremiumBannerChristmas() {
     PremiumBanner()
 }
