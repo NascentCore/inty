@@ -54,9 +54,9 @@ class VipCenterActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-//        VipCenterContent(
-//            onClose = { finish() },
-//            onPurchase = { viewModel.purchaseSelectedPlan(this) },
-//        )
+        //        VipCenterContent(
+        //            onClose = { finish() },
+        //            onPurchase = { viewModel.purchaseSelectedPlan(this) },
+        //        )
     }
 }

@@ -30,6 +30,7 @@ data class AgentInfo(
     val settings: @RawValue Map<String, Any>? = null,
     val visibility: String = "",
     val prompt: String = "",
+    @Json(name = "energy_points") val energyPoints: Int = 0,
     @Json(name = "follower_count") val followerCount: Int = 0,
     @Json(name = "connector_count") val connectorCount: Int = 0,
     @Json(name = "deleted_at") val deletedAt: Long? = null,

@@ -19,8 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.FeedbackRequestDialog
+import com.ai.intellimate.ui.components.AgentBackground
 
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
@@ -169,14 +169,16 @@ class ChatActivity : BaseActivity() {
                 enableAnimatedBackground = autoPlayAnimation,
             )
 
-//            ChatPage(
-//                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
-//                chatViewModel = chatViewModel,
-//                showBackButton = true,
-//                onBack = { finish() },
-//                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
-//                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
-//            )
+            //            ChatPage(
+            //                modifier =
+            // Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
+            //                chatViewModel = chatViewModel,
+            //                showBackButton = true,
+            //                onBack = { finish() },
+            //                pageSourceOverride = pageSource, // 传递 ChatActivity 的
+            // pageSource，避免重复追踪
+            //                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
+            //            )
 
             // 反馈请求对话框
             if (showFeedbackDialog) {

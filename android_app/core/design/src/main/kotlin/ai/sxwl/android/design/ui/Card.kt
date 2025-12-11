@@ -27,8 +27,7 @@ fun BlurBgCard(
         // 横向渐变边框（左右边缘向内渐变）
         Box(
             modifier =
-                Modifier
-                    .matchParentSize()
+                Modifier.matchParentSize()
                     .background(
                         brush =
                             Brush.horizontalGradient(
@@ -50,8 +49,7 @@ fun BlurBgCard(
         // 纵向渐变边框（上下边缘向内渐变）
         Box(
             modifier =
-                Modifier
-                    .matchParentSize()
+                Modifier.matchParentSize()
                     .background(
                         brush =
                             Brush.verticalGradient(
@@ -77,12 +75,7 @@ fun BlurBgCard(
 @Preview
 @Composable
 private fun PreviewBlurBgCard() {
-    BlurBgCard(modifier = Modifier
-        .fillMaxWidth()
-        .height(200.dp)) {
-        Text(
-            "哈哈哈哈",
-            color = Color.White
-        )
+    BlurBgCard(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+        Text("哈哈哈哈", color = Color.White)
     }
 }

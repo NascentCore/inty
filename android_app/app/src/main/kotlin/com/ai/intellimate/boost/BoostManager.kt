@@ -4,7 +4,10 @@
 package com.ai.intellimate.boost
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.http.ApiResult
+import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -96,8 +99,65 @@ object BoostManager {
         val available = boostState.value.availablePoints
         val normalized = BoostCalculator.normalizeBoostAmount(requestedPoints, available)
         if (normalized <= 0) throw BoostException(BoostError.NotEnoughPoints)
+        
+        // 1. 本地 boost 操作
         val info = repo.boostAgent(agentInfo, normalized)
         val result = BoostResult(info, normalized)
+        
+        // 2. 同步到后端（异步，不阻塞）
+        scope.launch {
+            try {
+                val updateResult =
+                    AgentService.updateAgentEnergyPoints(
+                        agentId = agentInfo.id,
+                        energyPointsDelta = normalized,
+                    )
+                when (updateResult) {
+                    is ApiResult.Success -> {
+                        LogUtils.d(
+                            "BoostManager",
+                            "Successfully synced boost to backend: agentId=${agentInfo.id}, points=$normalized"
+                        )
+                        logFirebaseEvent(
+                            "boost_synced_to_backend",
+                            mapOf(
+                                "agent_id" to agentInfo.id,
+                                "agent_name" to agentInfo.name,
+                                "points" to normalized,
+                            ),
+                        )
+                    }
+                    is ApiResult.Error -> {
+                        LogUtils.w(
+                            "BoostManager",
+                            "Failed to sync boost to backend: agentId=${agentInfo.id}, error=${updateResult.message}"
+                        )
+                        logFirebaseEvent(
+                            "boost_sync_failed",
+                            mapOf(
+                                "agent_id" to agentInfo.id,
+                                "agent_name" to agentInfo.name,
+                                "points" to normalized,
+                                "error" to (updateResult.message ?: "unknown"),
+                            ),
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("BoostManager", "Exception syncing boost to backend", e)
+                logFirebaseEvent(
+                    "boost_sync_exception",
+                    mapOf(
+                        "agent_id" to agentInfo.id,
+                        "agent_name" to agentInfo.name,
+                        "points" to normalized,
+                        "exception" to e.javaClass.simpleName,
+                    ),
+                )
+            }
+        }
+        
+        // 3. 发送本地事件（立即返回）
         _events.emit(
             BoostEvent.BoostSuccess(
                 agentId = agentInfo.id,

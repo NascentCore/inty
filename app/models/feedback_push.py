@@ -1,5 +1,13 @@
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.models import Base
@@ -19,9 +27,7 @@ class FeedbackPushHistory(Base):
         nullable=False,
         comment="触发的聊天轮数阈值（20/30/40/50/60）",
     )
-    sent_at = Column(
-        DateTime(timezone=True), nullable=False, comment="发送时间"
-    )
+    sent_at = Column(DateTime(timezone=True), nullable=False, comment="发送时间")
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
 
     # 关系
@@ -39,4 +45,3 @@ class FeedbackPushHistory(Base):
             name="uq_feedback_push_user_threshold",
         ),
     )
-

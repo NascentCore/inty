@@ -278,15 +278,16 @@ class RoomImpl(
                                     "reversed first=${reversedServerMessages.first().id.take(8)}, last=${reversedServerMessages.last().id.take(8)}"
                             )
                         }
-                        
+
                         // 🔧 修复：合并服务器消息和本地消息，而不是只使用服务器消息
                         // 因为服务器只返回最新的20条消息，如果只使用服务器消息，会丢失历史消息
                         // 合并策略：保留本地消息，用服务器消息更新或追加
                         val allMessages = mutableListOf<MsgInfo>()
-                        val serverMessageKeys = serverMessages.mapNotNull {
-                            it.id.ifEmpty { it.localMsgId.ifEmpty { null } }
-                        }.toSet()
-                        
+                        val serverMessageKeys =
+                            serverMessages
+                                .mapNotNull { it.id.ifEmpty { it.localMsgId.ifEmpty { null } } }
+                                .toSet()
+
                         // 先添加本地消息中不在服务器消息列表中的消息（历史消息）
                         localMessages.forEach { localMsg ->
                             val localKey = localMsg.id.ifEmpty { localMsg.localMsgId }
@@ -294,10 +295,10 @@ class RoomImpl(
                                 allMessages.add(localMsg)
                             }
                         }
-                        
+
                         // 然后添加服务器消息（已反转，确保顺序正确）
                         allMessages.addAll(reversedServerMessages)
-                        
+
                         localDataSource.updateMessages(agentId, allMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(

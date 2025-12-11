@@ -55,10 +55,7 @@ object Utils {
     }
 }
 
-
-/**
- * 以概率返回true；用于随机概率事件的触发。
- */
+/** 以概率返回true；用于随机概率事件的触发。 */
 fun pickWithProbability(probability: Float): Boolean {
     return Random.nextFloat() < probability
 }
