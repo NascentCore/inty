@@ -10,15 +10,16 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
@@ -61,6 +65,8 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.enableChristmasConfig
 import com.ai.intellimate.ui.UiConfigs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.random.Random
 
 @Preview
@@ -197,8 +203,47 @@ internal fun PremiumBanner(
         )
 
         LeftParticleEffects(isChristmas = isChristmas)
+
+        var boxSize by remember { mutableStateOf(Size.Zero) }
+
+        val backgroundBrush =
+            remember(boxSize, isChristmas) {
+                if (boxSize == Size.Zero) {
+                    Brush.radialGradient(
+                        colors = listOf(Color.Transparent, Color.Transparent),
+                        radius = 1f
+                    )
+                } else {
+                    val minSize = min(boxSize.width, boxSize.height)
+                    val radius = max(minSize * .8f, 1f)
+                    if (isChristmas) {
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFFFFE898).copy(alpha = 0.8f),
+                                Color(0xFFFFE898).copy(alpha = 0.5f),
+                                Color.Transparent
+                            ),
+                            center = Offset(boxSize.width / 2f, boxSize.height / 2f),
+                            radius = radius
+                        )
+                    } else {
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFFC122FF).copy(.5f),
+                                Color.Transparent
+                            ),
+                            center = Offset(boxSize.width / 2f, boxSize.height / 2f),
+                            radius = radius
+                        )
+                    }
+                }
+            }
+
         Column(
-            modifier = Modifier
+            modifier = Modifier.fillMaxHeight().background(brush = backgroundBrush)
+                .onSizeChanged{size ->
+                    boxSize = Size(size.width.toFloat(), size.height.toFloat())
+                }
                 .padding(end = 8.dp)
                 .align(Alignment.CenterEnd),
             horizontalAlignment = Alignment.End,
@@ -226,6 +271,7 @@ internal fun PremiumBanner(
                 ActionButton(
                     modifier = Modifier,
                     isChristmas = isChristmas,
+                    onClick = onClick,
                     buttonText = bannerContent.buttonText,
                 )
             }
@@ -279,7 +325,7 @@ fun SnowPiece(modifier: Modifier = Modifier) {
                 brush = Brush.radialGradient(
                     colors = listOf(
                         Color(0x99FDE8BF),
-                        Color(0xFDE8BF),
+                        Color(0x00FDE8BF),
                         Color.Transparent
                     ),
                 )
@@ -457,7 +503,7 @@ private fun FloatingGoldDot(
 private data class ParticleConfig(
     val initialX: Float,
     val initialY: Float,
-    val size: androidx.compose.ui.unit.Dp,
+    val size: Dp,
     val alpha: Float,
     val duration: Int,
     val delay: Int,
@@ -477,121 +523,79 @@ private fun PreviewPurpleStar() {
 internal fun ActionButton(
     modifier: Modifier = Modifier,
     isChristmas: Boolean = false,
+    onClick: () -> Unit = {},
     buttonText: String = "Activate now",
 ) {
-
-    var boxSize by remember { mutableStateOf(Size.Zero) }
-
-    val backgroundBrush =
-        remember(boxSize, isChristmas) {
-            if (boxSize == Size.Zero) {
-                Brush.radialGradient(
-                    colors = listOf(Color.Transparent, Color.Transparent),
-                    radius = 1f
+    val borderBrush =
+        remember(isChristmas) {
+            if (isChristmas) {
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF408B2F),
+                        Color(0xFFE56135)
+                    )
                 )
             } else {
-                val minSize = kotlin.math.min(boxSize.width, boxSize.height)
-                val radius = kotlin.math.max(minSize * 0.8f, 1f)
-                if (isChristmas) {
-                    Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFFFFE898).copy(alpha = 0.8f),
-                            Color(0xFFFFE898).copy(alpha = 0.5f),
-                            Color.Transparent
-                        ),
-                        center = Offset(boxSize.width / 2f, boxSize.height / 2f),
-                        radius = radius
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFFC2F7FD),
+                        Color(0xFFC2F7FD)
                     )
-                } else {
-                    Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xC122FF).copy(.5f),
-                            Color.Transparent
-                        ),
-                        center = Offset(boxSize.width / 2f, boxSize.height / 2f),
-                        radius = radius
-                    )
-                }
+                )
             }
-        }
-
-    val borderBrush =
-        if (isChristmas) {
-            Brush.horizontalGradient(
-                colors = listOf(
-                    Color(0xFF408B2F),
-                    Color(0xFFE56135)
-                )
-            )
-        } else {
-            Brush.horizontalGradient(
-                colors = listOf(
-                    Color(0xFFC2F7FD),
-                    Color(0xFFC2F7FD)
-                )
-            )
         }
 
     val iconRes =
-        if (isChristmas) {
-            R.drawable.tab_icon_explore_christmas
-        } else {
-            R.drawable.icon_gold_heart
+        remember(isChristmas) {
+            if (isChristmas) {
+                R.drawable.tab_icon_explore_christmas
+            } else {
+                R.drawable.icon_gold_heart
+            }
         }
 
-    Box(
-        modifier
-            .clip(RoundedCornerShape(30.dp))
-            .onSizeChanged { size ->
-                boxSize = Size(size.width.toFloat(), size.height.toFloat())
-            }
-            .background(brush = backgroundBrush),
-        contentAlignment = Alignment.Center,
+    ElevatedButton(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(30.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF1F1F1F),
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFF1F1F1F).copy(alpha = 0.6f),
+            disabledContentColor = Color.White.copy(alpha = 0.6f)
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 2.dp,
+            disabledElevation = 0.dp
+        ),
+        border = BorderStroke(width = 1.dp, brush = borderBrush)
     ) {
-        Row(
-            Modifier
-                .clip(RoundedCornerShape(30.dp))
-                .background(
-                    if (isChristmas) {
-                        Color(0xFF1F1F1F)
-                    } else {
-                        Color(0xFF1F1F1F)
-                    }
-                )
-                .border(
-                    width = 1.dp,
-                    brush = borderBrush,
-                    shape = RoundedCornerShape(30.dp)
-                )
-                .padding(horizontal = 25.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Image(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(
-                        style = SpanStyle(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFFFFEECC),
-                                    Color(0xFFAD9515)
-                                )
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = buildAnnotatedString {
+                withStyle(
+                    style = SpanStyle(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFFFEECC),
+                                Color(0xFFAD9515)
                             )
                         )
-                    ) {
-                        append(buttonText)
-                    }
-                },
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
-        }
+                    )
+                ) {
+                    append(buttonText)
+                }
+            },
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -599,19 +603,15 @@ internal fun ActionButton(
 @Composable
 private fun PreviewActionButton() {
     Column {
-        ActionButton(modifier = Modifier.size(200.dp, 80.dp))
-        ActionButton(modifier = Modifier.size(200.dp, 80.dp), buttonText = "Keep Premium")
+        ActionButton(modifier = Modifier.size(170.dp, 48.dp))
+        ActionButton(modifier = Modifier.size(200.dp, 56.dp), buttonText = "Keep Premium")
+        ActionButton(
+            modifier = Modifier.size(200.dp, 40.dp),
+            isChristmas = true
+        )
     }
 }
 
-@Preview
-@Composable
-private fun PreviewActionButtonChristmas() {
-    ActionButton(
-        modifier = Modifier.size(200.dp, 80.dp),
-        isChristmas = true
-    )
-}
 
 @Preview
 @Composable
