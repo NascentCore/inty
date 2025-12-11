@@ -14,17 +14,18 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +37,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.enableChristmasConfig
 import com.ai.intellimate.ui.UiConfigs
 import kotlin.random.Random
 
@@ -119,6 +120,13 @@ internal fun ProfileHeaderBg(modifier: Modifier = Modifier) {
 
 }
 
+private data class BannerContent(
+    val title: String,
+    val subtitle: String,
+    val showActionButton: Boolean,
+    val buttonText: String,
+)
+
 /** Premium Banner 组件 */
 @Composable
 internal fun PremiumBanner(
@@ -126,9 +134,40 @@ internal fun PremiumBanner(
     purchaseTime: String? = null,
     expireTime: String? = null,
     onClick: () -> Unit = {},
-    isChristmas: Boolean = false,
 ) {
+    val isChristmas = enableChristmasConfig()
     var lastClickTimePremium by remember { mutableLongStateOf(0L) }
+
+    val bannerContent = remember(status, purchaseTime, expireTime) {
+        when (status) {
+            VipStatus.UI_SUBSCRIBED -> {
+                val dateText = purchaseTime?.takeIf { it.isNotEmpty() } ?: ""
+                BannerContent(
+                    title = "You're Premium",
+                    subtitle = "Member since $dateText",
+                    showActionButton = false,
+                    buttonText = ""
+                )
+            }
+            VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> {
+                val dateText = expireTime?.takeIf { it.isNotEmpty() } ?: ""
+                BannerContent(
+                    title = "Premium Ending Soon",
+                    subtitle = "Expires on $dateText",
+                    showActionButton = true,
+                    buttonText = "Keep Premium"
+                )
+            }
+            else -> {
+                BannerContent(
+                    title = "Upgrade to Premium",
+                    subtitle = "Unlock all privilege now",
+                    showActionButton = true,
+                    buttonText = "Activate now"
+                )
+            }
+        }
+    }
 
     Box(
         modifier =
@@ -148,41 +187,50 @@ internal fun PremiumBanner(
                 }
     ) {
         Image(
-            painter = painterResource(R.drawable.img_banner_bg_bg),
-            contentDescription = "",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxHeight(),
-        )
-        Image(
             painter = painterResource(
                 if (isChristmas) R.drawable.img_vip_banner_bg_christmas else R.drawable.img_vip_banner_bg
             ),
             contentDescription = "",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxHeight(),
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color.Black.copy(.1f), Color.Black.copy(.7f)),
-                        center = Offset(x = 300f, y = 150f),
-                    )
-                )
+            modifier = Modifier.matchParentSize(),
         )
 
         LeftParticleEffects(isChristmas = isChristmas)
+        Column(
+            modifier = Modifier
+                .padding(end = 8.dp)
+                .align(Alignment.CenterEnd),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = bannerContent.title,
+                fontSize = 14.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight(700),
+                color = Color(0xFFFFFFFF),
+                textAlign = TextAlign.Right,
+            )
 
-        ActionButton(
-            modifier = Modifier.align(BiasAlignment(.95f, .1f)),
-            isChristmas = isChristmas,
-            status = status,
-            purchaseTime = purchaseTime,
-            expireTime = expireTime,
-        )
+            Text(
+                text = bannerContent.subtitle,
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight(500),
+                color = Color(0x8CFFFFFF),
+                textAlign = TextAlign.Right,
+            )
+            if (bannerContent.showActionButton) {
+                Spacer(Modifier.height(8.dp))
+                ActionButton(
+                    modifier = Modifier.sizeIn(180.dp, 48.dp),
+                    isChristmas = isChristmas,
+                    buttonText = bannerContent.buttonText,
+                )
+            }
+        }
 
-        RightParticleEffects(isChristmas = isChristmas)
+        RightParticleEffects()
     }
 }
 
@@ -192,8 +240,8 @@ internal fun PurpleStar(modifier: Modifier = Modifier) {
         modifier.background(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color(0xC122FF).copy(.5f),
-                    Color(0xC122FF).copy(.3f),
+                    Color(0xFFC122FF).copy(.5f),
+                    Color(0xFFC122FF).copy(.3f),
                     Color.Transparent
                 ),
             )
@@ -278,7 +326,7 @@ private fun LeftParticleEffects(isChristmas: Boolean) {
 }
 
 @Composable
-private fun RightParticleEffects(isChristmas: Boolean) {
+private fun RightParticleEffects() {
     val particleCount = 6
     val particles = remember(particleCount) {
         (0 until particleCount).map {
@@ -428,16 +476,8 @@ private fun PreviewPurpleStar() {
 internal fun ActionButton(
     modifier: Modifier = Modifier,
     isChristmas: Boolean = false,
-    status: String? = null,
-    purchaseTime: String? = null,
-    expireTime: String? = null,
+    buttonText: String = "Activate now",
 ) {
-    val buttonText =
-        when (status) {
-            VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
-            VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expires on $expireTime"
-            else -> "Activate now"
-        }
 
     var boxSize by remember { mutableStateOf(Size.Zero) }
 
@@ -445,27 +485,32 @@ internal fun ActionButton(
         remember(boxSize, isChristmas) {
             if (boxSize == Size.Zero) {
                 Brush.radialGradient(
-                    colors = listOf(Color.Transparent, Color.Transparent)
-                )
-            } else if (isChristmas) {
-                Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFFFE898).copy(alpha = 0.8f),
-                        Color(0xFFFFE898).copy(alpha = 0.5f),
-                        Color.Transparent
-                    ),
-                    center = Offset(boxSize.width / 2f, boxSize.height / 2f),
-                    radius = kotlin.math.min(boxSize.width, boxSize.height) * 0.8f
+                    colors = listOf(Color.Transparent, Color.Transparent),
+                    radius = 1f
                 )
             } else {
-                Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xC122FF).copy(.5f),
-                        Color.Transparent
-                    ),
-                    center = Offset(boxSize.width / 2f, boxSize.height / 2f),
-                    radius = kotlin.math.min(boxSize.width, boxSize.height) * 0.8f
-                )
+                val minSize = kotlin.math.min(boxSize.width, boxSize.height)
+                val radius = kotlin.math.max(minSize * 0.8f, 1f)
+                if (isChristmas) {
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFE898).copy(alpha = 0.8f),
+                            Color(0xFFFFE898).copy(alpha = 0.5f),
+                            Color.Transparent
+                        ),
+                        center = Offset(boxSize.width / 2f, boxSize.height / 2f),
+                        radius = radius
+                    )
+                } else {
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xC122FF).copy(.5f),
+                            Color.Transparent
+                        ),
+                        center = Offset(boxSize.width / 2f, boxSize.height / 2f),
+                        radius = radius
+                    )
+                }
             }
         }
 
@@ -499,14 +544,11 @@ internal fun ActionButton(
             .onSizeChanged { size ->
                 boxSize = Size(size.width.toFloat(), size.height.toFloat())
             }
-            .background(brush = backgroundBrush)
-            .padding(horizontal = 12.dp, vertical = 16.dp),
+            .background(brush = backgroundBrush),
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(30.dp))
+            Modifier.clip(RoundedCornerShape(30.dp))
                 .background(
                     if (isChristmas) {
                         Color(0xFF1F1F1F)
@@ -554,7 +596,10 @@ internal fun ActionButton(
 @Preview
 @Composable
 private fun PreviewActionButton() {
-    ActionButton(modifier = Modifier.size(200.dp, 80.dp))
+    Column {
+        ActionButton(modifier = Modifier.size(200.dp, 80.dp))
+        ActionButton(modifier = Modifier.size(200.dp, 80.dp), buttonText = "Keep Premium")
+    }
 }
 
 @Preview
@@ -575,5 +620,5 @@ private fun PreviewPremiumBanner() {
 @Preview
 @Composable
 private fun PreviewPremiumBannerChristmas() {
-    PremiumBanner(isChristmas = true)
+    PremiumBanner()
 }
