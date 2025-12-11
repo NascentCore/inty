@@ -538,6 +538,10 @@ object UiConfigs {
         }
     }
 
+    object CharacterIntroduction {
+        const val TITLE_FONT_SIZE = 16
+    }
+
     /** 角色资料配置 - 适用于角色资料页面的背景视频播放次数、CDN 图片质量和宽度等设置 */
     object CharacterProfile {
         /** 页面切换时的播放次数 */
