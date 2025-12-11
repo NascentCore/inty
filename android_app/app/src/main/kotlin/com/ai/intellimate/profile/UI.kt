@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -60,7 +61,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.enableChristmasConfig
@@ -342,45 +342,64 @@ fun SnowPiece(modifier: Modifier = Modifier) {
 
 @Composable
 private fun LeftParticleEffects(isChristmas: Boolean) {
-    val particleCount = 8
-    val particles = remember(particleCount) {
+    val density = LocalDensity.current
+    var containerSize by remember { mutableStateOf(Size.Zero) }
+    
+    val particleCount = if (isChristmas) 8 else 6
+    val particles = remember(particleCount, isChristmas) {
         (0 until particleCount).map {
             ParticleConfig(
                 initialX = Random.nextFloat() * 0.5f,
-                initialY = Random.nextFloat(),
-                size = (8f + Random.nextFloat() * 16f).dp,
-                alpha = 0.3f + Random.nextFloat() * 0.7f,
+                initialY = -0.2f,
+                size = if (isChristmas) {
+                    (8f + Random.nextFloat() * 12f).dp
+                } else {
+                    (6f + Random.nextFloat() * 10f).dp
+                },
+                alpha = if (isChristmas) {
+                    0.4f + Random.nextFloat() * 0.6f
+                } else {
+                    0.3f + Random.nextFloat() * 0.7f
+                },
                 duration = (3000 + Random.nextInt(2000)).toInt(),
                 delay = Random.nextInt(1000),
             )
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        particles.forEach { particle ->
-            FloatingParticle(
-                particle = particle,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = particle.initialX * 200.dp,
-                        y = particle.initialY * 120.dp
-                    ),
-                isChristmas = isChristmas,
-            )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size ->
+                with(density) {
+                    containerSize = Size(size.width.toDp().value, size.height.toDp().value)
+                }
+            }
+    ) {
+        if (containerSize.width > 0 && containerSize.height > 0) {
+            particles.forEach { particle ->
+                FloatingParticle(
+                    particle = particle,
+                    containerSize = containerSize,
+                    isChristmas = isChristmas,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun RightParticleEffects() {
+    val density = LocalDensity.current
+    var containerSize by remember { mutableStateOf(Size.Zero) }
+    
     val particleCount = 6
     val particles = remember(particleCount) {
         (0 until particleCount).map {
             ParticleConfig(
                 initialX = 0.5f + Random.nextFloat() * 0.5f,
-                initialY = Random.nextFloat(),
-                size = (6f + Random.nextFloat() * 12f).dp,
+                initialY = -0.2f,
+                size = (6f + Random.nextFloat() * 10f).dp,
                 alpha = 0.4f + Random.nextFloat() * 0.6f,
                 duration = (2500 + Random.nextInt(2000)).toInt(),
                 delay = Random.nextInt(1000),
@@ -388,17 +407,22 @@ private fun RightParticleEffects() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        particles.forEach { particle ->
-            FloatingGoldDot(
-                particle = particle,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = particle.initialX * 200.dp,
-                        y = particle.initialY * 120.dp
-                    ),
-            )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size ->
+                with(density) {
+                    containerSize = Size(size.width.toDp().value, size.height.toDp().value)
+                }
+            }
+    ) {
+        if (containerSize.width > 0 && containerSize.height > 0) {
+            particles.forEach { particle ->
+                FloatingGoldDot(
+                    particle = particle,
+                    containerSize = containerSize,
+                )
+            }
         }
     }
 }
@@ -406,13 +430,14 @@ private fun RightParticleEffects() {
 @Composable
 private fun FloatingParticle(
     particle: ParticleConfig,
-    modifier: Modifier = Modifier,
+    containerSize: Size,
     isChristmas: Boolean,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "particle_float")
-    val offsetY by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val infiniteTransition = rememberInfiniteTransition(label = "particle_float_${particle.hashCode()}")
+    
+    val animateY by infiniteTransition.animateFloat(
+        initialValue = particle.initialY,
+        targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
             animation = tween(
                 particle.duration,
@@ -423,28 +448,33 @@ private fun FloatingParticle(
         ),
         label = "float_y"
     )
-    val offsetX by infiniteTransition.animateFloat(
-        initialValue = 0f,
+    
+    val animateX by infiniteTransition.animateFloat(
+        initialValue = -0.3f,
         targetValue = 0.3f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                particle.duration,
+                particle.duration / 2,
                 delayMillis = particle.delay,
                 easing = LinearEasing
             ),
-            repeatMode = RepeatMode.Restart
+            repeatMode = RepeatMode.Reverse
         ),
         label = "float_x"
     )
 
+    val particleSizeValue = particle.size.value
+    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.4f
+    val currentY = animateY * containerSize.height
+
     Box(
-        modifier = modifier
+        modifier = Modifier
+            .offset(
+                x = currentX.dp,
+                y = currentY.dp
+            )
             .alpha(particle.alpha)
             .size(particle.size)
-            .offset(
-                x = offsetX * 60.dp,
-                y = offsetY * 120.dp
-            )
     ) {
         if (isChristmas) {
             SnowPiece(modifier = Modifier.fillMaxSize())
@@ -457,12 +487,13 @@ private fun FloatingParticle(
 @Composable
 private fun FloatingGoldDot(
     particle: ParticleConfig,
-    modifier: Modifier = Modifier,
+    containerSize: Size,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "gold_dot_float")
-    val offsetY by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val infiniteTransition = rememberInfiniteTransition(label = "gold_dot_float_${particle.hashCode()}")
+    
+    val animateY by infiniteTransition.animateFloat(
+        initialValue = particle.initialY,
+        targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
             animation = tween(
                 particle.duration,
@@ -473,28 +504,32 @@ private fun FloatingGoldDot(
         ),
         label = "float_y"
     )
-    val offsetX by infiniteTransition.animateFloat(
-        initialValue = 0f,
+    
+    val animateX by infiniteTransition.animateFloat(
+        initialValue = -0.2f,
         targetValue = 0.2f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                particle.duration,
+                particle.duration / 2,
                 delayMillis = particle.delay,
                 easing = LinearEasing
             ),
-            repeatMode = RepeatMode.Restart
+            repeatMode = RepeatMode.Reverse
         ),
         label = "float_x"
     )
 
+    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.3f
+    val currentY = animateY * containerSize.height
+
     Box(
-        modifier = modifier
+        modifier = Modifier
+            .offset(
+                x = currentX.dp,
+                y = currentY.dp
+            )
             .alpha(particle.alpha)
             .size(particle.size)
-            .offset(
-                x = offsetX * 40.dp,
-                y = offsetY * 120.dp
-            )
     ) {
         GoldDot(modifier = Modifier.fillMaxSize())
     }
