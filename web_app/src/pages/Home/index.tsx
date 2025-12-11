@@ -49,30 +49,11 @@ const HomePage: React.FC = () => {
     history.push(`/chat/${agent.id}`);
   };
 
-  /**
-   * 处理下载按钮点击
-   */
-  const handleDownloadClick = () => {
-    window.open('https://play.google.com/store/apps/details?id=com.ai.intellimate', '_blank');
-  };
-
   return (
     <div className="home-page" ref={scrollContainerRef}>
-      {/* 页面标题 */}
-      <div className="page-header">
-        <h1 className="page-title">discover</h1>
-        <button type="button" className="download-button" onClick={handleDownloadClick}>
-          <img
-            src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
-            alt="Get it on Google Play"
-            loading="lazy"
-          />
-        </button>
-      </div>
-
       <div className="page-content">
         {/* 首页上方 横向广告 */}
-        <AdHomeTop />
+        {/* <AdHomeTop /> */}
         <CharacterList
           recommendList={recommendList}
           loading={loading}

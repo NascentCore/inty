@@ -1,37 +1,40 @@
 /**
  * ChatHeader 聊天页面头部组件
- * 显示 Agent 信息和返回按钮
+ *
+ * 用途：显示 Agent 信息和返回按钮
+ * 使用示例：
+ * ```tsx
+ * <ChatHeader />
+ * ```
+ *
+ * 注意事项：
+ * - 右侧放入 PageHeader 的 children 区域
+ * - CREATED_BY_AGENT
  */
 
 import { ArrowLeft, Bot } from 'lucide-react';
+import { history, useModel } from '@umijs/max';
 import React from 'react';
-import { Icon } from '@/components';
-import type { IAgent } from '@/types';
+import Icon from '@/components/Icon';
 import './index.less';
-
-/**
- * ChatHeader 组件 Props
- */
-interface IChatHeaderProps {
-  /** Agent 信息 */
-  agent: IAgent | null;
-  /** 加载状态 */
-  loading: boolean;
-  /** 返回回调 */
-  onBack: () => void;
-}
 
 /**
  * ChatHeader 组件
  */
-const ChatHeader: React.FC<IChatHeaderProps> = ({ agent, loading, onBack }) => {
+const ChatHeader: React.FC = () => {
+  const { currentAgent: agent, detailLoading: loading } = useModel('agent');
+
+  const handleBack = () => {
+    history.push('/');
+  };
+
   /**
    * 渲染加载状态
    */
   if (loading) {
     return (
       <div className="chat-header">
-        <button className="back-button" onClick={onBack} type="button" title="Back">
+        <button className="back-button" onClick={handleBack} type="button" title="Back">
           <Icon icon={ArrowLeft} size={20} />
         </button>
         <div className="agent-info">
@@ -51,7 +54,7 @@ const ChatHeader: React.FC<IChatHeaderProps> = ({ agent, loading, onBack }) => {
   if (!agent) {
     return (
       <div className="chat-header">
-        <button className="back-button" onClick={onBack} type="button" title="Back">
+        <button className="back-button" onClick={handleBack} type="button" title="Back">
           <Icon icon={ArrowLeft} size={20} />
         </button>
         <div className="agent-info">
@@ -66,7 +69,7 @@ const ChatHeader: React.FC<IChatHeaderProps> = ({ agent, loading, onBack }) => {
    */
   return (
     <div className="chat-header">
-      <button className="back-button" onClick={onBack} type="button" title="Back">
+      <button className="back-button" onClick={handleBack} type="button" title="Back">
         <Icon icon={ArrowLeft} size={20} />
       </button>
       <div className="agent-info">

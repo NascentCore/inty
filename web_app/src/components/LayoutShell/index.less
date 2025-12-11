@@ -1,0 +1,38 @@
+/**
+ * LayoutShell 样式
+ * CREATED_BY_AGENT
+ */
+
+@import '@/styles/variables.less';
+
+@sider-width: 280px;
+@header-height: 70px;
+
+.layout-shell {
+  position: relative;
+
+  .layout-shell-sider {
+    position: fixed;
+    width: @sider-width;
+    top: @header-height;
+    left: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    background: @dark-bg-secondary;
+    color: @dark-text-primary;
+    border-right: 1px solid @dark-border-color;
+    @media (max-width: @screen-md) {
+      display: none;
+    }
+  }
+
+  .layout-shell-main {
+    padding-left: @sider-width;
+    background: @dark-bg-primary;
+    @media (max-width: @screen-md) {
+      padding-left: 0;
+    }
+  }
+}

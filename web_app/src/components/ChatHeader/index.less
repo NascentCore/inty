@@ -1,21 +1,15 @@
 /**
  * ChatHeader 组件样式
- * 风格与 SidebarLayout Header 保持一致
+ * CREATED_BY_AGENT
  */
 
 @import '@/styles/variables.less';
 
 .chat-header {
-  position: fixed;
-  top: 0;
-  left: 280px;
-  right: 0;
-  z-index: 1000;
   display: flex;
   align-items: center;
   gap: 16px;
   height: 70px;
-  padding: 0 24px;
   background: rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid @dark-border-color;
   backdrop-filter: blur(10px);
@@ -138,6 +132,9 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        @media (max-width: @screen-md) {
+          display: none;
+        }
       }
 
       .agent-intro-skeleton {
@@ -169,48 +166,5 @@
   }
   100% {
     background-position: -200% 0;
-  }
-}
-
-/* 响应式 */
-@media (max-width: @screen-md) {
-  .chat-header {
-    height: 60px;
-    padding: 0 16px;
-
-    .back-button {
-      width: 36px;
-      height: 36px;
-      font-size: 18px;
-    }
-
-    .agent-info {
-      .agent-avatar,
-      .agent-avatar-skeleton {
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-      }
-
-      .agent-details {
-        .agent-name {
-          font-size: 18px;
-        }
-
-        .agent-name-skeleton {
-          width: 100px;
-          height: 18px;
-        }
-
-        .agent-intro {
-          font-size: 13px;
-        }
-
-        .agent-intro-skeleton {
-          width: 150px;
-          height: 14px;
-        }
-      }
-    }
   }
 }

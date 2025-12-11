@@ -3,10 +3,10 @@
  * 实现与 AI Agent 的对话功能
  */
 
-import { history, useModel, useParams } from '@umijs/max';
+import { useModel, useParams } from '@umijs/max';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { ErrorAlert } from '@/components';
-import { AgentDetailPanel, ChatHeader, MessageInput, MessageList } from './components';
+import { AgentDetailPanel, MessageInput, MessageList } from './components';
 import './index.less';
 
 /**
@@ -74,20 +74,10 @@ const ChatPage: React.FC = () => {
     [agentId, sendChatMessage],
   );
 
-  /**
-   * 返回首页
-   */
-  const handleBack = useCallback(() => {
-    history.push('/');
-  }, []);
-
   return (
     <div className="chat-page">
       {/* 左侧：聊天区域 */}
       <div className="chat-main">
-        {/* 顶部 Agent 信息 */}
-        <ChatHeader agent={currentAgent} loading={agentLoading} onBack={handleBack} />
-
         {/* 消息列表 */}
         <div className="chat-content">
           <MessageList
@@ -109,16 +99,10 @@ const ChatPage: React.FC = () => {
           />
         </div>
       </div>
-
-      {/* 错误提示 - 固定在页面顶部 */}
-      {error && (
-        <div className="chat-error-alert">
-          <ErrorAlert message="Failed to send" description={error} type="error" />
-        </div>
-      )}
-
-      {/* 右侧：角色详情面板 */}
-      {currentAgent && <AgentDetailPanel agent={currentAgent} />}
+      <div className="chat-right">
+        {/* 右侧：角色详情面板 */}
+        {currentAgent && <AgentDetailPanel agent={currentAgent} />}
+      </div>
     </div>
   );
 };
