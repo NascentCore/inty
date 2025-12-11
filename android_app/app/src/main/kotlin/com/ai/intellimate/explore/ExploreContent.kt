@@ -40,17 +40,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.ai.intellimate.R
 import com.ai.intellimate.explore.special.HorizontalAgentCardList
-import com.ai.intellimate.explore.special.SpecialDetailActivity
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.EmptyDataState
 import com.ai.intellimate.ui.components.NetworkErrorState
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
+import com.ai.intellimate.xb.navigation.Routes
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
@@ -97,10 +101,15 @@ fun ExploreContent(
     onRetry: (() -> Unit)? = null,
     viewModel: ExploreViewModel = viewModel(),
     resetToTopSignal: Int = 0,
+    navController: NavController? = null,
 ) {
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
     val vm: ExploreViewModel = viewModel
     val context = LocalContext.current
+
+    val moshi = remember { Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build() }
+    val agentListType = remember { Types.newParameterizedType(List::class.java, AgentInfo::class.java) }
+    val agentListAdapter = remember { moshi.adapter<List<AgentInfo>>(agentListType) }
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
 
@@ -277,7 +286,7 @@ fun ExploreContent(
                     if (visibleRatio >= 0.7f) {
                         val agentIndex = itemInfo.index - themeItemCount
                         // 确保 agentIndex 在有效范围内（双重检查，防止边界情况）
-                        if (agentIndex >= 0 && agentIndex < agentItemCount) {
+                        if (agentIndex in 0..<agentItemCount) {
                             visibleIndices.add(agentIndex)
                         }
                     }
@@ -437,14 +446,22 @@ fun ExploreContent(
                                         onAgentClick = onClickAgent,
                                         onTitleClick = {
                                             // 跳转到主题详情页面
-                                            SpecialDetailActivity.launch(
-                                                context = context,
-                                                themeId = theme.id,
-                                                themeTitle = theme.name,
-                                                themeDescription = theme.description,
-                                                isChristmas = theme.isChristmas,
-                                                agents = theme.agents,
-                                            )
+                                            navController?.let { nav ->
+                                                val agentsJson = try {
+                                                    agentListAdapter.toJson(theme.agents)
+                                                } catch (e: Exception) {
+                                                    ""
+                                                }
+                                                nav.navigate(
+                                                    Routes.collectionDetail(
+                                                        themeId = theme.id,
+                                                        themeTitle = theme.name,
+                                                        themeDescription = theme.description,
+                                                        isChristmas = theme.isChristmas,
+                                                        agentsJson = agentsJson,
+                                                    )
+                                                )
+                                            }
                                         },
                                     )
                                 }

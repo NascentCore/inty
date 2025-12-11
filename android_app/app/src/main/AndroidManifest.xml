@@ -118,9 +118,6 @@
             android:theme="@style/Theme.Inty.UCrop" />
 
         <activity
-            android:name=".explore.special.SpecialDetailActivity"
-            android:launchMode="singleTop" />
-        <activity
             android:name=".boost.BoostLeaderboardActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"

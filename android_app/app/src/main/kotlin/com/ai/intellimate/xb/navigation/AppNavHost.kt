@@ -1,11 +1,13 @@
 package com.ai.intellimate.xb.navigation
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -14,9 +16,15 @@ import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.SplashLoginUI
 import com.ai.intellimate.chat.ChatScreen
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.explore.special.CollectionDetailVM
+import com.ai.intellimate.explore.special.ThemedDetailScreen
 import com.ai.intellimate.settings.SettingScreen
 import com.ai.intellimate.vip.VipCenterContent
 import com.ai.intellimate.xb.helper.AgentStore
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import java.net.URLDecoder
 
 /**
  * 应用导航宿主组件
@@ -106,6 +114,63 @@ fun AppNavHost(
                 showBackButton = true,
                 shouldShowBoostSheetOnOpen = showBoost == true,
                 agentId = agentId,
+            )
+
+        }
+
+        // 定义角色专区详情页面路由
+        composable(Routes.CollectionDetail) { backStackEntry ->
+            val themeId = backStackEntry.arguments?.getString("themeId") ?: ""
+            val themeTitleEncoded = backStackEntry.arguments?.getString("themeTitle") ?: ""
+            val themeDescriptionEncoded = backStackEntry.arguments?.getString("themeDescription") ?: ""
+            val isChristmas = backStackEntry.arguments?.getBoolean("isChristmas") ?: false
+            val agentsJsonEncoded = backStackEntry.arguments?.getString("agentsJson") ?: ""
+
+            val themeTitle = try {
+                URLDecoder.decode(themeTitleEncoded, "UTF-8")
+            } catch (e: Exception) {
+                themeTitleEncoded
+            }
+
+            val themeDescription = try {
+                URLDecoder.decode(themeDescriptionEncoded, "UTF-8")
+            } catch (e: Exception) {
+                themeDescriptionEncoded
+            }
+
+            val agentsJson = try {
+                URLDecoder.decode(agentsJsonEncoded, "UTF-8")
+            } catch (e: Exception) {
+                agentsJsonEncoded
+            }
+
+            val viewModel: CollectionDetailVM = viewModel()
+
+            LaunchedEffect(themeId, themeTitle, themeDescription, isChristmas, agentsJson) {
+                val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+                val agentListType = Types.newParameterizedType(List::class.java, AgentInfo::class.java)
+                val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
+
+                val agents = try {
+                    if (agentsJson.isNotEmpty()) {
+                        agentListAdapter.fromJson(agentsJson) ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+
+                viewModel.setThemeData(themeTitle, themeDescription, agents, isChristmas)
+            }
+
+            ThemedDetailScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onClickAgent = { agent ->
+                    AgentStore.addAgent(agent)
+                    navController.navigate(Routes.chatPage(agent.id, false))
+                },
             )
         }
     }
