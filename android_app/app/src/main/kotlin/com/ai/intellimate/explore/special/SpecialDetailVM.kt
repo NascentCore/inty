@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** 主题详情页面 ViewModel */
-class SpecialDetailVM : BaseVM() {
+/** 角色专区详情页面 ViewModel */
+class CollectionDetailVM : BaseVM() {
 
     private val _themeTitle = MutableStateFlow("")
     val themeTitle: StateFlow<String> = _themeTitle.asStateFlow()

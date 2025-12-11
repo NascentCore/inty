@@ -114,7 +114,7 @@ internal object ThemedDetailConfig {
 /**
  * 专题详情界面的事件描述卡片
  *
- * 用途：显示在专题详情界面（SpecialDetailScreen）顶部，展示该专题的事件描述信息 特点：
+ * 用途：显示在角色专区详情界面（ThemedDetailScreen）顶部，展示该专区的事件描述信息 特点：
  * - 使用 ThemedEventCard 作为容器，支持圣诞主题装饰
  * - 内部使用 ExpandableText 实现文本折叠/展开功能
  * - 默认显示4行，超出部分可展开查看
@@ -153,7 +153,7 @@ internal fun EventCard(
 /**
  * 专题详情界面的角色卡片（横向布局）
  *
- * 用途：显示在专题详情界面（SpecialDetailScreen）的 LazyColumn 列表中，展示单个 AI 角色信息 特点：
+ * 用途：显示在角色专区详情界面（ThemedDetailScreen）的 LazyColumn 列表中，展示单个 AI 角色信息 特点：
  * - 横向布局：左侧为角色图片，右侧为角色信息（名称、简介、标签）
  * - 固定高度，宽度自适应
  * - 支持图片加载状态（占位符、加载失败处理）

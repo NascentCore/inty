@@ -23,10 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** 主题详情页面 */
+/** 角色专区详情页面 */
 @Composable
 fun ThemedDetailScreen(
-    viewModel: SpecialDetailVM,
+    viewModel: CollectionDetailVM,
     onBack: () -> Unit,
     onClickAgent: (AgentInfo) -> Unit,
 ) {

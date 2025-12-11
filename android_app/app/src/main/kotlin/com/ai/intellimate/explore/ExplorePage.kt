@@ -2,7 +2,6 @@ package com.ai.intellimate.explore
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.startup.ImagePreloadManager
-import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
@@ -69,7 +68,6 @@ fun ExplorePage(
     externalResetSignal: Int = 0,
 ) {
     val context = LocalContext.current
-    val isDebugMode = HeartAppUtils.isAppDebugMode()
 
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
@@ -165,6 +163,7 @@ fun ExplorePage(
                     onRetry = { viewModel.refreshRecommendAgents() },
                     viewModel = viewModel,
                     resetToTopSignal = externalResetSignal,
+                    navController = navController,
                 )
             }
         }
