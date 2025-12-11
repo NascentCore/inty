@@ -1844,6 +1844,53 @@ async def get_session_messages(
 
 
 @router.get(
+    "/agents/generated-images/counts",
+    tags=[INTY_EVAL_TAG],
+)
+async def get_all_agents_image_counts(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    获取所有角色的生成图片数量
+
+    返回格式: {"agent_id_1": 5, "agent_id_2": 10, ...}
+    """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from sqlalchemy import func, select
+
+        from app.models.resource import Resource, ResourceType
+
+        # 使用 GROUP BY 统计每个角色的图片数量
+        query = (
+            select(Resource.agent_id, func.count(Resource.url).label("count"))
+            .where(
+                Resource.type == ResourceType.IMAGE,
+                Resource.resource_metadata.isnot(None),
+                Resource.agent_id.isnot(None),
+            )
+            .group_by(Resource.agent_id)
+        )
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        # 构建返回数据
+        counts = {row.agent_id: row.count for row in rows}
+
+        logger.debug(f"获取所有角色图片数量，共 {len(counts)} 个角色有图片")
+        return {"counts": counts}
+
+    except Exception as e:
+        logger.error(f"获取角色图片数量失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取角色图片数量失败")
+
+
+@router.get(
     "/agents/{agent_id}/generated-images",
     tags=[INTY_EVAL_TAG],
 )
@@ -1885,6 +1932,17 @@ async def get_agent_generated_images(
         result = await db.execute(query)
         resources = result.scalars().all()
 
+        # 收集所有 user_id 并查询用户昵称
+        from app.models.user import User
+
+        user_ids = list(set(r.user_id for r in resources if r.user_id))
+        user_nicknames = {}
+        if user_ids:
+            user_query = select(User.id, User.nickname).where(User.id.in_(user_ids))
+            user_result = await db.execute(user_query)
+            for row in user_result.all():
+                user_nicknames[row.id] = row.nickname
+
         # 构建返回数据
         images = []
         for resource in resources:
@@ -1909,6 +1967,7 @@ async def get_agent_generated_images(
                         resource.created_at.isoformat() if resource.created_at else None
                     ),
                     "user_id": resource.user_id,
+                    "user_nickname": user_nicknames.get(resource.user_id),
                 }
             )
 

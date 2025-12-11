@@ -1225,6 +1225,10 @@ export const generatedImagesApi = {
     },
   ): Promise<import("../types").GeneratedImagesResponse> =>
     apiClient.get(`/evaluation/agents/${agentId}/generated-images`, params),
+
+  // 获取所有角色的图片数量
+  getImageCounts: (): Promise<import("../types").ImageCountsResponse> =>
+    apiClient.get("/evaluation/agents/generated-images/counts"),
 };
 
 export const characterThemeApi = {

@@ -23,6 +23,8 @@ import {
   message,
   Tooltip,
   Avatar,
+  Badge,
+  Divider,
 } from "antd";
 import {
   PictureOutlined,
@@ -43,17 +45,22 @@ const GeneratedImagesPage: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [images, setImages] = useState<GeneratedImage[]>([]);
+  const [imageCounts, setImageCounts] = useState<Record<string, number>>({});
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [loadingImages, setLoadingImages] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
 
-  // 加载角色列表
+  // 加载角色列表和图片数量
   const loadAgents = useCallback(async () => {
     setLoadingAgents(true);
     try {
-      const data = await agentApi.list({ limit: 200 });
-      setAgents(data);
+      const [agentsData, countsData] = await Promise.all([
+        agentApi.list({ limit: 200 }),
+        generatedImagesApi.getImageCounts(),
+      ]);
+      setAgents(agentsData);
+      setImageCounts(countsData.counts);
     } catch (error) {
       message.error("加载角色列表失败");
       console.error("加载角色列表失败:", error);
@@ -97,6 +104,26 @@ const GeneratedImagesPage: React.FC = () => {
   const filteredAgents = agents.filter((agent) =>
     agent.name.toLowerCase().includes(searchText.toLowerCase()),
   );
+
+  // 按用户分组图片
+  const groupedImages = React.useMemo(() => {
+    const groups: Record<
+      string,
+      { user_id: string; user_nickname: string | null; images: GeneratedImage[] }
+    > = {};
+    for (const image of images) {
+      const userId = image.user_id || "unknown";
+      if (!groups[userId]) {
+        groups[userId] = {
+          user_id: userId,
+          user_nickname: image.user_nickname,
+          images: [],
+        };
+      }
+      groups[userId].images.push(image);
+    }
+    return Object.values(groups);
+  }, [images]);
 
   // 格式化日期
   const formatDate = (dateStr: string | null) => {
@@ -200,9 +227,18 @@ const GeneratedImagesPage: React.FC = () => {
                           </Text>
                         }
                         description={
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {agent.visibility === "PUBLIC" ? "公开" : "私有"}
-                          </Text>
+                          <Space size={4}>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {agent.visibility === "PUBLIC" ? "公开" : "私有"}
+                            </Text>
+                            {imageCounts[agent.id] > 0 && (
+                              <Badge
+                                count={imageCounts[agent.id]}
+                                style={{ backgroundColor: "#52c41a" }}
+                                size="small"
+                              />
+                            )}
+                          </Space>
                         }
                       />
                     </List.Item>
@@ -267,70 +303,96 @@ const GeneratedImagesPage: React.FC = () => {
                 style={{ marginTop: 100 }}
               />
             ) : (
-              <Row gutter={[16, 16]}>
-                {images.map((image, index) => (
-                  <Col key={index} xs={12} sm={8} md={6} lg={4}>
-                    <Card
-                      hoverable
-                      size="small"
-                      cover={
-                        <div
-                          style={{
-                            position: "relative",
-                            paddingTop: "100%",
-                            overflow: "hidden",
-                          }}
+              <div>
+                {groupedImages.map((group, groupIndex) => (
+                  <div key={group.user_id} style={{ marginBottom: 24 }}>
+                    {/* 用户分组标题 */}
+                    <Divider orientation="left" style={{ margin: "16px 0" }}>
+                      <Space>
+                        <UserOutlined />
+                        <Text strong>
+                          {group.user_nickname || "未知用户"}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          ({group.user_id.slice(0, 16)}...)
+                        </Text>
+                        <Tag color="blue">{group.images.length} 张</Tag>
+                      </Space>
+                    </Divider>
+                    {/* 该用户的图片 */}
+                    <Row gutter={[16, 16]}>
+                      {group.images.map((image, index) => (
+                        <Col
+                          key={`${groupIndex}-${index}`}
+                          xs={12}
+                          sm={8}
+                          md={6}
+                          lg={4}
                         >
-                          <img
-                            src={image.url}
-                            alt={`生成图片 ${index + 1}`}
-                            style={{
-                              position: "absolute",
-                              top: 0,
-                              left: 0,
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                            onClick={() => setPreviewImage(image)}
-                          />
-                          <div
-                            style={{
-                              position: "absolute",
-                              top: 8,
-                              right: 8,
-                            }}
+                          <Card
+                            hoverable
+                            size="small"
+                            cover={
+                              <div
+                                style={{
+                                  position: "relative",
+                                  paddingTop: "100%",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <img
+                                  src={image.url}
+                                  alt={`生成图片 ${index + 1}`}
+                                  style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                  }}
+                                  onClick={() => setPreviewImage(image)}
+                                />
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: 8,
+                                    right: 8,
+                                  }}
+                                >
+                                  <Tooltip title="查看大图">
+                                    <Button
+                                      type="primary"
+                                      shape="circle"
+                                      size="small"
+                                      icon={<ExpandOutlined />}
+                                      onClick={() => setPreviewImage(image)}
+                                    />
+                                  </Tooltip>
+                                </div>
+                              </div>
+                            }
+                            bodyStyle={{ padding: "8px" }}
                           >
-                            <Tooltip title="查看大图">
-                              <Button
-                                type="primary"
-                                shape="circle"
-                                size="small"
-                                icon={<ExpandOutlined />}
-                                onClick={() => setPreviewImage(image)}
-                              />
+                            <Tooltip title={image.generation_prompt}>
+                              <Paragraph
+                                ellipsis={{ rows: 2 }}
+                                style={{ fontSize: 12, marginBottom: 4 }}
+                              >
+                                {image.generation_prompt}
+                              </Paragraph>
                             </Tooltip>
-                          </div>
-                        </div>
-                      }
-                      bodyStyle={{ padding: "8px" }}
-                    >
-                      <Tooltip title={image.generation_prompt}>
-                        <Paragraph
-                          ellipsis={{ rows: 2 }}
-                          style={{ fontSize: 12, marginBottom: 4 }}
-                        >
-                          {image.generation_prompt}
-                        </Paragraph>
-                      </Tooltip>
-                      <Text type="secondary" style={{ fontSize: 10 }}>
-                        <ClockCircleOutlined style={{ marginRight: 4 }} />
-                        {formatDate(image.created_at)}
-                      </Text>
-                    </Card>
-                  </Col>
+                            <Text type="secondary" style={{ fontSize: 10 }}>
+                              <ClockCircleOutlined style={{ marginRight: 4 }} />
+                              {formatDate(image.created_at)}
+                            </Text>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  </div>
                 ))}
-              </Row>
+              </div>
             )}
           </Card>
         </Col>
