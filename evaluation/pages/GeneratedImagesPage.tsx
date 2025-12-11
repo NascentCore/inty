@@ -109,7 +109,11 @@ const GeneratedImagesPage: React.FC = () => {
   const groupedImages = React.useMemo(() => {
     const groups: Record<
       string,
-      { user_id: string; user_nickname: string | null; images: GeneratedImage[] }
+      {
+        user_id: string;
+        user_nickname: string | null;
+        images: GeneratedImage[];
+      }
     > = {};
     for (const image of images) {
       const userId = image.user_id || "unknown";
@@ -310,9 +314,7 @@ const GeneratedImagesPage: React.FC = () => {
                     <Divider orientation="left" style={{ margin: "16px 0" }}>
                       <Space>
                         <UserOutlined />
-                        <Text strong>
-                          {group.user_nickname || "未知用户"}
-                        </Text>
+                        <Text strong>{group.user_nickname || "未知用户"}</Text>
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           ({group.user_id.slice(0, 16)}...)
                         </Text>
@@ -459,4 +461,3 @@ const GeneratedImagesPage: React.FC = () => {
 };
 
 export default GeneratedImagesPage;
-

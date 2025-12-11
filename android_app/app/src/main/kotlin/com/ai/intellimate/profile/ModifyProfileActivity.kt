@@ -177,32 +177,32 @@ class ModifyProfileActivity : BaseActivity() {
                     onDismissRequest = { editKey = EditKey.None },
                     sheetState = sheetState,
                     dragHandle = null,
-                    contentWindowInsets = { WindowInsets() }
+                    contentWindowInsets = { WindowInsets() },
                 ) {
                     EditDialog(
                         editKey = editKey,
                         editValue = editValue,
                         onDismiss = {
-                            scope.launch {
-                                sheetState.hide()
-                            }.invokeOnCompletion {
-                                if (!sheetState.isVisible) {
-                                    editKey = EditKey.None
+                            scope
+                                .launch { sheetState.hide() }
+                                .invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        editKey = EditKey.None
+                                    }
                                 }
-                            }
                         },
                         onSave = { key, value ->
                             // 在各自的 sheet 中点击 save 时，立即调用接口更新
                             // updateFieldAndSave 会判断是否变化，并更新本地状态
                             viewModel.updateFieldAndSave(key, value)
 
-                            scope.launch {
-                                sheetState.hide()
-                            }.invokeOnCompletion {
-                                if (!sheetState.isVisible) {
-                                    editKey = EditKey.None
+                            scope
+                                .launch { sheetState.hide() }
+                                .invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        editKey = EditKey.None
+                                    }
                                 }
-                            }
                         },
                         onValueChange = { editValue = it },
                     )

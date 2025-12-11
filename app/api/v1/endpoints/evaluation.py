@@ -1971,9 +1971,7 @@ async def get_agent_generated_images(
                 }
             )
 
-        logger.debug(
-            f"获取角色 {agent_id} 的生成图片，共 {len(images)} 张"
-        )
+        logger.debug(f"获取角色 {agent_id} 的生成图片，共 {len(images)} 张")
         return {"images": images, "total": len(images)}
 
     except Exception as e:
