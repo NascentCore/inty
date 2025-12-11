@@ -135,7 +135,7 @@ private data class BannerContent(
 /** Premium Banner 组件 */
 @Composable
 internal fun PremiumBanner(
-    status: String? = "Activate Now",
+    status: String? = null,
     purchaseTime: String? = null,
     expireTime: String? = null,
     onClick: () -> Unit = {},
@@ -143,13 +143,22 @@ internal fun PremiumBanner(
     val isChristmas = enableChristmasConfig()
     var lastClickTimePremium by remember { mutableLongStateOf(0L) }
 
-    val bannerContent = remember(status, purchaseTime, expireTime) {
+    val subscribedTitle = stringResource(R.string.profile_premium_banner_title_subscribed)
+    val expiringSoonTitle = stringResource(R.string.profile_premium_banner_title_expiring_soon)
+    val upgradeTitle = stringResource(R.string.profile_premium_banner_title_upgrade)
+    val unlockSubtitle = stringResource(R.string.profile_premium_banner_subtitle_unlock)
+    val keepPremiumButton = stringResource(R.string.profile_premium_banner_button_keep_premium)
+    val activateButton = stringResource(R.string.profile_premium_banner_button_activate)
+    val memberSinceFormat = stringResource(R.string.profile_premium_banner_subtitle_member_since)
+    val expiresOnFormat = stringResource(R.string.profile_premium_banner_subtitle_expires_on)
+
+    val bannerContent = remember(status, purchaseTime, expireTime, subscribedTitle, expiringSoonTitle, upgradeTitle, unlockSubtitle, keepPremiumButton, activateButton, memberSinceFormat, expiresOnFormat) {
         when (status) {
             VipStatus.UI_SUBSCRIBED -> {
                 val dateText = purchaseTime?.takeIf { it.isNotEmpty() } ?: ""
                 BannerContent(
-                    title = "You're Premium",
-                    subtitle = "Member since $dateText",
+                    title = subscribedTitle,
+                    subtitle = memberSinceFormat.format(dateText),
                     showActionButton = false,
                     buttonText = ""
                 )
@@ -158,19 +167,19 @@ internal fun PremiumBanner(
             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> {
                 val dateText = expireTime?.takeIf { it.isNotEmpty() } ?: ""
                 BannerContent(
-                    title = "Premium Ending Soon",
-                    subtitle = "Expires on $dateText",
+                    title = expiringSoonTitle,
+                    subtitle = expiresOnFormat.format(dateText),
                     showActionButton = true,
-                    buttonText = "Keep Premium"
+                    buttonText = keepPremiumButton
                 )
             }
 
             else -> {
                 BannerContent(
-                    title = "Upgrade to Premium",
-                    subtitle = "Unlock all privilege now",
+                    title = upgradeTitle,
+                    subtitle = unlockSubtitle,
                     showActionButton = true,
-                    buttonText = "Activate now"
+                    buttonText = activateButton
                 )
             }
         }
@@ -589,7 +598,7 @@ internal fun ActionButton(
     modifier: Modifier = Modifier,
     isChristmas: Boolean = false,
     onClick: () -> Unit = {},
-    buttonText: String = "Activate now",
+    buttonText: String = stringResource(R.string.profile_premium_banner_button_activate),
 ) {
     val borderBrush =
         remember(isChristmas) {
@@ -669,7 +678,7 @@ internal fun ActionButton(
 private fun PreviewActionButton() {
     Column {
         ActionButton(modifier = Modifier.size(170.dp, 48.dp))
-        ActionButton(modifier = Modifier.size(200.dp, 56.dp), buttonText = "Keep Premium")
+        ActionButton(modifier = Modifier.size(200.dp, 56.dp), buttonText = stringResource(R.string.profile_premium_banner_button_keep_premium))
         ActionButton(
             modifier = Modifier.size(200.dp, 40.dp),
             isChristmas = true
