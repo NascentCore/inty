@@ -28,7 +28,7 @@ import { User } from 'lucide-react';
 import React from 'react';
 import { Icon } from '@/components';
 import type { IUserProfile } from '@/types';
-import { SubscribeButton } from '../index';
+import SubscribeButton from '../SubscribeButton';
 import './index.less';
 
 interface IUserSectionProps {

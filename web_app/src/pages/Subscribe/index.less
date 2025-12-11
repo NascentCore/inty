@@ -27,14 +27,6 @@
     color: @dark-text-primary;
     margin: 0 0 @spacing-md 0;
     line-height: 1.2;
-
-    @media (max-width: @screen-md) {
-      font-size: 36px;
-    }
-
-    @media (max-width: @screen-sm) {
-      font-size: 28px;
-    }
   }
 
   .subscribe-subtitle {
@@ -42,10 +34,6 @@
     color: @dark-text-secondary;
     margin: 0 0 @spacing-lg 0;
     max-width: 600px;
-
-    @media (max-width: @screen-sm) {
-      font-size: @font-size-sm;
-    }
   }
 
   // 当前订阅状态提示
@@ -87,16 +75,6 @@
     max-width: 1000px;
     width: 100%;
     margin: 0 auto @spacing-xxl auto;
-
-    @media (max-width: @screen-lg) {
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: @spacing-md;
-    }
-
-    @media (max-width: @screen-md) {
-      grid-template-columns: 1fr;
-      gap: @spacing-md;
-    }
   }
 
   // 错误状态
@@ -151,23 +129,5 @@
     color: @dark-text-tertiary;
     margin: 0;
     text-align: center;
-
-    @media (max-width: @screen-sm) {
-      text-align: left;
-      width: 100%;
-    }
-  }
-}
-
-// 响应式布局调整
-@media (max-width: @screen-md) {
-  .subscribe-page {
-    padding: @spacing-lg @spacing-md;
-  }
-}
-
-@media (max-width: @screen-sm) {
-  .subscribe-page {
-    padding: @spacing-md @spacing-sm;
   }
 }

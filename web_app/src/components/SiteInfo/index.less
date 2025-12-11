@@ -1,0 +1,31 @@
+/**
+ * SiteInfo 样式
+ * 展示品牌标识
+ */
+@import '@/styles/variables.less';
+
+.site-info-block {
+  width: 280px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  @media (max-width: @screen-md) {
+    display: none;
+  }
+
+  .site-info-logo {
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .site-info-name {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: @dark-text-primary;
+    letter-spacing: -0.5px;
+  }
+}

@@ -17,7 +17,7 @@ export default [
   {
     path: '/chat/:agentId',
     component: './Chat',
-    wrappers: ['@/layouts/SidebarLayout'],
+    wrappers: ['@/layouts/ChatLayout'],
   },
   {
     path: '/profile',
