@@ -154,7 +154,7 @@ object IntySetting {
         curUserSetting.putBoolean("user_set_auto_play_animation", true)
     }
 
-    /** 标记用户已手动设置过 Text Streaming*/
+    /** 标记用户已手动设置过 Text Streaming */
     fun markUserTextStreaming() {
         curUserSetting.putBoolean("user_set_text_streaming", true)
     }

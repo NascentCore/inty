@@ -281,7 +281,9 @@ class ChatViewModel : BaseVM() {
 
                     val latestAiMsg = list.find { msg -> msg.role == "assistant" }
                     _shouldFlowShow.value =
-                        IntySetting.isTextStreaming() && lastAiMsgInfo != null && latestAiMsg?.id != lastAiMsgInfo?.id
+                        IntySetting.isTextStreaming() &&
+                            lastAiMsgInfo != null &&
+                            latestAiMsg?.id != lastAiMsgInfo?.id
 
                     lastAiMsgInfo = latestAiMsg
 

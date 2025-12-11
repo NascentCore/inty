@@ -66,8 +66,8 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -145,11 +145,9 @@ fun ChatSettingsDrawer(
         modifier = Modifier,
         drawerState = drawerState,
         drawerContent = {
-
             Column(
                 modifier =
-                    Modifier
-                        .width(319.dp)
+                    Modifier.width(319.dp)
                         .fillMaxHeight()
                         .padding(bottom = 56.dp)
                         .verticalScroll(rememberScrollState())
@@ -591,39 +589,41 @@ fun ChatSettingsDrawer(
                 onDismissRequest = { editKey = EditKey.None },
                 sheetState = sheetState,
                 dragHandle = null,
-                contentWindowInsets = { WindowInsets()}
+                contentWindowInsets = { WindowInsets() },
             ) {
                 EditDialog(
                     editKey = editKey,
                     editValue = editValue,
                     onDismiss = {
-                        coroutineScope.launch {
-                            sheetState.hide()
-                        }.invokeOnCompletion {
-                            if (!sheetState.isVisible) {
-                                editKey = EditKey.None
+                        coroutineScope
+                            .launch { sheetState.hide() }
+                            .invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    editKey = EditKey.None
+                                }
                             }
-                        }
                     },
                     onSave = { key, value ->
-                        coroutineScope.launch {
-                            sheetState.hide()
+                        coroutineScope
+                            .launch {
+                                sheetState.hide()
 
-                            when (key) {
-                                EditKey.Preference -> {
-                                    PersonaPreferenceStore.savePreference(context, value.trim())
-                                }
-                                else -> {
-                                    modifyProfileViewModel.changeUserProfile(key, value)
-                                    // 直接保存，事件监听会自动刷新UI
-                                    modifyProfileViewModel.onSave()
+                                when (key) {
+                                    EditKey.Preference -> {
+                                        PersonaPreferenceStore.savePreference(context, value.trim())
+                                    }
+                                    else -> {
+                                        modifyProfileViewModel.changeUserProfile(key, value)
+                                        // 直接保存，事件监听会自动刷新UI
+                                        modifyProfileViewModel.onSave()
+                                    }
                                 }
                             }
-                        }.invokeOnCompletion {
-                            if (!sheetState.isVisible) {
-                                editKey = EditKey.None
+                            .invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    editKey = EditKey.None
+                                }
                             }
-                        }
                     },
                     onValueChange = { value -> editValue = value },
                 )
@@ -637,8 +637,7 @@ fun ChatSettingsDrawer(
             ) {
                 Column(
                     modifier =
-                        Modifier
-                            .padding(horizontal = 24.dp)
+                        Modifier.padding(horizontal = 24.dp)
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color(0xFF241533))
                             .widthIn(min = 280.dp, max = 360.dp)

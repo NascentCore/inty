@@ -108,7 +108,9 @@ fun ExploreContent(
     val context = LocalContext.current
 
     val moshi = remember { Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build() }
-    val agentListType = remember { Types.newParameterizedType(List::class.java, AgentInfo::class.java) }
+    val agentListType = remember {
+        Types.newParameterizedType(List::class.java, AgentInfo::class.java)
+    }
     val agentListAdapter = remember { moshi.adapter<List<AgentInfo>>(agentListType) }
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
@@ -447,11 +449,12 @@ fun ExploreContent(
                                         onTitleClick = {
                                             // 跳转到主题详情页面
                                             navController?.let { nav ->
-                                                val agentsJson = try {
-                                                    agentListAdapter.toJson(theme.agents)
-                                                } catch (e: Exception) {
-                                                    ""
-                                                }
+                                                val agentsJson =
+                                                    try {
+                                                        agentListAdapter.toJson(theme.agents)
+                                                    } catch (e: Exception) {
+                                                        ""
+                                                    }
                                                 nav.navigate(
                                                     Routes.collectionDetail(
                                                         themeId = theme.id,

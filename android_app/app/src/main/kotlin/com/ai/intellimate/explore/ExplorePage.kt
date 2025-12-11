@@ -106,9 +106,7 @@ fun ExplorePage(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
                     Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
-                        BoostShortcutButton(
-                            onClick = { BoostLeaderboardActivity.launch(context) }
-                        )
+                        BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
                     }
                 },
             )

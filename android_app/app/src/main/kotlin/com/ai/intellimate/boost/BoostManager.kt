@@ -99,11 +99,11 @@ object BoostManager {
         val available = boostState.value.availablePoints
         val normalized = BoostCalculator.normalizeBoostAmount(requestedPoints, available)
         if (normalized <= 0) throw BoostException(BoostError.NotEnoughPoints)
-        
+
         // 1. 本地 boost 操作
         val info = repo.boostAgent(agentInfo, normalized)
         val result = BoostResult(info, normalized)
-        
+
         // 2. 同步到后端（异步，不阻塞）
         scope.launch {
             try {
@@ -116,7 +116,7 @@ object BoostManager {
                     is ApiResult.Success -> {
                         LogUtils.d(
                             "BoostManager",
-                            "Successfully synced boost to backend: agentId=${agentInfo.id}, points=$normalized"
+                            "Successfully synced boost to backend: agentId=${agentInfo.id}, points=$normalized",
                         )
                         logFirebaseEvent(
                             "boost_synced_to_backend",
@@ -130,7 +130,7 @@ object BoostManager {
                     is ApiResult.Error -> {
                         LogUtils.w(
                             "BoostManager",
-                            "Failed to sync boost to backend: agentId=${agentInfo.id}, error=${updateResult.message}"
+                            "Failed to sync boost to backend: agentId=${agentInfo.id}, error=${updateResult.message}",
                         )
                         logFirebaseEvent(
                             "boost_sync_failed",
@@ -156,7 +156,7 @@ object BoostManager {
                 )
             }
         }
-        
+
         // 3. 发送本地事件（立即返回）
         _events.emit(
             BoostEvent.BoostSuccess(

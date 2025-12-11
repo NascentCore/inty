@@ -115,51 +115,56 @@ fun AppNavHost(
                 shouldShowBoostSheetOnOpen = showBoost == true,
                 agentId = agentId,
             )
-
         }
 
         // 定义角色专区详情页面路由
         composable(Routes.CollectionDetail) { backStackEntry ->
             val themeId = backStackEntry.arguments?.getString("themeId") ?: ""
             val themeTitleEncoded = backStackEntry.arguments?.getString("themeTitle") ?: ""
-            val themeDescriptionEncoded = backStackEntry.arguments?.getString("themeDescription") ?: ""
+            val themeDescriptionEncoded =
+                backStackEntry.arguments?.getString("themeDescription") ?: ""
             val isChristmas = backStackEntry.arguments?.getBoolean("isChristmas") ?: false
             val agentsJsonEncoded = backStackEntry.arguments?.getString("agentsJson") ?: ""
 
-            val themeTitle = try {
-                URLDecoder.decode(themeTitleEncoded, "UTF-8")
-            } catch (e: Exception) {
-                themeTitleEncoded
-            }
+            val themeTitle =
+                try {
+                    URLDecoder.decode(themeTitleEncoded, "UTF-8")
+                } catch (e: Exception) {
+                    themeTitleEncoded
+                }
 
-            val themeDescription = try {
-                URLDecoder.decode(themeDescriptionEncoded, "UTF-8")
-            } catch (e: Exception) {
-                themeDescriptionEncoded
-            }
+            val themeDescription =
+                try {
+                    URLDecoder.decode(themeDescriptionEncoded, "UTF-8")
+                } catch (e: Exception) {
+                    themeDescriptionEncoded
+                }
 
-            val agentsJson = try {
-                URLDecoder.decode(agentsJsonEncoded, "UTF-8")
-            } catch (e: Exception) {
-                agentsJsonEncoded
-            }
+            val agentsJson =
+                try {
+                    URLDecoder.decode(agentsJsonEncoded, "UTF-8")
+                } catch (e: Exception) {
+                    agentsJsonEncoded
+                }
 
             val viewModel: CollectionDetailVM = viewModel()
 
             LaunchedEffect(themeId, themeTitle, themeDescription, isChristmas, agentsJson) {
                 val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-                val agentListType = Types.newParameterizedType(List::class.java, AgentInfo::class.java)
+                val agentListType =
+                    Types.newParameterizedType(List::class.java, AgentInfo::class.java)
                 val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
 
-                val agents = try {
-                    if (agentsJson.isNotEmpty()) {
-                        agentListAdapter.fromJson(agentsJson) ?: emptyList()
-                    } else {
+                val agents =
+                    try {
+                        if (agentsJson.isNotEmpty()) {
+                            agentListAdapter.fromJson(agentsJson) ?: emptyList()
+                        } else {
+                            emptyList()
+                        }
+                    } catch (e: Exception) {
                         emptyList()
                     }
-                } catch (e: Exception) {
-                    emptyList()
-                }
 
                 viewModel.setThemeData(themeTitle, themeDescription, agents, isChristmas)
             }

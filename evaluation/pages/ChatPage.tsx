@@ -1502,9 +1502,7 @@ export const ChatPage: React.FC = () => {
                                             <Tooltip
                                               title={`相似度: ${Math.round((message.meta_data.generated_image.similarity || 0) * 100)}%`}
                                             >
-                                              <Tag color="orange">
-                                                匹配图片
-                                              </Tag>
+                                              <Tag color="orange">匹配图片</Tag>
                                             </Tooltip>
                                           </div>
                                         )}

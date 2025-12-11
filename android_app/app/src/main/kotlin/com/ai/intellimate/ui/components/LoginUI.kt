@@ -54,7 +54,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import java.util.regex.Pattern
 
-
 /** Google 登录按钮组件 */
 @Composable
 internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
@@ -75,10 +74,7 @@ internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.google),
                 contentDescription = stringResource(R.string.content_desc_google_login),
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 20.dp)
-                    .size(30.dp),
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(30.dp),
             )
             Text(
                 text = stringResource(R.string.continue_with_google),
@@ -172,13 +168,10 @@ internal fun EnterEmailScreen(
     var emailError by remember { mutableStateOf<String?>(null) }
     val invalidEmailErrorText = stringResource(R.string.invalid_email_format)
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(Color(0xFF1A1A2E))) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A2E))) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .padding(horizontal = 24.dp)
                     .padding(top = 60.dp, bottom = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -186,12 +179,9 @@ internal fun EnterEmailScreen(
             // 返回按钮
             Image(
                 modifier =
-                    Modifier
-                        .align(Alignment.Start)
-                        .size(18.dp, 18.dp)
-                        .noRippleClickable {
-                            onBack()
-                        },
+                    Modifier.align(Alignment.Start).size(18.dp, 18.dp).noRippleClickable {
+                        onBack()
+                    },
                 painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
@@ -246,9 +236,7 @@ internal fun EnterEmailScreen(
                     text = it,
                     color = Color.Red,
                     fontSize = 12.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
                 )
             }
 
@@ -265,9 +253,7 @@ internal fun EnterEmailScreen(
                         onContinue(email)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(30.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
             ) {
@@ -300,13 +286,10 @@ internal fun LoginWithEmailScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(Color(0xFF1A1A2E))) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A2E))) {
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .padding(horizontal = 24.dp)
                     .padding(top = 60.dp, bottom = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -314,12 +297,9 @@ internal fun LoginWithEmailScreen(
             // 返回按钮
             Image(
                 modifier =
-                    Modifier
-                        .align(Alignment.Start)
-                        .size(18.dp, 18.dp)
-                        .noRippleClickable {
-                            onBack()
-                        },
+                    Modifier.align(Alignment.Start).size(18.dp, 18.dp).noRippleClickable {
+                        onBack()
+                    },
                 painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
@@ -417,9 +397,7 @@ internal fun LoginWithEmailScreen(
                         onLogin(email, password)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(30.dp),
                 colors =
                     ButtonDefaults.buttonColors(

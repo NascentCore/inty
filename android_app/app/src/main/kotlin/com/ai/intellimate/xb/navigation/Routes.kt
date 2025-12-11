@@ -5,8 +5,7 @@ import java.net.URLEncoder
 /**
  * 应用路由定义
  *
- * 定义应用内所有页面的导航路由路径，使用 Compose Navigation 进行页面跳转。
- * 所有路由路径使用小写下划线命名风格（snake_case）。
+ * 定义应用内所有页面的导航路由路径，使用 Compose Navigation 进行页面跳转。 所有路由路径使用小写下划线命名风格（snake_case）。
  */
 object Routes {
     /** 启动/登录页面路由 */
@@ -30,8 +29,11 @@ object Routes {
     /** 编辑个人资料页面路由 */
     const val EditProfile = "ef"
 
-    /** 角色专区详情页面路由，参数：themeId（专区ID）、themeTitle（专区标题）、themeDescription（专区描述）、isChristmas（是否为圣诞主题）、agentsJson（角色列表JSON） */
-    const val CollectionDetail = "collection_detail/{themeId}/{themeTitle}/{themeDescription}/{isChristmas}/{agentsJson}"
+    /**
+     * 角色专区详情页面路由，参数：themeId（专区ID）、themeTitle（专区标题）、themeDescription（专区描述）、isChristmas（是否为圣诞主题）、agentsJson（角色列表JSON）
+     */
+    const val CollectionDetail =
+        "collection_detail/{themeId}/{themeTitle}/{themeDescription}/{isChristmas}/{agentsJson}"
 
     /**
      * 构建聊天页面路由路径

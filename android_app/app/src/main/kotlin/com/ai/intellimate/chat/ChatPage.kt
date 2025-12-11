@@ -54,7 +54,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -353,10 +352,7 @@ internal fun ChatPage(
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .padding(innerPadding).imePadding()
-                ) {
+                Column(modifier = Modifier.padding(innerPadding).imePadding()) {
                     Spacer(Modifier.height(48.dp))
 
                     agentInfo?.let { info ->
