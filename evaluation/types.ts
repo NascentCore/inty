@@ -581,3 +581,19 @@ export interface SessionMessagesResponse {
   size: number;
   has_more: boolean;
 }
+
+// 生成图片
+export interface GeneratedImage {
+  url: string;
+  gcs_url: string;
+  generation_prompt: string;
+  width: number | null;
+  height: number | null;
+  created_at: string | null;
+  user_id: string | null;
+}
+
+export interface GeneratedImagesResponse {
+  images: GeneratedImage[];
+  total: number;
+}

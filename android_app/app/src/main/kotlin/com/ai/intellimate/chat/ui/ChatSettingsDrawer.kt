@@ -12,11 +12,13 @@ import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Intent
 import android.net.Uri
+import android.view.Window
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,9 +30,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -69,6 +75,7 @@ private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 
 /** 聊天设置抽屉组件 */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatSettingsDrawer(
     chatViewModel: ChatViewModel,
@@ -549,30 +556,46 @@ fun ChatSettingsDrawer(
             }
         },
     ) {
+        val sheetState = rememberModalBottomSheetState(true)
+
         // 应该放主屏内容的位置
         // 编辑弹窗（与 MySettingActivity 同样的 UI 交互）
         if (editKey != EditKey.None) {
-            Dialog(
+            ModalBottomSheet(
                 onDismissRequest = { editKey = EditKey.None },
-                properties = DialogProperties(usePlatformDefaultWidth = false),
+                sheetState = sheetState,
+                dragHandle = null,
+                contentWindowInsets = { WindowInsets()}
             ) {
                 EditDialog(
                     editKey = editKey,
                     editValue = editValue,
-                    onDismiss = { editKey = EditKey.None },
-                    onSave = { key, value ->
-                        when (key) {
-                            EditKey.Preference -> {
+                    onDismiss = {
+                        coroutineScope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
                                 editKey = EditKey.None
-                                coroutineScope.launch {
+                            }
+                        }
+                    },
+                    onSave = { key, value ->
+                        coroutineScope.launch {
+                            sheetState.hide()
+
+                            when (key) {
+                                EditKey.Preference -> {
                                     PersonaPreferenceStore.savePreference(context, value.trim())
                                 }
+                                else -> {
+                                    modifyProfileViewModel.changeUserProfile(key, value)
+                                    // 直接保存，事件监听会自动刷新UI
+                                    modifyProfileViewModel.onSave()
+                                }
                             }
-                            else -> {
-                                modifyProfileViewModel.changeUserProfile(key, value)
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
                                 editKey = EditKey.None
-                                // 直接保存，事件监听会自动刷新UI
-                                modifyProfileViewModel.onSave()
                             }
                         }
                     },

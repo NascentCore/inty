@@ -1313,6 +1313,8 @@ async def _try_match_existing_image(
                     "width": similar_image.get("width"),
                     "height": similar_image.get("height"),
                     "format": similar_image.get("format", "jpeg"),
+                    "is_matched": True,
+                    "similarity": similar_image.get("similarity", 0),
                 },
                 prompt=current_prompt,
             )
@@ -1496,6 +1498,7 @@ async def generate_chat_image(
             or "安全过滤器" in error_message
             or "blocked" in error_message.lower()
             or "safety filter" in error_message.lower()
+            or "no_image" in error_message.lower()  # Gemini NO_IMAGE 也是内容过滤
         )
 
         # 如果是可匹配的错误类型，尝试匹配已生成图片
