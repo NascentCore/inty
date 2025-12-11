@@ -981,6 +981,9 @@ export const chatApi = {
           width: number;
           height: number;
           prompt?: string;
+          is_matched?: boolean;
+          similarity?: number;
+          matched_from_user_id?: string;
         };
       };
     }>;
@@ -1016,6 +1019,9 @@ export const chatApi = {
           width: number;
           height: number;
           prompt?: string;
+          is_matched?: boolean;
+          similarity?: number;
+          matched_from_user_id?: string;
         };
       };
     }>;
@@ -1205,6 +1211,22 @@ export const chatImageApi = {
 // 角色主题专区管理API
 // =============================================================================
 
+// =============================================================================
+// 生成图片管理API
+// =============================================================================
+
+export const generatedImagesApi = {
+  // 获取指定角色的生成图片列表
+  getAgentImages: (
+    agentId: string,
+    params?: {
+      skip?: number;
+      limit?: number;
+    },
+  ): Promise<import("../types").GeneratedImagesResponse> =>
+    apiClient.get(`/evaluation/agents/${agentId}/generated-images`, params),
+};
+
 export const characterThemeApi = {
   // 获取专区列表
   list: (params?: {
@@ -1272,6 +1294,7 @@ export default {
   images: imageApi,
   chatImage: chatImageApi,
   userAnalytics: userAnalyticsApi,
+  generatedImages: generatedImagesApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端

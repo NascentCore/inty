@@ -16,6 +16,7 @@ import {
   SettingOutlined,
   UserOutlined,
   AppstoreOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -26,6 +27,7 @@ import CharacterThemeManagePage from "./pages/CharacterThemeManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UserAnalyticsPage } from "./pages/UserAnalyticsPage";
 import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
+import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -42,7 +44,8 @@ type PageKey =
   | "settings"
   | "user-analytics"
   | "user-daily-messages"
-  | "character-themes";
+  | "character-themes"
+  | "generated-images";
 
 interface NavigationItem {
   key: PageKey;
@@ -189,6 +192,12 @@ const AppContent: React.FC = () => {
       label: "用户每日消息",
       description: "查询用户每日聊天记录和会话历史",
     },
+    {
+      key: "generated-images",
+      icon: <PictureOutlined />,
+      label: "生成图片管理",
+      description: "查看角色聊天生成的所有图片",
+    },
   ];
 
   // 获取页面标题
@@ -212,6 +221,8 @@ const AppContent: React.FC = () => {
         return "用户数据分析";
       case "user-daily-messages":
         return "用户每日消息";
+      case "generated-images":
+        return "生成图片管理";
       default:
         return "智能体评测系统";
     }
@@ -242,6 +253,8 @@ const AppContent: React.FC = () => {
         return <UserAnalyticsPage />;
       case "user-daily-messages":
         return <UserDailyMessagesPage />;
+      case "generated-images":
+        return <GeneratedImagesPage />;
 
       default:
         return null;

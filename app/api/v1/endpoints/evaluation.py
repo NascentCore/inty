@@ -1836,3 +1836,87 @@ async def get_session_messages(
     except Exception as e:
         logger.error(f"获取会话消息失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取会话消息失败")
+
+
+# =============================================================================
+# 生成图片管理API
+# =============================================================================
+
+
+@router.get(
+    "/agents/{agent_id}/generated-images",
+    tags=[INTY_EVAL_TAG],
+)
+async def get_agent_generated_images(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    agent_id: str,
+    skip: int = Query(0, ge=0, description="跳过的记录数"),
+    limit: int = Query(50, ge=1, le=200, description="返回的记录数"),
+) -> Any:
+    """
+    获取指定角色的所有聊天生成图片
+
+    从 resources 表查询带有 generation_prompt 的图片资源
+    """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from sqlalchemy import select
+
+        from app.models.resource import Resource, ResourceType
+        from app.services.image_transform_service import image_transform_service
+
+        # 查询指定 agent 的生成图片
+        query = (
+            select(Resource)
+            .where(
+                Resource.agent_id == agent_id,
+                Resource.type == ResourceType.IMAGE,
+                Resource.resource_metadata.isnot(None),
+            )
+            .order_by(Resource.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        result = await db.execute(query)
+        resources = result.scalars().all()
+
+        # 构建返回数据
+        images = []
+        for resource in resources:
+            metadata = resource.resource_metadata or {}
+            generation_prompt = metadata.get("generation_prompt")
+
+            # 只返回有 generation_prompt 的图片
+            if not generation_prompt:
+                continue
+
+            size = metadata.get("size", {})
+            cdn_url = image_transform_service.transform_desktop(resource.url)
+
+            images.append(
+                {
+                    "url": cdn_url,
+                    "gcs_url": resource.url,
+                    "generation_prompt": generation_prompt,
+                    "width": size.get("width"),
+                    "height": size.get("height"),
+                    "created_at": (
+                        resource.created_at.isoformat() if resource.created_at else None
+                    ),
+                    "user_id": resource.user_id,
+                }
+            )
+
+        logger.debug(
+            f"获取角色 {agent_id} 的生成图片，共 {len(images)} 张"
+        )
+        return {"images": images, "total": len(images)}
+
+    except Exception as e:
+        logger.error(f"获取角色生成图片失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取角色生成图片失败")

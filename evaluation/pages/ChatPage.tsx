@@ -73,6 +73,10 @@ interface ChatMessage {
       width: number;
       height: number;
       prompt?: string;
+      // 匹配图片相关字段
+      is_matched?: boolean;
+      similarity?: number;
+      matched_from_user_id?: string;
     };
   };
 }
@@ -1491,6 +1495,19 @@ export const ChatPage: React.FC = () => {
                                           }}
                                           placeholder={<Spin size="small" />}
                                         />
+                                        {/* 匹配图片标识 */}
+                                        {message.meta_data.generated_image
+                                          .is_matched && (
+                                          <div style={{ marginTop: "6px" }}>
+                                            <Tooltip
+                                              title={`相似度: ${Math.round((message.meta_data.generated_image.similarity || 0) * 100)}%`}
+                                            >
+                                              <Tag color="orange">
+                                                匹配图片
+                                              </Tag>
+                                            </Tooltip>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   <div
@@ -1599,6 +1616,10 @@ export const ChatPage: React.FC = () => {
                                                               imageData.width,
                                                             height:
                                                               imageData.height,
+                                                            is_matched:
+                                                              imageData.is_matched,
+                                                            similarity:
+                                                              imageData.similarity,
                                                           },
                                                         },
                                                       };
