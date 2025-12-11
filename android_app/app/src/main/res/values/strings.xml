@@ -300,6 +300,16 @@
     <string name="visibility_required_title_full">Visibility *</string>
     <string name="become_a_premium">Become a Premium Member</string>
     <string name="more_information_full">More Information</string>
+
+    <!-- Profile Premium Banner -->
+    <string name="profile_premium_banner_title_subscribed">You\'re Premium</string>
+    <string name="profile_premium_banner_subtitle_member_since" formatted="false">Member since %s</string>
+    <string name="profile_premium_banner_title_expiring_soon">Premium Ending Soon</string>
+    <string name="profile_premium_banner_subtitle_expires_on" formatted="false">Expires on %s</string>
+    <string name="profile_premium_banner_button_keep_premium">Keep Premium</string>
+    <string name="profile_premium_banner_title_upgrade">Upgrade to Premium</string>
+    <string name="profile_premium_banner_subtitle_unlock">Unlock all privilege now</string>
+    <string name="profile_premium_banner_button_activate">Activate now</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
     <string name="edit_button">Edit</string>
