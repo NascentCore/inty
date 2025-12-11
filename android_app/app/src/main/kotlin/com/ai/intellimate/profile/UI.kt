@@ -345,24 +345,20 @@ private fun LeftParticleEffects(isChristmas: Boolean) {
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(Size.Zero) }
     
-    val particleCount = if (isChristmas) 8 else 6
+    val particleCount = if (isChristmas) 15 else 12
     val particles = remember(particleCount, isChristmas) {
-        (0 until particleCount).map {
+        (0 until particleCount).map { index ->
             ParticleConfig(
                 initialX = Random.nextFloat() * 0.5f,
-                initialY = -0.2f,
+                initialY = -0.2f - (index * 0.15f),
                 size = if (isChristmas) {
                     (8f + Random.nextFloat() * 12f).dp
                 } else {
                     (6f + Random.nextFloat() * 10f).dp
                 },
-                alpha = if (isChristmas) {
-                    0.4f + Random.nextFloat() * 0.6f
-                } else {
-                    0.3f + Random.nextFloat() * 0.7f
-                },
+                alpha = 0.05f + Random.nextFloat() * 0.45f,
                 duration = (3000 + Random.nextInt(2000)).toInt(),
-                delay = Random.nextInt(1000),
+                delay = (index * 200) + Random.nextInt(300),
             )
         }
     }
@@ -393,16 +389,16 @@ private fun RightParticleEffects() {
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(Size.Zero) }
     
-    val particleCount = 6
+    val particleCount = 12
     val particles = remember(particleCount) {
-        (0 until particleCount).map {
+        (0 until particleCount).map { index ->
             ParticleConfig(
                 initialX = 0.5f + Random.nextFloat() * 0.5f,
-                initialY = -0.2f,
+                initialY = -0.2f - (index * 0.15f),
                 size = (6f + Random.nextFloat() * 10f).dp,
-                alpha = 0.4f + Random.nextFloat() * 0.6f,
+                alpha = 0.05f + Random.nextFloat() * 0.45f,
                 duration = (2500 + Random.nextInt(2000)).toInt(),
-                delay = Random.nextInt(1000),
+                delay = (index * 200) + Random.nextInt(300),
             )
         }
     }
@@ -462,8 +458,21 @@ private fun FloatingParticle(
         ),
         label = "float_x"
     )
+    
+    val animateScale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                (800 + Random.nextInt(400)).toInt(),
+                delayMillis = particle.delay,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
 
-    val particleSizeValue = particle.size.value
     val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.4f
     val currentY = animateY * containerSize.height
 
@@ -474,7 +483,7 @@ private fun FloatingParticle(
                 y = currentY.dp
             )
             .alpha(particle.alpha)
-            .size(particle.size)
+            .size(particle.size * animateScale)
     ) {
         if (isChristmas) {
             SnowPiece(modifier = Modifier.fillMaxSize())
@@ -518,6 +527,20 @@ private fun FloatingGoldDot(
         ),
         label = "float_x"
     )
+    
+    val animateScale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                (800 + Random.nextInt(400)).toInt(),
+                delayMillis = particle.delay,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
 
     val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.3f
     val currentY = animateY * containerSize.height
@@ -529,7 +552,7 @@ private fun FloatingGoldDot(
                 y = currentY.dp
             )
             .alpha(particle.alpha)
-            .size(particle.size)
+            .size(particle.size * animateScale)
     ) {
         GoldDot(modifier = Modifier.fillMaxSize())
     }
