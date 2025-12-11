@@ -11,14 +11,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -79,6 +84,7 @@ class ModifyProfileActivity : BaseActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
@@ -143,7 +149,8 @@ class ModifyProfileActivity : BaseActivity() {
         val userProfile = viewModel.userProfile.collectAsState()
         var editKey by remember { mutableStateOf(EditKey.None) }
         var editValue by rememberSaveable { mutableStateOf("") }
-
+        val scope = rememberCoroutineScope()
+        val sheetState = rememberModalBottomSheetState(true)
         val isSaving by viewModel.isSaving.collectAsState()
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -166,18 +173,40 @@ class ModifyProfileActivity : BaseActivity() {
             )
 
             if (editKey != EditKey.None) {
-                EditDialog(
-                    editKey = editKey,
-                    editValue = editValue,
-                    onDismiss = { editKey = EditKey.None },
-                    onSave = { key, value ->
-                        // 在各自的 sheet 中点击 save 时，立即调用接口更新
-                        // updateFieldAndSave 会判断是否变化，并更新本地状态
-                        viewModel.updateFieldAndSave(key, value)
-                        editKey = EditKey.None
-                    },
-                    onValueChange = { editValue = it },
-                )
+                ModalBottomSheet(
+                    onDismissRequest = { editKey = EditKey.None },
+                    sheetState = sheetState,
+                    dragHandle = null,
+                    contentWindowInsets = { WindowInsets() }
+                ) {
+                    EditDialog(
+                        editKey = editKey,
+                        editValue = editValue,
+                        onDismiss = {
+                            scope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    editKey = EditKey.None
+                                }
+                            }
+                        },
+                        onSave = { key, value ->
+                            // 在各自的 sheet 中点击 save 时，立即调用接口更新
+                            // updateFieldAndSave 会判断是否变化，并更新本地状态
+                            viewModel.updateFieldAndSave(key, value)
+
+                            scope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    editKey = EditKey.None
+                                }
+                            }
+                        },
+                        onValueChange = { editValue = it },
+                    )
+                }
             }
 
             if (isSaving) {
