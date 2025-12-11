@@ -694,8 +694,8 @@ private val christmasTabItems =
         ),
         HeartBottomTabItem(
             index = 2,
-            selectedIcon = R.drawable.tab_icon_create_christmas,
-            unselectedIcon = R.drawable.tab_icon_create_christmas,
+            selectedIcon = R.drawable.tab_icon_create_christmas2,
+            unselectedIcon = R.drawable.tab_icon_create_christmas2,
             labelResId = R.string.tab_create,
         ),
         HeartBottomTabItem(

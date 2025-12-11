@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -149,6 +148,7 @@ internal fun PremiumBanner(
                     buttonText = ""
                 )
             }
+
             VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> {
                 val dateText = expireTime?.takeIf { it.isNotEmpty() } ?: ""
                 BannerContent(
@@ -158,6 +158,7 @@ internal fun PremiumBanner(
                     buttonText = "Keep Premium"
                 )
             }
+
             else -> {
                 BannerContent(
                     title = "Upgrade to Premium",
@@ -223,7 +224,7 @@ internal fun PremiumBanner(
             if (bannerContent.showActionButton) {
                 Spacer(Modifier.height(8.dp))
                 ActionButton(
-                    modifier = Modifier.sizeIn(180.dp, 48.dp),
+                    modifier = Modifier,
                     isChristmas = isChristmas,
                     buttonText = bannerContent.buttonText,
                 )
@@ -548,7 +549,8 @@ internal fun ActionButton(
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            Modifier.clip(RoundedCornerShape(30.dp))
+            Modifier
+                .clip(RoundedCornerShape(30.dp))
                 .background(
                     if (isChristmas) {
                         Color(0xFF1F1F1F)
