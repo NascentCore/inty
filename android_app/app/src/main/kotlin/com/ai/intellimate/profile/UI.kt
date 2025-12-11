@@ -10,10 +10,11 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +39,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -46,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -55,12 +58,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.enableChristmasConfig
 import com.ai.intellimate.ui.UiConfigs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.random.Random
 
 @Preview
@@ -119,6 +125,13 @@ internal fun ProfileHeaderBg(modifier: Modifier = Modifier) {
 
 }
 
+private data class BannerContent(
+    val title: String,
+    val subtitle: String,
+    val showActionButton: Boolean,
+    val buttonText: String,
+)
+
 /** Premium Banner 组件 */
 @Composable
 internal fun PremiumBanner(
@@ -126,9 +139,42 @@ internal fun PremiumBanner(
     purchaseTime: String? = null,
     expireTime: String? = null,
     onClick: () -> Unit = {},
-    isChristmas: Boolean = false,
 ) {
+    val isChristmas = enableChristmasConfig()
     var lastClickTimePremium by remember { mutableLongStateOf(0L) }
+
+    val bannerContent = remember(status, purchaseTime, expireTime) {
+        when (status) {
+            VipStatus.UI_SUBSCRIBED -> {
+                val dateText = purchaseTime?.takeIf { it.isNotEmpty() } ?: ""
+                BannerContent(
+                    title = "You're Premium",
+                    subtitle = "Member since $dateText",
+                    showActionButton = false,
+                    buttonText = ""
+                )
+            }
+
+            VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> {
+                val dateText = expireTime?.takeIf { it.isNotEmpty() } ?: ""
+                BannerContent(
+                    title = "Premium Ending Soon",
+                    subtitle = "Expires on $dateText",
+                    showActionButton = true,
+                    buttonText = "Keep Premium"
+                )
+            }
+
+            else -> {
+                BannerContent(
+                    title = "Upgrade to Premium",
+                    subtitle = "Unlock all privilege now",
+                    showActionButton = true,
+                    buttonText = "Activate now"
+                )
+            }
+        }
+    }
 
     Box(
         modifier =
@@ -148,41 +194,95 @@ internal fun PremiumBanner(
                 }
     ) {
         Image(
-            painter = painterResource(R.drawable.img_banner_bg_bg),
-            contentDescription = "",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxHeight(),
-        )
-        Image(
             painter = painterResource(
                 if (isChristmas) R.drawable.img_vip_banner_bg_christmas else R.drawable.img_vip_banner_bg
             ),
             contentDescription = "",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxHeight(),
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color.Black.copy(.1f), Color.Black.copy(.7f)),
-                        center = Offset(x = 300f, y = 150f),
-                    )
-                )
+            modifier = Modifier.matchParentSize(),
         )
 
         LeftParticleEffects(isChristmas = isChristmas)
 
-        ActionButton(
-            modifier = Modifier.align(BiasAlignment(.95f, .1f)),
-            isChristmas = isChristmas,
-            status = status,
-            purchaseTime = purchaseTime,
-            expireTime = expireTime,
-        )
+        var boxSize by remember { mutableStateOf(Size.Zero) }
 
-        RightParticleEffects(isChristmas = isChristmas)
+        val backgroundBrush =
+            remember(boxSize, isChristmas) {
+                if (boxSize == Size.Zero) {
+                    Brush.radialGradient(
+                        colors = listOf(Color.Transparent, Color.Transparent),
+                        radius = 1f
+                    )
+                } else {
+                    val minSize = min(boxSize.width, boxSize.height)
+                    val radius = max(minSize * .8f, 1f)
+                    if (isChristmas) {
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFFFFE898).copy(alpha = 0.5f),
+                                Color(0xFFFFE898).copy(alpha = 0.2f),
+                                Color.Transparent,
+                                Color.Transparent,
+                            ),
+                            center = Offset(boxSize.width / 2f, boxSize.height / 2f),
+                            radius = radius
+                        )
+                    } else {
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFFC122FF).copy(.5f),
+                                Color(0xFFC122FF).copy(.2f),
+                                Color.Transparent,
+                                Color.Transparent,
+                            ),
+                            center = Offset(boxSize.width / 2f, boxSize.height / 2f),
+                            radius = radius
+                        )
+                    }
+                }
+            }
+
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .background(brush = backgroundBrush)
+                .onSizeChanged { size ->
+                    boxSize = Size(size.width.toFloat(), size.height.toFloat())
+                }
+                .padding(end = 8.dp)
+                .align(Alignment.CenterEnd),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = bannerContent.title,
+                fontSize = 14.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight(700),
+                color = Color(0xFFFFFFFF),
+                textAlign = TextAlign.Right,
+            )
+
+            Text(
+                text = bannerContent.subtitle,
+                fontSize = 12.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight(500),
+                color = Color(0x8CFFFFFF),
+                textAlign = TextAlign.Right,
+            )
+            if (bannerContent.showActionButton) {
+                Spacer(Modifier.height(8.dp))
+                ActionButton(
+                    modifier = Modifier,
+                    isChristmas = isChristmas,
+                    onClick = onClick,
+                    buttonText = bannerContent.buttonText,
+                )
+            }
+        }
+
+        RightParticleEffects()
     }
 }
 
@@ -192,8 +292,8 @@ internal fun PurpleStar(modifier: Modifier = Modifier) {
         modifier.background(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color(0xC122FF).copy(.5f),
-                    Color(0xC122FF).copy(.3f),
+                    Color(0xFFC122FF).copy(.5f),
+                    Color(0xFFC122FF).copy(.3f),
                     Color.Transparent
                 ),
             )
@@ -230,7 +330,7 @@ fun SnowPiece(modifier: Modifier = Modifier) {
                 brush = Brush.radialGradient(
                     colors = listOf(
                         Color(0x99FDE8BF),
-                        Color(0xFDE8BF),
+                        Color(0x00FDE8BF),
                         Color.Transparent
                     ),
                 )
@@ -247,63 +347,83 @@ fun SnowPiece(modifier: Modifier = Modifier) {
 
 @Composable
 private fun LeftParticleEffects(isChristmas: Boolean) {
-    val particleCount = 8
-    val particles = remember(particleCount) {
-        (0 until particleCount).map {
+    val density = LocalDensity.current
+    var containerSize by remember { mutableStateOf(Size.Zero) }
+
+    val particleCount = if (isChristmas) 15 else 12
+    val particles = remember(particleCount, isChristmas) {
+        (0 until particleCount).map { index ->
             ParticleConfig(
                 initialX = Random.nextFloat() * 0.5f,
-                initialY = Random.nextFloat(),
-                size = (8f + Random.nextFloat() * 16f).dp,
-                alpha = 0.3f + Random.nextFloat() * 0.7f,
+                initialY = -0.2f - (index * 0.15f),
+                size = if (isChristmas) {
+                    (24f + Random.nextFloat() * 36f).dp
+                } else {
+                    (6f + Random.nextFloat() * 10f).dp
+                },
+                alpha = 0.05f + Random.nextFloat() * 0.45f,
                 duration = (3000 + Random.nextInt(2000)).toInt(),
-                delay = Random.nextInt(1000),
+                delay = (index * 200) + Random.nextInt(300),
             )
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        particles.forEach { particle ->
-            FloatingParticle(
-                particle = particle,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = particle.initialX * 200.dp,
-                        y = particle.initialY * 120.dp
-                    ),
-                isChristmas = isChristmas,
-            )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size ->
+                with(density) {
+                    containerSize = Size(size.width.toDp().value, size.height.toDp().value)
+                }
+            }
+    ) {
+        if (containerSize.width > 0 && containerSize.height > 0) {
+            particles.forEach { particle ->
+                FloatingParticle(
+                    particle = particle,
+                    containerSize = containerSize,
+                    isChristmas = isChristmas,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun RightParticleEffects(isChristmas: Boolean) {
-    val particleCount = 6
+private fun RightParticleEffects() {
+    val density = LocalDensity.current
+    var containerSize by remember { mutableStateOf(Size.Zero) }
+
+    val particleCount = 12
     val particles = remember(particleCount) {
-        (0 until particleCount).map {
+        (0 until particleCount).map { index ->
             ParticleConfig(
                 initialX = 0.5f + Random.nextFloat() * 0.5f,
-                initialY = Random.nextFloat(),
-                size = (6f + Random.nextFloat() * 12f).dp,
-                alpha = 0.4f + Random.nextFloat() * 0.6f,
+                initialY = -0.2f - (index * 0.15f),
+                size = (6f + Random.nextFloat() * 10f).dp,
+                alpha = 0.05f + Random.nextFloat() * 0.45f,
                 duration = (2500 + Random.nextInt(2000)).toInt(),
-                delay = Random.nextInt(1000),
+                delay = (index * 200) + Random.nextInt(300),
             )
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        particles.forEach { particle ->
-            FloatingGoldDot(
-                particle = particle,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = particle.initialX * 200.dp,
-                        y = particle.initialY * 120.dp
-                    ),
-            )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size ->
+                with(density) {
+                    containerSize = Size(size.width.toDp().value, size.height.toDp().value)
+                }
+            }
+    ) {
+        if (containerSize.width > 0 && containerSize.height > 0) {
+            particles.forEach { particle ->
+                FloatingGoldDot(
+                    particle = particle,
+                    containerSize = containerSize,
+                )
+            }
         }
     }
 }
@@ -311,13 +431,15 @@ private fun RightParticleEffects(isChristmas: Boolean) {
 @Composable
 private fun FloatingParticle(
     particle: ParticleConfig,
-    modifier: Modifier = Modifier,
+    containerSize: Size,
     isChristmas: Boolean,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "particle_float")
-    val offsetY by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val infiniteTransition =
+        rememberInfiniteTransition(label = "particle_float_${particle.hashCode()}")
+
+    val animateY by infiniteTransition.animateFloat(
+        initialValue = particle.initialY,
+        targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
             animation = tween(
                 particle.duration,
@@ -328,28 +450,46 @@ private fun FloatingParticle(
         ),
         label = "float_y"
     )
-    val offsetX by infiniteTransition.animateFloat(
-        initialValue = 0f,
+
+    val animateX by infiniteTransition.animateFloat(
+        initialValue = -0.3f,
         targetValue = 0.3f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                particle.duration,
+                particle.duration / 2,
                 delayMillis = particle.delay,
                 easing = LinearEasing
             ),
-            repeatMode = RepeatMode.Restart
+            repeatMode = RepeatMode.Reverse
         ),
         label = "float_x"
     )
 
+    val animateScale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                (800 + Random.nextInt(400)).toInt(),
+                delayMillis = particle.delay,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.4f
+    val currentY = animateY * containerSize.height
+
     Box(
-        modifier = modifier
-            .alpha(particle.alpha)
-            .size(particle.size)
+        modifier = Modifier
             .offset(
-                x = offsetX * 60.dp,
-                y = offsetY * 120.dp
+                x = currentX.dp,
+                y = currentY.dp
             )
+            .alpha(particle.alpha)
+            .size(particle.size * animateScale)
     ) {
         if (isChristmas) {
             SnowPiece(modifier = Modifier.fillMaxSize())
@@ -362,12 +502,14 @@ private fun FloatingParticle(
 @Composable
 private fun FloatingGoldDot(
     particle: ParticleConfig,
-    modifier: Modifier = Modifier,
+    containerSize: Size,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "gold_dot_float")
-    val offsetY by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val infiniteTransition =
+        rememberInfiniteTransition(label = "gold_dot_float_${particle.hashCode()}")
+
+    val animateY by infiniteTransition.animateFloat(
+        initialValue = particle.initialY,
+        targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
             animation = tween(
                 particle.duration,
@@ -378,28 +520,46 @@ private fun FloatingGoldDot(
         ),
         label = "float_y"
     )
-    val offsetX by infiniteTransition.animateFloat(
-        initialValue = 0f,
+
+    val animateX by infiniteTransition.animateFloat(
+        initialValue = -0.2f,
         targetValue = 0.2f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                particle.duration,
+                particle.duration / 2,
                 delayMillis = particle.delay,
                 easing = LinearEasing
             ),
-            repeatMode = RepeatMode.Restart
+            repeatMode = RepeatMode.Reverse
         ),
         label = "float_x"
     )
 
+    val animateScale by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                (800 + Random.nextInt(400)).toInt(),
+                delayMillis = particle.delay,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.3f
+    val currentY = animateY * containerSize.height
+
     Box(
-        modifier = modifier
-            .alpha(particle.alpha)
-            .size(particle.size)
+        modifier = Modifier
             .offset(
-                x = offsetX * 40.dp,
-                y = offsetY * 120.dp
+                x = currentX.dp,
+                y = currentY.dp
             )
+            .alpha(particle.alpha)
+            .size(particle.size * animateScale)
     ) {
         GoldDot(modifier = Modifier.fillMaxSize())
     }
@@ -408,7 +568,7 @@ private fun FloatingGoldDot(
 private data class ParticleConfig(
     val initialX: Float,
     val initialY: Float,
-    val size: androidx.compose.ui.unit.Dp,
+    val size: Dp,
     val alpha: Float,
     val duration: Int,
     val delay: Int,
@@ -428,152 +588,98 @@ private fun PreviewPurpleStar() {
 internal fun ActionButton(
     modifier: Modifier = Modifier,
     isChristmas: Boolean = false,
-    status: String? = null,
-    purchaseTime: String? = null,
-    expireTime: String? = null,
+    onClick: () -> Unit = {},
+    buttonText: String = "Activate now",
 ) {
-    val buttonText =
-        when (status) {
-            VipStatus.UI_SUBSCRIBED -> "Since $purchaseTime"
-            VipStatus.UI_SUBSCRIBED_EXPIRE_SOON -> "Expires on $expireTime"
-            else -> "Activate now"
-        }
-
-    var boxSize by remember { mutableStateOf(Size.Zero) }
-
-    val backgroundBrush =
-        remember(boxSize, isChristmas) {
-            if (boxSize == Size.Zero) {
-                Brush.radialGradient(
-                    colors = listOf(Color.Transparent, Color.Transparent)
-                )
-            } else if (isChristmas) {
-                Brush.radialGradient(
+    val borderBrush =
+        remember(isChristmas) {
+            if (isChristmas) {
+                Brush.horizontalGradient(
                     colors = listOf(
-                        Color(0xFFFFE898).copy(alpha = 0.8f),
-                        Color(0xFFFFE898).copy(alpha = 0.5f),
-                        Color.Transparent
-                    ),
-                    center = Offset(boxSize.width / 2f, boxSize.height / 2f),
-                    radius = kotlin.math.min(boxSize.width, boxSize.height) * 0.8f
+                        Color(0xFF408B2F),
+                        Color(0xFFE56135)
+                    )
                 )
             } else {
-                Brush.radialGradient(
+                Brush.horizontalGradient(
                     colors = listOf(
-                        Color(0xC122FF).copy(.5f),
-                        Color.Transparent
-                    ),
-                    center = Offset(boxSize.width / 2f, boxSize.height / 2f),
-                    radius = kotlin.math.min(boxSize.width, boxSize.height) * 0.8f
+                        Color(0xFFC2F7FD),
+                        Color(0xFFC2F7FD)
+                    )
                 )
             }
-        }
-
-    val borderBrush =
-        if (isChristmas) {
-            Brush.horizontalGradient(
-                colors = listOf(
-                    Color(0xFF408B2F),
-                    Color(0xFFE56135)
-                )
-            )
-        } else {
-            Brush.horizontalGradient(
-                colors = listOf(
-                    Color(0xFFC2F7FD),
-                    Color(0xFFC2F7FD)
-                )
-            )
         }
 
     val iconRes =
-        if (isChristmas) {
-            R.drawable.tab_icon_explore_christmas
-        } else {
-            R.drawable.icon_gold_heart
+        remember(isChristmas) {
+            if (isChristmas) {
+                R.drawable.tab_icon_explore_christmas
+            } else {
+                R.drawable.icon_gold_heart
+            }
         }
 
-    Box(
-        modifier
-            .clip(RoundedCornerShape(30.dp))
-            .onSizeChanged { size ->
-                boxSize = Size(size.width.toFloat(), size.height.toFloat())
-            }
-            .background(brush = backgroundBrush)
-            .padding(horizontal = 12.dp, vertical = 16.dp),
-        contentAlignment = Alignment.Center,
+    ElevatedButton(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(30.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF1F1F1F),
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFF1F1F1F).copy(alpha = 0.6f),
+            disabledContentColor = Color.White.copy(alpha = 0.6f)
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 2.dp,
+            disabledElevation = 0.dp
+        ),
+        border = BorderStroke(width = 1.dp, brush = borderBrush)
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(30.dp))
-                .background(
-                    if (isChristmas) {
-                        Color(0xFF1F1F1F)
-                    } else {
-                        Color(0xFF1F1F1F)
-                    }
-                )
-                .border(
-                    width = 1.dp,
-                    brush = borderBrush,
-                    shape = RoundedCornerShape(30.dp)
-                )
-                .padding(horizontal = 25.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Image(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(
-                        style = SpanStyle(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFFFFEECC),
-                                    Color(0xFFAD9515)
-                                )
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = buildAnnotatedString {
+                withStyle(
+                    style = SpanStyle(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFFFEECC),
+                                Color(0xFFAD9515)
                             )
                         )
-                    ) {
-                        append(buttonText)
-                    }
-                },
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
-        }
+                    )
+                ) {
+                    append(buttonText)
+                }
+            },
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
 @Preview
 @Composable
 private fun PreviewActionButton() {
-    ActionButton(modifier = Modifier.size(200.dp, 80.dp))
+    Column {
+        ActionButton(modifier = Modifier.size(170.dp, 48.dp))
+        ActionButton(modifier = Modifier.size(200.dp, 56.dp), buttonText = "Keep Premium")
+        ActionButton(
+            modifier = Modifier.size(200.dp, 40.dp),
+            isChristmas = true
+        )
+    }
 }
 
-@Preview
-@Composable
-private fun PreviewActionButtonChristmas() {
-    ActionButton(
-        modifier = Modifier.size(200.dp, 80.dp),
-        isChristmas = true
-    )
-}
 
 @Preview
 @Composable
 private fun PreviewPremiumBanner() {
     PremiumBanner()
-}
-
-@Preview
-@Composable
-private fun PreviewPremiumBannerChristmas() {
-    PremiumBanner(isChristmas = true)
 }

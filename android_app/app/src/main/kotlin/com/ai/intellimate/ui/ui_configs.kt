@@ -301,7 +301,7 @@ object UiConfigs {
         val AvatarToNicknameSpacing = 19.dp
 
         /** 区域之间的间距 */
-        val SectionSpacing = 24.dp
+        val SectionSpacing = 16.dp
 
         /** 底部间距 */
         val BottomSpacing = 8.dp

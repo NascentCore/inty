@@ -677,8 +677,8 @@ private fun ProfileHeader(
             }
         }
 
-        // Intro 和 VIP Banner 之间的间距 - 折叠时减少
-        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
+        // Intro 和 VIP Banner 之间的间距 - 使用较小的间距，折叠时减少
+        Spacer(Modifier.height(12.dp * (1f - collapseProgress)))
 
         // VIP Banner - 折叠时隐藏，宽度适配屏幕（不含padding），高度 120.dp
         if (collapseProgress < 1f) {
