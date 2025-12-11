@@ -25,6 +25,9 @@ object SettingStateManager {
     private val _autoPlayAnimationFlow = MutableStateFlow(IntySetting.isAutoPlayAnimation())
     val autoPlayAnimationFlow: StateFlow<Boolean> = _autoPlayAnimationFlow.asStateFlow()
 
+    private val _textStreamingFlow = MutableStateFlow(IntySetting.isTextStreaming())
+    val textStreaming = _textStreamingFlow.asStateFlow()
+
     // 显示场景动作输入按钮状态
     private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
     val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
@@ -134,6 +137,12 @@ object SettingStateManager {
         IntySetting.setAutoPlayAnimation(enabled)
         IntySetting.markUserSetAutoPlayAnimation()
         _autoPlayAnimationFlow.value = enabled
+    }
+
+    fun updateTextStreaming(enabled: Boolean) {
+        IntySetting.setTextStreaming(enabled)
+        IntySetting.markUserTextStreaming()
+        _textStreamingFlow.value = enabled
     }
 
     /** 更新显示场景动作输入按钮状态 */

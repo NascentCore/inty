@@ -12,7 +12,6 @@ import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
 import android.content.Intent
 import android.net.Uri
-import android.view.Window
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,7 +31,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,6 +91,7 @@ fun ChatSettingsDrawer(
 
     // Auto-play animated background全局设置
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
+    val textStreaming by SettingStateManager.textStreaming.collectAsState()
 
     // Show scene action button全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
@@ -149,7 +148,8 @@ fun ChatSettingsDrawer(
 
             Column(
                 modifier =
-                    Modifier.width(319.dp)
+                    Modifier
+                        .width(319.dp)
                         .fillMaxHeight()
                         .padding(bottom = 56.dp)
                         .verticalScroll(rememberScrollState())
@@ -385,6 +385,32 @@ fun ChatSettingsDrawer(
 
                         IntelliMateDivider()
 
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title = stringResource(R.string.chat_setting_text_streaming),
+                                    checked = textStreaming,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "toggle_text_streaming",
+                                        "enabled" to enabled,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                SettingStateManager.updateTextStreaming(enabled)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
                         // Show scene action button开关
                         SettingsSwitchItem(
                             item =
@@ -611,7 +637,8 @@ fun ChatSettingsDrawer(
             ) {
                 Column(
                     modifier =
-                        Modifier.padding(horizontal = 24.dp)
+                        Modifier
+                            .padding(horizontal = 24.dp)
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color(0xFF241533))
                             .widthIn(min = 280.dp, max = 360.dp)
