@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -55,52 +54,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import java.util.regex.Pattern
 
-/** 登录页面关闭按钮组件 */
-@Composable
-internal fun LoginCloseButton(onClose: () -> Unit) {
-    Image(
-        modifier =
-            Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
-                onClose()
-            },
-        painter = painterResource(R.drawable.close),
-        contentDescription = null,
-    )
-}
-
-/** Logo 图片组件 */
-@Composable
-internal fun LogoImage() {
-    Image(
-        modifier = Modifier.size(width = 239.dp, height = 190.dp),
-        painter = painterResource(R.drawable.img_login_hi),
-        contentScale = ContentScale.Crop,
-        alignment = Alignment.TopCenter,
-        contentDescription = "",
-    )
-}
-
-/** 欢迎标题组件 */
-@Composable
-internal fun WelcomeTitle() {
-    Text(
-        text = stringResource(R.string.welcome_to_intellimate),
-        color = Color.White,
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-    )
-}
-
-/** 欢迎副标题组件 */
-@Composable
-internal fun WelcomeSubtitle() {
-    Text(
-        text = stringResource(R.string.create_account_or_login),
-        color = Color.White.copy(alpha = 0.55f),
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Normal,
-    )
-}
 
 /** Google 登录按钮组件 */
 @Composable
@@ -122,7 +75,10 @@ internal fun GoogleLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.google),
                 contentDescription = stringResource(R.string.content_desc_google_login),
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 20.dp).size(30.dp),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 20.dp)
+                    .size(30.dp),
             )
             Text(
                 text = stringResource(R.string.continue_with_google),
@@ -223,10 +179,13 @@ internal fun EnterEmailScreen(
     var emailError by remember { mutableStateOf<String?>(null) }
     val invalidEmailErrorText = stringResource(R.string.invalid_email_format)
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A2E))) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(Color(0xFF1A1A2E))) {
         Column(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .padding(horizontal = 24.dp)
                     .padding(top = 60.dp, bottom = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -234,9 +193,12 @@ internal fun EnterEmailScreen(
             // 返回按钮
             Image(
                 modifier =
-                    Modifier.align(Alignment.Start).size(18.dp, 18.dp).noRippleClickable {
-                        onBack()
-                    },
+                    Modifier
+                        .align(Alignment.Start)
+                        .size(18.dp, 18.dp)
+                        .noRippleClickable {
+                            onBack()
+                        },
                 painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
@@ -291,7 +253,9 @@ internal fun EnterEmailScreen(
                     text = it,
                     color = Color.Red,
                     fontSize = 12.sp,
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp),
                 )
             }
 
@@ -308,7 +272,9 @@ internal fun EnterEmailScreen(
                         onContinue(email)
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 shape = RoundedCornerShape(30.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
             ) {
@@ -341,10 +307,13 @@ internal fun LoginWithEmailScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A2E))) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(Color(0xFF1A1A2E))) {
         Column(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .padding(horizontal = 24.dp)
                     .padding(top = 60.dp, bottom = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -352,9 +321,12 @@ internal fun LoginWithEmailScreen(
             // 返回按钮
             Image(
                 modifier =
-                    Modifier.align(Alignment.Start).size(18.dp, 18.dp).noRippleClickable {
-                        onBack()
-                    },
+                    Modifier
+                        .align(Alignment.Start)
+                        .size(18.dp, 18.dp)
+                        .noRippleClickable {
+                            onBack()
+                        },
                 painter = painterResource(R.drawable.back),
                 contentDescription = stringResource(R.string.content_desc_back),
             )
@@ -452,7 +424,9 @@ internal fun LoginWithEmailScreen(
                         onLogin(email, password)
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 shape = RoundedCornerShape(30.dp),
                 colors =
                     ButtonDefaults.buttonColors(

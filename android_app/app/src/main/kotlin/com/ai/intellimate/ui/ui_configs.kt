@@ -283,7 +283,7 @@ object UiConfigs {
         }
 
         /** 顶部间距偏移量 */
-        val TopSpacerOffset = 28.dp
+        val TopSpacerOffset = 56.dp
 
         /** 顶部折叠效果 - 头部最大高度 */
         val HeaderMaxHeight = 280.dp

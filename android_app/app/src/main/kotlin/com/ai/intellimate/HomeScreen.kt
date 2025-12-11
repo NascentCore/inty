@@ -415,7 +415,6 @@ private fun HomeContent(
             val appUpdateTips by mainViewModel.appUpdateTips.collectAsState()
             ProfileTabContent(
                 navController,
-                onShowSettings = { mainViewModel.showSettings() },
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
                 appUpdateTips = appUpdateTips,
@@ -515,7 +514,6 @@ private fun ExploreTabContent(
 @Composable
 private fun ProfileTabContent(
     navController: NavController,
-    onShowSettings: () -> Unit,
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
     appUpdateTips: Boolean,
@@ -640,7 +638,6 @@ private fun ProfileTabContent(
             )
         },
         onLoadMore = { profileViewModel.loadMoreUserCreatedAgents() },
-        onShowSettings = onShowSettings,
         profileViewModel = profileViewModel, // 传递 ViewModel 以便 ProfilePage 内部处理刷新
     )
 }

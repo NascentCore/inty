@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -37,17 +36,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.AutoRenewalNotice
 import com.ai.intellimate.ui.components.EmptyPlanState
-import com.ai.intellimate.ui.components.PremiumBenefitItem
 import com.ai.intellimate.ui.components.PremiumPlanList
 import com.ai.intellimate.ui.components.PurchaseButton
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
@@ -56,27 +51,13 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
-/** 订阅描述文本组件 */
-@Composable
-private fun SubscriptionDescriptionText(text: String) {
-    Text(
-        text = text,
-        color = Color.Gray,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Normal,
-        textAlign = TextAlign.Center,
-        // 保证文字居中
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-
 /** 会员中心页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VipCenterContent(
     navController: NavController,
-    //    onClose: () -> Unit,
-    //    onPurchase: () -> Unit,
+//    onClose: () -> Unit,
+//    onPurchase: () -> Unit,
     viewModel: VipCenterViewModel = viewModel(),
 ) {
     val plans by viewModel.plansFlow.collectAsState()
@@ -92,6 +73,7 @@ fun VipCenterContent(
             viewModel.purchaseSelectedPlan(activity)
         }
     }
+
     fun onClose() {
         navController.popBackStack()
     }
@@ -134,7 +116,9 @@ fun VipCenterContent(
 
     Box(
         modifier =
-            Modifier.fillMaxSize().background(ai.sxwl.android.design.theme.HeartColor.primaryColor)
+            Modifier
+                .fillMaxSize()
+                .background(ai.sxwl.android.design.theme.HeartColor.primaryColor)
     ) {
         // 双层图片背景
         val hazeState = rememberHazeState()
@@ -144,17 +128,24 @@ fun VipCenterContent(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
         )
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)))
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f)))
         Image(
             painter = painterResource(R.drawable.vip_female),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().padding(top = 100.dp).hazeSource(state = hazeState),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 100.dp)
+                .hazeSource(state = hazeState),
             alignment = Alignment.BottomCenter,
             contentScale = ContentScale.FillHeight,
         )
 
         val scrollState = rememberScrollState()
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)) {
             VipCenterTopBar(onClose = { onClose() })
 
             Spacer(Modifier.weight(1f))
@@ -207,52 +198,13 @@ private fun VipCenterTopBar(onClose: () -> Unit) {
     )
 }
 
-/** 会员中心头部 */
-@Composable
-private fun VipCenterHeader() {
-    Column(modifier = Modifier.padding(start = 16.dp)) {
-        Image(
-            painter = painterResource(R.drawable.img_intellimate_premium),
-            contentDescription = null,
-            modifier = Modifier.size(278.dp, 32.dp),
-        )
-        Text(
-            text = stringResource(R.string.premium_subtitle),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White,
-        )
-        Spacer(Modifier.height(10.dp))
-    }
-}
-
-/** 会员权益列表 */
-@Composable
-private fun VipCenterBenefits() {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
-
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))
-
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_flagship_models))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_chat_style))
-
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun VipCenterContentPreview() {
-    //    VipCenterContent(onClose = {}, onPurchase = {})
-}
 
 @Composable
 private fun VipBenefitsDesc(hazeState: HazeState) {
     Box(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp)
                 .background(Color(0x806E5289).copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp))
                 .clip(RoundedCornerShape(8.dp))
@@ -263,7 +215,9 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
             Image(
                 painter = painterResource(R.drawable.vip_desc_title),
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp),
                 contentScale = ContentScale.FillWidth,
             )
 
@@ -271,7 +225,9 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
             Image(
                 painter = painterResource(R.drawable.vip_desc_content),
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp),
                 contentScale = ContentScale.FillWidth,
             )
 
@@ -281,9 +237,8 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
 }
 
 // Context 扩展函数：安全地查找 Activity
-fun Context.findActivity(): Activity? =
-    when (this) {
-        is Activity -> this // 已经是 Activity，直接返回
-        is ContextWrapper -> baseContext.findActivity() // 继续解包 baseContext
-        else -> null // 无法找到
-    }
+fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this // 已经是 Activity，直接返回
+    is ContextWrapper -> baseContext.findActivity() // 继续解包 baseContext
+    else -> null // 无法找到
+}
