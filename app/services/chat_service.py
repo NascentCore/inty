@@ -1491,18 +1491,10 @@ async def generate_chat_image(
         )
     except ValueError as e:
         error_message = str(e)
-        # 检查是否是网络错误或安全过滤器阻止
         is_network_error = _is_network_error(error_message, type(e).__name__)
-        is_safety_filter = (
-            "被阻止" in error_message
-            or "安全过滤器" in error_message
-            or "blocked" in error_message.lower()
-            or "safety filter" in error_message.lower()
-            or "no_image" in error_message.lower()  # Gemini NO_IMAGE 也是内容过滤
-        )
 
-        # 如果是可匹配的错误类型，尝试匹配已生成图片
-        if (is_network_error or is_safety_filter) and current_prompt:
+        # 所有生图失败都尝试匹配已生成图片（不需要判断原因）
+        if current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
                 agent_id=agent_id,
@@ -1516,7 +1508,14 @@ async def generate_chat_image(
             if fallback_result:
                 return fallback_result
 
-        # 如果是安全过滤器阻止，提取阻止原因
+        # 检查是否是安全过滤器阻止（用于记录日志和返回业务错误）
+        is_safety_filter = (
+            "被阻止" in error_message
+            or "安全过滤器" in error_message
+            or "blocked" in error_message.lower()
+            or "safety" in error_message.lower()
+        )
+
         if is_safety_filter:
             block_reason = None
             if "原因:" in error_message:
@@ -1572,12 +1571,10 @@ async def generate_chat_image(
         error_message = str(e)
         failure_reason = error_message
         failure_type = type(e).__name__.lower()
-
-        # 检查是否是网络错误
         is_network_error = _is_network_error(error_message, failure_type)
 
-        # 如果是网络错误且已构建提示词，尝试匹配已生成图片
-        if is_network_error and current_prompt:
+        # 所有生图失败都尝试匹配已生成图片（不需要判断原因）
+        if current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
                 agent_id=agent_id,
@@ -1586,7 +1583,7 @@ async def generate_chat_image(
                 session_id=session_id,
                 current_prompt=current_prompt,
                 message_content=message_content,
-                is_network_error=True,
+                is_network_error=is_network_error,
             )
             if fallback_result:
                 return fallback_result
