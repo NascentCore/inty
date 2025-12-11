@@ -1241,12 +1241,20 @@ async def _try_match_existing_image(
             f"尝试匹配已生成图片 - Agent ID: {agent_id}, User ID: {user_id}"
         )
 
+        # #region agent log
+        import json as _json; open("/Users/donggang/Documents/code/inty-backend/.cursor/debug.log", "a").write(_json.dumps({"location": "chat_service.py:_try_match_existing_image", "message": "Calling find_most_similar_image", "data": {"agent_id": agent_id, "user_id": user_id, "prompt_len": len(current_prompt) if current_prompt else 0}, "hypothesisId": "C", "timestamp": __import__("time").time()}) + "\n")
+        # #endregion
+
         similar_image = await image_generation_service.find_most_similar_image(
             db=db,
             agent_id=agent_id,
             current_prompt=current_prompt,
             current_user_id=user_id,
         )
+
+        # #region agent log
+        import json as _json; open("/Users/donggang/Documents/code/inty-backend/.cursor/debug.log", "a").write(_json.dumps({"location": "chat_service.py:_try_match_existing_image:after_find", "message": "find_most_similar_image result", "data": {"found": similar_image is not None, "similarity": similar_image.get("similarity") if similar_image else None}, "hypothesisId": "C", "timestamp": __import__("time").time()}) + "\n")
+        # #endregion
 
         if similar_image:
             matched_user_id = similar_image.get("user_id")
@@ -1313,6 +1321,8 @@ async def _try_match_existing_image(
                     "width": similar_image.get("width"),
                     "height": similar_image.get("height"),
                     "format": similar_image.get("format", "jpeg"),
+                    "is_matched": True,
+                    "similarity": similar_image.get("similarity", 0),
                 },
                 prompt=current_prompt,
             )
@@ -1496,10 +1506,18 @@ async def generate_chat_image(
             or "安全过滤器" in error_message
             or "blocked" in error_message.lower()
             or "safety filter" in error_message.lower()
+            or "no_image" in error_message.lower()  # Gemini NO_IMAGE 也是内容过滤
         )
+
+        # #region agent log
+        import json as _json; open("/Users/donggang/Documents/code/inty-backend/.cursor/debug.log", "a").write(_json.dumps({"location": "chat_service.py:1490", "message": "ValueError caught in generate_chat_image", "data": {"error_message": error_message, "is_network_error": is_network_error, "is_safety_filter": is_safety_filter, "has_current_prompt": current_prompt is not None}, "hypothesisId": "A", "timestamp": __import__("time").time()}) + "\n")
+        # #endregion
 
         # 如果是可匹配的错误类型，尝试匹配已生成图片
         if (is_network_error or is_safety_filter) and current_prompt:
+            # #region agent log
+            import json as _json; open("/Users/donggang/Documents/code/inty-backend/.cursor/debug.log", "a").write(_json.dumps({"location": "chat_service.py:1507", "message": "Entering fallback image matching", "data": {"agent_id": agent_id, "user_id": user_id}, "hypothesisId": "B", "timestamp": __import__("time").time()}) + "\n")
+            # #endregion
             fallback_result = await _try_match_existing_image(
                 db=db,
                 agent_id=agent_id,
@@ -1510,6 +1528,9 @@ async def generate_chat_image(
                 message_content=message_content,
                 is_network_error=is_network_error,
             )
+            # #region agent log
+            import json as _json; open("/Users/donggang/Documents/code/inty-backend/.cursor/debug.log", "a").write(_json.dumps({"location": "chat_service.py:1519", "message": "Fallback result", "data": {"has_result": fallback_result is not None}, "hypothesisId": "B", "timestamp": __import__("time").time()}) + "\n")
+            # #endregion
             if fallback_result:
                 return fallback_result
 
