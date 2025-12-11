@@ -121,21 +121,16 @@ private fun TagItem(text: String) {
         modifier =
             Modifier.background(color = Color(0xff1C1523), shape = RoundedCornerShape(4.dp))
                 .border(
-                    width = 1.dp,
+                    width = .5.dp,
                     brush =
-                        Brush.linearGradient(
-                            colors =
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(0.09f),
-                                    Color.Transparent,
-                                )
+                        Brush.horizontalGradient(
+                            colors = listOf(Color(0xFF842BA7), Color(0xFF331141))
                         ),
                     shape = RoundedCornerShape(4.dp),
                 )
     ) {
         Text(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             text = text,
             fontSize = 12.sp,
             fontWeight = FontWeight.Light,

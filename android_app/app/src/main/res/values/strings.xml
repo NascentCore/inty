@@ -466,4 +466,5 @@
     <string name="reset">Reset</string>
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
     <string name="reset_suc_msg">A new conversation has started.</string>
+    <string name="chat_setting_text_streaming">Text streaming</string>
 </resources>

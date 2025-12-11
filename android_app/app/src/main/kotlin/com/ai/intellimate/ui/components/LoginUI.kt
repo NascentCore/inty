@@ -145,13 +145,6 @@ internal fun EmailLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp,
-                )
-            }
         }
     }
 }

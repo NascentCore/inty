@@ -130,8 +130,18 @@ object IntySetting {
         curUserSetting.putBoolean("auto_play_animation", enabled)
     }
 
+    /** 流式显示聊天消息 */
+    fun setTextStreaming(enabled: Boolean) {
+        curUserSetting.putBoolean("text_streaming", enabled)
+    }
+
     fun isAutoPlayAnimation(): Boolean {
         return curUserSetting.decodeBool("auto_play_animation", true)
+    }
+
+    /** 是否流式显示聊天消息 */
+    fun isTextStreaming(): Boolean {
+        return curUserSetting.decodeBool("text_streaming", true)
     }
 
     /** 检查用户是否手动设置过 Auto Play Animation */
@@ -142,6 +152,11 @@ object IntySetting {
     /** 标记用户已手动设置过 Auto Play Animation */
     fun markUserSetAutoPlayAnimation() {
         curUserSetting.putBoolean("user_set_auto_play_animation", true)
+    }
+
+    /** 标记用户已手动设置过 Text Streaming*/
+    fun markUserTextStreaming() {
+        curUserSetting.putBoolean("user_set_text_streaming", true)
     }
 
     /** 显示场景动作输入按钮（全局设置，默认关闭） */

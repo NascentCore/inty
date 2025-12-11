@@ -243,52 +243,8 @@ internal fun AiAgentInfoScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    genderPronoun?.let {
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            text = stringResource(id = it.labelRes),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color.White.copy(alpha = 0.85f),
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(5.dp))
-                                Row(
-                                    modifier =
-                                        Modifier.fillMaxWidth().noRippleClickable {
-                                            if (agent.id.isBlank()) {
-                                                return@noRippleClickable
-                                            }
-                                            val clipboard =
-                                                context.getSystemService<ClipboardManager>()
-                                            clipboard?.setPrimaryClip(
-                                                ClipData.newPlainText(
-                                                    CLIPBOARD_LABEL_AGENT_ID,
-                                                    agent.id,
-                                                )
-                                            )
-                                            if (clipboard != null) {
-                                                ToastUtils.showShort(
-                                                    R.string.toast_copied_to_clipboard
-                                                )
-                                            }
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Spacer(Modifier.width(16.dp))
-                                    Text(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        text = stringResource(R.string.ID, displayId),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Light,
-                                        color = Color.White.copy(0.55f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
                                 }
                             }
-
                             Spacer(Modifier.width(16.dp))
                         }
 
@@ -341,11 +297,11 @@ internal fun AiAgentInfoScreen(
                             Text(
                                 modifier = Modifier.padding(horizontal = 12.dp),
                                 text = stringResource(R.string.introduction),
-                                fontSize = 14.sp,
+                                fontSize = UiConfigs.CharacterIntroduction.TITLE_FONT_SIZE.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White,
                             )
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(8.dp))
                             Column {
                                 // 使用智能 Tags 布局
                                 val gender =
@@ -372,7 +328,7 @@ internal fun AiAgentInfoScreen(
                                     modifier = Modifier.padding(horizontal = 12.dp),
                                     maxLines = 1,
                                 )
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(4.dp))
                                 Text(
                                     modifier = Modifier.padding(horizontal = 12.dp),
                                     text = agent.intro,
