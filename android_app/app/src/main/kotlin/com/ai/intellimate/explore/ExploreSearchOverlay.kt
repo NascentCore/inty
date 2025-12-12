@@ -85,7 +85,6 @@ fun ExploreSearchOverlay(
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottomPadding = innerPadding.calculateBottomPadding()
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -105,7 +104,7 @@ fun ExploreSearchOverlay(
                 .navigationBarsPadding(),
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).padding(top = statusBarPadding),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextField(
