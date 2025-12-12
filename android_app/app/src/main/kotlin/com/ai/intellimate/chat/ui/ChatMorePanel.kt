@@ -323,7 +323,8 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     ) {
                         Text(
                             text = stringResource(R.string.reset),
-                            fontSize = 14.sp,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.W700,
                             color = Color(0xFFFF3B30),
                         )
                     }
