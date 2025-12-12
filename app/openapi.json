@@ -3731,6 +3731,13 @@
                         "type": "integer",
                         "title": "Version"
                     },
+                    "energy_points": {
+                        "type": "integer",
+                        "minimum": 0.0,
+                        "title": "Energy Points",
+                        "description": "Agent \u5f53\u524d\u80fd\u91cf\u70b9\u6570\uff0c\u5bf9\u5e94\u6570\u636e\u5e93 points \u5217",
+                        "default": 0
+                    },
                     "is_followed": {
                         "type": "boolean",
                         "title": "Is Followed",
