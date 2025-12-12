@@ -206,31 +206,6 @@ fun ExplorePage(
                 },
             )
         }
-
-        // 搜索浮层
-        if (showSearchOverlay) {
-            ExploreSearchOverlay(
-                modifier = Modifier.fillMaxSize(),
-                innerPadding = innerPadding,
-                searchResults = searchResults,
-                isSearching = isSearching,
-                hasSearchExecuted = hasSearchExecuted,
-                onDismiss = {
-                    showSearchOverlay = false
-                    viewModel.resetSearchState()
-                },
-                onQuerySubmit = { query ->
-                    if (query.isNotBlank()) {
-                        viewModel.searchAgentsByName(query)
-                    }
-                },
-                onClickAgent = { agent ->
-                    showSearchOverlay = false
-                    viewModel.resetSearchState()
-                    onClickAgent(agent)
-                },
-            )
-        }
     }
 }
 
