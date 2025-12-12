@@ -12,15 +12,19 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.components.AgentBackground
+import com.ai.intellimate.chat.ChatPage
 
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
@@ -158,6 +162,8 @@ class ChatActivity : BaseActivity() {
                     generatedImageUrl != "loading"
             }
 
+        val navController = rememberNavController()
+        
         Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(
@@ -169,16 +175,15 @@ class ChatActivity : BaseActivity() {
                 enableAnimatedBackground = autoPlayAnimation,
             )
 
-            //            ChatPage(
-            //                modifier =
-            // Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
-            //                chatViewModel = chatViewModel,
-            //                showBackButton = true,
-            //                onBack = { finish() },
-            //                pageSourceOverride = pageSource, // 传递 ChatActivity 的
-            // pageSource，避免重复追踪
-            //                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
-            //            )
+            ChatPage(
+                navController = navController,
+                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
+                chatViewModel = chatViewModel,
+                showBackButton = true,
+                onBack = { finish() },
+                pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
+                shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
+            )
 
             // 反馈请求对话框
             if (showFeedbackDialog) {

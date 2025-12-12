@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostLeaderboardEntry
 import com.ai.intellimate.boost.BoostTrend
 import com.ai.intellimate.ui.UiConfigs
@@ -61,10 +60,6 @@ fun BoostLeaderboardTab(
         BoostStatusChip(
             modifier = Modifier.fillMaxWidth(),
             availablePoints = availablePoints,
-            onClick = {
-                // 状态芯片仅用于展示可用积分，不触发任何操作
-                // 用户应通过点击排行榜条目来执行 Boost 操作
-            },
         )
 
         Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToTitleSpacing))
@@ -154,7 +149,7 @@ private fun BoostLeaderboardRow(
                     text =
                         stringResource(
                             R.string.boost_points_value,
-                            entry.boostCount * BoostConfig.BOOST_STEP_POINTS,
+                            entry.pointsInvested,
                         ),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
