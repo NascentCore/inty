@@ -51,4 +51,41 @@ class CharacterRepository(
             dao.updateEnergy(agentId, sanitizedPoints, System.currentTimeMillis())
         }
     }
+
+    suspend fun searchCharactersByName(query: String, limit: Int = 100): List<AgentInfo> {
+        return withContext(dispatcher) {
+            val entities = dao.searchCharactersByName(query, limit)
+            entities.map { it.toAgentInfo() }
+        }
+    }
+}
+
+/** 将 CharacterEntity 转换为 AgentInfo */
+private fun CharacterEntity.toAgentInfo(): AgentInfo {
+    return AgentInfo(
+        id = this.agentId,
+        name = this.name,
+        avatar = this.avatar,
+        intro = this.intro,
+        readableId = this.readableId,
+        category = this.category,
+        // 其他字段使用默认值，因为数据库中没有存储
+        background = "",
+        backgroundAnimatedUrl = "",
+        backgroundImages = emptyList(),
+        gender = "",
+        isFollowed = false,
+        opening = "",
+        opening_audio_url = "",
+        voicePreview = "",
+        createdAt = "",
+        creator = null,
+        tags = null,
+        settings = null,
+        visibility = "",
+        prompt = "",
+        followerCount = 0,
+        connectorCount = 0,
+        deletedAt = null,
+    )
 }
