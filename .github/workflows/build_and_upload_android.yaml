@@ -60,12 +60,20 @@ jobs:
           releaseFiles: android_app/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
+      - name: Upload AAB to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android_app/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 7
       - name: Publish upload summary
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
+          ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           {
             echo "## 上传产物摘要"
             echo
             echo "- 提交短 SHA: \`$SHORT_SHA\`"
             echo "- AAB 路径: \`android_app/app/build/outputs/bundle/release/app-release.aab\`"
+            echo "- GitHub Artifacts 下载: [查看并下载 AAB]($ARTIFACT_URL)"
           } >> "$GITHUB_STEP_SUMMARY"
