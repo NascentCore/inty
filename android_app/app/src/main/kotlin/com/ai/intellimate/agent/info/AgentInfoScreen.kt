@@ -116,9 +116,7 @@ internal fun AiAgentInfoScreen(
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
 
     // 为角色应援/Boost 功能
-    val boostState by
-        if (isDebugMode) BoostManager.boostState.collectAsState()
-        else remember { mutableStateOf(BoostState()) }
+    val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
@@ -245,26 +243,24 @@ internal fun AiAgentInfoScreen(
                             Spacer(Modifier.width(16.dp))
                         }
 
-                        // 角色应援/Boost 功能（仅在 debug 模式下显示）
-                        if (isDebugMode) {
-                            Spacer(Modifier.height(16.dp))
+                        // 角色应援/Boost 功能
+                        Spacer(Modifier.height(16.dp))
 
-                            BoostStatusChip(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                availablePoints = boostState.availablePoints,
-                                onClick = {
-                                    if (
-                                        boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS
-                                    ) {
-                                        ToastUtils.showShort(R.string.boost_toast_not_enough_points)
-                                    } else {
-                                        showBoostSheet = true
-                                    }
-                                },
-                            )
+                        BoostStatusChip(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            availablePoints = boostState.availablePoints,
+                            onClick = {
+                                if (
+                                    boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS
+                                ) {
+                                    ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+                                } else {
+                                    showBoostSheet = true
+                                }
+                            },
+                        )
 
-                            Spacer(Modifier.height(16.dp))
-                        }
+                        Spacer(Modifier.height(16.dp))
 
                         Spacer(Modifier.height(24.dp))
 
@@ -364,12 +360,11 @@ internal fun AiAgentInfoScreen(
         }
     }
 
-    // Boost Sheet 弹窗（仅在 debug 模式下显示）
+    // Boost Sheet 弹窗
     // 显示位置：角色主页（AgentInfoScreen）底部，以半屏弹窗形式展示
     // 显示时机：
-    //   1. 必须在 debug 模式下（isDebugMode == true）
-    //   2. 用户点击了角色主页中的 BoostStatusChip（第 291-301 行），且可用积分 >= 100 pts
-    //   3. 此时 showBoostSheet 被设置为 true，触发此弹窗显示
+    //   1. 用户点击了角色主页中的 BoostStatusChip，且可用积分 >= 100 pts
+    //   2. 此时 showBoostSheet 被设置为 true，触发此弹窗显示
     // UI 效果：半屏底部弹窗，包含：
     //   - 当前角色的 Boost 信息
     //   - 可用积分显示
@@ -379,7 +374,7 @@ internal fun AiAgentInfoScreen(
     //   - 用户点击 BoostStatusChip → 打开此弹窗
     //   - 用户选择投入积分并确认 → 执行 Boost 操作 → 显示成功 Toast → 关闭弹窗
     //   - 用户点击关闭/取消 → 关闭弹窗
-    if (isDebugMode && showBoostSheet) {
+    if (showBoostSheet) {
         BoostSheet(
             agentInfo = agent,
             availablePoints = boostState.availablePoints,
