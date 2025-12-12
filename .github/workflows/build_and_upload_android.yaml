@@ -1,5 +1,4 @@
-# 构建 release 构建类型并上传到 Google Play Internal Testing 轨道。
-name: Release - Build and upload aab to Google Play internal testing track
+name: Release - 构建并上传到 Google Play 内测轨道
 
 on:
   push:
