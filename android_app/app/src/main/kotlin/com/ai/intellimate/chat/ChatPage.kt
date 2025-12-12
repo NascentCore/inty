@@ -126,8 +126,8 @@ internal fun ChatPage(
     val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
     var pendingBoostSheet by
-        remember(shouldShowBoostSheetOnOpen && isDebugMode) {
-            mutableStateOf(shouldShowBoostSheetOnOpen && isDebugMode)
+        remember(shouldShowBoostSheetOnOpen) {
+            mutableStateOf(shouldShowBoostSheetOnOpen)
         }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
@@ -252,8 +252,8 @@ internal fun ChatPage(
     }
 
     // 从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，自动打开 BoostSheet
-    LaunchedEffect(agentInfo?.id, pendingBoostSheet, isDebugMode) {
-        if (isDebugMode && agentInfo != null && pendingBoostSheet) {
+    LaunchedEffect(agentInfo?.id, pendingBoostSheet) {
+        if (agentInfo != null && pendingBoostSheet) {
             showBoostSheet = true
             pendingBoostSheet = false
         }
@@ -787,7 +787,7 @@ internal fun ChatPage(
         // - onDismiss: 用户点击外部区域或取消按钮 → 直接关闭弹窗
         // 错误处理：Boost 操作失败时显示 Toast 错误提示（积分不足、已领取奖励等）
         agentInfo?.let { info ->
-            if (isDebugMode && showBoostSheet) {
+            if (showBoostSheet) {
                 BoostSheet(
                     agentInfo = info,
                     availablePoints = boostState.availablePoints,
