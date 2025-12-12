@@ -36,6 +36,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostLeaderboardEntry
+import com.ai.intellimate.boost.BoostSeedProvider
+import com.ai.intellimate.boost.BoostTrend
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.ui.components.EmptyStateComponent
@@ -69,6 +73,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var retryTrigger by remember { mutableStateOf(0) }
+    val seedProvider = remember { BoostSeedProvider() }
 
     LaunchedEffect(retryTrigger) {
         isLoading = true
@@ -83,7 +88,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                 )
         ) {
             is ApiResult.Success -> {
-                leaderboardEntries =
+                val remoteEntries =
                     result.data.mapIndexed { index, agent ->
                         val energyPoints = agent.energyPoints
                         // 使用 energyPoints / BOOST_STEP_POINTS 估算 boost 次数
@@ -103,6 +108,20 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                             trend = BoostTrend.FLAT, // 后端不返回趋势，使用 FLAT
                             isSeed = false,
                         )
+                    }
+                val missingSlots =
+                    (BoostConfig.LEADERBOARD_LIMIT - remoteEntries.size).coerceAtLeast(0)
+                val fallbackEntries =
+                    if (missingSlots > 0) {
+                        seedProvider
+                            .seeds(remoteEntries.map { it.agentId }.toSet())
+                            .take(missingSlots)
+                    } else {
+                        emptyList()
+                    }
+                leaderboardEntries =
+                    (remoteEntries + fallbackEntries).mapIndexed { index, entry ->
+                        entry.copy(rank = index + 1)
                     }
                 isLoading = false
             }
