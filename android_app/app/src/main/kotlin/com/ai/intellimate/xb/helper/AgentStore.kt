@@ -9,24 +9,15 @@ object AgentStore {
     // 添加AgentInfo
     fun addAgent(agentInfo: AgentInfo) {
         synchronized(this) {
-            var hasAgent = false
-            val count = agents.count()
-            for (i in 0 until count) {
-                val a = agents[i]
-                if (a.id == agentInfo.id) hasAgent = true
-            }
-            if (!hasAgent) agents.add(agentInfo)
+            //移除旧的记录
+            agents.removeIf { it.id == agentInfo.id }
+            //更新为记录
+            agents.add(agentInfo)
         }
     }
 
     // 获取缓存中的AgentInfo
     fun getAgent(agentId: String?): AgentInfo? {
-        if (agentId == null) return null
-        var index = -1
-        for (i in 0 until agents.count()) {
-            val a = agents[i]
-            if (a.id == agentId) index = i
-        }
-        return if (index > -1) agents[index] else null
+        return agents.find { it.id == agentId }
     }
 }
