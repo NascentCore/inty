@@ -448,99 +448,35 @@ private fun CreateRolePage(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                result.data?.let { data ->
-                    val resultUri = UCrop.getOutput(data)
-                    if (resultUri != null) {
-                        LogUtils.i("Avatar cropped successfully: $resultUri")
-
-                        // Upload the cropped image to server
-                        try {
-                            val file = File(resultUri.path!!)
-                            val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-                            val body =
-                                MultipartBody.Part.createFormData("file", file.name, requestFile)
-
-                            // Use CreateRoleViewModel's scope to launch the coroutine
-                            createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                try {
-                                    val response = NetServiceMgr.getAgentApi().uploadAvatar(body)
-                                    when (response) {
-                                        is HttpResult.Success -> {
-                                            val uploadedUrl = response.data.url
-                                            LogUtils.i("Avatar uploaded successfully: $uploadedUrl")
-
-                                            // Update UI on main thread
-                                            withContext(Dispatchers.Main) {
-                                                // Face edit: update cropped avatar
-                                                croppedAvatarUrl = uploadedUrl
-                                                ToastUtils.showShort(
-                                                    R.string.toast_avatar_cropped_uploaded
-                                                )
-                                            }
-                                        }
-
-                                        is HttpResult.Failure -> {
-                                            LogUtils.e("Upload failed: ${response.message}")
-                                            withContext(Dispatchers.Main) {
-                                                isUploadingFromGallery = false
-                                                originalUploadedImageUrl = null
-                                                ToastUtils.showShort(
-                                                    context.getString(
-                                                        R.string.toast_upload_failed_with_message,
-                                                        response.message ?: "Unknown error",
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    LogUtils.e("Upload exception: ${e.message}")
-                                    withContext(Dispatchers.Main) {
-                                        isUploadingFromGallery = false
-                                        originalUploadedImageUrl = null
-                                        ToastUtils.showShort(
-                                            context.getString(
-                                                R.string.toast_upload_failed_with_message,
-                                                e.message ?: "Unknown error",
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            LogUtils.e("Failed to prepare upload: ${e.message}")
-                            isUploadingFromGallery = false
-                            originalUploadedImageUrl = null
-                            ToastUtils.showShort(
-                                context.getString(
-                                    R.string.toast_failed_prepare_upload_with_message,
-                                    e.message ?: "Unknown error",
-                                )
-                            )
-                        }
+            when (result.resultCode) {
+                Activity.RESULT_OK -> {
+                    result.data?.let { data ->
+                        croppedAvatarUrl = UCrop.getOutput(data)?.toString()
                     }
                 }
-            } else if (result.resultCode == UCrop.RESULT_ERROR) {
-                result.data?.let { data ->
-                    val cropError = UCrop.getError(data)
-                    LogUtils.e("UCrop error: ${cropError?.message}")
+                UCrop.RESULT_ERROR -> {
+                    result.data?.let { data ->
+                        val cropError = UCrop.getError(data)
+                        LogUtils.e("UCrop error: ${cropError?.message}")
+                        isUploadingFromGallery = false
+                        originalUploadedImageUrl = null
+                        ToastUtils.showShort(
+                            context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
+                        )
+                    }
+                }
+                Activity.RESULT_CANCELED -> {
+                    // 用户取消了裁剪操作（按返回键），清除图库上传标志
+                    LogUtils.i("Crop operation cancelled by user")
                     isUploadingFromGallery = false
                     originalUploadedImageUrl = null
-                    ToastUtils.showShort(
-                        context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
-                    )
                 }
-            } else if (result.resultCode == Activity.RESULT_CANCELED) {
-                // 用户取消了裁剪操作（按返回键），清除图库上传标志
-                LogUtils.i("Crop operation cancelled by user")
-                isUploadingFromGallery = false
-                originalUploadedImageUrl = null
-            } else {
-                // 处理其他未知结果代码，确保清除标志
-                LogUtils.w("Unknown crop result code: ${result.resultCode}")
-                isUploadingFromGallery = false
-                originalUploadedImageUrl = null
+                else -> {
+                    // 处理其他未知结果代码，确保清除标志
+                    LogUtils.w("Unknown crop result code: ${result.resultCode}")
+                    isUploadingFromGallery = false
+                    originalUploadedImageUrl = null
+                }
             }
         }
 
@@ -1029,17 +965,6 @@ private fun CreateRolePage(
                                         avatarUrl
                                     }
 
-                                // 头像数据更新
-                                if (isEditMode) {
-                                    // 更新ai 形象的背景选择
-                                    if (backgroundUrl != editAgent.background) {
-                                        // 此时如果头像数据还是旧的，则手动更新为最新背景的
-                                        if (croppedAvatarUrl == editAgent.avatar) {
-                                            croppedAvatarUrl = backgroundUrl
-                                        }
-                                    }
-                                }
-                                val finalAvatarUrl = croppedAvatarUrl
                                 val backgroundImagesList =
                                     avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
 
@@ -1052,7 +977,7 @@ private fun CreateRolePage(
                                     CreateAgentRequest(
                                         name = name,
                                         gender = gender,
-                                        avatar = finalAvatarUrl,
+                                        avatar = croppedAvatarUrl ?: editAgent?.avatar?.takeIf { editAgent.background == backgroundUrl },
                                         background = backgroundUrl,
                                         backgroundImages = backgroundImagesList,
                                         settings = mapOf("description" to settings),

@@ -32,9 +32,13 @@ class CreateRoleViewModel : BaseVM() {
                     convertToRemoteImage(uri, createTempFile)
                 }
             }
+        val remoteAvatar = request.avatar?.let { convertToRemoteImage(it, createTempFile) } ?: remoteBackgroundImage
 
-        val newRequest =
-            request.copy(background = remoteBackgroundImage, backgroundImages = remoteImageUrls)
+        val newRequest = request.copy(
+                background = remoteBackgroundImage,
+                backgroundImages = remoteImageUrls,
+                avatar = remoteAvatar
+            )
 
         if (agentId.isNullOrBlank()) {
             val result = repository.createAgent(newRequest)
