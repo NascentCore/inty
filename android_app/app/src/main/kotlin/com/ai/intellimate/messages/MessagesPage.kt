@@ -34,10 +34,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -378,13 +377,13 @@ private fun MessagesTabSwitcher(
         )
     val selectedIndex = tabs.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
 
-    TabRow(
+    SecondaryTabRow(
         selectedTabIndex = selectedIndex,
         containerColor = Color.Transparent,
         contentColor = Color.White,
         indicator = { tabPositions ->
             if (tabPositions.isNotEmpty()) {
-                TabRowDefaults.Indicator(
+                TabRowDefaults.SecondaryIndicator(
                     modifier =
                         Modifier.tabIndicatorOffset(tabPositions[selectedIndex]).height(2.dp),
                     color = Color.White,

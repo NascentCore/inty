@@ -137,8 +137,7 @@ fun ReportScreen(
         // 顶部导航栏
         CenterAlignedTopAppBar(
             colors =
-                TopAppBarDefaults.centerAlignedTopAppBarColors()
-                    .copy(containerColor = Color(0XFF1C1523)),
+                TopAppBarDefaults.topAppBarColors(containerColor = Color(0XFF1C1523)),
             title = {
                 Text(
                     text =

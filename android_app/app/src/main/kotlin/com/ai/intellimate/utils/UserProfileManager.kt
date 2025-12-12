@@ -20,15 +20,7 @@ object UserProfileManager {
         IntySetting.setUserProfileBoolean("is_active", userProfile.isActive)
         IntySetting.setUserProfileBoolean("is_superuser", userProfile.isSuperuser)
         IntySetting.setUserProfileData("phone", userProfile.phone ?: "")
-
-        // 处理 ageGroup（可能是字符串或其他类型）
-        userProfile.ageGroup?.let { ageGroup ->
-            when (ageGroup) {
-                is String -> IntySetting.setUserProfileData("age_group", ageGroup)
-                is Int -> IntySetting.setUserProfileInt("age_group_int", ageGroup)
-                else -> IntySetting.setUserProfileData("age_group", ageGroup.toString())
-            }
-        }
+        userProfile.ageGroup?.let { IntySetting.setUserProfileData("age_group", it) }
     }
 
     fun getUserProfile(): UserProfile {
@@ -47,10 +39,10 @@ object UserProfileManager {
             isSuperuser = IntySetting.getUserProfileBoolean("is_superuser", false),
             phone = IntySetting.getUserProfileData("phone")?.takeIf { it.isNotEmpty() },
             ageGroup =
-                IntySetting.getUserProfileData("age_group")
+                IntySetting.getUserProfileData("age_group")?.takeIf { it.isNotEmpty() }
                     ?: IntySetting.getUserProfileInt("age_group_int", 0)
                         .takeIf { it > 0 }
-                        .toString(),
+                        ?.toString(),
         )
     }
 

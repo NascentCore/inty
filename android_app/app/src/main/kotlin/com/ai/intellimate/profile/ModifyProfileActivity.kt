@@ -6,6 +6,7 @@ import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -68,7 +69,12 @@ class ModifyProfileActivity : BaseActivity() {
 
     override fun initConfigData() {
         super.initConfigData()
-        val userProfile: UserProfile? = intent.getParcelableExtra(INTENT_KEY_USER_INFO)
+        val userProfile: UserProfile? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(INTENT_KEY_USER_INFO, UserProfile::class.java)
+            } else {
+                @Suppress("DEPRECATION") intent.getParcelableExtra(INTENT_KEY_USER_INFO)
+            }
         viewModel.init(userProfile)
 
         // 监听ViewModel事件

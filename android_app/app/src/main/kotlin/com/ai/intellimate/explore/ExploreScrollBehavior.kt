@@ -22,7 +22,7 @@ fun rememberExploreScrollConnection(
         object : NestedScrollConnection {
 
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (source != NestedScrollSource.Drag || scrollDeltaThreshold <= 0f) {
+                if (source != NestedScrollSource.UserInput || scrollDeltaThreshold <= 0f) {
                     return Offset.Zero
                 }
 

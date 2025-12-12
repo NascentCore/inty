@@ -302,12 +302,17 @@ private fun CreateRolePage(
     var avatarUrl by remember(avatarUrlInitial) { mutableStateOf<String?>(avatarUrlInitial) }
 
     val editSelectedIndex =
-        if (isEditMode && editAgent != null && editAgent.backgroundImages.isNotEmpty()) {
-            val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
-            backgroundUrl?.let { url ->
-                val index = editAgent.backgroundImages.indexOf(url)
-                if (index >= 0) index else 0
-            } ?: 0
+        if (isEditMode) {
+            val backgroundImages = editAgent?.backgroundImages.orEmpty()
+            if (backgroundImages.isNotEmpty()) {
+                val backgroundUrl = editAgent?.background?.takeIf { it.isNotBlank() }
+                backgroundUrl?.let { url ->
+                    val index = backgroundImages.indexOf(url)
+                    if (index >= 0) index else 0
+                } ?: 0
+            } else {
+                0
+            }
         } else {
             0
         }
@@ -746,8 +751,7 @@ private fun CreateRolePage(
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors()
-                        .copy(containerColor = Color.Transparent),
+                    TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = if (isEditMode) "Edit IntelliMate" else "Create IntelliMate",

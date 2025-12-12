@@ -144,8 +144,7 @@ private fun AvatarGeneratePage(
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors()
-                        .copy(containerColor = Color.Transparent),
+                    TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 title = {
                     Text(
                         text = stringResource(R.string.generate_avatar),

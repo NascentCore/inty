@@ -156,16 +156,14 @@ class VideoCacheManager private constructor(private val context: Context) {
                 // 下载视频
                 val request = Request.Builder().url(url).build()
                 LogUtils.d("VideoCacheManager - [preloadVideo] 发送 HTTP 请求...")
-                val response = httpClient.newCall(request).execute()
+                httpClient.newCall(request).execute().use { response ->
+                    val connectTime = System.currentTimeMillis() - downloadStartTime
+                    LogUtils.d(
+                        "VideoCacheManager - [preloadVideo] HTTP 响应: code=${response.code}, connectTime=${connectTime}ms"
+                    )
 
-                val connectTime = System.currentTimeMillis() - downloadStartTime
-                LogUtils.d(
-                    "VideoCacheManager - [preloadVideo] HTTP 响应: code=${response.code}, connectTime=${connectTime}ms"
-                )
-
-                if (response.isSuccessful) {
-                    val body = response.body
-                    if (body != null) {
+                    if (response.isSuccessful) {
+                        val body = response.body
                         val contentLength = body.contentLength()
                         LogUtils.d("VideoCacheManager - [preloadVideo] 响应体大小: $contentLength bytes")
 
@@ -216,12 +214,10 @@ class VideoCacheManager private constructor(private val context: Context) {
                         )
                         LogUtils.d("VideoCacheManager - [preloadVideo] ========== 预加载完成 ==========")
                     } else {
-                        LogUtils.w("VideoCacheManager - [preloadVideo] ✗ 响应体为 null")
+                        LogUtils.w(
+                            "VideoCacheManager - [preloadVideo] ✗ HTTP 请求失败: code=${response.code}, message=${response.message}"
+                        )
                     }
-                } else {
-                    LogUtils.w(
-                        "VideoCacheManager - [preloadVideo] ✗ HTTP 请求失败: code=${response.code}, message=${response.message}"
-                    )
                 }
             } catch (e: Exception) {
                 val totalTime = System.currentTimeMillis() - startTime

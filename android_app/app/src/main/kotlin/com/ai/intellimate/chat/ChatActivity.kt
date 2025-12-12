@@ -102,7 +102,7 @@ class ChatActivity : BaseActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(INTENT_KEY_AGENT_INFO, AgentInfo::class.java)
             } else {
-                intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
+                @Suppress("DEPRECATION") intent.getParcelableExtra(INTENT_KEY_AGENT_INFO)
             }
         agentId = intent.getStringExtra(INTENT_KEY_AGENT_ID)
         pageSource = intent.getStringExtra(INTENT_KEY_PAGE_SOURCE) ?: DEFAULT_PAGE_SOURCE
