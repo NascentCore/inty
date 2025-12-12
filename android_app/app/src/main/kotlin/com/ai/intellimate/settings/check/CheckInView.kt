@@ -101,9 +101,6 @@ fun CheckInScreen(onClose: () -> Unit) {
                 BoostStatusChip(
                     modifier = Modifier.fillMaxWidth(),
                     availablePoints = boostState.availablePoints,
-                    onClick = {
-                        // 点击横幅不做任何操作，仅用于显示
-                    },
                 )
             }
 
