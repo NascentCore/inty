@@ -123,7 +123,8 @@ fun AppNavHost(
             val themeTitleEncoded = backStackEntry.arguments?.getString("themeTitle") ?: ""
             val themeDescriptionEncoded =
                 backStackEntry.arguments?.getString("themeDescription") ?: ""
-            val isChristmas = backStackEntry.arguments?.getBoolean("isChristmas") ?: false
+            val isChristmasString = backStackEntry.arguments?.getString("isChristmas") ?: "false"
+            val isChristmas = isChristmasString.toBoolean()
             val agentsJsonEncoded = backStackEntry.arguments?.getString("agentsJson") ?: ""
 
             val themeTitle =
