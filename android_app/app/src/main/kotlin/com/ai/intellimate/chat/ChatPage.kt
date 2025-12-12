@@ -545,6 +545,7 @@ internal fun ChatPage(
                                     item {
                                         agentInfo?.let { agent ->
                                             val shouldShowOpening = agent.opening.isNotEmpty()
+
                                             if (shouldShowOpening) {
                                                 val openingMessage =
                                                     MsgInfo(
@@ -663,7 +664,10 @@ internal fun ChatPage(
                                     ChatInput(
                                         chatViewModel = chatViewModel,
                                         onSendMessage = { chatViewModel.sendMsg() },
-                                        onToggleMorePanel = { showMorePanel = !showMorePanel },
+                                        onToggleMorePanel = {
+                                            showMorePanel = !showMorePanel
+                                            focusManager.clearFocus()
+                                        },
                                         showMorePanel = showMorePanel,
                                         bottomPadding = effectiveBottomPadding,
                                         focusRequester = inputFocusRequester,
@@ -821,7 +825,7 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(agentInfo?.id, isCurrentPage, showMorePanel, shouldAutoFocusInput) {
+    LaunchedEffect(agentInfo?.id, isCurrentPage,shouldAutoFocusInput) {
         if (!isCurrentPage) return@LaunchedEffect
 
         if (showMorePanel || agentInfo == null) {
