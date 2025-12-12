@@ -4,7 +4,12 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.isInPreview
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.ui.BlurBgCard
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,13 +43,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -56,11 +64,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
+import kotlin.random.Random
 
 /** 主题详情页面配置常量 包含专题详情界面和主题专区界面中使用的各种尺寸和样式配置 */
 internal object ThemedDetailConfig {
@@ -132,7 +143,9 @@ internal fun EventCard(
     ThemedEventCard(modifier = modifier.fillMaxWidth(), isChristmas) {
         ExpandableText(
             text = description,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 40.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 40.dp),
             collapsedMaxLines = ThemedDetailConfig.EventDescriptionMaxLines,
             textStyle =
                 TextStyle(
@@ -166,7 +179,8 @@ internal fun EventCard(
 internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
     Row(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .height(ThemedDetailConfig.CharacterCardHeight)
                 .padding(horizontal = 16.dp)
                 .background(
@@ -182,7 +196,9 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(ThemedDetailConfig.CharacterCardSpacing),
     ) {
         // 角色图片区域（左侧，固定宽度 80dp）
-        Box(modifier = Modifier.width(ThemedDetailConfig.CharacterImageWidth).fillMaxHeight()) {
+        Box(modifier = Modifier
+            .width(ThemedDetailConfig.CharacterImageWidth)
+            .fillMaxHeight()) {
             val imageUrl = if (isInPreview) null else agent.getAlbumImage()
             var imageLoaded by remember(agent.id) { mutableStateOf(false) }
             var imageLoadError by remember(agent.id) { mutableStateOf(false) }
@@ -200,14 +216,18 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 AsyncImage(
                     model = ai.sxwl.android.design.R.drawable.img_girl_lite,
                     contentDescription = agent.name,
-                    modifier = Modifier.fillMaxSize().clip(imageShape),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(imageShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 // 显示加载占位符
                 if (!imageLoaded && !imageLoadError) {
                     ShimmerPlaceholder(
-                        modifier = Modifier.fillMaxSize().clip(imageShape),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(imageShape),
                         cornerRadius = ThemedDetailConfig.EventCardCornerRadius,
                     )
                 }
@@ -217,7 +237,9 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                     AsyncImage(
                         model = ai.sxwl.android.design.R.drawable.img_girl_lite,
                         contentDescription = agent.name,
-                        modifier = Modifier.fillMaxSize().clip(imageShape),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(imageShape),
                         contentScale = ContentScale.Crop,
                     )
                 }
@@ -226,7 +248,9 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = agent.name,
-                    modifier = Modifier.fillMaxSize().clip(imageShape),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(imageShape),
                     contentScale = ContentScale.Crop,
                     onSuccess = { imageLoaded = true },
                     onError = {
@@ -240,7 +264,8 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
         // 角色信息区域（右侧，自适应宽度，包含名称、简介、标签）
         Column(
             modifier =
-                Modifier.fillMaxHeight()
+                Modifier
+                    .fillMaxHeight()
                     .weight(1f)
                     .padding(ThemedDetailConfig.CharacterCardPadding),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -264,7 +289,9 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 color = Color(0xB2FFFFFF),
                 maxLines = if (tags.isNullOrEmpty()) 5 else 4,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             )
 
             if (!tags.isNullOrEmpty()) {
@@ -309,7 +336,8 @@ internal fun HorizontalAgentCardList(
         // 内容层：包含标题、描述和横向滚动的角色卡片列表
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .padding(ThemedDetailConfig.HorizontalCardListPadding)
                     .then(
                         if (onCardClick != null) {
@@ -324,7 +352,8 @@ internal fun HorizontalAgentCardList(
             // 标题区域（带模糊阴影效果）和右箭头，支持点击跳转
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .then(
                             if (onTitleClick != null) {
                                 Modifier.clickable { onTitleClick() }
@@ -397,7 +426,8 @@ internal fun HorizontalAgentCardList(
 private fun HorizontalAgentCardItem(agent: AgentInfo, onClick: () -> Unit) {
     Box(
         modifier =
-            Modifier.width(ThemedDetailConfig.HorizontalCardItemWidth)
+            Modifier
+                .width(ThemedDetailConfig.HorizontalCardItemWidth)
                 .height(ThemedDetailConfig.HorizontalCardItemHeight)
                 .clip(RoundedCornerShape(ThemedDetailConfig.HorizontalCardItemCornerRadius))
                 .clickable { onClick() }
@@ -415,7 +445,8 @@ private fun HorizontalAgentCardItem(agent: AgentInfo, onClick: () -> Unit) {
         // 角色名称（叠加在图片底部，带渐变遮罩确保文字可读性）
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(
                         brush =
@@ -528,7 +559,9 @@ private fun PreviewHorizontalAgentCardList() {
             ),
         )
 
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp)) {
         HorizontalAgentCardList(
             title = "# Merry Christmas",
             description =
@@ -579,14 +612,16 @@ fun ThemedEventCard(
     content: @Composable () -> Unit,
 ) {
     ConstraintLayout(modifier.padding(top = 16.dp)) {
-        val (leftPine, rightPine, leftSnow, rightSnow, blurBg) = createRefs()
+        val (leftPine, rightPine, leftSnow, rightSnow, blurBg, snowEffect) = createRefs()
 
         BlurBgCard(
             modifier =
-                Modifier.fillMaxWidth().constrainAs(blurBg) {
-                    top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
-                },
+                Modifier
+                    .fillMaxWidth()
+                    .constrainAs(blurBg) {
+                        top.linkTo(parent.top)
+                        bottom.linkTo(parent.bottom)
+                    },
             contentAlignment,
             content = { content() },
         )
@@ -629,6 +664,23 @@ fun ThemedEventCard(
                         top.linkTo(rightPine.top, (-16).dp)
                     },
             )
+
+            // 雪花效果层，覆盖整个卡片区域
+            Box(
+                modifier =
+                    Modifier
+                        .constrainAs(snowEffect) {
+                            top.linkTo(blurBg.top)
+                            bottom.linkTo(blurBg.bottom)
+                            start.linkTo(blurBg.start)
+                            end.linkTo(blurBg.end)
+                            width = Dimension.fillToConstraints
+                            height = Dimension.fillToConstraints
+                        }
+                        .zIndex(1f)
+            ) {
+                HorizontalCardSnowFallingEffect()
+            }
         }
     }
 }
@@ -646,13 +698,17 @@ private fun PreviewThemedEventCard() {
                     text =
                         "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
                     modifier =
-                        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 40.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 40.dp),
                     textStyle = TextStyle(color = Color.White),
                 )
             },
         )
         ThemedEventCard(
-            modifier = Modifier.fillMaxWidth().height(170.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(170.dp),
             content = {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("哈哈哈哈🤣", color = Color.White)
@@ -728,11 +784,11 @@ private fun ExpandableText(
     var textPaddingEnd by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val rotationAngle by
-        animateFloatAsState(
-            targetValue = if (isExpanded) 180f else 0f,
-            animationSpec = tween(durationMillis = 300),
-            label = "arrowRotation",
-        )
+    animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "arrowRotation",
+    )
 
     Box(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -740,7 +796,9 @@ private fun ExpandableText(
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(end = textPaddingEnd.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = textPaddingEnd.dp),
             onTextLayout = { layoutResult ->
                 textLayoutResult = layoutResult
                 if (!isExpanded) {
@@ -750,7 +808,7 @@ private fun ExpandableText(
                     textPaddingEnd =
                         if (
                             hasTextOverflow &&
-                                buttonPosition == ExpandableTextButtonPosition.TextEnd
+                            buttonPosition == ExpandableTextButtonPosition.TextEnd
                         ) {
                             (iconSize + iconSpacing).value.toInt()
                         } else {
@@ -781,7 +839,8 @@ private fun ExpandableText(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
                             modifier =
-                                Modifier.size(iconSize)
+                                Modifier
+                                    .size(iconSize)
                                     .offset(x = iconOffsetX, y = iconOffsetY)
                                     .rotate(rotationAngle)
                                     .noRippleClickable { isExpanded = !isExpanded },
@@ -796,7 +855,8 @@ private fun ExpandableText(
                                 ),
                             contentDescription = null,
                             modifier =
-                                Modifier.size(iconSize)
+                                Modifier
+                                    .size(iconSize)
                                     .offset(x = iconOffsetX, y = iconOffsetY)
                                     .noRippleClickable { isExpanded = !isExpanded },
                             tint = iconTint,
@@ -810,7 +870,8 @@ private fun ExpandableText(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
                             modifier =
-                                Modifier.size(iconSize)
+                                Modifier
+                                    .size(iconSize)
                                     .align(Alignment.BottomEnd)
                                     .rotate(rotationAngle)
                                     .noRippleClickable { isExpanded = !isExpanded },
@@ -825,7 +886,8 @@ private fun ExpandableText(
                                 ),
                             contentDescription = null,
                             modifier =
-                                Modifier.size(iconSize)
+                                Modifier
+                                    .size(iconSize)
                                     .align(Alignment.BottomEnd)
                                     .noRippleClickable { isExpanded = !isExpanded },
                             tint = iconTint,
@@ -845,5 +907,168 @@ enum class ExpandableTextButtonPosition {
     /** 按钮定位在容器的右下角 适用于：ChatItem 中的聊天消息文本 */
     BottomEnd,
 }
+
+// endregion
+
+// region 雪花效果
+
+@Composable
+private fun HorizontalCardSnowPiece(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "snow_breathing")
+    val breathingAlpha by
+    infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1.0f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(2000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "breathing_alpha",
+    )
+
+    Box(
+        modifier
+            .alpha(breathingAlpha)
+            .background(
+                brush =
+                    Brush.radialGradient(
+                        colors = listOf(Color(0xCCFFFFFF), Color(0x66FFFFFF), Color.Transparent)
+                    )
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_snow_piece),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(.5f),
+            contentScale = ContentScale.Fit,
+        )
+    }
+}
+
+@Composable
+private fun HorizontalCardSnowFallingEffect() {
+    val density = LocalDensity.current
+    var containerSize by remember { mutableStateOf(Size.Zero) }
+
+    val particleCount = 25
+    val particles =
+        remember(particleCount) {
+            (0 until particleCount).map { index ->
+                HorizontalCardParticleConfig(
+                    initialX = Random.nextFloat(),
+                    initialY = -0.2f - (index * 0.08f),
+                    size = (24f + Random.nextFloat() * 24f).dp,
+                    alpha = 0.15f + Random.nextFloat() * 0.5f,
+                    duration = (5000 + Random.nextInt(3000)).toInt(),
+                    delay = (index * 120) + Random.nextInt(150),
+                )
+            }
+        }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .onSizeChanged { layoutSize ->
+                    with(density) {
+                        containerSize =
+                            Size(layoutSize.width.toDp().value, layoutSize.height.toDp().value)
+                    }
+                }
+    ) {
+        if (containerSize.width > 0 && containerSize.height > 0) {
+            particles.forEach { particle ->
+                HorizontalCardFloatingSnowParticle(
+                    particle = particle,
+                    containerSize = containerSize
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HorizontalCardFloatingSnowParticle(
+    particle: HorizontalCardParticleConfig,
+    containerSize: Size
+) {
+    val infiniteTransition =
+        rememberInfiniteTransition(label = "snow_particle_float_${particle.hashCode()}")
+
+    val animateY by
+    infiniteTransition.animateFloat(
+        initialValue = particle.initialY,
+        targetValue = 1.2f,
+        animationSpec =
+            infiniteRepeatable(
+                animation =
+                    tween(
+                        particle.duration,
+                        delayMillis = particle.delay,
+                        easing = LinearEasing,
+                    ),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "float_y",
+    )
+
+    val animateX by
+    infiniteTransition.animateFloat(
+        initialValue = -0.2f,
+        targetValue = 0.2f,
+        animationSpec =
+            infiniteRepeatable(
+                animation =
+                    tween(
+                        (particle.duration * 0.6).toInt(),
+                        delayMillis = particle.delay,
+                        easing = LinearEasing,
+                    ),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "float_x",
+    )
+
+    val animateScale by
+    infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1.1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation =
+                    tween(
+                        (1000 + Random.nextInt(500)).toInt(),
+                        delayMillis = particle.delay,
+                        easing = LinearEasing,
+                    ),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "scale",
+    )
+
+    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.3f
+    val currentY = animateY * containerSize.height
+
+    Box(
+        modifier =
+            Modifier
+                .offset(x = currentX.dp, y = currentY.dp)
+                .alpha(particle.alpha)
+                .size(particle.size * animateScale)
+    ) {
+        HorizontalCardSnowPiece(modifier = Modifier.fillMaxSize())
+    }
+}
+
+private data class HorizontalCardParticleConfig(
+    val initialX: Float,
+    val initialY: Float,
+    val size: Dp,
+    val alpha: Float,
+    val duration: Int,
+    val delay: Int,
+)
 
 // endregion
