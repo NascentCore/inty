@@ -57,10 +57,7 @@ fun BoostLeaderboardTab(
                     vertical = UiConfigs.LeaderBoard.VerticalPadding,
                 )
     ) {
-        BoostStatusChip(
-            modifier = Modifier.fillMaxWidth(),
-            availablePoints = availablePoints,
-        )
+        BoostStatusChip(modifier = Modifier.fillMaxWidth(), availablePoints = availablePoints)
 
         Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToTitleSpacing))
 
@@ -146,11 +143,7 @@ private fun BoostLeaderboardRow(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text =
-                        stringResource(
-                            R.string.boost_points_value,
-                            entry.pointsInvested,
-                        ),
+                    text = stringResource(R.string.boost_points_value, entry.pointsInvested),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                 )

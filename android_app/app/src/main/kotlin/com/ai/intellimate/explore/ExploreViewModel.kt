@@ -4,13 +4,13 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import ai.sxwl.android.data.character.repository.CharacterRepository
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.Dispatchers
@@ -429,7 +429,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                     LogUtils.d(
                         "ExploreViewModel - 数据库无结果，从缓存搜索: " +
                             "推荐${recommendedAgents.size}个, 聊天${chatAgents.size}个, " +
-                            "用户创建${userCreatedAgents.size}个, 找到${cacheResults.size}个匹配结果",
+                            "用户创建${userCreatedAgents.size}个, 找到${cacheResults.size}个匹配结果"
                     )
 
                     _searchResults.value = cacheResults

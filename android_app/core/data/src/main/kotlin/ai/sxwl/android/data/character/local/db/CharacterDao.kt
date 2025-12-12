@@ -24,6 +24,8 @@ interface CharacterDao {
     )
     suspend fun updateEnergy(agentId: String, energyPoints: Int, updatedAt: Long)
 
-    @Query("SELECT * FROM characters WHERE name LIKE '%' || :query || '%' COLLATE NOCASE ORDER BY name LIMIT :limit")
+    @Query(
+        "SELECT * FROM characters WHERE name LIKE '%' || :query || '%' COLLATE NOCASE ORDER BY name LIMIT :limit"
+    )
     suspend fun searchCharactersByName(query: String, limit: Int = 100): List<CharacterEntity>
 }

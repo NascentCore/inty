@@ -35,9 +35,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostConfig
-import com.ai.intellimate.boost.BoostLeaderboardEntry
-import com.ai.intellimate.boost.BoostTrend
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.ui.components.EmptyStateComponent
@@ -75,7 +72,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     LaunchedEffect(retryTrigger) {
         isLoading = true
         errorMessage = null
-        
+
         when (
             val result =
                 AgentService.getRecommendAgents(
@@ -107,9 +104,9 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                             isSeed = false,
                         )
                     }
-                
+
                 leaderboardEntries = remoteEntries
-                
+
                 isLoading = false
             }
             is ApiResult.Error -> {
@@ -171,9 +168,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                     type = EmptyStateType.NETWORK_ERROR,
                     title = stringResource(R.string.empty_explore_error),
                     showRetryButton = true,
-                    onRetry = {
-                        retryTrigger++
-                    },
+                    onRetry = { retryTrigger++ },
                     modifier = Modifier.padding(innerPadding).fillMaxSize(),
                 )
             }

@@ -1,7 +1,6 @@
 package com.ai.intellimate.agent.generate
 
 import ai.sxwl.android.common.base.BaseActivity
-import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.CreateAgentRequest
@@ -109,7 +108,6 @@ import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
-import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import java.io.File
@@ -122,9 +120,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {
@@ -977,7 +972,11 @@ private fun CreateRolePage(
                                     CreateAgentRequest(
                                         name = name,
                                         gender = gender,
-                                        avatar = croppedAvatarUrl ?: editAgent?.avatar?.takeIf { editAgent.background == backgroundUrl },
+                                        avatar =
+                                            croppedAvatarUrl
+                                                ?: editAgent?.avatar?.takeIf {
+                                                    editAgent.background == backgroundUrl
+                                                },
                                         background = backgroundUrl,
                                         backgroundImages = backgroundImagesList,
                                         settings = mapOf("description" to settings),

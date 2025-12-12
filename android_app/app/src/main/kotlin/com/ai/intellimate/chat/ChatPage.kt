@@ -8,6 +8,10 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -59,13 +63,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
 import com.ai.intellimate.R
+import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
@@ -83,7 +84,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.xb.navigation.Routes
-import com.ai.intellimate.audio.OpeningPlayState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -131,9 +131,7 @@ internal fun ChatPage(
     val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
     var pendingBoostSheet by
-        remember(shouldShowBoostSheetOnOpen) {
-            mutableStateOf(shouldShowBoostSheetOnOpen)
-        }
+        remember(shouldShowBoostSheetOnOpen) { mutableStateOf(shouldShowBoostSheetOnOpen) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
         val messageRes =
@@ -450,23 +448,28 @@ internal fun ChatPage(
                                         (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
                             // 判断是否需要播放开场白语音（移到LazyColumn外部）
-                            val shouldDelayShowOpening = remember(
-                                agentInfo?.id,
-                                agentInfo?.opening_audio_url,
-                                isQueryMsgsCompleted,
-                                isCurrentPage,
-                                isGuideVisible,
-                                chatMessages.size,
-                            ) {
-                                agentInfo?.let { agent ->
-                                    val actualChatMessages = chatMessages.filter { !it.isOpening() && it.role != "system" }
-                                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
-                                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agent.id)
-                                    val safeAgentId = agent.id
-                                    val audioUrl = agent.opening_audio_url
+                            val shouldDelayShowOpening =
+                                remember(
+                                    agentInfo?.id,
+                                    agentInfo?.opening_audio_url,
+                                    isQueryMsgsCompleted,
+                                    isCurrentPage,
+                                    isGuideVisible,
+                                    chatMessages.size,
+                                ) {
+                                    agentInfo?.let { agent ->
+                                        val actualChatMessages =
+                                            chatMessages.filter {
+                                                !it.isOpening() && it.role != "system"
+                                            }
+                                        val isOnlyOpeningMessage = actualChatMessages.isEmpty()
+                                        val hasPlayedOpening =
+                                            OpeningPlayState.agentOpeningPlayed(agent.id)
+                                        val safeAgentId = agent.id
+                                        val audioUrl = agent.opening_audio_url
 
-                                    // 判断是否需要自动播放开场白语音
-                                    agent.opening.isNotEmpty() &&
+                                        // 判断是否需要自动播放开场白语音
+                                        agent.opening.isNotEmpty() &&
                                             isOnlyOpeningMessage &&
                                             !hasPlayedOpening &&
                                             isQueryMsgsCompleted &&
@@ -474,14 +477,19 @@ internal fun ChatPage(
                                             audioUrl.isNotEmpty() &&
                                             IntySetting.isAutoPlayAudio() &&
                                             !isGuideVisible
-                                } ?: false
-                            }
-                            
+                                    } ?: false
+                                }
+
                             // 控制开场白显示状态（移到LazyColumn外部）
                             var showOpeningItem by remember(agentInfo?.id) { mutableStateOf(false) }
-                            
+
                             // 如果需要延迟显示，延迟1.5秒后显示（移到LazyColumn外部）
-                            LaunchedEffect(shouldDelayShowOpening, isQueryMsgsCompleted, isCurrentPage, agentInfo?.id) {
+                            LaunchedEffect(
+                                shouldDelayShowOpening,
+                                isQueryMsgsCompleted,
+                                isCurrentPage,
+                                agentInfo?.id,
+                            ) {
                                 if (agentInfo?.id == null || !isQueryMsgsCompleted) {
                                     showOpeningItem = false
                                     return@LaunchedEffect
@@ -594,7 +602,7 @@ internal fun ChatPage(
                                 val showIntroOpeningTop =
                                     isQueryMsgsCompleted &&
                                         ((!hasMoreMessages) || chatMessages.isEmpty())
-                                
+
                                 if (showIntroOpeningTop) {
                                     item {
                                         agentInfo?.let { agent ->
@@ -603,12 +611,14 @@ internal fun ChatPage(
                                                 // 使用渐变动画显示开场白
                                                 AnimatedVisibility(
                                                     visible = showOpeningItem,
-                                                    enter = fadeIn(
-                                                        animationSpec = tween(
-                                                            durationMillis = 500,
-                                                            easing = FastOutSlowInEasing
-                                                        )
-                                                    )
+                                                    enter =
+                                                        fadeIn(
+                                                            animationSpec =
+                                                                tween(
+                                                                    durationMillis = 500,
+                                                                    easing = FastOutSlowInEasing,
+                                                                )
+                                                        ),
                                                 ) {
                                                     Column {
                                                         val openingMessage =
@@ -893,7 +903,7 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(agentInfo?.id, isCurrentPage,shouldAutoFocusInput) {
+    LaunchedEffect(agentInfo?.id, isCurrentPage, shouldAutoFocusInput) {
         if (!isCurrentPage) return@LaunchedEffect
 
         if (showMorePanel || agentInfo == null) {

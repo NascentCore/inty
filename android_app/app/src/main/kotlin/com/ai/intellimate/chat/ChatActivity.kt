@@ -24,7 +24,6 @@ import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.components.AgentBackground
-import com.ai.intellimate.chat.ChatPage
 
 /** 私聊的聊天页面 */
 class ChatActivity : BaseActivity() {
@@ -163,7 +162,7 @@ class ChatActivity : BaseActivity() {
             }
 
         val navController = rememberNavController()
-        
+
         Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(

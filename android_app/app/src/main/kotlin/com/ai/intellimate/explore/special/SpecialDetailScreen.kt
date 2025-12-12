@@ -92,13 +92,7 @@ fun ThemedDetailScreen(
         }
 
         if (isChristmas) {
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .zIndex(1f)
-            ) {
-                SnowFallingEffect()
-            }
+            Box(modifier = Modifier.fillMaxSize().zIndex(1f)) { SnowFallingEffect() }
         }
     }
 }
@@ -160,12 +154,12 @@ private fun SnowFallingEffect() {
 
     Box(
         modifier =
-            Modifier.fillMaxSize()
-                .onSizeChanged { layoutSize ->
-                    with(density) {
-                        containerSize = Size(layoutSize.width.toDp().value, layoutSize.height.toDp().value)
-                    }
+            Modifier.fillMaxSize().onSizeChanged { layoutSize ->
+                with(density) {
+                    containerSize =
+                        Size(layoutSize.width.toDp().value, layoutSize.height.toDp().value)
                 }
+            }
     ) {
         if (containerSize.width > 0 && containerSize.height > 0) {
             particles.forEach { particle ->
