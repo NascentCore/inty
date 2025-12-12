@@ -6,7 +6,6 @@ package com.ai.intellimate.boost
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AgentService
-import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Box
@@ -109,11 +108,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                         )
                     }
                 
-                // 直接使用后端返回的数据，不添加 dummy/seed 数据
-                leaderboardEntries =
-                    remoteEntries.mapIndexed { index, entry ->
-                        entry.copy(rank = index + 1)
-                    }
+                leaderboardEntries = remoteEntries
                 
                 isLoading = false
             }
@@ -127,17 +122,13 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     val handleLeaderboardAction =
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
-                if (entry.agentId.isBlank()) {
-                    ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
-                } else {
-                    ChatActivity.launch(
-                        context,
-                        agentInfo = null,
-                        agentId = entry.agentId,
-                        pageSource = ChatActivity.EXPLORE_TAB,
-                        showBoostSheet = showSheet,
-                    )
-                }
+                ChatActivity.launch(
+                    context,
+                    agentInfo = null,
+                    agentId = entry.agentId,
+                    pageSource = ChatActivity.EXPLORE_TAB,
+                    showBoostSheet = showSheet,
+                )
             }
         }
 

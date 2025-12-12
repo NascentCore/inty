@@ -62,11 +62,10 @@ fun BoostStatusChip(
     val context = LocalContext.current
     val canBoost = availablePoints >= BoostConfig.BOOST_STEP_POINTS
     
-    val handleClick = {
+    val handleClick: () -> Unit = {
         if (onClick != null) {
             onClick()
         } else if (canBoost) {
-            // 默认行为：打开 boost leaderboard 页面
             BoostLeaderboardActivity.launch(context)
         }
     }
