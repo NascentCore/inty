@@ -8,6 +8,7 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +16,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -30,11 +32,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropUp
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -295,7 +304,12 @@ internal fun AiAgentInfoScreen(
                                 color = Color.White,
                             )
                             Spacer(Modifier.height(8.dp))
-                            Column {
+                            Column(
+                                modifier = Modifier.animateContentSize()
+                            ) {
+                                var isExpanded by remember { mutableStateOf(false) }
+                                var expandVisible by remember { mutableStateOf(false) }
+
                                 // 使用智能 Tags 布局
                                 val gender =
                                     runCatching {
@@ -328,12 +342,36 @@ internal fun AiAgentInfoScreen(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Light,
                                     color = Color.White,
-                                    maxLines = 3,
+                                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
                                     overflow = TextOverflow.Ellipsis,
+                                    onTextLayout = {
+                                        expandVisible = it.hasVisualOverflow || it.lineCount > 3
+                                    }
                                 )
-                            }
 
-                            Spacer(Modifier.height(12.dp))
+                                if (expandVisible) {
+                                    Button(
+                                        onClick = { isExpanded = !isExpanded },
+                                        contentPadding = PaddingValues(),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color.Transparent
+                                        ),
+                                        modifier = Modifier.fillMaxWidth().height(16.dp)
+                                    ) {
+                                        Image(
+                                            imageVector = if (isExpanded) {
+                                                Icons.Rounded.ArrowDropUp
+                                            } else {
+                                                Icons.Rounded.ArrowDropDown
+                                            },
+                                            contentDescription = null,
+                                            colorFilter = ColorFilter.tint(Color.White)
+                                        )
+                                    }
+                                } else {
+                                    Spacer(Modifier.height(12.dp))
+                                }
+                            }
                         }
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
