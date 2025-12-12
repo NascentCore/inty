@@ -143,9 +143,7 @@ internal fun EventCard(
     ThemedEventCard(modifier = modifier.fillMaxWidth(), isChristmas) {
         ExpandableText(
             text = description,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 40.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 40.dp),
             collapsedMaxLines = ThemedDetailConfig.EventDescriptionMaxLines,
             textStyle =
                 TextStyle(
@@ -179,8 +177,7 @@ internal fun EventCard(
 internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(ThemedDetailConfig.CharacterCardHeight)
                 .padding(horizontal = 16.dp)
                 .background(
@@ -196,9 +193,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(ThemedDetailConfig.CharacterCardSpacing),
     ) {
         // 角色图片区域（左侧，固定宽度 80dp）
-        Box(modifier = Modifier
-            .width(ThemedDetailConfig.CharacterImageWidth)
-            .fillMaxHeight()) {
+        Box(modifier = Modifier.width(ThemedDetailConfig.CharacterImageWidth).fillMaxHeight()) {
             val imageUrl = if (isInPreview) null else agent.getAlbumImage()
             var imageLoaded by remember(agent.id) { mutableStateOf(false) }
             var imageLoadError by remember(agent.id) { mutableStateOf(false) }
@@ -216,18 +211,14 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 AsyncImage(
                     model = ai.sxwl.android.design.R.drawable.img_girl_lite,
                     contentDescription = agent.name,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(imageShape),
+                    modifier = Modifier.fillMaxSize().clip(imageShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 // 显示加载占位符
                 if (!imageLoaded && !imageLoadError) {
                     ShimmerPlaceholder(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(imageShape),
+                        modifier = Modifier.fillMaxSize().clip(imageShape),
                         cornerRadius = ThemedDetailConfig.EventCardCornerRadius,
                     )
                 }
@@ -237,9 +228,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                     AsyncImage(
                         model = ai.sxwl.android.design.R.drawable.img_girl_lite,
                         contentDescription = agent.name,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(imageShape),
+                        modifier = Modifier.fillMaxSize().clip(imageShape),
                         contentScale = ContentScale.Crop,
                     )
                 }
@@ -248,9 +237,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = agent.name,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(imageShape),
+                    modifier = Modifier.fillMaxSize().clip(imageShape),
                     contentScale = ContentScale.Crop,
                     onSuccess = { imageLoaded = true },
                     onError = {
@@ -264,8 +251,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
         // 角色信息区域（右侧，自适应宽度，包含名称、简介、标签）
         Column(
             modifier =
-                Modifier
-                    .fillMaxHeight()
+                Modifier.fillMaxHeight()
                     .weight(1f)
                     .padding(ThemedDetailConfig.CharacterCardPadding),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -289,9 +275,7 @@ internal fun ThemedCharacterCard(agent: AgentInfo, onClick: () -> Unit) {
                 color = Color(0xB2FFFFFF),
                 maxLines = if (tags.isNullOrEmpty()) 5 else 4,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f),
             )
 
             if (!tags.isNullOrEmpty()) {
@@ -336,8 +320,7 @@ internal fun HorizontalAgentCardList(
         // 内容层：包含标题、描述和横向滚动的角色卡片列表
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .padding(ThemedDetailConfig.HorizontalCardListPadding)
                     .then(
                         if (onCardClick != null) {
@@ -352,8 +335,7 @@ internal fun HorizontalAgentCardList(
             // 标题区域（带模糊阴影效果）和右箭头，支持点击跳转
             Row(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .then(
                             if (onTitleClick != null) {
                                 Modifier.clickable { onTitleClick() }
@@ -426,8 +408,7 @@ internal fun HorizontalAgentCardList(
 private fun HorizontalAgentCardItem(agent: AgentInfo, onClick: () -> Unit) {
     Box(
         modifier =
-            Modifier
-                .width(ThemedDetailConfig.HorizontalCardItemWidth)
+            Modifier.width(ThemedDetailConfig.HorizontalCardItemWidth)
                 .height(ThemedDetailConfig.HorizontalCardItemHeight)
                 .clip(RoundedCornerShape(ThemedDetailConfig.HorizontalCardItemCornerRadius))
                 .clickable { onClick() }
@@ -445,8 +426,7 @@ private fun HorizontalAgentCardItem(agent: AgentInfo, onClick: () -> Unit) {
         // 角色名称（叠加在图片底部，带渐变遮罩确保文字可读性）
         Box(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(
                         brush =
@@ -559,9 +539,7 @@ private fun PreviewHorizontalAgentCardList() {
             ),
         )
 
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         HorizontalAgentCardList(
             title = "# Merry Christmas",
             description =
@@ -616,12 +594,10 @@ fun ThemedEventCard(
 
         BlurBgCard(
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .constrainAs(blurBg) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                    },
+                Modifier.fillMaxWidth().constrainAs(blurBg) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                },
             contentAlignment,
             content = { content() },
         )
@@ -668,8 +644,7 @@ fun ThemedEventCard(
             // 雪花效果层，覆盖整个卡片区域
             Box(
                 modifier =
-                    Modifier
-                        .constrainAs(snowEffect) {
+                    Modifier.constrainAs(snowEffect) {
                             top.linkTo(blurBg.top)
                             bottom.linkTo(blurBg.bottom)
                             start.linkTo(blurBg.start)
@@ -698,17 +673,13 @@ private fun PreviewThemedEventCard() {
                     text =
                         "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 40.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 40.dp),
                     textStyle = TextStyle(color = Color.White),
                 )
             },
         )
         ThemedEventCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(170.dp),
+            modifier = Modifier.fillMaxWidth().height(170.dp),
             content = {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("哈哈哈哈🤣", color = Color.White)
@@ -784,11 +755,11 @@ private fun ExpandableText(
     var textPaddingEnd by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val rotationAngle by
-    animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "arrowRotation",
-    )
+        animateFloatAsState(
+            targetValue = if (isExpanded) 180f else 0f,
+            animationSpec = tween(durationMillis = 300),
+            label = "arrowRotation",
+        )
 
     Box(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -796,9 +767,7 @@ private fun ExpandableText(
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = textPaddingEnd.dp),
+            modifier = Modifier.fillMaxWidth().padding(end = textPaddingEnd.dp),
             onTextLayout = { layoutResult ->
                 textLayoutResult = layoutResult
                 if (!isExpanded) {
@@ -808,7 +777,7 @@ private fun ExpandableText(
                     textPaddingEnd =
                         if (
                             hasTextOverflow &&
-                            buttonPosition == ExpandableTextButtonPosition.TextEnd
+                                buttonPosition == ExpandableTextButtonPosition.TextEnd
                         ) {
                             (iconSize + iconSpacing).value.toInt()
                         } else {
@@ -839,8 +808,7 @@ private fun ExpandableText(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
                             modifier =
-                                Modifier
-                                    .size(iconSize)
+                                Modifier.size(iconSize)
                                     .offset(x = iconOffsetX, y = iconOffsetY)
                                     .rotate(rotationAngle)
                                     .noRippleClickable { isExpanded = !isExpanded },
@@ -855,8 +823,7 @@ private fun ExpandableText(
                                 ),
                             contentDescription = null,
                             modifier =
-                                Modifier
-                                    .size(iconSize)
+                                Modifier.size(iconSize)
                                     .offset(x = iconOffsetX, y = iconOffsetY)
                                     .noRippleClickable { isExpanded = !isExpanded },
                             tint = iconTint,
@@ -870,8 +837,7 @@ private fun ExpandableText(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
                             modifier =
-                                Modifier
-                                    .size(iconSize)
+                                Modifier.size(iconSize)
                                     .align(Alignment.BottomEnd)
                                     .rotate(rotationAngle)
                                     .noRippleClickable { isExpanded = !isExpanded },
@@ -886,8 +852,7 @@ private fun ExpandableText(
                                 ),
                             contentDescription = null,
                             modifier =
-                                Modifier
-                                    .size(iconSize)
+                                Modifier.size(iconSize)
                                     .align(Alignment.BottomEnd)
                                     .noRippleClickable { isExpanded = !isExpanded },
                             tint = iconTint,
@@ -916,16 +881,16 @@ enum class ExpandableTextButtonPosition {
 private fun HorizontalCardSnowPiece(modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "snow_breathing")
     val breathingAlpha by
-    infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1.0f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(2000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "breathing_alpha",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = 0.6f,
+            targetValue = 1.0f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(2000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "breathing_alpha",
+        )
 
     Box(
         modifier
@@ -969,20 +934,18 @@ private fun HorizontalCardSnowFallingEffect() {
 
     Box(
         modifier =
-            Modifier
-                .fillMaxSize()
-                .onSizeChanged { layoutSize ->
-                    with(density) {
-                        containerSize =
-                            Size(layoutSize.width.toDp().value, layoutSize.height.toDp().value)
-                    }
+            Modifier.fillMaxSize().onSizeChanged { layoutSize ->
+                with(density) {
+                    containerSize =
+                        Size(layoutSize.width.toDp().value, layoutSize.height.toDp().value)
                 }
+            }
     ) {
         if (containerSize.width > 0 && containerSize.height > 0) {
             particles.forEach { particle ->
                 HorizontalCardFloatingSnowParticle(
                     particle = particle,
-                    containerSize = containerSize
+                    containerSize = containerSize,
                 )
             }
         }
@@ -992,69 +955,68 @@ private fun HorizontalCardSnowFallingEffect() {
 @Composable
 private fun HorizontalCardFloatingSnowParticle(
     particle: HorizontalCardParticleConfig,
-    containerSize: Size
+    containerSize: Size,
 ) {
     val infiniteTransition =
         rememberInfiniteTransition(label = "snow_particle_float_${particle.hashCode()}")
 
     val animateY by
-    infiniteTransition.animateFloat(
-        initialValue = particle.initialY,
-        targetValue = 1.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        particle.duration,
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "float_y",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = particle.initialY,
+            targetValue = 1.2f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            particle.duration,
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "float_y",
+        )
 
     val animateX by
-    infiniteTransition.animateFloat(
-        initialValue = -0.2f,
-        targetValue = 0.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        (particle.duration * 0.6).toInt(),
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "float_x",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = -0.2f,
+            targetValue = 0.2f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            (particle.duration * 0.6).toInt(),
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "float_x",
+        )
 
     val animateScale by
-    infiniteTransition.animateFloat(
-        initialValue = 0.7f,
-        targetValue = 1.1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        (1000 + Random.nextInt(500)).toInt(),
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "scale",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = 0.7f,
+            targetValue = 1.1f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            (1000 + Random.nextInt(500)).toInt(),
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "scale",
+        )
 
     val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.3f
     val currentY = animateY * containerSize.height
 
     Box(
         modifier =
-            Modifier
-                .offset(x = currentX.dp, y = currentY.dp)
+            Modifier.offset(x = currentX.dp, y = currentY.dp)
                 .alpha(particle.alpha)
                 .size(particle.size * animateScale)
     ) {

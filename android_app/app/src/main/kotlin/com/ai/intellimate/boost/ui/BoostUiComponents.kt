@@ -61,7 +61,7 @@ fun BoostStatusChip(
 ) {
     val context = LocalContext.current
     val canBoost = availablePoints >= BoostConfig.BOOST_STEP_POINTS
-    
+
     val handleClick: () -> Unit = {
         if (onClick != null) {
             onClick()
@@ -69,7 +69,7 @@ fun BoostStatusChip(
             BoostLeaderboardActivity.launch(context)
         }
     }
-    
+
     val gradient =
         Brush.horizontalGradient(
             colors =

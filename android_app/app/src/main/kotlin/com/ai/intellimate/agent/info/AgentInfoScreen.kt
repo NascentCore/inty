@@ -41,8 +41,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -80,7 +78,6 @@ import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
-import com.ai.intellimate.boost.BoostState
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
@@ -259,9 +256,7 @@ internal fun AiAgentInfoScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             availablePoints = boostState.availablePoints,
                             onClick = {
-                                if (
-                                    boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS
-                                ) {
+                                if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
                                     ToastUtils.showShort(R.string.boost_toast_not_enough_points)
                                 } else {
                                     showBoostSheet = true
@@ -304,9 +299,7 @@ internal fun AiAgentInfoScreen(
                                 color = Color.White,
                             )
                             Spacer(Modifier.height(8.dp))
-                            Column(
-                                modifier = Modifier.animateContentSize()
-                            ) {
+                            Column(modifier = Modifier.animateContentSize()) {
                                 var isExpanded by remember { mutableStateOf(false) }
                                 var expandVisible by remember { mutableStateOf(false) }
 
@@ -346,26 +339,28 @@ internal fun AiAgentInfoScreen(
                                     overflow = TextOverflow.Ellipsis,
                                     onTextLayout = {
                                         expandVisible = it.hasVisualOverflow || it.lineCount > 3
-                                    }
+                                    },
                                 )
 
                                 if (expandVisible) {
                                     Button(
                                         onClick = { isExpanded = !isExpanded },
                                         contentPadding = PaddingValues(),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = Color.Transparent
-                                        ),
-                                        modifier = Modifier.fillMaxWidth().height(16.dp)
+                                        colors =
+                                            ButtonDefaults.buttonColors(
+                                                containerColor = Color.Transparent
+                                            ),
+                                        modifier = Modifier.fillMaxWidth().height(16.dp),
                                     ) {
                                         Image(
-                                            imageVector = if (isExpanded) {
-                                                Icons.Rounded.ArrowDropUp
-                                            } else {
-                                                Icons.Rounded.ArrowDropDown
-                                            },
+                                            imageVector =
+                                                if (isExpanded) {
+                                                    Icons.Rounded.ArrowDropUp
+                                                } else {
+                                                    Icons.Rounded.ArrowDropDown
+                                                },
                                             contentDescription = null,
-                                            colorFilter = ColorFilter.tint(Color.White)
+                                            colorFilter = ColorFilter.tint(Color.White),
                                         )
                                     }
                                 } else {

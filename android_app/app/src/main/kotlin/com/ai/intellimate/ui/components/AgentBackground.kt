@@ -188,9 +188,21 @@ fun AgentBackground(
      *
      * 播放次数：UiConfigs.AnimatedBackground.VIDEO_MESSAGE_PLAY_COUNT = 1
      */
-    LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage, isVideoPlaying, customBackgroundUrl) {
+    LaunchedEffect(
+        isLoading,
+        backgroundAnimatedUrl,
+        isVideoCached,
+        isCurrentPage,
+        isVideoPlaying,
+        customBackgroundUrl,
+    ) {
         // 如果有自定义背景，不触发动画背景播放
-        if (isLoading && backgroundAnimatedUrl != null && isCurrentPage && customBackgroundUrl.isNullOrBlank()) {
+        if (
+            isLoading &&
+                backgroundAnimatedUrl != null &&
+                isCurrentPage &&
+                customBackgroundUrl.isNullOrBlank()
+        ) {
             val isVideo = isVideoUrl(backgroundAnimatedUrl)
             if ((!isVideo || isVideoCached) && !isVideoPlaying) {
                 shouldPlayLoading = true

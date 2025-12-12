@@ -32,12 +32,15 @@ class CreateRoleViewModel : BaseVM() {
                     convertToRemoteImage(uri, createTempFile)
                 }
             }
-        val remoteAvatar = request.avatar?.let { convertToRemoteImage(it, createTempFile) } ?: remoteBackgroundImage
+        val remoteAvatar =
+            request.avatar?.let { convertToRemoteImage(it, createTempFile) }
+                ?: remoteBackgroundImage
 
-        val newRequest = request.copy(
+        val newRequest =
+            request.copy(
                 background = remoteBackgroundImage,
                 backgroundImages = remoteImageUrls,
-                avatar = remoteAvatar
+                avatar = remoteAvatar,
             )
 
         if (agentId.isNullOrBlank()) {

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -57,7 +56,6 @@ import com.ai.intellimate.R
 
 /**
  * Explore 搜索浮层：点击顶部放大镜后出现的全屏搜索界面。
- *
  * - 背景使用半透明深色蒙层，参考设计稿截图 2。
  * - 仅在键盘的 Search/放大镜动作触发后执行搜索，避免增量查询。
  * - 结果区使用 Explore 角色卡复用一致的卡片体验，点击角色后会沿用 Explorer 的跳转逻辑。
@@ -101,19 +99,17 @@ fun ExploreSearchOverlay(
                 .background(Color.Black.copy(alpha = 0.98f))
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(bottom = bottomPadding)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextField(
                     value = searchText,
                     onValueChange = { searchText = it },
-                    modifier =
-                        Modifier.weight(1f)
-                            .focusRequester(focusRequester),
-                    placeholder = { Text(text = stringResource(R.string.explore_search_placeholder)) },
+                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                    placeholder = {
+                        Text(text = stringResource(R.string.explore_search_placeholder))
+                    },
                     singleLine = true,
                     leadingIcon = {
                         Icon(
@@ -127,7 +123,8 @@ fun ExploreSearchOverlay(
                             IconButton(onClick = { searchText = "" }) {
                                 Icon(
                                     imageVector = Icons.Filled.Clear,
-                                    contentDescription = stringResource(R.string.explore_search_clear_desc),
+                                    contentDescription =
+                                        stringResource(R.string.explore_search_clear_desc),
                                     tint = Color.White,
                                 )
                             }
@@ -152,7 +149,7 @@ fun ExploreSearchOverlay(
                                 keyboardController?.hide()
                                 focusManager.clearFocus(force = true)
                                 onQuerySubmit(searchText)
-                            },
+                            }
                         ),
                 )
 
@@ -161,7 +158,7 @@ fun ExploreSearchOverlay(
                         searchText = ""
                         focusManager.clearFocus(force = true)
                         onDismiss()
-                    },
+                    }
                 ) {
                     Text(text = stringResource(R.string.explore_search_cancel), color = Color.White)
                 }

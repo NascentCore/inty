@@ -9,9 +9,9 @@ object AgentStore {
     // 添加AgentInfo
     fun addAgent(agentInfo: AgentInfo) {
         synchronized(this) {
-            //移除旧的记录
+            // 移除旧的记录
             agents.removeIf { it.id == agentInfo.id }
-            //更新为记录
+            // 更新为记录
             agents.add(agentInfo)
         }
     }
