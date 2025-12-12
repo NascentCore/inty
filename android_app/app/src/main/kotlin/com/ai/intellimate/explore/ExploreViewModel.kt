@@ -10,8 +10,10 @@ import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.UnifiedStartupManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +22,9 @@ import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM(), ExploreFetchCallback {
+    // 角色数据库仓库，用于搜索
+    private val characterRepository = CharacterRepository()
+
     // 使用app层的ExplorePagingRepository替代core/data层的Repository，以支持事件回调
     // 注意：这会使用不同的缓存策略，但可以支持事件上报
     private val explorePagingRepository by lazy {
@@ -64,6 +69,16 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     // 缓存是否已加载完成（用于避免竞态条件）
     private val _isCacheLoaded = MutableStateFlow(false)
     val isCacheLoaded: StateFlow<Boolean> = _isCacheLoaded.asStateFlow()
+
+    // 搜索相关状态
+    private val _searchResults = MutableStateFlow<List<AgentInfo>>(emptyList())
+    val searchResults: StateFlow<List<AgentInfo>> = _searchResults.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private val _hasSearchExecuted = MutableStateFlow(false)
+    val hasSearchExecuted: StateFlow<Boolean> = _hasSearchExecuted.asStateFlow()
 
     // 实现 ExploreFetchCallback 接口
     override suspend fun onSuccess(
@@ -372,6 +387,69 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 _isLoadingThemes.value = false
             }
         }
+    }
+
+    /** 搜索角色（从本地数据库搜索，按名称模糊匹配） */
+    fun searchAgentsByName(keyword: String) {
+        val query = keyword.trim()
+        if (query.isBlank()) {
+            resetSearchState()
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _isSearching.value = true
+            _hasSearchExecuted.value = true
+            try {
+                // 优先从数据库搜索（包含所有已同步的角色）
+                val dbResults = characterRepository.searchCharactersByName(query, limit = 100)
+                LogUtils.d("ExploreViewModel - 从数据库搜索关键词'$query'，找到${dbResults.size}个匹配结果")
+
+                // 如果数据库结果为空，尝试从缓存搜索作为补充
+                if (dbResults.isEmpty()) {
+                    val recommendedAgents = AgentCacheManager.getCachedAgents()
+                    val chatAgents = AgentCacheManager.getCachedChatAgents()
+                    val userCreatedAgents = AgentCacheManager.getCachedUserCreatedAgents()
+
+                    val allCachedAgents = mutableListOf<AgentInfo>()
+                    val seenIds = mutableSetOf<String>()
+
+                    (recommendedAgents + chatAgents + userCreatedAgents).forEach { agent ->
+                        if (agent.id.isNotEmpty() && !seenIds.contains(agent.id)) {
+                            allCachedAgents.add(agent)
+                            seenIds.add(agent.id)
+                        }
+                    }
+
+                    val cacheResults =
+                        allCachedAgents.filter { agent ->
+                            agent.name.contains(query, ignoreCase = true)
+                        }
+
+                    LogUtils.d(
+                        "ExploreViewModel - 数据库无结果，从缓存搜索: " +
+                            "推荐${recommendedAgents.size}个, 聊天${chatAgents.size}个, " +
+                            "用户创建${userCreatedAgents.size}个, 找到${cacheResults.size}个匹配结果",
+                    )
+
+                    _searchResults.value = cacheResults
+                } else {
+                    _searchResults.value = dbResults
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ExploreViewModel - searchAgentsByName异常: ${e.message}", e)
+                _searchResults.value = emptyList()
+            } finally {
+                _isSearching.value = false
+            }
+        }
+    }
+
+    /** 重置搜索状态 */
+    fun resetSearchState() {
+        _searchResults.value = emptyList()
+        _isSearching.value = false
+        _hasSearchExecuted.value = false
     }
 
     /** 刷新主题专区列表（用于下拉刷新，只有成功获取数据后才更新 UI） */
