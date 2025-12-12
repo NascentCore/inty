@@ -50,11 +50,26 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostCalculator
 import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostLeaderboardActivity
 import kotlinx.coroutines.launch
 
 @Composable
-fun BoostStatusChip(modifier: Modifier = Modifier, availablePoints: Int, onClick: () -> Unit) {
+fun BoostStatusChip(
+    modifier: Modifier = Modifier,
+    availablePoints: Int,
+    onClick: (() -> Unit)? = null,
+) {
+    val context = LocalContext.current
     val canBoost = availablePoints >= BoostConfig.BOOST_STEP_POINTS
+    
+    val handleClick: () -> Unit = {
+        if (onClick != null) {
+            onClick()
+        } else if (canBoost) {
+            BoostLeaderboardActivity.launch(context)
+        }
+    }
+    
     val gradient =
         Brush.horizontalGradient(
             colors =
@@ -75,7 +90,7 @@ fun BoostStatusChip(modifier: Modifier = Modifier, availablePoints: Int, onClick
                     shape = RoundedCornerShape(24.dp),
                 )
                 .padding(horizontal = 16.dp, vertical = 10.dp)
-                .noRippleClickable(enabled = canBoost, onClick = onClick),
+                .noRippleClickable(enabled = canBoost, onClick = handleClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

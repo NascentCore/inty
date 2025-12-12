@@ -6,7 +6,6 @@ package com.ai.intellimate.boost
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AgentService
-import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Box
@@ -36,6 +35,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostLeaderboardEntry
+import com.ai.intellimate.boost.BoostTrend
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.ui.components.EmptyStateComponent
@@ -73,6 +75,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     LaunchedEffect(retryTrigger) {
         isLoading = true
         errorMessage = null
+        
         when (
             val result =
                 AgentService.getRecommendAgents(
@@ -83,7 +86,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                 )
         ) {
             is ApiResult.Success -> {
-                leaderboardEntries =
+                val remoteEntries =
                     result.data.mapIndexed { index, agent ->
                         val energyPoints = agent.energyPoints
                         // 使用 energyPoints / BOOST_STEP_POINTS 估算 boost 次数
@@ -104,6 +107,9 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                             isSeed = false,
                         )
                     }
+                
+                leaderboardEntries = remoteEntries
+                
                 isLoading = false
             }
             is ApiResult.Error -> {
@@ -116,17 +122,13 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     val handleLeaderboardAction =
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
-                if (entry.isSeed || entry.agentId.isBlank()) {
-                    ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
-                } else {
-                    ChatActivity.launch(
-                        context,
-                        agentInfo = null,
-                        agentId = entry.agentId,
-                        pageSource = ChatActivity.EXPLORE_TAB,
-                        showBoostSheet = showSheet,
-                    )
-                }
+                ChatActivity.launch(
+                    context,
+                    agentInfo = null,
+                    agentId = entry.agentId,
+                    pageSource = ChatActivity.EXPLORE_TAB,
+                    showBoostSheet = showSheet,
+                )
             }
         }
 
@@ -170,7 +172,6 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                     title = stringResource(R.string.empty_explore_error),
                     showRetryButton = true,
                     onRetry = {
-                        // 重新加载
                         retryTrigger++
                     },
                     modifier = Modifier.padding(innerPadding).fillMaxSize(),

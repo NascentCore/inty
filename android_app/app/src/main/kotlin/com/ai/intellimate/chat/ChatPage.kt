@@ -59,6 +59,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
 import com.ai.intellimate.R
@@ -79,6 +83,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.xb.navigation.Routes
+import com.ai.intellimate.audio.OpeningPlayState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -126,8 +131,8 @@ internal fun ChatPage(
     val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
     var pendingBoostSheet by
-        remember(shouldShowBoostSheetOnOpen && isDebugMode) {
-            mutableStateOf(shouldShowBoostSheetOnOpen && isDebugMode)
+        remember(shouldShowBoostSheetOnOpen) {
+            mutableStateOf(shouldShowBoostSheetOnOpen)
         }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
@@ -252,8 +257,8 @@ internal fun ChatPage(
     }
 
     // 从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，自动打开 BoostSheet
-    LaunchedEffect(agentInfo?.id, pendingBoostSheet, isDebugMode) {
-        if (isDebugMode && agentInfo != null && pendingBoostSheet) {
+    LaunchedEffect(agentInfo?.id, pendingBoostSheet) {
+        if (agentInfo != null && pendingBoostSheet) {
             showBoostSheet = true
             pendingBoostSheet = false
         }
@@ -444,6 +449,54 @@ internal fun ChatPage(
                                     (isLoadingMore ||
                                         (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
 
+                            // 判断是否需要播放开场白语音（移到LazyColumn外部）
+                            val shouldDelayShowOpening = remember(
+                                agentInfo?.id,
+                                agentInfo?.opening_audio_url,
+                                isQueryMsgsCompleted,
+                                isCurrentPage,
+                                isGuideVisible,
+                                chatMessages.size,
+                            ) {
+                                agentInfo?.let { agent ->
+                                    val actualChatMessages = chatMessages.filter { !it.isOpening() && it.role != "system" }
+                                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
+                                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agent.id)
+                                    val safeAgentId = agent.id
+                                    val audioUrl = agent.opening_audio_url
+
+                                    // 判断是否需要自动播放开场白语音
+                                    agent.opening.isNotEmpty() &&
+                                            isOnlyOpeningMessage &&
+                                            !hasPlayedOpening &&
+                                            isQueryMsgsCompleted &&
+                                            safeAgentId.isNotEmpty() &&
+                                            audioUrl.isNotEmpty() &&
+                                            IntySetting.isAutoPlayAudio() &&
+                                            !isGuideVisible
+                                } ?: false
+                            }
+                            
+                            // 控制开场白显示状态（移到LazyColumn外部）
+                            var showOpeningItem by remember(agentInfo?.id) { mutableStateOf(false) }
+                            
+                            // 如果需要延迟显示，延迟1.5秒后显示（移到LazyColumn外部）
+                            LaunchedEffect(shouldDelayShowOpening, isQueryMsgsCompleted, isCurrentPage, agentInfo?.id) {
+                                if (agentInfo?.id == null || !isQueryMsgsCompleted) {
+                                    showOpeningItem = false
+                                    return@LaunchedEffect
+                                }
+
+                                if (isCurrentPage) {
+                                    if (shouldDelayShowOpening) {
+                                        // 如果需要播放语音，先隐藏，延迟1.5秒后显示
+                                        delay(1500)
+                                    }
+
+                                    showOpeningItem = true
+                                }
+                            }
+
                             LazyColumn(
                                 modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
                                 state = listState,
@@ -541,30 +594,46 @@ internal fun ChatPage(
                                 val showIntroOpeningTop =
                                     isQueryMsgsCompleted &&
                                         ((!hasMoreMessages) || chatMessages.isEmpty())
+                                
                                 if (showIntroOpeningTop) {
                                     item {
                                         agentInfo?.let { agent ->
                                             val shouldShowOpening = agent.opening.isNotEmpty()
                                             if (shouldShowOpening) {
-                                                val openingMessage =
-                                                    MsgInfo(
-                                                        content = agent.opening,
-                                                        role = "assistant",
-                                                        meta_data =
-                                                            MsgInfo.MsgMetaData(
-                                                                agentId = agent.id,
-                                                                isOpening = true,
-                                                            ),
-                                                        audio_url = agent.opening_audio_url,
+                                                // 使用渐变动画显示开场白
+                                                AnimatedVisibility(
+                                                    visible = showOpeningItem,
+                                                    enter = fadeIn(
+                                                        animationSpec = tween(
+                                                            durationMillis = 500,
+                                                            easing = FastOutSlowInEasing
+                                                        )
                                                     )
-                                                ChatItem(
-                                                    openingMessage,
-                                                    isCurrentPage = isCurrentPage,
-                                                    chatViewModel = chatViewModel,
-                                                    isGuideVisible = isGuideVisible,
-                                                    messageFontSizeSp = chatFontSizeSp,
-                                                )
-                                                Spacer(Modifier.height(16.dp))
+                                                ) {
+                                                    Column {
+                                                        val openingMessage =
+                                                            MsgInfo(
+                                                                content = agent.opening,
+                                                                role = "assistant",
+                                                                meta_data =
+                                                                    MsgInfo.MsgMetaData(
+                                                                        agentId = agent.id,
+                                                                        isOpening = true,
+                                                                    ),
+                                                                audio_url = agent.opening_audio_url,
+                                                            )
+
+                                                        Spacer(Modifier.height(16.dp))
+                                                        ChatItem(
+                                                            openingMessage,
+                                                            isCurrentPage = isCurrentPage,
+                                                            chatViewModel = chatViewModel,
+                                                            isGuideVisible = isGuideVisible,
+                                                            messageFontSizeSp = chatFontSizeSp,
+                                                        )
+                                                        Spacer(Modifier.height(16.dp))
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -663,7 +732,10 @@ internal fun ChatPage(
                                     ChatInput(
                                         chatViewModel = chatViewModel,
                                         onSendMessage = { chatViewModel.sendMsg() },
-                                        onToggleMorePanel = { showMorePanel = !showMorePanel },
+                                        onToggleMorePanel = {
+                                            showMorePanel = !showMorePanel
+                                            focusManager.clearFocus()
+                                        },
                                         showMorePanel = showMorePanel,
                                         bottomPadding = effectiveBottomPadding,
                                         focusRequester = inputFocusRequester,
@@ -787,7 +859,7 @@ internal fun ChatPage(
         // - onDismiss: 用户点击外部区域或取消按钮 → 直接关闭弹窗
         // 错误处理：Boost 操作失败时显示 Toast 错误提示（积分不足、已领取奖励等）
         agentInfo?.let { info ->
-            if (isDebugMode && showBoostSheet) {
+            if (showBoostSheet) {
                 BoostSheet(
                     agentInfo = info,
                     availablePoints = boostState.availablePoints,
@@ -821,7 +893,7 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(agentInfo?.id, isCurrentPage, showMorePanel, shouldAutoFocusInput) {
+    LaunchedEffect(agentInfo?.id, isCurrentPage,shouldAutoFocusInput) {
         if (!isCurrentPage) return@LaunchedEffect
 
         if (showMorePanel || agentInfo == null) {

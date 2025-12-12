@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Rocket
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +30,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +75,12 @@ fun ExplorePage(
     val agentsFlow = viewModel.getRecommendAgentsFlow()
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
 
+    // 搜索相关状态
+    var showSearchOverlay by remember { mutableStateOf(false) }
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isSearching by viewModel.isSearching.collectAsState()
+    val hasSearchExecuted by viewModel.hasSearchExecuted.collectAsState()
+
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView(
             "ExplorePage",
@@ -105,6 +114,13 @@ fun ExplorePage(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
+                    IconButton(onClick = { showSearchOverlay = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = stringResource(R.string.explore_search_icon_desc),
+                            tint = Color.White,
+                        )
+                    }
                     Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
                         BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
                     }
@@ -164,6 +180,31 @@ fun ExplorePage(
                     navController = navController,
                 )
             }
+        }
+
+        // 搜索浮层
+        if (showSearchOverlay) {
+            ExploreSearchOverlay(
+                modifier = Modifier.fillMaxSize(),
+                innerPadding = innerPadding,
+                searchResults = searchResults,
+                isSearching = isSearching,
+                hasSearchExecuted = hasSearchExecuted,
+                onDismiss = {
+                    showSearchOverlay = false
+                    viewModel.resetSearchState()
+                },
+                onQuerySubmit = { query ->
+                    if (query.isNotBlank()) {
+                        viewModel.searchAgentsByName(query)
+                    }
+                },
+                onClickAgent = { agent ->
+                    showSearchOverlay = false
+                    viewModel.resetSearchState()
+                    onClickAgent(agent)
+                },
+            )
         }
     }
 }

@@ -78,6 +78,7 @@ fun IntyAgent.toAgentInfo(): AgentInfo {
             settings = null, // SDK中settings是Settings对象，需要转换为Map
             visibility = this.visibility()?.toString() ?: "",
             prompt = this.prompt() ?: "",
+            energyPoints = this.energyPoints()?.toInt() ?: 0,
             followerCount = this.followerCount()?.toInt() ?: 0,
             connectorCount = this.connectorCount()?.toInt() ?: 0,
             deletedAt = this.deletedAt(),

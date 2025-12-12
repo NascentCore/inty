@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -44,6 +45,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.ui.BoostStatusChip
 import kotlinx.coroutines.launch
 
 @Composable
@@ -89,6 +91,18 @@ fun CheckInScreen(onClose: () -> Unit) {
 
         Column(modifier = Modifier.fillMaxWidth()) {
             CheckInNavigation(onClose = onClose)
+
+            // Energy Points 横幅
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                BoostStatusChip(
+                    modifier = Modifier.fillMaxWidth(),
+                    availablePoints = boostState.availablePoints,
+                )
+            }
 
             Spacer(modifier = Modifier.height(screenHeightDp * 0.08f))
             Text(
