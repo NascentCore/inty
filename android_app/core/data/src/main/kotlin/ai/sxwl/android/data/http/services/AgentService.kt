@@ -29,82 +29,53 @@ object AgentService {
         sortSeed: String = "default",
     ): ApiResult<List<AgentInfo>> {
         return IntyNetworkManager.executeRequest("Get Recommend Agents") {
-            LogUtils.i(
-                "AgentService.getRecommendAgents - 请求参数: page=$page, pageSize=$pageSize, sort=$sort, sortSeed='$sortSeed'"
-            )
-            
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .ai()
-                    .agents()
-                    .recommend(
-                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.builder()
-                            .page(page.toLong())
-                            .pageSize(pageSize.toLong())
-                            .sort(
-                                when (sort) {
-                                    "random" ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .RANDOM
+            val params = com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.builder()
+                .page(page.toLong())
+                .pageSize(pageSize.toLong())
+                .sort(
+                    when (sort) {
+                        "random" ->
+                            com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
+                                .Sort
+                                .RANDOM
 
-                                    "created_asc" ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .CREATED_ASC
+                        "created_asc" ->
+                            com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
+                                .Sort
+                                .CREATED_ASC
 
-                                    "created_desc" ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .CREATED_DESC
+                        "created_desc" ->
+                            com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
+                                .Sort
+                                .CREATED_DESC
 
-                                    "energy_points" ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .ENERGY_POINTS
+                        "energy_points" ->
+                            com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
+                                .Sort
+                                .ENERGY_POINTS
 
-                                    else ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .RANDOM
-                                }
-                            )
-                            .sortSeed(sortSeed)
-                            .build()
-                    )
-
-            LogUtils.i("AgentService.getRecommendAgents - 响应状态: code=${response.code()}, message=${response.message()}")
-            LogUtils.i("AgentService.getRecommendAgents - response.data() 是否为 null: ${response.data() == null}")
-            
-            val rawData = response.data()
-            if (rawData != null) {
-                LogUtils.i("AgentService.getRecommendAgents - rawData.list() 是否为 null: ${rawData.list() == null}")
-                val rawList = rawData.list()
-                if (rawList != null) {
-                    LogUtils.i("AgentService.getRecommendAgents - 原始列表大小: ${rawList.size}")
-                    rawList.forEachIndexed { index, agent ->
-                        LogUtils.i(
-                            "AgentService.getRecommendAgents - 原始角色[$index]: id=${agent.id()}, name=${agent.name()}, energyPoints=${agent.energyPoints()}"
-                        )
+                        else ->
+                            com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
+                                .Sort
+                                .RANDOM
                     }
-                } else {
-                    LogUtils.w("AgentService.getRecommendAgents - rawData.list() 为 null")
-                }
-            } else {
-                LogUtils.w("AgentService.getRecommendAgents - response.data() 为 null")
-            }
-
-            val result = rawData?.list()?.map { it.toAgentInfo() } ?: emptyList()
-            LogUtils.i("AgentService.getRecommendAgents - 转换后的结果数量: ${result.size}")
-            result.forEachIndexed { index, agentInfo ->
-                LogUtils.i(
-                    "AgentService.getRecommendAgents - 转换后角色[$index]: id=${agentInfo.id}, name=${agentInfo.name}, energyPoints=${agentInfo.energyPoints}"
                 )
-            }
-            
-            result
+                .sortSeed(sortSeed)
+                .build()
+
+            // 使用 withContext 确保阻塞调用在 IO 线程执行，避免 NetworkOnMainThreadException
+            val response =
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    IntyNetworkManager.getClient()
+                        .api()
+                        .v1()
+                        .ai()
+                        .agents()
+                        .recommend(params)
+                }
+
+            val rawData = response.data()
+            rawData?.list()?.map { it.toAgentInfo() } ?: emptyList()
         }
     }
 

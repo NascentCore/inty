@@ -6,7 +6,6 @@ package com.ai.intellimate.boost
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AgentService
-import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
@@ -39,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostLeaderboardEntry
-import com.ai.intellimate.boost.BoostSeedProvider
 import com.ai.intellimate.boost.BoostTrend
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.chat.ChatActivity
@@ -74,41 +72,21 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var retryTrigger by remember { mutableStateOf(0) }
-    val seedProvider = remember { BoostSeedProvider() }
 
     LaunchedEffect(retryTrigger) {
         isLoading = true
         errorMessage = null
         
-        // 记录 API 调用参数
-        val requestPage = 1
-        val requestPageSize = 10
-        val requestSort = "energy_points"
-        val requestSortSeed = ""
-        LogUtils.i(
-            "BoostLeaderboard - 开始请求角色列表: page=$requestPage, pageSize=$requestPageSize, sort=$requestSort, sortSeed='$requestSortSeed'"
-        )
-        
         when (
             val result =
                 AgentService.getRecommendAgents(
-                    page = requestPage,
-                    pageSize = requestPageSize,
-                    sort = requestSort,
-                    sortSeed = requestSortSeed,
+                    page = 1,
+                    pageSize = 10,
+                    sort = "energy_points",
+                    sortSeed = "",
                 )
         ) {
             is ApiResult.Success -> {
-                LogUtils.i("BoostLeaderboard - API 调用成功，返回数据类型: Success")
-                LogUtils.i("BoostLeaderboard - 返回的角色列表大小: ${result.data.size}")
-                
-                // 记录每个角色的详细信息
-                result.data.forEachIndexed { index, agent ->
-                    LogUtils.i(
-                        "BoostLeaderboard - 角色[$index]: id=${agent.id}, name=${agent.name}, energyPoints=${agent.energyPoints}, avatar=${agent.avatar}"
-                    )
-                }
-                
                 val remoteEntries =
                     result.data.mapIndexed { index, agent ->
                         val energyPoints = agent.energyPoints
@@ -131,42 +109,15 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                         )
                     }
                 
-                LogUtils.i("BoostLeaderboard - 转换后的 remoteEntries 数量: ${remoteEntries.size}")
-                
-                val missingSlots =
-                    (BoostConfig.LEADERBOARD_LIMIT - remoteEntries.size).coerceAtLeast(0)
-                LogUtils.i(
-                    "BoostLeaderboard - LEADERBOARD_LIMIT=${BoostConfig.LEADERBOARD_LIMIT}, remoteEntries.size=${remoteEntries.size}, missingSlots=$missingSlots"
-                )
-                
-                val fallbackEntries =
-                    if (missingSlots > 0) {
-                        seedProvider
-                            .seeds(remoteEntries.map { it.agentId }.toSet())
-                            .take(missingSlots)
-                    } else {
-                        emptyList()
-                    }
-                
-                LogUtils.i("BoostLeaderboard - fallbackEntries 数量: ${fallbackEntries.size}")
-                
+                // 直接使用后端返回的数据，不添加 dummy/seed 数据
                 leaderboardEntries =
-                    (remoteEntries + fallbackEntries).mapIndexed { index, entry ->
+                    remoteEntries.mapIndexed { index, entry ->
                         entry.copy(rank = index + 1)
                     }
-                
-                LogUtils.i("BoostLeaderboard - 最终 leaderboardEntries 数量: ${leaderboardEntries.size}")
-                leaderboardEntries.forEachIndexed { index, entry ->
-                    LogUtils.i(
-                        "BoostLeaderboard - 最终条目[$index]: rank=${entry.rank}, agentId=${entry.agentId}, agentName=${entry.agentName}, boostCount=${entry.boostCount}, isSeed=${entry.isSeed}"
-                    )
-                }
                 
                 isLoading = false
             }
             is ApiResult.Error -> {
-                LogUtils.e("BoostLeaderboard - API 调用失败: ${result.message}")
-                LogUtils.e("BoostLeaderboard - 错误类型: ${result.javaClass.simpleName}")
                 errorMessage = result.message
                 isLoading = false
             }
@@ -176,7 +127,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     val handleLeaderboardAction =
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
-                if (entry.isSeed || entry.agentId.isBlank()) {
+                if (entry.agentId.isBlank()) {
                     ToastUtils.showShort(R.string.boost_seed_placeholder_toast)
                 } else {
                     ChatActivity.launch(
@@ -230,7 +181,6 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                     title = stringResource(R.string.empty_explore_error),
                     showRetryButton = true,
                     onRetry = {
-                        // 重新加载
                         retryTrigger++
                     },
                     modifier = Modifier.padding(innerPadding).fillMaxSize(),
