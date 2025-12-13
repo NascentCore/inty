@@ -440,17 +440,17 @@
     <string name="billing_error_fallback_google_play_service">Google Play services error</string>
 
     <!-- Boost / Leaderboard -->
-    <string name="energy_points_first_title">You earned your FIRST energy point!</string>
-    <string name="energy_points_first_subtitle">Keep chatting to unlock more energy.</string>
-    <string name="energy_points_tens_title">You reached %1$d energy points!</string>
-    <string name="energy_points_tens_subtitle">Trophy unlocked - keep the streak going.</string>
+    <string name="energy_points_first_title">You earned your FIRST Boost Point!</string>
+    <string name="energy_points_first_subtitle">Keep chatting to earn more Boost Points.</string>
+    <string name="energy_points_tens_title">You reached %1$d Boost Points!</string>
+    <string name="energy_points_tens_subtitle">Milestone unlocked - keep the streak going.</string>
     <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
     <string name="energy_points_thousands_subtitle">Legendary trophy unlocked. You\'re unstoppable.</string>
     <string name="energy_points_counter">%1$d pts</string>
-    <string name="boost_points_label">Energy Points</string>
+    <string name="boost_points_label">Boost Points</string>
     <string name="boost_points_value">%1$d pts</string>
     <string name="boost_points_action">Boost</string>
-    <string name="boost_points_action_disabled">Earn points</string>
+    <string name="boost_points_action_disabled">Learn</string>
     <string name="boost_sheet_title">Boost this character</string>
     <string name="boost_points_available">Available: %1$d pts</string>
     <string name="boost_points_to_invest">Planning to invest %1$d pts</string>
@@ -466,6 +466,7 @@
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
     <string name="boost_leaderboard_back_cd">Back to Explore</string>
+    <string name="boost_leaderboard_energy_points_value">Energy Points: %1$d</string>
     <string name="boost_trend_up">Rising</string>
     <string name="boost_trend_down">Cooling</string>
     <string name="boost_trend_flat">Steady</string>
@@ -475,9 +476,19 @@
     <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
     <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
     <string name="boost_toast_success">Boost sent to %1$s!</string>
-    <string name="boost_toast_success_points">%1$d energy points sent to %2$s!</string>
+    <string name="boost_toast_success_points">%1$d Boost Points sent to %2$s!</string>
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
+    <string name="boost_points_help_title">Boost Points</string>
+    <string name="boost_points_help_subtitle">Earn Boost Points, then spend them to boost any character you like.</string>
+    <string name="boost_points_help_progress">%1$d / %2$d pts to boost</string>
+    <string name="boost_points_help_how_to_earn_title">How to earn</string>
+    <string name="boost_points_help_how_to_earn_body">Chat, generate images, listen to voices, or check in daily.</string>
+    <string name="boost_points_help_cta_check_in">Daily check-in</string>
+    <string name="boost_points_help_cta_leaderboard">View Top 10</string>
+    <string name="boost_points_help_close">Got it</string>
+    <string name="boost_character_energy_points">Character Energy Points: %1$d</string>
+    <string name="boost_character_energy_points_hint">This score ranks the character on the Top 10 board.</string>
     <string name="explore_boost_shortcut">Top 10</string>
     <string name="explore_boost_shortcut_cd">Open boost leaderboard</string>
     <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>

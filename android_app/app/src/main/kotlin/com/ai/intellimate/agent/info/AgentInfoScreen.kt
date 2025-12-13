@@ -79,6 +79,7 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
@@ -124,6 +125,7 @@ internal fun AiAgentInfoScreen(
     // 为角色应援/Boost 功能
     val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
+    var showBoostHelpSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
         val messageRes =
@@ -257,7 +259,7 @@ internal fun AiAgentInfoScreen(
                             availablePoints = boostState.availablePoints,
                             onClick = {
                                 if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
-                                    ToastUtils.showShort(R.string.boost_toast_not_enough_points)
+                                    showBoostHelpSheet = true
                                 } else {
                                     showBoostSheet = true
                                 }
@@ -265,6 +267,58 @@ internal fun AiAgentInfoScreen(
                         )
 
                         Spacer(Modifier.height(16.dp))
+
+                        Column(
+                            modifier =
+                                Modifier.padding(horizontal = 16.dp)
+                                    .fillMaxWidth()
+                                    .border(
+                                        brush =
+                                            Brush.linearGradient(
+                                                colors =
+                                                    listOf(
+                                                        Color.Transparent,
+                                                        Color.White.copy(0.2f),
+                                                        Color.Transparent,
+                                                    )
+                                            ),
+                                        width = 1.dp,
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                    .background(
+                                        color = Color(0x331C1D21),
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                    .padding(14.dp)
+                        ) {
+                            Text(
+                                text =
+                                    stringResource(
+                                        R.string.boost_character_energy_points,
+                                        agent.energyPoints,
+                                    ),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.boost_character_energy_points_hint),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Light,
+                                color = Color.White.copy(alpha = 0.75f),
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            TextButton(
+                                onClick = { com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.boost_points_help_cta_leaderboard),
+                                    color = Color.White,
+                                )
+                            }
+                        }
 
                         Spacer(Modifier.height(24.dp))
 
@@ -433,6 +487,17 @@ internal fun AiAgentInfoScreen(
                 }
             },
             onDismiss = { showBoostSheet = false },
+        )
+    }
+
+    if (showBoostHelpSheet) {
+        BoostPointsHelpSheet(
+            availablePoints = boostState.availablePoints,
+            onDismiss = { showBoostHelpSheet = false },
+            onOpenLeaderboard = {
+                showBoostHelpSheet = false
+                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
+            },
         )
     }
 }
