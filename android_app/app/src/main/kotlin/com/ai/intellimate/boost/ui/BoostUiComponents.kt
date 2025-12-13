@@ -6,7 +6,6 @@ package com.ai.intellimate.boost.ui
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -147,14 +145,13 @@ fun BoostSheet(
         }
 
     LaunchedEffect(availablePoints) {
+        desiredPoints = 0
         if (availablePoints >= BoostConfig.BOOST_STEP_POINTS) {
             desiredPoints =
                 BoostCalculator.normalizeBoostAmount(
-                    desiredPoints.coerceAtLeast(BoostConfig.BOOST_STEP_POINTS),
+                    0.coerceAtLeast(BoostConfig.BOOST_STEP_POINTS),
                     availablePoints,
                 )
-        } else {
-            desiredPoints = 0
         }
     }
 
