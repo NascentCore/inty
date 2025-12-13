@@ -152,6 +152,11 @@
     <string name="preview_generated_avatar">Preview Generated Avatar</string>
     <string name="describe_desired_avatar">Describe your desired avatar *</string>
     <string name="avatar_creation_hint_full">A cute anime girl, long hair, big eyes, wearing a white dress, in front of a beautiful garden, smiling at you…</string>
+    <string name="avatar_style_section_title">Style</string>
+    <string name="avatar_style_real_feel">Real feel</string>
+    <string name="avatar_style_cartoon">Cartoon</string>
+    <string name="avatar_style_real_feel_desc">Photorealistic, natural lighting</string>
+    <string name="avatar_style_cartoon_desc">Illustrated, clean lines</string>
 
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>

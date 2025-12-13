@@ -179,6 +179,23 @@ object UiConfigs {
         val ReplySheetGradient = listOf(ReplySheetGradientTop, ReplySheetGradientBottom)
     }
 
+    /** 头像生成页面配置 - 适用于 AvatarGenerateActivity 的风格选择等模块 */
+    object AvatarGenerate {
+        object StyleSelector {
+            /** 风格卡片宽度 */
+            val CardWidth = 170.dp
+
+            /** 风格卡片高度 */
+            val CardHeight = 72.dp
+
+            /** 风格卡片圆角 */
+            val CardCornerRadius = 12.dp
+
+            /** 风格卡片边框宽度 */
+            val CardBorderWidth = 1.dp
+        }
+    }
+
     /** 比例配置 - 适用于按钮、输入框等组件相对于父容器的宽度或圆角半径比例设置 */
     object Fractions {
         /** 主要按钮宽度比例（相对于父容器） */
@@ -198,6 +215,9 @@ object UiConfigs {
 
         /** 变暗文字透明度 */
         const val DimmedText = 0.5f
+
+        /** 次要文字透明度 */
+        const val SecondaryText = 0.7f
 
         /** 细微边框透明度 */
         const val SubtleBorder = 0.2f
