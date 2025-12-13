@@ -6,13 +6,15 @@ package com.ai.intellimate.boost.ui
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -30,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -61,12 +64,13 @@ fun BoostStatusChip(
 ) {
     val context = LocalContext.current
     val canBoost = availablePoints >= BoostConfig.BOOST_STEP_POINTS
+    var showHelpSheet by remember { mutableStateOf(false) }
 
     val handleClick: () -> Unit = {
         if (onClick != null) {
             onClick()
-        } else if (canBoost) {
-            BoostLeaderboardActivity.launch(context)
+        } else {
+            showHelpSheet = true
         }
     }
 
@@ -90,9 +94,9 @@ fun BoostStatusChip(
                     shape = RoundedCornerShape(24.dp),
                 )
                 .padding(horizontal = 16.dp, vertical = 10.dp)
-                .noRippleClickable(enabled = canBoost, onClick = handleClick),
+                .noRippleClickable(enabled = true, onClick = handleClick),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.rocket_launch_24px),
@@ -100,28 +104,23 @@ fun BoostStatusChip(
             tint = Color.White,
             modifier = Modifier.size(20.dp),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = stringResource(R.string.boost_points_label),
-                color = Color.White.copy(alpha = 0.75f),
-                fontSize = 12.sp,
-            )
-            Text(
-                text = stringResource(R.string.boost_points_value, availablePoints),
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Spacer(Modifier.size(12.dp))
         Text(
-            text =
-                stringResource(
-                    if (canBoost) R.string.boost_points_action
-                    else R.string.boost_points_action_disabled
-                ),
-            color = if (canBoost) Color.White else Color.White.copy(alpha = 0.4f),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(start = 8.dp),
+            text = "$availablePoints ${stringResource(R.string.boost_points_label)}",
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+
+    if (showHelpSheet) {
+        BoostPointsHelpSheet(
+            availablePoints = availablePoints,
+            onDismiss = { showHelpSheet = false },
+            onOpenLeaderboard = {
+                showHelpSheet = false
+                BoostLeaderboardActivity.launch(context)
+            },
         )
     }
 }
@@ -134,8 +133,10 @@ fun BoostSheet(
     onBoostConfirmed: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showHelpSheet by remember { mutableStateOf(false) }
     var desiredPoints by
         remember(availablePoints) {
             mutableIntStateOf(
@@ -144,11 +145,14 @@ fun BoostSheet(
         }
 
     LaunchedEffect(availablePoints) {
-        desiredPoints =
-            BoostCalculator.normalizeBoostAmount(
-                desiredPoints.coerceAtLeast(BoostConfig.BOOST_STEP_POINTS),
-                availablePoints,
-            )
+        desiredPoints = 0
+        if (availablePoints >= BoostConfig.BOOST_STEP_POINTS) {
+            desiredPoints =
+                BoostCalculator.normalizeBoostAmount(
+                    0.coerceAtLeast(BoostConfig.BOOST_STEP_POINTS),
+                    availablePoints,
+                )
+        }
     }
 
     ModalBottomSheet(
@@ -161,6 +165,17 @@ fun BoostSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             BoostSheetHeader(agentInfo = agentInfo)
+
+            CharacterEnergyPointsCard(
+                energyPoints = agentInfo.energyPoints,
+                onOpenLeaderboard = {
+                    scope.launch {
+                        sheetState.hide()
+                        onDismiss()
+                        BoostLeaderboardActivity.launch(context)
+                    }
+                },
+            )
 
             BoostPointsSummary(availablePoints = availablePoints, desiredPoints = desiredPoints)
 
@@ -183,10 +198,19 @@ fun BoostSheet(
 
             if (availablePoints < BoostConfig.BOOST_STEP_POINTS) {
                 Text(
-                    text = stringResource(R.string.boost_sheet_not_enough_points),
+                    text = stringResource(R.string.boost_sheet_not_enough_points, BoostConfig.BOOST_STEP_POINTS),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                 )
+                TextButton(
+                    onClick = { showHelpSheet = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stringResource(R.string.boost_points_action_disabled),
+                        color = Color.White,
+                    )
+                }
             }
 
             Button(
@@ -214,6 +238,17 @@ fun BoostSheet(
                 Text(text = stringResource(R.string.boost_sheet_cancel), color = Color.White)
             }
         }
+    }
+
+    if (showHelpSheet) {
+        BoostPointsHelpSheet(
+            availablePoints = availablePoints,
+            onDismiss = { showHelpSheet = false },
+            onOpenLeaderboard = {
+                showHelpSheet = false
+                BoostLeaderboardActivity.launch(context)
+            },
+        )
     }
 }
 
@@ -320,6 +355,99 @@ private fun BoostStepper(
                 contentDescription = "Increase",
                 tint = Color.White,
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BoostPointsHelpSheet(
+    availablePoints: Int,
+    onDismiss: () -> Unit,
+    onOpenLeaderboard: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val target = BoostConfig.BOOST_STEP_POINTS
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color(0xFF0F0F11),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.boost_points_help_title),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.boost_points_help_subtitle),
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 13.sp,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.boost_points_help_progress, availablePoints, target),
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.boost_points_help_how_to_earn_title),
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.boost_points_help_how_to_earn_body),
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 13.sp,
+            )
+            Button(
+                onClick = onOpenLeaderboard,
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF7A18),
+                        contentColor = Color.White,
+                    ),
+            ) {
+                Text(text = stringResource(R.string.boost_points_help_cta_leaderboard))
+            }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.boost_points_help_close), color = Color.White)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CharacterEnergyPointsCard(energyPoints: Int, onOpenLeaderboard: () -> Unit) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF1C1D21))
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.boost_character_energy_points, energyPoints),
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text = stringResource(R.string.boost_character_energy_points_hint),
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 12.sp,
+        )
+        TextButton(onClick = onOpenLeaderboard, modifier = Modifier.fillMaxWidth()) {
+            Text(text = stringResource(R.string.boost_points_help_cta_leaderboard), color = Color.White)
         }
     }
 }

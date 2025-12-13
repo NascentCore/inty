@@ -8,9 +8,10 @@
 
 ## 核心概念
 - **Token Energy**：用户每日通过签到、活动奖励等方式领取的额度，直接与聊天 token 消耗挂钩。
-- **Points**：基于 Token Energy 或聊天 token 消耗实时折算的积分，兑换比例在客户端常量中配置（默认 1 Point = 1 Token Energy）。积分只在本地存储，刷新即重置。
-- **Boost**：一次打榜行为，消耗 100 Points（可配置），为当前 AI 角色累积人气。
-- **Top Boosted Characters**：按 Boost 次数排序的排行榜，默认展示前 100 个角色，可作为 Explore 页签的子 Tab。
+- **Boost Points（账号可支配积分）**：用户通过聊天/图片/语音/签到获得的可支配积分，用于后续选择要支持（Boost）的角色。客户端常量控制兑换比例与获取规则。
+- **Energy Points（角色榜单积分）**：角色在榜单中的总分（后端字段 `energy_points` / `agents.points`），用于 Top10/排行榜排序。Boost 行为会把用户投入的 Boost Points 以增量形式累加到角色的 Energy Points 上。
+- **Boost**：一次支持/打榜行为，消耗一定数量的 Boost Points（默认 100，步长可配置），为当前 AI 角色累积 Energy Points。
+- **Top Characters（Leaderboard）**：按角色 Energy Points 排序的排行榜（例如 Top 10），用于展示“全站热度”。
 
 ## 用户旅程
 1. **签到/活动**：用户触发签到即获得 Token Energy，提示当前可用积分。
