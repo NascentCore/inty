@@ -96,7 +96,7 @@ fun BoostStatusChip(
                 .padding(horizontal = 16.dp, vertical = 10.dp)
                 .noRippleClickable(enabled = true, onClick = handleClick),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.rocket_launch_24px),
@@ -104,33 +104,12 @@ fun BoostStatusChip(
             tint = Color.White,
             modifier = Modifier.size(20.dp),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = stringResource(R.string.boost_points_label),
-                color = Color.White.copy(alpha = 0.75f),
-                fontSize = 12.sp,
-            )
-            Text(
-                text = stringResource(R.string.boost_points_value, availablePoints),
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Spacer(Modifier.size(12.dp))
         Text(
-            text =
-                stringResource(
-                    if (onClick != null && canBoost) R.string.boost_points_action
-                    else R.string.boost_points_action_disabled
-                ),
-            color =
-                if (onClick != null && canBoost) {
-                    Color.White
-                } else {
-                    Color.White.copy(alpha = 0.4f)
-                },
-            fontSize = 12.sp,
-            modifier = Modifier.padding(start = 8.dp),
+            text = "$availablePoints ${stringResource(R.string.boost_points_label)}",
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 
