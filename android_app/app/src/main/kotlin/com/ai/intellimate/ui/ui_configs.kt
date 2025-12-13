@@ -606,6 +606,9 @@ object UiConfigs {
         /** 标题底部内边距 */
         val TitleBottomPadding = 12.dp
 
+        /** 状态芯片与列表之间的间距 */
+        val StatusChipToListSpacing = 24.dp
+
         /** 空状态卡片圆角半径 */
         val EmptyStateCardCornerRadius = 16.dp
 

@@ -59,15 +59,7 @@ fun BoostLeaderboardTab(
     ) {
         BoostStatusChip(modifier = Modifier.fillMaxWidth(), availablePoints = availablePoints)
 
-        Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToTitleSpacing))
-
-        Text(
-            text = stringResource(R.string.boost_leaderboard_title),
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = UiConfigs.LeaderBoard.TitleBottomPadding),
-        )
+        Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToListSpacing))
 
         if (entries.isEmpty()) {
             Column(
