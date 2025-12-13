@@ -425,34 +425,21 @@ fun BoostPointsHelpSheet(
                 color = Color.White.copy(alpha = 0.75f),
                 fontSize = 13.sp,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = onOpenLeaderboard,
-                    modifier = Modifier.weight(1f),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFF7A18),
-                            contentColor = Color.White,
-                        ),
-                ) {
-                    Text(text = stringResource(R.string.boost_points_help_cta_leaderboard))
-                }
-                OutlinedHelpButton(
-                    text = stringResource(R.string.boost_points_help_close),
-                    onClick = onDismiss,
-                )
+            Button(
+                onClick = onOpenLeaderboard,
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF7A18),
+                        contentColor = Color.White,
+                    ),
+            ) {
+                Text(text = stringResource(R.string.boost_points_help_cta_leaderboard))
             }
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                 Text(text = stringResource(R.string.boost_points_help_close), color = Color.White)
             }
         }
-    }
-}
-
-@Composable
-private fun OutlinedHelpButton(text: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick) {
-        Text(text = text, color = Color.White.copy(alpha = 0.9f))
     }
 }
 
