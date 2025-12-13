@@ -74,12 +74,11 @@ import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
-import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
+import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
@@ -257,9 +256,7 @@ internal fun AiAgentInfoScreen(
                         BoostStatusChip(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             availablePoints = boostState.availablePoints,
-                            onClick = {
-                                showBoostSheet = true
-                            },
+                            onClick = { showBoostSheet = true },
                         )
 
                         Spacer(Modifier.height(16.dp))
@@ -306,11 +303,16 @@ internal fun AiAgentInfoScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                             TextButton(
-                                onClick = { com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context) },
+                                onClick = {
+                                    com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
+                                        context
+                                    )
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(
-                                    text = stringResource(R.string.boost_points_help_cta_leaderboard),
+                                    text =
+                                        stringResource(R.string.boost_points_help_cta_leaderboard),
                                     color = Color.White,
                                 )
                             }
