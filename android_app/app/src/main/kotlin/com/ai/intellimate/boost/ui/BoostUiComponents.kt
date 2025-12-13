@@ -6,15 +6,15 @@ package com.ai.intellimate.boost.ui
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -198,14 +198,15 @@ fun BoostSheet(
 
             if (availablePoints < BoostConfig.BOOST_STEP_POINTS) {
                 Text(
-                    text = stringResource(R.string.boost_sheet_not_enough_points, BoostConfig.BOOST_STEP_POINTS),
+                    text =
+                        stringResource(
+                            R.string.boost_sheet_not_enough_points,
+                            BoostConfig.BOOST_STEP_POINTS,
+                        ),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                 )
-                TextButton(
-                    onClick = { showHelpSheet = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                TextButton(onClick = { showHelpSheet = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = stringResource(R.string.boost_points_action_disabled),
                         color = Color.White,
@@ -447,7 +448,10 @@ private fun CharacterEnergyPointsCard(energyPoints: Int, onOpenLeaderboard: () -
             fontSize = 12.sp,
         )
         TextButton(onClick = onOpenLeaderboard, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.boost_points_help_cta_leaderboard), color = Color.White)
+            Text(
+                text = stringResource(R.string.boost_points_help_cta_leaderboard),
+                color = Color.White,
+            )
         }
     }
 }
