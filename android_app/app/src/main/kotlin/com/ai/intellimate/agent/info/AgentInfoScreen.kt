@@ -258,11 +258,7 @@ internal fun AiAgentInfoScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             availablePoints = boostState.availablePoints,
                             onClick = {
-                                if (boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS) {
-                                    showBoostHelpSheet = true
-                                } else {
-                                    showBoostSheet = true
-                                }
+                                showBoostSheet = true
                             },
                         )
 

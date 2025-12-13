@@ -6,7 +6,9 @@ package com.ai.intellimate.boost.ui
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -145,11 +147,15 @@ fun BoostSheet(
         }
 
     LaunchedEffect(availablePoints) {
-        desiredPoints =
-            BoostCalculator.normalizeBoostAmount(
-                desiredPoints.coerceAtLeast(BoostConfig.BOOST_STEP_POINTS),
-                availablePoints,
-            )
+        if (availablePoints >= BoostConfig.BOOST_STEP_POINTS) {
+            desiredPoints =
+                BoostCalculator.normalizeBoostAmount(
+                    desiredPoints.coerceAtLeast(BoostConfig.BOOST_STEP_POINTS),
+                    availablePoints,
+                )
+        } else {
+            desiredPoints = 0
+        }
     }
 
     ModalBottomSheet(
@@ -195,7 +201,7 @@ fun BoostSheet(
 
             if (availablePoints < BoostConfig.BOOST_STEP_POINTS) {
                 Text(
-                    text = stringResource(R.string.boost_sheet_not_enough_points),
+                    text = stringResource(R.string.boost_sheet_not_enough_points, BoostConfig.BOOST_STEP_POINTS),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                 )

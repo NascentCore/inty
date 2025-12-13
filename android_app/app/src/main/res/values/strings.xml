@@ -456,13 +456,14 @@
     <string name="boost_points_to_invest">Planning to invest %1$d pts</string>
     <string name="boost_selected_points">%1$d pts</string>
     <string name="boost_points_step_hint">Each boost uses %1$d pts</string>
-    <string name="boost_sheet_not_enough_points">You need at least 100 pts to boost. Earn more by chatting, generating images, or listening to voices.</string>
+    <string name="boost_sheet_not_enough_points">You need at least %1$d pts to boost. Earn more by chatting, generating images, or listening to voices.</string>
+    <string name="boost_points_need_at_least">You need at least %1$d pts</string>
     <string name="boost_sheet_confirm">Boost now</string>
     <string name="boost_sheet_cancel">Maybe later</string>
     <string name="boost_daily_reward_cta">Claim daily energy points (+200)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
-    <string name="boost_leaderboard_title">Top 10 Characters</string>
+    <string name="boost_leaderboard_title">Top IntelliMates</string>
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
     <string name="boost_leaderboard_back_cd">Back to Explore</string>
@@ -488,8 +489,8 @@
     <string name="boost_points_help_cta_leaderboard">View Top 10</string>
     <string name="boost_points_help_close">Got it</string>
     <string name="boost_character_energy_points">Character Energy Points: %1$d</string>
-    <string name="boost_character_energy_points_hint">This score ranks the character on the Top 10 board.</string>
-    <string name="explore_boost_shortcut">Top 10</string>
+    <string name="boost_character_energy_points_hint">This score ranks IntelliMates on the leaderboard.</string>
+    <string name="explore_boost_shortcut">Top IntelliMates</string>
     <string name="explore_boost_shortcut_cd">Open boost leaderboard</string>
     <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
     <string name="reset">Reset</string>
