@@ -258,15 +258,6 @@ class ChatRepositoryImpl(
                         // 然后添加服务器消息（按原始顺序）
                         allMessages.addAll(serverMessages)
 
-                        // #region agent log
-                        allMessages.forEachIndexed { idx, msg ->
-                            LogUtils.i(
-                                "ChatRepositoryImpl",
-                                "Messages before updateMessages: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}, timestamp=${msg.timestamp ?: "null"}"
-                            )
-                        }
-                        // #endregion
-
                         localDataSource.updateMessages(agentId, allMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(

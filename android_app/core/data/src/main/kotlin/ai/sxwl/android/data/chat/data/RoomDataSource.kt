@@ -8,7 +8,6 @@ import ai.sxwl.android.data.chat.local.db.ChatSyncStateEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toModel
-import ai.sxwl.android.utils.LogUtils
 import androidx.room.withTransaction
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
@@ -52,33 +51,14 @@ class RoomDataSource(
     private val hasMoreFlows = ConcurrentHashMap<String, StateFlow<Boolean>>()
 
     fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> {
-        // #region agent log
-        LogUtils.i("RoomDataSource", "=== VERSION MARKER: getMessagesFlow v2.0 (2025-12-13) ===")
-        LogUtils.i("RoomDataSource", "getMessagesFlow called for agentId=$agentId")
-        // #endregion
         return messageFlows.getOrPut(agentId) {
             logger.debug { "RoomDataSource.getMessagesFlow creating new flow for agentId=$agentId" }
-            // #region agent log
-            LogUtils.i("RoomDataSource", "Creating new StateFlow for agentId=$agentId")
-            // #endregion
             messageDao
                 .streamMessages(agentId)
                 .map { list ->
                     logger.debug {
                         "RoomDataSource.getMessagesFlow received ${list.size} messages for agentId=$agentId"
                     }
-                    // #region agent log
-                    LogUtils.i("RoomDataSource", "=== Query result: ${list.size} messages ===")
-                    list.forEachIndexed { idx, entity ->
-                        val idValue = entity.remoteId ?: entity.localId
-                        val idNum = idValue.toLongOrNull() ?: -1L
-                        LogUtils.i(
-                            "RoomDataSource",
-                            "Query[$idx]: id=$idValue (num=$idNum), localId=${entity.localId}, remoteId=${entity.remoteId ?: "null"}, timestamp=${entity.timestamp ?: "null"}"
-                        )
-                    }
-                    LogUtils.i("RoomDataSource", "=== End query result ===")
-                    // #endregion
                     list.map(ChatMessageEntity::toModel)
                 }
                 .stateIn(scope, SharingStarted.Eagerly, emptyList())
@@ -86,14 +66,7 @@ class RoomDataSource(
                     logger.debug {
                         "RoomDataSource.getMessagesFlow initial value: ${flow.value.size} messages for agentId=$agentId"
                     }
-                    // #region agent log
-                    LogUtils.i("RoomDataSource", "StateFlow created, initial value size: ${flow.value.size} for agentId=$agentId")
-                    // #endregion
                 }
-        }.also { flow ->
-            // #region agent log
-            LogUtils.i("RoomDataSource", "Returning existing StateFlow, current value size: ${flow.value.size} for agentId=$agentId")
-            // #endregion
         }
     }
 
@@ -112,14 +85,6 @@ class RoomDataSource(
             logger.debug {
                 "RoomDataSource.updateMessages updating ${messages.size} messages for agentId=$agentId"
             }
-            // #region agent log
-            messages.forEachIndexed { idx, msg ->
-                LogUtils.i(
-                    "RoomDataSource",
-                    "Server message input: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}, timestamp=${msg.timestamp ?: "null"}, content=${msg.content.take(50)}"
-                )
-            }
-            // #endregion
             // 获取现有消息，用于保留本地消息和去重
             val existingMessages = messageDao.getAllMessages(agentId)
             val existingMapByLocalId = existingMessages.associateBy { it.localId }
@@ -145,15 +110,6 @@ class RoomDataSource(
                         // 尝试将 id 转换为数字，如果不能转换则使用字符串比较
                         idStr.toLongOrNull() ?: Long.MAX_VALUE
                     }
-
-                    // #region agent log
-                    sortedMessages.forEachIndexed { idx, msg ->
-                        LogUtils.i(
-                            "RoomDataSource",
-                            "Sorted messages by id: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}, serverTimestamp=${msg.timestamp ?: "null"}"
-                        )
-                    }
-                    // #endregion
 
                     // 处理服务器消息：按 id 排序后的顺序，使用服务器提供的 timestamp
                     // 重要：使用服务器返回的原始 timestamp，不生成新的 timestamp
@@ -187,14 +143,6 @@ class RoomDataSource(
                                 msg
                             }
 
-                        // #region agent log
-                        val finalTimestamp = messageWithTimestamp.timestamp ?: "null"
-                        LogUtils.i(
-                            "RoomDataSource",
-                            "Message timestamp processing: id=${msg.id}, originalTimestamp=${msg.timestamp ?: "null"}, finalTimestamp=$finalTimestamp"
-                        )
-                        // #endregion
-
                         messageWithTimestamp.toEntity(agentId, existing = existingEntity)
                     }
 
@@ -220,16 +168,6 @@ class RoomDataSource(
                         idStr.toLongOrNull() ?: Long.MAX_VALUE
                     }
 
-                    // #region agent log
-                    allEntities.forEachIndexed { idx, entity ->
-                        LogUtils.i(
-                            "RoomDataSource",
-                            "All entities after id sort: index=$idx, localId=${entity.localId}, remoteId=${entity.remoteId ?: "null"}, timestamp=${entity.timestamp ?: "null"}"
-                        )
-                    }
-                    // #endregion
-
-
                     messageDao.upsert(allEntities)
                 }
                 // 如果 messages 为空，deleteByAgent 已经删除了所有消息，Flow 会自动更新
@@ -245,14 +183,6 @@ class RoomDataSource(
             logger.debug {
                 "RoomDataSource.appendMessages saving ${newMessages.size} messages for agentId=$agentId"
             }
-            // #region agent log
-            newMessages.forEachIndexed { idx, msg ->
-                LogUtils.i(
-                    "RoomDataSource",
-                    "appendMessages input: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}, timestamp=${msg.timestamp ?: "null"}"
-                )
-            }
-            // #endregion
             // 在事务中原子性地读取最大 timestamp 并插入消息，避免并发竞争
             db.withTransaction {
                 val existingMessages = messageDao.getAllMessages(agentId)
@@ -276,14 +206,6 @@ class RoomDataSource(
                     val idStr = msg.id.ifEmpty { msg.localMsgId }
                     idStr.toLongOrNull() ?: Long.MAX_VALUE
                 }
-                // #region agent log
-                sortedMessages.forEachIndexed { idx, msg ->
-                    LogUtils.i(
-                        "RoomDataSource",
-                        "appendMessages sorted: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}"
-                    )
-                }
-                // #endregion
                 val entities = sortedMessages.mapIndexed { index, msg ->
                     // 为每个消息生成递增的 timestamp（ISO 8601 格式）
                     val timestamp =
@@ -296,14 +218,6 @@ class RoomDataSource(
                         }
                     msgWithTimestamp.toEntity(agentId)
                 }
-                // #region agent log
-                entities.forEachIndexed { idx, entity ->
-                    LogUtils.i(
-                        "RoomDataSource",
-                        "appendMessages entities before upsert: index=$idx, localId=${entity.localId}, remoteId=${entity.remoteId ?: "null"}, timestamp=${entity.timestamp ?: "null"}"
-                    )
-                }
-                // #endregion
                 messageDao.upsert(entities)
             }
             logger.debug {
@@ -317,14 +231,6 @@ class RoomDataSource(
             logger.debug {
                 "RoomDataSource.prependMessages prepending ${newMessages.size} messages for agentId=$agentId"
             }
-            // #region agent log
-            newMessages.forEachIndexed { idx, msg ->
-                LogUtils.i(
-                    "RoomDataSource",
-                    "prependMessages input: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}, timestamp=${msg.timestamp ?: "null"}"
-                )
-            }
-            // #endregion
             // 在事务中原子性地读取最小 timestamp 并插入消息，避免并发竞争
             db.withTransaction {
                 val existingMessages = messageDao.getAllMessages(agentId)
@@ -356,14 +262,6 @@ class RoomDataSource(
                     val idStr = msg.id.ifEmpty { msg.localMsgId }
                     idStr.toLongOrNull() ?: Long.MAX_VALUE
                 }
-                // #region agent log
-                sortedMessages.forEachIndexed { idx, msg ->
-                    LogUtils.i(
-                        "RoomDataSource",
-                        "prependMessages sorted: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}"
-                    )
-                }
-                // #endregion
                 val entities = sortedMessages.mapIndexed { index, msg ->
                     // 为每个消息生成递减的 timestamp（ISO 8601 格式）
                     // 索引越大，timestamp 越小（因为要插入到列表开头）
@@ -377,14 +275,6 @@ class RoomDataSource(
                         }
                     msgWithTimestamp.toEntity(agentId)
                 }
-                // #region agent log
-                entities.forEachIndexed { idx, entity ->
-                    LogUtils.i(
-                        "RoomDataSource",
-                        "prependMessages entities before upsert: index=$idx, localId=${entity.localId}, remoteId=${entity.remoteId ?: "null"}, timestamp=${entity.timestamp ?: "null"}"
-                    )
-                }
-                // #endregion
                 messageDao.upsert(entities)
             }
             logger.debug {
