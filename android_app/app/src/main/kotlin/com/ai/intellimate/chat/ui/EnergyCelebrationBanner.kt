@@ -98,9 +98,9 @@ fun EnergyCelebrationBanner(
 
 private fun resolveCelebrationLevel(totalPoints: Int): EnergyCelebrationLevel? {
     if (totalPoints == 1) return EnergyCelebrationLevel.First
-    if (totalPoints % 1000 == 0) return EnergyCelebrationLevel.Thousands
-    if (totalPoints % 100 == 0) return EnergyCelebrationLevel.Hundreds
-    if (totalPoints % 10 == 0) return EnergyCelebrationLevel.Tens
+    if (totalPoints == 10) return EnergyCelebrationLevel.Tens
+    if (totalPoints == 100) return EnergyCelebrationLevel.Hundreds  
+    if (totalPoints == 1000) return EnergyCelebrationLevel.Thousands
     return null
 }
 
