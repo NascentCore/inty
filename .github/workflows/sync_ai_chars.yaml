@@ -1,4 +1,4 @@
-name: Sync AI characters from dev to prod
+name: dev-prod 同步 AI 角色
 
 on:
   schedule:
