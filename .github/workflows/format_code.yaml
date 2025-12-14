@@ -1,4 +1,4 @@
-name: Format All Files
+name: 格式化所有代码文件
 
 on:
   schedule:
