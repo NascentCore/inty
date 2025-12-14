@@ -1,4 +1,4 @@
-name: Build SDKs for pull request
+name: 使用 Stainless 生成 SDKs
 
 on:
   pull_request:
