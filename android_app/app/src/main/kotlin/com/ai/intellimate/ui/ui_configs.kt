@@ -456,6 +456,9 @@ object UiConfigs {
 
     /** 聊天页面配置 - 适用于聊天页面的功能开关，如 Remix 按钮可见性等 */
     object ChatPage {
+        /** 是否显示订阅按钮 */
+        const val showSubscriptionButton = false
+
         @Composable
         fun enableRemix(): Boolean {
             val visibilityState by RemixButtonVisibilityManager.visibility.collectAsState()

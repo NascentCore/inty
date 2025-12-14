@@ -396,7 +396,7 @@ internal fun ChatPage(
                         Column {
                             Spacer(Modifier.height(16.dp))
 
-                            if (agentInfo != null && !vipStatus.isSubscribed) {
+                            if (agentInfo != null && !vipStatus.isSubscribed && UiConfigs.ChatPage.showSubscriptionButton) {
                                 PremiumModelTag(
                                     onClick = {
                                         scope.launch {
