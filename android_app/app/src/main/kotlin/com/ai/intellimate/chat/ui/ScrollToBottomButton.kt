@@ -43,7 +43,7 @@ fun ScrollToBottomButton(
         Box(
             modifier =
                 Modifier
-                    .size(config.IconSize + config.InnerPadding * 2 + config.BorderWidth * 2)
+                    .size(config.ButtonSize)
                     .clip(CircleShape)
                     .border(
                         config.BorderWidth,

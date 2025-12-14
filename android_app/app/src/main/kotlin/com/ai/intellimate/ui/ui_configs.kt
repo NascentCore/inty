@@ -501,7 +501,10 @@ object UiConfigs {
             val InnerPadding = 4.dp
 
             /** 图标大小 */
-            val IconSize = 20.dp
+            val IconSize = 30.dp
+
+            /** 按钮整体大小（圆形按钮的直径） */
+            val ButtonSize = IconSize + InnerPadding * 2 + BorderWidth * 2
 
             /** 右侧内边距 */
             val RightPadding = 16.dp
