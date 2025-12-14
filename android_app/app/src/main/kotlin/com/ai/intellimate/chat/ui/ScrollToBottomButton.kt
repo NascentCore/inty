@@ -24,7 +24,19 @@ import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
-/** 滚动到底部悬浮按钮组件 - 当用户滚动到历史消息时显示，点击后滚动回最新消息位置 */
+/** 滚动到底部悬浮按钮组件
+ *
+ * 用户可见功能：
+ * - 当用户向上滚动查看历史消息时，此按钮会出现在聊天页面右下角
+ * - 按钮显示为圆形，带有双向下箭头图标（KeyboardDoubleArrowDown）
+ * - 点击按钮后，聊天列表会平滑滚动回最新消息位置
+ * - 当用户回到最新消息位置时，按钮会自动淡出隐藏
+ *
+ * UI 特性：
+ * - 圆形按钮，半透明黑色背景，白色边框渐变
+ * - 使用淡入淡出动画，提供流畅的显示/隐藏体验
+ * - 按钮大小、位置等视觉效果参数统一在 UiConfigs.ChatPage.ScrollToBottomButton 中管理
+ */
 @Composable
 fun ScrollToBottomButton(
     modifier: Modifier = Modifier,
@@ -34,6 +46,8 @@ fun ScrollToBottomButton(
 ) {
     val config = UiConfigs.ChatPage.ScrollToBottomButton
 
+    // 使用 AnimatedVisibility 实现按钮的淡入淡出动画
+    // modifier 需要传递给 AnimatedVisibility 以确保对齐方式正确应用
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(),
