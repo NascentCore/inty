@@ -356,8 +356,14 @@ internal fun ChatPage(
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
             val listState = rememberLazyListState()
+            // 聊天页面滚动位置状态：true 表示用户在最新消息位置，false 表示用户已滚动到历史消息
+            // 此状态用于控制两个浮动按钮的显示：
+            // - 在最新消息位置：显示 Keep Talking 按钮（如果启用）
+            // - 在历史消息位置：显示滚动到底部按钮
             var isAtLatestMessage by remember { mutableStateOf(true) }
 
+            // 监听滚动位置变化，实时更新 isAtLatestMessage 状态
+            // 当 firstVisibleItemIndex == 0 且 scrollOffset == 0 时，表示用户正在查看最新消息
             LaunchedEffect(listState) {
                 snapshotFlow {
                     listState.firstVisibleItemIndex to
@@ -805,10 +811,18 @@ internal fun ChatPage(
                             generatedImageUrl != "loading"
                     }
 
+                // Keep Talking 按钮显示逻辑：
+                // 1. 用户开启了 Keep Talking 功能
+                // 2. 存在最新的 AI 助手消息
+                // 3. 用户当前在最新消息位置（未滚动到历史记录）
+                // 当用户滚动到历史记录时，此按钮会自动隐藏
                 val showKeepTalkingButton =
                     showKeepTalking && hasLatestAssistantMessage && isAtLatestMessage
                 val isKeepTalkingEnabled = !hasLoadingMessageForButton
 
+                // 滚动到底部按钮显示逻辑：
+                // 当用户不在最新消息位置时（已滚动到历史记录），显示此按钮
+                // 点击后平滑滚动回最新消息位置
                 val showScrollToBottomButton = !isAtLatestMessage
 
                 val chatInputEstimatedHeight = 70.dp
@@ -822,6 +836,9 @@ internal fun ChatPage(
                         chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
                     }
 
+                // 计算滚动到底部按钮的垂直位置
+                // 如果 Keep Talking 按钮可见，则滚动到底部按钮位于其上方，避免重叠
+                // 否则，滚动到底部按钮使用与 Keep Talking 按钮相同的位置
                 val scrollToBottomButtonBottomOffset =
                     if (showKeepTalkingButton) {
                         buttonBottomOffset +
@@ -830,6 +847,8 @@ internal fun ChatPage(
                         buttonBottomOffset
                     }
 
+                // 滚动到底部按钮：当用户滚动到历史消息时显示在右下角
+                // 功能：点击后平滑滚动回最新消息位置（LazyColumn 使用 reverseLayout，索引 0 为最新消息）
                 ScrollToBottomButton(
                     modifier =
                         Modifier
@@ -841,11 +860,15 @@ internal fun ChatPage(
                     visible = showScrollToBottomButton,
                     onClick = {
                         scope.launch {
+                            // 平滑滚动到索引 0（最新消息位置）
                             listState.animateScrollToItem(0)
                         }
                     },
                 )
 
+                // Keep Talking 按钮：当用户在最新消息位置时显示在右下角
+                // 功能：点击后发送 "continue" 消息，让 AI 继续对话
+                // 当用户滚动到历史记录时，此按钮会自动隐藏，避免与滚动到底部按钮重叠
                 KeepTalkingFloatingButton(
                     modifier =
                         Modifier.align(Alignment.BottomEnd).padding(bottom = buttonBottomOffset),
