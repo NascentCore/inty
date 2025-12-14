@@ -30,6 +30,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
@@ -125,6 +129,7 @@ private fun AvatarGeneratePage(
     val generatedImageUrls by viewModel.generatedImageUrls.collectAsState()
     val selectedImageIndex by viewModel.selectedImageIndex.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val styleTemplate by viewModel.styleTemplate.collectAsState()
 
     val focusManager = LocalFocusManager.current
 
@@ -197,7 +202,15 @@ private fun AvatarGeneratePage(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(UiConfigs.Spacing.MediumPlus))
+
+            AvatarStyleSelectionSection(
+                selectedTemplate = styleTemplate,
+                enabled = !isLoading,
+                onSelect = viewModel::selectStyleTemplate,
+            )
+
+            Spacer(modifier = Modifier.height(UiConfigs.Spacing.HeroGap))
 
             // Prompt Input Field
             PromptInputField(value = prompt, onValueChange = viewModel::updatePrompt)
@@ -228,6 +241,99 @@ private fun AvatarGeneratePage(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+@Composable
+private fun AvatarStyleSelectionSection(
+    selectedTemplate: AvatarImageStyleTemplate,
+    enabled: Boolean,
+    onSelect: (AvatarImageStyleTemplate) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.avatar_style_section_title),
+            fontSize = UiConfigs.Typography.BodyLarge,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start,
+        )
+
+        Spacer(modifier = Modifier.height(UiConfigs.Spacing.Small))
+
+        val templates = AvatarImageStyleTemplate.entries
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.Small),
+        ) {
+            items(items = templates, key = { it.key }) { template ->
+                AvatarStyleCard(
+                    template = template,
+                    selected = template == selectedTemplate,
+                    enabled = enabled,
+                    onClick = { onSelect(template) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvatarStyleCard(
+    template: AvatarImageStyleTemplate,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val titleRes =
+        when (template) {
+            AvatarImageStyleTemplate.REAL_FEEL -> R.string.avatar_style_real_feel
+            AvatarImageStyleTemplate.CARTOON -> R.string.avatar_style_cartoon
+        }
+    val descRes =
+        when (template) {
+            AvatarImageStyleTemplate.REAL_FEEL -> R.string.avatar_style_real_feel_desc
+            AvatarImageStyleTemplate.CARTOON -> R.string.avatar_style_cartoon_desc
+        }
+
+    val borderColor =
+        if (selected) {
+            UiConfigs.Colors.GradientStart
+        } else {
+            Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
+        }
+
+    Column(
+        modifier =
+            Modifier.width(UiConfigs.AvatarGenerate.StyleSelector.CardWidth)
+                .height(UiConfigs.AvatarGenerate.StyleSelector.CardHeight)
+                .background(
+                    color = UiConfigs.Colors.InputSurface,
+                    shape = RoundedCornerShape(UiConfigs.AvatarGenerate.StyleSelector.CardCornerRadius),
+                )
+                .border(
+                    width = UiConfigs.AvatarGenerate.StyleSelector.CardBorderWidth,
+                    color = borderColor,
+                    shape = RoundedCornerShape(UiConfigs.AvatarGenerate.StyleSelector.CardCornerRadius),
+                )
+                .noRippleClickable { if (enabled) onClick() }
+                .padding(horizontal = UiConfigs.Spacing.Medium, vertical = UiConfigs.Spacing.Small),
+        verticalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.Tiny),
+    ) {
+        Text(
+            text = stringResource(titleRes),
+            fontSize = UiConfigs.Typography.Body,
+            color = if (enabled) Color.White else Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = stringResource(descRes),
+            fontSize = UiConfigs.Typography.Caption,
+            color = Color.White.copy(alpha = UiConfigs.Alpha.SecondaryText),
+            maxLines = 2,
+        )
     }
 }
 
