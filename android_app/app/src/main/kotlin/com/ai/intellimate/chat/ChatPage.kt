@@ -78,6 +78,7 @@ import com.ai.intellimate.chat.ui.ChatTopBar
 import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
+import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -354,6 +355,20 @@ internal fun ChatPage(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
+            val listState = rememberLazyListState()
+            var showScrollToBottomButton by remember { mutableStateOf(false) }
+
+            LaunchedEffect(listState) {
+                snapshotFlow {
+                    listState.firstVisibleItemIndex to
+                        listState.firstVisibleItemScrollOffset
+                }
+                    .collect { (firstVisibleIndex, scrollOffset) ->
+                        showScrollToBottomButton =
+                            firstVisibleIndex > 0 || scrollOffset > 0
+                    }
+            }
+
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.padding(innerPadding).imePadding()) {
                     Spacer(Modifier.height(48.dp))
@@ -426,7 +441,6 @@ internal fun ChatPage(
                             val chatMessages by chatViewModel.msgs.collectAsState()
                             val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
                             val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
-                            val listState = rememberLazyListState()
 
                             val layoutInfo = listState.layoutInfo
                             val visibleItemsForUi = layoutInfo.visibleItemsInfo
@@ -805,6 +819,30 @@ internal fun ChatPage(
                     } else {
                         chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
                     }
+
+                val scrollToBottomButtonBottomOffset =
+                    if (showKeepTalkingButton) {
+                        buttonBottomOffset +
+                            UiConfigs.ChatPage.ScrollToBottomButton.BottomOffsetAboveKeepTalking
+                    } else {
+                        buttonBottomOffset
+                    }
+
+                ScrollToBottomButton(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(
+                                bottom = scrollToBottomButtonBottomOffset,
+                                end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,
+                            ),
+                    visible = showScrollToBottomButton,
+                    onClick = {
+                        scope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                )
 
                 KeepTalkingFloatingButton(
                     modifier =

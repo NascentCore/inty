@@ -471,6 +471,45 @@ object UiConfigs {
             return visibilityState ?: RemixButtonVisibilityManager.getCurrentVisibility()
         }
 
+        /** 滚动到底部按钮配置 - 适用于聊天页面中滚动到底部按钮的尺寸、样式、位置等设置 */
+        object ScrollToBottomButton {
+            /** 左上角圆角半径 */
+            val CornerRadiusTopStart = 20.dp
+
+            /** 左下角圆角半径 */
+            val CornerRadiusBottomStart = 20.dp
+
+            /** 边框宽度 */
+            val BorderWidth = 1.dp
+
+            /** 边框渐变起始颜色透明度（启用状态） */
+            const val BorderGradientStartAlpha = 0.7f
+
+            /** 边框渐变起始颜色透明度（禁用状态） */
+            const val BorderGradientStartAlphaDisabled = 0.3f
+
+            /** 边框渐变结束颜色透明度 */
+            const val BorderGradientEndAlpha = 0.2f
+
+            /** 背景颜色透明度 */
+            const val BackgroundAlpha = 0.6f
+
+            /** 禁用状态整体透明度 */
+            const val DisabledAlpha = 0.5f
+
+            /** 按钮内部内边距 */
+            val InnerPadding = 4.dp
+
+            /** 图标大小 */
+            val IconSize = 20.dp
+
+            /** 右侧内边距 */
+            val RightPadding = 16.dp
+
+            /** 位于 KeepTalkingFloatingButton 上方的间距 */
+            val BottomOffsetAboveKeepTalking = 60.dp
+        }
+
         /** 相册配置 - 适用于角色相册页面的列数等设置 */
         object PhotoAlbum {
             /** 预览区域配置 - 适用于角色信息页面中的图片预览区域 */
