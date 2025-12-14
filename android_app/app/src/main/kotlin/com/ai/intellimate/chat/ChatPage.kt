@@ -356,7 +356,7 @@ internal fun ChatPage(
             contentWindowInsets = WindowInsets(0),
         ) { innerPadding ->
             val listState = rememberLazyListState()
-            var showScrollToBottomButton by remember { mutableStateOf(false) }
+            var isAtLatestMessage by remember { mutableStateOf(true) }
 
             LaunchedEffect(listState) {
                 snapshotFlow {
@@ -364,8 +364,7 @@ internal fun ChatPage(
                         listState.firstVisibleItemScrollOffset
                 }
                     .collect { (firstVisibleIndex, scrollOffset) ->
-                        showScrollToBottomButton =
-                            firstVisibleIndex > 0 || scrollOffset > 0
+                        isAtLatestMessage = firstVisibleIndex == 0 && scrollOffset == 0
                     }
             }
 
@@ -806,8 +805,11 @@ internal fun ChatPage(
                             generatedImageUrl != "loading"
                     }
 
-                val showKeepTalkingButton = showKeepTalking && hasLatestAssistantMessage
+                val showKeepTalkingButton =
+                    showKeepTalking && hasLatestAssistantMessage && isAtLatestMessage
                 val isKeepTalkingEnabled = !hasLoadingMessageForButton
+
+                val showScrollToBottomButton = !isAtLatestMessage
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
