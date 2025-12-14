@@ -84,9 +84,8 @@ class RoomDataSource(
             logger.debug {
                 "RoomDataSource.updateMessages updating ${messages.size} messages for agentId=$agentId"
             }
-            // 在事务之前获取现有消息以保留它们的sortKey
+            // 获取现有消息，用于保留本地消息和去重
             val existingMessages = messageDao.getAllMessages(agentId)
-            // 创建现有消息的映射表，以localId为key，也支持remoteId匹配
             val existingMapByLocalId = existingMessages.associateBy { it.localId }
             val existingMapByRemoteId =
                 existingMessages.filter { it.remoteId != null }.associateBy { it.remoteId!! }
@@ -94,60 +93,69 @@ class RoomDataSource(
             db.withTransaction {
                 messageDao.deleteByAgent(agentId)
                 if (messages.isNotEmpty()) {
-                    // 为消息分配sortKey，优先使用现有的sortKey以保持稳定
-                    val lastSortKey = existingMessages.maxOfOrNull { it.sortKey } ?: 0L
-                    val baseTime = max(System.nanoTime(), lastSortKey + 1)
-                    var currentSortKey = baseTime
-
-                    // 先匹配所有消息，收集已使用的 sortKey，避免冲突
-                    val usedSortKeys = mutableSetOf<Long>()
-
-                    messageDao.upsert(
-                        messages.map { msg ->
-                            // 尝试从现有消息中获取sortKey
-                            // 匹配逻辑：
-                            // 1. 如果 msg.localMsgId 不为空，优先使用 localMsgId 匹配 existingMapByLocalId
-                            // 2. 如果 msg.id 不为空，使用 id 匹配 existingMapByRemoteId
-                            // 3. 如果都匹配不到，使用新的 sortKey
-                            val existingEntity =
-                                when {
-                                    msg.localMsgId.isNotEmpty() -> {
-                                        existingMapByLocalId[msg.localMsgId]
-                                            ?: if (msg.id.isNotEmpty())
-                                                existingMapByRemoteId[msg.id]
-                                            else null
-                                    }
-                                    msg.id.isNotEmpty() -> {
-                                        // 先尝试通过 remoteId 匹配，如果失败，再尝试通过 localId 匹配（因为 localId 可能等于
-                                        // id）
-                                        existingMapByRemoteId[msg.id]
-                                            ?: existingMapByLocalId[msg.id]
-                                    }
-                                    else -> null
-                                }
-
-                            val sortKey =
-                                if (existingEntity != null) {
-                                    // 使用现有消息的 sortKey，并将其加入 usedSortKeys 以避免冲突
-                                    val reusedSortKey = existingEntity.sortKey
-                                    usedSortKeys.add(reusedSortKey)
-                                    reusedSortKey
-                                } else {
-                                    // 为新消息分配 sortKey，确保不与已使用的 sortKey 冲突
-                                    while (
-                                        usedSortKeys.contains(currentSortKey) ||
-                                            existingMessages.any { it.sortKey == currentSortKey }
-                                    ) {
-                                        currentSortKey++
-                                    }
-                                    val newSortKey = currentSortKey++
-                                    usedSortKeys.add(newSortKey)
-                                    newSortKey
-                                }
-
-                            msg.toEntity(agentId, existing = existingEntity, now = sortKey)
+                    // 创建服务器消息的键集合，用于去重和识别本地消息
+                    val serverMessageKeys = mutableSetOf<String>()
+                    messages.forEach { msg ->
+                        val key = msg.id.ifEmpty { msg.localMsgId.ifEmpty { null } }
+                        if (key != null) {
+                            serverMessageKeys.add(key)
                         }
-                    )
+                    }
+
+                    // 处理服务器消息：按列表顺序，确保 timestamp 正确设置
+                    val baseTime = System.currentTimeMillis()
+                    val serverEntities = messages.mapIndexed { index, msg ->
+                        // 尝试匹配现有消息
+                        val existingEntity =
+                            when {
+                                msg.localMsgId.isNotEmpty() -> {
+                                    existingMapByLocalId[msg.localMsgId]
+                                        ?: if (msg.id.isNotEmpty())
+                                            existingMapByRemoteId[msg.id]
+                                        else null
+                                }
+                                msg.id.isNotEmpty() -> {
+                                    existingMapByRemoteId[msg.id]
+                                        ?: existingMapByLocalId[msg.id]
+                                }
+                                else -> null
+                            }
+
+                        // 确保 timestamp 存在：优先使用服务器返回的 timestamp，否则使用列表索引生成
+                        val messageWithTimestamp =
+                            if (msg.timestamp.isNullOrEmpty()) {
+                                // 如果服务器消息没有 timestamp，根据列表索引生成递增的时间戳
+                                // 列表顺序即为排序依据，索引越大（越靠后）时间戳越大
+                                val generatedTimestamp =
+                                    java.time.Instant.ofEpochMilli(baseTime + index * 1000)
+                                        .toString()
+                                msg.copy(timestamp = generatedTimestamp)
+                            } else {
+                                msg
+                            }
+
+                        messageWithTimestamp.toEntity(agentId, existing = existingEntity)
+                    }
+
+                    // 保留不在服务器消息列表中的本地消息
+                    val localEntities = existingMessages
+                        .filter { entity ->
+                            val key = entity.remoteId ?: entity.localId
+                            key !in serverMessageKeys
+                        }
+                        .map { entity ->
+                            // 保持本地消息的 timestamp，如果不存在则使用 createdAt
+                            val localTimestamp =
+                                entity.timestamp
+                                    ?: java.time.Instant.ofEpochMilli(entity.createdAt).toString()
+                            val msg = entity.toModel()
+                            msg.copy(timestamp = localTimestamp).toEntity(agentId, existing = entity)
+                        }
+
+                    // 合并服务器消息和本地消息，服务器消息在前（按列表顺序）
+                    val allEntities = serverEntities + localEntities
+
+                    messageDao.upsert(allEntities)
                 }
                 // 如果 messages 为空，deleteByAgent 已经删除了所有消息，Flow 会自动更新
             }
@@ -162,15 +170,36 @@ class RoomDataSource(
             logger.debug {
                 "RoomDataSource.appendMessages saving ${newMessages.size} messages for agentId=$agentId"
             }
-            // 在事务中原子性地读取sortKey并插入消息，避免并发竞争
+            // 在事务中原子性地读取最大 timestamp 并插入消息，避免并发竞争
             db.withTransaction {
-                val lastSortKey = messageDao.getMaxSortKey(agentId) ?: 0L
-                val baseTime = max(System.nanoTime(), lastSortKey + 1)
-                var currentSortKey = baseTime
+                val existingMessages = messageDao.getAllMessages(agentId)
+                // 获取现有消息的最大 timestamp（转换为毫秒）
+                val maxTimestampMs =
+                    existingMessages
+                        .mapNotNull { entity ->
+                            entity.timestamp?.let { ts ->
+                                try {
+                                    java.time.Instant.parse(ts).toEpochMilli()
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            } ?: entity.createdAt
+                        }
+                        .maxOrNull() ?: 0L
+
+                val baseTime = max(System.currentTimeMillis(), maxTimestampMs + 1)
                 messageDao.upsert(
-                    newMessages.map { msg ->
-                        val sortKey = currentSortKey++
-                        msg.toEntity(agentId, now = sortKey)
+                    newMessages.mapIndexed { index, msg ->
+                        // 为每个消息生成递增的 timestamp（ISO 8601 格式）
+                        val timestamp =
+                            java.time.Instant.ofEpochMilli(baseTime + index * 1000).toString()
+                        val msgWithTimestamp =
+                            if (msg.timestamp.isNullOrEmpty()) {
+                                msg.copy(timestamp = timestamp)
+                            } else {
+                                msg
+                            }
+                        msgWithTimestamp.toEntity(agentId)
                     }
                 )
             }
@@ -185,22 +214,45 @@ class RoomDataSource(
             logger.debug {
                 "RoomDataSource.prependMessages prepending ${newMessages.size} messages for agentId=$agentId"
             }
-            // 在事务中原子性地读取sortKey并插入消息，避免并发竞争
+            // 在事务中原子性地读取最小 timestamp 并插入消息，避免并发竞争
             db.withTransaction {
-                val minSortKey = messageDao.getMinSortKey(agentId) ?: 0L
-                // 如果已有消息，新消息的sortKey应该比最小sortKey更小
-                // 如果还没有消息，使用当前时间作为基准
+                val existingMessages = messageDao.getAllMessages(agentId)
+                // 获取现有消息的最小 timestamp（转换为毫秒）
+                val minTimestampMs =
+                    existingMessages
+                        .mapNotNull { entity ->
+                            entity.timestamp?.let { ts ->
+                                try {
+                                    java.time.Instant.parse(ts).toEpochMilli()
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            } ?: entity.createdAt
+                        }
+                        .minOrNull()
+
                 val baseTime =
-                    if (minSortKey > 0) {
-                        minSortKey - newMessages.size - 1
+                    if (minTimestampMs != null && minTimestampMs > 0) {
+                        // 如果已有消息，新消息的 timestamp 应该比最小 timestamp 更小
+                        minTimestampMs - newMessages.size * 1000 - 1000
                     } else {
-                        System.nanoTime()
+                        // 如果还没有消息，使用当前时间作为基准
+                        System.currentTimeMillis()
                     }
-                var currentSortKey = baseTime
+
                 messageDao.upsert(
-                    newMessages.map { msg ->
-                        val sortKey = currentSortKey++
-                        msg.toEntity(agentId, now = sortKey)
+                    newMessages.mapIndexed { index, msg ->
+                        // 为每个消息生成递减的 timestamp（ISO 8601 格式）
+                        // 索引越大，timestamp 越小（因为要插入到列表开头）
+                        val timestamp =
+                            java.time.Instant.ofEpochMilli(baseTime + index * 1000).toString()
+                        val msgWithTimestamp =
+                            if (msg.timestamp.isNullOrEmpty()) {
+                                msg.copy(timestamp = timestamp)
+                            } else {
+                                msg
+                            }
+                        msgWithTimestamp.toEntity(agentId)
                     }
                 )
             }
@@ -269,11 +321,33 @@ class RoomDataSource(
 
     suspend fun addMessage(agentId: String, message: MsgInfo) =
         withContext(dispatcher) {
-            // 在事务中原子性地读取sortKey并插入消息，避免并发竞争
+            // 在事务中原子性地读取最大 timestamp 并插入消息，避免并发竞争
             db.withTransaction {
-                val lastSortKey = messageDao.getMaxSortKey(agentId) ?: 0L
-                val sortKey = max(System.nanoTime(), lastSortKey + 1)
-                messageDao.upsert(message.toEntity(agentId, now = sortKey))
+                val existingMessages = messageDao.getAllMessages(agentId)
+                // 获取现有消息的最大 timestamp（转换为毫秒）
+                val maxTimestampMs =
+                    existingMessages
+                        .mapNotNull { entity ->
+                            entity.timestamp?.let { ts ->
+                                try {
+                                    java.time.Instant.parse(ts).toEpochMilli()
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            } ?: entity.createdAt
+                        }
+                        .maxOrNull() ?: 0L
+
+                val timestampMs = max(System.currentTimeMillis(), maxTimestampMs + 1)
+                val timestamp =
+                    if (message.timestamp.isNullOrEmpty()) {
+                        java.time.Instant.ofEpochMilli(timestampMs).toString()
+                    } else {
+                        message.timestamp
+                    }
+
+                val messageWithTimestamp = message.copy(timestamp = timestamp)
+                messageDao.upsert(messageWithTimestamp.toEntity(agentId))
             }
         }
 
@@ -316,14 +390,6 @@ class RoomDataSource(
 
     private fun loadingFlow(agentId: String): MutableStateFlow<Boolean> =
         loadingFlows.getOrPut(agentId) { MutableStateFlow(false) }
-
-    /** 获取指定agent的最后一条消息的sortKey，用于确保新消息的sortKey单调递增 */
-    suspend fun getLastSortKey(agentId: String): Long =
-        withContext(dispatcher) { messageDao.getMaxSortKey(agentId) ?: 0L }
-
-    /** 获取指定agent的第一条消息的sortKey，用于prependMessages */
-    private suspend fun getMinSortKey(agentId: String): Long =
-        withContext(dispatcher) { messageDao.getMinSortKey(agentId) ?: 0L }
 
     private fun now(): Long = System.currentTimeMillis()
 }

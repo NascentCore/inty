@@ -63,11 +63,11 @@ class RoomDataSourceTest {
     fun `getMessagesFlow 返回消息流`() =
         runTest(testDispatcher) {
             // Given: 插入测试消息到数据库
-            // 注意：streamMessages 按 sortKey DESC 排序，所以 sortKey 更大的消息会在前面
+            // 注意：streamMessages 按 timestamp DESC 排序，所以 timestamp 更大的消息会在前面
             val entities =
                 listOf(
-                    createMessageEntity("msg-1", "Hello", "user", sortKey = 1000L),
-                    createMessageEntity("msg-2", "Hi there", "assistant", sortKey = 2000L),
+                    createMessageEntity("msg-1", "Hello", "user", timestamp = "2025-01-15T10:30:00.000000Z"),
+                    createMessageEntity("msg-2", "Hi there", "assistant", timestamp = "2025-01-15T10:31:00.000000Z"),
                 )
             database.chatMessageDao().upsert(entities)
             advanceUntilIdle()
@@ -78,7 +78,7 @@ class RoomDataSourceTest {
             val messages = flow.first { it.isNotEmpty() }
 
             // Then: 应该返回转换后的消息列表
-            // 按 sortKey DESC 排序，所以 msg-2 (sortKey=2000) 在前，msg-1 (sortKey=1000) 在后
+            // 按 timestamp DESC 排序，所以 msg-2 (timestamp 更大) 在前，msg-1 (timestamp 更小) 在后
             assertEquals(2, messages.size)
             assertEquals("Hi there", messages[0].content)
             assertEquals("Hello", messages[1].content)
@@ -97,10 +97,10 @@ class RoomDataSourceTest {
             dataSource.appendMessages(agentId, listOf(newMessage))
             advanceUntilIdle()
 
-            // Then: 新消息应该追加到末尾（sortKey 更大，在降序排序中会在前面）
+            // Then: 新消息应该追加到末尾（timestamp 更大，在降序排序中会在前面）
             val messages = dataSource.getMessagesFlow(agentId).first { it.size == 2 }
             assertEquals(2, messages.size)
-            assertEquals("Second", messages[0].content) // 新消息在前（sortKey 更大）
+            assertEquals("Second", messages[0].content) // 新消息在前（timestamp 更大）
             assertEquals("First", messages[1].content)
         }
 
@@ -117,11 +117,11 @@ class RoomDataSourceTest {
             dataSource.prependMessages(agentId, listOf(newMessage))
             advanceUntilIdle()
 
-            // Then: 新消息应该前置到开头（sortKey 更小，在降序排序中会在后面）
+            // Then: 新消息应该前置到开头（timestamp 更小，在降序排序中会在后面）
             val messages = dataSource.getMessagesFlow(agentId).first { it.size == 2 }
             assertEquals(2, messages.size)
-            assertEquals("Second", messages[0].content) // 原有消息在前（sortKey 更大）
-            assertEquals("First", messages[1].content) // 前置消息在后（sortKey 更小）
+            assertEquals("Second", messages[0].content) // 原有消息在前（timestamp 更大）
+            assertEquals("First", messages[1].content) // 前置消息在后（timestamp 更小）
         }
 
     @Test
@@ -215,15 +215,15 @@ class RoomDataSourceTest {
         localId: String,
         content: String,
         role: String,
-        sortKey: Long = System.nanoTime(),
+        timestamp: String = "2025-01-15T10:30:00.000000Z",
     ): ChatMessageEntity {
         val message =
             MsgInfo(
                 id = localId,
                 content = content,
                 role = role,
-                timestamp = "2025-01-15T10:30:00.000000Z",
+                timestamp = timestamp,
             )
-        return message.toEntity(agentId, now = sortKey)
+        return message.toEntity(agentId)
     }
 }

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 interface ChatMessageDao {
 
     @Query(
-        "SELECT * FROM chat_messages WHERE agentId = :agentId ORDER BY sortKey DESC, createdAt DESC"
+        "SELECT * FROM chat_messages WHERE agentId = :agentId ORDER BY timestamp DESC, createdAt DESC"
     )
     fun streamMessages(agentId: String): Flow<List<ChatMessageEntity>>
 
@@ -67,12 +67,6 @@ interface ChatMessageDao {
         height: Int?,
         updatedAt: Long,
     )
-
-    @Query("SELECT MAX(sortKey) FROM chat_messages WHERE agentId = :agentId")
-    suspend fun getMaxSortKey(agentId: String): Long?
-
-    @Query("SELECT MIN(sortKey) FROM chat_messages WHERE agentId = :agentId")
-    suspend fun getMinSortKey(agentId: String): Long?
 
     @Query("SELECT * FROM chat_messages WHERE agentId = :agentId")
     suspend fun getAllMessages(agentId: String): List<ChatMessageEntity>

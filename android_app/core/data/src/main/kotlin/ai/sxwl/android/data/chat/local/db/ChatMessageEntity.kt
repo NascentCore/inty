@@ -13,7 +13,6 @@ import androidx.room.PrimaryKey
         [
             Index(value = ["agentId"]),
             Index(value = ["remoteId"]),
-            Index(value = ["agentId", "sortKey"]),
         ],
 )
 data class ChatMessageEntity(
@@ -31,7 +30,6 @@ data class ChatMessageEntity(
     val generatedImageUrl: String?,
     val generatedImageWidth: Int?,
     val generatedImageHeight: Int?,
-    val sortKey: Long,
     val createdAt: Long,
     val updatedAt: Long,
 )
@@ -39,14 +37,11 @@ data class ChatMessageEntity(
 internal fun MsgInfo.toEntity(
     agentId: String,
     existing: ChatMessageEntity? = null,
-    now: Long = System.nanoTime(),
 ): ChatMessageEntity {
     val stableLocalId = resolveLocalId(agentId, existing)
     val hasMetaPayload = meta_data != null
     val generatedImage = meta_data?.generatedImage
-    // 始终使用本地时间（now参数）作为sortKey，忽略服务器时间戳以确保正确的本地时间顺序
-    // 保留服务器时间戳在timestamp字段中用于显示，但不用于排序
-    val sortKey = existing?.sortKey ?: now
+    val now = System.currentTimeMillis()
 
     val resolvedMetaAgentId =
         when {
@@ -74,14 +69,14 @@ internal fun MsgInfo.toEntity(
             else -> existing?.generatedImageHeight
         }
 
-    // 使用服务器时间戳（用于UI显示），如果不存在则保留现有的timestamp
+    // 使用服务器时间戳（用于排序和UI显示），如果不存在则保留现有的timestamp
     // 对于本地消息（如用户消息），如果没有timestamp且没有existing entity，则从当前时间生成
     val resolvedTimestamp =
         timestamp
             ?: existing?.timestamp
             ?: if (existing == null) {
                 // 为本地消息生成ISO 8601格式的时间戳
-                java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+                java.time.Instant.ofEpochMilli(now).toString()
             } else {
                 null
             }
@@ -101,7 +96,6 @@ internal fun MsgInfo.toEntity(
         generatedImageUrl = resolvedGeneratedImageUrl,
         generatedImageWidth = resolvedGeneratedImageWidth,
         generatedImageHeight = resolvedGeneratedImageHeight,
-        sortKey = sortKey,
         createdAt = existing?.createdAt ?: now,
         updatedAt = now,
     )
