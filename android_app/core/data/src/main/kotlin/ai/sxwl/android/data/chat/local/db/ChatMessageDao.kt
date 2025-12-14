@@ -76,4 +76,9 @@ interface ChatMessageDao {
 
     @Query("SELECT * FROM chat_messages WHERE agentId = :agentId")
     suspend fun getAllMessages(agentId: String): List<ChatMessageEntity>
+
+    @Query(
+        "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND generatedImageUrl IS NOT NULL AND generatedImageUrl != '' AND generatedImageUrl != 'loading' ORDER BY sortKey DESC, createdAt DESC"
+    )
+    fun streamMessagesWithImages(agentId: String): Flow<List<ChatMessageEntity>>
 }

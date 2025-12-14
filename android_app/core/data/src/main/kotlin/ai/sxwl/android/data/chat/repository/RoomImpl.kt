@@ -18,7 +18,6 @@ class RoomImpl(
 ) : ChatRepository {
 
     companion object {
-        private const val DEFAULT_PAGE_SIZE = 20
         private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
         private const val ROLE_ASSISTANT = "assistant"
     }
@@ -41,13 +40,7 @@ class RoomImpl(
 
     private fun reverseServerMessages(messages: List<MsgInfo>): List<MsgInfo> {
         if (messages.isEmpty()) return messages
-        val reversed = messages.reversed()
-        LogUtils.i(
-            "RoomImpl REVERSING messages: " +
-                "original first=${messages.first().id.take(8)}, last=${messages.last().id.take(8)} | " +
-                "reversed first=${reversed.first().id.take(8)}, last=${reversed.last().id.take(8)}"
-        )
-        return reversed
+        return messages.reversed()
     }
 
     override fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> {

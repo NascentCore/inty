@@ -64,6 +64,8 @@ object DataModule {
 
     fun getChatRepository(): ChatRepository = _chatRepository
 
+    fun getRoomDataSource(): RoomDataSource = _roomDataSource
+
     fun getCharacterRepository(): CharacterRepository = _characterRepository
 
     fun setAgentCacheProvider(cacheProvider: AgentCacheProvider) {

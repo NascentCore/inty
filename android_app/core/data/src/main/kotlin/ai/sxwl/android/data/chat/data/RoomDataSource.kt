@@ -69,6 +69,17 @@ class RoomDataSource(
                 }
         }
 
+    fun getMessagesWithImagesFlow(agentId: String): StateFlow<List<MsgInfo>> =
+        messageDao
+            .streamMessagesWithImages(agentId)
+            .map { list ->
+                logger.debug {
+                    "RoomDataSource.getMessagesWithImagesFlow received ${list.size} messages with images for agentId=$agentId"
+                }
+                list.map(ChatMessageEntity::toModel)
+            }
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
     fun getLoadingMoreFlow(agentId: String): StateFlow<Boolean> = loadingFlow(agentId)
 
     fun getHasMoreFlow(agentId: String): StateFlow<Boolean> =
