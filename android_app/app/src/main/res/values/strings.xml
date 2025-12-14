@@ -447,10 +447,12 @@
     <!-- Boost / Leaderboard -->
     <string name="energy_points_first_title">You earned your FIRST Boost Point!</string>
     <string name="energy_points_first_subtitle">Keep chatting to earn more Boost Points.</string>
-    <string name="energy_points_tens_title">You reached %1$d Boost Points!</string>
+    <string name="energy_points_tens_title">Added 10 Boost Points! Total %1$d Boost Points!</string>
     <string name="energy_points_tens_subtitle">Milestone unlocked - keep the streak going.</string>
+    <string name="energy_points_hundreds_title">Added 100 Boost Points! Total %1$d Boost Points!</string>
     <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
-    <string name="energy_points_thousands_subtitle">Legendary trophy unlocked. You\'re unstoppable.</string>
+    <string name="energy_points_thousands_title">Added 1000 Boost Points! Total %1$d Boost Points!</string>
+    <string name="energy_points_thousands_subtitle">Legendary trophy unlocked!</string>
     <string name="energy_points_counter">%1$d pts</string>
     <string name="boost_points_label">Boost Points</string>
     <string name="boost_points_value">%1$d pts</string>

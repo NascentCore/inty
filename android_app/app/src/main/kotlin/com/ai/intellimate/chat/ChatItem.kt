@@ -630,19 +630,6 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                     )
                 }
             }
-
-            if (BuildConfig.DEBUG) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    DebugMessageMetadata(
-                        item = item,
-                        modifier =
-                            Modifier.widthIn(
-                                min = 1.dp,
-                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                            ),
-                    )
-                }
-            }
         }
         // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
         .onFailure { e ->
