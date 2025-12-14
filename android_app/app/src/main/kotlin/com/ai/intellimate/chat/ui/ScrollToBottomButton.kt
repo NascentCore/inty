@@ -12,19 +12,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
-/** 滚动到底部悬浮按钮组件
+/**
+ * 滚动到底部悬浮按钮组件
  *
  * 用户可见功能：
  * - 当用户向上滚动查看历史消息时，此按钮会出现在聊天页面右下角
@@ -48,16 +48,10 @@ fun ScrollToBottomButton(
 
     // 使用 AnimatedVisibility 实现按钮的淡入淡出动画
     // modifier 需要传递给 AnimatedVisibility 以确保对齐方式正确应用
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = modifier,
-    ) {
+    AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
         Box(
             modifier =
-                Modifier
-                    .size(config.ButtonSize)
+                Modifier.size(config.ButtonSize)
                     .clip(CircleShape)
                     .border(
                         config.BorderWidth,
@@ -90,7 +84,8 @@ fun ScrollToBottomButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.keyboard_double_arrow_down_24px),
+                imageVector =
+                    ImageVector.vectorResource(R.drawable.keyboard_double_arrow_down_24px),
                 contentDescription = "Scroll to bottom",
                 modifier = Modifier.size(config.IconSize),
                 tint = if (enabled) Color.White else Color.LightGray,

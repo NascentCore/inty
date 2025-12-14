@@ -414,11 +414,7 @@ class RoomImpl(
         }
 
         val loadingImage =
-            MsgInfo.MsgMetaData.GeneratedImage(
-                imageUrl = "loading",
-                width = 300,
-                height = 533,
-            )
+            MsgInfo.MsgMetaData.GeneratedImage(imageUrl = "loading", width = 300, height = 533)
         localDataSource.updateMessageGeneratedImage(agentId, messageId, loadingImage)
 
         val result = remoteDataSource.messageGenerateImage(agentId, messageId)
