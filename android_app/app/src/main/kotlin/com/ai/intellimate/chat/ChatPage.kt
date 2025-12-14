@@ -366,9 +366,8 @@ internal fun ChatPage(
             // 当 firstVisibleItemIndex == 0 且 scrollOffset == 0 时，表示用户正在查看最新消息
             LaunchedEffect(listState) {
                 snapshotFlow {
-                    listState.firstVisibleItemIndex to
-                        listState.firstVisibleItemScrollOffset
-                }
+                        listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                    }
                     .collect { (firstVisibleIndex, scrollOffset) ->
                         isAtLatestMessage = firstVisibleIndex == 0 && scrollOffset == 0
                     }
@@ -416,7 +415,11 @@ internal fun ChatPage(
                         Column {
                             Spacer(Modifier.height(16.dp))
 
-                            if (agentInfo != null && !vipStatus.isSubscribed && UiConfigs.ChatPage.showSubscriptionButton) {
+                            if (
+                                agentInfo != null &&
+                                    !vipStatus.isSubscribed &&
+                                    UiConfigs.ChatPage.showSubscriptionButton
+                            ) {
                                 PremiumModelTag(
                                     onClick = {
                                         scope.launch {
@@ -851,8 +854,7 @@ internal fun ChatPage(
                 // 功能：点击后平滑滚动回最新消息位置（LazyColumn 使用 reverseLayout，索引 0 为最新消息）
                 ScrollToBottomButton(
                     modifier =
-                        Modifier
-                            .align(Alignment.BottomEnd)
+                        Modifier.align(Alignment.BottomEnd)
                             .padding(
                                 bottom = scrollToBottomButtonBottomOffset,
                                 end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,

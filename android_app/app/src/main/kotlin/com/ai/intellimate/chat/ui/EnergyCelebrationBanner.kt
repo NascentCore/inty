@@ -3,6 +3,7 @@
  */
 package com.ai.intellimate.chat.ui
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,10 +39,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
-import ai.sxwl.android.design.theme.IntelliMateTheme
 import com.ai.intellimate.R
 import kotlinx.coroutines.delay
 
@@ -108,8 +108,7 @@ fun EnergyCelebrationBanner(
  * - **千的倍数里程碑**：当积分达到或超过 1000 且是 1000 的倍数时（1000, 2000, 3000, ...），返回 Thousands 级别
  * - **其他情况**：返回 null，表示不触发庆祝动画
  *
- * 注意：此函数仅判断是否达到里程碑，不检查积分是否增加。调用方需要确保只在积分增加时调用此函数。
- * 对于 0 或负数，此函数会返回 null，不会触发庆祝动画。
+ * 注意：此函数仅判断是否达到里程碑，不检查积分是否增加。调用方需要确保只在积分增加时调用此函数。 对于 0 或负数，此函数会返回 null，不会触发庆祝动画。
  *
  * @param totalPoints 用户当前的总积分值（必须大于 0）
  * @return 对应的庆祝级别，如果不需要庆祝则返回 null
@@ -174,10 +173,12 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
     val primaryText =
         when (data.level) {
             EnergyCelebrationLevel.First -> stringResource(R.string.energy_points_first_title)
-            EnergyCelebrationLevel.Tens -> stringResource(R.string.energy_points_tens_title, data.totalPoints)
+            EnergyCelebrationLevel.Tens ->
+                stringResource(R.string.energy_points_tens_title, data.totalPoints)
             EnergyCelebrationLevel.Hundreds ->
                 stringResource(R.string.energy_points_hundreds_title, data.totalPoints)
-            EnergyCelebrationLevel.Thousands -> stringResource(R.string.energy_points_thousands_title, data.totalPoints)
+            EnergyCelebrationLevel.Thousands ->
+                stringResource(R.string.energy_points_thousands_title, data.totalPoints)
         }
 
     val secondaryText =
@@ -237,10 +238,7 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
 private fun EnergyCelebrationCardFirstPreview() {
     IntelliMateTheme {
         EnergyCelebrationCard(
-            data = EnergyCelebrationUiModel(
-                level = EnergyCelebrationLevel.First,
-                totalPoints = 1,
-            ),
+            data = EnergyCelebrationUiModel(level = EnergyCelebrationLevel.First, totalPoints = 1)
         )
     }
 }
@@ -250,10 +248,7 @@ private fun EnergyCelebrationCardFirstPreview() {
 private fun EnergyCelebrationCardTensPreview() {
     IntelliMateTheme {
         EnergyCelebrationCard(
-            data = EnergyCelebrationUiModel(
-                level = EnergyCelebrationLevel.Tens,
-                totalPoints = 10,
-            ),
+            data = EnergyCelebrationUiModel(level = EnergyCelebrationLevel.Tens, totalPoints = 10)
         )
     }
 }
@@ -263,10 +258,8 @@ private fun EnergyCelebrationCardTensPreview() {
 private fun EnergyCelebrationCardHundredsPreview() {
     IntelliMateTheme {
         EnergyCelebrationCard(
-            data = EnergyCelebrationUiModel(
-                level = EnergyCelebrationLevel.Hundreds,
-                totalPoints = 100,
-            ),
+            data =
+                EnergyCelebrationUiModel(level = EnergyCelebrationLevel.Hundreds, totalPoints = 100)
         )
     }
 }
@@ -276,10 +269,11 @@ private fun EnergyCelebrationCardHundredsPreview() {
 private fun EnergyCelebrationCardThousandsPreview() {
     IntelliMateTheme {
         EnergyCelebrationCard(
-            data = EnergyCelebrationUiModel(
-                level = EnergyCelebrationLevel.Thousands,
-                totalPoints = 1000,
-            ),
+            data =
+                EnergyCelebrationUiModel(
+                    level = EnergyCelebrationLevel.Thousands,
+                    totalPoints = 1000,
+                )
         )
     }
 }

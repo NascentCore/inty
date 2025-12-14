@@ -107,29 +107,30 @@ class AgentInfoViewModel : BaseVM() {
         galleryAgentId = agentId
         galleryJob?.cancel()
 
-        galleryJob = viewModelScope.launch {
-            launch(Dispatchers.IO) {
-                runCatching { chatRepository.ensureInitialHistory(agentId, GALLERY_PAGE_SIZE) }
-                    .onFailure { throwable ->
-                        LogUtils.e(
-                            "ensureInitialHistory failed for $agentId: ${throwable.message}"
-                        )
-                    }
-            }
+        galleryJob =
+            viewModelScope.launch {
+                launch(Dispatchers.IO) {
+                    runCatching { chatRepository.ensureInitialHistory(agentId, GALLERY_PAGE_SIZE) }
+                        .onFailure { throwable ->
+                            LogUtils.e(
+                                "ensureInitialHistory failed for $agentId: ${throwable.message}"
+                            )
+                        }
+                }
 
-            roomDataSource.getMessagesWithImagesFlow(agentId).collect { messages ->
-                val galleryItems =
-                    messages
-                        .asSequence()
-                        .mapNotNull { message -> mapMessageToGalleryItem(message) }
-                        .sortedByDescending { it.timestamp ?: "" }
-                        .distinctBy { it.imageUrl }
-                        .take(MAX_GALLERY_ITEMS)
-                        .toList()
-                _chatImageGallery.value = galleryItems
-                AgentImageGalleryCache.cacheGallery(agentId, galleryItems)
+                roomDataSource.getMessagesWithImagesFlow(agentId).collect { messages ->
+                    val galleryItems =
+                        messages
+                            .asSequence()
+                            .mapNotNull { message -> mapMessageToGalleryItem(message) }
+                            .sortedByDescending { it.timestamp ?: "" }
+                            .distinctBy { it.imageUrl }
+                            .take(MAX_GALLERY_ITEMS)
+                            .toList()
+                    _chatImageGallery.value = galleryItems
+                    AgentImageGalleryCache.cacheGallery(agentId, galleryItems)
+                }
             }
-        }
     }
 
     private fun mapMessageToGalleryItem(message: MsgInfo): AgentImageGalleryItem? {

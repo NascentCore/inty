@@ -311,12 +311,14 @@ private fun AvatarStyleCard(
                 .height(UiConfigs.AvatarGenerate.StyleSelector.CardHeight)
                 .background(
                     color = UiConfigs.Colors.InputSurface,
-                    shape = RoundedCornerShape(UiConfigs.AvatarGenerate.StyleSelector.CardCornerRadius),
+                    shape =
+                        RoundedCornerShape(UiConfigs.AvatarGenerate.StyleSelector.CardCornerRadius),
                 )
                 .border(
                     width = UiConfigs.AvatarGenerate.StyleSelector.CardBorderWidth,
                     color = borderColor,
-                    shape = RoundedCornerShape(UiConfigs.AvatarGenerate.StyleSelector.CardCornerRadius),
+                    shape =
+                        RoundedCornerShape(UiConfigs.AvatarGenerate.StyleSelector.CardCornerRadius),
                 )
                 .noRippleClickable { if (enabled) onClick() }
                 .padding(horizontal = UiConfigs.Spacing.Medium, vertical = UiConfigs.Spacing.Small),
@@ -325,7 +327,8 @@ private fun AvatarStyleCard(
         Text(
             text = stringResource(titleRes),
             fontSize = UiConfigs.Typography.Body,
-            color = if (enabled) Color.White else Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
+            color =
+                if (enabled) Color.White else Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
             fontWeight = FontWeight.SemiBold,
         )
         Text(

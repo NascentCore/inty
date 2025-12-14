@@ -88,4 +88,3 @@ class EnergyCelebrationBannerTest {
         assertNull(resolveCelebrationLevel(1500)) // 1500 不是 1000 的倍数，应该返回 null
     }
 }
-
