@@ -107,11 +107,13 @@ fun EnergyCelebrationBanner(
  * - **其他情况**：返回 null，表示不触发庆祝动画
  *
  * 注意：此函数仅判断是否达到里程碑，不检查积分是否增加。调用方需要确保只在积分增加时调用此函数。
+ * 对于 0 或负数，此函数会返回 null，不会触发庆祝动画。
  *
- * @param totalPoints 用户当前的总积分值
+ * @param totalPoints 用户当前的总积分值（必须大于 0）
  * @return 对应的庆祝级别，如果不需要庆祝则返回 null
  */
 internal fun resolveCelebrationLevel(totalPoints: Int): EnergyCelebrationLevel? {
+    if (totalPoints <= 0) return null
     if (totalPoints == 1) return EnergyCelebrationLevel.First
     if (totalPoints < 100 && totalPoints % 10 == 0) return EnergyCelebrationLevel.Tens
     if (totalPoints < 1000 && totalPoints % 100 == 0) return EnergyCelebrationLevel.Hundreds
