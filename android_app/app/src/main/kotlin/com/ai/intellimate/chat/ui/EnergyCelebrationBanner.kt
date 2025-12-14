@@ -40,6 +40,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import com.ai.intellimate.R
 import kotlinx.coroutines.delay
 
@@ -227,5 +229,57 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "First Point")
+@Composable
+private fun EnergyCelebrationCardFirstPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data = EnergyCelebrationUiModel(
+                level = EnergyCelebrationLevel.First,
+                totalPoints = 1,
+            ),
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Tens (10 points)")
+@Composable
+private fun EnergyCelebrationCardTensPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data = EnergyCelebrationUiModel(
+                level = EnergyCelebrationLevel.Tens,
+                totalPoints = 10,
+            ),
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Hundreds (100 points)")
+@Composable
+private fun EnergyCelebrationCardHundredsPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data = EnergyCelebrationUiModel(
+                level = EnergyCelebrationLevel.Hundreds,
+                totalPoints = 100,
+            ),
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Thousands (1000 points)")
+@Composable
+private fun EnergyCelebrationCardThousandsPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data = EnergyCelebrationUiModel(
+                level = EnergyCelebrationLevel.Thousands,
+                totalPoints = 1000,
+            ),
+        )
     }
 }
