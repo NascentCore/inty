@@ -12,7 +12,13 @@ import kotlinx.coroutines.flow.Flow
 interface ChatMessageDao {
 
     @Query(
-        "SELECT * FROM chat_messages WHERE agentId = :agentId ORDER BY timestamp DESC, createdAt DESC"
+        "SELECT * FROM chat_messages WHERE agentId = :agentId ORDER BY " +
+            "CASE " +
+            "WHEN remoteId IS NOT NULL AND remoteId != '' AND remoteId GLOB '[0-9]*' THEN CAST(remoteId AS INTEGER) " +
+            "WHEN localId GLOB '[0-9]*' THEN CAST(localId AS INTEGER) " +
+            "ELSE 999999999 " +
+            "END DESC, " +
+            "timestamp DESC, createdAt DESC"
     )
     fun streamMessages(agentId: String): Flow<List<ChatMessageEntity>>
 

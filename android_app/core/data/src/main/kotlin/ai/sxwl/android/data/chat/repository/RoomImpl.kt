@@ -54,6 +54,9 @@ class RoomImpl(
     }
 
     override suspend fun ensureInitialHistory(agentId: String, pageSize: Int) {
+        // #region agent log - VERSION MARKER
+        LogUtils.i("RoomImpl", "=== VERSION MARKER: ensureInitialHistory v2.0 (2025-12-13) ===")
+        // #endregion
         LogUtils.d("RoomImpl.ensureInitialHistory called for $agentId")
 
         if (localDataSource.isInitialLoaded(agentId)) return
@@ -105,6 +108,24 @@ class RoomImpl(
                         "RoomImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
                     )
 
+                    // #region agent log
+                    if (messages.isNotEmpty()) {
+                        val firstId = messages.first().id.ifEmpty { messages.first().localMsgId }
+                        val lastId = messages.last().id.ifEmpty { messages.last().localMsgId }
+                        LogUtils.i(
+                            "RoomImpl",
+                            "ensureInitialHistory BEFORE updateMessages: first=$firstId, last=$lastId, count=${messages.size}"
+                        )
+                        messages.forEachIndexed { idx, msg ->
+                            val id = msg.id.ifEmpty { msg.localMsgId }
+                            LogUtils.i(
+                                "RoomImpl",
+                                "ensureInitialHistory[$idx]: id=$id, timestamp=${msg.timestamp ?: "null"}"
+                            )
+                        }
+                    }
+                    // #endregion
+
                     // 服务器消息按原始顺序传递给 updateMessages，updateMessages 会按列表顺序处理
                     localDataSource.updateMessages(agentId, messages)
                     localDataSource.setHasMore(agentId, result.data.hasMore)
@@ -139,6 +160,21 @@ class RoomImpl(
                     val moreMessages =
                         convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     if (moreMessages.isNotEmpty()) {
+                        // #region agent log
+                        val firstId = moreMessages.first().id.ifEmpty { moreMessages.first().localMsgId }
+                        val lastId = moreMessages.last().id.ifEmpty { moreMessages.last().localMsgId }
+                        LogUtils.i(
+                            "RoomImpl",
+                            "loadMoreMessages BEFORE prependMessages: first=$firstId, last=$lastId, count=${moreMessages.size}"
+                        )
+                        moreMessages.forEachIndexed { idx, msg ->
+                            val id = msg.id.ifEmpty { msg.localMsgId }
+                            LogUtils.i(
+                                "RoomImpl",
+                                "loadMoreMessages[$idx]: id=$id, timestamp=${msg.timestamp ?: "null"}"
+                            )
+                        }
+                        // #endregion
                         // 使用 prependMessages 加载历史消息，确保它们插入到列表开头（使用更小的 timestamp）
                         localDataSource.prependMessages(agentId, moreMessages)
                         localDataSource.incrementOffset(agentId, pageSize)
@@ -265,6 +301,15 @@ class RoomImpl(
 
                         // 然后添加服务器消息（按原始顺序）
                         allMessages.addAll(serverMessages)
+
+                        // #region agent log
+                        allMessages.forEachIndexed { idx, msg ->
+                            LogUtils.i(
+                                "RoomImpl",
+                                "Messages before updateMessages: index=$idx, id=${msg.id}, localMsgId=${msg.localMsgId}, timestamp=${msg.timestamp ?: "null"}"
+                            )
+                        }
+                        // #endregion
 
                         localDataSource.updateMessages(agentId, allMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
