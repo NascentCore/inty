@@ -1224,6 +1224,23 @@ export const generatedImagesApi = {
     apiClient.get("/evaluation/agents/generated-images/counts"),
 };
 
+// =============================================================================
+// 举报与反馈管理API
+// =============================================================================
+
+export const reportApi = {
+  // 获取举报/反馈列表
+  list: (params?: {
+    target_type?: import("../types").ReportTargetType;
+    status?: import("../types").ReportStatus;
+    report_type?: import("../types").ReportType;
+    order_by?: "created_at_desc" | "created_at_asc";
+    skip?: number;
+    limit?: number;
+  }): Promise<import("../types").ReportsListResponse> =>
+    apiClient.get("/report/", params),
+};
+
 export const characterThemeApi = {
   // 获取专区列表
   list: (params?: {
@@ -1292,6 +1309,7 @@ export default {
   chatImage: chatImageApi,
   userAnalytics: userAnalyticsApi,
   generatedImages: generatedImagesApi,
+  report: reportApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端

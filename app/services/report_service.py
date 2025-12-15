@@ -132,8 +132,19 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
     count_stmt = select(func.count()).select_from(Report).where(and_(*filters))
     total = (await db.execute(count_stmt)).scalar_one()
 
+    # 构建排序
+    order_clause = Report.created_at.desc()  # 默认按创建时间降序
+    if query.order_by == "created_at_asc":
+        order_clause = Report.created_at.asc()
+
     # 查询分页数据
-    stmt = select(Report).where(and_(*filters)).offset(query.skip).limit(query.limit)
+    stmt = (
+        select(Report)
+        .where(and_(*filters))
+        .order_by(order_clause)
+        .offset(query.skip)
+        .limit(query.limit)
+    )
     result = await db.execute(stmt)
     items = result.scalars().all()
 
