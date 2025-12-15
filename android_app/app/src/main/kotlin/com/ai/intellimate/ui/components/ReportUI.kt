@@ -207,7 +207,8 @@ fun ReportImageEvidenceContainer(title: String, images: List<String>, onClickAdd
 
 /** 保存按钮组件 */
 @Composable
-fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
+fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false, enabled: Boolean = true) {
+    val isEnabled = enabled && !isSubmitting
     Box(
         modifier =
             Modifier.fillMaxWidth()
@@ -215,11 +216,19 @@ fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
                 .height(50.dp)
                 .background(
                     brush =
-                        Brush.linearGradient(colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))),
+                        if (isEnabled) {
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D)),
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                colors = listOf(Color.White.copy(0.12f), Color.White.copy(0.12f)),
+                            )
+                        },
                     shape = RoundedCornerShape(25.dp),
                 )
                 .noRippleClickable {
-                    if (!isSubmitting) {
+                    if (isEnabled) {
                         onSave()
                     }
                 }
@@ -237,7 +246,7 @@ fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false) {
                 text = stringResource(R.string.submit_button),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color.White,
+                color = if (isEnabled) Color.White else Color.White.copy(0.6f),
             )
         }
     }

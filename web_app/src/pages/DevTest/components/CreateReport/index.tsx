@@ -37,7 +37,7 @@ const CreateReport: React.FC = () => {
         {
           name: 'description',
           label: '详细描述',
-          required: false,
+          required: true,
           placeholder: '请输入详细描述',
         },
       ]}
@@ -48,11 +48,8 @@ const CreateReport: React.FC = () => {
           reason_ids: values.reason_ids
             .split(',')
             .map((id: string) => Number.parseInt(id.trim(), 10)),
+          description: values.description,
         };
-
-        if (values.description) {
-          params.description = values.description;
-        }
 
         logger.testDetail('请求参数', params);
 
