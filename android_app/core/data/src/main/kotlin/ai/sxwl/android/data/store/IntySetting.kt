@@ -11,12 +11,13 @@ import kotlin.random.Random
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
 private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
+private const val KEY_CHAT_MODEL_ID = "chat_model_id"
 private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
+private const val DEFAULT_CHAT_MODEL_ID = "gemini_3_flash"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
-private const val KEY_FEEDBACK_REQUESTED = "feedback_requested"
 private const val KEY_TOTAL_MESSAGE_COUNT = "total_message_count"
 
 object IntySetting {
@@ -34,9 +35,6 @@ object IntySetting {
 
     // 用于同步 incrementTotalMessageCount 操作的锁对象
     private val messageCountLock = Any()
-
-    // 用于同步反馈请求标记操作的锁对象
-    private val feedbackRequestLock = Any()
 
     init {
 
@@ -188,6 +186,16 @@ object IntySetting {
         return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
     }
 
+    /** 聊天模型选择（全局设置，默认 Gemini 3 Flash） */
+    fun setChatModelId(modelId: String) {
+        curUserSetting.putString(KEY_CHAT_MODEL_ID, modelId)
+    }
+
+    fun getChatModelId(): String {
+        return curUserSetting.decodeString(KEY_CHAT_MODEL_ID, DEFAULT_CHAT_MODEL_ID)
+            ?: DEFAULT_CHAT_MODEL_ID
+    }
+
     fun getLastResubReminderDialogShowTime(): Long {
         return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
     }
@@ -205,40 +213,12 @@ object IntySetting {
     }
 
     fun getFeedbackDialogLastShowTime(): Long {
-        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, 0L)
+        // 默认值为很大的负值，保证第一次检查一定超出显示时长阈值。
+        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, -1L)
     }
 
     fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
         curUserSetting.putLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
-    }
-
-    /** 获取是否已请求过反馈 */
-    fun get_feedback_requested(): Boolean {
-        return curUserSetting.decodeBool(KEY_FEEDBACK_REQUESTED, false)
-    }
-
-    /** 设置是否已请求过反馈 */
-    fun set_feedback_requested(value: Boolean) {
-        curUserSetting.putBoolean(KEY_FEEDBACK_REQUESTED, value)
-    }
-
-    /**
-     * 原子性地尝试标记反馈为已请求
-     *
-     * 如果反馈尚未被请求，则标记为已请求并返回 true。 如果反馈已被请求，则返回 false。
-     *
-     * 此方法使用同步锁确保原子性，防止并发调用时出现竞态条件。 这对于防止多个触发点（如 ChatViewModel 和 HomeScreen）同时显示反馈对话框至关重要。
-     *
-     * @return true 如果成功标记为已请求（之前未请求），false 如果已经被请求过
-     */
-    fun tryMarkFeedbackRequested(): Boolean {
-        synchronized(feedbackRequestLock) {
-            if (get_feedback_requested()) {
-                return false
-            }
-            set_feedback_requested(true)
-            return true
-        }
     }
 
     /** 获取总消息数（跨所有AI角色） */

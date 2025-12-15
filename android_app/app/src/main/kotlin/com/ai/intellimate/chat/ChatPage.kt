@@ -910,6 +910,7 @@ internal fun ChatPage(
             agentInfo = agentInfo,
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
+            navController = navController,
         )
 
         EnergyCelebrationBanner(

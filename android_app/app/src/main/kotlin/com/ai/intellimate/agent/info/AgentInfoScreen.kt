@@ -260,8 +260,10 @@ internal fun AiAgentInfoScreen(
                             navController,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             availablePoints = boostState.availablePoints,
-                            onClick = { showBoostSheet = true },
-                        )
+                            onClick = { showBoostSheet = true }
+                        ) {
+                            Text(stringResource(R.string.boost_sheet_title))
+                        }
 
                         Spacer(Modifier.height(16.dp))
 
@@ -556,8 +558,13 @@ private fun PhotoAlbumPreviewSection(
                         modifier = Modifier.weight(1f),
                     )
                 }
+
+                repeat(columnCount - displayedImages.size) {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
+
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
     }
 

@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "b0a1d5475e108479919e3ba336616fc4",
+    "identityHash": "54960aacac65dfb477ad9138d4818317",
     "entities": [
       {
         "tableName": "characters",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`agent_id` TEXT NOT NULL, `name` TEXT NOT NULL, `avatar` TEXT NOT NULL, `intro` TEXT NOT NULL, `readable_id` TEXT NOT NULL, `category` TEXT NOT NULL, `energy_points` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`agent_id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`agent_id` TEXT NOT NULL, `name` TEXT NOT NULL, `avatar` TEXT NOT NULL, `intro` TEXT NOT NULL, `readable_id` TEXT NOT NULL, `category` TEXT NOT NULL, `energy_points` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `background` TEXT NOT NULL, `background_animate` TEXT NOT NULL, PRIMARY KEY(`agent_id`))",
         "fields": [
           {
             "fieldPath": "agentId",
@@ -55,6 +55,18 @@
             "columnName": "updated_at",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "background",
+            "columnName": "background",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "backgroundAnimatedUrl",
+            "columnName": "background_animate",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -67,7 +79,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b0a1d5475e108479919e3ba336616fc4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '54960aacac65dfb477ad9138d4818317')"
     ]
   }
 }

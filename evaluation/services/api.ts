@@ -651,87 +651,80 @@ export const statsApi = {
 // 用户数据分析API
 // =============================================================================
 
+// 双日期范围参数类型
+interface AnalyticsDateParams {
+  // 注册日期范围
+  register_start_date?: string;
+  register_end_date?: string;
+  register_last_days?: number;
+  // 活跃日期范围
+  activity_start_date?: string;
+  activity_end_date?: string;
+  activity_last_days?: number;
+}
+
 export const userAnalyticsApi = {
   // 获取统计数据
-  getStats: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").UserAnalyticsStatsResponse> =>
+  getStats: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").UserAnalyticsStatsResponse> =>
     apiClient.get("/evaluation/user-analytics/stats", params),
-  // 获取每日新用户统计
-  getNewUsers: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").DailyNewUsers[]> =>
+
+  // 获取用户注册统计
+  getNewUsers: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").DailyNewUsers[]> =>
     apiClient.get("/evaluation/user-analytics/new-users", params),
 
   // 获取用户聊天活动原始数据
-  getUserActivity: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").UserChatActivityItem[]> =>
+  getUserActivity: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").UserChatActivityItem[]> =>
     apiClient.get("/evaluation/user-analytics/user-activity", params),
 
-  // 获取对话轮数分布（按Session）- 只统计新用户发起的会话
-  getConversationRounds: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").ConversationRoundsResponse[]> =>
+  // 获取对话轮数分布（按Session）
+  getConversationRounds: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").ConversationRoundsResponse[]> =>
     apiClient.get("/evaluation/user-analytics/conversation-rounds", params),
 
   // 获取对话轮数分布（按用户）
-  getUserRoundsDistribution: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").UserRoundsDistributionItem[]> =>
+  getUserRoundsDistribution: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").UserRoundsDistributionItem[]> =>
     apiClient.get(
       "/evaluation/user-analytics/user-rounds-distribution",
       params,
     ),
 
   // 获取热门角色排行
-  getPopularAgents: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").PopularAgentsResponse[]> =>
+  getPopularAgents: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").PopularAgentsResponse[]> =>
     apiClient.get("/evaluation/user-analytics/popular-agents", params),
 
-  // 获取达到聊天限制的用户
-  getUsersHittingLimit: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").UsersHittingLimitResponse[]> =>
+  // 获取达到聊天限制的用户（使用活跃日期范围）
+  getUsersHittingLimit: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").UsersHittingLimitResponse[]> =>
     apiClient.get("/evaluation/user-analytics/users-hitting-limit", params),
 
   // 获取角色数据分析
-  getAgentAnalytics: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").AgentAnalyticsResponse[]> =>
+  getAgentAnalytics: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").AgentAnalyticsResponse[]> =>
     apiClient.get("/evaluation/user-analytics/agent-analytics", params),
 
   // 获取用户会话详情
-  getUserSessionsDetail: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").UserSessionsDetailResponse[]> =>
+  getUserSessionsDetail: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").UserSessionsDetailResponse[]> =>
     apiClient.get("/evaluation/user-analytics/user-sessions-detail", params),
 
   // 获取对话详情（包含消息内容）
-  getConversationsDetail: (params?: {
-    start_date?: string;
-    end_date?: string;
-    last_days?: number;
-  }): Promise<import("../types").ConversationsDetailResponse[]> =>
+  getConversationsDetail: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").ConversationsDetailResponse[]> =>
     apiClient.get("/evaluation/user-analytics/conversations-detail", params),
 
   // 获取用户每日消息统计
@@ -1231,6 +1224,23 @@ export const generatedImagesApi = {
     apiClient.get("/evaluation/agents/generated-images/counts"),
 };
 
+// =============================================================================
+// 举报与反馈管理API
+// =============================================================================
+
+export const reportApi = {
+  // 获取举报/反馈列表
+  list: (params?: {
+    target_type?: import("../types").ReportTargetType;
+    status?: import("../types").ReportStatus;
+    report_type?: import("../types").ReportType;
+    order_by?: "created_at_desc" | "created_at_asc";
+    skip?: number;
+    limit?: number;
+  }): Promise<import("../types").ReportsListResponse> =>
+    apiClient.get("/report/", params),
+};
+
 export const characterThemeApi = {
   // 获取专区列表
   list: (params?: {
@@ -1299,6 +1309,7 @@ export default {
   chatImage: chatImageApi,
   userAnalytics: userAnalyticsApi,
   generatedImages: generatedImagesApi,
+  report: reportApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端

@@ -726,8 +726,8 @@ async def upload_cropped_background(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from app.services import agent_service
         from app.schemas.agent import AgentUpdate
+        from app.services import agent_service
         from app.utils.image_upload import process_image_upload
 
         # 验证 Agent 存在且用户有权限
@@ -1037,6 +1037,57 @@ async def compare_evaluation_sessions(
 # =============================================================================
 
 
+def _parse_analytics_date_ranges(
+    register_start_date: Optional[str],
+    register_end_date: Optional[str],
+    register_last_days: Optional[int],
+    activity_start_date: Optional[str],
+    activity_end_date: Optional[str],
+    activity_last_days: Optional[int],
+) -> tuple:
+    """解析用户分析的双日期范围参数
+
+    返回: (register_start, register_end, activity_start, activity_end)
+    如果活跃日期范围未提供，则默认与注册日期范围相同
+    """
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+
+    # 解析注册日期范围
+    if register_last_days:
+        reg_end = now
+        reg_start = now - timedelta(days=register_last_days)
+    elif register_start_date and register_end_date:
+        reg_start = datetime.strptime(register_start_date, "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        )
+        reg_end = datetime.strptime(register_end_date, "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        ) + timedelta(days=1)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="必须提供 register_start_date/register_end_date 或 register_last_days",
+        )
+
+    # 解析活跃日期范围（如果提供）
+    act_start = None
+    act_end = None
+    if activity_last_days:
+        act_end = now
+        act_start = now - timedelta(days=activity_last_days)
+    elif activity_start_date and activity_end_date:
+        act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        )
+        act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        ) + timedelta(days=1)
+
+    return reg_start, reg_end, act_start, act_end
+
+
 @router.get(
     "/user-analytics/new-users",
     response_model=List[schemas.user_analytics.DailyNewUsersResponse],
@@ -1046,45 +1097,41 @@ async def get_new_users(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
 ) -> Any:
-    """获取每日新用户统计"""
+    """获取用户注册统计（按注册日期范围）"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from datetime import datetime, timedelta, timezone
-
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, _, _ = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            None,
+            None,
+            None,
+        )
 
         service = UserAnalyticsService(db)
-        data = await service.get_new_users(start_date_obj, end_date_obj)
+        data = await service.get_new_users(reg_start, reg_end)
         return data
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"获取新用户统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取新用户统计失败")
+        logger.error(f"获取用户统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取用户统计失败")
 
 
 @router.get(
@@ -1096,38 +1143,34 @@ async def get_user_activity(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
 ) -> Any:
-    """获取用户聊天活动原始数据"""
+    """获取用户聊天活动原始数据（按注册日期范围筛选用户）"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from datetime import datetime, timedelta, timezone
-
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, _, _ = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            None,
+            None,
+            None,
+        )
 
         service = UserAnalyticsService(db)
-        data = await service.get_user_chat_activity(start_date_obj, end_date_obj)
+        data = await service.get_user_chat_activity(reg_start, reg_end)
         return data
 
     except ValueError as e:
@@ -1146,38 +1189,45 @@ async def get_conversation_rounds(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
-    """获取对话轮数分布（按Session）- 只统计新用户发起的会话"""
+    """获取对话轮数分布（按Session）"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from datetime import datetime, timedelta, timezone
-
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
 
         service = UserAnalyticsService(db)
-        data = await service.get_conversation_rounds(start_date_obj, end_date_obj)
+        data = await service.get_conversation_rounds(
+            reg_start, reg_end, act_start, act_end
+        )
         return data
 
     except ValueError as e:
@@ -1196,38 +1246,45 @@ async def get_user_rounds_distribution(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
     """获取对话轮数分布（按用户）"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from datetime import datetime, timedelta, timezone
-
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
 
         service = UserAnalyticsService(db)
-        data = await service.get_user_rounds_distribution(start_date_obj, end_date_obj)
+        data = await service.get_user_rounds_distribution(
+            reg_start, reg_end, act_start, act_end
+        )
         return data
 
     except ValueError as e:
@@ -1246,9 +1303,24 @@ async def get_popular_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
     """获取热门角色排行"""
     if not current_user.is_superuser:
@@ -1256,64 +1328,49 @@ async def get_popular_agents(
 
     try:
         from collections import defaultdict
-        from datetime import datetime, timedelta, timezone
 
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
 
         service = UserAnalyticsService(db)
-        activity_data = await service.get_user_chat_activity(
-            start_date_obj, end_date_obj
-        )
+        activity_data = await service.get_user_chat_activity(reg_start, reg_end)
 
         agent_stats = defaultdict(
             lambda: {
                 "users": set(),
                 "rounds": 0,
-                "sessions": [],  # 存储每个会话的轮数（仅包含有用户消息的）
-                "total_chats": set(),  # 存储所有 chats（包括只有开场白的）
+                "sessions": [],
+                "total_chats": set(),
             }
         )
         rounds_data = await service.get_conversation_rounds(
-            start_date_obj, end_date_obj
+            reg_start, reg_end, act_start, act_end
         )
         chat_to_rounds = {
             item["chat_id"]: item["message_count_excluding_opening"]
             for item in rounds_data
         }
 
-        # 统计所有 chats（包括只有开场白的）
         for item in activity_data:
             if item["chat_id"] and item["agent_name"]:
                 agent_name = item["agent_name"]
                 agent_stats[agent_name]["total_chats"].add(item["chat_id"])
 
-        # 统计有用户消息的 chats
         for item in activity_data:
             if item["chat_id"] and item["agent_name"]:
                 agent_name = item["agent_name"]
                 rounds = chat_to_rounds.get(item["chat_id"], 0)
-                # 只统计有用户消息的会话
                 if rounds > 0:
                     agent_stats[agent_name]["users"].add(item["user_id"])
                     agent_stats[agent_name]["rounds"] += rounds
-                    # 记录会话的轮数（用于计算百分比）
                     agent_stats[agent_name]["sessions"].append(rounds)
 
         result = []
@@ -1321,25 +1378,18 @@ async def get_popular_agents(
             user_count = len(stats["users"])
             total_rounds = stats["rounds"]
             sessions = stats["sessions"]
-            active_sessions = len(sessions)  # 有用户消息的 session 数
-            total_sessions = len(stats["total_chats"])  # 总的 session 数（浏览数）
+            active_sessions = len(sessions)
+            total_sessions = len(stats["total_chats"])
 
-            # 计算人均聊天轮数
             avg_rounds_per_user = total_rounds / user_count if user_count > 0 else 0.0
-
-            # 统计 >=5 轮和 >=10 轮的会话数
             sessions_ge_5 = sum(1 for r in sessions if r >= 5)
             sessions_ge_10 = sum(1 for r in sessions if r >= 10)
-
-            # 计算百分比
             pct_sessions_ge_5 = (
                 (sessions_ge_5 / active_sessions * 100) if active_sessions > 0 else 0.0
             )
             pct_sessions_ge_10 = (
                 (sessions_ge_10 / active_sessions * 100) if active_sessions > 0 else 0.0
             )
-
-            # 计算开口率
             open_rate = (
                 (active_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
             )
@@ -1377,11 +1427,17 @@ async def get_users_hitting_limit(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
-    """获取达到聊天限制的用户"""
+    """获取达到聊天限制的用户（使用活跃日期范围）"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
@@ -1392,23 +1448,24 @@ async def get_users_hitting_limit(
 
         now = datetime.now(timezone.utc)
 
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
+        if activity_last_days:
+            act_end = now
+            act_start = now - timedelta(days=activity_last_days)
+        elif activity_start_date and activity_end_date:
+            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
+            act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
         else:
             raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
+                status_code=400,
+                detail="必须提供 activity_start_date/activity_end_date 或 activity_last_days",
             )
 
         service = UserAnalyticsService(db)
-        data = await service.get_users_hitting_chat_limit(start_date_obj, end_date_obj)
+        data = await service.get_users_hitting_chat_limit(act_start, act_end)
         return data
 
     except ValueError as e:
@@ -1427,38 +1484,43 @@ async def get_agent_analytics(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
     """获取角色数据分析"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from datetime import datetime, timedelta, timezone
-
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
 
         service = UserAnalyticsService(db)
-        data = await service.get_agent_analytics(start_date_obj, end_date_obj)
+        data = await service.get_agent_analytics(reg_start, reg_end, act_start, act_end)
         return data
 
     except ValueError as e:
@@ -1477,38 +1539,45 @@ async def get_user_sessions_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
     """获取用户会话详情"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from datetime import datetime, timedelta, timezone
-
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
 
         service = UserAnalyticsService(db)
-        data = await service.get_user_sessions_detail(start_date_obj, end_date_obj)
+        data = await service.get_user_sessions_detail(
+            reg_start, reg_end, act_start, act_end
+        )
         return data
 
     except ValueError as e:
@@ -1527,9 +1596,24 @@ async def get_conversations_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
     """获取对话详情（包含消息内容）"""
     if not current_user.is_superuser:
@@ -1537,30 +1621,21 @@ async def get_conversations_detail(
 
     try:
         from collections import defaultdict
-        from datetime import datetime, timedelta, timezone
 
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
 
         service = UserAnalyticsService(db)
         sessions_detail = await service.get_user_sessions_detail(
-            start_date_obj, end_date_obj
+            reg_start, reg_end, act_start, act_end
         )
 
         if not sessions_detail:
@@ -1623,38 +1698,43 @@ async def get_user_analytics_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
-    last_days: Optional[int] = Query(None, ge=1, le=365, description="最近N天"),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
 ) -> Any:
-    """获取用户数据分析统计概览（与原始脚本逻辑一致）"""
+    """获取用户数据分析统计概览"""
     if not current_user.is_superuser:
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from datetime import datetime, timedelta, timezone
-
         from app.services.user_analytics_service import UserAnalyticsService
 
-        now = datetime.now(timezone.utc)
-
-        if last_days:
-            end_date_obj = now
-            start_date_obj = now - timedelta(days=last_days)
-        elif start_date and end_date:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            ) + timedelta(days=1)
-        else:
-            raise HTTPException(
-                status_code=400, detail="必须提供 start_date/end_date 或 last_days"
-            )
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
 
         service = UserAnalyticsService(db)
-        data = await service.get_analytics_stats(start_date_obj, end_date_obj)
+        data = await service.get_analytics_stats(reg_start, reg_end, act_start, act_end)
         return data
 
     except ValueError as e:

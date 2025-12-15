@@ -28,6 +28,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -59,6 +61,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -66,11 +69,45 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
+import com.ai.intellimate.xb.navigation.Routes
+import ai.sxwl.android.data.billing.BillingRepository
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
+
+private const val CHAT_MODEL_ID_DEFAULT = "default"
+private const val CHAT_MODEL_ID_GPT_5_2 = "gpt5_2"
+private const val CHAT_MODEL_ID_CLAUDE_OPUS_4_5 = "claude_opus_4_5"
+private const val CHAT_MODEL_ID_GEMINI_3_FLASH = "gemini_3_flash"
+
+private data class ChatModelOption(
+    val id: String,
+    val labelResId: Int,
+)
+
+private val CHAT_MODEL_OPTIONS =
+    listOf(
+        ChatModelOption(CHAT_MODEL_ID_DEFAULT, R.string.chat_settings_model_default),
+        ChatModelOption(CHAT_MODEL_ID_GPT_5_2, R.string.chat_settings_model_gpt_5_2),
+        ChatModelOption(
+            CHAT_MODEL_ID_CLAUDE_OPUS_4_5,
+            R.string.chat_settings_model_claude_opus_4_5,
+        ),
+        ChatModelOption(CHAT_MODEL_ID_GEMINI_3_FLASH, R.string.chat_settings_model_gemini_3_flash),
+    )
+
+private fun chatModelLabelResId(modelId: String): Int {
+    return when (modelId) {
+        CHAT_MODEL_ID_DEFAULT -> R.string.chat_settings_model_default
+        CHAT_MODEL_ID_GPT_5_2 -> R.string.chat_settings_model_gpt_5_2
+        CHAT_MODEL_ID_CLAUDE_OPUS_4_5 -> R.string.chat_settings_model_claude_opus_4_5
+        // 默认模型ID显示为"Default"
+        CHAT_MODEL_ID_GEMINI_3_FLASH -> R.string.chat_settings_model_default
+        else -> R.string.chat_settings_model_default
+    }
+}
 
 /** 聊天设置抽屉组件 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,9 +117,12 @@ fun ChatSettingsDrawer(
     agentInfo: AgentInfo?,
     drawerState: MutableState<DrawerValue>,
     onKeepTalkingChange: (Boolean) -> Unit,
+    navController: NavController,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    // 订阅状态检查
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
 
@@ -96,6 +136,7 @@ fun ChatSettingsDrawer(
     // Show scene action button全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
     val chatFontSize by SettingStateManager.chatFontSizeFlow.collectAsState()
+    val chatModelId by SettingStateManager.chatModelIdFlow.collectAsState()
 
     val horizontalPadding = 16
     val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
@@ -116,6 +157,7 @@ fun ChatSettingsDrawer(
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
     var editValue by rememberSaveable { mutableStateOf("") }
     var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
+    var showModelMenu by rememberSaveable { mutableStateOf(false) }
     var pendingFontSize by rememberSaveable {
         mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP)
     }
@@ -302,9 +344,7 @@ fun ChatSettingsDrawer(
                         SettingsSwitchItem(
                             item =
                                 SettingsItemData.SwitchItemData(
-                                    title =
-                                        stringResource(R.string.chat_settings_show_keep_talking) +
-                                            "青青河边草，有有利到寒假工i哦啊个",
+                                    title = stringResource(R.string.chat_settings_show_keep_talking),
                                     checked = showKeepTalking,
                                 ),
                             fontLight = true,
@@ -436,6 +476,82 @@ fun ChatSettingsDrawer(
                                 SettingStateManager.updateShowSceneActionButton(enabled)
                             },
                         )
+
+                        IntelliMateDivider()
+
+                        // Models 下拉菜单
+                        androidx.compose.foundation.layout.Box {
+                            SettingsArrowItem(
+                                item =
+                                    SettingsItemData.CommonItemData(
+                                        title = stringResource(R.string.chat_settings_models_title),
+                                        content = stringResource(chatModelLabelResId(chatModelId)),
+                                        arrow = true,
+                                    ),
+                                fontLight = true,
+                                isInGroup = true,
+                                horizontalPadding = horizontalPadding,
+                                onItemClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "open_models_menu",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    showModelMenu = true
+                                },
+                            )
+
+                            DropdownMenu(
+                                expanded = showModelMenu,
+                                onDismissRequest = { showModelMenu = false },
+                            ) {
+                                CHAT_MODEL_OPTIONS.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(option.labelResId),
+                                                color = Color.White,
+                                                fontSize = 14.sp,
+                                            )
+                                        },
+                                        onClick = {
+                                            showModelMenu = false
+                                            
+                                            // 检查订阅状态：如果未订阅且选择的不是Default，则跳转到订阅页面
+                                            if (!vipStatus.isSubscribed && option.id != CHAT_MODEL_ID_DEFAULT) {
+                                                navController.navigate(Routes.VipCenter)
+                                                FirebaseManager.logEvent(
+                                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                                    FirebaseManager.safeEventParams(
+                                                        "click_type" to "select_model_requires_subscription",
+                                                        "model_id" to option.id,
+                                                        "timestamp" to System.currentTimeMillis(),
+                                                    ),
+                                                )
+                                            } else {
+                                                // 已订阅或选择Default，允许选择
+                                                val modelIdToSet = if (option.id == CHAT_MODEL_ID_DEFAULT) {
+                                                    CHAT_MODEL_ID_DEFAULT
+                                                } else {
+                                                    option.id
+                                                }
+                                                SettingStateManager.updateChatModelId(modelIdToSet)
+                                                FirebaseManager.logEvent(
+                                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                                    FirebaseManager.safeEventParams(
+                                                        "click_type" to "select_model",
+                                                        "model_id" to option.id,
+                                                        "timestamp" to System.currentTimeMillis(),
+                                                    ),
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        }
 
                         IntelliMateDivider()
 

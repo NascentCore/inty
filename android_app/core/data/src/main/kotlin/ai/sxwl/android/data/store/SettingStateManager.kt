@@ -39,6 +39,10 @@ object SettingStateManager {
         )
     val chatFontSizeFlow: StateFlow<Float> = _chatFontSizeFlow.asStateFlow()
 
+    // 聊天模型选择（全局设置）
+    private val _chatModelIdFlow = MutableStateFlow(IntySetting.getChatModelId())
+    val chatModelIdFlow: StateFlow<String> = _chatModelIdFlow.asStateFlow()
+
     // 标记是否已经初始化过（避免重复初始化）
     @Volatile private var initialized = false
 
@@ -157,5 +161,11 @@ object SettingStateManager {
         val clamped = fontSizeSp.coerceIn(CHAT_FONT_SIZE_MIN_SP, CHAT_FONT_SIZE_MAX_SP)
         IntySetting.setChatFontSizeSp(clamped)
         _chatFontSizeFlow.value = clamped
+    }
+
+    /** 更新聊天模型 */
+    fun updateChatModelId(modelId: String) {
+        IntySetting.setChatModelId(modelId)
+        _chatModelIdFlow.value = modelId
     }
 }

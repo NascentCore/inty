@@ -2,10 +2,14 @@ package com.ai.intellimate.boost
 
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AgentService
+import ai.sxwl.android.data.store.BoostLeaderboardRankCache
+import ai.sxwl.android.data.store.BoostLeaderboardRankStore
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
+import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.ui.components.EmptyStateComponent
 import com.ai.intellimate.ui.components.EmptyStateType
@@ -56,6 +61,7 @@ fun BoostLeaderboardScreen(
         isLoading = true
         errorMessage = null
 
+        val previousCache = BoostLeaderboardRankStore.readCache(context)
         when (
             val result =
                 AgentService.getRecommendAgents(
@@ -66,7 +72,7 @@ fun BoostLeaderboardScreen(
                 )
         ) {
             is ApiResult.Success -> {
-                val remoteEntries =
+                val baseEntries =
                     result.data.mapIndexed { index, agent ->
                         val energyPoints = agent.energyPoints
                         // 使用 energyPoints / BOOST_STEP_POINTS 估算 boost 次数
@@ -83,12 +89,25 @@ fun BoostLeaderboardScreen(
                             avatarUrl = agent.avatar,
                             boostCount = estimatedBoostCount,
                             pointsInvested = energyPoints,
-                            trend = BoostTrend.FLAT, // 后端不返回趋势，使用 FLAT
+                            trend = BoostTrend.FLAT,
                             isSeed = false,
                         )
                     }
 
-                leaderboardEntries = remoteEntries
+                val entriesWithTrend =
+                    BoostLeaderboardTrendCalculator.applyTrends(
+                        entries = baseEntries,
+                        previousRanksByAgentId = previousCache.ranksByAgentId,
+                    )
+
+                leaderboardEntries = entriesWithTrend
+                BoostLeaderboardRankStore.saveCache(
+                    context,
+                    BoostLeaderboardRankCache(
+                        updatedAtMs = System.currentTimeMillis(),
+                        ranksByAgentId = BoostLeaderboardTrendCalculator.toRankMap(baseEntries),
+                    ),
+                )
 
                 isLoading = false
             }
@@ -102,7 +121,7 @@ fun BoostLeaderboardScreen(
     val handleLeaderboardAction =
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
-                navController.navigate(Routes.chatPage(entry.agentId, false));
+                navController.navigate(Routes.chatPage(entry.agentId, showSheet))
 //                ChatActivity.launch(
 //                    context,
 //                    agentInfo = null,
@@ -112,6 +131,7 @@ fun BoostLeaderboardScreen(
 //                )
             }
         }
+    var showHelpSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -124,16 +144,23 @@ fun BoostLeaderboardScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (onClick != null) {
-                            onClick()
-                        } else {
-                            navController.popBackStack()
-                        }
+                        navController.popBackStack()
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.back),
                             contentDescription = stringResource(R.string.boost_leaderboard_back_cd),
                             tint = Color.White,
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { showHelpSheet = true}
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
+                            contentDescription = "help",
+                            tint = Color.White
                         )
                     }
                 },
@@ -176,5 +203,16 @@ fun BoostLeaderboardScreen(
                 )
             }
         }
+    }
+
+    if (showHelpSheet) {
+        BoostPointsHelpSheet(
+            availablePoints = boostState.availablePoints,
+            onDismiss = { showHelpSheet = false },
+            onOpenLeaderboard = {
+                showHelpSheet = false
+                BoostLeaderboardActivity.launch(context)
+            },
+        )
     }
 }

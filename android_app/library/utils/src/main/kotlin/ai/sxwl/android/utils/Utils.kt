@@ -2,7 +2,6 @@ package ai.sxwl.android.utils
 
 import android.app.Application
 import android.util.Log
-import kotlin.random.Random
 
 /** 工具类核心类，提供应用初始化和基础功能 */
 object Utils {
@@ -53,9 +52,4 @@ object Utils {
             "Failed to initialize Application. Please call Utils.init() in Application.onCreate()"
         )
     }
-}
-
-/** 以概率返回true；用于随机概率事件的触发。 */
-fun pickWithProbability(probability: Float): Boolean {
-    return Random.nextFloat() < probability
 }

@@ -17,7 +17,12 @@ interface CharacterDao {
     @Query("SELECT * FROM characters WHERE agent_id = :agentId LIMIT 1")
     suspend fun getCharacter(agentId: String): CharacterEntity?
 
+    @Query("SELECT * FROM characters WHERE agent_id IN (:agentIds)")
+    suspend fun getCharacters(agentIds: List<String>): List<CharacterEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(character: CharacterEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertAll(characters: List<CharacterEntity>)
 
     @Query(
         "UPDATE characters SET energy_points = :energyPoints, updated_at = :updatedAt WHERE agent_id = :agentId"

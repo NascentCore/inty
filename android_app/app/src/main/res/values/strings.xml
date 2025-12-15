@@ -90,8 +90,7 @@
     <string name="premium_benefit_higher_other_limits">Higher image speech synthesis limits</string>
     <string name="premium_benefit_model">Empathetic AI</string>
     <string name="premium_benefit_chat_style">Customizable chat style</string>
-    <string name="premium_benefit_flagship_models">Latest flagship models (Gemini 3, Grok 4.1)</string>
-
+    <string name="premium_benefit_premium_models">Premium models</string>
     <string name="premium_benefit_newfeature">Priority access to new features</string>
 
     <string name="premium_subscribe">Subscribe</string>
@@ -231,6 +230,11 @@
     <string name="chat_settings_show_scene_action_button">Show action button</string>
     <string name="chat_settings_font_size">Message font size</string>
     <string name="chat_settings_font_size_value">%1$d sp</string>
+    <string name="chat_settings_models_title">Models</string>
+    <string name="chat_settings_model_default">Default</string>
+    <string name="chat_settings_model_gpt_5_2">GPT-5.2</string>
+    <string name="chat_settings_model_claude_opus_4_5">Claude Opus 4.5</string>
+    <string name="chat_settings_model_gemini_3_flash">Gemini 3 Flash</string>
     <string name="chat_settings_font_size_dialog_title">Message font size</string>
     <string name="chat_settings_font_size_dialog_description">Adjust how large chat bubbles look.</string>
     <string name="chat_settings_font_size_preview_label">Preview</string>
@@ -364,7 +368,7 @@
 
     <!-- Explore Search -->
     <string name="explore_search_icon_desc">Search characters</string>
-    <string name="explore_search_placeholder">Search by character name</string>
+    <string name="explore_search_placeholder">Search by name</string>
     <string name="explore_search_cancel">Cancel</string>
     <string name="explore_search_empty">No matching characters</string>
     <string name="explore_search_hint_text">Enter a character name and tap search</string>
@@ -467,14 +471,14 @@
     <string name="boost_points_need_at_least">You need at least %1$d pts</string>
     <string name="boost_sheet_confirm">Boost now</string>
     <string name="boost_sheet_cancel">Maybe later</string>
-    <string name="boost_daily_reward_cta">Claim daily energy points (+200)</string>
+    <string name="boost_daily_reward_cta">Claim daily Boost Points (+200)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
     <string name="boost_leaderboard_title">Top IntelliMates</string>
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
     <string name="boost_leaderboard_back_cd">Back to Explore</string>
-    <string name="boost_leaderboard_energy_points_value">Energy Points: %1$d</string>
+    <string name="boost_leaderboard_energy_points_value">Boost Points: %1$d</string>
     <string name="boost_trend_up">Rising</string>
     <string name="boost_trend_down">Cooling</string>
     <string name="boost_trend_flat">Steady</string>
@@ -488,14 +492,14 @@
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
     <string name="boost_points_help_title">Boost Points</string>
-    <string name="boost_points_help_subtitle">Earn Boost Points, then spend them to boost any character you like.</string>
+    <string name="boost_points_help_subtitle">Boost Points are an important resource in the app.You can use them to boost any character you like and help them rank higher.</string>
     <string name="boost_points_help_progress">%1$d / %2$d pts to boost</string>
-    <string name="boost_points_help_how_to_earn_title">How to earn</string>
-    <string name="boost_points_help_how_to_earn_body">Chat, generate images, listen to voices, or check in daily.</string>
+    <string name="boost_points_help_how_to_earn_title">How to earn?</string>
+    <string name="boost_points_help_how_to_earn_body">You can earn Boost Points by: Chatting with characters, Generating images, Listening to voices, Checking in daily.</string>
     <string name="boost_points_help_cta_check_in">Daily check-in</string>
     <string name="boost_points_help_cta_leaderboard">View Top 10</string>
     <string name="boost_points_help_close">Got it</string>
-    <string name="boost_character_energy_points">Character Energy Points: %1$d</string>
+    <string name="boost_character_energy_points">Character Boost Points: %1$d</string>
     <string name="boost_character_energy_points_hint">This score ranks IntelliMates on the leaderboard.</string>
     <string name="explore_boost_shortcut">Top IntelliMates</string>
     <string name="explore_boost_shortcut_cd">Open boost leaderboard</string>
@@ -504,4 +508,5 @@
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
     <string name="reset_suc_msg">A new conversation has started.</string>
     <string name="chat_setting_text_streaming">Text streaming</string>
+    <string name="my_boost_points">My Boost Points: %1$d</string>
 </resources>
