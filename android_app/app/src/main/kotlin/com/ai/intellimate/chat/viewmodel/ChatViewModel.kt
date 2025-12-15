@@ -19,7 +19,6 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
-import ai.sxwl.android.utils.pickWithProbability
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
