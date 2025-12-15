@@ -91,6 +91,12 @@ class ReportViewModel : BaseVM() {
             return
         }
 
+        val trimmedDescription = description.value.trim()
+        if (trimmedDescription.isEmpty()) {
+            ToastUtils.showShort(R.string.toast_please_enter_description)
+            return
+        }
+
         // 如果正在提交，直接返回
         if (_isSubmitting.value) {
             return
@@ -116,7 +122,7 @@ class ReportViewModel : BaseVM() {
                         reasonCodes = selectedReasonCodes.toList(),
                         targetId = if (isFeedbackMode) null else targetID,
                         targetType = if (isFeedbackMode) null else targetType,
-                        description = description.value.trim(),
+                        description = trimmedDescription,
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                         reportType =
                             if (isFeedbackMode) {
