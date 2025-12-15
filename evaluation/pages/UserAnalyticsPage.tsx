@@ -46,19 +46,35 @@ import type {
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-interface DateRange {
-  start_date?: string;
-  end_date?: string;
-  last_days?: number;
+interface AnalyticsDateParams {
+  // 注册日期范围
+  register_start_date?: string;
+  register_end_date?: string;
+  register_last_days?: number;
+  // 活跃日期范围
+  activity_start_date?: string;
+  activity_end_date?: string;
+  activity_last_days?: number;
 }
 
 export const UserAnalyticsPage: React.FC = () => {
-  // 日期范围状态
-  const [dateRangeType, setDateRangeType] = useState<"range" | "last_days">(
-    "last_days",
-  );
-  const [lastDays, setLastDays] = useState<number>(7);
-  const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
+  // 用户注册日期范围状态
+  const [registerDateType, setRegisterDateType] = useState<
+    "range" | "last_days"
+  >("last_days");
+  const [registerLastDays, setRegisterLastDays] = useState<number>(7);
+  const [registerCustomRange, setRegisterCustomRange] = useState<
+    [Dayjs, Dayjs] | null
+  >(null);
+
+  // 用户活跃日期范围状态
+  const [activityDateType, setActivityDateType] = useState<
+    "range" | "last_days"
+  >("last_days");
+  const [activityLastDays, setActivityLastDays] = useState<number>(7);
+  const [activityCustomRange, setActivityCustomRange] = useState<
+    [Dayjs, Dayjs] | null
+  >(null);
 
   // 数据加载状态
   const [loading, setLoading] = useState(false);
@@ -96,25 +112,63 @@ export const UserAnalyticsPage: React.FC = () => {
   >("all");
 
   // 获取日期范围参数
-  const getDateRangeParams = useCallback((): DateRange => {
-    if (dateRangeType === "last_days") {
-      return { last_days: lastDays };
-    } else if (customRange && customRange[0] && customRange[1]) {
-      return {
-        start_date: customRange[0].format("YYYY-MM-DD"),
-        end_date: customRange[1].format("YYYY-MM-DD"),
-      };
+  const getDateRangeParams = useCallback((): AnalyticsDateParams => {
+    const params: AnalyticsDateParams = {};
+
+    // 注册日期范围
+    if (registerDateType === "last_days") {
+      params.register_last_days = registerLastDays;
+    } else if (
+      registerCustomRange &&
+      registerCustomRange[0] &&
+      registerCustomRange[1]
+    ) {
+      params.register_start_date = registerCustomRange[0].format("YYYY-MM-DD");
+      params.register_end_date = registerCustomRange[1].format("YYYY-MM-DD");
     }
-    return {};
-  }, [dateRangeType, lastDays, customRange]);
+
+    // 活跃日期范围（如果为空则默认与注册范围一致）
+    if (activityDateType === "last_days") {
+      params.activity_last_days = activityLastDays;
+    } else if (
+      activityCustomRange &&
+      activityCustomRange[0] &&
+      activityCustomRange[1]
+    ) {
+      params.activity_start_date = activityCustomRange[0].format("YYYY-MM-DD");
+      params.activity_end_date = activityCustomRange[1].format("YYYY-MM-DD");
+    } else {
+      // 活跃范围为空时，使用注册范围的值
+      if (params.register_last_days) {
+        params.activity_last_days = params.register_last_days;
+      } else if (params.register_start_date && params.register_end_date) {
+        params.activity_start_date = params.register_start_date;
+        params.activity_end_date = params.register_end_date;
+      }
+    }
+
+    return params;
+  }, [
+    registerDateType,
+    registerLastDays,
+    registerCustomRange,
+    activityDateType,
+    activityLastDays,
+    activityCustomRange,
+  ]);
 
   // 加载所有数据
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const params = getDateRangeParams();
-      if (!params.start_date && !params.end_date && !params.last_days) {
-        message.warning("请选择日期范围");
+      // 验证注册日期范围必填
+      if (
+        !params.register_start_date &&
+        !params.register_end_date &&
+        !params.register_last_days
+      ) {
+        message.warning("请选择用户注册日期范围");
         setLoading(false);
         return;
       }
@@ -427,33 +481,71 @@ export const UserAnalyticsPage: React.FC = () => {
     <div style={{ padding: "24px" }}>
       {/* 日期选择器 */}
       <Card style={{ marginBottom: "24px" }}>
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <Space>
-            <span>日期范围：</span>
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          {/* 用户注册日期范围 */}
+          <Space wrap>
+            <span style={{ fontWeight: 500 }}>用户注册范围：</span>
             <Select
-              value={dateRangeType}
-              onChange={setDateRangeType}
+              value={registerDateType}
+              onChange={setRegisterDateType}
               style={{ width: 120 }}
             >
               <Option value="last_days">最近N天</Option>
               <Option value="range">自定义范围</Option>
             </Select>
-            {dateRangeType === "last_days" ? (
+            {registerDateType === "last_days" ? (
               <Select
-                value={lastDays}
-                onChange={setLastDays}
+                value={registerLastDays}
+                onChange={setRegisterLastDays}
                 style={{ width: 120 }}
               >
+                <Option value={1}>最近1天</Option>
                 <Option value={3}>最近3天</Option>
                 <Option value={7}>最近7天</Option>
+                <Option value={14}>最近14天</Option>
                 <Option value={30}>最近30天</Option>
                 <Option value={90}>最近90天</Option>
               </Select>
             ) : (
               <RangePicker
-                value={customRange}
+                value={registerCustomRange}
                 onChange={(dates) =>
-                  setCustomRange(dates as [Dayjs, Dayjs] | null)
+                  setRegisterCustomRange(dates as [Dayjs, Dayjs] | null)
+                }
+                format="YYYY-MM-DD"
+              />
+            )}
+          </Space>
+
+          {/* 用户活跃日期范围 */}
+          <Space wrap>
+            <span style={{ fontWeight: 500 }}>用户活跃范围：</span>
+            <Select
+              value={activityDateType}
+              onChange={setActivityDateType}
+              style={{ width: 120 }}
+            >
+              <Option value="last_days">最近N天</Option>
+              <Option value="range">自定义范围</Option>
+            </Select>
+            {activityDateType === "last_days" ? (
+              <Select
+                value={activityLastDays}
+                onChange={setActivityLastDays}
+                style={{ width: 120 }}
+              >
+                <Option value={1}>最近1天</Option>
+                <Option value={3}>最近3天</Option>
+                <Option value={7}>最近7天</Option>
+                <Option value={14}>最近14天</Option>
+                <Option value={30}>最近30天</Option>
+                <Option value={90}>最近90天</Option>
+              </Select>
+            ) : (
+              <RangePicker
+                value={activityCustomRange}
+                onChange={(dates) =>
+                  setActivityCustomRange(dates as [Dayjs, Dayjs] | null)
                 }
                 format="YYYY-MM-DD"
               />
@@ -478,7 +570,7 @@ export const UserAnalyticsPage: React.FC = () => {
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
-              title="新增用户数"
+              title="用户数"
               value={stats?.total_new_users ?? 0}
               prefix={<UserOutlined />}
             />
@@ -552,7 +644,7 @@ export const UserAnalyticsPage: React.FC = () => {
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
-              title="新增用户开口率"
+              title="开口率"
               value={stats?.new_user_open_rate.toFixed(2) ?? "0.00"}
               suffix="%"
             />
@@ -613,9 +705,9 @@ export const UserAnalyticsPage: React.FC = () => {
 
       {/* 图表区域 */}
       <Row gutter={[16, 16]}>
-        {/* 图表1: 每日新用户趋势 */}
+        {/* 图表1: 用户注册结构 */}
         <Col xs={24} lg={12}>
-          <Card title="每日新用户趋势" style={{ height: "400px" }}>
+          <Card title="用户注册结构" style={{ height: "400px" }}>
             {newUsers.length > 0 ? (
               <Plot
                 data={[
@@ -641,7 +733,7 @@ export const UserAnalyticsPage: React.FC = () => {
                   },
                 ]}
                 layout={{
-                  title: "每日新用户趋势",
+                  title: "用户注册结构",
                   barmode: "stack",
                   height: 300,
                   xaxis: { title: "日期" },

@@ -7,11 +7,20 @@ from pydantic import BaseModel, Field
 
 
 class UserAnalyticsDateRange(BaseModel):
-    """日期范围请求"""
+    """日期范围请求（支持双日期范围：注册日期 + 活跃日期）"""
 
-    start_date: Optional[datetime] = Field(None, description="开始日期")
-    end_date: Optional[datetime] = Field(None, description="结束日期")
-    last_days: Optional[int] = Field(None, ge=1, le=365, description="最近N天")
+    # 用户注册日期范围
+    register_start_date: Optional[datetime] = Field(None, description="注册开始日期")
+    register_end_date: Optional[datetime] = Field(None, description="注册结束日期")
+    register_last_days: Optional[int] = Field(
+        None, ge=1, le=365, description="注册最近N天"
+    )
+    # 用户活跃日期范围
+    activity_start_date: Optional[datetime] = Field(None, description="活跃开始日期")
+    activity_end_date: Optional[datetime] = Field(None, description="活跃结束日期")
+    activity_last_days: Optional[int] = Field(
+        None, ge=1, le=365, description="活跃最近N天"
+    )
 
 
 class DailyNewUsersResponse(BaseModel):
@@ -151,7 +160,7 @@ class UserAnalyticsStatsResponse(BaseModel):
     """用户数据分析统计概览（与原始脚本逻辑一致）"""
 
     # 统计类型
-    total_new_users: int = Field(description="新增用户数")
+    total_new_users: int = Field(description="用户数")
     total_chat_initiators: int = Field(
         description="发起聊天的人数（排除仅浏览开场白的用户）"
     )
@@ -166,9 +175,9 @@ class UserAnalyticsStatsResponse(BaseModel):
     avg_voice_requests_per_user: float = Field(description="平均发起语音请求数")
     # 会话维度（包含用户消息的会话）
     avg_rounds_per_session: float = Field(description="每个会话平均轮数")
-    # 新增指标
+    # 开口率指标
     new_user_open_rate: float = Field(
-        description="新增用户开口率（total_chat_initiators / total_new_users，0-100）"
+        description="开口率（total_chat_initiators / total_new_users，0-100）"
     )
     # 生图统计
     total_image_generation_requests: int = Field(description="总生图请求数", default=0)
