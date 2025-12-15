@@ -256,8 +256,10 @@ internal fun AiAgentInfoScreen(
                         BoostStatusChip(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             availablePoints = boostState.availablePoints,
-                            onClick = { showBoostSheet = true },
-                        )
+                            onClick = { showBoostSheet = true }
+                        ) {
+                            Text(stringResource(R.string.boost_sheet_title))
+                        }
 
                         Spacer(Modifier.height(16.dp))
 

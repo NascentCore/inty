@@ -492,10 +492,10 @@
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
     <string name="boost_points_help_title">Boost Points</string>
-    <string name="boost_points_help_subtitle">Earn Boost Points, then spend them to boost any character you like.</string>
+    <string name="boost_points_help_subtitle">Boost Points are an important resource in the app.You can use them to boost any character you like and help them rank higher.</string>
     <string name="boost_points_help_progress">%1$d / %2$d pts to boost</string>
-    <string name="boost_points_help_how_to_earn_title">How to earn</string>
-    <string name="boost_points_help_how_to_earn_body">Chat, generate images, listen to voices, or check in daily.</string>
+    <string name="boost_points_help_how_to_earn_title">How to earn?</string>
+    <string name="boost_points_help_how_to_earn_body">You can earn Boost Points by: Chatting with characters, Generating images, Listening to voices, Checking in daily.</string>
     <string name="boost_points_help_cta_check_in">Daily check-in</string>
     <string name="boost_points_help_cta_leaderboard">View Top 10</string>
     <string name="boost_points_help_close">Got it</string>
@@ -508,4 +508,5 @@
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
     <string name="reset_suc_msg">A new conversation has started.</string>
     <string name="chat_setting_text_streaming">Text streaming</string>
+    <string name="my_boost_points">My Boost Points: %1$d</string>
 </resources>
