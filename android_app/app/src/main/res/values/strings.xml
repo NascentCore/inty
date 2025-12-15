@@ -368,7 +368,7 @@
 
     <!-- Explore Search -->
     <string name="explore_search_icon_desc">Search characters</string>
-    <string name="explore_search_placeholder">Search by character name</string>
+    <string name="explore_search_placeholder">Search by name</string>
     <string name="explore_search_cancel">Cancel</string>
     <string name="explore_search_empty">No matching characters</string>
     <string name="explore_search_hint_text">Enter a character name and tap search</string>

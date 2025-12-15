@@ -5,6 +5,7 @@ package com.ai.intellimate.explore
 import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,6 +101,7 @@ fun ExploreSearchOverlay(
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(bottom = bottomPadding)
                 .navigationBarsPadding()
+                .clickable{}
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
