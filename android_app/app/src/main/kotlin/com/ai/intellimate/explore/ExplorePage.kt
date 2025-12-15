@@ -53,6 +53,7 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostLeaderboardActivity
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 
 private const val MIN_REFRESH_DURATION_MS = 400L
@@ -122,7 +123,10 @@ fun ExplorePage(
                         )
                     }
                     Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
-                        BoostShortcutButton(onClick = { BoostLeaderboardActivity.launch(context) })
+                        BoostShortcutButton(onClick = {
+                            navController.navigate(Routes.BoostLeaderboard)
+//                            BoostLeaderboardActivity.launch(context)
+                        })
                     }
                 },
             )

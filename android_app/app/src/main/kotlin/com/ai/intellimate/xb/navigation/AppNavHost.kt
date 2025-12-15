@@ -16,12 +16,18 @@ import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.SplashLoginUI
+import com.ai.intellimate.agent.info.AgentInfoViewModel
+import com.ai.intellimate.agent.info.AiAgentInfoScreen
+import com.ai.intellimate.agent.info.PhotoAlbumScreen
+import com.ai.intellimate.boost.BoostLeaderboardScreen
 import com.ai.intellimate.chat.ChatScreen
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.explore.special.CollectionDetailVM
 import com.ai.intellimate.explore.special.ThemedDetailScreen
 import com.ai.intellimate.settings.SettingScreen
+import com.ai.intellimate.settings.check.CheckInScreen
 import com.ai.intellimate.vip.VipCenterContent
+import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.helper.AgentStore
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -54,6 +60,7 @@ fun AppNavHost(
         mainViewModel.updatePushAgentId("")
         navController.navigate(Routes.chatPage(pushAgentId, false))
     }
+    val agentInfoViewModel: AgentInfoViewModel = viewModel()
 
     // 配置导航宿主，定义所有可导航的页面和转场动画
     NavHost(
@@ -124,6 +131,59 @@ fun AppNavHost(
                 shouldShowBoostSheetOnOpen = showBoost == true,
                 agentId = agentId,
             )
+        }
+
+        composable(Routes.BoostLeaderboard) {
+            BoostLeaderboardScreen(navController)
+        }
+        composable(Routes.CheckIn) {
+            IgnoreSystemFontScaling {
+                CheckInScreen(
+                    navController,
+                )
+            }
+        }
+
+        composable(Routes.AgentInfoPage) { backStackEntry ->
+            val agentId = backStackEntry.arguments?.getString("agentId")
+            val agentInfo = AgentStore.getAgent(agentId = agentId)
+            LaunchedEffect(agentId) {
+                if (agentInfo != null) {
+                    agentInfoViewModel.setAgentInfo(agentInfo)
+                } else {
+                    agentInfoViewModel.setAgentID(agentId!!)
+                }
+            }
+
+            if (agentInfo != null) {
+                val galleryImages = agentInfoViewModel.chatImageGallery.collectAsState()
+                AiAgentInfoScreen(
+                    agent = agentInfo,
+                    galleryItems = galleryImages.value,
+                    navController = navController,
+                )
+            }
+        }
+
+        composable(Routes.AgentPhotoAlbum) { backStackEntry ->
+            val agentId = backStackEntry.arguments?.getString("agentId")
+            val agentInfo = AgentStore.getAgent(agentId = agentId)
+            LaunchedEffect(agentId) {
+                if (agentInfo != null) {
+                    agentInfoViewModel.setAgentInfo(agentInfo)
+                } else {
+                    agentInfoViewModel.setAgentID(agentId!!)
+                }
+            }
+
+            if (agentInfo != null) {
+                val galleryImages = agentInfoViewModel.chatImageGallery.collectAsState()
+                PhotoAlbumScreen(
+                    agent = agentInfo,
+                    galleryItems = galleryImages.value,
+                    onBack = { navController.popBackStack() },
+                )
+            }
         }
 
         // 定义角色专区详情页面路由

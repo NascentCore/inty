@@ -85,6 +85,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.utils.formatDisplayId
+import com.ai.intellimate.xb.navigation.Routes
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -114,7 +115,7 @@ internal fun AiAgentInfoScreen(
     agent: AgentInfo,
     galleryItems: List<AgentImageGalleryItem>,
     navController: androidx.navigation.NavController,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
@@ -155,7 +156,9 @@ internal fun AiAgentInfoScreen(
                     navigationIcon = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                    navController.popBackStack()
+                                },
                             painter = painterResource(R.drawable.back),
                             contentDescription = null,
                         )
@@ -254,6 +257,7 @@ internal fun AiAgentInfoScreen(
                         Spacer(Modifier.height(16.dp))
 
                         BoostStatusChip(
+                            navController,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             availablePoints = boostState.availablePoints,
                             onClick = { showBoostSheet = true },
@@ -304,9 +308,10 @@ internal fun AiAgentInfoScreen(
                             Spacer(Modifier.height(8.dp))
                             TextButton(
                                 onClick = {
-                                    com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
-                                        context
-                                    )
+                                    navController.navigate(Routes.BoostLeaderboard)
+//                                    com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
+//                                        context
+//                                    )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
@@ -430,7 +435,8 @@ internal fun AiAgentInfoScreen(
                                 images = galleryItems,
                                 agentId = agent.id,
                                 onNavigateToPhotoAlbum = {
-                                    navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
+//                                    navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
+                                    navController.navigate(Routes.agentPhotoAlbum(agent.id))
                                 },
                             )
                         }
@@ -461,6 +467,7 @@ internal fun AiAgentInfoScreen(
     //   - 用户点击关闭/取消 → 关闭弹窗
     if (showBoostSheet) {
         BoostSheet(
+            navController,
             agentInfo = agent,
             availablePoints = boostState.availablePoints,
             onBoostConfirmed = { points ->
@@ -494,7 +501,8 @@ internal fun AiAgentInfoScreen(
             onDismiss = { showBoostHelpSheet = false },
             onOpenLeaderboard = {
                 showBoostHelpSheet = false
-                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
+                navController.navigate(Routes.BoostLeaderboard)
+//                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
             },
         )
     }

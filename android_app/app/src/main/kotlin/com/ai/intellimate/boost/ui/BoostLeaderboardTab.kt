@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
@@ -42,6 +43,7 @@ import com.ai.intellimate.ui.UiConfigs
 
 @Composable
 fun BoostLeaderboardTab(
+    navController: NavController,
     modifier: Modifier = Modifier,
     availablePoints: Int,
     entries: List<BoostLeaderboardEntry>,
@@ -57,7 +59,7 @@ fun BoostLeaderboardTab(
                     vertical = UiConfigs.LeaderBoard.VerticalPadding,
                 )
     ) {
-        BoostStatusChip(modifier = Modifier.fillMaxWidth(), availablePoints = availablePoints)
+        BoostStatusChip(navController, modifier = Modifier.fillMaxWidth(), availablePoints = availablePoints)
 
         Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToListSpacing))
 
