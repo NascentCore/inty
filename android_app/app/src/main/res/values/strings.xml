@@ -90,8 +90,7 @@
     <string name="premium_benefit_higher_other_limits">Higher image speech synthesis limits</string>
     <string name="premium_benefit_model">Empathetic AI</string>
     <string name="premium_benefit_chat_style">Customizable chat style</string>
-    <string name="premium_benefit_flagship_models">Latest flagship models (Gemini 3, Grok 4.1)</string>
-
+    <string name="premium_benefit_premium_models">Premium models</string>
     <string name="premium_benefit_newfeature">Priority access to new features</string>
 
     <string name="premium_subscribe">Subscribe</string>
@@ -232,6 +231,7 @@
     <string name="chat_settings_font_size">Message font size</string>
     <string name="chat_settings_font_size_value">%1$d sp</string>
     <string name="chat_settings_models_title">Models</string>
+    <string name="chat_settings_model_default">Default</string>
     <string name="chat_settings_model_gpt_5_2">GPT-5.2</string>
     <string name="chat_settings_model_claude_opus_4_5">Claude Opus 4.5</string>
     <string name="chat_settings_model_gemini_3_flash">Gemini 3 Flash</string>
