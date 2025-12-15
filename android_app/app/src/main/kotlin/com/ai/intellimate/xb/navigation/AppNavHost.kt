@@ -6,6 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -45,6 +47,13 @@ fun AppNavHost(
 ) {
     // 创建并记住导航控制器，用于管理页面导航栈
     val navController = rememberNavController()
+
+    val pushAgentId by mainViewModel.pushAgentId.collectAsState()
+    LaunchedEffect(pushAgentId) {
+        if (pushAgentId.isEmpty()) return@LaunchedEffect
+        mainViewModel.updatePushAgentId("")
+        navController.navigate(Routes.chatPage(pushAgentId, false))
+    }
 
     // 配置导航宿主，定义所有可导航的页面和转场动画
     NavHost(

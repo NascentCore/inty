@@ -96,6 +96,10 @@ class MainViewModel : BaseVM() {
             }
         }
 
+    // 点击离线推送通知相关（存储点击过来的AgentId）
+    private var _pushAgentId = MutableStateFlow("")
+    val pushAgentId: StateFlow<String> = _pushAgentId.asStateFlow()
+
     companion object {
         private const val MAX_TAB_HISTORY = 10
     }
@@ -479,5 +483,10 @@ class MainViewModel : BaseVM() {
     /** 隐藏反馈请求弹窗 */
     fun hideFeedbackRequestDialog() {
         _showFeedbackRequestDialog.value = false
+    }
+
+    /** 更新 pushAgentId (离线推送通知点击) */
+    fun updatePushAgentId(id: String) {
+        _pushAgentId.value = id
     }
 }

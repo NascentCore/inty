@@ -269,12 +269,8 @@ class MainActivity : BaseActivity() {
                     "page_source" to com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
                 ),
             )
-            // 跳转到 ChatActivity todo需要验证有效性
-            com.ai.intellimate.chat.ChatActivity.launch(
-                context = this,
-                agentId = agentId,
-                pageSource = com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
-            )
+            // 跳转到 ChatScreen
+            mainViewModel.updatePushAgentId(agentId)
 
             // 清除 Intent extras，避免重复处理
             intent.removeExtra(FCMConstants.DATA_KEY_TYPE)

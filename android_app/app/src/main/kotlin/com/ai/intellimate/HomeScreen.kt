@@ -503,7 +503,7 @@ private fun ExploreTabContent(
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
             navController.navigate(Routes.chatPage(agent.id, false))
-            //            ChatActivity.launch(context, agent, pageSource = ChatActivity.EXPLORE_TAB)
+
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,
