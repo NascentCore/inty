@@ -11,9 +11,11 @@ import kotlin.random.Random
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
 private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
+private const val KEY_CHAT_MODEL_ID = "chat_model_id"
 private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
+private const val DEFAULT_CHAT_MODEL_ID = "gemini_3_flash"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
 private const val KEY_FEEDBACK_REQUESTED = "feedback_requested"
@@ -186,6 +188,16 @@ object IntySetting {
 
     fun getChatFontSizeSp(): Float {
         return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
+    }
+
+    /** 聊天模型选择（全局设置，默认 Gemini 3 Flash） */
+    fun setChatModelId(modelId: String) {
+        curUserSetting.putString(KEY_CHAT_MODEL_ID, modelId)
+    }
+
+    fun getChatModelId(): String {
+        return curUserSetting.decodeString(KEY_CHAT_MODEL_ID, DEFAULT_CHAT_MODEL_ID)
+            ?: DEFAULT_CHAT_MODEL_ID
     }
 
     fun getLastResubReminderDialogShowTime(): Long {
