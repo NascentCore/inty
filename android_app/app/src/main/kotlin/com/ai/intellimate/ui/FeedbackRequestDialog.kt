@@ -103,4 +103,3 @@ internal fun FeedbackRequestDialog(onCancel: () -> Unit = {}, onSendSuggestions:
 private fun PreviewFeedBackDialog() {
     FeedbackRequestDialog()
 }
-

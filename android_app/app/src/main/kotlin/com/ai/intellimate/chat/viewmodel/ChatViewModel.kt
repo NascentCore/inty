@@ -33,11 +33,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
@@ -512,9 +512,10 @@ class ChatViewModel : BaseVM() {
 
                         if (
                             // 会话消息数达到阈值
-                            sessionMessageCount >= UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
-                            // 距离上次显示已超过最小间隔时间
-                            timeSinceLastShow >= UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
+                            sessionMessageCount >=
+                                UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                                // 距离上次显示已超过最小间隔时间
+                                timeSinceLastShow >= UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
                         ) {
                             IntySetting.setFeedbackDialogLastShowTime(currentTime)
                             // 确保在主线程更新 UI 状态

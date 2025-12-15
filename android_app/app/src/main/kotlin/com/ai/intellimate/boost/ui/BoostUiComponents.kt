@@ -66,7 +66,9 @@ fun BoostStatusChip(
     modifier: Modifier = Modifier,
     availablePoints: Int,
     onClick: (() -> Unit)? = null,
-    content: @Composable () -> Unit = { Text("$availablePoints ${stringResource(R.string.boost_points_label)}")}
+    content: @Composable () -> Unit = {
+        Text("$availablePoints ${stringResource(R.string.boost_points_label)}")
+    },
 ) {
     val context = LocalContext.current
     val canBoost = availablePoints >= BoostConfig.BOOST_STEP_POINTS
@@ -113,12 +115,9 @@ fun BoostStatusChip(
         Spacer(Modifier.size(12.dp))
 
         ProvideTextStyle(
-            value = TextStyle(
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            ),
-            content = content
+            value =
+                TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+            content = content,
         )
     }
 
@@ -195,7 +194,7 @@ fun BoostSheet(
                 text = stringResource(R.string.my_boost_points, availablePoints),
                 color = Color.White,
                 fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier.align(Alignment.CenterHorizontally),
             )
             if (availablePoints < BoostConfig.BOOST_STEP_POINTS) {
                 Text(
@@ -209,12 +208,12 @@ fun BoostSheet(
                 )
                 IconButton(
                     onClick = { showHelpSheet = true },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                         contentDescription = "help",
-                        tint = Color.White
+                        tint = Color.White,
                     )
                 }
             }
@@ -387,9 +386,7 @@ fun BoostPointsHelpSheet(
                 imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                 contentDescription = "help",
                 tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .size(32.dp)
+                modifier = Modifier.align(Alignment.CenterHorizontally).size(32.dp),
             )
             Text(
                 text = stringResource(R.string.boost_points_help_title),

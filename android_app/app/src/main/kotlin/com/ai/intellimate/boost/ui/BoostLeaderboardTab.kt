@@ -57,11 +57,11 @@ fun BoostLeaderboardTab(
                     vertical = UiConfigs.LeaderBoard.VerticalPadding,
                 )
     ) {
-        //BoostStatusChip(modifier = Modifier.fillMaxWidth(), availablePoints = availablePoints)
+        // BoostStatusChip(modifier = Modifier.fillMaxWidth(), availablePoints = availablePoints)
         Text(
             text = stringResource(R.string.my_boost_points, availablePoints),
             color = Color.White,
-            modifier = Modifier.align(Alignment.End)
+            modifier = Modifier.align(Alignment.End),
         )
 
         Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToListSpacing))
@@ -69,8 +69,7 @@ fun BoostLeaderboardTab(
         if (entries.isEmpty()) {
             Column(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
+                    Modifier.fillMaxSize()
                         .clip(RoundedCornerShape(UiConfigs.LeaderBoard.EmptyStateCardCornerRadius))
                         .background(Color(0xFF1A1A1F))
                         .padding(UiConfigs.LeaderBoard.EmptyStateCardPadding),
@@ -112,8 +111,7 @@ private fun BoostLeaderboardRow(
 ) {
     Column(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0xFF15151A))
                 .padding(16.dp)
@@ -127,9 +125,7 @@ private fun BoostLeaderboardRow(
             )
             Spacer(Modifier.size(12.dp))
             AsyncImage(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape),
+                modifier = Modifier.size(48.dp).clip(CircleShape),
                 model = ImageRequest.Builder(LocalContext.current).data(entry.avatarUrl).build(),
                 placeholder = painterResource(R.drawable.img_default_avatar),
                 error = painterResource(R.drawable.img_default_avatar),
@@ -192,8 +188,7 @@ private fun TrendPill(entry: BoostLeaderboardEntry) {
         }
     Row(
         modifier =
-            Modifier
-                .clip(RoundedCornerShape(50))
+            Modifier.clip(RoundedCornerShape(50))
                 .background(tint.copy(alpha = 0.18f))
                 .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
