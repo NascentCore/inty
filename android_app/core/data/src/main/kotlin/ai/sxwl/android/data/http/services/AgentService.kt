@@ -188,12 +188,12 @@ object AgentService {
         }
     }
 
-    /** 更新智能体的 energy points（增量） */
+    /** 更新智能体的 Boost Points（增量） */
     suspend fun updateAgentEnergyPoints(
         agentId: String,
         energyPointsDelta: Int,
     ): ApiResult<AgentInfo> {
-        return IntyNetworkManager.executeRequest("Update Agent Energy Points") {
+        return IntyNetworkManager.executeRequest("Update Agent Boost Points") {
             val params =
                 com.inty.api.models.api.v1.ai.agents.AgentUpdateParams.builder()
                     .energyPoints(energyPointsDelta.toLong())

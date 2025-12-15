@@ -471,14 +471,14 @@
     <string name="boost_points_need_at_least">You need at least %1$d pts</string>
     <string name="boost_sheet_confirm">Boost now</string>
     <string name="boost_sheet_cancel">Maybe later</string>
-    <string name="boost_daily_reward_cta">Claim daily energy points (+200)</string>
+    <string name="boost_daily_reward_cta">Claim daily Boost Points (+200)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
     <string name="boost_leaderboard_title">Top IntelliMates</string>
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
     <string name="boost_leaderboard_back_cd">Back to Explore</string>
-    <string name="boost_leaderboard_energy_points_value">Energy Points: %1$d</string>
+    <string name="boost_leaderboard_energy_points_value">Boost Points: %1$d</string>
     <string name="boost_trend_up">Rising</string>
     <string name="boost_trend_down">Cooling</string>
     <string name="boost_trend_flat">Steady</string>
@@ -499,7 +499,7 @@
     <string name="boost_points_help_cta_check_in">Daily check-in</string>
     <string name="boost_points_help_cta_leaderboard">View Top 10</string>
     <string name="boost_points_help_close">Got it</string>
-    <string name="boost_character_energy_points">Character Energy Points: %1$d</string>
+    <string name="boost_character_energy_points">Character Boost Points: %1$d</string>
     <string name="boost_character_energy_points_hint">This score ranks IntelliMates on the leaderboard.</string>
     <string name="explore_boost_shortcut">Top IntelliMates</string>
     <string name="explore_boost_shortcut_cd">Open boost leaderboard</string>

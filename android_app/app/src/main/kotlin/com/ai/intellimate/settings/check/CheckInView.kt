@@ -92,7 +92,7 @@ fun CheckInScreen(onClose: () -> Unit) {
         Column(modifier = Modifier.fillMaxWidth()) {
             CheckInNavigation(onClose = onClose)
 
-            // Energy Points 横幅
+            // Boost Points 横幅
             Spacer(modifier = Modifier.height(16.dp))
             Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),

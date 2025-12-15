@@ -489,8 +489,7 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
 @router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
-    summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
-    deprecated=True,
+    summary="给定提示词生成图片，用于创建角色时生成角色的形象图片",
     include_in_schema=True,
     tags=[INTY_EVAL_TAG],
 )
