@@ -6,6 +6,8 @@ package com.ai.intellimate.boost
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AgentService
+import ai.sxwl.android.data.store.BoostLeaderboardRankCache
+import ai.sxwl.android.data.store.BoostLeaderboardRankStore
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Box
@@ -73,6 +75,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
         isLoading = true
         errorMessage = null
 
+        val previousCache = BoostLeaderboardRankStore.readCache(context)
         when (
             val result =
                 AgentService.getRecommendAgents(
@@ -83,7 +86,7 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                 )
         ) {
             is ApiResult.Success -> {
-                val remoteEntries =
+                val baseEntries =
                     result.data.mapIndexed { index, agent ->
                         val energyPoints = agent.energyPoints
                         // 使用 energyPoints / BOOST_STEP_POINTS 估算 boost 次数
@@ -100,12 +103,25 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                             avatarUrl = agent.avatar,
                             boostCount = estimatedBoostCount,
                             pointsInvested = energyPoints,
-                            trend = BoostTrend.FLAT, // 后端不返回趋势，使用 FLAT
+                            trend = BoostTrend.FLAT,
                             isSeed = false,
                         )
                     }
 
-                leaderboardEntries = remoteEntries
+                val entriesWithTrend =
+                    BoostLeaderboardTrendCalculator.applyTrends(
+                        entries = baseEntries,
+                        previousRanksByAgentId = previousCache.ranksByAgentId,
+                    )
+
+                leaderboardEntries = entriesWithTrend
+                BoostLeaderboardRankStore.saveCache(
+                    context,
+                    BoostLeaderboardRankCache(
+                        updatedAtMs = System.currentTimeMillis(),
+                        ranksByAgentId = BoostLeaderboardTrendCalculator.toRankMap(baseEntries),
+                    ),
+                )
 
                 isLoading = false
             }
