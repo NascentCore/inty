@@ -231,6 +231,10 @@
     <string name="chat_settings_show_scene_action_button">Show action button</string>
     <string name="chat_settings_font_size">Message font size</string>
     <string name="chat_settings_font_size_value">%1$d sp</string>
+    <string name="chat_settings_models_title">Models</string>
+    <string name="chat_settings_model_gpt_5_2">GPT-5.2</string>
+    <string name="chat_settings_model_claude_opus_4_5">Claude Opus 4.5</string>
+    <string name="chat_settings_model_gemini_3_flash">Gemini 3 Flash</string>
     <string name="chat_settings_font_size_dialog_title">Message font size</string>
     <string name="chat_settings_font_size_dialog_description">Adjust how large chat bubbles look.</string>
     <string name="chat_settings_font_size_preview_label">Preview</string>

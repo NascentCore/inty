@@ -28,6 +28,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -72,6 +74,34 @@ import kotlinx.coroutines.launch
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 
+private const val CHAT_MODEL_ID_GPT_5_2 = "gpt5_2"
+private const val CHAT_MODEL_ID_CLAUDE_OPUS_4_5 = "claude_opus_4_5"
+private const val CHAT_MODEL_ID_GEMINI_3_FLASH = "gemini_3_flash"
+
+private data class ChatModelOption(
+    val id: String,
+    val labelResId: Int,
+)
+
+private val CHAT_MODEL_OPTIONS =
+    listOf(
+        ChatModelOption(CHAT_MODEL_ID_GPT_5_2, R.string.chat_settings_model_gpt_5_2),
+        ChatModelOption(
+            CHAT_MODEL_ID_CLAUDE_OPUS_4_5,
+            R.string.chat_settings_model_claude_opus_4_5,
+        ),
+        ChatModelOption(CHAT_MODEL_ID_GEMINI_3_FLASH, R.string.chat_settings_model_gemini_3_flash),
+    )
+
+private fun chatModelLabelResId(modelId: String): Int {
+    return when (modelId) {
+        CHAT_MODEL_ID_GPT_5_2 -> R.string.chat_settings_model_gpt_5_2
+        CHAT_MODEL_ID_CLAUDE_OPUS_4_5 -> R.string.chat_settings_model_claude_opus_4_5
+        CHAT_MODEL_ID_GEMINI_3_FLASH -> R.string.chat_settings_model_gemini_3_flash
+        else -> R.string.chat_settings_model_gemini_3_flash
+    }
+}
+
 /** 聊天设置抽屉组件 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +126,7 @@ fun ChatSettingsDrawer(
     // Show scene action button全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
     val chatFontSize by SettingStateManager.chatFontSizeFlow.collectAsState()
+    val chatModelId by SettingStateManager.chatModelIdFlow.collectAsState()
 
     val horizontalPadding = 16
     val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
@@ -116,6 +147,7 @@ fun ChatSettingsDrawer(
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
     var editValue by rememberSaveable { mutableStateOf("") }
     var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
+    var showModelMenu by rememberSaveable { mutableStateOf(false) }
     var pendingFontSize by rememberSaveable {
         mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP)
     }
@@ -302,9 +334,7 @@ fun ChatSettingsDrawer(
                         SettingsSwitchItem(
                             item =
                                 SettingsItemData.SwitchItemData(
-                                    title =
-                                        stringResource(R.string.chat_settings_show_keep_talking) +
-                                            "青青河边草，有有利到寒假工i哦啊个",
+                                    title = stringResource(R.string.chat_settings_show_keep_talking),
                                     checked = showKeepTalking,
                                 ),
                             fontLight = true,
@@ -436,6 +466,62 @@ fun ChatSettingsDrawer(
                                 SettingStateManager.updateShowSceneActionButton(enabled)
                             },
                         )
+
+                        IntelliMateDivider()
+
+                        // Models 下拉菜单
+                        androidx.compose.foundation.layout.Box {
+                            SettingsArrowItem(
+                                item =
+                                    SettingsItemData.CommonItemData(
+                                        title = stringResource(R.string.chat_settings_models_title),
+                                        content = stringResource(chatModelLabelResId(chatModelId)),
+                                        arrow = true,
+                                    ),
+                                fontLight = true,
+                                isInGroup = true,
+                                horizontalPadding = horizontalPadding,
+                                onItemClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "open_models_menu",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    showModelMenu = true
+                                },
+                            )
+
+                            DropdownMenu(
+                                expanded = showModelMenu,
+                                onDismissRequest = { showModelMenu = false },
+                            ) {
+                                CHAT_MODEL_OPTIONS.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(option.labelResId),
+                                                color = Color.White,
+                                                fontSize = 14.sp,
+                                            )
+                                        },
+                                        onClick = {
+                                            showModelMenu = false
+                                            SettingStateManager.updateChatModelId(option.id)
+                                            FirebaseManager.logEvent(
+                                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                                FirebaseManager.safeEventParams(
+                                                    "click_type" to "select_model",
+                                                    "model_id" to option.id,
+                                                    "timestamp" to System.currentTimeMillis(),
+                                                ),
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
 
                         IntelliMateDivider()
 
