@@ -4,6 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -162,6 +163,8 @@ fun AppNavHost(
                     galleryItems = galleryImages.value,
                     navController = navController,
                 )
+            } else {
+                Box {}
             }
         }
 
@@ -183,6 +186,8 @@ fun AppNavHost(
                     galleryItems = galleryImages.value,
                     onBack = { navController.popBackStack() },
                 )
+            } else {
+                Box {}
             }
         }
 

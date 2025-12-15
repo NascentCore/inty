@@ -211,7 +211,8 @@ fun BoostLeaderboardScreen(
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                BoostLeaderboardActivity.launch(context)
+                navController.navigate(Routes.BoostLeaderboard)
+//                BoostLeaderboardActivity.launch(context)
             },
         )
     }
