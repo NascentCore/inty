@@ -81,9 +81,9 @@ internal fun ChatScreen(
         // 反馈请求对话框
         if (showFeedbackDialog) {
             FeedbackRequestDialog(
-                onCancel = { chatViewModel.hideFeedbackDialog() },
+                onCancel = { chatViewModel.hideFeedbackRequestDialog() },
                 onSendSuggestions = {
-                    chatViewModel.hideFeedbackDialog()
+                    chatViewModel.hideFeedbackRequestDialog()
                     ReportActivity.launchFeedback(context)
                 },
             )

@@ -746,7 +746,7 @@ class ChatViewModel : BaseVM() {
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
 
     /** 隐藏反馈对话框 */
-    fun hideFeedbackDialog() {
+    fun hideFeedbackRequestDialog() {
         _showFeedbackRequestDialog.value = false
     }
 

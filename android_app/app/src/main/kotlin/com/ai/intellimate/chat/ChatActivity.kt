@@ -158,6 +158,7 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
+        // TODO: 此处是在 ChatActivity 中，入口较少，下面的反馈收集状态是否可以删除？
         val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
         val context = LocalContext.current
         val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
@@ -196,9 +197,9 @@ class ChatActivity : BaseActivity() {
             // 反馈请求对话框
             if (showFeedbackDialog) {
                 FeedbackRequestDialog(
-                    onCancel = { chatViewModel.hideFeedbackDialog() },
+                    onCancel = { chatViewModel.hideFeedbackRequestDialog() },
                     onSendSuggestions = {
-                        chatViewModel.hideFeedbackDialog()
+                        chatViewModel.hideFeedbackRequestDialog()
                         ReportActivity.launchFeedback(context)
                     },
                 )
