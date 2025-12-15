@@ -4,6 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.isInPreview
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.ui.BlurBgCard
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -898,7 +899,13 @@ private fun HorizontalCardSnowPiece(modifier: Modifier = Modifier) {
             .background(
                 brush =
                     Brush.radialGradient(
-                        colors = listOf(Color(0xCCFFFFFF), Color(0x66FFFFFF), Color.Transparent)
+                        colors =
+                            listOf(
+                                Color(0xE6FFFFFF),
+                                Color(0xB3FFFFFF),
+                                Color(0x80FFFFFF),
+                                Color.Transparent
+                            )
                     )
             ),
         contentAlignment = Alignment.Center,
@@ -906,7 +913,7 @@ private fun HorizontalCardSnowPiece(modifier: Modifier = Modifier) {
         Image(
             painter = painterResource(R.drawable.ic_snow_piece),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize(.5f),
+            modifier = Modifier.fillMaxSize(.55f),
             contentScale = ContentScale.Fit,
         )
     }
@@ -917,17 +924,20 @@ private fun HorizontalCardSnowFallingEffect() {
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(Size.Zero) }
 
-    val particleCount = 25
+    val particleCount = 28
     val particles =
         remember(particleCount) {
             (0 until particleCount).map { index ->
+                val size = (22f + Random.nextFloat() * 26f).dp
                 HorizontalCardParticleConfig(
                     initialX = Random.nextFloat(),
-                    initialY = -0.2f - (index * 0.08f),
-                    size = (24f + Random.nextFloat() * 24f).dp,
-                    alpha = 0.15f + Random.nextFloat() * 0.5f,
-                    duration = (5000 + Random.nextInt(3000)).toInt(),
-                    delay = (index * 120) + Random.nextInt(150),
+                    initialY = -0.15f - (index * 0.07f),
+                    size = size,
+                    alpha = (0.2f + Random.nextFloat() * 0.55f).coerceAtMost(0.8f),
+                    duration = (5500 + Random.nextInt(3500)).toInt(),
+                    delay = (index * 100) + Random.nextInt(130),
+                    swingAmplitude = (0.12f + Random.nextFloat() * 0.2f),
+                    rotationSpeed = (0.25f + Random.nextFloat() * 0.6f) * if (Random.nextBoolean()) 1f else -1f,
                 )
             }
         }
@@ -963,14 +973,14 @@ private fun HorizontalCardFloatingSnowParticle(
     val animateY by
         infiniteTransition.animateFloat(
             initialValue = particle.initialY,
-            targetValue = 1.2f,
+            targetValue = 1.25f,
             animationSpec =
                 infiniteRepeatable(
                     animation =
                         tween(
                             particle.duration,
                             delayMillis = particle.delay,
-                            easing = LinearEasing,
+                            easing = FastOutSlowInEasing,
                         ),
                     repeatMode = RepeatMode.Restart,
                 ),
@@ -979,45 +989,63 @@ private fun HorizontalCardFloatingSnowParticle(
 
     val animateX by
         infiniteTransition.animateFloat(
-            initialValue = -0.2f,
-            targetValue = 0.2f,
+            initialValue = -particle.swingAmplitude,
+            targetValue = particle.swingAmplitude,
             animationSpec =
                 infiniteRepeatable(
                     animation =
                         tween(
-                            (particle.duration * 0.6).toInt(),
+                            (particle.duration * 0.75).toInt(),
                             delayMillis = particle.delay,
-                            easing = LinearEasing,
+                            easing = FastOutSlowInEasing,
                         ),
                     repeatMode = RepeatMode.Reverse,
                 ),
             label = "float_x",
         )
 
-    val animateScale by
+    val animateRotation by
         infiniteTransition.animateFloat(
-            initialValue = 0.7f,
-            targetValue = 1.1f,
+            initialValue = 0f,
+            targetValue = 360f * particle.rotationSpeed,
             animationSpec =
                 infiniteRepeatable(
                     animation =
                         tween(
-                            (1000 + Random.nextInt(500)).toInt(),
+                            (particle.duration * 0.45).toInt(),
                             delayMillis = particle.delay,
                             easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "rotation",
+        )
+
+    val animateScale by
+        infiniteTransition.animateFloat(
+            initialValue = 0.75f,
+            targetValue = 1.05f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            (1200 + Random.nextInt(700)).toInt(),
+                            delayMillis = particle.delay,
+                            easing = FastOutSlowInEasing,
                         ),
                     repeatMode = RepeatMode.Reverse,
                 ),
             label = "scale",
         )
 
-    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.3f
+    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.35f
     val currentY = animateY * containerSize.height
 
     Box(
         modifier =
             Modifier.offset(x = currentX.dp, y = currentY.dp)
                 .alpha(particle.alpha)
+                .rotate(animateRotation)
                 .size(particle.size * animateScale)
     ) {
         HorizontalCardSnowPiece(modifier = Modifier.fillMaxSize())
@@ -1031,6 +1059,8 @@ private data class HorizontalCardParticleConfig(
     val alpha: Float,
     val duration: Int,
     val delay: Int,
+    val swingAmplitude: Float = 0.2f,
+    val rotationSpeed: Float = 1f,
 )
 
 // endregion
