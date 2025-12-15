@@ -504,13 +504,21 @@ class ChatViewModel : BaseVM() {
 
                         // 增加总消息数并检查是否需要显示反馈对话框
                         val newMessageCount = IntySetting.incrementTotalMessageCount()
+                        val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                        val currentTime = System.currentTimeMillis()
+                        val timeSinceLastShow = currentTime - lastShowTime
+                        
+                        // 检查是否满足显示条件：
+                        // 1. 消息数达到阈值倍数
+                        // 2. 随机概率满足
+                        // 3. 距离上次显示已超过最小间隔时间
                         if (
                             newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD ==
-                                0 && pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)
+                                0 && 
+                            pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD) &&
+                            timeSinceLastShow >= UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
                         ) {
-                            IntySetting.setFeedbackDialogLastShowTime(
-                                System.currentTimeMillis()
-                            )
+                            IntySetting.setFeedbackDialogLastShowTime(currentTime)
                             // 确保在主线程更新 UI 状态
                             withContext(Dispatchers.Main) {
                                 _showFeedbackRequestDialog.value = true
