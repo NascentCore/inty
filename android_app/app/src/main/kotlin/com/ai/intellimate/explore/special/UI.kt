@@ -904,7 +904,7 @@ private fun HorizontalCardSnowPiece(modifier: Modifier = Modifier) {
                                 Color(0xE6FFFFFF),
                                 Color(0xB3FFFFFF),
                                 Color(0x80FFFFFF),
-                                Color.Transparent
+                                Color.Transparent,
                             )
                     )
             ),
@@ -937,7 +937,8 @@ private fun HorizontalCardSnowFallingEffect() {
                     duration = (5500 + Random.nextInt(3500)).toInt(),
                     delay = (index * 100) + Random.nextInt(130),
                     swingAmplitude = (0.12f + Random.nextFloat() * 0.2f),
-                    rotationSpeed = (0.25f + Random.nextFloat() * 0.6f) * if (Random.nextBoolean()) 1f else -1f,
+                    rotationSpeed =
+                        (0.25f + Random.nextFloat() * 0.6f) * if (Random.nextBoolean()) 1f else -1f,
                 )
             }
         }

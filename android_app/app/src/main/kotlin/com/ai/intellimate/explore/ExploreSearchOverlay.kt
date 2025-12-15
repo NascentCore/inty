@@ -101,7 +101,7 @@ fun ExploreSearchOverlay(
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(bottom = bottomPadding)
                 .navigationBarsPadding()
-                .clickable{}
+                .clickable {}
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

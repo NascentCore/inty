@@ -5,8 +5,6 @@ import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
 import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
-import ai.sxwl.android.data.character.local.db.CharacterDao
-import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
@@ -52,9 +50,9 @@ interface ExploreFetchCallback {
 class ExplorePagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.sortSeed(),
-    private val cacheProvider: RecommendedAgentCacheProvider? = null,   //实际缓存仍然使用的MMKV
+    private val cacheProvider: RecommendedAgentCacheProvider? = null, // 实际缓存仍然使用的MMKV
     private val fetchCallback: ExploreFetchCallback? = null,
-    private val characterRepository: CharacterRepository = CharacterRepository()
+    private val characterRepository: CharacterRepository = CharacterRepository(),
 ) : PagingSource<Int, AgentInfo>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {
@@ -125,7 +123,7 @@ class ExplorePagingSource(
                                 estimatedLoadedCount < result.data.total
                             }
 
-                        //同步缓存至Room
+                        // 同步缓存至Room
                         characterRepository.cacheAgents(validAgents)
 
                         if (

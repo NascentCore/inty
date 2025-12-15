@@ -125,7 +125,7 @@ private fun SnowPiece(modifier: Modifier = Modifier) {
                                 Color(0xE6FFFFFF),
                                 Color(0xB3FFFFFF),
                                 Color(0x80FFFFFF),
-                                Color.Transparent
+                                Color.Transparent,
                             )
                     )
             ),
@@ -158,7 +158,8 @@ private fun SnowFallingEffect() {
                     duration = (7000 + Random.nextInt(5000)).toInt(),
                     delay = (index * 90) + Random.nextInt(120),
                     swingAmplitude = (0.15f + Random.nextFloat() * 0.25f),
-                    rotationSpeed = (0.3f + Random.nextFloat() * 0.7f) * if (Random.nextBoolean()) 1f else -1f,
+                    rotationSpeed =
+                        (0.3f + Random.nextFloat() * 0.7f) * if (Random.nextBoolean()) 1f else -1f,
                 )
             }
         }

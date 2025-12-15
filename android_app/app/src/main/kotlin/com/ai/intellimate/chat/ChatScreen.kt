@@ -22,14 +22,15 @@ import com.ai.intellimate.ui.components.AgentBackground
  *
  * 使用场景：
  * 1. 从 MainActivity 的导航系统进入 - 通过 Routes.ChatPage 路由，在 AppNavHost 中定义
- * 2. 从消息列表 Tab 点击会话项 - HomeScreen.MessagesTabContent 中调用 navController.navigate(Routes.chatPage(...))
- * 3. 从消息列表 Tab 点击收藏的角色 - HomeScreen.MessagesTabContent 中调用 navController.navigate(Routes.chatPage(...))
+ * 2. 从消息列表 Tab 点击会话项 - HomeScreen.MessagesTabContent 中调用
+ *    navController.navigate(Routes.chatPage(...))
+ * 3. 从消息列表 Tab 点击收藏的角色 - HomeScreen.MessagesTabContent 中调用
+ *    navController.navigate(Routes.chatPage(...))
  * 4. 从探索 Tab 点击角色 - HomeScreen.ExploreTabContent 中调用 navController.navigate(Routes.chatPage(...))
  * 5. 从个人中心 Tab 点击角色 - HomeScreen.ProfileTabContent 中调用 navController.navigate(Routes.chatPage(...))
  * 6. 从其他通过导航系统跳转的地方 - 任何使用 navController.navigate(Routes.chatPage(...)) 的地方
  *
- * 注意：此组件在 MainActivity 的 NavHost 中显示，不是独立的 Activity。
- * 只有推送通知和 Boost 排行榜场景使用独立的 ChatActivity。
+ * 注意：此组件在 MainActivity 的 NavHost 中显示，不是独立的 Activity。 只有推送通知和 Boost 排行榜场景使用独立的 ChatActivity。
  */
 @Composable
 internal fun ChatScreen(
