@@ -158,7 +158,8 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
-        val showFeedbackDialog by chatViewModel.showFeedbackDialog.collectAsState()
+        // TODO: 此处是在 ChatActivity 中，入口较少，下面的反馈收集状态是否可以删除？
+        val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
         val context = LocalContext.current
         val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
         val hasLoadingMessage =
@@ -196,9 +197,9 @@ class ChatActivity : BaseActivity() {
             // 反馈请求对话框
             if (showFeedbackDialog) {
                 FeedbackRequestDialog(
-                    onCancel = { chatViewModel.hideFeedbackDialog() },
+                    onCancel = { chatViewModel.hideFeedbackRequestDialog() },
                     onSendSuggestions = {
-                        chatViewModel.hideFeedbackDialog()
+                        chatViewModel.hideFeedbackRequestDialog()
                         ReportActivity.launchFeedback(context)
                     },
                 )
@@ -210,11 +211,15 @@ class ChatActivity : BaseActivity() {
         super.onDestroy()
         // 清理 ChatViewModel 资源
         chatViewModel.clearAllData()
+        // 重置会话消息计数（app 退出时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 
     override fun onPause() {
         super.onPause()
         // 统一生命周期：Activity 页面进入后台即停止音频
         chatViewModel.pauseVoicePlayback()
+        // 重置会话消息计数（app 进入后台时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 }

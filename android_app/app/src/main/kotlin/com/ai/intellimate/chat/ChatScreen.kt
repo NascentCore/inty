@@ -10,8 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.components.AgentBackground
 
 /**
@@ -45,6 +48,8 @@ internal fun ChatScreen(
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
+    val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
+    val context = LocalContext.current
     val hasLoadingMessage =
         chatMessages.any { msg ->
             val hasGeneratedImage = msg.hasGeneratedImage()
@@ -72,5 +77,16 @@ internal fun ChatScreen(
             onBack = { navController.popBackStack() },
             shouldShowBoostSheetOnOpen = shouldShowBoostSheetOnOpen,
         )
+
+        // 反馈请求对话框
+        if (showFeedbackDialog) {
+            FeedbackRequestDialog(
+                onCancel = { chatViewModel.hideFeedbackRequestDialog() },
+                onSendSuggestions = {
+                    chatViewModel.hideFeedbackRequestDialog()
+                    ReportActivity.launchFeedback(context)
+                },
+            )
+        }
     }
 }

@@ -651,10 +651,10 @@ object UiConfigs {
 
     /** 反馈对话框配置 - 适用于反馈请求对话框的随机阈值等设置 */
     object FeedbackDialog {
-        /** 反馈对话框随机阈值 - 当随机数在 [0, 1) 范围内小于此值时显示对话框 */
-        const val RANDOM_THRESHOLD = 0.1f
-        /** 消息数阈值 - 当消息数达到此阈值时显示对话框 */
-        const val MESSAGES_COUNT_THRESHOLD = 100
+        /** 消息数阈值 - 当前使用期内（app 打开未退出/未后台挂起）发送消息数每达到此阈值时显示对话框 */
+        const val SESSION_MESSAGES_COUNT_THRESHOLD = 10
+        /** 最小显示间隔（毫秒）- 防止频繁显示对话框，至少间隔此时间才能再次显示 */
+        const val MIN_SHOW_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000L // 3天
     }
 
     /** 排行榜配置 - 适用于 Boost 排行榜页面的间距、尺寸、颜色等设置 */

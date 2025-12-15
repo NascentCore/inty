@@ -19,7 +19,6 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
-import ai.sxwl.android.utils.pickWithProbability
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
@@ -34,6 +33,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -73,8 +73,11 @@ class ChatViewModel : BaseVM() {
     val hasMoreMessages = _hasMoreMessages.asStateFlow()
 
     // 反馈对话框显示状态
-    private val _showFeedbackDialog = MutableStateFlow(false)
-    val showFeedbackDialog = _showFeedbackDialog.asStateFlow()
+    private val _showFeedbackRequestDialog = MutableStateFlow(false)
+    val showFeedbackRequestDialog = _showFeedbackRequestDialog.asStateFlow()
+
+    // 会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
+    private var sessionMessageCount = 0
 
     private var currentOffset = 0
     private val PAGE_SIZE = 20
@@ -501,20 +504,22 @@ class ChatViewModel : BaseVM() {
                             BoostManager.recordAssistantMessage(agent)
                         }
 
-                        // 增加总消息数并检查是否需要显示反馈对话框
-                        val newMessageCount = IntySetting.incrementTotalMessageCount()
+                        // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
+                        sessionMessageCount++
+                        val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                        val currentTime = System.currentTimeMillis()
+                        val timeSinceLastShow = currentTime - lastShowTime
+
                         if (
-                            newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD ==
-                                0 && pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)
+                            // 会话消息数达到阈值
+                            sessionMessageCount >= UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                            // 距离上次显示已超过最小间隔时间
+                            timeSinceLastShow >= UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
                         ) {
-                            // 使用原子方法检查并标记反馈请求，防止并发竞态条件
-                            // tryMarkFeedbackRequested() 原子性地检查并设置标志，返回 true 表示成功标记（之前未请求）
-                            if (IntySetting.tryMarkFeedbackRequested()) {
-                                LogUtils.d("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount")
-                                IntySetting.setFeedbackDialogLastShowTime(
-                                    System.currentTimeMillis()
-                                )
-                                _showFeedbackDialog.value = true
+                            IntySetting.setFeedbackDialogLastShowTime(currentTime)
+                            // 确保在主线程更新 UI 状态
+                            withContext(Dispatchers.Main) {
+                                _showFeedbackRequestDialog.value = true
                             }
                         }
 
@@ -740,8 +745,13 @@ class ChatViewModel : BaseVM() {
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
 
     /** 隐藏反馈对话框 */
-    fun hideFeedbackDialog() {
-        _showFeedbackDialog.value = false
+    fun hideFeedbackRequestDialog() {
+        _showFeedbackRequestDialog.value = false
+    }
+
+    /** 重置会话消息计数（当 app 进入后台或退出时调用） */
+    fun resetSessionMessageCount() {
+        sessionMessageCount = 0
     }
 
     fun dismissImageGenerationDialog() =
