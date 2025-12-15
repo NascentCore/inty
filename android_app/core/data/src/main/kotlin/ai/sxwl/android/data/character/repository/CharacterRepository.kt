@@ -26,6 +26,42 @@ class CharacterRepository(
         return withContext(dispatcher) { dao.getCharacter(agentId) }
     }
 
+    suspend fun cacheAgents(agents: List<AgentInfo>) {
+        if (agents.isEmpty()) return
+
+        val entities = agents.map { agentInfo ->
+            CharacterEntity(
+                agentId = agentInfo.id,
+                name = agentInfo.name,
+                avatar = agentInfo.avatar,
+                intro = agentInfo.intro,
+                readableId = agentInfo.readableId,
+                category = agentInfo.category,
+                energyPoints = agentInfo.energyPoints,
+                updatedAt = System.currentTimeMillis(),
+                background = agentInfo.background,
+                backgroundAnimatedUrl = agentInfo.backgroundAnimatedUrl,
+                gender = agentInfo.gender,
+                isFollowed = agentInfo.isFollowed,
+                opening = agentInfo.opening,
+                openingAudioUrl = agentInfo.opening_audio_url,
+                voicePreview = agentInfo.voicePreview,
+                createdAt = agentInfo.createdAt,
+                creator = agentInfo.creator,
+                tags = agentInfo.tags?.filterNotNull(),
+                settings = agentInfo.settings,
+                visibility = agentInfo.visibility,
+                prompt = agentInfo.prompt,
+                followerCount = agentInfo.followerCount,
+                connectorCount = agentInfo.connectorCount,
+                deletedAt = agentInfo.deletedAt,
+                backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
+            )
+        }
+
+        dao.upsertAll(entities)
+    }
+
     suspend fun syncCharacterSnapshot(agentInfo: AgentInfo, energyPoints: Int) {
         withContext(dispatcher) {
             val existing = dao.getCharacter(agentInfo.id)
@@ -40,6 +76,23 @@ class CharacterRepository(
                     category = agentInfo.category,
                     energyPoints = sanitizedPoints,
                     updatedAt = System.currentTimeMillis(),
+                    background = agentInfo.background,
+                    backgroundAnimatedUrl = agentInfo.backgroundAnimatedUrl,
+                    gender = agentInfo.gender,
+                    isFollowed = agentInfo.isFollowed,
+                    opening = agentInfo.opening,
+                    openingAudioUrl = agentInfo.opening_audio_url,
+                    voicePreview = agentInfo.voicePreview,
+                    createdAt = agentInfo.createdAt,
+                    creator = agentInfo.creator,
+                    tags = agentInfo.tags?.filterNotNull(),
+                    settings = agentInfo.settings,
+                    visibility = agentInfo.visibility,
+                    prompt = agentInfo.prompt,
+                    followerCount = agentInfo.followerCount,
+                    connectorCount = agentInfo.connectorCount,
+                    deletedAt = agentInfo.deletedAt,
+                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
                 )
             dao.upsert(entity)
         }
@@ -69,23 +122,23 @@ private fun CharacterEntity.toAgentInfo(): AgentInfo {
         intro = this.intro,
         readableId = this.readableId,
         category = this.category,
-        // 其他字段使用默认值，因为数据库中没有存储
-        background = "",
-        backgroundAnimatedUrl = "",
-        backgroundImages = emptyList(),
-        gender = "",
-        isFollowed = false,
-        opening = "",
-        opening_audio_url = "",
-        voicePreview = "",
-        createdAt = "",
-        creator = null,
-        tags = null,
-        settings = null,
-        visibility = "",
-        prompt = "",
-        followerCount = 0,
-        connectorCount = 0,
-        deletedAt = null,
-    )
+        background = this.background,
+        backgroundAnimatedUrl = this.backgroundAnimatedUrl,
+        backgroundImages = this.backgroundImages ?: emptyList(),
+        gender = this.gender,
+        isFollowed = this.isFollowed,
+        opening = this.opening,
+        opening_audio_url = this.openingAudioUrl,
+        voicePreview = this.voicePreview,
+        createdAt = this.createdAt,
+        creator = this.creator,
+        tags = this.tags?.map { it as String? },
+        settings = this.settings,
+        visibility = this.visibility,
+        prompt = this.prompt,
+        energyPoints = this.energyPoints,
+        followerCount = this.followerCount,
+        connectorCount = this.connectorCount,
+        deletedAt = this.deletedAt,
+    ).also { info -> info.isDeleted = this.deletedAt != null }
 }
