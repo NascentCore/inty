@@ -77,6 +77,9 @@ class ChatViewModel : BaseVM() {
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog = _showFeedbackRequestDialog.asStateFlow()
 
+    // 会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
+    private var sessionMessageCount = 0
+
     private var currentOffset = 0
     private val PAGE_SIZE = 20
 
@@ -502,20 +505,17 @@ class ChatViewModel : BaseVM() {
                             BoostManager.recordAssistantMessage(agent)
                         }
 
-                        // 增加总消息数并检查是否需要显示反馈对话框
-                        val newMessageCount = IntySetting.incrementTotalMessageCount()
+                        // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
+                        sessionMessageCount++
+                        LogUtils.e("sessionMessageCount: $sessionMessageCount")
                         val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
                         val currentTime = System.currentTimeMillis()
                         val timeSinceLastShow = currentTime - lastShowTime
-                        
-                        // 检查是否满足显示条件：
-                        // 1. 消息数达到阈值倍数
-                        // 2. 随机概率满足
-                        // 3. 距离上次显示已超过最小间隔时间
+
                         if (
-                            newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD ==
-                                0 && 
-                            pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD) &&
+                            // 会话消息数达到阈值
+                            sessionMessageCount >= UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                            // 距离上次显示已超过最小间隔时间
                             timeSinceLastShow >= UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
                         ) {
                             IntySetting.setFeedbackDialogLastShowTime(currentTime)
@@ -749,6 +749,11 @@ class ChatViewModel : BaseVM() {
     /** 隐藏反馈对话框 */
     fun hideFeedbackDialog() {
         _showFeedbackRequestDialog.value = false
+    }
+
+    /** 重置会话消息计数（当 app 进入后台或退出时调用） */
+    fun resetSessionMessageCount() {
+        sessionMessageCount = 0
     }
 
     fun dismissImageGenerationDialog() =

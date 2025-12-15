@@ -201,7 +201,8 @@ object IntySetting {
     }
 
     fun getFeedbackDialogLastShowTime(): Long {
-        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, 0L)
+        // 默认值为很大的负值，保证第一次检查一定超出显示时长阈值。
+        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, -1L)
     }
 
     fun setFeedbackDialogLastShowTime(timestampMillis: Long) {

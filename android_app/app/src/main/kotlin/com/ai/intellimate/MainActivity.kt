@@ -479,6 +479,8 @@ class MainActivity : BaseActivity() {
         isAppInForeground = false
         // 暂停音频播放
         chatViewModel.pauseVoicePlayback()
+        // 重置会话消息计数（app 进入后台时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 
     override fun onDestroy() {

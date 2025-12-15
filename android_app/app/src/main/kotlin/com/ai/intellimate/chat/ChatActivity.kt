@@ -210,11 +210,15 @@ class ChatActivity : BaseActivity() {
         super.onDestroy()
         // 清理 ChatViewModel 资源
         chatViewModel.clearAllData()
+        // 重置会话消息计数（app 退出时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 
     override fun onPause() {
         super.onPause()
         // 统一生命周期：Activity 页面进入后台即停止音频
         chatViewModel.pauseVoicePlayback()
+        // 重置会话消息计数（app 进入后台时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 }
