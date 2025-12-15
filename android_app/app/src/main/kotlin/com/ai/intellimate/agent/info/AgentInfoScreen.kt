@@ -548,8 +548,13 @@ private fun PhotoAlbumPreviewSection(
                         modifier = Modifier.weight(1f),
                     )
                 }
+
+                repeat(columnCount - displayedImages.size) {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
+
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
     }
 
