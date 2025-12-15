@@ -8,7 +8,6 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
-from eval_app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
@@ -24,11 +23,10 @@ from app.schemas.response import (
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
-from app.services.push_notification_service import (
-    mark_user_push_notifications_as_read,
-)
+from app.services.push_notification_service import mark_user_push_notifications_as_read
 from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
+from eval_app.api import deps
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
@@ -303,6 +301,7 @@ ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[
     response_model=ChatImageGenerationAPIResponse,
     summary="基于聊天消息及历史消息和其他相关信息（角色背景、用户 profile 等）生成图片",
     description=(
+        "用于聊天中为最新一条 AI 消息生成图片。"
         "根据Agent角色、聊天历史和用户消息生成图片，并保存到聊天历史中。"
         "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。未来如需扩展可直接重命名。"
         "agent id 则代表与该 agent 的*当前*会话的 id"
