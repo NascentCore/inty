@@ -1,14 +1,12 @@
 package com.ai.intellimate.chat
 
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -50,7 +48,7 @@ internal fun ChatScreen(
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
-    val showFeedbackDialog by chatViewModel.showFeedbackDialog.collectAsState()
+    val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
     val context = LocalContext.current
     val hasLoadingMessage =
         chatMessages.any { msg ->
@@ -81,11 +79,7 @@ internal fun ChatScreen(
         )
 
         // 反馈请求对话框
-        LaunchedEffect(showFeedbackDialog) {
-            LogUtils.i("ChatScreen", "showFeedbackDialog 状态变化: $showFeedbackDialog")
-        }
         if (showFeedbackDialog) {
-            LogUtils.i("ChatScreen", "准备显示 FeedbackRequestDialog")
             FeedbackRequestDialog(
                 onCancel = { chatViewModel.hideFeedbackDialog() },
                 onSendSuggestions = {

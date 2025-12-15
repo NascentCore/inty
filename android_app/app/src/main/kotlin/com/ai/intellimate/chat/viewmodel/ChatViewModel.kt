@@ -74,8 +74,8 @@ class ChatViewModel : BaseVM() {
     val hasMoreMessages = _hasMoreMessages.asStateFlow()
 
     // 反馈对话框显示状态
-    private val _showFeedbackDialog = MutableStateFlow(false)
-    val showFeedbackDialog = _showFeedbackDialog.asStateFlow()
+    private val _showFeedbackRequestDialog = MutableStateFlow(false)
+    val showFeedbackRequestDialog = _showFeedbackRequestDialog.asStateFlow()
 
     private var currentOffset = 0
     private val PAGE_SIZE = 20
@@ -508,15 +508,12 @@ class ChatViewModel : BaseVM() {
                             newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD ==
                                 0 && pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)
                         ) {
-                            val viewModelInstance = this@ChatViewModel
-                            LogUtils.i("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount, ViewModel实例=${viewModelInstance.hashCode()}")
                             IntySetting.setFeedbackDialogLastShowTime(
                                 System.currentTimeMillis()
                             )
                             // 确保在主线程更新 UI 状态
                             withContext(Dispatchers.Main) {
-                                _showFeedbackDialog.value = true
-                                LogUtils.i("ChatViewModel", "已设置 _showFeedbackDialog = true，当前值: ${_showFeedbackDialog.value}, ViewModel实例=${viewModelInstance.hashCode()}")
+                                _showFeedbackRequestDialog.value = true
                             }
                         }
 
@@ -743,7 +740,7 @@ class ChatViewModel : BaseVM() {
 
     /** 隐藏反馈对话框 */
     fun hideFeedbackDialog() {
-        _showFeedbackDialog.value = false
+        _showFeedbackRequestDialog.value = false
     }
 
     fun dismissImageGenerationDialog() =
