@@ -506,7 +506,6 @@ class ChatViewModel : BaseVM() {
 
                         // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
                         sessionMessageCount++
-                        LogUtils.e("sessionMessageCount: $sessionMessageCount")
                         val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
                         val currentTime = System.currentTimeMillis()
                         val timeSinceLastShow = currentTime - lastShowTime
