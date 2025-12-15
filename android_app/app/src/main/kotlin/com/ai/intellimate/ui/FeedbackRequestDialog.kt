@@ -73,6 +73,7 @@ internal fun FeedbackRequestDialog(onCancel: () -> Unit = {}, onSendSuggestions:
                     fontWeight = FontWeight.Normal,
                     color = UiConfigs.Colors.VipSecondaryText,
                     textAlign = TextAlign.Start,
+                    modifier = Modifier.padding(start = 18.dp),
                 )
 
                 Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
