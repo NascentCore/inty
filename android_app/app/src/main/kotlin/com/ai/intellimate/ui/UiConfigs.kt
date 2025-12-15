@@ -652,7 +652,7 @@ object UiConfigs {
     /** 反馈对话框配置 - 适用于反馈请求对话框的随机阈值等设置 */
     object FeedbackDialog {
         /** 消息数阈值 - 当前使用期内（app 打开未退出/未后台挂起）发送消息数每达到此阈值时显示对话框 */
-        const val SESSION_MESSAGES_COUNT_THRESHOLD = 10
+        const val SESSION_MESSAGES_COUNT_THRESHOLD = 30
         /** 最小显示间隔（毫秒）- 防止频繁显示对话框，至少间隔此时间才能再次显示 */
         const val MIN_SHOW_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000L // 3天
     }
