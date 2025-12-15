@@ -34,6 +34,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -507,14 +508,15 @@ class ChatViewModel : BaseVM() {
                             newMessageCount % UiConfigs.FeedbackDialog.MESSAGES_COUNT_THRESHOLD ==
                                 0 && pickWithProbability(UiConfigs.FeedbackDialog.RANDOM_THRESHOLD)
                         ) {
-                            // 使用原子方法检查并标记反馈请求，防止并发竞态条件
-                            // tryMarkFeedbackRequested() 原子性地检查并设置标志，返回 true 表示成功标记（之前未请求）
-                            if (IntySetting.tryMarkFeedbackRequested()) {
-                                LogUtils.d("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount")
-                                IntySetting.setFeedbackDialogLastShowTime(
-                                    System.currentTimeMillis()
-                                )
+                            val viewModelInstance = this@ChatViewModel
+                            LogUtils.i("ChatViewModel", "触发反馈对话框请求: 消息数=$newMessageCount, ViewModel实例=${viewModelInstance.hashCode()}")
+                            IntySetting.setFeedbackDialogLastShowTime(
+                                System.currentTimeMillis()
+                            )
+                            // 确保在主线程更新 UI 状态
+                            withContext(Dispatchers.Main) {
                                 _showFeedbackDialog.value = true
+                                LogUtils.i("ChatViewModel", "已设置 _showFeedbackDialog = true，当前值: ${_showFeedbackDialog.value}, ViewModel实例=${viewModelInstance.hashCode()}")
                             }
                         }
 

@@ -652,9 +652,9 @@ object UiConfigs {
     /** 反馈对话框配置 - 适用于反馈请求对话框的随机阈值等设置 */
     object FeedbackDialog {
         /** 反馈对话框随机阈值 - 当随机数在 [0, 1) 范围内小于此值时显示对话框 */
-        const val RANDOM_THRESHOLD = 0.1f
+        const val RANDOM_THRESHOLD = 1.0f
         /** 消息数阈值 - 当消息数达到此阈值时显示对话框 */
-        const val MESSAGES_COUNT_THRESHOLD = 100
+        const val MESSAGES_COUNT_THRESHOLD = 10
     }
 
     /** 排行榜配置 - 适用于 Boost 排行榜页面的间距、尺寸、颜色等设置 */

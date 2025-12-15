@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.rememberNavController
@@ -156,10 +158,14 @@ class ChatActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
+        LogUtils.i("ChatActivity", "ConfigComposeUI 开始执行")
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
         val showFeedbackDialog by chatViewModel.showFeedbackDialog.collectAsState()
         val context = LocalContext.current
+        
+        // 调试：每次重组时都记录状态
+        LogUtils.i("ChatActivity", "ConfigComposeUI 重组，showFeedbackDialog = $showFeedbackDialog, chatViewModel = ${chatViewModel.hashCode()}")
         val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
         val hasLoadingMessage =
             chatMessages.any { msg ->
@@ -194,7 +200,11 @@ class ChatActivity : BaseActivity() {
             )
 
             // 反馈请求对话框
+            LaunchedEffect(showFeedbackDialog) {
+                LogUtils.i("ChatActivity", "showFeedbackDialog 状态变化: $showFeedbackDialog")
+            }
             if (showFeedbackDialog) {
+                LogUtils.i("ChatActivity", "准备显示 FeedbackRequestDialog")
                 FeedbackRequestDialog(
                     onCancel = { chatViewModel.hideFeedbackDialog() },
                     onSendSuggestions = {
