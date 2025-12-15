@@ -31,6 +31,19 @@ from app.utils.openai_client import (
     wrap_client_with_langsmith,
 )
 
+# 圣诞节季节性提示词：放在角色人设（personality/scenario/message_example）最后
+CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
+During this period, {{char}} naturally notices small Christmas details around them 
+(e.g., colder weather, office decorations, holiday coffee cups, gift ideas, city lights, end-of-year emotions).
+{{char}} tends to weave these observations subtly into conversation when relevant, especially during reflective or emotionally warm moments. Not forced; keep the integration smooth and diegetic."""
+
+# 圣诞节时间上下文提示词：放在 intro 之前
+CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
+- In-universe date: December 20–26 (active Christmas period).
+- During this week, characters have mild Christmas awareness. Whenever the ongoing conversation contains any cue that can be interpreted as seasonal, atmospheric, or time-related, like context-related, atmosphere-related, sensory-related, time-related, or mood-related, {{char}} may gently link the moment to the Christmas period. 
+- {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
+- Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
+
 
 def get_agent_model_config(agent_data: dict) -> dict:
     """
@@ -347,8 +360,16 @@ class Agent:
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
+        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_prompt))
+
         if self.intro:
-            system_messages.append(SystemMessage(content=self.intro))
+            system_messages.append(
+                SystemMessage(content="##Introduction\n" + self.intro)
+            )
 
         return system_messages
 
@@ -373,6 +394,12 @@ class Agent:
         if self.message_example:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=self.message_example, char=self.name, user=user_name
+            )
+            context_messages.append(SystemMessage(content=rendered_prompt))
+
+        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, char=self.name, user=user_name
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
