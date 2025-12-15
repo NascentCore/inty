@@ -145,7 +145,7 @@ private fun SnowFallingEffect() {
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(Size.Zero) }
 
-    val particleCount = 65
+    val particleCount = 32
     val particles =
         remember(particleCount) {
             (0 until particleCount).map { index ->
