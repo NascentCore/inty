@@ -231,23 +231,6 @@ private class AuthInterceptor : Interceptor {
     }
 }
 
-/** 记录错误和异常 */
-private fun trackError(
-    error: String,
-    errorType: String = "unknown",
-    additionalParams: Map<String, Any> = emptyMap(),
-) {
-    try {
-        FirebaseManager.logEvent(
-            FirebaseManager.Events.APP_ERROR,
-            mapOf("error" to "$errorType: $error", "timestamp" to System.currentTimeMillis()) +
-                additionalParams,
-        )
-    } catch (e: Exception) {
-        LogUtils.e("Failed to track error: ${e.message}")
-    }
-}
-
 /** 网络性能监控拦截器 使用 Firebase Performance 监控请求性能 */
 private class PerformanceInterceptor : Interceptor {
 
@@ -280,7 +263,7 @@ private class PerformanceInterceptor : Interceptor {
             FirebaseManager.stopHttpMetric(httpMetric, response.code)
 
             // 记录性能指标（不影响请求结果）
-            recordPerformanceMetrics(request, duration, response.isSuccessful)
+            recordPerformanceMetrics(request, duration)
             response
         } catch (e: Exception) {
             val endTime = System.currentTimeMillis()
@@ -298,7 +281,7 @@ private class PerformanceInterceptor : Interceptor {
     }
 
     /** 记录性能指标（异步执行，不阻塞请求） */
-    private fun recordPerformanceMetrics(request: Request, duration: Long, isSuccessful: Boolean) {
+    private fun recordPerformanceMetrics(request: Request, duration: Long) {
         try {
             // 使用线程池异步记录性能指标，避免阻塞主线程
             UnifiedOkHttpClient.performanceExecutor.execute {
@@ -312,7 +295,7 @@ private class PerformanceInterceptor : Interceptor {
                     }
 
                     duration < SLOW_REQUEST_THRESHOLD -> {
-                        LogUtils.w(
+                        LogUtils.d(
                             "⚠️ Slow request: ${request.method} ${request.url} (${duration}ms)"
                         )
                         // 使用 Firebase Analytics 记录慢请求
@@ -383,7 +366,7 @@ private class CachedDns : Dns {
 
     // 缓存过期时间（5分钟）
     private val cacheExpiry = ConcurrentHashMap<String, Long>()
-    private val CACHE_DURATION = 5 * 60 * 1000L // 5分钟
+    private val cacheDuration = 5 * 60 * 1000L // 5分钟
 
     override fun lookup(hostname: String): List<InetAddress> {
         val now = System.currentTimeMillis()
@@ -397,7 +380,7 @@ private class CachedDns : Dns {
 
         return cache.getOrPut(hostname) {
             val result = Dns.SYSTEM.lookup(hostname)
-            cacheExpiry[hostname] = now + CACHE_DURATION
+            cacheExpiry[hostname] = now + cacheDuration
             result
         }
     }
