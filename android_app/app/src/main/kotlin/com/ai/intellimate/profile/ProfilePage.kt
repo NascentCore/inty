@@ -512,7 +512,8 @@ private fun ProfileHeader(
                             //
                             // ToastUtils.showLargeText(e.toString())
                             //                                            }
-                            CheckInActivity.launch(context)
+                            navController.navigate(Routes.CheckIn)
+//                            CheckInActivity.launch(context)
                         }
                     },
                 model = R.drawable.ic_checkin,

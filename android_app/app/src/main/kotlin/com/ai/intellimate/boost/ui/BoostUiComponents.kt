@@ -53,16 +53,19 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostCalculator
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostLeaderboardActivity
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.launch
 
 @Composable
 fun BoostStatusChip(
+    navController: NavController,
     modifier: Modifier = Modifier,
     availablePoints: Int,
     onClick: (() -> Unit)? = null,
@@ -127,7 +130,8 @@ fun BoostStatusChip(
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                BoostLeaderboardActivity.launch(context)
+                navController.navigate(Routes.BoostLeaderboard)
+//                BoostLeaderboardActivity.launch(context)
             },
         )
     }
@@ -136,6 +140,7 @@ fun BoostStatusChip(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoostSheet(
+    navController: NavController,
     agentInfo: AgentInfo,
     availablePoints: Int,
     onBoostConfirmed: (Int) -> Unit,
@@ -251,7 +256,8 @@ fun BoostSheet(
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                BoostLeaderboardActivity.launch(context)
+                navController.navigate(Routes.BoostLeaderboard)
+//                BoostLeaderboardActivity.launch(context)
             },
         )
     }

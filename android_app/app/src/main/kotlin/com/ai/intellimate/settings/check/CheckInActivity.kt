@@ -30,6 +30,6 @@ class CheckInActivity : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
 
-        IgnoreSystemFontScaling { CheckInScreen(onClose = { finish() }) }
+//        IgnoreSystemFontScaling { CheckInScreen(onClose = { finish() }) }
     }
 }

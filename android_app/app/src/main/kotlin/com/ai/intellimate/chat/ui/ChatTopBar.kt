@@ -35,16 +35,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.info.AgentInfoActivity
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.xb.helper.AgentStore
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.launch
 
 /** 聊天页面顶部栏组件 */
 @Composable
 fun ChatTopBar(
+    navController: NavController,
     modifier: Modifier,
     agentInfo: AgentInfo,
     showBackButton: Boolean = false,
@@ -83,7 +87,9 @@ fun ChatTopBar(
                             if (agentInfo.isDeleted) {
                                 ToastUtils.showShort(R.string.str_agent_is_deleted)
                             } else {
-                                AgentInfoActivity.launch(context, agentInfo)
+                                AgentStore.addAgent(agentInfo)
+                                navController.navigate(Routes.agentInfPage(agentInfo.id))
+//                                AgentInfoActivity.launch(context, agentInfo)
                             }
                         }
                     },

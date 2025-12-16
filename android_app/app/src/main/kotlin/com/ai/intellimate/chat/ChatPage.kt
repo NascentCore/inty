@@ -379,6 +379,7 @@ internal fun ChatPage(
 
                     agentInfo?.let { info ->
                         ChatTopBar(
+                            navController,
                             modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                             agentInfo = info,
                             showBackButton = showBackButton,
@@ -937,6 +938,7 @@ internal fun ChatPage(
         agentInfo?.let { info ->
             if (showBoostSheet) {
                 BoostSheet(
+                    navController,
                     agentInfo = info,
                     availablePoints = boostState.availablePoints,
                     onBoostConfirmed = { points ->

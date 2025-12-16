@@ -1,23 +1,15 @@
-/*
- * CREATED_BY_AGENT
- */
 package com.ai.intellimate.boost
 
-import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.store.BoostLeaderboardRankCache
 import ai.sxwl.android.data.store.BoostLeaderboardRankStore
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Help
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.rounded.Help
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,33 +32,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.ui.components.EmptyStateComponent
 import com.ai.intellimate.ui.components.EmptyStateType
-
-/** Boost 排行榜的独立页面 */
-class BoostLeaderboardActivity : BaseActivity() {
-
-    companion object {
-        fun launch(context: Context) {
-            context.startActivity(Intent(context, BoostLeaderboardActivity::class.java))
-        }
-    }
-
-    override fun getPageName(): String = "BoostLeaderboardPage"
-
-    @Composable
-    override fun ConfigComposeUI() {
-        BoostLeaderboardScreen(onBack = { finish() })
-    }
-}
+import com.ai.intellimate.xb.helper.AgentStore
+import com.ai.intellimate.xb.navigation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BoostLeaderboardScreen(onBack: () -> Unit) {
+fun BoostLeaderboardScreen(
+    navController: NavController,
+    onClick: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val boostState by BoostManager.boostState.collectAsState()
 
@@ -140,13 +121,14 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
     val handleLeaderboardAction =
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
-                ChatActivity.launch(
-                    context,
-                    agentInfo = null,
-                    agentId = entry.agentId,
-                    pageSource = ChatActivity.EXPLORE_TAB,
-                    showBoostSheet = showSheet,
-                )
+                navController.navigate(Routes.chatPage(entry.agentId, showSheet))
+//                ChatActivity.launch(
+//                    context,
+//                    agentInfo = null,
+//                    agentId = entry.agentId,
+//                    pageSource = ChatActivity.EXPLORE_TAB,
+//                    showBoostSheet = showSheet,
+//                )
             }
         }
     var showHelpSheet by remember { mutableStateOf(false) }
@@ -161,7 +143,9 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        navController.popBackStack()
+                    }) {
                         Icon(
                             painter = painterResource(R.drawable.back),
                             contentDescription = stringResource(R.string.boost_leaderboard_back_cd),
@@ -170,11 +154,13 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showHelpSheet = true }) {
+                    IconButton(
+                        onClick = { showHelpSheet = true}
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                             contentDescription = "help",
-                            tint = Color.White,
+                            tint = Color.White
                         )
                     }
                 },
@@ -207,13 +193,14 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                 )
             }
             else -> {
-//                BoostLeaderboardTab(
-//                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-//                    availablePoints = boostState.availablePoints,
-//                    entries = leaderboardEntries,
-//                    onChat = { handleLeaderboardAction(it, false) },
-//                    onBoost = { handleLeaderboardAction(it, true) },
-//                )
+                BoostLeaderboardTab(
+                    navController,
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                    availablePoints = boostState.availablePoints,
+                    entries = leaderboardEntries,
+                    onChat = { handleLeaderboardAction(it, false) },
+                    onBoost = { handleLeaderboardAction(it, true) },
+                )
             }
         }
     }
@@ -224,7 +211,8 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                BoostLeaderboardActivity.launch(context)
+                navController.navigate(Routes.BoostLeaderboard)
+//                BoostLeaderboardActivity.launch(context)
             },
         )
     }
