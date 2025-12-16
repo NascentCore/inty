@@ -23,6 +23,7 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
@@ -1428,6 +1429,7 @@ class ChatViewModel : BaseVM() {
         _isLoadingMore.value = false
         _hasMoreMessages.value = true
         _isQueryMsgsCompleted.value = false
+        OpeningPlayState.clearAgentPlayed(agentId)
 
         // 3. 重新绑定消息流（因为 clearChatData 会清理内存缓存）
         // 注意：如果使用了 RoomDataSource，消息流会自动更新

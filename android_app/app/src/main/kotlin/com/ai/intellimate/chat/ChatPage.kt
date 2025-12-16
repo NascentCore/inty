@@ -7,6 +7,7 @@ import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -521,7 +522,7 @@ internal fun ChatPage(
                                 if (isCurrentPage) {
                                     if (shouldDelayShowOpening) {
                                         // 如果需要播放语音，先隐藏，延迟1.5秒后显示
-                                        delay(1500)
+                                        delay(1000)
                                     }
 
                                     showOpeningItem = true
@@ -630,42 +631,29 @@ internal fun ChatPage(
                                     item {
                                         agentInfo?.let { agent ->
                                             val shouldShowOpening = agent.opening.isNotEmpty()
-                                            if (shouldShowOpening) {
-                                                // 使用渐变动画显示开场白
-                                                AnimatedVisibility(
-                                                    visible = showOpeningItem,
-                                                    enter =
-                                                        fadeIn(
-                                                            animationSpec =
-                                                                tween(
-                                                                    durationMillis = 500,
-                                                                    easing = FastOutSlowInEasing,
-                                                                )
-                                                        ),
-                                                ) {
-                                                    Column {
-                                                        val openingMessage =
-                                                            MsgInfo(
-                                                                content = agent.opening,
-                                                                role = "assistant",
-                                                                meta_data =
-                                                                    MsgInfo.MsgMetaData(
-                                                                        agentId = agent.id,
-                                                                        isOpening = true,
-                                                                    ),
-                                                                audio_url = agent.opening_audio_url,
-                                                            )
-
-                                                        Spacer(Modifier.height(16.dp))
-                                                        ChatItem(
-                                                            openingMessage,
-                                                            isCurrentPage = isCurrentPage,
-                                                            chatViewModel = chatViewModel,
-                                                            isGuideVisible = isGuideVisible,
-                                                            messageFontSizeSp = chatFontSizeSp,
+                                            if (shouldShowOpening && showOpeningItem) {
+                                                Column {
+                                                    val openingMessage =
+                                                        MsgInfo(
+                                                            content = agent.opening,
+                                                            role = "assistant",
+                                                            meta_data =
+                                                                MsgInfo.MsgMetaData(
+                                                                    agentId = agent.id,
+                                                                    isOpening = true,
+                                                                ),
+                                                            audio_url = agent.opening_audio_url,
                                                         )
-                                                        Spacer(Modifier.height(16.dp))
-                                                    }
+
+                                                    Spacer(Modifier.height(16.dp))
+                                                    ChatItem(
+                                                        openingMessage,
+                                                        isCurrentPage = isCurrentPage,
+                                                        chatViewModel = chatViewModel,
+                                                        isGuideVisible = isGuideVisible,
+                                                        messageFontSizeSp = chatFontSizeSp,
+                                                    )
+                                                    Spacer(Modifier.height(16.dp))
                                                 }
                                             }
                                         }
