@@ -8,9 +8,7 @@ import androidx.room.TypeConverter
 import com.architecture.httplib.utils.MoshiUtils
 import com.squareup.moshi.Types
 
-/**
- * Room TypeConverter 用于序列化/反序列化复杂类型
- */
+/** Room TypeConverter 用于序列化/反序列化复杂类型 */
 class CharacterTypeConverters {
 
     // List<String> 转换器
@@ -41,7 +39,8 @@ class CharacterTypeConverters {
     fun fromStringMap(value: String?): Map<String, Any>? {
         if (value.isNullOrBlank()) return null
         return try {
-            val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+            val type =
+                Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
             MoshiUtils.moshiBuild.adapter<Map<String, Any>>(type).fromJson(value)
         } catch (e: Exception) {
             null
@@ -52,7 +51,8 @@ class CharacterTypeConverters {
     fun toStringMap(value: Map<String, Any>?): String? {
         if (value.isNullOrEmpty()) return null
         return try {
-            val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+            val type =
+                Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
             MoshiUtils.moshiBuild.adapter<Map<String, Any>>(type).toJson(value) ?: null
         } catch (e: Exception) {
             null
@@ -80,4 +80,3 @@ class CharacterTypeConverters {
         }
     }
 }
-

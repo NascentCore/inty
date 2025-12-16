@@ -120,4 +120,3 @@ class BoostLeaderboardTrendCalculatorTest {
         assertEquals(mapOf("a" to 3, "b" to 1), BoostLeaderboardTrendCalculator.toRankMap(entries))
     }
 }
-

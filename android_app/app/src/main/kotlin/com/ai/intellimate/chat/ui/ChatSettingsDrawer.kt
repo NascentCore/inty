@@ -1,6 +1,7 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.PersonaPreferenceStore
 import ai.sxwl.android.data.store.SettingStateManager
@@ -28,9 +29,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
@@ -70,7 +71,6 @@ import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.xb.navigation.Routes
-import ai.sxwl.android.data.billing.BillingRepository
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -82,10 +82,7 @@ private const val CHAT_MODEL_ID_GPT_5_2 = "gpt5_2"
 private const val CHAT_MODEL_ID_CLAUDE_OPUS_4_5 = "claude_opus_4_5"
 private const val CHAT_MODEL_ID_GEMINI_3_FLASH = "gemini_3_flash"
 
-private data class ChatModelOption(
-    val id: String,
-    val labelResId: Int,
-)
+private data class ChatModelOption(val id: String, val labelResId: Int)
 
 private val CHAT_MODEL_OPTIONS =
     listOf(
@@ -344,7 +341,8 @@ fun ChatSettingsDrawer(
                         SettingsSwitchItem(
                             item =
                                 SettingsItemData.SwitchItemData(
-                                    title = stringResource(R.string.chat_settings_show_keep_talking),
+                                    title =
+                                        stringResource(R.string.chat_settings_show_keep_talking),
                                     checked = showKeepTalking,
                                 ),
                             fontLight = true,
@@ -518,25 +516,30 @@ fun ChatSettingsDrawer(
                                         },
                                         onClick = {
                                             showModelMenu = false
-                                            
+
                                             // 检查订阅状态：如果未订阅且选择的不是Default，则跳转到订阅页面
-                                            if (!vipStatus.isSubscribed && option.id != CHAT_MODEL_ID_DEFAULT) {
+                                            if (
+                                                !vipStatus.isSubscribed &&
+                                                    option.id != CHAT_MODEL_ID_DEFAULT
+                                            ) {
                                                 navController.navigate(Routes.VipCenter)
                                                 FirebaseManager.logEvent(
                                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                                     FirebaseManager.safeEventParams(
-                                                        "click_type" to "select_model_requires_subscription",
+                                                        "click_type" to
+                                                            "select_model_requires_subscription",
                                                         "model_id" to option.id,
                                                         "timestamp" to System.currentTimeMillis(),
                                                     ),
                                                 )
                                             } else {
                                                 // 已订阅或选择Default，允许选择
-                                                val modelIdToSet = if (option.id == CHAT_MODEL_ID_DEFAULT) {
-                                                    CHAT_MODEL_ID_DEFAULT
-                                                } else {
-                                                    option.id
-                                                }
+                                                val modelIdToSet =
+                                                    if (option.id == CHAT_MODEL_ID_DEFAULT) {
+                                                        CHAT_MODEL_ID_DEFAULT
+                                                    } else {
+                                                        option.id
+                                                    }
                                                 SettingStateManager.updateChatModelId(modelIdToSet)
                                                 FirebaseManager.logEvent(
                                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,

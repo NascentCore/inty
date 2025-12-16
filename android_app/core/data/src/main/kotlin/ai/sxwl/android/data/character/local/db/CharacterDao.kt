@@ -22,7 +22,8 @@ interface CharacterDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(character: CharacterEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertAll(characters: List<CharacterEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(characters: List<CharacterEntity>)
 
     @Query(
         "UPDATE characters SET energy_points = :energyPoints, updated_at = :updatedAt WHERE agent_id = :agentId"

@@ -32,8 +32,8 @@ import com.ai.intellimate.ui.components.AgentBackground
  * 1. 从推送通知启动 - 当用户点击 FCM 推送通知时，通过 MainActivity.handleNotificationIntent() 调用 ChatActivity.launch()
  * 2. 从 Boost 排行榜页面启动 - 当用户在 BoostLeaderboardActivity 中点击排行榜项时调用 ChatActivity.launch()
  *
- * 注意：应用内大部分聊天页面跳转使用导航系统（Routes.ChatPage），通过 ChatScreen 组件显示，
- * 而不是使用独立的 ChatActivity。只有上述两种场景会使用 ChatActivity。
+ * 注意：应用内大部分聊天页面跳转使用导航系统（Routes.ChatPage），通过 ChatScreen 组件显示， 而不是使用独立的 ChatActivity。只有上述两种场景会使用
+ * ChatActivity。
  */
 class ChatActivity : BaseActivity() {
 

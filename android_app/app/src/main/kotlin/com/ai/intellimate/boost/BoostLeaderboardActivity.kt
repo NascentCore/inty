@@ -151,64 +151,62 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
         }
     var showHelpSheet by remember { mutableStateOf(false) }
 
-//    Scaffold(
-//        topBar = {
-//            CenterAlignedTopAppBar(
-//                title = {
-//                    Text(
-//                        text = stringResource(R.string.boost_leaderboard_title),
-//                        color = Color.White,
-//                    )
-//                },
-//                navigationIcon = {
-//                    IconButton(onClick = onBack) {
-//                        Icon(
-//                            painter = painterResource(R.drawable.back),
-//                            contentDescription = stringResource(R.string.boost_leaderboard_back_cd),
-//                            tint = Color.White,
-//                        )
-//                    }
-//                },
-//                actions = {
-//                    IconButton(
-//                        onClick = { showHelpSheet = true}
-//                    ) {
-//                        Icon(
-//                            imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
-//                            contentDescription = "help",
-//                            tint = Color.White
-//                        )
-//                    }
-//                },
-//                colors =
-//                    TopAppBarDefaults.centerAlignedTopAppBarColors(
-//                        containerColor = Color.Transparent
-//                    ),
-//            )
-//        }
-//    ) { innerPadding ->
-//        when {
-//            isLoading -> {
-//                Box(
-//                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-//                    contentAlignment = Alignment.Center,
-//                ) {
-//                    CircularProgressIndicator(
-//                        modifier = Modifier.size(24.dp),
-//                        color = Color.White.copy(alpha = 0.7f),
-//                    )
-//                }
-//            }
-//            errorMessage != null -> {
-//                EmptyStateComponent(
-//                    type = EmptyStateType.NETWORK_ERROR,
-//                    title = stringResource(R.string.empty_explore_error),
-//                    showRetryButton = true,
-//                    onRetry = { retryTrigger++ },
-//                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-//                )
-//            }
-//            else -> {
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.boost_leaderboard_title),
+                        color = Color.White,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(R.drawable.back),
+                            contentDescription = stringResource(R.string.boost_leaderboard_back_cd),
+                            tint = Color.White,
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showHelpSheet = true }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
+                            contentDescription = "help",
+                            tint = Color.White,
+                        )
+                    }
+                },
+                colors =
+                    TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color.Transparent
+                    ),
+            )
+        }
+    ) { innerPadding ->
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White.copy(alpha = 0.7f),
+                    )
+                }
+            }
+            errorMessage != null -> {
+                EmptyStateComponent(
+                    type = EmptyStateType.NETWORK_ERROR,
+                    title = stringResource(R.string.empty_explore_error),
+                    showRetryButton = true,
+                    onRetry = { retryTrigger++ },
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                )
+            }
+            else -> {
 //                BoostLeaderboardTab(
 //                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
 //                    availablePoints = boostState.availablePoints,
@@ -216,18 +214,18 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
 //                    onChat = { handleLeaderboardAction(it, false) },
 //                    onBoost = { handleLeaderboardAction(it, true) },
 //                )
-//            }
-//        }
-//    }
-//
-//    if (showHelpSheet) {
-//        BoostPointsHelpSheet(
-//            availablePoints = boostState.availablePoints,
-//            onDismiss = { showHelpSheet = false },
-//            onOpenLeaderboard = {
-//                showHelpSheet = false
-//                BoostLeaderboardActivity.launch(context)
-//            },
-//        )
-//    }
+            }
+        }
+    }
+
+    if (showHelpSheet) {
+        BoostPointsHelpSheet(
+            availablePoints = boostState.availablePoints,
+            onDismiss = { showHelpSheet = false },
+            onOpenLeaderboard = {
+                showHelpSheet = false
+                BoostLeaderboardActivity.launch(context)
+            },
+        )
+    }
 }

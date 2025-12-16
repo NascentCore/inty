@@ -140,9 +140,7 @@ export const ReportFeedbackPage: React.FC = () => {
       key: "id",
       width: 120,
       ellipsis: true,
-      render: (id: string) => (
-        <span title={id}>{id.substring(0, 8)}...</span>
-      ),
+      render: (id: string) => <span title={id}>{id.substring(0, 8)}...</span>,
     },
     {
       title: "类型",
@@ -173,9 +171,7 @@ export const ReportFeedbackPage: React.FC = () => {
       key: "target_id",
       width: 140,
       ellipsis: true,
-      render: (id: string) => (
-        <span title={id}>{id.substring(0, 12)}...</span>
-      ),
+      render: (id: string) => <span title={id}>{id.substring(0, 12)}...</span>,
     },
     {
       title: "原因",
@@ -210,7 +206,8 @@ export const ReportFeedbackPage: React.FC = () => {
       render: (desc: string | null) => {
         if (!desc) return <span style={{ color: "#999" }}>无</span>;
         const maxLen = 50;
-        const displayText = desc.length > maxLen ? `${desc.substring(0, maxLen)}...` : desc;
+        const displayText =
+          desc.length > maxLen ? `${desc.substring(0, maxLen)}...` : desc;
         return <span title={desc}>{displayText}</span>;
       },
     },
@@ -279,16 +276,16 @@ export const ReportFeedbackPage: React.FC = () => {
             <Option value="AGENT">角色</Option>
           </Select>
 
-          <Select
-            value={orderBy}
-            onChange={setOrderBy}
-            style={{ width: 150 }}
-          >
+          <Select value={orderBy} onChange={setOrderBy} style={{ width: 150 }}>
             <Option value="created_at_desc">创建时间降序</Option>
             <Option value="created_at_asc">创建时间升序</Option>
           </Select>
 
-          <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={loadData}
+            loading={loading}
+          >
             刷新
           </Button>
         </Space>
@@ -333,9 +330,7 @@ export const ReportFeedbackPage: React.FC = () => {
               {selectedItem.id}
             </Descriptions.Item>
             <Descriptions.Item label="类型">
-              <Tag
-                color={TYPE_COLORS[selectedItem.report_type || "REPORT"]}
-              >
+              <Tag color={TYPE_COLORS[selectedItem.report_type || "REPORT"]}>
                 {TYPE_LABELS[selectedItem.report_type || "REPORT"]}
               </Tag>
             </Descriptions.Item>
