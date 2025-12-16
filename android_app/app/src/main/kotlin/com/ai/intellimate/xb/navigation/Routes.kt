@@ -15,7 +15,7 @@ object Routes {
     const val HomeTab = "home_screen"
 
     /** 聊天页面路由，参数：agentId（角色ID）、showBoost（是否显示Boost弹窗） */
-    const val ChatPage = "chat_page/{agentId}/{showBoost}"
+    const val ChatPage = "chat_page/{agentId}/{showBoost}?shouldAutoFocusInput={shouldAutoFocusInput}"
 
     /** 设置页面路由 */
     const val Settings = "settings"
@@ -46,7 +46,7 @@ object Routes {
      * @param showBoost 是否显示Boost弹窗
      * @return 聊天页面路由路径
      */
-    fun chatPage(agentId: String, showBoost: Boolean) = "chat_page/${agentId}/${showBoost}"
+    fun chatPage(agentId: String, showBoost: Boolean, shouldAutoFocusInput: Boolean = true) = "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}"
 
     fun agentInfPage(agentId: String) = "agent_info_page/${agentId}"
     fun agentPhotoAlbum(agentId: String) = "agent_photo_album/${agentId}"
