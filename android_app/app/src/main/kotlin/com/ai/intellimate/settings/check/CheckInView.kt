@@ -50,9 +50,7 @@ import com.ai.intellimate.boost.ui.BoostStatusChip
 import kotlinx.coroutines.launch
 
 @Composable
-fun CheckInScreen(
-    navController: NavController,
-) {
+fun CheckInScreen(navController: NavController) {
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp.dp
     val screenWidthDp = configuration.screenWidthDp.dp
@@ -93,9 +91,7 @@ fun CheckInScreen(
         )
 
         Column(modifier = Modifier.fillMaxWidth()) {
-            CheckInNavigation(onClose = {
-                navController.popBackStack()
-            })
+            CheckInNavigation(onClose = { navController.popBackStack() })
 
             // Boost Points 横幅
             Spacer(modifier = Modifier.height(16.dp))

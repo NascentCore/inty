@@ -30,7 +30,10 @@ object SignKeyConfig {
 
             // 场景 2：当前在仓库根目录（含 android_app/ 子目录）
             val androidAppDir = File(dir, "android_app")
-            if (File(androidAppDir, "gradlew").exists() && File(androidAppDir, "build-logic").exists()) {
+            if (
+                File(androidAppDir, "gradlew").exists() &&
+                    File(androidAppDir, "build-logic").exists()
+            ) {
                 return androidAppDir
             }
 
@@ -49,7 +52,9 @@ object SignKeyConfig {
             return configFile
         }
 
-        throw IllegalStateException("签名配置文件不存在: $CONFIG_FILE_PATH (androidAppDir=${androidAppDir.path})")
+        throw IllegalStateException(
+            "签名配置文件不存在: $CONFIG_FILE_PATH (androidAppDir=${androidAppDir.path})"
+        )
     }
 
     /** 读取签名配置文件 */

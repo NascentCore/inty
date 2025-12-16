@@ -36,18 +36,13 @@ import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
-import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.ui.components.EmptyStateComponent
 import com.ai.intellimate.ui.components.EmptyStateType
-import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BoostLeaderboardScreen(
-    navController: NavController,
-    onClick: (() -> Unit)? = null
-) {
+fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? = null) {
     val context = LocalContext.current
     val boostState by BoostManager.boostState.collectAsState()
 
@@ -122,13 +117,13 @@ fun BoostLeaderboardScreen(
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
                 navController.navigate(Routes.chatPage(entry.agentId, showSheet))
-//                ChatActivity.launch(
-//                    context,
-//                    agentInfo = null,
-//                    agentId = entry.agentId,
-//                    pageSource = ChatActivity.EXPLORE_TAB,
-//                    showBoostSheet = showSheet,
-//                )
+                //                ChatActivity.launch(
+                //                    context,
+                //                    agentInfo = null,
+                //                    agentId = entry.agentId,
+                //                    pageSource = ChatActivity.EXPLORE_TAB,
+                //                    showBoostSheet = showSheet,
+                //                )
             }
         }
     var showHelpSheet by remember { mutableStateOf(false) }
@@ -143,9 +138,7 @@ fun BoostLeaderboardScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        navController.popBackStack()
-                    }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             painter = painterResource(R.drawable.back),
                             contentDescription = stringResource(R.string.boost_leaderboard_back_cd),
@@ -154,13 +147,11 @@ fun BoostLeaderboardScreen(
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { showHelpSheet = true}
-                    ) {
+                    IconButton(onClick = { showHelpSheet = true }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                             contentDescription = "help",
-                            tint = Color.White
+                            tint = Color.White,
                         )
                     }
                 },
@@ -212,7 +203,7 @@ fun BoostLeaderboardScreen(
             onOpenLeaderboard = {
                 showHelpSheet = false
                 navController.navigate(Routes.BoostLeaderboard)
-//                BoostLeaderboardActivity.launch(context)
+                //                BoostLeaderboardActivity.launch(context)
             },
         )
     }

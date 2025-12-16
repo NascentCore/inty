@@ -202,11 +202,12 @@ private fun VipBenefitsDesc(hazeState: HazeState, isVipSubscribed: Boolean) {
         Column {
             Spacer(modifier = Modifier.height(16.dp))
             Image(
-                painter = if(isVipSubscribed) {
-                    painterResource(R.drawable.vip_desc_title_sub)
-                } else {
-                    painterResource(R.drawable.vip_desc_title)
-                },
+                painter =
+                    if (isVipSubscribed) {
+                        painterResource(R.drawable.vip_desc_title_sub)
+                    } else {
+                        painterResource(R.drawable.vip_desc_title)
+                    },
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
                 contentScale = ContentScale.FillWidth,

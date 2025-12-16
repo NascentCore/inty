@@ -115,11 +115,12 @@ fun AppNavHost(
         // 深度链接的参数需要指明类型，否则可能会出现类型转换错误
         composable(
             route = Routes.ChatPage,
-            arguments = listOf(
-                navArgument("agentId") { type = NavType.StringType},
-                navArgument("showBoost") { type = NavType.BoolType},
-                navArgument("shouldAutoFocusInput") { type = NavType.BoolType}
-            )
+            arguments =
+                listOf(
+                    navArgument("agentId") { type = NavType.StringType },
+                    navArgument("showBoost") { type = NavType.BoolType },
+                    navArgument("shouldAutoFocusInput") { type = NavType.BoolType },
+                ),
         ) { backStackEntry ->
             val agentId = backStackEntry.arguments?.getString("agentId")
             val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
@@ -147,16 +148,8 @@ fun AppNavHost(
             )
         }
 
-        composable(Routes.BoostLeaderboard) {
-            BoostLeaderboardScreen(navController)
-        }
-        composable(Routes.CheckIn) {
-            IgnoreSystemFontScaling {
-                CheckInScreen(
-                    navController,
-                )
-            }
-        }
+        composable(Routes.BoostLeaderboard) { BoostLeaderboardScreen(navController) }
+        composable(Routes.CheckIn) { IgnoreSystemFontScaling { CheckInScreen(navController) } }
 
         composable(Routes.AgentInfoPage) { backStackEntry ->
             val agentId = backStackEntry.arguments?.getString("agentId")

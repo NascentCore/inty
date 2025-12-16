@@ -311,9 +311,10 @@ internal fun AiAgentInfoScreen(
                             TextButton(
                                 onClick = {
                                     navController.navigate(Routes.BoostLeaderboard)
-//                                    com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
-//                                        context
-//                                    )
+                                    //
+                                    // com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
+                                    //                                        context
+                                    //                                    )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
@@ -437,7 +438,8 @@ internal fun AiAgentInfoScreen(
                                 images = galleryItems,
                                 agentId = agent.id,
                                 onNavigateToPhotoAlbum = {
-//                                    navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
+                                    //
+                                    // navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
                                     navController.navigate(Routes.agentPhotoAlbum(agent.id))
                                 },
                             )
@@ -504,7 +506,7 @@ internal fun AiAgentInfoScreen(
             onOpenLeaderboard = {
                 showBoostHelpSheet = false
                 navController.navigate(Routes.BoostLeaderboard)
-//                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
+                //                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
             },
         )
     }
@@ -555,7 +557,7 @@ private fun PhotoAlbumPreviewSection(
                         item = item,
                         agentId = agentId,
                         onPreview = { previewImage = it },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                 }
 
@@ -719,7 +721,7 @@ private fun AgentGalleryImageCardCompact(
     Box(
         modifier =
             modifier
-                .aspectRatio(9f/16f)
+                .aspectRatio(9f / 16f)
                 .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
                 .background(
                     Color.White.copy(

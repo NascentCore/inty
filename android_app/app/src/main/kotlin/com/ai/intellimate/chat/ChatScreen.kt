@@ -77,7 +77,7 @@ internal fun ChatScreen(
             showBackButton = true,
             onBack = { navController.popBackStack() },
             shouldShowBoostSheetOnOpen = shouldShowBoostSheetOnOpen,
-            shouldAutoFocusInput = shouldAutoFocusInput
+            shouldAutoFocusInput = shouldAutoFocusInput,
         )
 
         // 反馈请求对话框

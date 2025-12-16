@@ -7,12 +7,7 @@ import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
-import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -351,11 +346,7 @@ internal fun ChatPage(
                 }
         }
 
-        LifecycleResumeEffect(keyboard) {
-            onPauseOrDispose {
-                keyboard?.hide()
-            }
-        }
+        LifecycleResumeEffect(keyboard) { onPauseOrDispose { keyboard?.hide() } }
 
         Scaffold(
             modifier = Modifier.fillMaxSize().background(Color.Transparent),
