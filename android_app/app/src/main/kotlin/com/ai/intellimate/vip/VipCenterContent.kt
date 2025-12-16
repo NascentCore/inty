@@ -140,7 +140,7 @@ fun VipCenterContent(
             VipCenterTopBar(onClose = { onClose() })
 
             Spacer(Modifier.weight(1f))
-            VipBenefitsDesc(hazeState)
+            VipBenefitsDesc(hazeState, vipStatus.isSubscribed)
 
             Spacer(Modifier.height(12.dp))
             // 动态显示订阅计划列表
@@ -190,7 +190,7 @@ private fun VipCenterTopBar(onClose: () -> Unit) {
 }
 
 @Composable
-private fun VipBenefitsDesc(hazeState: HazeState) {
+private fun VipBenefitsDesc(hazeState: HazeState, isVipSubscribed: Boolean) {
     Box(
         modifier =
             Modifier.fillMaxWidth()
@@ -202,7 +202,11 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
         Column {
             Spacer(modifier = Modifier.height(16.dp))
             Image(
-                painter = painterResource(R.drawable.vip_desc_title),
+                painter = if(isVipSubscribed) {
+                    painterResource(R.drawable.vip_desc_title_sub)
+                } else {
+                    painterResource(R.drawable.vip_desc_title)
+                },
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
                 contentScale = ContentScale.FillWidth,
