@@ -502,11 +502,9 @@ private fun ExploreTabContent(
         innerPadding = innerPadding,
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.chatPage(
-                agentId = agent.id,
-                showBoost = false,
-                shouldAutoFocusInput = false
-            ))
+            navController.navigate(
+                Routes.chatPage(agentId = agent.id, showBoost = false, shouldAutoFocusInput = false)
+            )
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,

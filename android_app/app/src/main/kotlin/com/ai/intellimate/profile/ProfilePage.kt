@@ -100,7 +100,6 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
-import com.ai.intellimate.settings.check.CheckInActivity
 import com.ai.intellimate.settings.playStoreUrl
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -513,7 +512,7 @@ private fun ProfileHeader(
                             // ToastUtils.showLargeText(e.toString())
                             //                                            }
                             navController.navigate(Routes.CheckIn)
-//                            CheckInActivity.launch(context)
+                            //                            CheckInActivity.launch(context)
                         }
                     },
                 model = R.drawable.ic_checkin,

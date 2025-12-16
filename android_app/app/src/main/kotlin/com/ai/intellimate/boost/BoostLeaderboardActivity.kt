@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Help
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.rounded.Help
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,7 +39,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.chat.ChatActivity
 import com.ai.intellimate.ui.components.EmptyStateComponent
@@ -207,13 +204,13 @@ private fun BoostLeaderboardScreen(onBack: () -> Unit) {
                 )
             }
             else -> {
-//                BoostLeaderboardTab(
-//                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-//                    availablePoints = boostState.availablePoints,
-//                    entries = leaderboardEntries,
-//                    onChat = { handleLeaderboardAction(it, false) },
-//                    onBoost = { handleLeaderboardAction(it, true) },
-//                )
+                //                BoostLeaderboardTab(
+                //                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                //                    availablePoints = boostState.availablePoints,
+                //                    entries = leaderboardEntries,
+                //                    onChat = { handleLeaderboardAction(it, false) },
+                //                    onBoost = { handleLeaderboardAction(it, true) },
+                //                )
             }
         }
     }

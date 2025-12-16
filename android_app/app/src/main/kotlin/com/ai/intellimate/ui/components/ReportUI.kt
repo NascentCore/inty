@@ -218,11 +218,11 @@ fun SaveBtn(onSave: () -> Unit, isSubmitting: Boolean = false, enabled: Boolean 
                     brush =
                         if (isEnabled) {
                             Brush.linearGradient(
-                                colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D)),
+                                colors = listOf(Color(0xFFC122FF), Color(0xFFFF905D))
                             )
                         } else {
                             Brush.linearGradient(
-                                colors = listOf(Color.White.copy(0.12f), Color.White.copy(0.12f)),
+                                colors = listOf(Color.White.copy(0.12f), Color.White.copy(0.12f))
                             )
                         },
                     shape = RoundedCornerShape(25.dp),

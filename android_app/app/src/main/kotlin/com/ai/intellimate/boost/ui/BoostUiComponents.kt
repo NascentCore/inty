@@ -59,7 +59,6 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostCalculator
 import com.ai.intellimate.boost.BoostConfig
-import com.ai.intellimate.boost.BoostLeaderboardActivity
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.launch
 
@@ -131,7 +130,7 @@ fun BoostStatusChip(
             onOpenLeaderboard = {
                 showHelpSheet = false
                 navController.navigate(Routes.BoostLeaderboard)
-//                BoostLeaderboardActivity.launch(context)
+                //                BoostLeaderboardActivity.launch(context)
             },
         )
     }
@@ -257,7 +256,7 @@ fun BoostSheet(
             onOpenLeaderboard = {
                 showHelpSheet = false
                 navController.navigate(Routes.BoostLeaderboard)
-//                BoostLeaderboardActivity.launch(context)
+                //                BoostLeaderboardActivity.launch(context)
             },
         )
     }

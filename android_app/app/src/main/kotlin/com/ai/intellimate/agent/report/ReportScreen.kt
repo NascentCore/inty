@@ -109,8 +109,7 @@ fun ReportScreen(
                     "${stringResource(R.string.report_description)} *"
                 }
             ReportDescriptionContainer(
-                title =
-                    requiredDescriptionTitle,
+                title = requiredDescriptionTitle,
                 description = description,
                 onDescriptionChange = onDescriptionChange,
                 placeholder =
