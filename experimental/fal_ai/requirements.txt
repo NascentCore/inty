@@ -1,0 +1,4 @@
+# fal.ai API 测试依赖
+# CREATED_BY_AGENT
+fal-client
+
