@@ -351,6 +351,12 @@ internal fun ChatPage(
                 }
         }
 
+        LifecycleResumeEffect(keyboard) {
+            onPauseOrDispose {
+                keyboard?.hide()
+            }
+        }
+
         Scaffold(
             modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
