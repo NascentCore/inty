@@ -11,9 +11,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.SplashLoginUI
@@ -110,9 +112,18 @@ fun AppNavHost(
         composable(Routes.VipCenter) { VipCenterContent(navController) }
 
         // 定义聊天页面路由
-        composable(Routes.ChatPage) { backStackEntry ->
+        // 深度链接的参数需要指明类型，否则可能会出现类型转换错误
+        composable(
+            route = Routes.ChatPage,
+            arguments = listOf(
+                navArgument("agentId") { type = NavType.StringType},
+                navArgument("showBoost") { type = NavType.BoolType},
+                navArgument("shouldAutoFocusInput") { type = NavType.BoolType}
+            )
+        ) { backStackEntry ->
             val agentId = backStackEntry.arguments?.getString("agentId")
             val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
+            val shouldAutoFocusInput = backStackEntry.arguments?.getBoolean("shouldAutoFocusInput")
             LaunchedEffect(agentId) {
                 val agent = AgentStore.getAgent(agentId = agentId)
                 if (agentId != null) {
@@ -131,6 +142,7 @@ fun AppNavHost(
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 shouldShowBoostSheetOnOpen = showBoost == true,
+                shouldAutoFocusInput = shouldAutoFocusInput ?: true,
                 agentId = agentId,
             )
         }
