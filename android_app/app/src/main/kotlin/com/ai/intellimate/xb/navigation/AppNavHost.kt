@@ -119,6 +119,7 @@ fun AppNavHost(
                     if (agent != null) {
                         chatViewModel.setAgentInfo(agent, true)
                     } else {
+                        chatViewModel.clearAllData()
                         chatViewModel.setAgentID(agentId)
                     }
                     chatViewModel.updateUserInfo()
