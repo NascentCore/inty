@@ -547,7 +547,7 @@ private fun PhotoAlbumPreviewSection(
                         item = item,
                         agentId = agentId,
                         onPreview = { previewImage = it },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
@@ -711,7 +711,7 @@ private fun AgentGalleryImageCardCompact(
     Box(
         modifier =
             modifier
-                .fillMaxWidth()
+                .aspectRatio(9f/16f)
                 .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
                 .background(
                     Color.White.copy(
