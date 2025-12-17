@@ -840,7 +840,7 @@ internal fun ChatPage(
                 // 功能：点击后平滑滚动回最新消息位置（LazyColumn 使用 reverseLayout，索引 0 为最新消息）
                 ScrollToBottomButton(
                     modifier =
-                        Modifier.align(Alignment.BottomEnd)
+                        Modifier.align(Alignment.BottomCenter)
                             .padding(
                                 bottom = scrollToBottomButtonBottomOffset,
                                 end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,
