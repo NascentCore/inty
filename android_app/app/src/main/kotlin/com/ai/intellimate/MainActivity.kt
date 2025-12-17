@@ -55,13 +55,13 @@ import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.xb.navigation.AppNavHost
 import com.ai.intellimate.xb.navigation.Routes
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -789,7 +789,8 @@ private fun performEmailLogin(
                     // 使用 withContext 确保在 IO 线程执行，并等待完成
                     withContext(Dispatchers.IO) {
                         try {
-                            ai.sxwl.android.data.di.DataModule.getChatRepository().clearAllChatData()
+                            ai.sxwl.android.data.di.DataModule.getChatRepository()
+                                .clearAllChatData()
                             LogUtils.i(
                                 "MainActivity: cleared all chat data before email login for user ${userProfile.id}"
                             )

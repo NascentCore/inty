@@ -206,15 +206,15 @@ private fun PhotoAlbumImageItem(
                     }
         ) {
             AsyncImage(
-                modifier = Modifier.fillMaxWidth().aspectRatio(9f/16f),
+                modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f),
                 model =
                     ImageRequest.Builder(context)
                         .data(
                             getCdnImageUrl(
                                 item.imageUrl,
                                 width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
-                                quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY
-                            ) //确保设置聊天背景后能使用相同url的缓存，以避免出现加载过程。
+                                quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
+                            ) // 确保设置聊天背景后能使用相同url的缓存，以避免出现加载过程。
                         )
                         .build(),
                 contentDescription =

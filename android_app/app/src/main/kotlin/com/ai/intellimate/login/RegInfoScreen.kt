@@ -72,9 +72,7 @@ internal fun RegInfoScreen(
     }
 
     // 拦截系统返回键
-    BackHandler(enabled = true) {
-        handleClose()
-    }
+    BackHandler(enabled = true) { handleClose() }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
         Column(

@@ -814,7 +814,10 @@ internal fun ChatPage(
                 // 4. Agent 未被删除
                 // 当用户滚动到历史记录时，此按钮会自动隐藏
                 val showKeepTalkingButton =
-                    showKeepTalking && hasLatestAssistantMessage && isAtLatestMessage && agentInfo?.isDeleted != true
+                    showKeepTalking &&
+                        hasLatestAssistantMessage &&
+                        isAtLatestMessage &&
+                        agentInfo?.isDeleted != true
                 val isKeepTalkingEnabled = !hasLoadingMessageForButton
 
                 // 滚动到底部按钮显示逻辑：
@@ -878,7 +881,7 @@ internal fun ChatPage(
         val resetSucMsg = stringResource(R.string.reset_suc_msg)
         var resetSuccess by remember { mutableStateOf(false) }
 
-        //使用rememberCoroutineScope启动Snackbar存在bug
+        // 使用rememberCoroutineScope启动Snackbar存在bug
         LaunchedEffect(snackbarHostState) {
             snapshotFlow { resetSuccess }
                 .collect {

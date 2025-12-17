@@ -307,7 +307,8 @@ internal fun AiAgentInfoScreen(
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    text = stringResource(R.string.boost_character_energy_points_hint),
+                                    text =
+                                        stringResource(R.string.boost_character_energy_points_hint),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Light,
                                     color = Color.White.copy(alpha = 0.75f),
@@ -325,7 +326,9 @@ internal fun AiAgentInfoScreen(
                                 ) {
                                     Text(
                                         text =
-                                            stringResource(R.string.boost_points_help_cta_leaderboard),
+                                            stringResource(
+                                                R.string.boost_points_help_cta_leaderboard
+                                            ),
                                         color = Color.White,
                                     )
                                 }
@@ -741,9 +744,7 @@ private fun AgentGalleryImageCardCompact(
                 }
     ) {
         AsyncImage(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(9f / 16f),
+            modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f),
             model =
                 ImageRequest.Builder(context)
                     .data(
