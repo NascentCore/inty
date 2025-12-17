@@ -83,7 +83,6 @@ import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
@@ -812,9 +811,10 @@ internal fun ChatPage(
                 // 1. 用户开启了 Keep Talking 功能
                 // 2. 存在最新的 AI 助手消息
                 // 3. 用户当前在最新消息位置（未滚动到历史记录）
+                // 4. Agent 未被删除
                 // 当用户滚动到历史记录时，此按钮会自动隐藏
                 val showKeepTalkingButton =
-                    showKeepTalking && hasLatestAssistantMessage && isAtLatestMessage
+                    showKeepTalking && hasLatestAssistantMessage && isAtLatestMessage && agentInfo?.isDeleted != true
                 val isKeepTalkingEnabled = !hasLoadingMessageForButton
 
                 // 滚动到底部按钮显示逻辑：
