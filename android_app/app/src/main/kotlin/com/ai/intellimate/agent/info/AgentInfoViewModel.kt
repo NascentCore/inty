@@ -9,22 +9,26 @@ import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.agent.info.AgentInfoViewModel.Companion.DEFAULT_GALLERY_DIMENSION
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
 import com.squareup.moshi.JsonClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @JsonClass(generateAdapter = true)
 data class AgentImageGalleryItem(
-    val messageId: String,
+    val messageId: String = "",
     val imageUrl: String,
-    val width: Int,
-    val height: Int,
-    val timestamp: String?,
+    val width: Int = 512,
+    val height: Int = 512,
+    val timestamp: String? = null,
 )
 
 class AgentInfoViewModel : BaseVM() {
@@ -39,7 +43,13 @@ class AgentInfoViewModel : BaseVM() {
     val agentInfo = _agentInfo.asStateFlow()
 
     private val _chatImageGallery = MutableStateFlow<List<AgentImageGalleryItem>>(emptyList())
-    val chatImageGallery = _chatImageGallery.asStateFlow()
+    val chatImageGallery = _chatImageGallery.combine(agentInfo) { gallery, agent ->
+        gallery + agent?.backgroundImages?.map { AgentImageGalleryItem(imageUrl = it) }.orEmpty()
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(),
+        emptyList()
+    )
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
     private val roomDataSource: RoomDataSource = DataModule.getRoomDataSource()
 

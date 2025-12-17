@@ -187,7 +187,6 @@ private fun PhotoAlbumImageItem(
     onPreview: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
 
     // 从共享状态派生当前背景状态，确保所有项目都能正确响应背景变化
     val isCurrentBackground = currentBackgroundUrl == item.imageUrl
@@ -207,7 +206,7 @@ private fun PhotoAlbumImageItem(
                     }
         ) {
             AsyncImage(
-                modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
+                modifier = Modifier.fillMaxWidth().aspectRatio(9f/16f),
                 model =
                     ImageRequest.Builder(context)
                         .data(
