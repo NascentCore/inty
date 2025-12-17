@@ -1,0 +1,39 @@
+# CREATED_BY_AGENT
+# 同步角色主题专区配置文件示例
+# 复制此文件为 config.yaml 并修改相应配置
+
+# Dev环境数据库配置
+# 与 devops/config.yaml.dev 保持一致
+dev_database:
+  host: 10.41.177.3
+  port: 5432
+  user: postgres
+  password: sxwl666A!
+  db: inty-dev
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+# Prod环境数据库配置
+# 与 devops/config.yaml.prod 保持一致
+prod_database:
+  host: 10.41.177.3
+  port: 5432
+  user: postgres
+  password: sxwl666A!
+  db: inty
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+
+# 日志配置
+logging:
+  level: INFO
