@@ -154,6 +154,8 @@ fun AppNavHost(
         composable(Routes.AgentInfoPage) { backStackEntry ->
             val agentId = backStackEntry.arguments?.getString("agentId")
             val agentInfo = AgentStore.getAgent(agentId = agentId)
+            val agent by agentInfoViewModel.agentInfo.collectAsState()
+
             LaunchedEffect(agentId) {
                 if (agentInfo != null) {
                     agentInfoViewModel.setAgentInfo(agentInfo)
@@ -162,15 +164,14 @@ fun AppNavHost(
                 }
             }
 
-            if (agentInfo != null) {
+            agent?.let {
                 val galleryImages = agentInfoViewModel.chatImageGallery.collectAsState()
+
                 AiAgentInfoScreen(
-                    agent = agentInfo,
+                    agent = it,
                     galleryItems = galleryImages.value,
                     navController = navController,
                 )
-            } else {
-                Box {}
             }
         }
 
