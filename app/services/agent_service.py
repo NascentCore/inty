@@ -9,7 +9,7 @@ from typing import Any, List, Optional
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import Integer, and_, desc, func, or_, select, text
+from sqlalchemy import Integer, and_, case, desc, func, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -39,6 +39,26 @@ from app.services.resource_service import async_create_image_resource
 from app.services.voice_service import GENDER_VOICE_MAPPING, VoiceService
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, ImageSize, get_jpg_bytes_from_pil_image
+
+
+_ORDER_NON_CURRENT_USER_CREATED_FIRST = 0
+_ORDER_CURRENT_USER_CREATED_LAST = 1
+
+
+def _order_user_created_agents_last(current_user_id: Optional[str]):
+    """
+    将当前用户自己创建的角色排到最后（不改变同组内原有排序）。
+
+    返回一个可用于 SQLAlchemy order_by 的表达式：
+    - 非当前用户创建：0
+    - 当前用户创建：1
+    """
+    if not current_user_id:
+        return None
+    return case(
+        (models.Agent.creator_id == current_user_id, _ORDER_CURRENT_USER_CREATED_LAST),
+        else_=_ORDER_NON_CURRENT_USER_CREATED_FIRST,
+    )
 
 
 async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> None:
@@ -441,6 +461,17 @@ async def get_recommended_agents(
             )
 
         # 获取agents和关注者数量
+        user_created_last = _order_user_created_agents_last(current_user_id)
+        order_by_clauses = []
+        if user_created_last is not None:
+            order_by_clauses.append(user_created_last.asc())
+        order_by_clauses.extend(
+            [
+                desc(func.coalesce(models.Agent.points, 0)),
+                desc(models.Agent.created_at),
+            ]
+        )
+
         query = (
             select(
                 models.Agent,
@@ -458,10 +489,7 @@ async def get_recommended_agents(
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
-            .order_by(
-                desc(func.coalesce(models.Agent.points, 0)),
-                desc(models.Agent.created_at),
-            )
+            .order_by(*order_by_clauses)
         )
 
         result = await db.execute(query)
@@ -561,7 +589,7 @@ async def get_balanced_score_based_agents(
     page: int,
     page_size: int,
     sort_seed: str = "",
-    current_user_id: Optional[str] = None,  # pylint: disable=unused-argument
+    current_user_id: Optional[str] = None,
 ) -> List[models.Agent]:
     """
     简化的平衡权重排序：score * 2 + random(0-100)
@@ -570,9 +598,12 @@ async def get_balanced_score_based_agents(
     offset = (page - 1) * page_size
 
     # 平衡权重排序查询，同时获取头像和背景图的尺寸信息
-    query = (
-        _select_agents_with_sizes()
-        .order_by(
+    user_created_last = _order_user_created_agents_last(current_user_id)
+    order_by_clauses = []
+    if user_created_last is not None:
+        order_by_clauses.append(user_created_last.asc())
+    order_by_clauses.extend(
+        [
             (
                 # score * 2 + random(0-100)
                 func.coalesce(
@@ -583,7 +614,12 @@ async def get_balanced_score_based_agents(
             ).desc(),
             # 添加agent.id作为第二排序字段，确保排序稳定性，避免分页重复
             models.Agent.id.asc(),
-        )
+        ]
+    )
+
+    query = (
+        _select_agents_with_sizes()
+        .order_by(*order_by_clauses)
         .offset(offset)
         .limit(page_size)
     )
@@ -644,6 +680,7 @@ async def get_recommended_agents_paginated(
 
             # 确定排序方式
             order_by_clauses = []
+            user_created_last = _order_user_created_agents_last(current_user.id)
             if sort_by == AgentSortOption.CREATED_ASC:
                 order_by_clauses = [models.Agent.created_at.asc()]
             elif sort_by == AgentSortOption.RANDOM:
@@ -655,6 +692,10 @@ async def get_recommended_agents_paginated(
                 ]
             else:  # 默认为 CREATED_DESC
                 order_by_clauses = [desc(models.Agent.created_at)]
+
+            # 将“当前用户自己创建的角色”整体后置，但不改变同组内原有排序
+            if user_created_last is not None:
+                order_by_clauses = [user_created_last.asc(), *order_by_clauses]
 
             # 获取分页数据，同时获取头像和背景图的尺寸信息
             data_query = (
@@ -1557,6 +1598,12 @@ async def search_agents(
         count_result = await db.execute(count_query)
         total = count_result.scalar()
 
+        user_created_last = _order_user_created_agents_last(current_user.id)
+        order_by_clauses = []
+        if user_created_last is not None:
+            order_by_clauses.append(user_created_last.asc())
+        order_by_clauses.append(desc(models.Agent.created_at))
+
         # 获取分页数据包含关注者数量
         data_query = (
             select(
@@ -1569,7 +1616,7 @@ async def search_agents(
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(page_size)
-            .order_by(desc(models.Agent.created_at))  # 按创建时间倒序排列
+            .order_by(*order_by_clauses)
         )
 
         result = await db.execute(data_query)
