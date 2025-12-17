@@ -341,11 +341,20 @@ class ChatViewModel : BaseVM() {
     private fun loadChatHistory(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 使用增量同步，优先显示本地数据，然后检查服务器更新
-                syncChatDataUseCase(agentId)
+                // ✅ 修复：使用 loadChatHistoryUseCase 而不是 syncChatDataUseCase
+                // 添加超时机制，避免无限等待
+                kotlinx.coroutines.withTimeout(10000) { // 10秒超时
+                    loadChatHistoryUseCase(agentId, PAGE_SIZE)
+                }
+                _isQueryMsgsCompleted.value = true
+                LogUtils.i("ChatViewModel.loadChatHistory completed for $agentId")
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                LogUtils.e("ChatViewModel.loadChatHistory timeout for $agentId")
+                // 超时也标记为完成，避免一直等待，让用户至少能看到 intro/opening
                 _isQueryMsgsCompleted.value = true
             } catch (e: Exception) {
-                LogUtils.e("ChatViewModel.loadChatHistory error: ${e.message}")
+                LogUtils.e("ChatViewModel.loadChatHistory error for $agentId: ${e.message}")
+                // 即使出错也标记为完成，避免 UI 一直等待
                 _isQueryMsgsCompleted.value = true
             }
         }
