@@ -3,7 +3,7 @@ name: dev-prod 同步 AI 角色
 on:
   schedule:
     # Run every day at 5 PM UTC, 2:00 AM Beijing time, 10:00 AM PST.
-    - cron: '0 17 * * *'
+    - cron: "0 17 * * *"
   workflow_dispatch:
 
 jobs:
@@ -31,3 +31,4 @@ jobs:
           PYTHONPATH: .
         run: |
           python scripts/sync_agents_dev_to_prod/sync_agents.py --config config.yaml.example
+          python scripts/sync_character_themes_dev_to_prod/sync_character_themes.py --config config.yaml.example
