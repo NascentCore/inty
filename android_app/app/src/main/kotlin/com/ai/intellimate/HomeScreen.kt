@@ -625,6 +625,7 @@ private fun ProfileTabContent(
             val intent = CreateRoleActivity.getIntent(context, null, draftId)
             createFromProfileLauncher.launch(intent)
         },
+        onDeleteDraft = { draftId -> profileViewModel.deleteDraft(draftId) },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
             val intent = CreateRoleActivity.getIntent(context, agent)
