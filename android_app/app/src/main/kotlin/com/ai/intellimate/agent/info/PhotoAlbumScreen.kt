@@ -212,9 +212,9 @@ private fun PhotoAlbumImageItem(
                         .data(
                             getCdnImageUrl(
                                 item.imageUrl,
-                                width = UiConfigs.CharacterGallery.CDN_IMAGE_WIDTH,
-                                quality = UiConfigs.CharacterGallery.CDN_IMAGE_QUALITY,
-                            )
+                                width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
+                                quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY
+                            ) //确保设置聊天背景后能使用相同url的缓存，以避免出现加载过程。
                         )
                         .build(),
                 contentDescription =
