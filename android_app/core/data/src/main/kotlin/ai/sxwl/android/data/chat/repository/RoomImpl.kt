@@ -58,10 +58,26 @@ class RoomImpl(
     override suspend fun ensureInitialHistory(agentId: String, pageSize: Int) {
         LogUtils.d("RoomImpl.ensureInitialHistory called for $agentId")
 
-        if (localDataSource.isInitialLoaded(agentId)) return
+        // ✅ 修复：检查状态一致性，如果标记为 loaded 但数据库为空，应该重新加载
+        val isInitialLoaded = localDataSource.isInitialLoaded(agentId)
+        val localMessages = localDataSource.getMessagesFlow(agentId).value
+        val hasLocalMessages = localMessages.isNotEmpty()
+
+        // 如果已标记为 loaded 且有数据，直接返回
+        if (isInitialLoaded && hasLocalMessages) {
+            LogUtils.d("RoomImpl.ensureInitialHistory: already loaded with ${localMessages.size} messages for $agentId")
+            return
+        }
+
+        // ✅ 修复：如果标记为 loaded 但没有数据，重置状态并重新加载
+        if (isInitialLoaded) {
+            LogUtils.w(
+                "RoomImpl.ensureInitialHistory: isInitialLoaded=true but no messages, resetting state for $agentId"
+            )
+            localDataSource.setInitialLoaded(agentId, false)
+        }
 
         // 先检查是否有本地缓存数据
-        val localMessages = localDataSource.getMessagesFlow(agentId).value
         if (localMessages.isNotEmpty()) {
             LogUtils.i(
                 "RoomImpl.ensureInitialHistory found ${localMessages.size} local messages for $agentId"
@@ -204,11 +220,16 @@ class RoomImpl(
     override suspend fun syncLatestMessages(agentId: String, pageSize: Int) {
         LogUtils.d("RoomImpl.syncLatestMessages called for $agentId")
 
-        if (
-            !localDataSource.isInitialLoaded(agentId) ||
-                localDataSource.getMessagesFlow(agentId).value.isEmpty()
-        ) {
-            LogUtils.i("RoomImpl.syncLatestMessages calling ensureInitialHistory for $agentId")
+        // ✅ 修复：检查状态一致性，确保判断准确
+        val isInitialLoaded = localDataSource.isInitialLoaded(agentId)
+        val localMessages = localDataSource.getMessagesFlow(agentId).value
+        val hasLocalMessages = localMessages.isNotEmpty()
+
+        if (!isInitialLoaded || !hasLocalMessages) {
+            LogUtils.i(
+                "RoomImpl.syncLatestMessages calling ensureInitialHistory for $agentId (isInitialLoaded=$isInitialLoaded, hasLocalMessages=$hasLocalMessages)"
+            )
+            // ✅ 修复：确保 ensureInitialHistory 完成后再返回
             ensureInitialHistory(agentId, pageSize)
             return
         }

@@ -55,12 +55,13 @@ import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.xb.navigation.AppNavHost
 import com.ai.intellimate.xb.navigation.Routes
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -567,6 +568,22 @@ fun SplashLoginUI(
                                 val token = loginResult.data.token
                                 val userProfile = loginResult.data.user
 
+                                // ✅ 修复：在登录之前清理 Room 数据库，确保新账号不会看到旧数据
+                                // 使用 withContext 确保在 IO 线程执行，并等待完成
+                                withContext(Dispatchers.IO) {
+                                    try {
+                                        ai.sxwl.android.data.di.DataModule.getChatRepository()
+                                            .clearAllChatData()
+                                        LogUtils.i(
+                                            "MainActivity: cleared all chat data before login for user ${userProfile.id}"
+                                        )
+                                    } catch (e: Exception) {
+                                        LogUtils.e(
+                                            "MainActivity: failed to clear chat data before login: ${e.message}"
+                                        )
+                                    }
+                                }
+
                                 // 保存用户信息和 token
                                 IntySetting.login(userProfile.id, token)
                                 com.ai.intellimate.utils.UserProfileManager.saveUserProfile(
@@ -767,6 +784,21 @@ private fun performEmailLogin(
                 is com.architecture.httplib.core.HttpResult.Success -> {
                     val token = loginResult.data.token
                     val userProfile = loginResult.data.user
+
+                    // ✅ 修复：在登录之前清理 Room 数据库，确保新账号不会看到旧数据
+                    // 使用 withContext 确保在 IO 线程执行，并等待完成
+                    withContext(Dispatchers.IO) {
+                        try {
+                            ai.sxwl.android.data.di.DataModule.getChatRepository().clearAllChatData()
+                            LogUtils.i(
+                                "MainActivity: cleared all chat data before email login for user ${userProfile.id}"
+                            )
+                        } catch (e: Exception) {
+                            LogUtils.e(
+                                "MainActivity: failed to clear chat data before email login: ${e.message}"
+                            )
+                        }
+                    }
 
                     // 保存用户信息和 token
                     IntySetting.login(userProfile.id, token)
