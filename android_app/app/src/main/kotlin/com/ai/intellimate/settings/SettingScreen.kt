@@ -137,7 +137,7 @@ fun SettingScreen(
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
                 Spacer(Modifier.height(16.dp))
                 DebugBackendSettingsEntry()
-                
+
                 Spacer(Modifier.height(16.dp))
                 DebugBoostPointsEntry()
             }

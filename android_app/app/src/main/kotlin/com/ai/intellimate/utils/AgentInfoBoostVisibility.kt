@@ -24,4 +24,3 @@ fun AgentInfo.isUserCreatedPrivateRole(): Boolean {
     val isCreatedByCurrentUser = creatorId.isNotBlank() && creatorId == currentUserId
     return isPrivate && isCreatedByCurrentUser
 }
-

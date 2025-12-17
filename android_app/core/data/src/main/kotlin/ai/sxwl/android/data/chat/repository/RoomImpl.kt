@@ -65,7 +65,9 @@ class RoomImpl(
 
         // 如果已标记为 loaded 且有数据，直接返回
         if (isInitialLoaded && hasLocalMessages) {
-            LogUtils.d("RoomImpl.ensureInitialHistory: already loaded with ${localMessages.size} messages for $agentId")
+            LogUtils.d(
+                "RoomImpl.ensureInitialHistory: already loaded with ${localMessages.size} messages for $agentId"
+            )
             return
         }
 

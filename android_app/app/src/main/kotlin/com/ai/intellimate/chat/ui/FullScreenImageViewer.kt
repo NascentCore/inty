@@ -155,11 +155,12 @@ internal fun FullScreenImageViewer(
             model =
                 ImageLoaderUtils.createDeviceAdaptiveImageRequest(
                     context = context,
-                    imageUrl = getCdnImageUrl(
-                        imageUrl,
-                        width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
-                        quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY
-                    ),
+                    imageUrl =
+                        getCdnImageUrl(
+                            imageUrl,
+                            width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
+                            quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
+                        ),
                     maxWidth = 1920,
                     maxHeight = 1920,
                 ),
