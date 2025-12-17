@@ -267,6 +267,7 @@
     <string name="toast_email_error">email error</string>
     <string name="toast_age_screen_not_eligible">You are not eligible to use IntelliMate</string>
     <string name="toast_age_screen_required_select_age">Please select your age group</string>
+    <string name="toast_reginfo_required_select_gender">Please select your gender</string>
     <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
