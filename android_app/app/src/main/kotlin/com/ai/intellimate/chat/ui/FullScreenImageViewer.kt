@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.ai.intellimate.ui.UiConfigs
 
 /** 全屏图片查看器 */
 @Composable
@@ -154,7 +155,11 @@ internal fun FullScreenImageViewer(
             model =
                 ImageLoaderUtils.createDeviceAdaptiveImageRequest(
                     context = context,
-                    imageUrl = getCdnImageUrl(imageUrl, width = 1920, quality = 85),
+                    imageUrl = getCdnImageUrl(
+                        imageUrl,
+                        width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
+                        quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY
+                    ),
                     maxWidth = 1920,
                     maxHeight = 1920,
                 ),

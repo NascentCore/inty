@@ -44,7 +44,8 @@ class AgentInfoViewModel : BaseVM() {
 
     private val _chatImageGallery = MutableStateFlow<List<AgentImageGalleryItem>>(emptyList())
     val chatImageGallery = _chatImageGallery.combine(agentInfo) { gallery, agent ->
-        gallery + agent?.backgroundImages?.map { AgentImageGalleryItem(imageUrl = it) }.orEmpty()
+        (gallery + agent?.backgroundImages?.map { AgentImageGalleryItem(imageUrl = it) }.orEmpty())
+            .distinctBy { it.imageUrl }
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(),
