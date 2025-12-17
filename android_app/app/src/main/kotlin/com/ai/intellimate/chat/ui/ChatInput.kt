@@ -85,17 +85,11 @@ fun ChatInput(
                 value = inputData.value,
                 singleLine = false,
                 placeholder = {
-                    val placeholderText =
-                        if (showSceneActionButton) {
-                            stringResource(R.string.chat_input_with_scene_action_placeholder)
-                        } else {
-                            val defaultName = stringResource(R.string.chat_ai_typing_default_name)
-                            val targetName = agentInfo.firstNameOrNull() ?: defaultName
-                            stringResource(R.string.chat_input_placeholder, targetName)
-                        }
+                    val defaultName = stringResource(R.string.chat_ai_typing_default_name)
+                    val targetName = agentInfo.firstNameOrNull() ?: defaultName
 
                     Text(
-                        text = placeholderText,
+                        text = stringResource(R.string.chat_input_placeholder, targetName),
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = 0.5f),
                     )
