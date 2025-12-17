@@ -80,6 +80,7 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
+import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -121,6 +122,9 @@ internal fun ChatPage(
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
     val characterEnergy by chatViewModel.characterEnergy.collectAsState()
+
+    // 用户自建私有角色不展示 Boost 相关功能
+    val shouldShowBoostUi = agentInfo?.isUserCreatedPrivateRole() != true
 
     // 为角色应援/Boost 功能
     // 这里是 AI 生成代码，不清楚 UI 上有什么影响
@@ -254,7 +258,10 @@ internal fun ChatPage(
     // 从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，自动打开 BoostSheet
     LaunchedEffect(agentInfo?.id, pendingBoostSheet) {
         if (agentInfo != null && pendingBoostSheet) {
-            showBoostSheet = true
+            // 私有自建角色不允许打开 BoostSheet
+            if (shouldShowBoostUi) {
+                showBoostSheet = true
+            }
             pendingBoostSheet = false
         }
     }
@@ -898,12 +905,15 @@ internal fun ChatPage(
             navController = navController,
         )
 
-        EnergyCelebrationBanner(
-            totalPoints = boostState.chatMessagePoints,
-            enabled = isCurrentPage,
-            modifier =
-                Modifier.align(Alignment.TopCenter).padding(start = 16.dp, end = 16.dp, top = 16.dp),
-        )
+        if (shouldShowBoostUi) {
+            EnergyCelebrationBanner(
+                totalPoints = boostState.chatMessagePoints,
+                enabled = isCurrentPage,
+                modifier =
+                    Modifier.align(Alignment.TopCenter)
+                        .padding(start = 16.dp, end = 16.dp, top = 16.dp),
+            )
+        }
 
         ShowLimitDialog(navController, chatViewModel)
         ShowImageGenerationDialog(navController, chatViewModel)
@@ -921,7 +931,7 @@ internal fun ChatPage(
         // - onDismiss: 用户点击外部区域或取消按钮 → 直接关闭弹窗
         // 错误处理：Boost 操作失败时显示 Toast 错误提示（积分不足、已领取奖励等）
         agentInfo?.let { info ->
-            if (showBoostSheet) {
+            if (shouldShowBoostUi && showBoostSheet) {
                 BoostSheet(
                     navController,
                     agentInfo = info,
@@ -953,6 +963,14 @@ internal fun ChatPage(
         val needLogin by chatViewModel.requestLogin.collectAsState()
         if (needLogin) {
             chatViewModel.dismissLoginRequest()
+        }
+    }
+
+    // 如果切换到“私有自建角色”，确保不会残留显示 BoostSheet
+    LaunchedEffect(shouldShowBoostUi) {
+        if (!shouldShowBoostUi && showBoostSheet) {
+            showBoostSheet = false
+            pendingBoostSheet = false
         }
     }
 

@@ -85,6 +85,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.utils.formatDisplayId
+import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -121,6 +122,9 @@ internal fun AiAgentInfoScreen(
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     val enableRemix = UiConfigs.ChatPage.enableRemix()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
+
+    // 用户自建私有角色不展示 Boost 相关功能
+    val shouldShowBoostUi = !agent.isUserCreatedPrivateRole()
 
     // 为角色应援/Boost 功能
     val boostState by BoostManager.boostState.collectAsState()
@@ -256,77 +260,83 @@ internal fun AiAgentInfoScreen(
                         // 角色应援/Boost 功能
                         Spacer(Modifier.height(16.dp))
 
-                        BoostStatusChip(
-                            navController,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            availablePoints = boostState.availablePoints,
-                            onClick = { showBoostSheet = true },
-                        ) {
-                            Text(stringResource(R.string.boost_sheet_title))
-                        }
+                        if (shouldShowBoostUi) {
+                            BoostStatusChip(
+                                navController,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                availablePoints = boostState.availablePoints,
+                                onClick = { showBoostSheet = true },
+                            ) {
+                                Text(stringResource(R.string.boost_sheet_title))
+                            }
 
-                        Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(16.dp))
 
-                        Column(
-                            modifier =
-                                Modifier.padding(horizontal = 16.dp)
-                                    .fillMaxWidth()
-                                    .border(
-                                        brush =
-                                            Brush.linearGradient(
-                                                colors =
-                                                    listOf(
-                                                        Color.Transparent,
-                                                        Color.White.copy(0.2f),
-                                                        Color.Transparent,
-                                                    )
-                                            ),
-                                        width = 1.dp,
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
-                                    .background(
-                                        color = Color(0x331C1D21),
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
-                                    .padding(14.dp)
-                        ) {
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.boost_character_energy_points,
-                                        agent.energyPoints,
-                                    ),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White,
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = stringResource(R.string.boost_character_energy_points_hint),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Light,
-                                color = Color.White.copy(alpha = 0.75f),
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            TextButton(
-                                onClick = {
-                                    navController.navigate(Routes.BoostLeaderboard)
-                                    //
-                                    // com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
-                                    //                                        context
-                                    //                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
+                            Column(
+                                modifier =
+                                    Modifier.padding(horizontal = 16.dp)
+                                        .fillMaxWidth()
+                                        .border(
+                                            brush =
+                                                Brush.linearGradient(
+                                                    colors =
+                                                        listOf(
+                                                            Color.Transparent,
+                                                            Color.White.copy(0.2f),
+                                                            Color.Transparent,
+                                                        )
+                                                ),
+                                            width = 1.dp,
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                        .background(
+                                            color = Color(0x331C1D21),
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                        .padding(14.dp)
                             ) {
                                 Text(
                                     text =
-                                        stringResource(R.string.boost_points_help_cta_leaderboard),
+                                        stringResource(
+                                            R.string.boost_character_energy_points,
+                                            agent.energyPoints,
+                                        ),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = Color.White,
                                 )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = stringResource(R.string.boost_character_energy_points_hint),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Light,
+                                    color = Color.White.copy(alpha = 0.75f),
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                TextButton(
+                                    onClick = {
+                                        navController.navigate(Routes.BoostLeaderboard)
+                                        //
+                                        // com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
+                                        //                                        context
+                                        //                                    )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        text =
+                                            stringResource(R.string.boost_points_help_cta_leaderboard),
+                                        color = Color.White,
+                                    )
+                                }
                             }
-                        }
 
-                        Spacer(Modifier.height(24.dp))
+                            Spacer(Modifier.height(24.dp))
+                        } else {
+                            // 确保不会误触发弹窗残留状态
+                            if (showBoostSheet) showBoostSheet = false
+                            if (showBoostHelpSheet) showBoostHelpSheet = false
+                        }
 
                         Column(
                             modifier =
@@ -469,7 +479,7 @@ internal fun AiAgentInfoScreen(
     //   - 用户点击 BoostStatusChip → 打开此弹窗
     //   - 用户选择投入积分并确认 → 执行 Boost 操作 → 显示成功 Toast → 关闭弹窗
     //   - 用户点击关闭/取消 → 关闭弹窗
-    if (showBoostSheet) {
+    if (shouldShowBoostUi && showBoostSheet) {
         BoostSheet(
             navController,
             agentInfo = agent,
@@ -499,7 +509,7 @@ internal fun AiAgentInfoScreen(
         )
     }
 
-    if (showBoostHelpSheet) {
+    if (shouldShowBoostUi && showBoostHelpSheet) {
         BoostPointsHelpSheet(
             availablePoints = boostState.availablePoints,
             onDismiss = { showBoostHelpSheet = false },
