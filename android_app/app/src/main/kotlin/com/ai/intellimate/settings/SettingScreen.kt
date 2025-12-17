@@ -36,6 +36,7 @@ import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
@@ -136,6 +137,9 @@ fun SettingScreen(
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
                 Spacer(Modifier.height(16.dp))
                 DebugBackendSettingsEntry()
+                
+                Spacer(Modifier.height(16.dp))
+                DebugBoostPointsEntry()
             }
 
             // 对话框
@@ -413,5 +417,24 @@ private fun mailTo(context: Context, email: String) {
         context.startActivity(Intent.createChooser(intent, "email"))
     } catch (e: Exception) {
         ToastUtils.showShort(R.string.toast_email_error)
+    }
+}
+
+/** Debug 环境 Boost Points 测试入口（仅 debug 可见） */
+@Composable
+private fun DebugBoostPointsEntry() {
+    SettingsItemGroup {
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = "Add 10000 Boost Points (Debug)",
+                    content = "Click to add 10000 boost points for testing",
+                ),
+            isInGroup = true,
+            onItemClick = {
+                BoostManager.requestManualPoints(10000)
+                ToastUtils.showShort("Added 10000 boost points!")
+            },
+        )
     }
 }

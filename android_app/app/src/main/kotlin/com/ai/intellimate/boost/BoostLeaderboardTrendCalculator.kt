@@ -23,9 +23,16 @@ internal object BoostLeaderboardTrendCalculator {
         previousRanksByAgentId: Map<String, Int>,
     ): List<BoostLeaderboardEntry> {
         if (entries.isEmpty()) return entries
+        val hasHistory = previousRanksByAgentId.isNotEmpty()
         return entries.map { entry ->
             val previousRank = previousRanksByAgentId[entry.agentId]
-            entry.copy(trend = compareRank(currentRank = entry.rank, previousRank = previousRank))
+            val trend =
+                when {
+                    previousRank == null && hasHistory -> BoostTrend.UP
+                    previousRank == null -> BoostTrend.FLAT
+                    else -> compareRank(currentRank = entry.rank, previousRank = previousRank)
+                }
+            entry.copy(trend = trend)
         }
     }
 
@@ -47,8 +54,7 @@ internal object BoostLeaderboardTrendCalculator {
      * - 当前排名数字更大 → 排名下降（DOWN）
      * - 排名相同或无历史记录 → 持平（FLAT）
      */
-    private fun compareRank(currentRank: Int, previousRank: Int?): BoostTrend {
-        if (previousRank == null) return BoostTrend.FLAT
+    private fun compareRank(currentRank: Int, previousRank: Int): BoostTrend {
         return when {
             currentRank < previousRank -> BoostTrend.UP
             currentRank > previousRank -> BoostTrend.DOWN

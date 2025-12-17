@@ -92,6 +92,27 @@ class BoostLeaderboardTrendCalculatorTest {
     }
 
     @Test
+    fun `applyTrends - agent not in non-empty cache is UP`() {
+        val previous = mapOf("a" to 3)
+        val current =
+            listOf(
+                BoostLeaderboardEntry(
+                    rank = 2,
+                    agentId = "new",
+                    agentName = "New",
+                    avatarUrl = null,
+                    boostCount = 0,
+                    pointsInvested = 100,
+                    trend = BoostTrend.FLAT,
+                    isSeed = false,
+                )
+            )
+
+        val trended = BoostLeaderboardTrendCalculator.applyTrends(current, previous)
+        assertEquals(BoostTrend.UP, trended.single().trend)
+    }
+
+    @Test
     fun `toRankMap - maps agentId to rank`() {
         val entries =
             listOf(
