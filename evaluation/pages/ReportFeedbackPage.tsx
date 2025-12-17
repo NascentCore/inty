@@ -135,12 +135,41 @@ export const ReportFeedbackPage: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<ReportItem> = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 120,
+      title: "用户ID",
+      dataIndex: "reporter_id",
+      key: "reporter_id",
+      width: 140,
       ellipsis: true,
-      render: (id: string) => <span title={id}>{id.substring(0, 8)}...</span>,
+      render: (id: string) => <span title={id}>{id.substring(0, 12)}...</span>,
+    },
+    {
+      title: "原因",
+      dataIndex: "reason_codes",
+      key: "reason_codes",
+      width: 200,
+      render: (codes: string[]) => (
+        <Space wrap size={[0, 4]}>
+          {codes.map((code) => (
+            <Tag key={code} color="default">
+              {REASON_CODE_LABELS[code] || code}
+            </Tag>
+          ))}
+        </Space>
+      ),
+    },
+    {
+      title: "描述",
+      dataIndex: "description",
+      key: "description",
+      width: 200,
+      ellipsis: true,
+      render: (desc: string | null) => {
+        if (!desc) return <span style={{ color: "#999" }}>无</span>;
+        const maxLen = 50;
+        const displayText =
+          desc.length > maxLen ? `${desc.substring(0, maxLen)}...` : desc;
+        return <span title={desc}>{displayText}</span>;
+      },
     },
     {
       title: "类型",
@@ -164,52 +193,6 @@ export const ReportFeedbackPage: React.FC = () => {
           {type === "USER" ? "用户" : "角色"}
         </Tag>
       ),
-    },
-    {
-      title: "目标ID",
-      dataIndex: "target_id",
-      key: "target_id",
-      width: 140,
-      ellipsis: true,
-      render: (id: string) => <span title={id}>{id.substring(0, 12)}...</span>,
-    },
-    {
-      title: "原因",
-      dataIndex: "reason_codes",
-      key: "reason_codes",
-      width: 200,
-      render: (codes: string[]) => (
-        <Space wrap size={[0, 4]}>
-          {codes.map((code) => (
-            <Tag key={code} color="default">
-              {REASON_CODE_LABELS[code] || code}
-            </Tag>
-          ))}
-        </Space>
-      ),
-    },
-    {
-      title: "状态",
-      dataIndex: "status",
-      key: "status",
-      width: 90,
-      render: (status: ReportStatus) => (
-        <Tag color={STATUS_COLORS[status]}>{STATUS_LABELS[status]}</Tag>
-      ),
-    },
-    {
-      title: "描述",
-      dataIndex: "description",
-      key: "description",
-      width: 200,
-      ellipsis: true,
-      render: (desc: string | null) => {
-        if (!desc) return <span style={{ color: "#999" }}>无</span>;
-        const maxLen = 50;
-        const displayText =
-          desc.length > maxLen ? `${desc.substring(0, maxLen)}...` : desc;
-        return <span title={desc}>{displayText}</span>;
-      },
     },
     {
       title: "创建时间",
