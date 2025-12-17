@@ -120,6 +120,7 @@ internal fun ProfilePage(
     drafts: List<CreateRoleDraft> = emptyList(),
     onClickAgent: (AgentInfo) -> Unit,
     onClickDraft: ((String) -> Unit)? = null,
+    onDeleteDraft: ((String) -> Unit)? = null,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
     isLoading: Boolean = false,
@@ -323,6 +324,7 @@ internal fun ProfilePage(
                                     modifier =
                                         Modifier.noRippleClickable { onClickDraft(draft.id) },
                                     draft = draft,
+                                    onDeleteDraft = onDeleteDraft,
                                 )
                             }
                         }
@@ -700,7 +702,15 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
+private fun DraftAgentCard(
+    modifier: Modifier,
+    draft: CreateRoleDraft,
+    onDeleteDraft: ((String) -> Unit)? = null,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+
     val previewImage = remember(draft) { draft.primaryImageUrl() }
     val gradientBrush = remember {
         Brush.verticalGradient(
@@ -741,6 +751,55 @@ private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
             )
         }
 
+        // 右上角的菜单按钮（仅删除）
+        if (onDeleteDraft != null) {
+            Box(
+                modifier =
+                    Modifier.align(Alignment.TopEnd).padding(UiConfigs.MePage.AgentCardPadding)
+            ) {
+                Box(
+                    modifier =
+                        Modifier.size(UiConfigs.MePage.AgentCardMenuButtonSize)
+                            .background(
+                                Color.Black.copy(alpha = 0.5f),
+                                RoundedCornerShape(UiConfigs.MePage.AgentCardMenuButtonCornerRadius),
+                            )
+                            .noRippleClickable(
+                                onClick = {
+                                    val currentTime = System.currentTimeMillis()
+                                    if (AntiClick.isValidClick(lastClickTime)) {
+                                        lastClickTime = currentTime
+                                        showMenu = true
+                                    }
+                                }
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AsyncImage(
+                        modifier = Modifier.size(UiConfigs.MePage.AgentCardMenuIconSize),
+                        model = R.drawable.icon_more2,
+                        contentDescription = null,
+                    )
+                }
+
+                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(R.string.delete_button),
+                                color = Color.Red,
+                                fontSize = 14.sp,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            showDeleteDialog = true
+                        },
+                    )
+                }
+            }
+        }
+
         Box(
             modifier =
                 Modifier.align(Alignment.TopStart)
@@ -777,6 +836,58 @@ private fun DraftAgentCard(modifier: Modifier, draft: CreateRoleDraft) {
                 color = Color.White.copy(.7f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        // Delete confirmation dialog
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = {
+                    Text(
+                        text = stringResource(R.string.delete_draft_title),
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.delete_draft_confirm, displayName),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteDialog = false
+                            onDeleteDraft?.invoke(draft.id)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.delete_button),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                        )
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { showDeleteDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cancel_button_full),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                        )
+                    }
+                },
+                containerColor = Color(0xFF2A2A2A),
+                titleContentColor = Color.White,
+                textContentColor = Color.White,
             )
         }
     }
