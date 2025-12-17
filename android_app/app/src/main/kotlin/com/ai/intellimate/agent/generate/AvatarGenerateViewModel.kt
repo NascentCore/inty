@@ -27,17 +27,18 @@ import kotlinx.coroutines.withContext
 enum class AvatarImageStyleTemplate(
     /** 用于埋点/日志的稳定 key，避免依赖 UI 文案 */
     val key: String,
-    /** 追加到用户 prompt 末尾的风格描述片段 */
+    /** 发送给模型前拼接到 prompt 末尾的风格描述片段（UI 不展示） */
     val promptSuffix: String,
 ) {
     REAL_FEEL(
         key = "real_feel",
         promptSuffix =
-            "real feel, photorealistic, natural skin texture, soft natural lighting, high detail",
+            "single, adult, real feel, photorealistic, natural skin texture, soft natural lighting, high detail, focus on expression, dynamic composition",
     ),
     CARTOON(
         key = "cartoon",
-        promptSuffix = "cartoon style, clean lines, vibrant colors, cel shading, illustration",
+        promptSuffix =
+            "single, solo, adult, cartoon style, clean lines, (perfect body), stunningly beautiful, soft natural lighting, high detail, focus on expression, dynamic composition, dynamic pose, depth of field",
     ),
 }
 
@@ -88,7 +89,8 @@ class AvatarGenerateViewModel : BaseVM() {
         }
 
         // Store the prompt and start generation in background
-        AvatarManager.setGenerationPrompt(currentPrompt)
+        // 注意：AvatarManager 的 prompt 会在 UI 中展示，因此只保存用户原始输入
+        AvatarManager.setGenerationPrompt(userPrompt)
         LogUtils.i("Starting background generation with prompt: $currentPrompt")
 
         _isLoading.value = true
