@@ -715,13 +715,11 @@ private fun AgentGalleryImageCardCompact(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
     val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
 
     Box(
         modifier =
             modifier
-                .aspectRatio(9f / 16f)
                 .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
                 .background(
                     Color.White.copy(
@@ -733,7 +731,9 @@ private fun AgentGalleryImageCardCompact(
                 }
     ) {
         AsyncImage(
-            modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(9f / 16f),
             model =
                 ImageRequest.Builder(context)
                     .data(
