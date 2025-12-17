@@ -83,6 +83,7 @@ import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 // The spacer from the bottom of the chat input to what ever that flows underneath it.
@@ -875,6 +876,18 @@ internal fun ChatPage(
         }
 
         val resetSucMsg = stringResource(R.string.reset_suc_msg)
+        var resetSuccess by remember { mutableStateOf(false) }
+
+        //使用rememberCoroutineScope启动Snackbar存在bug
+        LaunchedEffect(snackbarHostState) {
+            snapshotFlow { resetSuccess }
+                .collect {
+                    if (it) {
+                        snackbarHostState.showSnackbar(message = resetSucMsg)
+                        resetSuccess = false
+                    }
+                }
+        }
 
         ChatMorePanel(
             navController,
@@ -889,7 +902,7 @@ internal fun ChatPage(
 
                     try {
                         chatViewModel.reset()
-                        snackbarHostState.showSnackbar(message = resetSucMsg)
+                        resetSuccess = true
                     } catch (_: Throwable) {
                         ToastUtils.showShort(R.string.reset_failed_msg)
                     }
