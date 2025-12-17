@@ -44,6 +44,13 @@ class ModifyProfileViewModel : BaseVM() {
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
 
+    private fun sanitizeEditValue(editKey: EditKey, editValue: String): String {
+        return when (editKey) {
+            EditKey.Name -> editValue.trim()
+            else -> editValue
+        }
+    }
+
     /** 发送事件通知 */
     private fun sendEvent(event: ViewModelEvent) {
         viewModelScope.launch { _events.emit(event) }
@@ -60,15 +67,16 @@ class ModifyProfileViewModel : BaseVM() {
     }
 
     fun changeUserProfile(editKey: EditKey, editValue: String) {
+        val sanitizedValue = sanitizeEditValue(editKey, editValue)
         when (editKey) {
             EditKey.Name -> {
-                _userProfile.value = _userProfile.value.copy(nickname = editValue)
+                _userProfile.value = _userProfile.value.copy(nickname = sanitizedValue)
             }
             EditKey.Pronouns -> {
-                _userProfile.value = _userProfile.value.copy(gender = editValue)
+                _userProfile.value = _userProfile.value.copy(gender = sanitizedValue)
             }
             EditKey.Persona -> {
-                _userProfile.value = _userProfile.value.copy(description = editValue)
+                _userProfile.value = _userProfile.value.copy(description = sanitizedValue)
             }
             EditKey.Preference,
             EditKey.None -> {}
@@ -80,6 +88,7 @@ class ModifyProfileViewModel : BaseVM() {
         launchBackground {
             _isSaving.value = true
             try {
+                val sanitizedValue = sanitizeEditValue(editKey, editValue)
                 val original = originalUserProfile ?: return@launchBackground
                 val current = _userProfile.value
                 var hasChanged = false
@@ -87,15 +96,15 @@ class ModifyProfileViewModel : BaseVM() {
                 // 先判断是否真的变化了
                 when (editKey) {
                     EditKey.Name -> {
-                        hasChanged = original.nickname != editValue
+                        hasChanged = original.nickname != sanitizedValue
                     }
 
                     EditKey.Pronouns -> {
-                        hasChanged = (original.gender ?: "") != editValue
+                        hasChanged = (original.gender ?: "") != sanitizedValue
                     }
 
                     EditKey.Persona -> {
-                        hasChanged = (original.description ?: "") != editValue
+                        hasChanged = (original.description ?: "") != sanitizedValue
                     }
 
                     EditKey.Preference,
@@ -106,16 +115,16 @@ class ModifyProfileViewModel : BaseVM() {
 
                 // 如果没有变化，只更新本地状态（用户可能在 sheet 中修改了但改回了原值），不调用接口
                 if (!hasChanged) {
-                    changeUserProfile(editKey, editValue)
+                    changeUserProfile(editKey, sanitizedValue)
                     return@launchBackground
                 }
 
                 // 有变化，更新本地状态
                 val updatedProfile =
                     when (editKey) {
-                        EditKey.Name -> current.copy(nickname = editValue)
-                        EditKey.Pronouns -> current.copy(gender = editValue)
-                        EditKey.Persona -> current.copy(description = editValue)
+                        EditKey.Name -> current.copy(nickname = sanitizedValue)
+                        EditKey.Pronouns -> current.copy(gender = sanitizedValue)
+                        EditKey.Persona -> current.copy(description = sanitizedValue)
                         EditKey.Preference,
                         EditKey.None -> current
                     }

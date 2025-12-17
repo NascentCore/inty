@@ -62,6 +62,12 @@ class UserUpdate(BaseModel):
     system_language: Optional[str] = None
     request_id: Optional[str] = None
 
+    @validator("nickname")
+    def validate_nickname(cls, v):
+        if v is None:
+            return v
+        return v.strip()
+
     @validator("email")
     def validate_email(cls, v):
         """宽松的邮箱验证"""
