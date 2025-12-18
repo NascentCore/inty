@@ -35,6 +35,7 @@ import com.ai.intellimate.ui.components.AgentBackground
  * 注意：应用内大部分聊天页面跳转使用导航系统（Routes.ChatPage），通过 ChatScreen 组件显示， 而不是使用独立的 ChatActivity。只有上述两种场景会使用
  * ChatActivity。
  */
+@Deprecated(message = "⚠️已废弃待删除，不可使用⚠️，请用Compose方式的ChatScreen")
 class ChatActivity : BaseActivity() {
 
     companion object {
@@ -167,13 +168,15 @@ class ChatActivity : BaseActivity() {
                 val hasGeneratedImage = msg.hasGeneratedImage()
                 val generatedImageUrl = msg.getGeneratedImageUrl()
                 msg.content == "loading_animation" &&
-                    !hasGeneratedImage &&
-                    generatedImageUrl != "loading"
+                        !hasGeneratedImage &&
+                        generatedImageUrl != "loading"
             }
 
         val navController = rememberNavController()
 
-        Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(
                 agentInfo = agentInfo,
@@ -186,7 +189,10 @@ class ChatActivity : BaseActivity() {
 
             ChatPage(
                 navController = navController,
-                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .navigationBarsPadding(),
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 onBack = { finish() },
