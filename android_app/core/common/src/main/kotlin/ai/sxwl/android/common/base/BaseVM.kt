@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.concurrent.CopyOnWriteArrayList
 
 abstract class BaseVM : ViewModel() {
 
@@ -18,10 +19,10 @@ abstract class BaseVM : ViewModel() {
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // UI相关任务列表
-    private val uiJobs: MutableList<Job> = mutableListOf()
+    private val uiJobs: MutableList<Job> = CopyOnWriteArrayList()
 
     // 后台任务列表
-    private val backgroundJobs: MutableList<Job> = mutableListOf()
+    private val backgroundJobs: MutableList<Job> = CopyOnWriteArrayList()
 
     // 异常处理器
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
