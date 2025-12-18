@@ -50,13 +50,21 @@ object HttpErrorHandler {
             else -> {
                 val operationName =
                     when {
+                        operation.contains("image upload", ignoreCase = true) ||
+                            operation.contains("upload.*image", ignoreCase = true) -> "Image upload"
                         operation.contains("create", ignoreCase = true) -> "Creation"
                         operation.contains("update", ignoreCase = true) -> "Update"
                         operation.contains("delete", ignoreCase = true) -> "Delete"
                         operation.contains("generate", ignoreCase = true) -> "Generation"
                         else -> "Operation"
                     }
-                "$operationName failed: ${e.message ?: "Unknown error"}"
+                val errorMessage = e.message ?: "Unknown error"
+                // 如果错误信息已经包含操作名称，直接返回，避免重复包装
+                if (errorMessage.contains(operationName, ignoreCase = true)) {
+                    errorMessage
+                } else {
+                    "$operationName failed: $errorMessage"
+                }
             }
         }
     }

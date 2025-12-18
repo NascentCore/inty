@@ -4,11 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.graphics.scale
-import java.io.File
-import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.zibin.luban.Luban
+import java.io.File
+import java.io.FileOutputStream
 
 /** 图片压缩工具类 基于Luban库封装，提供简洁的API供上层模块使用 */
 object ImageCompressUtils {
@@ -85,6 +85,8 @@ object ImageCompressUtils {
 
     /**
      * 将图片转换为 WebP 格式（同步方法，在协程中使用）
+     * 仅支持 BitmapFactory 可以解码的格式（JPEG、PNG 等标准格式）
+     * 对于 HEIC/HEIF 格式，请在使用处使用 Coil 加载后再调用此方法
      *
      * @param context 上下文
      * @param imageFile 要转换的图片文件
@@ -101,15 +103,23 @@ object ImageCompressUtils {
         maxHeight: Int = -1,
     ): File? =
         withContext(Dispatchers.IO) {
+            var bitmap: Bitmap? = null
             try {
                 if (!imageFile.exists()) {
                     return@withContext null
                 }
 
-                // 读取原始图片
+                // 尝试用 BitmapFactory 解码
                 val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeFile(imageFile.absolutePath, options)
+                val canDecode = options.outWidth > 0 && options.outHeight > 0
 
+                if (!canDecode) {
+                    // 无法用 BitmapFactory 解码（可能是 HEIC 格式），返回 null
+                    return@withContext null
+                }
+
+                // 可以用 BitmapFactory 解码（JPEG、PNG 等标准格式）
                 // 计算缩放比例
                 var sampleSize = 1
                 if (maxWidth > 0 && maxHeight > 0) {
@@ -120,7 +130,7 @@ object ImageCompressUtils {
 
                 // 加载缩放后的 Bitmap
                 val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-                val bitmap =
+                bitmap =
                     BitmapFactory.decodeFile(imageFile.absolutePath, decodeOptions)
                         ?: return@withContext null
 
@@ -163,6 +173,7 @@ object ImageCompressUtils {
 
                 webpFile
             } catch (e: Exception) {
+                bitmap?.recycle()
                 null
             }
         }
