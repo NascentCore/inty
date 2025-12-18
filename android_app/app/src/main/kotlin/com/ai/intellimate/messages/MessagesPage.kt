@@ -467,7 +467,7 @@ private fun FavoriteAgentItem(agent: AgentInfo, onClick: (AgentInfo) -> Unit) {
             placeholder = painterResource(R.drawable.img_default_avatar),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter
+            alignment = Alignment.TopCenter,
         )
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

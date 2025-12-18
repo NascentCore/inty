@@ -168,15 +168,13 @@ class ChatActivity : BaseActivity() {
                 val hasGeneratedImage = msg.hasGeneratedImage()
                 val generatedImageUrl = msg.getGeneratedImageUrl()
                 msg.content == "loading_animation" &&
-                        !hasGeneratedImage &&
-                        generatedImageUrl != "loading"
+                    !hasGeneratedImage &&
+                    generatedImageUrl != "loading"
             }
 
         val navController = rememberNavController()
 
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .background(HeartColor.primaryColor)) {
+        Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
             AgentBackground(
                 agentInfo = agentInfo,
@@ -189,10 +187,7 @@ class ChatActivity : BaseActivity() {
 
             ChatPage(
                 navController = navController,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .navigationBarsPadding(),
+                modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 onBack = { finish() },

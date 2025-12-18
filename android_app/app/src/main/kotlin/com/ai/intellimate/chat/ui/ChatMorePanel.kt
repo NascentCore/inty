@@ -106,8 +106,7 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
                             .windowInsetsPadding(WindowInsets.navigationBars)
                             .onGloballyPositioned { coords ->
@@ -140,7 +139,7 @@ fun ChatMorePanel(
                                     } else {
                                         // 去会员中心
                                         navController.navigate(Routes.VipCenter)
-                                        onDismiss()//要关闭掉panel
+                                        onDismiss() // 要关闭掉panel
                                     }
                                 }
                             },
@@ -217,16 +216,16 @@ fun ChatMorePanel(
 
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-    remember(agentInfo?.id, chatSettings) {
-        derivedStateOf {
-            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+        remember(agentInfo?.id, chatSettings) {
+            derivedStateOf {
+                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+            }
         }
-    }
 
     val replyStr by
-    remember(agentInfo?.id, currentChatSetting) {
-        derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
-    }
+        remember(agentInfo?.id, currentChatSetting) {
+            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
+        }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -252,22 +251,17 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -283,8 +277,7 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier
-                .clip(RoundedCornerShape(24.dp))
+            Modifier.clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -304,9 +297,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -318,9 +309,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),

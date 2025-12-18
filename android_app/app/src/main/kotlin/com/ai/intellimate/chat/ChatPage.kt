@@ -132,7 +132,7 @@ internal fun ChatPage(
     val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
     var pendingBoostSheet by
-    remember(shouldShowBoostSheetOnOpen) { mutableStateOf(shouldShowBoostSheetOnOpen) }
+        remember(shouldShowBoostSheetOnOpen) { mutableStateOf(shouldShowBoostSheetOnOpen) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
         val messageRes =
@@ -150,8 +150,8 @@ internal fun ChatPage(
                 val hasGeneratedImage = msg.hasGeneratedImage()
                 val generatedImageUrl = msg.getGeneratedImageUrl()
                 msg.content == "loading_animation" &&
-                        !hasGeneratedImage &&
-                        generatedImageUrl != "loading"
+                    !hasGeneratedImage &&
+                    generatedImageUrl != "loading"
             }
         }
 
@@ -178,23 +178,24 @@ internal fun ChatPage(
         if (isCurrentPage && agentInfo?.id != null) {
             // 确定页面来源
             val pageSource: String =
-                pageSourceOverride ?: if (showBackButton) {
-                    // 理论上不应该出现这种情况，但为了安全起见保留
-                    ChatPageSource.CHAT_ACTIVITY
-                } else {
-                    // 判断是否从上一个 agent 滑动而来
-                    val isFromPreviousAgent =
-                        previousAgentId.value != null &&
+                pageSourceOverride
+                    ?: if (showBackButton) {
+                        // 理论上不应该出现这种情况，但为了安全起见保留
+                        ChatPageSource.CHAT_ACTIVITY
+                    } else {
+                        // 判断是否从上一个 agent 滑动而来
+                        val isFromPreviousAgent =
+                            previousAgentId.value != null &&
                                 previousAgentId.value != agentInfo?.id &&
                                 previousAgentId.value != ""
 
-                    if (isFromPreviousAgent) {
-                        ChatPageSource.FROM_PREVIOUS_AGENT
-                    } else {
-                        // 首次进入或从 chat tab 进入
-                        ChatPageSource.MAIN_ACTIVITY_HOME_TAB
+                        if (isFromPreviousAgent) {
+                            ChatPageSource.FROM_PREVIOUS_AGENT
+                        } else {
+                            // 首次进入或从 chat tab 进入
+                            ChatPageSource.MAIN_ACTIVITY_HOME_TAB
+                        }
                     }
-                }
 
             // 生成唯一 key，用于判断是否需要上报（避免在同一状态下重复上报）
             // 包含 Agent ID、页面来源和开关状态，确保这些关键参数变化时会重新上报

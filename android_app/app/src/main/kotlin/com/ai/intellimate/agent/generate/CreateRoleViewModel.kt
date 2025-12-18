@@ -14,10 +14,10 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.agent.data.AgentGenerateRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** CreateRoleActivity 的 ViewModel 负责管理 Agent 的创建和更新逻辑 */
 class CreateRoleViewModel : BaseVM() {
@@ -35,11 +35,13 @@ class CreateRoleViewModel : BaseVM() {
             try {
                 val remoteUrl = convertToRemoteImage(uri, createTempFile, context)
                 remoteImageUrls.add(remoteUrl)
-                LogUtils.i("CreateRoleViewModel - Background image $index uploaded successfully: $remoteUrl")
+                LogUtils.i(
+                    "CreateRoleViewModel - Background image $index uploaded successfully: $remoteUrl"
+                )
             } catch (e: Exception) {
                 LogUtils.e(
                     "CreateRoleViewModel - Failed to upload background image $index: ${e.message}",
-                    e
+                    e,
                 )
                 // 提取原始错误信息，避免重复嵌套
                 val errorMessage = e.message ?: "Unknown error"
@@ -57,12 +59,14 @@ class CreateRoleViewModel : BaseVM() {
                 } else {
                     try {
                         val remoteUrl = convertToRemoteImage(uri, createTempFile, context)
-                        LogUtils.i("CreateRoleViewModel - Background image uploaded successfully: $remoteUrl")
+                        LogUtils.i(
+                            "CreateRoleViewModel - Background image uploaded successfully: $remoteUrl"
+                        )
                         remoteUrl
                     } catch (e: Exception) {
                         LogUtils.e(
                             "CreateRoleViewModel - Failed to upload background image: ${e.message}",
-                            e
+                            e,
                         )
                         // 提取原始错误信息，避免重复嵌套
                         val errorMessage = e.message ?: "Unknown error"
@@ -139,11 +143,15 @@ class CreateRoleViewModel : BaseVM() {
 
                         if (webpFile != null && webpFile.exists() && webpFile.length() > 0) {
                             val webpSizeKB = webpFile.length() / 1024
-                            LogUtils.i("CreateRoleViewModel - Image converted to WebP: ${webpSizeKB}KB")
+                            LogUtils.i(
+                                "CreateRoleViewModel - Image converted to WebP: ${webpSizeKB}KB"
+                            )
                             fileToUpload = webpFile
                         } else {
                             // 2. WebP 转换失败，尝试使用 Luban 压缩
-                            LogUtils.w("CreateRoleViewModel - WebP conversion failed, trying Luban compression")
+                            LogUtils.w(
+                                "CreateRoleViewModel - WebP conversion failed, trying Luban compression"
+                            )
                             compressedFile =
                                 ImageCompressUtils.compressImageSync(
                                     context = context,
@@ -157,14 +165,20 @@ class CreateRoleViewModel : BaseVM() {
                                         ),
                                 )
 
-                            if (compressedFile != null && compressedFile.exists() && compressedFile.length() > 0) {
+                            if (
+                                compressedFile != null &&
+                                    compressedFile.exists() &&
+                                    compressedFile.length() > 0
+                            ) {
                                 val compressedSizeKB = compressedFile.length() / 1024
                                 LogUtils.i(
                                     "CreateRoleViewModel - Image compressed with Luban: ${compressedSizeKB}KB"
                                 )
                                 fileToUpload = compressedFile
                             } else {
-                                LogUtils.w("CreateRoleViewModel - Compression failed, using original file")
+                                LogUtils.w(
+                                    "CreateRoleViewModel - Compression failed, using original file"
+                                )
                             }
                         }
                     }
@@ -174,7 +188,7 @@ class CreateRoleViewModel : BaseVM() {
                 } catch (e: Exception) {
                     LogUtils.e(
                         "CreateRoleViewModel - Failed to upload image: ${e.javaClass.simpleName}: ${e.message}",
-                        e
+                        e,
                     )
                     throw e
                 } finally {
@@ -183,15 +197,23 @@ class CreateRoleViewModel : BaseVM() {
                         try {
                             webpFile.delete()
                         } catch (e: Exception) {
-                            LogUtils.w("CreateRoleViewModel - Failed to delete WebP file: ${e.message}")
+                            LogUtils.w(
+                                "CreateRoleViewModel - Failed to delete WebP file: ${e.message}"
+                            )
                         }
                     }
                     // 清理压缩后的临时文件
-                    if (compressedFile != null && compressedFile != tempFile && compressedFile != webpFile) {
+                    if (
+                        compressedFile != null &&
+                            compressedFile != tempFile &&
+                            compressedFile != webpFile
+                    ) {
                         try {
                             compressedFile.delete()
                         } catch (e: Exception) {
-                            LogUtils.w("CreateRoleViewModel - Failed to delete compressed file: ${e.message}")
+                            LogUtils.w(
+                                "CreateRoleViewModel - Failed to delete compressed file: ${e.message}"
+                            )
                         }
                     }
                 }
@@ -200,8 +222,7 @@ class CreateRoleViewModel : BaseVM() {
     }
 
     /**
-     * 将图片转换为 WebP 格式，支持 HEIC/HEIF 格式（使用 Coil 加载）
-     * 先尝试使用 ImageCompressUtils.convertToWebPSync（标准格式）
+     * 将图片转换为 WebP 格式，支持 HEIC/HEIF 格式（使用 Coil 加载） 先尝试使用 ImageCompressUtils.convertToWebPSync（标准格式）
      * 如果失败，尝试使用 Coil 加载（HEIC 格式）后转换为 WebP
      */
     private suspend fun convertToWebPWithHeicSupport(

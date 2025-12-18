@@ -55,10 +55,10 @@ import coil3.compose.SubcomposeAsyncImageContent
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Size
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 private const val CDN_IMAGE_QUALITY = 80
 private const val CDN_STATIC_BACKGROUND_WIDTH = 1080
@@ -119,8 +119,7 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
 
     // 如果是 DrawableWrapper，尝试获取内部 drawable
     if (drawable is DrawableWrapper) {
-        val innerDrawable =
-            drawable.drawable
+        val innerDrawable = drawable.drawable
         val result = extractAnimatedImageDrawable(innerDrawable)
         if (result != null) {
             return result

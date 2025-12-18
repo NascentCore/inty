@@ -8,7 +8,6 @@ import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
@@ -142,12 +141,12 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             explorePagingRepository
                 .getRecommendAgentsFlow(useCache = true)
                 .map { pagingData ->
-                    //分页会导致不同页面可能存在相同agent，临时去重解决方案，更好的解决方式需要重构整个流程，从根源上去重
+                    // 分页会导致不同页面可能存在相同agent，临时去重解决方案，更好的解决方式需要重构整个流程，从根源上去重
                     val agentIds = mutableSetOf<String>()
 
                     pagingData.filter { item ->
                         if (agentIds.contains(item.id)) {
-                            false  // 过滤重复
+                            false // 过滤重复
                         } else {
                             agentIds.add(item.id)
                             true
