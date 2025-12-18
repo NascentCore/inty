@@ -73,6 +73,32 @@ const DEFAULT_SCALE = 0.18;
 const TALKING_COEFFICIENT = 150;
 const TALKING_BUFFER = 500;
 const MOUTH_PARAM_ID = 'ParamMouthOpenY';
+const MOUTH_VALUE_VERIFY_INTERVAL_MS = 1000;
+const LIVE2D_DEBUG_LIP_SYNC_STORAGE_KEY = 'INTY_DEVTEST_LIVE2D_DEBUG_LIP_SYNC';
+const LIVE2D_DEBUG_LIP_SYNC_QUERY_KEY = 'live2dDebugLipSync';
+
+const getLive2dDebugLipSyncEnabled = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  try {
+    const url = new URL(window.location.href);
+    const queryValue = url.searchParams.get(LIVE2D_DEBUG_LIP_SYNC_QUERY_KEY);
+    if (queryValue === '1' || queryValue === 'true') {
+      return true;
+    }
+    if (queryValue === '0' || queryValue === 'false') {
+      return false;
+    }
+  } catch {
+    // ignore
+  }
+  try {
+    return window.localStorage.getItem(LIVE2D_DEBUG_LIP_SYNC_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
 
 interface ILive2DCoreModel {
   setParameterValueById: (parameterId: string, value: number) => void;
@@ -127,19 +153,91 @@ const Live2DViewer = React.forwardRef(
     const [error, setError] = useState<string | null>(null);
     const onReadyRef = useRef<(() => void) | undefined>(onReady);
     const currentMotionRef = useRef<ICurrentMotionInfo | null>(null);
+    const updateMouthRef = useRef<(() => void) | null>(null);
+    const lastLogTimeRef = useRef<number>(0);
+    const internalModelEventTargetRef = useRef<any>(null);
+    const internalModelBeforeModelUpdateListenerRef = useRef<(() => void) | null>(null);
+    const mouthValueLastVerifyTimeRef = useRef<number>(0);
+    const lipSyncViaInternalModelRef = useRef<boolean>(false);
 
     useEffect(() => {
       onReadyRef.current = onReady;
     }, [onReady]);
+
+    const debugLipSyncEnabledRef = useRef<boolean>(getLive2dDebugLipSyncEnabled());
 
     const setMouthValue = (value: number) => {
       const coreModel = modelRef.current?.internalModel?.coreModel as
         | ILive2DCoreModel
         | undefined;
       if (!coreModel) {
+        console.warn('[Live2DViewer] setMouthValue: coreModel not available');
         return;
       }
-      coreModel.setParameterValueById(MOUTH_PARAM_ID, value);
+      try {
+        coreModel.setParameterValueById(MOUTH_PARAM_ID, value);
+        // 调试校验：读回参数值，确认没有被覆盖（节流 + 默认关闭）
+        if (debugLipSyncEnabledRef.current) {
+          const now = Date.now();
+          if (now - mouthValueLastVerifyTimeRef.current > MOUTH_VALUE_VERIFY_INTERVAL_MS) {
+            mouthValueLastVerifyTimeRef.current = now;
+            const actualValue = coreModel.getParameterValueById(MOUTH_PARAM_ID);
+            if (Math.abs(actualValue - value) > 0.001) {
+              console.warn(
+                `[Live2DViewer] setMouthValue: value mismatch`,
+                `expected=${value.toFixed(3)}, actual=${actualValue.toFixed(3)}`,
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Live2DViewer] setMouthValue: failed to set parameter', MOUTH_PARAM_ID, err);
+      }
+    };
+
+    // 计算并设置当前应该的嘴型值（根据是否正在说话）
+    const updateMouthValue = () => {
+      if (!modelRef.current) {
+        return;
+      }
+      const now = Date.now();
+      const isTalking = now < talkingEndTimeRef.current;
+
+      if (isTalking) {
+        const wave =
+          (Math.sin(now / 90) + Math.sin(now / 45) + Math.sin(now / 30)) / 3;
+        const normalized = Math.min(1, Math.max(0, (wave + 1) / 2));
+        setMouthValue(normalized * 0.85);
+      } else {
+        setMouthValue(0);
+      }
+    };
+
+    const updateMouth = () => {
+      if (!modelRef.current) {
+        return;
+      }
+      const now = Date.now();
+      const isTalking = now < talkingEndTimeRef.current;
+
+      // 节流日志：如果正在说话，每 2 秒记录一次（避免刷屏）
+      if (isTalking && now - lastLogTimeRef.current > 2000) {
+        lastLogTimeRef.current = now;
+        const wave =
+          (Math.sin(now / 90) + Math.sin(now / 45) + Math.sin(now / 30)) / 3;
+        const normalized = Math.min(1, Math.max(0, (wave + 1) / 2));
+        const mouthValue = normalized * 0.85;
+        console.debug(
+          '[Live2DViewer] updateMouth: talking',
+          `now=${now}, endTime=${talkingEndTimeRef.current}, remaining=${talkingEndTimeRef.current - now}ms`,
+          `mouthValue=${mouthValue.toFixed(3)}`,
+        );
+      }
+
+      // 如果 beforeModelUpdate 已接管嘴型更新，这里就不重复写参数，避免额外开销
+      if (!lipSyncViaInternalModelRef.current) {
+        updateMouthValue();
+      }
     };
 
     const destroyModel = () => {
@@ -148,6 +246,28 @@ const Live2DViewer = React.forwardRef(
         return;
       }
       try {
+        // 移除 internalModel 事件监听，避免热更新 / 重载导致重复绑定
+        if (internalModelEventTargetRef.current && internalModelBeforeModelUpdateListenerRef.current) {
+          const target = internalModelEventTargetRef.current;
+          const handler = internalModelBeforeModelUpdateListenerRef.current;
+          try {
+            if (typeof target.off === 'function') {
+              target.off('beforeModelUpdate', handler);
+            } else if (typeof target.removeListener === 'function') {
+              target.removeListener('beforeModelUpdate', handler);
+            }
+          } finally {
+            internalModelEventTargetRef.current = null;
+            internalModelBeforeModelUpdateListenerRef.current = null;
+            lipSyncViaInternalModelRef.current = false;
+          }
+        }
+
+        // 移除嘴型动画 ticker
+        if (appRef.current && updateMouthRef.current) {
+          appRef.current.ticker.remove(updateMouthRef.current);
+          updateMouthRef.current = null;
+        }
         // 如果 App 还存在且模型还在 stage 中，先移除
         if (appRef.current?.stage && model.parent) {
           appRef.current.stage.removeChild(model);
@@ -169,10 +289,16 @@ const Live2DViewer = React.forwardRef(
       () => ({
         speakText: (text: string) => {
           if (!text) {
+            console.warn('[Live2DViewer] speakText: empty text provided');
             return;
           }
           const duration = text.length * TALKING_COEFFICIENT + TALKING_BUFFER;
-          talkingEndTimeRef.current = Date.now() + duration;
+          const endTime = Date.now() + duration;
+          talkingEndTimeRef.current = endTime;
+          console.log(
+            '[Live2DViewer] speakText: triggered',
+            `textLength=${text.length}, duration=${duration}ms, endTime=${endTime}`,
+          );
         },
         stopSpeaking: () => {
           talkingEndTimeRef.current = 0;
@@ -183,11 +309,6 @@ const Live2DViewer = React.forwardRef(
             return;
           }
           modelRef.current.motion(group, index);
-          currentMotionRef.current = {
-            group,
-            index: index ?? 0,
-            timestamp: Date.now(),
-          };
         },
         get internalModel() {
           return modelRef.current;
@@ -270,16 +391,118 @@ const Live2DViewer = React.forwardRef(
           model.on('hit', (hitAreas: string[]) => {
             if (hitAreas.includes('body')) {
               model.motion('TapBody');
-              currentMotionRef.current = {
-                group: 'TapBody',
-                index: 0,
-                timestamp: Date.now(),
-              };
             }
           });
+
+          // 监听 motionStart 事件，更新当前动作状态并打印日志
+          // 注意：事件由 motionManager 发射，而非 model 本身
+          const motionManager = model.internalModel.motionManager;
+          if (motionManager) {
+            console.log('[Live2DViewer] MotionManager found, attaching listeners');
+            (motionManager as any).on(
+              'motionStart',
+              (group: string, index: number, audio?: any) => {
+                console.log(
+                  `[Live2DViewer] motionStart: group=${group} index=${index}`,
+                  audio ? '(has audio)' : '',
+                );
+                currentMotionRef.current = {
+                  group,
+                  index,
+                  timestamp: Date.now(),
+                };
+              },
+            );
+          } else {
+            console.warn(
+              '[Live2DViewer] motionManager not found, cannot listen to motionStart events',
+            );
+          }
+
+          // 方案 A：监听 internalModel 的 beforeModelUpdate，在参数最终应用前重新写嘴型
+          // 事件属于 InternalModelEvents（由 internalModel 发射），比挂在 motionManager 上更可靠
+          const internalModel = model.internalModel as any;
+          if (internalModel && typeof internalModel.on === 'function') {
+            // 若之前有残留监听（例如热更新），先尝试解绑
+            if (internalModelEventTargetRef.current && internalModelBeforeModelUpdateListenerRef.current) {
+              const prevTarget = internalModelEventTargetRef.current;
+              const prevHandler = internalModelBeforeModelUpdateListenerRef.current;
+              try {
+                if (typeof prevTarget.off === 'function') {
+                  prevTarget.off('beforeModelUpdate', prevHandler);
+                } else if (typeof prevTarget.removeListener === 'function') {
+                  prevTarget.removeListener('beforeModelUpdate', prevHandler);
+                }
+              } catch {
+                // 忽略解绑失败
+              } finally {
+                internalModelEventTargetRef.current = null;
+                internalModelBeforeModelUpdateListenerRef.current = null;
+              }
+            }
+
+            const beforeModelUpdateHandler = () => {
+              updateMouthValue();
+            };
+            internalModelEventTargetRef.current = internalModel;
+            internalModelBeforeModelUpdateListenerRef.current = beforeModelUpdateHandler;
+            internalModel.on('beforeModelUpdate', beforeModelUpdateHandler);
+            lipSyncViaInternalModelRef.current = true;
+            console.log('[Live2DViewer] beforeModelUpdate listener attached (lip sync override)');
+          } else {
+            console.warn('[Live2DViewer] internalModel does not support events; cannot attach beforeModelUpdate');
+          }
+
           app.stage.addChild(model);
           modelRef.current = model;
           currentMotionRef.current = null;
+          // 在模型加载完成后添加嘴型动画 ticker
+          if (app.ticker && !updateMouthRef.current) {
+            updateMouthRef.current = updateMouth;
+            app.ticker.add(updateMouth);
+            console.log('[Live2DViewer] Mouth animation ticker added successfully');
+
+            // 验证嘴型参数是否存在（通过尝试读取参数值来验证）
+            const coreModel = model.internalModel?.coreModel as ILive2DCoreModel | undefined;
+            if (coreModel) {
+              try {
+                // 尝试读取参数值来验证参数是否存在
+                const testValue = coreModel.getParameterValueById(MOUTH_PARAM_ID);
+                console.log(
+                  `[Live2DViewer] Mouth parameter "${MOUTH_PARAM_ID}" verified`,
+                  `current value=${testValue.toFixed(3)}`,
+                );
+              } catch (err) {
+                console.warn(
+                  `[Live2DViewer] Mouth parameter "${MOUTH_PARAM_ID}" not found or not accessible:`,
+                  err,
+                );
+                // 尝试通过 parameters.ids 查找（如果可用）
+                try {
+                  const params = (coreModel as any).parameters;
+                  if (params && Array.isArray(params.ids)) {
+                    const found = params.ids.includes(MOUTH_PARAM_ID);
+                    console.warn(
+                      `[Live2DViewer] Parameter check via parameters.ids:`,
+                      found ? 'found' : 'not found',
+                      `(total: ${params.ids.length})`,
+                    );
+                  }
+                } catch (e) {
+                  // 忽略，parameters 可能不可用
+                }
+              }
+            } else {
+              console.warn('[Live2DViewer] coreModel not available for parameter verification');
+            }
+          } else {
+            if (!app.ticker) {
+              console.warn('[Live2DViewer] Cannot add mouth ticker: app.ticker is not available');
+            }
+            if (updateMouthRef.current) {
+              console.warn('[Live2DViewer] Mouth ticker already exists, skipping');
+            }
+          }
           onReadyRef.current?.();
         } catch (err) {
           console.error('[Live2DViewer] failed to load model:', err);
@@ -294,31 +517,6 @@ const Live2DViewer = React.forwardRef(
         destroyModel();
       };
     }, [modelUrl, scale, x, y, scriptsReady]);
-
-    // 嘴型模拟 Ticker
-    useEffect(() => {
-      if (!appRef.current) {
-        return;
-      }
-      const updateMouth = () => {
-        if (!modelRef.current) {
-          return;
-        }
-        const now = Date.now();
-        if (now < talkingEndTimeRef.current) {
-          const wave =
-            (Math.sin(now / 90) + Math.sin(now / 45) + Math.sin(now / 30)) / 3;
-          const normalized = Math.min(1, Math.max(0, (wave + 1) / 2));
-          setMouthValue(normalized * 0.85);
-        } else {
-          setMouthValue(0);
-        }
-      };
-      appRef.current.ticker.add(updateMouth);
-      return () => {
-        appRef.current?.ticker.remove(updateMouth);
-      };
-    }, []);
 
     return (
       <div className="live2d-viewer">

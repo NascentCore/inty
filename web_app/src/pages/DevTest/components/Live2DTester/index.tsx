@@ -27,6 +27,7 @@ import {
   List,
   Select,
   Space,
+  Switch,
   Tabs,
   Typography,
   message,
@@ -75,6 +76,7 @@ const LOCAL_MODEL_OPTIONS: ILive2dModelOption[] = [
 
 const STREAMING_PLACEHOLDER =
   'LONG_PLACEHOLDER_TEXT_TO_KEEP_MOUTH_MOVING_DURING_STREAMING_RESPONSE';
+const LIVE2D_DEBUG_LIP_SYNC_STORAGE_KEY = 'INTY_DEVTEST_LIVE2D_DEBUG_LIP_SYNC';
 
 interface ILive2DInternalModel {
   settings?: IModel3Json;
@@ -93,6 +95,14 @@ const Live2DTester: React.FC = () => {
   const [motionHistory, setMotionHistory] = useState<IMotionHistoryItem[]>([]);
   const [isMonitoring, setIsMonitoring] = useState<boolean>(false);
   const [parameterData, setParameterData] = useState<Array<{ id: string; value: number }> | null>(null);
+  const [debugLipSyncEnabled, setDebugLipSyncEnabled] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(LIVE2D_DEBUG_LIP_SYNC_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [viewerInstanceKey, setViewerInstanceKey] = useState<number>(0);
   const viewerRef = useRef<ILive2DViewerRef | null>(null);
   const monitoringIntervalRef = useRef<number | null>(null);
 
@@ -148,6 +158,14 @@ const Live2DTester: React.FC = () => {
   const appendLog = (messageText: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs((prev) => [`[${timestamp}] ${messageText}`, ...prev].slice(0, 40));
+  };
+
+  const persistDebugLipSync = (enabled: boolean) => {
+    try {
+      window.localStorage.setItem(LIVE2D_DEBUG_LIP_SYNC_STORAGE_KEY, enabled ? '1' : '0');
+    } catch {
+      // ignore
+    }
   };
 
   const handleSpeakOnce = () => {
@@ -282,6 +300,27 @@ const Live2DTester: React.FC = () => {
 
             <Divider />
 
+            <Form.Item
+              label="DevTest: Lip sync debug verification"
+              extra={`Enable parameter read-back verification in Live2DViewer. You can also use ?live2dDebugLipSync=1 in URL.`}
+            >
+              <Space>
+                <Switch
+                  checked={debugLipSyncEnabled}
+                  onChange={(checked) => {
+                    setDebugLipSyncEnabled(checked);
+                    persistDebugLipSync(checked);
+                    setViewerInstanceKey((prev) => prev + 1);
+                    appendLog(`Lip sync debug verification ${checked ? 'enabled' : 'disabled'}. Viewer reloaded.`);
+                    message.info('Lip sync debug setting updated. Viewer reloaded.');
+                  }}
+                />
+                <Typography.Text type="secondary">
+                  {debugLipSyncEnabled ? 'Enabled' : 'Disabled'}
+                </Typography.Text>
+              </Space>
+            </Form.Item>
+
             <Form.Item label="Motion group">
               <Select<string>
                 placeholder="Select motion group"
@@ -317,6 +356,7 @@ const Live2DTester: React.FC = () => {
         <Card title="Viewer">
           <div className="live2d-tester__viewer">
             <Live2DViewer
+              key={viewerInstanceKey}
               ref={viewerRef}
               modelUrl={selectedModel}
               scale={0.2}
