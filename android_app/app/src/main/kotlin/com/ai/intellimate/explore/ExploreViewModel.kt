@@ -8,9 +8,11 @@ import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
@@ -136,7 +139,22 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
         // 使用app层的ExplorePagingRepository，支持事件回调
         val initialFlow =
-            explorePagingRepository.getRecommendAgentsFlow(useCache = true).cachedIn(viewModelScope)
+            explorePagingRepository
+                .getRecommendAgentsFlow(useCache = true)
+                .map { pagingData ->
+                    //分页会导致不同页面可能存在相同agent，临时去重解决方案，更好的解决方式需要重构整个流程，从根源上去重
+                    val agentIds = mutableSetOf<String>()
+
+                    pagingData.filter { item ->
+                        if (agentIds.contains(item.id)) {
+                            false  // 过滤重复
+                        } else {
+                            agentIds.add(item.id)
+                            true
+                        }
+                    }
+                }
+                .cachedIn(viewModelScope)
 
         _agentsFlow.value = initialFlow
         isInitialized = true
