@@ -247,7 +247,9 @@ private fun ChatItemAI(
                     item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
 
                 var showFullScreenImage by remember { mutableStateOf(false) }
-                var imageLoadError by remember { mutableStateOf(false) }
+                // 使用 generatedImageUrl 作为 key，URL 变化时自动重置状态
+                var imageLoadError by remember(generatedImageUrl) { mutableStateOf(false) }
+                var imageLoadSuccess by remember(generatedImageUrl) { mutableStateOf(false) }
 
                 val isNormalLoading =
                     item.content == "loading_animation" &&
@@ -439,7 +441,9 @@ private fun ChatItemAI(
                             // 消息生图的结果图片
                             ConstraintLayout(modifier = Modifier) {
                                 val (img, left, right) = createRefs()
-                                AsyncImage(
+
+                                // 使用 Box 叠加 shimmer 和图片
+                                Box(
                                     modifier =
                                         Modifier.fillMaxWidth(0.35f)
                                             .aspectRatio(aspectRatio)
@@ -449,24 +453,39 @@ private fun ChatItemAI(
                                                 detectTapGestures(
                                                     onTap = { showFullScreenImage = true }
                                                 )
-                                            },
-                                    model =
-                                        ImageRequest.Builder(LocalContext.current)
-                                            .data(
-                                                getCdnImageUrl(
-                                                    generatedImageUrl,
-                                                    width = targetWidth,
-                                                    quality = 70,
+                                            }
+                                ) {
+                                    // 图片加载中显示 shimmer（无 dots）
+                                    if (!imageLoadSuccess) {
+                                        ShimmerPlaceholder(
+                                            modifier = Modifier.matchParentSize(),
+                                            cornerRadius = 12.dp,
+                                            showLoadingDots = false,
+                                        )
+                                    }
+
+                                    // AsyncImage 在后台加载，加载成功后显示
+                                    AsyncImage(
+                                        modifier = Modifier.matchParentSize(),
+                                        model =
+                                            ImageRequest.Builder(LocalContext.current)
+                                                .data(
+                                                    getCdnImageUrl(
+                                                        generatedImageUrl,
+                                                        width = targetWidth,
+                                                        quality = 70,
+                                                    )
                                                 )
-                                            )
-                                            .build(),
-                                    contentDescription = "Generated image",
-                                    contentScale = ContentScale.Fit,
-                                    alignment = Alignment.CenterStart,
-                                    onError = { imageLoadError = true },
-                                )
+                                                .build(),
+                                        contentDescription = "Generated image",
+                                        contentScale = ContentScale.Fit,
+                                        alignment = Alignment.CenterStart,
+                                        onError = { imageLoadError = true },
+                                        onSuccess = { imageLoadSuccess = true },
+                                    )
+                                }
                                 // 圣诞点缀
-                                if (enableChristmasConfig()) {
+                                if (enableChristmasConfig() && imageLoadSuccess) {
                                     Image(
                                         painter = painterResource(R.drawable.img_christmas_candy),
                                         contentDescription = null,
@@ -487,7 +506,8 @@ private fun ChatItemAI(
                                     )
                                 }
                             }
-                        } else if (generatedImageUrl.isNullOrEmpty()) {
+                        } else {
+                            // URL 为空或其他情况，显示 shimmer
                             ShimmerPlaceholder(
                                 modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
