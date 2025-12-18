@@ -74,12 +74,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-<!--        <activity-->
-<!--            android:name=".chat.ChatActivity"-->
-<!--            android:launchMode="singleTop"-->
-<!--            android:screenOrientation="portrait"-->
-<!--            android:theme="@style/Theme.Inty"-->
-<!--            android:windowSoftInputMode="adjustResize" />-->
+
         <activity
             android:name=".profile.ModifyProfileActivity"
             android:launchMode="singleTop"
@@ -87,10 +82,6 @@
             android:theme="@style/Theme.Inty.Popup"
             android:windowSoftInputMode="adjustResize" />
 
-<!--        <activity-->
-<!--            android:name=".agent.info.AgentInfoActivity"-->
-<!--            android:launchMode="singleTop"-->
-<!--            android:theme="@style/Theme.Inty.Popup" />-->
         <activity
             android:name=".login.RegInfoActivity"
             android:launchMode="singleTop"
@@ -116,24 +107,10 @@
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.UCrop" />
-
-<!--        <activity-->
-<!--            android:name=".boost.BoostLeaderboardActivity"-->
-<!--            android:launchMode="singleTop"-->
-<!--            android:screenOrientation="portrait"-->
-<!--            android:theme="@style/Theme.Inty" />-->
-
-<!--        <activity-->
-<!--            android:name=".vip.VipCenterActivity"-->
-<!--            android:launchMode="singleTop" />-->
         <activity
             android:name=".vip.SubsManageActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Inty.Popup" />
-
-<!--        <activity-->
-<!--            android:name=".settings.check.CheckInActivity"-->
-<!--            android:launchMode="singleTop" />-->
 
     </application>
 
