@@ -461,6 +461,9 @@ class ImageGenerationService:
                         threshold="BLOCK_MEDIUM_AND_ABOVE",
                     ),
                 ],
+                image_config=types.ImageConfig(
+                    aspect_ratio="9:16",
+                ),
             )
 
             # 调用 Gemini 2.5 Flash Image 生成图片
