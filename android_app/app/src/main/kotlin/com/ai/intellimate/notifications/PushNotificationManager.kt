@@ -210,7 +210,14 @@ class PushNotificationManager private constructor(private val application: Appli
             FCMConstants.TYPE_AGENT_MESSAGE -> {
                 // Agent 消息：跳转到聊天页面
                 if (!agentId.isNullOrEmpty()) {
-                    ChatActivity.notifyIntent(application, agentId)
+//                    ChatActivity.notifyIntent(application, agentId)
+                    Intent(application, MainActivity::class.java).apply {
+                        // 设置 Flag，确保 Activity 启动时的行为符合预期
+                        // 例如：清除栈顶的 Activity，如果目标 Activity 已经存在，则将其带到栈顶
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra(FCMConstants.DATA_KEY_TYPE, FCMConstants.TYPE_AGENT_MESSAGE)
+                        putExtra(FCMConstants.DATA_KEY_AGENT_ID, agentId)
+                    }
                 } else {
                     LogUtils.w("PushNotificationManager", "消息类型为 agent_message 但缺少 agent_id，跳转到主页面")
                     createMainActivityIntent()
