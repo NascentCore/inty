@@ -13,6 +13,7 @@ import android.app.Activity
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -109,17 +110,16 @@ import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
+import java.io.File
+import java.io.FileOutputStream
+import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.util.Locale
-import java.util.UUID
-import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {

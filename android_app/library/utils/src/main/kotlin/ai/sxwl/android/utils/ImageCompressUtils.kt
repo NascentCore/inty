@@ -4,11 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.graphics.scale
+import java.io.File
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.zibin.luban.Luban
-import java.io.File
-import java.io.FileOutputStream
 
 /** 图片压缩工具类 基于Luban库封装，提供简洁的API供上层模块使用 */
 object ImageCompressUtils {
@@ -84,9 +84,8 @@ object ImageCompressUtils {
     }
 
     /**
-     * 将图片转换为 WebP 格式（同步方法，在协程中使用）
-     * 仅支持 BitmapFactory 可以解码的格式（JPEG、PNG 等标准格式）
-     * 对于 HEIC/HEIF 格式，请在使用处使用 Coil 加载后再调用此方法
+     * 将图片转换为 WebP 格式（同步方法，在协程中使用） 仅支持 BitmapFactory 可以解码的格式（JPEG、PNG 等标准格式） 对于 HEIC/HEIF 格式，请在使用处使用
+     * Coil 加载后再调用此方法
      *
      * @param context 上下文
      * @param imageFile 要转换的图片文件

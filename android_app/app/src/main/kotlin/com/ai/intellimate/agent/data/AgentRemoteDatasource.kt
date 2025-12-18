@@ -7,13 +7,13 @@ import ai.sxwl.android.data.api.model.UploadAvatarResponse
 import ai.sxwl.android.utils.LogUtils
 import com.ai.intellimate.utils.HttpErrorHandler
 import com.architecture.httplib.core.HttpResult
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.HttpException
-import java.io.File
 
 class AgentRemoteDatasource {
 
@@ -51,9 +51,10 @@ private suspend fun <T : Any> request(
             when (val result = action()) {
                 is HttpResult.Success -> result.data
                 is HttpResult.Failure -> {
-                    val errorMessage = result.message.ifBlank {
-                        "Creation failed, please check network connection"
-                    }
+                    val errorMessage =
+                        result.message.ifBlank {
+                            "Creation failed, please check network connection"
+                        }
                     LogUtils.e("AgentRemoteDatasource - Request failed: $errorMessage")
                     throw Exception(errorMessage)
                 }
