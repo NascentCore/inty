@@ -83,8 +83,6 @@ fun ChatMorePanel(
     var showSheet by remember { mutableStateOf(false) }
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-    // reply的vip拦截弹窗标记
-    var showDialog by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
 
     if (showResetConfirmDialog) {
@@ -108,7 +106,8 @@ fun ChatMorePanel(
                 val density = LocalDensity.current
                 Column(
                     modifier =
-                        Modifier.fillMaxWidth()
+                        Modifier
+                            .fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
                             .windowInsetsPadding(WindowInsets.navigationBars)
                             .onGloballyPositioned { coords ->
@@ -139,7 +138,9 @@ fun ChatMorePanel(
                                     if (vipStatus.isSubscribed) {
                                         showSheet = true
                                     } else {
-                                        showDialog = true
+                                        // 去会员中心
+                                        navController.navigate(Routes.VipCenter)
+                                        onDismiss()//要关闭掉panel
                                     }
                                 }
                             },
@@ -150,14 +151,10 @@ fun ChatMorePanel(
                             text = stringResource(R.string.str_reset),
                             onClick = {
                                 // 检查是否已登录
-                                // IntySetting.isLogin()内部已经调用getCurToken().isNotEmpty()，无需重复验证
                                 if (IntySetting.isLogin()) {
                                     // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
                                     // 相当于重新开始和agent初次聊天
-                                    // todo 需要接口
                                     showResetConfirmDialog = true
-                                } else {
-                                    // 未登录或游客时不执行操作（MainActivity已会显示登录界面）
                                 }
                             },
                         )
@@ -220,16 +217,16 @@ fun ChatMorePanel(
 
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-        remember(agentInfo?.id, chatSettings) {
-            derivedStateOf {
-                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
-            }
+    remember(agentInfo?.id, chatSettings) {
+        derivedStateOf {
+            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
         }
+    }
 
     val replyStr by
-        remember(agentInfo?.id, currentChatSetting) {
-            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
-        }
+    remember(agentInfo?.id, currentChatSetting) {
+        derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
+    }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -243,16 +240,6 @@ fun ChatMorePanel(
             },
         )
     }
-    // 会员定制回复的拦截跳转到vip center
-    if (showDialog) {
-        // 检查是否已登录
-        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-            // 去会员中心
-            navController.navigate(Routes.VipCenter)
-            //            VipCenterActivity.launch(context, VipCenterActivity.CHAT_MORE_PANEL)
-        }
-        showDialog = false
-    }
 }
 
 /** 更多面板项目组件 */
@@ -265,17 +252,22 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -291,7 +283,8 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier.clip(RoundedCornerShape(24.dp))
+            Modifier
+                .clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -311,7 +304,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -323,7 +318,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),
