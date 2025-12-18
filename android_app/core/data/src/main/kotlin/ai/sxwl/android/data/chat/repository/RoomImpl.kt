@@ -60,7 +60,7 @@ class RoomImpl(
 
         // ✅ 修复：检查状态一致性，如果标记为 loaded 但数据库为空，应该重新加载
         val isInitialLoaded = localDataSource.isInitialLoaded(agentId)
-        val localMessages = localDataSource.getMessagesFlow(agentId).value
+        val localMessages = localDataSource.getMessages(agentId)
         val hasLocalMessages = localMessages.isNotEmpty()
 
         // 如果已标记为 loaded 且有数据，直接返回
