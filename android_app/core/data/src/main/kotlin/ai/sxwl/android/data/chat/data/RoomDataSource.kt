@@ -50,6 +50,11 @@ class RoomDataSource(
     private val loadingFlows = ConcurrentHashMap<String, MutableStateFlow<Boolean>>()
     private val hasMoreFlows = ConcurrentHashMap<String, StateFlow<Boolean>>()
 
+
+    suspend fun getMessages(agentId: String) : List<MsgInfo> {
+        return messageDao.getAllMessages(agentId).map(ChatMessageEntity::toModel)
+    }
+
     fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> =
         messageFlows.getOrPut(agentId) {
             logger.debug { "RoomDataSource.getMessagesFlow creating new flow for agentId=$agentId" }
@@ -96,7 +101,9 @@ class RoomDataSource(
                 "RoomDataSource.updateMessages updating ${messages.size} messages for agentId=$agentId"
             }
             // 在事务之前获取现有消息以保留它们的sortKey
-            val existingMessages = messageDao.getAllMessages(agentId)
+            val existingMessages = messageDao.getAllMessages(agentId).filterNot {
+                it.content == "loading_animation" && it.role == "assistant"
+            }
             // 创建现有消息的映射表，以localId为key，也支持remoteId匹配
             val existingMapByLocalId = existingMessages.associateBy { it.localId }
             val existingMapByRemoteId =
