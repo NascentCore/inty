@@ -46,6 +46,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpCenter
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -503,29 +505,22 @@ private fun ProfileHeader(
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
-            AsyncImage(
+            Icon(
                 modifier =
-                    Modifier.size(24.dp).clickable {
+                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
-                            //                                            try {
-                            //
-                            // ToastUtils.showShort("Not Implementation！")
-                            //                                            } catch (e: Exception) {
-                            //
-                            // ToastUtils.showLargeText(e.toString())
-                            //                                            }
                             navController.navigate(Routes.CheckIn)
-                            //                            CheckInActivity.launch(context)
                         }
                     },
-                model = R.drawable.ic_checkin,
+                imageVector = Icons.Filled.EventAvailable,
                 contentDescription = null,
+                tint = Color.White,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
-            AsyncImage(
+            Icon(
                 modifier =
                     Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
@@ -536,8 +531,9 @@ private fun ProfileHeader(
                             }
                         }
                     },
-                model = R.drawable.icon_setting,
+                imageVector = Icons.Filled.Settings,
                 contentDescription = stringResource(R.string.me_icons_row_settings),
+                tint = Color.White,
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.RightPadding))
         }

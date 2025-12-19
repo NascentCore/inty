@@ -298,7 +298,7 @@ object UiConfigs {
         /** 顶部图标行配置 - 适用于个人页面顶部图标行的图标大小、间距和内边距设置 */
         object TopIconsRow {
             /** 顶部图标行图标大小 */
-            val Size = 24.dp
+            val Size = 28.dp
 
             /** 顶部图标行图标间距 */
             val Spacing = 8.dp
