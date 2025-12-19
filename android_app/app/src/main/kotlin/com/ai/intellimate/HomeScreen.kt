@@ -170,7 +170,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier =
-            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
+            modifier.fillMaxSize().background(HeartColor.primaryColor),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -211,6 +211,7 @@ fun HomeScreen(
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
                 height = UiConfigs.BottomBar.Height,
                 labelSpacing = UiConfigs.BottomBar.TabIconLabelSpacing,
+                bottomSpace = UiConfigs.BottomBar.BottomSpacing
             )
         },
     ) { innerPadding ->
