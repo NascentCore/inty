@@ -81,7 +81,7 @@ private fun LoadMoreErrorIndicator(
         horizontalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Failed to load more data",
+            text = "More characters to load…",
             color = Color.White.copy(0.7f),
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
