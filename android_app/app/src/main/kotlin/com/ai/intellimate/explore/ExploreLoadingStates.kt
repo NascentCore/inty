@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,13 +71,11 @@ private fun LoadingMoreIndicator() {
 
 /** 加载更多错误指示器 */
 @Composable
-private fun LoadMoreErrorIndicator(
-    onRetry: () -> Unit
-) {
+private fun LoadMoreErrorIndicator(onRetry: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "More characters to load…",
@@ -89,14 +86,9 @@ private fun LoadMoreErrorIndicator(
 
         IconButton(
             onClick = onRetry,
-            colors = IconButtonDefaults.iconButtonColors(
-                contentColor = Color.White
-            )
+            colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Refresh,
-                contentDescription = "Refresh"
-            )
+            Icon(imageVector = Icons.Rounded.Refresh, contentDescription = "Refresh")
         }
     }
 }

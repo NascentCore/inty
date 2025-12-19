@@ -905,7 +905,7 @@ internal fun ChatPage(
                     }
                 }
             },
-            windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets()
+            windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets(),
         )
 
         ChatSettingsDrawer(

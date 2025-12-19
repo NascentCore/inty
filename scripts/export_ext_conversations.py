@@ -71,7 +71,7 @@ async def find_messages_with_ext(
 ) -> List[MatchedMessage]:
     """
     查找 AI 消息内容包含独立 ext 单词的记录
-    
+
     使用正则表达式匹配独立的 "ext" 单词：
     - ext 作为整个内容
     - ext 前后是空格
@@ -166,7 +166,11 @@ async def get_context_messages(
 
     result = await db.execute(
         query,
-        {"session_id": session_uuid, "message_id": target_message_id, "half_size": half_size},
+        {
+            "session_id": session_uuid,
+            "message_id": target_message_id,
+            "half_size": half_size,
+        },
     )
     rows = result.fetchall()
 
@@ -260,7 +264,9 @@ async def export_ext_conversations(
         if (i + 1) % 100 == 0:
             logger.info(f"处理进度: {i + 1}/{len(matched_messages)}")
 
-        context = await get_context_messages(db, msg.session_id, msg.message_id, context_size)
+        context = await get_context_messages(
+            db, msg.session_id, msg.message_id, context_size
+        )
         meta = metadata.get(msg.session_id, {})
 
         exports.append(
@@ -310,9 +316,7 @@ async def export_ext_conversations(
     return len(exports)
 
 
-app = cyclopts.App(
-    help="导出 AI 消息内容包含独立 ext 单词的对话及其上下文"
-)
+app = cyclopts.App(help="导出 AI 消息内容包含独立 ext 单词的对话及其上下文")
 
 
 @app.default
@@ -341,4 +345,3 @@ async def _main(output: str, limit: Optional[int], context_size: int):
 
 if __name__ == "__main__":
     app()
-
