@@ -112,6 +112,13 @@ class CharacterRepository(
             entities.map { it.toAgentInfo() }
         }
     }
+
+    suspend fun searchCharactersByTag(query: String, limit: Int = 100): List<AgentInfo> {
+        return withContext(dispatcher) {
+            val entities = dao.searchCharactersByTag(query, limit)
+            entities.map { it.toAgentInfo() }
+        }
+    }
 }
 
 /** 将 CharacterEntity 转换为 AgentInfo */
