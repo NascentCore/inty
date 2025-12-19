@@ -286,6 +286,11 @@ object UiConfigs {
 
         /** 标签图标与文字之间的间距 */
         val TabIconLabelSpacing = (-6).dp
+
+        /**
+         * 距离屏幕底部间距
+         */
+        val BottomSpacing = 8.dp
     }
 
     /** 个人页面配置 - 适用于个人资料页面的头像、卡片、网格、空状态等组件的尺寸和间距设置 */

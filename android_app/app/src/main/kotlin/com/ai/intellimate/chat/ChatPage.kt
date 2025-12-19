@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -904,6 +905,7 @@ internal fun ChatPage(
                     }
                 }
             },
+            windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets()
         )
 
         ChatSettingsDrawer(

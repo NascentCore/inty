@@ -73,6 +73,7 @@ fun ChatMorePanel(
     onDismiss: () -> Unit,
     onHeightChange: (Dp) -> Unit,
     onReset: () -> Unit,
+    windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
     if (!visible) {
         onHeightChange(0.dp)
@@ -108,7 +109,7 @@ fun ChatMorePanel(
                     modifier =
                         Modifier.fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
-                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .windowInsetsPadding(windowInsets)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
                                 onHeightChange(h)

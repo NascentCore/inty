@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -52,6 +53,7 @@ fun HeartBottomAppBar(
     textSize: TextUnit = 12.sp,
     height: Dp? = null,
     labelSpacing: Dp = 4.dp,
+    bottomSpace: Dp = 0.dp,
     onTabSelected: (Int) -> Unit = {},
 ) {
     val navigationBarModifier =
@@ -65,6 +67,7 @@ fun HeartBottomAppBar(
         modifier = navigationBarModifier,
         containerColor = HeartColor.primaryColor,
         tonalElevation = 8.dp,
+        windowInsets = WindowInsets(bottom = bottomSpace)
     ) {
         tabItems.forEach { tab ->
             val isSelected = selectedTab == tab.index
