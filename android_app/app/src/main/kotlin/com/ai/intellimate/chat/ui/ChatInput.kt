@@ -84,15 +84,15 @@ fun ChatInput(
                 modifier = Modifier.padding(end = TrailingControlsPadding).align(Alignment.Center),
                 value = inputData.value,
                 singleLine = false,
-                placeholder = {
-                    val defaultName = stringResource(R.string.chat_ai_typing_default_name)
-                    val targetName = agentInfo.firstNameOrNull() ?: defaultName
-
-                    Text(
-                        text = stringResource(R.string.chat_input_placeholder, targetName),
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.5f),
-                    )
+                placeholder = agentInfo?.let {
+                    {
+                        val targetName = it.firstNameOrNull() ?: stringResource(R.string.chat_ai_typing_default_name)
+                        Text(
+                            text = stringResource(R.string.chat_input_placeholder, targetName),
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.5f),
+                        )
+                    }
                 },
                 onValueChange = { input -> chatViewModel.inputData.value = input },
                 keyboardOptions =
