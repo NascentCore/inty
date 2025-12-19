@@ -260,6 +260,11 @@ class AgentUpdate(AgentBase):
         description="需要新增的能量点数，会累加到 agent 的积分列中",
     )
 
+    replace_background_images: Optional[bool] = Field(
+        None,
+        description="是否替换 background_images 列表。为 True 时完全替换，为 False 或 None 时追加",
+    )
+
     # 模型配置
     llm_config: Optional[ModelConfig] = None
 

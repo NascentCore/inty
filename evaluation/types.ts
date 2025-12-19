@@ -74,6 +74,7 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
+  replace_background_images?: boolean; // 是否替换 background_images 列表
   background_animated?: string; // webp 动图 URL
   voice_id?: string;
   llm_config?: LLMConfig | null;
