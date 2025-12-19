@@ -508,15 +508,7 @@ private fun ProfileHeader(
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
-                            //                                            try {
-                            //
-                            // ToastUtils.showShort("Not Implementation！")
-                            //                                            } catch (e: Exception) {
-                            //
-                            // ToastUtils.showLargeText(e.toString())
-                            //                                            }
                             navController.navigate(Routes.CheckIn)
-                            //                            CheckInActivity.launch(context)
                         }
                     },
                 imageVector = Icons.Filled.EventAvailable,
