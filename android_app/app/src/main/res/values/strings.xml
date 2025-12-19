@@ -322,6 +322,8 @@
     <string name="profile_premium_banner_title_upgrade">Upgrade to Premium</string>
     <string name="profile_premium_banner_subtitle_unlock">Unlock all privileges now</string>
     <string name="profile_premium_banner_button_activate">Activate now</string>
+    <string name="profile_daily_rewards_title">Daily Rewards</string>
+    <string name="profile_daily_rewards_subtitle">Get free Boost Points</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
     <string name="edit_button">Edit</string>

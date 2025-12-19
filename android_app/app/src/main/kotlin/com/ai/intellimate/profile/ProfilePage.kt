@@ -651,8 +651,26 @@ private fun ProfileHeader(
             }
         }
 
-        // Intro 和 VIP Banner 之间的间距 - 使用较小的间距，折叠时减少
+        // Intro 和 Daily Rewards Banner 之间的间距 - 使用较小的间距，折叠时减少
         Spacer(Modifier.height(12.dp * (1f - collapseProgress)))
+
+        // Daily Rewards Banner - 折叠时隐藏
+        if (collapseProgress < 1f) {
+            var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
+            DailyRewardsBanner(
+                modifier =
+                    Modifier.alpha(1f - collapseProgress)
+                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                onClick = {
+                    val currentTime = System.currentTimeMillis()
+                    if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
+                    lastDailyRewardsClickTime = currentTime
+                    navController.navigate(Routes.CheckIn)
+                },
+            )
+
+            Spacer(Modifier.height(12.dp * (1f - collapseProgress)))
+        }
 
         // VIP Banner - 折叠时隐藏，宽度适配屏幕（不含padding），高度 120.dp
         if (collapseProgress < 1f) {
@@ -1097,6 +1115,90 @@ private fun MyAgentCard(
                 textContentColor = Color.White,
             )
         }
+    }
+}
+
+private object DailyRewardsBannerStyle {
+    val Height = 76.dp
+    val Shape = RoundedCornerShape(16.dp)
+    val BorderWidth = 1.dp
+    val BorderColor = Color.White.copy(alpha = 0.12f)
+    val TitleColor = Color(0xFFFFB020)
+    val SubtitleColor = Color.White.copy(alpha = 0.7f)
+    val TitleSize = 18.sp
+    val SubtitleSize = 13.sp
+    val HorizontalPadding = 16.dp
+    val VerticalPadding = 14.dp
+    val IllustrationHeight = 64.dp
+    val IllustrationWidth = 92.dp
+}
+
+@Composable
+private fun DailyRewardsBanner(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val backgroundBrush =
+        remember {
+            Brush.linearGradient(
+                colors =
+                    listOf(
+                        Color(0xFF0E2B46),
+                        Color(0xFF0F4C6B),
+                        Color(0xFF144A5F),
+                    ),
+                start = Offset.Zero,
+                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+            )
+        }
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(DailyRewardsBannerStyle.Height)
+                .clip(DailyRewardsBannerStyle.Shape)
+                .background(backgroundBrush)
+                .border(
+                    width = DailyRewardsBannerStyle.BorderWidth,
+                    color = DailyRewardsBannerStyle.BorderColor,
+                    shape = DailyRewardsBannerStyle.Shape,
+                )
+                .noRippleClickable(onClick = onClick)
+                .padding(
+                    horizontal = DailyRewardsBannerStyle.HorizontalPadding,
+                    vertical = DailyRewardsBannerStyle.VerticalPadding,
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.profile_daily_rewards_title),
+                color = DailyRewardsBannerStyle.TitleColor,
+                fontSize = DailyRewardsBannerStyle.TitleSize,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = stringResource(R.string.profile_daily_rewards_subtitle),
+                color = DailyRewardsBannerStyle.SubtitleColor,
+                fontSize = DailyRewardsBannerStyle.SubtitleSize,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        Image(
+            painter = painterResource(R.drawable.check_in_title),
+            contentDescription = null,
+            modifier =
+                Modifier.height(DailyRewardsBannerStyle.IllustrationHeight)
+                    .width(DailyRewardsBannerStyle.IllustrationWidth),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
