@@ -208,6 +208,10 @@ class ChatViewModel : BaseVM() {
         _hasMoreMessages.value = true
         _isLoadingMore.value = false
 
+        // 切换到不同 agent 时，清空输入状态，避免输入文案残留
+        inputData.value = ""
+        inputSelection.value = 0
+
         // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
 
