@@ -51,6 +51,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
@@ -100,6 +101,8 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.settings.check.getCurrentMonthInfo
 import com.ai.intellimate.settings.playStoreUrl
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -1123,14 +1126,18 @@ private object DailyRewardsBannerStyle {
     val Shape = RoundedCornerShape(16.dp)
     val BorderWidth = 1.dp
     val BorderColor = Color.White.copy(alpha = 0.12f)
-    val TitleColor = Color(0xFFFFB020)
+    val TitleColor = Color.White
     val SubtitleColor = Color.White.copy(alpha = 0.7f)
     val TitleSize = 18.sp
-    val SubtitleSize = 13.sp
+    val SubtitleSize = 14.sp
     val HorizontalPadding = 16.dp
     val VerticalPadding = 14.dp
     val IllustrationHeight = 64.dp
     val IllustrationWidth = 92.dp
+    val BackgroundGradientColors = listOf(
+        Color(0xFF9756FF),
+        Color(0xFFEF56FF),
+    )
 }
 
 @Composable
@@ -1138,15 +1145,16 @@ private fun DailyRewardsBanner(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    // 获取签到数据
+    val (daysInMonth, _) = remember { getCurrentMonthInfo() }
+    val checkedInDays = remember { CheckInRepository.getCheckedInDays() }
+    val checkedInCount = checkedInDays.count()
+    val progress = if (daysInMonth > 0) checkedInCount.toFloat() / daysInMonth.toFloat() else 0f
+
     val backgroundBrush =
         remember {
             Brush.linearGradient(
-                colors =
-                    listOf(
-                        Color(0xFF0E2B46),
-                        Color(0xFF0F4C6B),
-                        Color(0xFF144A5F),
-                    ),
+                colors = DailyRewardsBannerStyle.BackgroundGradientColors,
                 start = Offset.Zero,
                 end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
             )
@@ -1182,7 +1190,7 @@ private fun DailyRewardsBanner(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = stringResource(R.string.profile_daily_rewards_subtitle),
+                text = stringResource(R.string.profile_daily_rewards_subtitle, BoostConfig.DAILY_SIGN_IN_REWARD),
                 color = DailyRewardsBannerStyle.SubtitleColor,
                 fontSize = DailyRewardsBannerStyle.SubtitleSize,
                 fontWeight = FontWeight.Medium,
@@ -1191,14 +1199,24 @@ private fun DailyRewardsBanner(
             )
         }
 
-        Image(
-            painter = painterResource(R.drawable.check_in_title),
-            contentDescription = null,
-            modifier =
-                Modifier.height(DailyRewardsBannerStyle.IllustrationHeight)
-                    .width(DailyRewardsBannerStyle.IllustrationWidth),
-            contentScale = ContentScale.Fit,
-        )
+        Column(
+            modifier = Modifier.padding(start = 12.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                text = stringResource(R.string.check_in_day_together, checkedInCount),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.width(80.dp).height(4.dp),
+                color = Color(0xFFFF6B6B),
+                trackColor = Color.White.copy(alpha = 0.3f),
+            )
+        }
     }
 }
 
