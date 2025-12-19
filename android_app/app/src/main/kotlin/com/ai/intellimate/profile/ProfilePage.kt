@@ -46,6 +46,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpCenter
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -500,7 +502,7 @@ private fun ProfileHeader(
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
-            AsyncImage(
+            Icon(
                 modifier =
                     Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
@@ -517,12 +519,13 @@ private fun ProfileHeader(
                             //                            CheckInActivity.launch(context)
                         }
                     },
-                model = R.drawable.ic_checkin,
+                imageVector = Icons.Filled.EventAvailable,
                 contentDescription = null,
+                tint = Color.White,
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
-            AsyncImage(
+            Icon(
                 modifier =
                     Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
@@ -533,8 +536,9 @@ private fun ProfileHeader(
                             }
                         }
                     },
-                model = R.drawable.icon_setting,
+                imageVector = Icons.Filled.Settings,
                 contentDescription = stringResource(R.string.me_icons_row_settings),
+                tint = Color.White,
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.RightPadding))
         }
