@@ -1090,6 +1090,11 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) { chatRepository.removeMessage(agentId, localMsgId) }
     }
 
+    fun clearGeneratedImage(messageId: String) {
+        val agentId = _agentInfo.value?.id ?: return
+        chatRepository.updateMessageGeneratedImage(agentId, messageId, null)
+    }
+
     fun generateImageForMessage(messageId: String) {
         val agentId = _agentInfo.value?.id
         val agent = _agentInfo.value

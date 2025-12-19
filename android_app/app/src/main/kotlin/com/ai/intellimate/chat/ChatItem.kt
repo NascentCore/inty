@@ -412,7 +412,7 @@ private fun ChatItemAI(
                                         .background(Color.Black.copy(alpha = 0.3f))
                                         .padding(16.dp)
                                         .noRippleClickable {
-                                            viewModel.deleteMessage(item.localMsgId)
+                                            viewModel.clearGeneratedImage(item.localMsgId)
                                         },
                                 contentAlignment = Alignment.Center,
                             ) {
