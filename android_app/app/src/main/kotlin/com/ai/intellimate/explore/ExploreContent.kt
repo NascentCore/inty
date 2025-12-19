@@ -510,7 +510,14 @@ fun ExploreContent(
 
                     // 加载状态指示器
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        ExploreLoadingStates(lazyPagingItems, showLoadMoreLoading, isRefreshing)
+                        ExploreLoadingStates(
+                            onRetry = {
+                                lazyPagingItems.retry()
+                            },
+                            lazyPagingItems,
+                            showLoadMoreLoading,
+                            isRefreshing
+                        )
                     }
                 }
 
