@@ -51,6 +51,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
@@ -100,6 +101,8 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.settings.check.getCurrentMonthInfo
 import com.ai.intellimate.settings.playStoreUrl
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -651,8 +654,26 @@ private fun ProfileHeader(
             }
         }
 
-        // Intro 和 VIP Banner 之间的间距 - 使用较小的间距，折叠时减少
+        // Intro 和 Daily Rewards Banner 之间的间距 - 使用较小的间距，折叠时减少
         Spacer(Modifier.height(12.dp * (1f - collapseProgress)))
+
+        // Daily Rewards Banner - 折叠时隐藏
+        if (collapseProgress < 1f) {
+            var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
+            DailyRewardsBanner(
+                modifier =
+                    Modifier.alpha(1f - collapseProgress)
+                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                onClick = {
+                    val currentTime = System.currentTimeMillis()
+                    if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
+                    lastDailyRewardsClickTime = currentTime
+                    navController.navigate(Routes.CheckIn)
+                },
+            )
+
+            Spacer(Modifier.height(12.dp * (1f - collapseProgress)))
+        }
 
         // VIP Banner - 折叠时隐藏，宽度适配屏幕（不含padding），高度 120.dp
         if (collapseProgress < 1f) {
@@ -1095,6 +1116,105 @@ private fun MyAgentCard(
                 containerColor = Color(0xFF2A2A2A),
                 titleContentColor = Color.White,
                 textContentColor = Color.White,
+            )
+        }
+    }
+}
+
+private object DailyRewardsBannerStyle {
+    val Height = 76.dp
+    val Shape = RoundedCornerShape(16.dp)
+    val BorderWidth = 1.dp
+    val BorderColor = Color.White.copy(alpha = 0.12f)
+    val TitleColor = Color.White
+    val SubtitleColor = Color.White.copy(alpha = 0.7f)
+    val TitleSize = 18.sp
+    val SubtitleSize = 14.sp
+    val HorizontalPadding = 16.dp
+    val VerticalPadding = 14.dp
+    val IllustrationHeight = 64.dp
+    val IllustrationWidth = 92.dp
+    val BackgroundGradientColors = listOf(
+        Color(0xFF9756FF),
+        Color(0xFFEF56FF),
+    )
+}
+
+@Composable
+private fun DailyRewardsBanner(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    // 获取签到数据
+    val (daysInMonth, _) = remember { getCurrentMonthInfo() }
+    val checkedInDays = remember { CheckInRepository.getCheckedInDays() }
+    val checkedInCount = checkedInDays.count()
+    val progress = if (daysInMonth > 0) checkedInCount.toFloat() / daysInMonth.toFloat() else 0f
+
+    val backgroundBrush =
+        remember {
+            Brush.linearGradient(
+                colors = DailyRewardsBannerStyle.BackgroundGradientColors,
+                start = Offset.Zero,
+                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+            )
+        }
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(DailyRewardsBannerStyle.Height)
+                .clip(DailyRewardsBannerStyle.Shape)
+                .background(backgroundBrush)
+                .border(
+                    width = DailyRewardsBannerStyle.BorderWidth,
+                    color = DailyRewardsBannerStyle.BorderColor,
+                    shape = DailyRewardsBannerStyle.Shape,
+                )
+                .noRippleClickable(onClick = onClick)
+                .padding(
+                    horizontal = DailyRewardsBannerStyle.HorizontalPadding,
+                    vertical = DailyRewardsBannerStyle.VerticalPadding,
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.profile_daily_rewards_title),
+                color = DailyRewardsBannerStyle.TitleColor,
+                fontSize = DailyRewardsBannerStyle.TitleSize,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = stringResource(R.string.profile_daily_rewards_subtitle, BoostConfig.DAILY_SIGN_IN_REWARD),
+                color = DailyRewardsBannerStyle.SubtitleColor,
+                fontSize = DailyRewardsBannerStyle.SubtitleSize,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        Column(
+            modifier = Modifier.padding(start = 12.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                text = stringResource(R.string.check_in_day_together, checkedInCount),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.width(80.dp).height(4.dp),
+                color = Color(0xFFFF6B6B),
+                trackColor = Color.White.copy(alpha = 0.3f),
             )
         }
     }
