@@ -325,6 +325,16 @@ object UiConfigs {
         /** 头像到昵称之间的间距 */
         val AvatarToNicknameSpacing = 19.dp
 
+        /**
+         * 个人页 Header 中名字+简介整体上移的偏移量。
+         *
+         * 预期视觉效果：名字与 persona description 更贴近头像上方区域，避免整体偏下。
+         */
+        val ProfileNameBlockYOffset = (-6).dp
+
+        /** 名字与 persona description 之间的垂直间距 */
+        val ProfileNameToDescriptionSpacing = Spacing.Tiny / 3
+
         /** 区域之间的间距 */
         val SectionSpacing = 16.dp
 
