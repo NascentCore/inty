@@ -127,6 +127,7 @@ fun ChatPageContainer(
     val shouldShowGuide =
         remember(agentList.size, hasShowGuest) { !hasShowGuest && agentList.size > 1 }
 
+
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)
@@ -152,6 +153,16 @@ fun ChatPageContainer(
             val notEnd =
                 !(appendState is LoadState.NotLoading && appendState.endOfPaginationReached)
             val canPrefetch = refreshState is LoadState.NotLoading
+
+            // 检查是否有加载错误，如果有且用户滑动到接近末尾，自动重试
+            if (appendState is LoadState.Error) {
+                // 当用户滑动到接近末尾时，自动触发重试
+                if (pageState.currentPage >= thresholdIndex) {
+                    LogUtils.i("ChatPageContainer - 检测到加载失败，用户滑动到接近末尾，自动重试")
+                    agentsPagingItems.retry()
+                }
+                return@LaunchedEffect
+            }
 
             // 预取加载：当滑到倒数第5个左右时，触发下一页加载
             if (
