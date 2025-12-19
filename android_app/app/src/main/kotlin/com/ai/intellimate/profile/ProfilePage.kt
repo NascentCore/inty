@@ -502,7 +502,7 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(24.dp).clickable {
+                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
@@ -520,7 +520,7 @@ private fun ProfileHeader(
                 model = R.drawable.ic_checkin,
                 contentDescription = null,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
             AsyncImage(
                 modifier =
