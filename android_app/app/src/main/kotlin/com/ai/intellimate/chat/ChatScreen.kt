@@ -1,5 +1,6 @@
 package com.ai.intellimate.chat
 
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -50,6 +51,7 @@ internal fun ChatScreen(
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
+    val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
     val context = LocalContext.current
     val hasLoadingMessage =
         chatMessages.any { msg ->
@@ -67,6 +69,7 @@ internal fun ChatScreen(
             showGradients = true,
             isLoading = hasLoadingMessage,
             isCurrentPage = true,
+            enableAnimatedBackground = autoPlayAnimation,
             modifier = Modifier.fillMaxSize(),
         )
 
