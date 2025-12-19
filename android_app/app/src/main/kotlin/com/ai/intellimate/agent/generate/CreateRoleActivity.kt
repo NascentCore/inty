@@ -1,7 +1,6 @@
 package com.ai.intellimate.agent.generate
 
 import ai.sxwl.android.common.base.BaseActivity
-import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.CreateAgentRequest
@@ -103,12 +102,12 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
-import com.ai.intellimate.ui.NameEditField
+import com.ai.intellimate.ui.NameInputKeyBoardOption
+import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
-import com.architecture.httplib.core.HttpResult
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import java.io.File
@@ -121,9 +120,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {
@@ -447,99 +443,35 @@ private fun CreateRolePage(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                result.data?.let { data ->
-                    val resultUri = UCrop.getOutput(data)
-                    if (resultUri != null) {
-                        LogUtils.i("Avatar cropped successfully: $resultUri")
-
-                        // Upload the cropped image to server
-                        try {
-                            val file = File(resultUri.path!!)
-                            val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-                            val body =
-                                MultipartBody.Part.createFormData("file", file.name, requestFile)
-
-                            // Use CreateRoleViewModel's scope to launch the coroutine
-                            createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                try {
-                                    val response = NetServiceMgr.getAgentApi().uploadAvatar(body)
-                                    when (response) {
-                                        is HttpResult.Success -> {
-                                            val uploadedUrl = response.data.url
-                                            LogUtils.i("Avatar uploaded successfully: $uploadedUrl")
-
-                                            // Update UI on main thread
-                                            withContext(Dispatchers.Main) {
-                                                // Face edit: update cropped avatar
-                                                croppedAvatarUrl = uploadedUrl
-                                                ToastUtils.showShort(
-                                                    R.string.toast_avatar_cropped_uploaded
-                                                )
-                                            }
-                                        }
-
-                                        is HttpResult.Failure -> {
-                                            LogUtils.e("Upload failed: ${response.message}")
-                                            withContext(Dispatchers.Main) {
-                                                isUploadingFromGallery = false
-                                                originalUploadedImageUrl = null
-                                                ToastUtils.showShort(
-                                                    context.getString(
-                                                        R.string.toast_upload_failed_with_message,
-                                                        response.message ?: "Unknown error",
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    LogUtils.e("Upload exception: ${e.message}")
-                                    withContext(Dispatchers.Main) {
-                                        isUploadingFromGallery = false
-                                        originalUploadedImageUrl = null
-                                        ToastUtils.showShort(
-                                            context.getString(
-                                                R.string.toast_upload_failed_with_message,
-                                                e.message ?: "Unknown error",
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            LogUtils.e("Failed to prepare upload: ${e.message}")
-                            isUploadingFromGallery = false
-                            originalUploadedImageUrl = null
-                            ToastUtils.showShort(
-                                context.getString(
-                                    R.string.toast_failed_prepare_upload_with_message,
-                                    e.message ?: "Unknown error",
-                                )
-                            )
-                        }
+            when (result.resultCode) {
+                Activity.RESULT_OK -> {
+                    result.data?.let { data ->
+                        croppedAvatarUrl = UCrop.getOutput(data)?.toString()
                     }
                 }
-            } else if (result.resultCode == UCrop.RESULT_ERROR) {
-                result.data?.let { data ->
-                    val cropError = UCrop.getError(data)
-                    LogUtils.e("UCrop error: ${cropError?.message}")
+                UCrop.RESULT_ERROR -> {
+                    result.data?.let { data ->
+                        val cropError = UCrop.getError(data)
+                        LogUtils.e("UCrop error: ${cropError?.message}")
+                        isUploadingFromGallery = false
+                        originalUploadedImageUrl = null
+                        ToastUtils.showShort(
+                            context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
+                        )
+                    }
+                }
+                Activity.RESULT_CANCELED -> {
+                    // 用户取消了裁剪操作（按返回键），清除图库上传标志
+                    LogUtils.i("Crop operation cancelled by user")
                     isUploadingFromGallery = false
                     originalUploadedImageUrl = null
-                    ToastUtils.showShort(
-                        context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
-                    )
                 }
-            } else if (result.resultCode == Activity.RESULT_CANCELED) {
-                // 用户取消了裁剪操作（按返回键），清除图库上传标志
-                LogUtils.i("Crop operation cancelled by user")
-                isUploadingFromGallery = false
-                originalUploadedImageUrl = null
-            } else {
-                // 处理其他未知结果代码，确保清除标志
-                LogUtils.w("Unknown crop result code: ${result.resultCode}")
-                isUploadingFromGallery = false
-                originalUploadedImageUrl = null
+                else -> {
+                    // 处理其他未知结果代码，确保清除标志
+                    LogUtils.w("Unknown crop result code: ${result.resultCode}")
+                    isUploadingFromGallery = false
+                    originalUploadedImageUrl = null
+                }
             }
         }
 
@@ -946,11 +878,11 @@ private fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Name Field
-            NameEditField(
+            SingleLineInputField(
                 value = name,
                 onValueChange = { name = it },
-                label = "Name *",
+                keyboardOptions = NameInputKeyBoardOption,
+                title = "Name *",
                 placeholder = "Name your IntelliMate",
             )
 
@@ -1014,147 +946,86 @@ private fun CreateRolePage(
 
                     isLoading = true
 
-                    scope.launch {
-                        try {
-                            avatarUrls =
-                                avatarUrls.map { url ->
-                                    if (url.startsWith("http") || url.startsWith("https")) {
-                                        url
+                    scope
+                        .launch {
+                            try {
+                                // Prepare avatar and background fields according to new logic
+                                val backgroundUrl =
+                                    if (avatarUrls.isNotEmpty()) {
+                                        // Use selected image from generated grid as background
+                                        avatarUrls.getOrNull(selectedImageIndex)
+                                            ?: avatarUrls.first()
                                     } else {
-                                        uploadGallery(context, url.toUri())
-                                            ?: throw Exception("Upload Image Error")
+                                        // Use single generated image as background
+                                        avatarUrl
                                     }
+
+                                val backgroundImagesList =
+                                    avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
+
+                                // Save background for chat usage
+                                if (backgroundUrl != null) {
+                                    AvatarManager.setChatBackgroundUrl(backgroundUrl)
                                 }
 
-                            // Prepare avatar and background fields according to new logic
-                            val backgroundUrl =
-                                if (avatarUrls.isNotEmpty()) {
-                                    // Use selected image from generated grid as background
-                                    avatarUrls.getOrNull(selectedImageIndex) ?: avatarUrls.first()
-                                } else {
-                                    // Use single generated image as background
-                                    avatarUrl
-                                }
+                                val request =
+                                    CreateAgentRequest(
+                                        name = name,
+                                        gender = gender,
+                                        avatar =
+                                            croppedAvatarUrl
+                                                ?: editAgent?.avatar?.takeIf {
+                                                    editAgent.background == backgroundUrl
+                                                },
+                                        background = backgroundUrl,
+                                        backgroundImages = backgroundImagesList,
+                                        settings = mapOf("description" to settings),
+                                        intro = intro,
+                                        opening = opening,
+                                        visibility = visibility,
+                                        prompt = settings,
+                                    )
 
-                            // 头像数据更新
-                            if (isEditMode) {
-                                // 更新ai 形象的背景选择
-                                if (backgroundUrl != editAgent.background) {
-                                    // 此时如果头像数据还是旧的，则手动更新为最新背景的
-                                    if (croppedAvatarUrl == editAgent.avatar) {
-                                        croppedAvatarUrl = backgroundUrl
-                                    }
-                                }
-                            }
-                            val finalAvatarUrl = croppedAvatarUrl
-                            val backgroundImagesList =
-                                avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
-
-                            // Save background for chat usage
-                            if (backgroundUrl != null) {
-                                AvatarManager.setChatBackgroundUrl(backgroundUrl)
-                            }
-
-                            val request =
-                                CreateAgentRequest(
-                                    name = name,
-                                    gender = gender,
-                                    avatar = finalAvatarUrl,
-                                    background = backgroundUrl,
-                                    backgroundImages = backgroundImagesList,
-                                    settings = mapOf("description" to settings),
-                                    intro = intro,
-                                    opening = opening,
-                                    visibility = visibility,
-                                    prompt = settings,
-                                )
-                            // Call API through ViewModel
-                            if (isEditMode) {
+                                // Call API through ViewModel
                                 createRoleViewModel.updateAgent(
-                                    agentId = editAgent.id,
+                                    agentId = editAgent?.id.takeIf { isEditMode },
                                     request = request,
-                                    onSuccess = { agentInfo ->
-                                        ToastUtils.showShort(
-                                            R.string.character_updated_successfully
-                                        )
-                                        onCreateSuccess()
-                                    },
-                                    onError = { error ->
-                                        val errorMessage =
-                                            if (error.isBlank()) {
-                                                context.getString(
-                                                    R.string.operation_failed_try_later,
-                                                    context.getString(R.string.update_failed),
-                                                    context.getString(
-                                                        R.string.please_try_again_later
-                                                    ),
-                                                )
-                                            } else {
-                                                context.getString(
-                                                    R.string.update_failed_with_reason,
-                                                    error,
-                                                )
-                                            }
-                                        ToastUtils.showShort(errorMessage)
-
-                                        isLoading = false
-                                    },
+                                    createTempFile = { context.createTempFile(it) },
+                                    context = context,
                                 )
-                            } else {
-                                createRoleViewModel.createAgent(
-                                    request = request,
-                                    onSuccess = { agentInfo ->
-                                        // 如果是从草稿列表进入的，删除该草稿
-                                        if (savedDraft != null && draftId != null) {
-                                            CreateRoleDraftStorage.deleteDraft(draftId)
-                                        }
-                                        // 清除临时草稿
-                                        CreateRoleDraftStorage.clearCurrentDraft()
-                                        ToastUtils.showShort(
-                                            context.getString(R.string.create_ai_successfully)
-                                        )
-                                        onCreateSuccess()
-                                    },
-                                    onError = { error ->
-                                        val errorMessage =
-                                            if (error.isBlank()) {
-                                                context.getString(
-                                                    R.string.operation_failed_try_later,
-                                                    context.getString(R.string.creation_failed),
-                                                    context.getString(
-                                                        R.string.please_try_again_later
-                                                    ),
-                                                )
-                                            } else {
-                                                context.getString(
-                                                    R.string.creation_failed_with_reason,
-                                                    error,
-                                                )
-                                            }
-                                        ToastUtils.showShort(errorMessage)
 
-                                        isLoading = false
-                                    },
+                                if (isEditMode) {
+                                    ToastUtils.showShort(R.string.character_updated_successfully)
+                                    onCreateSuccess()
+                                } else {
+                                    // 如果是从草稿列表进入的，删除该草稿
+                                    if (savedDraft != null && draftId != null) {
+                                        CreateRoleDraftStorage.deleteDraft(draftId)
+                                    }
+                                    // 清除临时草稿
+                                    CreateRoleDraftStorage.clearCurrentDraft()
+                                    ToastUtils.showShort(
+                                        context.getString(R.string.create_ai_successfully)
+                                    )
+                                    onCreateSuccess()
+                                }
+                            } catch (e: Exception) {
+                                val operation =
+                                    if (isEditMode) context.getString(R.string.update_failed)
+                                    else context.getString(R.string.creation_failed)
+                                val errorMessage =
+                                    context.getString(
+                                        R.string.operation_error_with_reason,
+                                        operation,
+                                        e.message ?: context.getString(R.string.unknown_error),
+                                    )
+                                ToastUtils.showShort(errorMessage)
+                                LogUtils.e(
+                                    "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
                                 )
                             }
-                        } catch (e: Exception) {
-                            val operation =
-                                if (isEditMode) context.getString(R.string.update_failed)
-                                else context.getString(R.string.creation_failed)
-                            val errorMessage =
-                                context.getString(
-                                    R.string.operation_error_with_reason,
-                                    operation,
-                                    e.message ?: context.getString(R.string.unknown_error),
-                                )
-                            ToastUtils.showShort(errorMessage)
-                            LogUtils.e(
-                                "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
-                            )
-
-                            isLoading = false
                         }
-                    }
+                        .invokeOnCompletion { isLoading = false }
                 },
             )
 
@@ -1273,6 +1144,65 @@ private fun getFileSize(context: Context, uri: Uri): Long {
     }
 }
 
+private fun Context.createTempFile(uri: Uri): File {
+    // Check file size before processing - keep consistent with gallery limit
+    val fileSize = getFileSize(this, uri)
+    val maxSizeMB = MAX_GALLERY_PHOTO_SIZE_MB
+    val maxSizeBytes = maxSizeMB * 1024 * 1024L
+
+    // 如果无法确定文件大小（返回 0），拒绝上传以确保安全
+    if (fileSize == 0L) {
+        throw Exception(
+            getString(
+                R.string.toast_failed_prepare_upload_with_message,
+                "Unable to determine file size",
+            )
+        )
+    }
+
+    if (fileSize > maxSizeBytes) {
+        val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", maxSizeMB)
+        val fileSizeMBStr =
+            String.format(Locale.getDefault(), "%.1fMB", fileSize / (1024.0 * 1024.0))
+
+        throw Exception(
+            getString(
+                R.string.user_avatar_size_too_large_with_size_format,
+                maxSizeMBStr,
+                fileSizeMBStr,
+            )
+        )
+    }
+
+    // Copy URI to temp file for upload
+    val tempFile =
+        copyUriToTempFile(this, uri)
+            ?: throw Exception(
+                getString(
+                    R.string.toast_failed_prepare_upload_with_message,
+                    "Failed to read image file",
+                )
+            )
+
+    // 验证临时文件大小（双重检查，确保文件大小限制）
+    val tempFileSize = tempFile.length()
+    if (tempFileSize > maxSizeBytes) {
+        val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", maxSizeMB)
+        val fileSizeMBStr =
+            String.format(Locale.getDefault(), "%.1fMB", tempFileSize / (1024.0 * 1024.0))
+
+        throw Exception(
+            getString(
+                R.string.user_avatar_size_too_large_with_size_format,
+                maxSizeMBStr,
+                fileSizeMBStr,
+            )
+        )
+    }
+
+    return tempFile
+}
+
 // Helper function to copy URI to temporary file
 private fun copyUriToTempFile(context: Context, uri: Uri): File? {
     return try {
@@ -1288,97 +1218,6 @@ private fun copyUriToTempFile(context: Context, uri: Uri): File? {
     } catch (e: Exception) {
         LogUtils.e("Failed to copy URI to temp file: ${e.message}")
         null
-    }
-}
-
-private suspend fun uploadGallery(context: Context, uri: Uri): String? {
-    // Check file size before processing - keep consistent with gallery limit
-    val fileSize = getFileSize(context, uri)
-    val maxSizeMB = MAX_GALLERY_PHOTO_SIZE_MB
-    val maxSizeBytes = maxSizeMB * 1024 * 1024L
-
-    // 如果无法确定文件大小（返回 0），拒绝上传以确保安全
-    if (fileSize == 0L) {
-        ToastUtils.showShort(
-            context.getString(
-                R.string.toast_failed_prepare_upload_with_message,
-                "Unable to determine file size",
-            )
-        )
-        return null
-    }
-
-    if (fileSize > maxSizeBytes) {
-        val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", maxSizeMB)
-        val fileSizeMBStr =
-            String.format(Locale.getDefault(), "%.1fMB", fileSize / (1024.0 * 1024.0))
-        val msg =
-            context.getString(
-                R.string.user_avatar_size_too_large_with_size_format,
-                maxSizeMBStr,
-                fileSizeMBStr,
-            )
-        ToastUtils.showShort(msg)
-        // 文件大小检查失败，不设置上传标志，直接返回
-        return null
-    }
-
-    // Copy URI to temp file for upload
-    val tempFile = copyUriToTempFile(context, uri)
-    if (tempFile == null) {
-        withContext(Dispatchers.Main) {
-            ToastUtils.showShort(
-                context.getString(
-                    R.string.toast_failed_prepare_upload_with_message,
-                    "Failed to read image file",
-                )
-            )
-        }
-        return null
-    }
-
-    // 验证临时文件大小（双重检查，确保文件大小限制）
-    val tempFileSize = tempFile.length()
-    if (tempFileSize > maxSizeBytes) {
-        withContext(Dispatchers.Main) {
-            val maxSizeMBStr = String.format(Locale.getDefault(), "%dMB", maxSizeMB)
-            val fileSizeMBStr =
-                String.format(Locale.getDefault(), "%.1fMB", tempFileSize / (1024.0 * 1024.0))
-            val msg =
-                context.getString(
-                    R.string.user_avatar_size_too_large_with_size_format,
-                    maxSizeMBStr,
-                    fileSizeMBStr,
-                )
-            ToastUtils.showShort(msg)
-        }
-        return null
-    }
-
-    val requestFile = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
-    val body = MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
-
-    return withContext(Dispatchers.IO) {
-        when (val response = NetServiceMgr.getAgentApi().uploadAvatar(body)) {
-            is HttpResult.Success -> {
-                LogUtils.i("Original image uploaded successfully: ${response.data.url}")
-
-                response.data.url
-            }
-
-            is HttpResult.Failure -> {
-                LogUtils.e("Original image upload failed: ${response.message}")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(
-                        context.getString(
-                            R.string.toast_upload_failed_with_message,
-                            response.message,
-                        )
-                    )
-                }
-                null
-            }
-        }
     }
 }
 

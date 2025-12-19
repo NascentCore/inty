@@ -75,7 +75,7 @@ internal class BillingPriceManager(
                         LogUtils.d("Billing [价格查询] ✅ 查询成功，获取到 ${detailsList.size} 个商品信息")
 
                         // 详细记录每个商品的价格信息
-                        LogUtils.i("Billing [价格查询] Google Play 返回的商品详情:")
+                        LogUtils.d("Billing [价格查询] Google Play 返回的商品详情:")
                         detailsList.forEach { productDetails ->
                             val subscriptionOfferDetails =
                                 productDetails.subscriptionOfferDetails?.firstOrNull()

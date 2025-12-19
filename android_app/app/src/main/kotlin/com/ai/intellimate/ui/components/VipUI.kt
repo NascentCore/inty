@@ -286,14 +286,15 @@ fun PurchaseButton(
     isSubscribed: Boolean,
     hasSelectedPlan: Boolean,
     onPurchase: () -> Unit,
-    isLoading: Boolean = false,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(76.dp)
+                .alpha(if (isSubscribed) 0.6f else 1f)
                 .clickable(
                     enabled = !isSubscribed && hasSelectedPlan && !isLoading,
                     onClick = onPurchase,

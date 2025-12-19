@@ -18,10 +18,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.compose.rememberNavController
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.components.AgentBackground
 
-/** 私聊的聊天页面 */
+/**
+ * 私聊的聊天页面（独立 Activity）
+ *
+ * 使用场景：
+ * 1. 从推送通知启动 - 当用户点击 FCM 推送通知时，通过 MainActivity.handleNotificationIntent() 调用 ChatActivity.launch()
+ * 2. 从 Boost 排行榜页面启动 - 当用户在 BoostLeaderboardActivity 中点击排行榜项时调用 ChatActivity.launch()
+ *
+ * 注意：应用内大部分聊天页面跳转使用导航系统（Routes.ChatPage），通过 ChatScreen 组件显示， 而不是使用独立的 ChatActivity。只有上述两种场景会使用
+ * ChatActivity。
+ */
+@Deprecated(message = "⚠️已废弃待删除，不可使用⚠️，请用Compose方式的ChatScreen")
 class ChatActivity : BaseActivity() {
 
     companion object {
@@ -145,6 +159,9 @@ class ChatActivity : BaseActivity() {
         super.ConfigComposeUI()
         val agentInfo by chatViewModel.agentInfo.collectAsState()
         val chatMessages by chatViewModel.msgs.collectAsState()
+        // TODO: 此处是在 ChatActivity 中，入口较少，下面的反馈收集状态是否可以删除？
+        val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
+        val context = LocalContext.current
         val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
         val hasLoadingMessage =
             chatMessages.any { msg ->
@@ -154,6 +171,8 @@ class ChatActivity : BaseActivity() {
                     !hasGeneratedImage &&
                     generatedImageUrl != "loading"
             }
+
+        val navController = rememberNavController()
 
         Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             // 背景图放在最底层，不受 imePadding 影响
@@ -167,6 +186,7 @@ class ChatActivity : BaseActivity() {
             )
 
             ChatPage(
+                navController = navController,
                 modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
                 chatViewModel = chatViewModel,
                 showBackButton = true,
@@ -174,6 +194,17 @@ class ChatActivity : BaseActivity() {
                 pageSourceOverride = pageSource, // 传递 ChatActivity 的 pageSource，避免重复追踪
                 shouldShowBoostSheetOnOpen = shouldShowBoostSheet,
             )
+
+            // 反馈请求对话框
+            if (showFeedbackDialog) {
+                FeedbackRequestDialog(
+                    onCancel = { chatViewModel.hideFeedbackRequestDialog() },
+                    onSendSuggestions = {
+                        chatViewModel.hideFeedbackRequestDialog()
+                        ReportActivity.launchFeedback(context)
+                    },
+                )
+            }
         }
     }
 
@@ -181,11 +212,15 @@ class ChatActivity : BaseActivity() {
         super.onDestroy()
         // 清理 ChatViewModel 资源
         chatViewModel.clearAllData()
+        // 重置会话消息计数（app 退出时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 
     override fun onPause() {
         super.onPause()
         // 统一生命周期：Activity 页面进入后台即停止音频
         chatViewModel.pauseVoicePlayback()
+        // 重置会话消息计数（app 进入后台时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 }

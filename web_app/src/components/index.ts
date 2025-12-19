@@ -10,13 +10,18 @@ export { default as ErrorAlert } from './ErrorAlert';
  */
 export { default as AdHomeTop } from './AdHomeTop';
 export { default as AdSidebar } from './AdSidebar';
+export { default as ChatHeader } from './ChatHeader';
+export { default as DownloadButton } from './DownloadButton';
 export { default as Footer } from './Footer';
 export { default as GoogleLoginModal } from './GoogleLoginModal';
+export { default as LayoutShell } from './LayoutShell';
+export { default as PageHeader } from './PageHeader';
 /**
  * 通用 UI 组件
  */
 export { default as Icon } from './Icon';
 export { default as Loading } from './Loading';
+export { default as SiteInfo } from './SiteInfo';
 export { default as VersionBadge } from './VersionBadge';
 
 /**

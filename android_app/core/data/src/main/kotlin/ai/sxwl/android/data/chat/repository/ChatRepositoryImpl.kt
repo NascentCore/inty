@@ -240,7 +240,43 @@ class ChatRepositoryImpl(
 
                     if (hasNewMessages || hasStatusChanges) {
                         // 有新消息或状态变化，更新本地数据
-                        localDataSource.updateMessages(agentId, serverMessages)
+                        // 🔧 修复消息顺序问题：
+                        // 服务器返回的消息是 DESC 顺序（最新的在前），参见 IChatApi.getMsgs() 中 order 参数的默认值 "desc"
+                        // 但 updateMessages 按列表顺序递增分配 sortKey（baseTime, baseTime+1, baseTime+2...）
+                        // 如果第一条消息（最新的）得到最小的 sortKey，会导致排序错误
+                        // 解决方案：反转消息列表，确保最旧的消息得到最小的 sortKey，最新的消息得到最大的 sortKey
+                        // 这样在 ORDER BY sortKey DESC 查询时，最新的消息会排在前面，配合 reverseLayout=true 显示在底部
+                        val reversedServerMessages = serverMessages.reversed()
+                        if (serverMessages.isNotEmpty()) {
+                            LogUtils.i(
+                                "聊天接口数据",
+                                "syncLatestMessages REVERSING messages: " +
+                                    "original first=${serverMessages.first().id.take(8)}, last=${serverMessages.last().id.take(8)} | " +
+                                    "reversed first=${reversedServerMessages.first().id.take(8)}, last=${reversedServerMessages.last().id.take(8)}",
+                            )
+                        }
+
+                        // 🔧 修复：合并服务器消息和本地消息，而不是只使用服务器消息
+                        // 因为服务器只返回最新的20条消息，如果只使用服务器消息，会丢失历史消息
+                        // 合并策略：保留本地消息，用服务器消息更新或追加
+                        val allMessages = mutableListOf<MsgInfo>()
+                        val serverMessageKeys =
+                            serverMessages
+                                .mapNotNull { it.id.ifEmpty { it.localMsgId.ifEmpty { null } } }
+                                .toSet()
+
+                        // 先添加本地消息中不在服务器消息列表中的消息（历史消息）
+                        currentLocalMessages.forEach { localMsg ->
+                            val localKey = localMsg.id.ifEmpty { localMsg.localMsgId }
+                            if (localKey !in serverMessageKeys) {
+                                allMessages.add(localMsg)
+                            }
+                        }
+
+                        // 然后添加服务器消息（已反转，确保顺序正确）
+                        allMessages.addAll(reversedServerMessages)
+
+                        localDataSource.updateMessages(agentId, allMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(
                             agentId,
@@ -249,7 +285,7 @@ class ChatRepositoryImpl(
 
                         LogUtils.i(
                             "聊天接口数据",
-                            "syncLatestMessages 更新消息: agentId=$agentId, updated ${serverMessages.size} messages",
+                            "syncLatestMessages 更新消息: agentId=$agentId, merged ${allMessages.size} messages (${currentLocalMessages.size} local + ${serverMessages.size} server)",
                         )
                     }
                 }
@@ -461,5 +497,9 @@ class ChatRepositoryImpl(
     override suspend fun clearAllChatData() {
         LogUtils.d("ChatRepositoryImpl.clearAllChatData called")
         localDataSource.clearAllChatData()
+    }
+
+    override suspend fun clearMessage(agentId: String): Boolean {
+        return remoteDataSource.clearMessage(agentId)
     }
 }

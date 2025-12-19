@@ -5,6 +5,7 @@ import ai.sxwl.android.data.agent.domain.GetChatAgentsUseCase
 import ai.sxwl.android.data.agent.repository.AgentRepositoryImpl
 import ai.sxwl.android.data.cache.AgentCacheProvider
 import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
@@ -31,6 +32,8 @@ object DataModule {
     private val _chatRepository: ChatRepository by lazy {
         RoomImpl(_roomDataSource, _chatRemoteDataSource)
     }
+
+    private val _characterRepository: CharacterRepository by lazy { CharacterRepository() }
 
     private val _agentRepository: AgentRepository by lazy {
         AgentRepositoryImpl(_agentCacheProvider)
@@ -60,6 +63,10 @@ object DataModule {
     }
 
     fun getChatRepository(): ChatRepository = _chatRepository
+
+    fun getRoomDataSource(): RoomDataSource = _roomDataSource
+
+    fun getCharacterRepository(): CharacterRepository = _characterRepository
 
     fun setAgentCacheProvider(cacheProvider: AgentCacheProvider) {
         _agentCacheProvider = cacheProvider

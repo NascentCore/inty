@@ -33,13 +33,13 @@ fun BlurBgCard(
                             Brush.horizontalGradient(
                                 colors =
                                     listOf(
-                                        Color.White.copy(0.1f),
+                                        Color.White.copy(0.05f),
                                         Color.Transparent,
                                         Color.Transparent,
                                         Color.Transparent,
                                         Color.Transparent,
                                         Color.Transparent,
-                                        Color.White.copy(0.1f),
+                                        Color.White.copy(0.05f),
                                     )
                             ),
                         shape = RoundedCornerShape(8.dp),
@@ -55,12 +55,12 @@ fun BlurBgCard(
                             Brush.verticalGradient(
                                 colors =
                                     listOf(
-                                        Color.White.copy(0.1f),
+                                        Color.White.copy(0.05f),
                                         Color.Transparent,
                                         Color.Transparent,
                                         Color.Transparent,
                                         Color.Transparent,
-                                        Color.White.copy(0.1f),
+                                        Color.White.copy(0.05f),
                                     )
                             ),
                         shape = RoundedCornerShape(8.dp),
@@ -75,5 +75,7 @@ fun BlurBgCard(
 @Preview
 @Composable
 private fun PreviewBlurBgCard() {
-    BlurBgCard(modifier = Modifier.fillMaxWidth().height(200.dp)) { Text("哈哈哈哈") }
+    BlurBgCard(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+        Text("哈哈哈哈", color = Color.White)
+    }
 }

@@ -1,9 +1,16 @@
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, validator
 
 from app.models.user import AuthType, Gender
+
+
+class ActionType(str, Enum):
+    """用户行动类型枚举"""
+
+    REQUEST_FEEDBACK = "request_feedback"
 
 
 class UserBase(BaseModel):
@@ -55,6 +62,12 @@ class UserUpdate(BaseModel):
     system_language: Optional[str] = None
     request_id: Optional[str] = None
 
+    @validator("nickname")
+    def validate_nickname(cls, v):
+        if v is None:
+            return v
+        return v.strip()
+
     @validator("email")
     def validate_email(cls, v):
         """宽松的邮箱验证"""
@@ -83,6 +96,13 @@ class UserInDBBase(UserBase):
         from_attributes = True
 
 
+class UserAction(BaseModel):
+    """用户行动项"""
+
+    type: ActionType
+    enabled: bool
+
+
 class User(UserInDBBase):
     """返回给客户端的用户信息"""
 
@@ -90,6 +110,7 @@ class User(UserInDBBase):
     total_public_agents_follows: Optional[int] = 0
     followers_count: Optional[int] = 0
     connector_count: Optional[int] = 0
+    actions: list[UserAction] = []
 
 
 class Token(BaseModel):

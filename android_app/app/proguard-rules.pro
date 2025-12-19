@@ -238,10 +238,6 @@
 -dontwarn org.openjsse.**
 -dontwarn java.lang.invoke.StringConcatFactory
 
-# Ktor 相关警告
--dontwarn io.ktor.**
--keep class io.ktor.** { *; }
-
 # ===========================================
 # 性能优化
 # ===========================================

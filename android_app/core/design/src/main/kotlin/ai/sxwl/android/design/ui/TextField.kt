@@ -68,9 +68,7 @@ fun HeartMultiLineEditor(
                 if (hintStr.isNotEmpty()) {
                     Text(
                         text = hintStr,
-                        fontSize = textStyle.fontSize,
-                        fontWeight = textStyle.fontWeight,
-                        color = textStyle.color,
+                        style = textStyle
                     )
                 }
             },

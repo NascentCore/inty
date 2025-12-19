@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
@@ -59,6 +60,7 @@ var isKeyboardVisibleChatPage = false // 当前页面键盘是否可见
 /** ChatPageContainer - 支持分页加载的聊天页面容器 使用Paging库实现分页加载更多agents，提供更流畅的滑动体验 */
 @Composable
 fun ChatPageContainer(
+    navController: NavController,
     modifier: Modifier,
     viewModelFactory: ViewModelProvider.Factory,
     chatTabViewModel: ChatTabViewModel,
@@ -205,6 +207,7 @@ fun ChatPageContainer(
             // 是否有关联？因为原先产生视频超出边界的问题来自于缺少裁剪。
             Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 ChatPage(
+                    navController,
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,

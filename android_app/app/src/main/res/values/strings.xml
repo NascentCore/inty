@@ -90,8 +90,7 @@
     <string name="premium_benefit_higher_other_limits">Higher image speech synthesis limits</string>
     <string name="premium_benefit_model">Empathetic AI</string>
     <string name="premium_benefit_chat_style">Customizable chat style</string>
-    <string name="premium_benefit_flagship_models">Latest flagship models (Gemini 3, Grok 4.1)</string>
-
+    <string name="premium_benefit_premium_models">Premium models</string>
     <string name="premium_benefit_newfeature">Priority access to new features</string>
 
     <string name="premium_subscribe">Subscribe</string>
@@ -152,6 +151,11 @@
     <string name="preview_generated_avatar">Preview Generated Avatar</string>
     <string name="describe_desired_avatar">Describe your desired avatar *</string>
     <string name="avatar_creation_hint_full">A cute anime girl, long hair, big eyes, wearing a white dress, in front of a beautiful garden, smiling at you…</string>
+    <string name="avatar_style_section_title">Style</string>
+    <string name="avatar_style_real_feel">Real feel</string>
+    <string name="avatar_style_cartoon">Cartoon</string>
+    <string name="avatar_style_real_feel_desc">Photorealistic, natural lighting</string>
+    <string name="avatar_style_cartoon_desc">Illustrated, clean lines</string>
 
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>
@@ -163,6 +167,8 @@
     <string name="draft_badge_label">Draft</string>
     <string name="draft_card_placeholder_name">Untitled character</string>
     <string name="draft_card_placeholder_intro">Add more details to finish this character.</string>
+    <string name="delete_draft_title">Delete draft</string>
+    <string name="delete_draft_confirm">Are you sure you want to delete the draft "%s"? This action cannot be undone.</string>
 
     <!-- Report -->
     <string name="report_description">Report description</string>
@@ -188,7 +194,7 @@
     <string name="feedback_description">Feedback description</string>
     <string name="feedback_description_placeholder">Please describe your experience or suggestions…</string>
     <string name="toast_feedback_submitted">Thanks for helping improve the experience.</string>
-    <string name="feedback_request_content">Is everything working as expected?  Let us know.Your feedback helps us build a better experience for you.</string>
+    <string name="feedback_request_content">We ❤️ your feedback! Is everything working as expected? Do you have any suggestions for improvement? Let us know, and we\'ll get back to you soon!</string>
     <string name="send_suggestions">Send Suggestions</string>
 
     <!-- Settings -->
@@ -222,14 +228,22 @@
     <string name="chat_settings_user_manual_title">User Manual (Notion)</string>
     <string name="chat_settings_show_keep_talking">Show \"Keep Talking\" button</string>
     <string name="chat_settings_auto_play_voice">Auto-play voice messages</string>
-    <string name="chat_settings_auto_play_animation">Auto-play animated background</string>
+    <string name="chat_settings_auto_play_animation">Auto-play animated BGs</string>
     <string name="chat_settings_show_scene_action_button">Show action button</string>
     <string name="chat_settings_font_size">Message font size</string>
     <string name="chat_settings_font_size_value">%1$d sp</string>
+    <string name="chat_settings_models_title">Models</string>
+    <string name="chat_settings_model_default">Default</string>
+    <string name="chat_settings_model_gpt_5_2">GPT-5.2</string>
+    <string name="chat_settings_model_claude_opus_4_5">Claude Opus 4.5</string>
+    <string name="chat_settings_model_gemini_3_flash">Gemini 3 Flash</string>
     <string name="chat_settings_font_size_dialog_title">Message font size</string>
     <string name="chat_settings_font_size_dialog_description">Adjust how large chat bubbles look.</string>
     <string name="chat_settings_font_size_preview_label">Preview</string>
     <string name="chat_settings_font_size_preview_sample">This is how your messages appear.</string>
+    <string name="chat_settings_preference_title">Personality</string>
+    <string name="chat_settings_preference_placeholder">I am …</string>
+    <string name="chat_settings_preference_hint">charming, bold, adventurous…</string>
     <string name="chat_input_placeholder">Write something to %1$s</string>
     <string name="chat_input_with_scene_action_placeholder">Click () to describe actions, feelings, thoughts</string>
     <string name="chat_ai_typing_placeholder">%1$s is typing</string>
@@ -253,6 +267,7 @@
     <string name="toast_email_error">email error</string>
     <string name="toast_age_screen_not_eligible">You are not eligible to use IntelliMate</string>
     <string name="toast_age_screen_required_select_age">Please select your age group</string>
+    <string name="toast_reginfo_required_select_gender">Please select your gender</string>
     <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
@@ -297,6 +312,16 @@
     <string name="visibility_required_title_full">Visibility *</string>
     <string name="become_a_premium">Become a Premium Member</string>
     <string name="more_information_full">More Information</string>
+
+    <!-- Profile Premium Banner -->
+    <string name="profile_premium_banner_title_subscribed">You\'re Premium</string>
+    <string name="profile_premium_banner_subtitle_member_since" formatted="false">Member since %s</string>
+    <string name="profile_premium_banner_title_expiring_soon">Premium Ending Soon</string>
+    <string name="profile_premium_banner_subtitle_expires_on" formatted="false">Expires on %s</string>
+    <string name="profile_premium_banner_button_keep_premium">Keep Premium</string>
+    <string name="profile_premium_banner_title_upgrade">Upgrade to Premium</string>
+    <string name="profile_premium_banner_subtitle_unlock">Unlock all privileges now</string>
+    <string name="profile_premium_banner_button_activate">Activate now</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
     <string name="edit_button">Edit</string>
@@ -338,6 +363,20 @@
     <string name="empty_explore_error">Failed to load characters\nCheck your connection and try again</string>
     <string name="retry_button">Retry</string>
 
+    <!-- Messages Page -->
+    <string name="messages_tab_conversations">Messages</string>
+    <string name="messages_tab_favorites">Favorite</string>
+    <string name="messages_favorites_empty_title">No favorites yet</string>
+    <string name="messages_favorites_empty_subtitle">Tap the heart icon on any character to save it here.</string>
+
+    <!-- Explore Search -->
+    <string name="explore_search_icon_desc">Search characters</string>
+    <string name="explore_search_placeholder">Search by name</string>
+    <string name="explore_search_cancel">Cancel</string>
+    <string name="explore_search_empty">No matching characters</string>
+    <string name="explore_search_hint_text">Enter a character name and tap search</string>
+    <string name="explore_search_clear_desc">Clear search text</string>
+
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>
     <string name="tab_messages">Messages</string>
@@ -359,6 +398,7 @@
     <string name="toast_failed_prepare_upload_with_message">Failed to prepare upload: %s</string>
     <string name="toast_failed_download_image_editing">Failed to download image for editing</string>
     <string name="toast_please_select_reason">Please select at least one reason</string>
+    <string name="toast_please_enter_description">Please enter a description</string>
     <string name="toast_submitted_successfully">Submitted successfully. We will review it soon.</string>
     <string name="toast_report_creation_failed">Report creation failed</string>
 
@@ -413,31 +453,36 @@
     <string name="billing_error_fallback_google_play_service">Google Play services error</string>
 
     <!-- Boost / Leaderboard -->
-    <string name="energy_points_first_title">You earned your FIRST energy point!</string>
-    <string name="energy_points_first_subtitle">Keep chatting to unlock more energy.</string>
-    <string name="energy_points_tens_title">You reached %1$d energy points!</string>
-    <string name="energy_points_tens_subtitle">Trophy unlocked - keep the streak going.</string>
+    <string name="energy_points_first_title">You earned your FIRST Boost Point!</string>
+    <string name="energy_points_first_subtitle">Keep chatting to earn more Boost Points.</string>
+    <string name="energy_points_tens_title">Added 10 Boost Points! Total %1$d Boost Points!</string>
+    <string name="energy_points_tens_subtitle">Milestone unlocked - keep the streak going.</string>
+    <string name="energy_points_hundreds_title">Added 100 Boost Points! Total %1$d Boost Points!</string>
     <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
-    <string name="energy_points_thousands_subtitle">Legendary trophy unlocked. You\'re unstoppable.</string>
+    <string name="energy_points_thousands_title">Added 1000 Boost Points! Total %1$d Boost Points!</string>
+    <string name="energy_points_thousands_subtitle">Legendary trophy unlocked!</string>
     <string name="energy_points_counter">%1$d pts</string>
     <string name="boost_points_label">Boost Points</string>
     <string name="boost_points_value">%1$d pts</string>
     <string name="boost_points_action">Boost</string>
-    <string name="boost_points_action_disabled">Earn points</string>
+    <string name="boost_points_action_disabled">Learn</string>
     <string name="boost_sheet_title">Boost this character</string>
     <string name="boost_points_available">Available: %1$d pts</string>
     <string name="boost_points_to_invest">Planning to invest %1$d pts</string>
     <string name="boost_selected_points">%1$d pts</string>
     <string name="boost_points_step_hint">Each boost uses %1$d pts</string>
-    <string name="boost_sheet_not_enough_points">You need at least 100 pts to boost. Earn more by chatting, generating images, or listening to voices.</string>
+    <string name="boost_sheet_not_enough_points">You need at least %1$d pts to boost. Earn more by chatting, generating images, or listening to voices.</string>
+    <string name="boost_points_need_at_least">You need at least %1$d pts</string>
     <string name="boost_sheet_confirm">Boost now</string>
     <string name="boost_sheet_cancel">Maybe later</string>
-    <string name="boost_daily_reward_cta">Claim daily energy (+200 pts)</string>
+    <string name="boost_daily_reward_cta">Claim daily Boost Points (+200)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
-    <string name="boost_leaderboard_title">Top boosted characters (local)</string>
+    <string name="boost_leaderboard_title">Top IntelliMates</string>
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
+    <string name="boost_leaderboard_back_cd">Back to Explore</string>
+    <string name="boost_leaderboard_energy_points_value">Boost Points: %1$d</string>
     <string name="boost_trend_up">Rising</string>
     <string name="boost_trend_down">Cooling</string>
     <string name="boost_trend_flat">Steady</string>
@@ -447,7 +492,25 @@
     <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
     <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
     <string name="boost_toast_success">Boost sent to %1$s!</string>
-    <string name="boost_toast_success_points">%1$d energy points sent to %2$s!</string>
+    <string name="boost_toast_success_points">%1$d Boost Points sent to %2$s!</string>
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
+    <string name="boost_points_help_title">Boost Points</string>
+    <string name="boost_points_help_subtitle">Boost Points are an important resource in the app.You can use them to boost any character you like and help them rank higher.</string>
+    <string name="boost_points_help_progress">%1$d / %2$d pts to boost</string>
+    <string name="boost_points_help_how_to_earn_title">How to earn?</string>
+    <string name="boost_points_help_how_to_earn_body">You can earn Boost Points by: Chatting with characters, Generating images, Listening to voices, Checking in daily.</string>
+    <string name="boost_points_help_cta_check_in">Daily check-in</string>
+    <string name="boost_points_help_cta_leaderboard">View Top 10</string>
+    <string name="boost_points_help_close">Got it</string>
+    <string name="boost_character_energy_points">Character Boost Points: %1$d</string>
+    <string name="boost_character_energy_points_hint">This score ranks IntelliMates on the leaderboard.</string>
+    <string name="explore_boost_shortcut">Top IntelliMates</string>
+    <string name="explore_boost_shortcut_cd">Open boost leaderboard</string>
+    <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
+    <string name="reset">Reset</string>
+    <string name="reset_failed_msg">Reset failed. Please try again.</string>
+    <string name="reset_suc_msg">A new conversation has started.</string>
+    <string name="chat_setting_text_streaming">Text streaming</string>
+    <string name="my_boost_points">My Boost Points: %1$d</string>
 </resources>

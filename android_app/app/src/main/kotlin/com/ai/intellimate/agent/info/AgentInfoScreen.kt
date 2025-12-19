@@ -7,9 +7,8 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
-import android.content.ClipData
-import android.content.ClipboardManager
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,6 +16,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -32,8 +32,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropUp
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -53,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -65,16 +70,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.getSystemService
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
-import com.ai.intellimate.boost.BoostState
+import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
@@ -82,6 +85,8 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.utils.formatDisplayId
+import com.ai.intellimate.utils.isUserCreatedPrivateRole
+import com.ai.intellimate.xb.navigation.Routes
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -111,18 +116,20 @@ internal fun AiAgentInfoScreen(
     agent: AgentInfo,
     galleryItems: List<AgentImageGalleryItem>,
     navController: androidx.navigation.NavController,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     val enableRemix = UiConfigs.ChatPage.enableRemix()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
 
+    // 用户自建私有角色不展示 Boost 相关功能
+    val shouldShowBoostUi = !agent.isUserCreatedPrivateRole()
+
     // 为角色应援/Boost 功能
-    val boostState by
-        if (isDebugMode) BoostManager.boostState.collectAsState()
-        else remember { mutableStateOf(BoostState()) }
+    val boostState by BoostManager.boostState.collectAsState()
     var showBoostSheet by remember { mutableStateOf(false) }
+    var showBoostHelpSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val showBoostError: (BoostError) -> Unit = { error ->
         val messageRes =
@@ -153,7 +160,9 @@ internal fun AiAgentInfoScreen(
                     navigationIcon = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                                Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                    navController.popBackStack()
+                                },
                             painter = painterResource(R.drawable.back),
                             contentDescription = null,
                         )
@@ -243,77 +252,94 @@ internal fun AiAgentInfoScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    genderPronoun?.let {
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            text = stringResource(id = it.labelRes),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color.White.copy(alpha = 0.85f),
-                                        )
-                                    }
                                 }
-                                Spacer(Modifier.height(5.dp))
-                                Row(
-                                    modifier =
-                                        Modifier.fillMaxWidth().noRippleClickable {
-                                            if (agent.id.isBlank()) {
-                                                return@noRippleClickable
-                                            }
-                                            val clipboard =
-                                                context.getSystemService<ClipboardManager>()
-                                            clipboard?.setPrimaryClip(
-                                                ClipData.newPlainText(
-                                                    CLIPBOARD_LABEL_AGENT_ID,
-                                                    agent.id,
-                                                )
-                                            )
-                                            if (clipboard != null) {
-                                                ToastUtils.showShort(
-                                                    R.string.toast_copied_to_clipboard
-                                                )
-                                            }
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically,
+                            }
+                            Spacer(Modifier.width(16.dp))
+                        }
+
+                        // 角色应援/Boost 功能
+                        Spacer(Modifier.height(16.dp))
+
+                        if (shouldShowBoostUi) {
+                            BoostStatusChip(
+                                navController,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                availablePoints = boostState.availablePoints,
+                                onClick = { showBoostSheet = true },
+                            ) {
+                                Text(stringResource(R.string.boost_sheet_title))
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            Column(
+                                modifier =
+                                    Modifier.padding(horizontal = 16.dp)
+                                        .fillMaxWidth()
+                                        .border(
+                                            brush =
+                                                Brush.linearGradient(
+                                                    colors =
+                                                        listOf(
+                                                            Color.Transparent,
+                                                            Color.White.copy(0.2f),
+                                                            Color.Transparent,
+                                                        )
+                                                ),
+                                            width = 1.dp,
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                        .background(
+                                            color = Color(0x331C1D21),
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                        .padding(14.dp)
+                            ) {
+                                Text(
+                                    text =
+                                        stringResource(
+                                            R.string.boost_character_energy_points,
+                                            agent.energyPoints,
+                                        ),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White,
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text =
+                                        stringResource(R.string.boost_character_energy_points_hint),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Light,
+                                    color = Color.White.copy(alpha = 0.75f),
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                TextButton(
+                                    onClick = {
+                                        navController.navigate(Routes.BoostLeaderboard)
+                                        //
+                                        // com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
+                                        //                                        context
+                                        //                                    )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
                                 ) {
-                                    Spacer(Modifier.width(16.dp))
                                     Text(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        text = stringResource(R.string.ID, displayId),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Light,
-                                        color = Color.White.copy(0.55f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
+                                        text =
+                                            stringResource(
+                                                R.string.boost_points_help_cta_leaderboard
+                                            ),
+                                        color = Color.White,
                                     )
                                 }
                             }
 
-                            Spacer(Modifier.width(16.dp))
+                            Spacer(Modifier.height(24.dp))
+                        } else {
+                            // 确保不会误触发弹窗残留状态
+                            if (showBoostSheet) showBoostSheet = false
+                            if (showBoostHelpSheet) showBoostHelpSheet = false
                         }
-
-                        // 角色应援/Boost 功能（仅在 debug 模式下显示）
-                        if (isDebugMode) {
-                            Spacer(Modifier.height(16.dp))
-
-                            BoostStatusChip(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                availablePoints = boostState.availablePoints,
-                                onClick = {
-                                    if (
-                                        boostState.availablePoints < BoostConfig.BOOST_STEP_POINTS
-                                    ) {
-                                        ToastUtils.showShort(R.string.boost_toast_not_enough_points)
-                                    } else {
-                                        showBoostSheet = true
-                                    }
-                                },
-                            )
-
-                            Spacer(Modifier.height(16.dp))
-                        }
-
-                        Spacer(Modifier.height(24.dp))
 
                         Column(
                             modifier =
@@ -341,12 +367,15 @@ internal fun AiAgentInfoScreen(
                             Text(
                                 modifier = Modifier.padding(horizontal = 12.dp),
                                 text = stringResource(R.string.introduction),
-                                fontSize = 14.sp,
+                                fontSize = UiConfigs.CharacterIntroduction.TITLE_FONT_SIZE.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White,
                             )
-                            Spacer(Modifier.height(12.dp))
-                            Column {
+                            Spacer(Modifier.height(8.dp))
+                            Column(modifier = Modifier.animateContentSize()) {
+                                var isExpanded by remember { mutableStateOf(false) }
+                                var expandVisible by remember { mutableStateOf(false) }
+
                                 // 使用智能 Tags 布局
                                 val gender =
                                     runCatching {
@@ -372,19 +401,45 @@ internal fun AiAgentInfoScreen(
                                     modifier = Modifier.padding(horizontal = 12.dp),
                                     maxLines = 1,
                                 )
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(4.dp))
                                 Text(
                                     modifier = Modifier.padding(horizontal = 12.dp),
                                     text = agent.intro,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Light,
                                     color = Color.White,
-                                    maxLines = 3,
+                                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
                                     overflow = TextOverflow.Ellipsis,
+                                    onTextLayout = {
+                                        expandVisible = it.hasVisualOverflow || it.lineCount > 3
+                                    },
                                 )
-                            }
 
-                            Spacer(Modifier.height(12.dp))
+                                if (expandVisible) {
+                                    Button(
+                                        onClick = { isExpanded = !isExpanded },
+                                        contentPadding = PaddingValues(),
+                                        colors =
+                                            ButtonDefaults.buttonColors(
+                                                containerColor = Color.Transparent
+                                            ),
+                                        modifier = Modifier.fillMaxWidth().height(16.dp),
+                                    ) {
+                                        Image(
+                                            imageVector =
+                                                if (isExpanded) {
+                                                    Icons.Rounded.ArrowDropUp
+                                                } else {
+                                                    Icons.Rounded.ArrowDropDown
+                                                },
+                                            contentDescription = null,
+                                            colorFilter = ColorFilter.tint(Color.White),
+                                        )
+                                    }
+                                } else {
+                                    Spacer(Modifier.height(12.dp))
+                                }
+                            }
                         }
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
@@ -396,7 +451,9 @@ internal fun AiAgentInfoScreen(
                                 images = galleryItems,
                                 agentId = agent.id,
                                 onNavigateToPhotoAlbum = {
-                                    navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
+                                    //
+                                    // navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
+                                    navController.navigate(Routes.agentPhotoAlbum(agent.id))
                                 },
                             )
                         }
@@ -411,12 +468,11 @@ internal fun AiAgentInfoScreen(
         }
     }
 
-    // Boost Sheet 弹窗（仅在 debug 模式下显示）
+    // Boost Sheet 弹窗
     // 显示位置：角色主页（AgentInfoScreen）底部，以半屏弹窗形式展示
     // 显示时机：
-    //   1. 必须在 debug 模式下（isDebugMode == true）
-    //   2. 用户点击了角色主页中的 BoostStatusChip（第 291-301 行），且可用积分 >= 100 pts
-    //   3. 此时 showBoostSheet 被设置为 true，触发此弹窗显示
+    //   1. 用户点击了角色主页中的 BoostStatusChip，且可用积分 >= 100 pts
+    //   2. 此时 showBoostSheet 被设置为 true，触发此弹窗显示
     // UI 效果：半屏底部弹窗，包含：
     //   - 当前角色的 Boost 信息
     //   - 可用积分显示
@@ -426,8 +482,9 @@ internal fun AiAgentInfoScreen(
     //   - 用户点击 BoostStatusChip → 打开此弹窗
     //   - 用户选择投入积分并确认 → 执行 Boost 操作 → 显示成功 Toast → 关闭弹窗
     //   - 用户点击关闭/取消 → 关闭弹窗
-    if (isDebugMode && showBoostSheet) {
+    if (shouldShowBoostUi && showBoostSheet) {
         BoostSheet(
+            navController,
             agentInfo = agent,
             availablePoints = boostState.availablePoints,
             onBoostConfirmed = { points ->
@@ -452,6 +509,18 @@ internal fun AiAgentInfoScreen(
                 }
             },
             onDismiss = { showBoostSheet = false },
+        )
+    }
+
+    if (shouldShowBoostUi && showBoostHelpSheet) {
+        BoostPointsHelpSheet(
+            availablePoints = boostState.availablePoints,
+            onDismiss = { showBoostHelpSheet = false },
+            onOpenLeaderboard = {
+                showBoostHelpSheet = false
+                navController.navigate(Routes.BoostLeaderboard)
+                //                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
+            },
         )
     }
 }
@@ -504,8 +573,11 @@ private fun PhotoAlbumPreviewSection(
                         modifier = Modifier.weight(1f),
                     )
                 }
+
+                repeat(columnCount - displayedImages.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
     }
 
@@ -656,13 +728,11 @@ private fun AgentGalleryImageCardCompact(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val aspectRatio = if (item.height > 0) item.width.toFloat() / item.height.toFloat() else 1f
     val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
 
     Box(
         modifier =
             modifier
-                .fillMaxWidth()
                 .clip(RoundedCornerShape(UiConfigs.CharacterGallery.ImageCornerRadius))
                 .background(
                     Color.White.copy(
@@ -674,7 +744,7 @@ private fun AgentGalleryImageCardCompact(
                 }
     ) {
         AsyncImage(
-            modifier = Modifier.fillMaxWidth().aspectRatio(aspectRatio),
+            modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f),
             model =
                 ImageRequest.Builder(context)
                     .data(

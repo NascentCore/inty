@@ -15,6 +15,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -68,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.content.getSystemService
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -81,6 +83,7 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.enableChristmasConfig
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
@@ -244,7 +247,9 @@ private fun ChatItemAI(
                     item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
 
                 var showFullScreenImage by remember { mutableStateOf(false) }
-                var imageLoadError by remember { mutableStateOf(false) }
+                // 使用 generatedImageUrl 作为 key，URL 变化时自动重置状态
+                var imageLoadError by remember(generatedImageUrl) { mutableStateOf(false) }
+                var imageLoadSuccess by remember(generatedImageUrl) { mutableStateOf(false) }
 
                 val isNormalLoading =
                     item.content == "loading_animation" &&
@@ -343,6 +348,24 @@ private fun ChatItemAI(
                                         Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),
                                 )
                             }
+
+                            // 圣诞点缀
+                            if (enableChristmasConfig()) {
+                                Image(
+                                    painter = painterResource(R.drawable.img_omela),
+                                    contentDescription = null,
+                                    modifier =
+                                        Modifier.align(Alignment.BottomStart)
+                                            .offset(x = (-10).dp, y = 10.dp),
+                                )
+                                Image(
+                                    painter = painterResource(R.drawable.img_chat_snow_right),
+                                    contentDescription = null,
+                                    modifier =
+                                        Modifier.align(Alignment.TopEnd)
+                                            .offset(x = 15.dp, y = (-16).dp),
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
                     }
@@ -389,7 +412,7 @@ private fun ChatItemAI(
                                         .background(Color.Black.copy(alpha = 0.3f))
                                         .padding(16.dp)
                                         .noRippleClickable {
-                                            viewModel.deleteMessage(item.localMsgId)
+                                            viewModel.clearGeneratedImage(item.localMsgId)
                                         },
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -415,39 +438,83 @@ private fun ChatItemAI(
                                 }
                             }
                         } else if (!generatedImageUrl.isNullOrEmpty()) {
-                            AsyncImage(
-                                modifier =
-                                    Modifier.fillMaxWidth(0.35f)
-                                        .aspectRatio(aspectRatio)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onTap = { showFullScreenImage = true }
-                                            )
-                                        },
-                                model =
-                                    ImageRequest.Builder(LocalContext.current)
-                                        .data(
-                                            getCdnImageUrl(
-                                                generatedImageUrl,
-                                                width = targetWidth,
-                                                quality = 70,
-                                            )
+                            // 消息生图的结果图片
+                            ConstraintLayout(modifier = Modifier) {
+                                val (img, left, right) = createRefs()
+
+                                // 使用 Box 叠加 shimmer 和图片
+                                Box(
+                                    modifier =
+                                        Modifier.fillMaxWidth(0.35f)
+                                            .aspectRatio(aspectRatio)
+                                            .constrainAs(img) {}
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onTap = { showFullScreenImage = true }
+                                                )
+                                            }
+                                ) {
+                                    // 图片加载中显示 shimmer（无 dots）
+                                    if (!imageLoadSuccess) {
+                                        ShimmerPlaceholder(
+                                            modifier = Modifier.matchParentSize(),
+                                            cornerRadius = 12.dp,
+                                            showLoadingDots = false,
                                         )
-                                        .build(),
-                                contentDescription = "Generated image",
-                                contentScale = ContentScale.Fit,
-                                alignment = Alignment.CenterStart,
-                                onError = { imageLoadError = true },
-                            )
-                        } else if (generatedImageUrl.isNullOrEmpty()) {
+                                    }
+
+                                    // AsyncImage 在后台加载，加载成功后显示
+                                    AsyncImage(
+                                        modifier = Modifier.matchParentSize(),
+                                        model =
+                                            ImageRequest.Builder(LocalContext.current)
+                                                .data(
+                                                    getCdnImageUrl(
+                                                        generatedImageUrl,
+                                                        width = targetWidth,
+                                                        quality = 70,
+                                                    )
+                                                )
+                                                .build(),
+                                        contentDescription = "Generated image",
+                                        contentScale = ContentScale.Fit,
+                                        alignment = Alignment.CenterStart,
+                                        onError = { imageLoadError = true },
+                                        onSuccess = { imageLoadSuccess = true },
+                                    )
+                                }
+                                // 圣诞点缀
+                                if (enableChristmasConfig() && imageLoadSuccess) {
+                                    Image(
+                                        painter = painterResource(R.drawable.img_christmas_candy),
+                                        contentDescription = null,
+                                        modifier =
+                                            Modifier.constrainAs(left) {
+                                                start.linkTo(img.start, (-15).dp)
+                                                bottom.linkTo(img.bottom, (-12).dp)
+                                            },
+                                    )
+                                    Image(
+                                        painter = painterResource(R.drawable.img_candy_christmas),
+                                        contentDescription = null,
+                                        modifier =
+                                            Modifier.constrainAs(right) {
+                                                end.linkTo(img.end, (-25).dp)
+                                                bottom.linkTo(img.bottom, (-12).dp)
+                                            },
+                                    )
+                                }
+                            }
+                        } else {
+                            // URL 为空或其他情况，显示 shimmer
                             ShimmerPlaceholder(
                                 modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                             )
                         }
                     }
-
+                    // 消息生图的查看大图
                     if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
                         Dialog(
                             onDismissRequest = { showFullScreenImage = false },
@@ -559,23 +626,18 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                         normalColor = Color(0xff090909),
                         actionColor = Color(0xff090909).copy(0.6f),
                     )
+                    // 圣诞点缀
+                    if (enableChristmasConfig()) {
+                        Image(
+                            painter = painterResource(R.drawable.img_christmas_tree),
+                            contentDescription = null,
+                            modifier = Modifier.align(Alignment.TopStart).offset(x = (-20).dp),
+                        )
+                    }
                 }
             }
         }
         .also {
-            if (BuildConfig.DEBUG) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    DebugMessageMetadata(
-                        item = item,
-                        modifier =
-                            Modifier.widthIn(
-                                min = 1.dp,
-                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                            ),
-                    )
-                }
-            }
-
             if (BuildConfig.DEBUG) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     DebugMessageMetadata(
@@ -710,7 +772,7 @@ private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
 }
 
 private fun String.debugEllipsize(maxLength: Int = DEBUG_METADATA_VALUE_MAX): String {
-    if (length <= maxLength || maxLength <= 3) {
+    if (maxLength !in 4..<length) {
         return this
     }
     return take(maxLength - 3) + "..."
@@ -858,6 +920,7 @@ private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
         when (char) {
             '(',
             '（' -> stack.add(Pair(char, index))
+
             ')',
             '）' -> {
                 val matchingStart = if (char == ')') '(' else '（'

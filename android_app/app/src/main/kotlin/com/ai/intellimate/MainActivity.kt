@@ -61,6 +61,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -269,12 +270,9 @@ class MainActivity : BaseActivity() {
                     "page_source" to com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
                 ),
             )
-            // 跳转到 ChatActivity
-            com.ai.intellimate.chat.ChatActivity.launch(
-                context = this,
-                agentId = agentId,
-                pageSource = com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
-            )
+            // 跳转到 ChatScreen
+            mainViewModel.updatePushAgentId(agentId)
+
             // 清除 Intent extras，避免重复处理
             intent.removeExtra(FCMConstants.DATA_KEY_TYPE)
             intent.removeExtra(FCMConstants.DATA_KEY_AGENT_ID)
@@ -478,6 +476,8 @@ class MainActivity : BaseActivity() {
         isAppInForeground = false
         // 暂停音频播放
         chatViewModel.pauseVoicePlayback()
+        // 重置会话消息计数（app 进入后台时清空）
+        chatViewModel.resetSessionMessageCount()
     }
 
     override fun onDestroy() {
@@ -567,6 +567,22 @@ fun SplashLoginUI(
                             is com.architecture.httplib.core.HttpResult.Success -> {
                                 val token = loginResult.data.token
                                 val userProfile = loginResult.data.user
+
+                                // ✅ 修复：在登录之前清理 Room 数据库，确保新账号不会看到旧数据
+                                // 使用 withContext 确保在 IO 线程执行，并等待完成
+                                withContext(Dispatchers.IO) {
+                                    try {
+                                        ai.sxwl.android.data.di.DataModule.getChatRepository()
+                                            .clearAllChatData()
+                                        LogUtils.i(
+                                            "MainActivity: cleared all chat data before login for user ${userProfile.id}"
+                                        )
+                                    } catch (e: Exception) {
+                                        LogUtils.e(
+                                            "MainActivity: failed to clear chat data before login: ${e.message}"
+                                        )
+                                    }
+                                }
 
                                 // 保存用户信息和 token
                                 IntySetting.login(userProfile.id, token)
@@ -768,6 +784,22 @@ private fun performEmailLogin(
                 is com.architecture.httplib.core.HttpResult.Success -> {
                     val token = loginResult.data.token
                     val userProfile = loginResult.data.user
+
+                    // ✅ 修复：在登录之前清理 Room 数据库，确保新账号不会看到旧数据
+                    // 使用 withContext 确保在 IO 线程执行，并等待完成
+                    withContext(Dispatchers.IO) {
+                        try {
+                            ai.sxwl.android.data.di.DataModule.getChatRepository()
+                                .clearAllChatData()
+                            LogUtils.i(
+                                "MainActivity: cleared all chat data before email login for user ${userProfile.id}"
+                            )
+                        } catch (e: Exception) {
+                            LogUtils.e(
+                                "MainActivity: failed to clear chat data before email login: ${e.message}"
+                            )
+                        }
+                    }
 
                     // 保存用户信息和 token
                     IntySetting.login(userProfile.id, token)

@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -46,6 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,7 +56,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.IntySmallTextField2
-import com.ai.intellimate.ui.NameEditField
+import com.ai.intellimate.ui.NameInputKeyBoardOption
+import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 
 /** 编辑类型枚举 */
@@ -62,6 +66,7 @@ enum class EditKey {
     Name,
     Pronouns,
     Persona,
+    Preference,
 }
 
 /** 编辑类型显示名称扩展 */
@@ -71,6 +76,7 @@ private fun EditKey.toDisplayName(): String {
         EditKey.None -> ""
         EditKey.Name -> stringResource(R.string.str_name)
         EditKey.Pronouns -> stringResource(R.string.str_pronouns)
+        EditKey.Preference -> stringResource(R.string.chat_settings_preference_title)
         EditKey.Persona -> stringResource(R.string.str_persona)
     }
 }
@@ -195,7 +201,7 @@ fun EditDialog(
     onSave: (EditKey, String) -> Unit,
     onValueChange: (String) -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize().imePadding().noRippleClickable { onDismiss() }) {
+    Box(modifier = Modifier.imePadding().noRippleClickable { onDismiss() }) {
         Column(
             modifier =
                 Modifier.align(Alignment.BottomCenter)
@@ -249,7 +255,11 @@ fun EditDialog(
 private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (String) -> Unit) {
     when (editKey) {
         EditKey.Name -> {
-            NameEditField(value = editValue, onValueChange = onValueChange)
+            SingleLineInputField(
+                value = editValue,
+                onValueChange = onValueChange,
+                keyboardOptions = NameInputKeyBoardOption,
+            )
         }
 
         EditKey.Persona -> {
@@ -267,6 +277,19 @@ private fun EditContent(editKey: EditKey, editValue: String, onValueChange: (Str
 
         EditKey.Pronouns -> {
             PronounsEditField(value = editValue, onValueChange = onValueChange)
+        }
+
+        EditKey.Preference -> {
+            SingleLineInputField(
+                value = editValue,
+                onValueChange = onValueChange,
+                placeholder = stringResource(R.string.chat_settings_preference_hint),
+                keyboardOptions =
+                    KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                        capitalization = KeyboardCapitalization.None,
+                    ),
+            )
         }
 
         EditKey.None -> {

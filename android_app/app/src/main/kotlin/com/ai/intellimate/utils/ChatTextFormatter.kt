@@ -52,31 +52,40 @@ object ChatTextFormatter {
 
                 // 括号内容为斜体
                 val endIndex = bracketPairs[pairIndex].second
-                withStyle(
-                    SpanStyle(
-                        color = italicColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text.substring(currentIndex, endIndex))
+                // 确保索引有效，避免越界
+                if (currentIndex < endIndex) {
+                    withStyle(
+                        SpanStyle(
+                            color = italicColor,
+                            fontSize = fontSize,
+                            fontWeight = fontWeight,
+                            fontStyle = FontStyle.Italic,
+                            fontFamily = FontFamily.Default,
+                        )
+                    ) {
+                        append(text.substring(currentIndex, endIndex))
+                    }
                 }
 
                 // 结束括号 - 斜体样式
-                withStyle(
-                    SpanStyle(
-                        color = italicColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text[endIndex])
+                // 确保索引有效，避免越界
+                if (endIndex < text.length) {
+                    withStyle(
+                        SpanStyle(
+                            color = italicColor,
+                            fontSize = fontSize,
+                            fontWeight = fontWeight,
+                            fontStyle = FontStyle.Italic,
+                            fontFamily = FontFamily.Default,
+                        )
+                    ) {
+                        append(text[endIndex])
+                    }
+                    currentIndex = endIndex + 1
+                } else {
+                    // 如果索引无效，跳过当前括号对
+                    currentIndex = text.length
                 }
-                currentIndex = endIndex + 1
                 pairIndex++
             } else {
                 // 普通文本 - 按字符串片段添加而不是逐字符，避免破坏emoji
@@ -87,17 +96,28 @@ object ChatTextFormatter {
                         text.length
                     }
 
-                withStyle(
-                    SpanStyle(
-                        color = normalColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text.substring(currentIndex, nextBracketIndex))
+                // 确保索引有效，避免越界
+                if (currentIndex < nextBracketIndex) {
+                    withStyle(
+                        SpanStyle(
+                            color = normalColor,
+                            fontSize = fontSize,
+                            fontWeight = fontWeight,
+                            fontFamily = FontFamily.Default,
+                        )
+                    ) {
+                        append(text.substring(currentIndex, nextBracketIndex))
+                    }
+                    currentIndex = nextBracketIndex
+                } else {
+                    // 如果索引无效，跳过当前括号对，避免死循环
+                    if (pairIndex < bracketPairs.size) {
+                        pairIndex++
+                    } else {
+                        // 没有更多括号对，直接跳到文本末尾
+                        currentIndex = text.length
+                    }
                 }
-                currentIndex = nextBracketIndex
             }
         }
     }

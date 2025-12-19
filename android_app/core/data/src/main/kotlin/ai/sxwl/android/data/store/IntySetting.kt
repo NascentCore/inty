@@ -11,10 +11,14 @@ import kotlin.random.Random
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
 private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
+private const val KEY_CHAT_MODEL_ID = "chat_model_id"
 private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
+private const val DEFAULT_CHAT_MODEL_ID = "gemini_3_flash"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
+private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
+private const val KEY_TOTAL_MESSAGE_COUNT = "total_message_count"
 
 object IntySetting {
 
@@ -28,6 +32,9 @@ object IntySetting {
 
     // 当前UserId
     private var curUid: String = ""
+
+    // 用于同步 incrementTotalMessageCount 操作的锁对象
+    private val messageCountLock = Any()
 
     init {
 
@@ -121,8 +128,18 @@ object IntySetting {
         curUserSetting.putBoolean("auto_play_animation", enabled)
     }
 
+    /** 流式显示聊天消息 */
+    fun setTextStreaming(enabled: Boolean) {
+        curUserSetting.putBoolean("text_streaming", enabled)
+    }
+
     fun isAutoPlayAnimation(): Boolean {
         return curUserSetting.decodeBool("auto_play_animation", true)
+    }
+
+    /** 是否流式显示聊天消息 */
+    fun isTextStreaming(): Boolean {
+        return curUserSetting.decodeBool("text_streaming", true)
     }
 
     /** 检查用户是否手动设置过 Auto Play Animation */
@@ -133,6 +150,11 @@ object IntySetting {
     /** 标记用户已手动设置过 Auto Play Animation */
     fun markUserSetAutoPlayAnimation() {
         curUserSetting.putBoolean("user_set_auto_play_animation", true)
+    }
+
+    /** 标记用户已手动设置过 Text Streaming */
+    fun markUserTextStreaming() {
+        curUserSetting.putBoolean("user_set_text_streaming", true)
     }
 
     /** 显示场景动作输入按钮（全局设置，默认关闭） */
@@ -164,6 +186,16 @@ object IntySetting {
         return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
     }
 
+    /** 聊天模型选择（全局设置，默认 Gemini 3 Flash） */
+    fun setChatModelId(modelId: String) {
+        curUserSetting.putString(KEY_CHAT_MODEL_ID, modelId)
+    }
+
+    fun getChatModelId(): String {
+        return curUserSetting.decodeString(KEY_CHAT_MODEL_ID, DEFAULT_CHAT_MODEL_ID)
+            ?: DEFAULT_CHAT_MODEL_ID
+    }
+
     fun getLastResubReminderDialogShowTime(): Long {
         return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
     }
@@ -178,6 +210,35 @@ object IntySetting {
 
     fun setResubReminderDialogShowCount(count: Int) {
         curUserSetting.putInt(KEY_RESUB_REMINDER_SHOW_COUNT, count)
+    }
+
+    fun getFeedbackDialogLastShowTime(): Long {
+        // 默认值为很大的负值，保证第一次检查一定超出显示时长阈值。
+        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, -1L)
+    }
+
+    fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
+        curUserSetting.putLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
+    }
+
+    /** 获取总消息数（跨所有AI角色） */
+    fun getTotalMessageCount(): Int {
+        return curUserSetting.decodeInt(KEY_TOTAL_MESSAGE_COUNT, 0)
+    }
+
+    /**
+     * 增加总消息数并返回新的计数
+     *
+     * 使用同步锁确保读-改-写操作的原子性，防止并发调用时丢失增量。 这对于反馈对话框触发逻辑至关重要，因为它依赖于消息计数达到100的倍数。
+     */
+    fun incrementTotalMessageCount(): Int {
+        synchronized(messageCountLock) {
+            // TODO: DataStore 是否能提供同步？
+            val currentCount = getTotalMessageCount()
+            val newCount = currentCount + 1
+            curUserSetting.putInt(KEY_TOTAL_MESSAGE_COUNT, newCount)
+            return newCount
+        }
     }
 
     /** 记录消息Tab是否需要显示推送红点 */
@@ -358,13 +419,33 @@ object IntySetting {
     /** 设置 Explore 页面角色卡的收藏状态 */
     fun setExploreAgentFavorite(agentId: String, favorite: Boolean) {
         if (agentId.isBlank()) return
-        curUserSetting.putBoolean("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", favorite)
+        val key = "$KEY_PREFIX_EXPLORE_FAVORITE$agentId"
+        if (favorite) {
+            curUserSetting.putBoolean(key, true)
+        } else {
+            curUserSetting.removeValueForKey(key)
+        }
     }
 
     /** 获取 Explore 页面角色卡的收藏状态 */
     fun isExploreAgentFavorite(agentId: String): Boolean {
         if (agentId.isBlank()) return false
         return curUserSetting.decodeBool("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", false)
+    }
+
+    /** 获取所有已收藏的 Explore 角色ID */
+    fun getExploreFavoriteAgentIds(): List<String> {
+        val keys = curUserSetting.allKeys() ?: return emptyList()
+        return keys
+            .asSequence()
+            .filter { it.startsWith(KEY_PREFIX_EXPLORE_FAVORITE) }
+            .mapNotNull { key ->
+                val agentId = key.removePrefix(KEY_PREFIX_EXPLORE_FAVORITE)
+                if (curUserSetting.decodeBool(key, false)) agentId else null
+            }
+            .distinct()
+            .sorted()
+            .toList()
     }
 
     // endregion

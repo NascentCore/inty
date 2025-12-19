@@ -11,9 +11,11 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
@@ -21,9 +23,12 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
+import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -33,11 +38,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
 class ChatViewModel : BaseVM() {
 
     // 依赖注入 - 使用新的架构
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
+    private val characterRepository: CharacterRepository = DataModule.getCharacterRepository()
     private val sendMessageUseCase = DataModule.sendMessageUseCase
     private val loadChatHistoryUseCase = DataModule.loadChatHistoryUseCase
     private val syncChatDataUseCase = DataModule.syncChatDataUseCase
@@ -64,6 +73,13 @@ class ChatViewModel : BaseVM() {
     private val _hasMoreMessages = MutableStateFlow(true)
     val hasMoreMessages = _hasMoreMessages.asStateFlow()
 
+    // 反馈对话框显示状态
+    private val _showFeedbackRequestDialog = MutableStateFlow(false)
+    val showFeedbackRequestDialog = _showFeedbackRequestDialog.asStateFlow()
+
+    // 会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
+    private var sessionMessageCount = 0
+
     private var currentOffset = 0
     private val PAGE_SIZE = 20
 
@@ -76,6 +92,9 @@ class ChatViewModel : BaseVM() {
 
     private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
     val userProfile = _userProfile.asStateFlow()
+
+    private val _characterEnergy = MutableStateFlow(0)
+    val characterEnergy = _characterEnergy.asStateFlow()
 
     // 防抖机制：避免快速点击发送按钮
     private var lastSendTime = 0L
@@ -97,7 +116,9 @@ class ChatViewModel : BaseVM() {
     private var messagesJob: Job? = null
     private var loadingMoreJob: Job? = null
     private var hasMoreJob: Job? = null
+    private var characterEnergyJob: Job? = null
     private var boundAgentId: String? = null
+    private var lastSyncedEnergyPoints = 0
 
     fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
 
@@ -129,6 +150,9 @@ class ChatViewModel : BaseVM() {
             _isQueryMsgsCompleted.value = false
             // 停止语音播放
             audioManager?.stopAllPlayback()
+            characterEnergyJob?.cancel()
+            _characterEnergy.value = 0
+            lastSyncedEnergyPoints = 0
             return
         }
 
@@ -136,6 +160,11 @@ class ChatViewModel : BaseVM() {
         // syncLatestMessages 内部已经有逻辑判断是否有新消息，如果没有新消息不会更新本地数据
         if (_agentInfo.value?.id == agentInfo.id) {
             _agentInfo.value = agentInfo
+            // 重新启动能量点数观察，确保数据实时更新
+            observeCharacterEnergy(agentInfo.id)
+            viewModelScope.launch(Dispatchers.IO) {
+                characterRepository.syncCharacterSnapshot(agentInfo, lastSyncedEnergyPoints)
+            }
             // 总是触发后台同步，确保用户看到最新消息
             viewModelScope.launch(Dispatchers.IO) {
                 try {
@@ -165,6 +194,12 @@ class ChatViewModel : BaseVM() {
         )
 
         _agentInfo.value = agentInfo
+        lastSyncedEnergyPoints = 0
+        _characterEnergy.value = 0
+        observeCharacterEnergy(agentInfo.id)
+        viewModelScope.launch(Dispatchers.IO) {
+            characterRepository.syncCharacterSnapshot(agentInfo, lastSyncedEnergyPoints)
+        }
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
 
@@ -173,6 +208,10 @@ class ChatViewModel : BaseVM() {
         _hasMoreMessages.value = true
         _isLoadingMore.value = false
 
+        // 切换到不同 agent 时，清空输入状态，避免输入文案残留
+        inputData.value = ""
+        inputSelection.value = 0
+
         // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
 
@@ -180,14 +219,33 @@ class ChatViewModel : BaseVM() {
         val hasLocalData = chatRepository.getMessagesFlow(agentInfo.id).value.isNotEmpty()
 
         if (hasLocalData) {
-            // 有本地数据，立即标记为完成，然后后台同步
-            _isQueryMsgsCompleted.value = true
-            // 后台同步最新数据
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    syncChatDataUseCase(agentInfo.id)
-                } catch (e: Exception) {
-                    LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+            if (forceSync) {
+                // 🔧 修复：从通知进入时（forceSync=true），先同步最新数据，等待完成后再标记为完成
+                // 确保UI显示的是最新消息，而不是旧的本地缓存
+                _isQueryMsgsCompleted.value = false
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        syncChatDataUseCase(agentInfo.id)
+                        _isQueryMsgsCompleted.value = true
+                        LogUtils.i(
+                            "ChatViewModel.setAgentInfo forceSync completed for ${agentInfo.id}"
+                        )
+                    } catch (e: Exception) {
+                        LogUtils.e("ChatViewModel.setAgentInfo forceSync error: ${e.message}")
+                        // 即使同步失败，也标记为完成，避免UI一直等待
+                        _isQueryMsgsCompleted.value = true
+                    }
+                }
+            } else {
+                // 有本地数据，立即标记为完成，然后后台同步
+                _isQueryMsgsCompleted.value = true
+                // 后台同步最新数据
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        syncChatDataUseCase(agentInfo.id)
+                    } catch (e: Exception) {
+                        LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
+                    }
                 }
             }
         } else {
@@ -231,9 +289,16 @@ class ChatViewModel : BaseVM() {
 
                     val latestAiMsg = list.find { msg -> msg.role == "assistant" }
                     _shouldFlowShow.value =
-                        lastAiMsgInfo != null && latestAiMsg?.id != lastAiMsgInfo?.id
+                        IntySetting.isTextStreaming() &&
+                            lastAiMsgInfo != null &&
+                            latestAiMsg?.id != lastAiMsgInfo?.id
 
                     lastAiMsgInfo = latestAiMsg
+
+                    val currentAgent = _agentInfo.value
+                    if (currentAgent != null && currentAgent.id == agentId) {
+                        syncCharacterEnergyFromMessages(currentAgent, list)
+                    }
                 }
             }
         loadingMoreJob =
@@ -250,15 +315,50 @@ class ChatViewModel : BaseVM() {
             }
     }
 
+    private fun observeCharacterEnergy(agentId: String) {
+        characterEnergyJob?.cancel()
+        characterEnergyJob =
+            viewModelScope.launch {
+                characterRepository.observeCharacter(agentId).collect { entity ->
+                    val points = entity?.energyPoints ?: 0
+                    _characterEnergy.value = points
+                    lastSyncedEnergyPoints = points
+                }
+            }
+    }
+
+    private fun syncCharacterEnergyFromMessages(agent: AgentInfo, messages: List<MsgInfo>) {
+        val energyPoints =
+            messages.count { msg ->
+                msg.role == "assistant" &&
+                    !msg.isOpening() &&
+                    msg.content != LOADING_PLACEHOLDER_CONTENT
+            }
+        if (energyPoints <= lastSyncedEnergyPoints) return
+        lastSyncedEnergyPoints = energyPoints
+        viewModelScope.launch(Dispatchers.IO) {
+            characterRepository.syncCharacterSnapshot(agent, energyPoints)
+        }
+    }
+
     /** 加载聊天历史 - 使用增量同步优化体验 */
     private fun loadChatHistory(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 使用增量同步，优先显示本地数据，然后检查服务器更新
-                syncChatDataUseCase(agentId)
+                // ✅ 修复：使用 loadChatHistoryUseCase 而不是 syncChatDataUseCase
+                // 添加超时机制，避免无限等待
+                kotlinx.coroutines.withTimeout(10000) { // 10秒超时
+                    loadChatHistoryUseCase(agentId, PAGE_SIZE)
+                }
+                _isQueryMsgsCompleted.value = true
+                LogUtils.i("ChatViewModel.loadChatHistory completed for $agentId")
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                LogUtils.e("ChatViewModel.loadChatHistory timeout for $agentId")
+                // 超时也标记为完成，避免一直等待，让用户至少能看到 intro/opening
                 _isQueryMsgsCompleted.value = true
             } catch (e: Exception) {
-                LogUtils.e("ChatViewModel.loadChatHistory error: ${e.message}")
+                LogUtils.e("ChatViewModel.loadChatHistory error for $agentId: ${e.message}")
+                // 即使出错也标记为完成，避免 UI 一直等待
                 _isQueryMsgsCompleted.value = true
             }
         }
@@ -416,6 +516,26 @@ class ChatViewModel : BaseVM() {
                                 !assistantContent.isNullOrBlank()
                         if (hasAssistantReply) {
                             BoostManager.recordAssistantMessage(agent)
+                        }
+
+                        // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
+                        sessionMessageCount++
+                        val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                        val currentTime = System.currentTimeMillis()
+                        val timeSinceLastShow = currentTime - lastShowTime
+
+                        if (
+                            // 会话消息数达到阈值
+                            sessionMessageCount >=
+                                UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                                // 距离上次显示已超过最小间隔时间
+                                timeSinceLastShow >= UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
+                        ) {
+                            IntySetting.setFeedbackDialogLastShowTime(currentTime)
+                            // 确保在主线程更新 UI 状态
+                            withContext(Dispatchers.Main) {
+                                _showFeedbackRequestDialog.value = true
+                            }
                         }
 
                         runCatching {
@@ -638,6 +758,16 @@ class ChatViewModel : BaseVM() {
 
     // 关闭limit次数 拦截消息的弹窗
     fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+
+    /** 隐藏反馈对话框 */
+    fun hideFeedbackRequestDialog() {
+        _showFeedbackRequestDialog.value = false
+    }
+
+    /** 重置会话消息计数（当 app 进入后台或退出时调用） */
+    fun resetSessionMessageCount() {
+        sessionMessageCount = 0
+    }
 
     fun dismissImageGenerationDialog() =
         viewModelScope.launch { showImageGenerationDialog.emit(null) }
@@ -960,6 +1090,11 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) { chatRepository.removeMessage(agentId, localMsgId) }
     }
 
+    fun clearGeneratedImage(messageId: String) {
+        val agentId = _agentInfo.value?.id ?: return
+        chatRepository.updateMessageGeneratedImage(agentId, messageId, null)
+    }
+
     fun generateImageForMessage(messageId: String) {
         val agentId = _agentInfo.value?.id
         val agent = _agentInfo.value
@@ -1236,6 +1371,7 @@ class ChatViewModel : BaseVM() {
                 val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
                 when (result) {
                     is HttpResult.Success -> {
+                        AgentStore.addAgent(result.data)
                         setAgentInfo(result.data, forceSync = forceSync)
                     }
 
@@ -1262,6 +1398,9 @@ class ChatViewModel : BaseVM() {
         lastQueryAgentId = null
         lastQueryTime = 0L
         lastSendTime = 0L
+        characterEnergyJob?.cancel()
+        _characterEnergy.value = 0
+        lastSyncedEnergyPoints = 0
 
         // 清理chatSettings
         _chatSettings.value = emptyMap()
@@ -1292,5 +1431,31 @@ class ChatViewModel : BaseVM() {
                 meta_data = MsgInfo.MsgMetaData(agentId = agent.id),
             )
         chatRepository.addMessage(agent.id, message)
+    }
+
+    suspend fun reset() {
+        val agentId = agentInfo.value?.id ?: throw Exception("Agent is null")
+
+        if (!chatRepository.clearMessage(agentId)) {
+            throw Exception("Reset Failed")
+        }
+
+        // 1. 删除本地历史消息
+        chatRepository.clearChatData(agentId)
+        // 2. 清理 ViewModel 中的状态
+        _msgs.value = emptyList()
+        _isLoadingMore.value = false
+        _hasMoreMessages.value = true
+        _isQueryMsgsCompleted.value = false
+        OpeningPlayState.clearAgentPlayed(agentId)
+
+        // 3. 重新绑定消息流（因为 clearChatData 会清理内存缓存）
+        // 注意：如果使用了 RoomDataSource，消息流会自动更新
+
+        // 4. 拉取最新消息
+        chatRepository.ensureInitialHistory(agentId, PAGE_SIZE)
+        _isQueryMsgsCompleted.value = true
+
+        LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
     }
 }

@@ -96,6 +96,10 @@ class MainViewModel : BaseVM() {
             }
         }
 
+    // 点击离线推送通知相关（存储点击过来的AgentId）
+    private var _pushAgentId = MutableStateFlow("")
+    val pushAgentId: StateFlow<String> = _pushAgentId.asStateFlow()
+
     companion object {
         private const val MAX_TAB_HISTORY = 10
     }
@@ -375,6 +379,16 @@ class MainViewModel : BaseVM() {
         // 注意：hideSettings() 已经在上方调用，所以这里更新状态后，UI会直接从 SettingContent 切换到 SplashLoginUI
         updateLoginState()
 
+        // ✅ 修复：清理 Room 数据库，避免数据残留
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                ai.sxwl.android.data.di.DataModule.getChatRepository().clearAllChatData()
+                LogUtils.i("MainViewModel.logout: cleared all chat data")
+            } catch (e: Exception) {
+                LogUtils.e("MainViewModel.logout: failed to clear chat data: ${e.message}")
+            }
+        }
+
         // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
         // 参考:
         // https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
@@ -479,5 +493,10 @@ class MainViewModel : BaseVM() {
     /** 隐藏反馈请求弹窗 */
     fun hideFeedbackRequestDialog() {
         _showFeedbackRequestDialog.value = false
+    }
+
+    /** 更新 pushAgentId (离线推送通知点击) */
+    fun updatePushAgentId(id: String) {
+        _pushAgentId.value = id
     }
 }

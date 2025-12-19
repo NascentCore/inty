@@ -427,7 +427,7 @@ async def get_recommended_agents(
     current_user_id: Optional[str] = None,
 ) -> List[models.Agent]:
     """
-    Get recommended AI agents list (public and approved agents, ordered by creation time desc)
+    Get recommended AI agents list (public and approved agents, ordered by energy points desc)
     """
     try:
         # Validate parameters
@@ -458,7 +458,10 @@ async def get_recommended_agents(
             .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
-            .order_by(desc(models.Agent.created_at))
+            .order_by(
+                desc(func.coalesce(models.Agent.points, 0)),
+                desc(models.Agent.created_at),
+            )
         )
 
         result = await db.execute(query)
@@ -640,22 +643,25 @@ async def get_recommended_agents_paginated(
             skip = (page - 1) * page_size
 
             # 确定排序方式
-            sort_order = None
+            order_by_clauses = []
             if sort_by == AgentSortOption.CREATED_ASC:
-                sort_order = models.Agent.created_at.asc()
+                order_by_clauses = [models.Agent.created_at.asc()]
             elif sort_by == AgentSortOption.RANDOM:
-                sort_order = get_deterministic_random_order(sort_seed)
+                order_by_clauses = [get_deterministic_random_order(sort_seed)]
             elif sort_by == AgentSortOption.ENERGY_POINTS:
-                sort_order = desc(models.Agent.points)
+                order_by_clauses = [
+                    desc(func.coalesce(models.Agent.points, 0)),
+                    desc(models.Agent.created_at),
+                ]
             else:  # 默认为 CREATED_DESC
-                sort_order = desc(models.Agent.created_at)
+                order_by_clauses = [desc(models.Agent.created_at)]
 
             # 获取分页数据，同时获取头像和背景图的尺寸信息
             data_query = (
                 _select_agents_with_sizes()
                 .offset(skip)
                 .limit(page_size)
-                .order_by(sort_order)
+                .order_by(*order_by_clauses)
             )
 
             result = await db.execute(data_query)
@@ -1013,11 +1019,20 @@ async def update_agent(
 
         # 检查是否需要重新生成开场白语音
         update_data = agent_in.model_dump(exclude_unset=True)
+        energy_points_delta = update_data.pop("energy_points", None)
+        if energy_points_delta is not None and energy_points_delta <= 0:
+            raise HTTPException(
+                status_code=400, detail="energy_points must be a positive integer"
+            )
         should_regenerate_voice = "opening" in update_data or "voice_id" in update_data
 
         update_data = process_agent_image_urls(update_data)
 
         _update_agent_in_db(update_data, db_agent)
+
+        if energy_points_delta:
+            current_points = db_agent.points or 0
+            db_agent.points = current_points + energy_points_delta
 
         # 确保在异步上下文中调用 flag_modified
         # 在 _update_agent_in_db() 调用 flag_modified 会报 MissingGreenlet 错误

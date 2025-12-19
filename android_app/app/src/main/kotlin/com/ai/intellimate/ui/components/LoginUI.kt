@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,53 +53,6 @@ import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import java.util.regex.Pattern
-
-/** 登录页面关闭按钮组件 */
-@Composable
-internal fun LoginCloseButton(onClose: () -> Unit) {
-    Image(
-        modifier =
-            Modifier.padding(end = 16.dp, top = 16.dp).size(18.dp, 18.dp).noRippleClickable {
-                onClose()
-            },
-        painter = painterResource(R.drawable.close),
-        contentDescription = null,
-    )
-}
-
-/** Logo 图片组件 */
-@Composable
-internal fun LogoImage() {
-    Image(
-        modifier = Modifier.size(width = 239.dp, height = 190.dp),
-        painter = painterResource(R.drawable.img_login_hi),
-        contentScale = ContentScale.Crop,
-        alignment = Alignment.TopCenter,
-        contentDescription = "",
-    )
-}
-
-/** 欢迎标题组件 */
-@Composable
-internal fun WelcomeTitle() {
-    Text(
-        text = stringResource(R.string.welcome_to_intellimate),
-        color = Color.White,
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-    )
-}
-
-/** 欢迎副标题组件 */
-@Composable
-internal fun WelcomeSubtitle() {
-    Text(
-        text = stringResource(R.string.create_account_or_login),
-        color = Color.White.copy(alpha = 0.55f),
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Normal,
-    )
-}
 
 /** Google 登录按钮组件 */
 @Composable
@@ -189,13 +141,6 @@ internal fun EmailLoginButton(isLoading: Boolean, onLoginClick: () -> Unit) {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp,
-                )
-            }
         }
     }
 }

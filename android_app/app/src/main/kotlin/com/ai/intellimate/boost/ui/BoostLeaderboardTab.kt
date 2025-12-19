@@ -33,48 +33,48 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostLeaderboardEntry
 import com.ai.intellimate.boost.BoostTrend
+import com.ai.intellimate.ui.UiConfigs
 
 @Composable
 fun BoostLeaderboardTab(
+    navController: NavController,
     modifier: Modifier = Modifier,
     availablePoints: Int,
     entries: List<BoostLeaderboardEntry>,
     onChat: (BoostLeaderboardEntry) -> Unit,
     onBoost: (BoostLeaderboardEntry) -> Unit,
 ) {
-    Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        BoostStatusChip(
-            modifier = Modifier.fillMaxWidth(),
-            availablePoints = availablePoints,
-            onClick = {
-                // 状态芯片仅用于展示可用积分，不触发任何操作
-                // 用户应通过点击排行榜条目来执行 Boost 操作
-            },
-        )
-
-        Spacer(Modifier.height(24.dp))
-
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = UiConfigs.LeaderBoard.HorizontalPadding,
+                    vertical = UiConfigs.LeaderBoard.VerticalPadding,
+                )
+    ) {
+        // BoostStatusChip(modifier = Modifier.fillMaxWidth(), availablePoints = availablePoints)
         Text(
-            text = stringResource(R.string.boost_leaderboard_title),
+            text = stringResource(R.string.my_boost_points, availablePoints),
             color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp),
+            modifier = Modifier.align(Alignment.End),
         )
+
+        Spacer(Modifier.height(UiConfigs.LeaderBoard.StatusChipToListSpacing))
 
         if (entries.isEmpty()) {
             Column(
                 modifier =
                     Modifier.fillMaxSize()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(UiConfigs.LeaderBoard.EmptyStateCardCornerRadius))
                         .background(Color(0xFF1A1A1F))
-                        .padding(24.dp),
+                        .padding(UiConfigs.LeaderBoard.EmptyStateCardPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -87,7 +87,7 @@ fun BoostLeaderboardTab(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(UiConfigs.LeaderBoard.ListItemSpacing),
             ) {
                 itemsIndexed(entries, key = { _, item -> item.agentId + item.rank }) { index, entry
                     ->
@@ -98,7 +98,7 @@ fun BoostLeaderboardTab(
                         showDivider = index < entries.lastIndex,
                     )
                 }
-                item { Spacer(Modifier.height(32.dp)) }
+                item { Spacer(Modifier.height(UiConfigs.LeaderBoard.ListBottomSpacing)) }
             }
         }
     }
@@ -144,8 +144,8 @@ private fun BoostLeaderboardRow(
                 Text(
                     text =
                         stringResource(
-                            R.string.boost_points_value,
-                            entry.boostCount * BoostConfig.BOOST_STEP_POINTS,
+                            R.string.boost_leaderboard_energy_points_value,
+                            entry.pointsInvested,
                         ),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,

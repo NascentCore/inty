@@ -18,16 +18,13 @@ class RoomImpl(
 ) : ChatRepository {
 
     companion object {
-        private const val DEFAULT_PAGE_SIZE = 20
         private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
         private const val ROLE_ASSISTANT = "assistant"
     }
 
-    /** 将服务端返回的消息中的 user_vote 转换为 userFeedback */
     private fun convertUserVoteToFeedback(messages: List<MsgInfo>): List<MsgInfo> {
         return messages.map { msg ->
             if (msg.user_vote != null && msg.userFeedback == null) {
-                // 如果消息有 user_vote 但没有 userFeedback，进行转换
                 val userFeedback =
                     when (msg.user_vote) {
                         VoteConstants.LIKE -> MsgInfo.UserFeedback.LIKE
@@ -39,6 +36,11 @@ class RoomImpl(
                 msg
             }
         }
+    }
+
+    private fun reverseServerMessages(messages: List<MsgInfo>): List<MsgInfo> {
+        if (messages.isEmpty()) return messages
+        return messages.reversed()
     }
 
     override fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> {
@@ -56,10 +58,28 @@ class RoomImpl(
     override suspend fun ensureInitialHistory(agentId: String, pageSize: Int) {
         LogUtils.d("RoomImpl.ensureInitialHistory called for $agentId")
 
-        if (localDataSource.isInitialLoaded(agentId)) return
+        // ✅ 修复：检查状态一致性，如果标记为 loaded 但数据库为空，应该重新加载
+        val isInitialLoaded = localDataSource.isInitialLoaded(agentId)
+        val localMessages = localDataSource.getMessages(agentId)
+        val hasLocalMessages = localMessages.isNotEmpty()
+
+        // 如果已标记为 loaded 且有数据，直接返回
+        if (isInitialLoaded && hasLocalMessages) {
+            LogUtils.d(
+                "RoomImpl.ensureInitialHistory: already loaded with ${localMessages.size} messages for $agentId"
+            )
+            return
+        }
+
+        // ✅ 修复：如果标记为 loaded 但没有数据，重置状态并重新加载
+        if (isInitialLoaded) {
+            LogUtils.w(
+                "RoomImpl.ensureInitialHistory: isInitialLoaded=true but no messages, resetting state for $agentId"
+            )
+            localDataSource.setInitialLoaded(agentId, false)
+        }
 
         // 先检查是否有本地缓存数据
-        val localMessages = localDataSource.getMessagesFlow(agentId).value
         if (localMessages.isNotEmpty()) {
             LogUtils.i(
                 "RoomImpl.ensureInitialHistory found ${localMessages.size} local messages for $agentId"
@@ -73,7 +93,8 @@ class RoomImpl(
                         val serverMessages =
                             convertUserVoteToFeedback(result.data.messages ?: emptyList())
                         if (serverMessages.isNotEmpty()) {
-                            localDataSource.updateMessages(agentId, serverMessages)
+                            val reversedServerMessages = reverseServerMessages(serverMessages)
+                            localDataSource.updateMessages(agentId, reversedServerMessages)
                             localDataSource.setHasMore(agentId, result.data.hasMore)
                             localDataSource.setOffset(
                                 agentId,
@@ -104,21 +125,7 @@ class RoomImpl(
                         "RoomImpl.ensureInitialHistory loaded ${messages.size} messages for $agentId"
                     )
 
-                    // 🔧 修复首次加载消息反序问题：
-                    // 服务器返回的消息是 DESC 顺序（最新的在前），参见 IChatApi.getMsgs() 中 order 参数的默认值 "desc"
-                    // 但 updateMessages 按列表顺序递增分配 sortKey（baseTime, baseTime+1, baseTime+2...）
-                    // 如果第一条消息（最新的）得到最小的 sortKey，会导致排序错误
-                    // 解决方案：反转消息列表，确保最旧的消息得到最小的 sortKey，最新的消息得到最大的 sortKey
-                    // 这样在 ORDER BY sortKey DESC 查询时，最新的消息会排在前面，配合 reverseLayout=true 显示在底部
-                    val reversedMessages = messages.reversed()
-                    if (messages.isNotEmpty()) {
-                        LogUtils.i(
-                            "RoomImpl.ensureInitialHistory REVERSING messages: " +
-                                "original first=${messages.first().id.take(8)}, last=${messages.last().id.take(8)} | " +
-                                "reversed first=${reversedMessages.first().id.take(8)}, last=${reversedMessages.last().id.take(8)}"
-                        )
-                    }
-
+                    val reversedMessages = reverseServerMessages(messages)
                     localDataSource.updateMessages(agentId, reversedMessages)
                     localDataSource.setHasMore(agentId, result.data.hasMore)
                     localDataSource.setOffset(agentId, if (messages.isNotEmpty()) pageSize else 0)
@@ -152,9 +159,8 @@ class RoomImpl(
                     val moreMessages =
                         convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     if (moreMessages.isNotEmpty()) {
-                        // 使用 prependMessages 加载历史消息，确保它们插入到列表开头（使用更小的 sortKey）
-                        // 在 sortKey DESC 排序中，它们会排在后面，在 reverseLayout UI 中会显示在顶部
-                        localDataSource.prependMessages(agentId, moreMessages)
+                        val reversedMoreMessages = reverseServerMessages(moreMessages)
+                        localDataSource.prependMessages(agentId, reversedMoreMessages)
                         localDataSource.incrementOffset(agentId, pageSize)
                     }
                     localDataSource.setHasMore(agentId, result.data.hasMore)
@@ -180,12 +186,8 @@ class RoomImpl(
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
-        // 1) 先插入用户消息与loading占位
-        // appendMessages会自动处理sortKey和timestamp的同步
         val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
         val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
-
-        // 使用appendMessages，它会自动处理单调递增的sortKey和同步的timestamp
         localDataSource.appendMessages(agentId, listOf(userMsg, loadingMsg))
 
         val result =
@@ -196,7 +198,6 @@ class RoomImpl(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        // 2) 移除loading占位
         val currentMessages = localDataSource.getMessagesFlow(agentId).value
         val filteredMessages =
             currentMessages.filterNot {
@@ -204,11 +205,9 @@ class RoomImpl(
             }
         localDataSource.updateMessages(agentId, filteredMessages)
 
-        // 3) 追加AI回复
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
-                // appendMessages会自动处理sortKey和timestamp的同步
                 val assistantMsgs = choices.map { it.message }
                 LogUtils.d(
                     "RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId"
@@ -223,12 +222,16 @@ class RoomImpl(
     override suspend fun syncLatestMessages(agentId: String, pageSize: Int) {
         LogUtils.d("RoomImpl.syncLatestMessages called for $agentId")
 
-        if (
-            !localDataSource.isInitialLoaded(agentId) ||
-                localDataSource.getMessagesFlow(agentId).value.isEmpty()
-        ) {
-            // 如果没有初始化或没有本地数据，使用正常的初始化流程
-            LogUtils.i("RoomImpl.syncLatestMessages calling ensureInitialHistory for $agentId")
+        // ✅ 修复：检查状态一致性，确保判断准确
+        val isInitialLoaded = localDataSource.isInitialLoaded(agentId)
+        val localMessages = localDataSource.getMessagesFlow(agentId).value
+        val hasLocalMessages = localMessages.isNotEmpty()
+
+        if (!isInitialLoaded || !hasLocalMessages) {
+            LogUtils.i(
+                "RoomImpl.syncLatestMessages calling ensureInitialHistory for $agentId (isInitialLoaded=$isInitialLoaded, hasLocalMessages=$hasLocalMessages)"
+            )
+            // ✅ 修复：确保 ensureInitialHistory 完成后再返回
             ensureInitialHistory(agentId, pageSize)
             return
         }
@@ -260,8 +263,24 @@ class RoomImpl(
                         }
 
                     if (hasNewMessages || hasStatusChanges) {
-                        // 有新消息或状态变化，更新本地数据
-                        localDataSource.updateMessages(agentId, serverMessages)
+                        val reversedServerMessages = reverseServerMessages(serverMessages)
+
+                        val allMessages = mutableListOf<MsgInfo>()
+                        val serverMessageKeys =
+                            serverMessages
+                                .mapNotNull { it.id.ifEmpty { it.localMsgId.ifEmpty { null } } }
+                                .toSet()
+
+                        localMessages.forEach { localMsg ->
+                            val localKey = localMsg.id.ifEmpty { localMsg.localMsgId }
+                            if (localKey !in serverMessageKeys) {
+                                allMessages.add(localMsg)
+                            }
+                        }
+
+                        allMessages.addAll(reversedServerMessages)
+
+                        localDataSource.updateMessages(agentId, allMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(
                             agentId,
@@ -269,7 +288,7 @@ class RoomImpl(
                         )
 
                         LogUtils.i(
-                            "RoomImpl.syncLatestMessages found new messages or status changes for $agentId, updated ${serverMessages.size} messages"
+                            "RoomImpl.syncLatestMessages found new messages or status changes for $agentId, merged ${allMessages.size} messages (${localMessages.size} local + ${serverMessages.size} server)"
                         )
                     } else {
                         LogUtils.i(
@@ -313,18 +332,15 @@ class RoomImpl(
 
         val result = remoteDataSource.voteMessage(agentId, messageId, vote)
 
-        // 如果投票成功，更新本地消息的 user_vote 和 userFeedback 字段
         if (result is HttpResult.Success) {
             val voteValue = result.data.data?.vote
             if (voteValue != null) {
-                // 将服务端的 vote 值转换为本地的 userFeedback
                 val userFeedback =
                     when (voteValue) {
                         VoteConstants.LIKE -> MsgInfo.UserFeedback.LIKE
                         VoteConstants.DISLIKE -> MsgInfo.UserFeedback.DISLIKE
                         else -> null
                     }
-                // 更新本地消息的 user_vote 和 userFeedback 字段
                 val messages = localDataSource.getMessagesFlow(agentId).value
                 val targetMessage =
                     messages.find { it.id == messageId || it.localMsgId == messageId }
@@ -364,7 +380,6 @@ class RoomImpl(
         LogUtils.d("RoomImpl.recallLastAssistantMessage called for $agentId")
         val messages = localDataSource.getMessagesFlow(agentId).value
 
-        // 找到最后一条AI消息（排除loading）
         val lastAssistantMessage =
             messages.lastOrNull {
                 it.role == ROLE_ASSISTANT && it.content != LOADING_PLACEHOLDER_CONTENT
@@ -375,16 +390,11 @@ class RoomImpl(
             return
         }
 
-        // 删除最后一条AI消息，变成loading状态
         localDataSource.removeMessage(agentId, lastAssistantMessage.localMsgId)
 
-        // 添加 loading 消息占位
-        // appendMessages会自动处理sortKey和timestamp的同步
         val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
         localDataSource.appendMessages(agentId, listOf(loadingMsg))
 
-        // 发送 recall 消息给服务器（类似 keep talking 的实现）
-        // 服务器应该理解 "recall" 标记并重新生成最后一条AI消息
         val recallMsg = MsgInfo(content = "recall", role = "user")
         val result =
             try {
@@ -394,7 +404,6 @@ class RoomImpl(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        // 移除loading占位
         val currentMessages = localDataSource.getMessagesFlow(agentId).value
         val filteredMessages =
             currentMessages.filterNot {
@@ -402,11 +411,9 @@ class RoomImpl(
             }
         localDataSource.updateMessages(agentId, filteredMessages)
 
-        // 追加AI回复
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
-                // appendMessages会自动处理sortKey和timestamp的同步
                 val assistantMsgs = choices.map { it.message }
                 localDataSource.appendMessages(agentId, assistantMsgs)
             }
@@ -421,7 +428,6 @@ class RoomImpl(
     > {
         LogUtils.d("RoomImpl.generateImageForMessage called for $agentId, messageId: $messageId")
 
-        // 找到触发消息生图的那条消息
         val messages = localDataSource.getMessagesFlow(agentId).value
         val sourceMessage = messages.find { it.id == messageId || it.localMsgId == messageId }
 
@@ -430,22 +436,14 @@ class RoomImpl(
             return HttpResult.Failure("Source message not found", -1)
         }
 
-        // 在触发消息上设置 loading 状态：通过设置一个临时的 generatedImage（imageUrl 为 "loading"）
-        // 这样图片会显示在触发消息的下方，而不是创建新消息
-        // 使用 9:16 的宽高比（竖屏），与生成的图片尺寸匹配
         val loadingImage =
-            MsgInfo.MsgMetaData.GeneratedImage(
-                imageUrl = "loading", // 特殊标记，表示正在生成图片
-                width = 300,
-                height = 533, // 9:16 比例 (300 * 16 / 9 ≈ 533)
-            )
+            MsgInfo.MsgMetaData.GeneratedImage(imageUrl = "loading", width = 300, height = 533)
         localDataSource.updateMessageGeneratedImage(agentId, messageId, loadingImage)
 
         val result = remoteDataSource.messageGenerateImage(agentId, messageId)
 
         when (result) {
             is HttpResult.Success -> {
-                // 更新触发消息的 generatedImage 为实际图片
                 val generatedImage =
                     MsgInfo.MsgMetaData.GeneratedImage(
                         imageUrl = result.data.imageUrl,
@@ -458,7 +456,6 @@ class RoomImpl(
 
             is HttpResult.Failure -> {
                 LogUtils.e("RoomImpl.generateImageForMessage failure: ${result.message}")
-                // 生成失败时，移除 loading 状态
                 localDataSource.updateMessageGeneratedImage(agentId, messageId, null)
             }
         }
@@ -476,5 +473,9 @@ class RoomImpl(
         LogUtils.d("RoomImpl.clearAllChatData called")
         localDataSource.clearAllChatData()
         LogUtils.i("RoomImpl.clearAllChatData completed")
+    }
+
+    override suspend fun clearMessage(agentId: String): Boolean {
+        return remoteDataSource.clearMessage(agentId)
     }
 }

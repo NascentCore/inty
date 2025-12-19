@@ -400,6 +400,167 @@ async def send_fcm_multicast(
         return False
 
 
+async def send_fcm_data_only(
+    db: AsyncSession,
+    user_ids: List[str],
+    data: dict,
+    dry_run: bool = False,
+) -> bool:
+    """发送 FCM 纯数据消息（无 notification）
+
+    用于发送仅包含 data 字段的 FCM 消息，应用在前台时会收到。
+
+    Args:
+        db: 数据库会话
+        user_ids: 用户 ID 列表
+        data: 数据字段（字典，所有值必须是字符串）
+        dry_run: 如果为 True，仅验证消息格式而不实际发送
+
+    Returns:
+        bool: 是否发送成功
+    """
+    try:
+        if dry_run:
+            logger.info(f"[DRY RUN] FCM 数据消息测试模式：验证消息格式，不会实际发送")
+
+        # 1. 获取所有设备 token
+        tokens = await user_service.get_users_device_tokens(db, user_ids)
+
+        if not tokens:
+            logger.warning(f"Users {user_ids} have no registered device tokens")
+            if not dry_run and user_ids:
+                await _mark_users_with_invalid_tokens(db, user_ids)
+            return False
+
+        # 获取 token 到 user_id 的映射
+        token_to_user_map = {}
+        if not dry_run:
+            stmt = select(DeviceToken.token, DeviceToken.user_id).where(
+                DeviceToken.token.in_(tokens)
+            )
+            result = await db.execute(stmt)
+            for token, user_id in result.all():
+                token_to_user_map[token] = user_id
+
+        # 2. 确保所有 data 值都是字符串（FCM 要求）
+        data_str = {k: str(v) for k, v in data.items()}
+
+        # 3. 发送消息
+        success_count = 0
+        fail_count = 0
+        invalid_tokens = []
+        send_results = []
+
+        for token in tokens:
+            try:
+                # 创建纯数据消息（无 notification）
+                single_message = messaging.Message(
+                    token=token,
+                    data=data_str,
+                    android=messaging.AndroidConfig(priority="high"),
+                )
+
+                # 发送消息（支持 dry_run 模式）
+                message_id = messaging.send(single_message, dry_run=dry_run)
+
+                if dry_run:
+                    logger.info(
+                        f"[DRY RUN] 数据消息验证成功: token={token[:20]}..., message_id={message_id}"
+                    )
+                else:
+                    logger.debug(
+                        f"FCM 数据消息发送成功: token={token[:20]}..., message_id={message_id}"
+                    )
+
+                send_results.append(
+                    {
+                        "token": token[:20] + "...",
+                        "message_id": message_id,
+                        "status": "success",
+                    }
+                )
+                success_count += 1
+
+            except INVALID_EXCEPTIONS as e:
+                invalid_tokens.append(token)
+                fail_count += 1
+                error_msg = str(e)
+                logger.warning(
+                    f"FCM 数据消息发送失败（无效 token）: token={token[:20]}..., error={error_msg}"
+                )
+                send_results.append(
+                    {
+                        "token": token[:20] + "...",
+                        "status": "invalid_token",
+                        "error": error_msg,
+                    }
+                )
+            except Exception as e:
+                fail_count += 1
+                error_msg = str(e)
+                error_type = type(e).__name__
+                logger.error(
+                    f"FCM 数据消息发送失败: token={token[:20]}..., error_type={error_type}, error={error_msg}"
+                )
+                send_results.append(
+                    {
+                        "token": token[:20] + "...",
+                        "status": "error",
+                        "error_type": error_type,
+                        "error": error_msg,
+                    }
+                )
+
+        # 4. 处理结果
+        if dry_run:
+            logger.info(
+                f"[DRY RUN] 数据消息测试完成: 成功={success_count}, 失败={fail_count}, 总计={len(tokens)}"
+            )
+            logger.debug(f"[DRY RUN] 详细结果: {send_results}")
+        else:
+            if fail_count > 0:
+                logger.error(
+                    f"FCM 数据消息发送失败: {fail_count} 个设备失败, 成功={success_count}"
+                )
+                logger.debug(f"发送结果详情: {send_results}")
+
+            # 5. 清理无效 token（仅在非 dry_run 模式下）
+            if invalid_tokens:
+                try:
+                    await db.execute(
+                        delete(DeviceToken).where(DeviceToken.token.in_(invalid_tokens))
+                    )
+                    await db.commit()
+                    logger.debug(f"已清理 {len(invalid_tokens)} 个无效 token")
+
+                    # 检查是否有用户的所有 token 都无效了
+                    if success_count == 0 and fail_count == len(invalid_tokens):
+                        invalid_user_ids = list(
+                            set(
+                                token_to_user_map.get(token)
+                                for token in invalid_tokens
+                                if token in token_to_user_map
+                            )
+                        )
+                        if invalid_user_ids:
+                            await _mark_users_with_invalid_tokens(db, invalid_user_ids)
+                except Exception as e:
+                    logger.error(f"清理无效 token 失败: {str(e)}")
+                    logger.error(f"错误堆栈: {traceback.format_exc()}")
+
+                return False
+
+            logger.info(f"FCM 数据消息发送成功: {success_count} 个设备")
+            logger.debug(f"发送结果详情: {send_results}")
+
+        return success_count > 0
+
+    except Exception as e:
+        logger.error(f"Failed to send FCM data message: {str(e)}")
+        logger.error(f"Error stack: {traceback.format_exc()}")
+        return False
+
+
 async def _mark_users_with_invalid_tokens(
     db: AsyncSession, user_ids: List[str]
 ) -> None:

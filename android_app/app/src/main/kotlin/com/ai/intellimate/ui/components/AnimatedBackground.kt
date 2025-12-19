@@ -10,7 +10,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.DrawableWrapper
 import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.ScaleDrawable
-import android.os.Build
 import android.view.TextureView
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -120,19 +119,7 @@ private fun extractAnimatedImageDrawable(drawable: Drawable?): AnimatedImageDraw
 
     // 如果是 DrawableWrapper，尝试获取内部 drawable
     if (drawable is DrawableWrapper) {
-        val innerDrawable =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                drawable.drawable
-            } else {
-                // 对于旧版本，尝试通过反射获取
-                try {
-                    val field = DrawableWrapper::class.java.getDeclaredField("mDrawable")
-                    field.isAccessible = true
-                    field.get(drawable) as? Drawable
-                } catch (e: Exception) {
-                    null
-                }
-            }
+        val innerDrawable = drawable.drawable
         val result = extractAnimatedImageDrawable(innerDrawable)
         if (result != null) {
             return result
@@ -288,7 +275,12 @@ fun AnimatedBackground(
         actualPlayCount = 0
         hasPlayCompleted = false
         if (isAnimatedImageLocal) {
-            animatedImageDrawable?.stop()
+            // 先停止动画，再清空引用，避免在停止过程中触发回调导致崩溃
+            try {
+                animatedImageDrawable?.stop()
+            } catch (e: Exception) {
+                LogUtils.e("AnimatedBackground - 停止动画失败: ${e.message}")
+            }
             animatedImageDrawable = null
         }
         isPlaying = false
@@ -344,10 +336,10 @@ fun AnimatedBackground(
                 showStaticImage = true
                 targetStaticImageAlpha = 1f
             }
-        } else if (videoUrl != null && staticImageUrl == null) {
+        } else if (videoUrl != null) {
             showStaticImage = false
             targetStaticImageAlpha = 0f
-        } else if (videoUrl == null && staticImageUrl != null) {
+        } else if (staticImageUrl != null) {
             showStaticImage = true
             targetStaticImageAlpha = 1f
         }
@@ -672,11 +664,16 @@ fun AnimatedBackground(
                 // 捕获当前drawable的引用，用于回调中验证
                 val currentDrawable = drawable
 
-                // 先注销旧回调
+                // 先停止动画，再注销旧回调，避免在回调执行过程中出现竞态条件
                 val oldCallback = animationCallback
                 if (oldCallback != null && isCallbackRegistered) {
                     try {
-                        drawable.unregisterAnimationCallback(oldCallback)
+                        // 先停止动画，避免在注销回调时触发新的回调
+                        if (drawable.isRunning) {
+                            drawable.stop()
+                            // 等待停止完成，避免竞态条件
+                            kotlinx.coroutines.delay(50)
+                        }
                     } catch (e: Exception) {
                         LogUtils.e("AnimatedBackground - 注销旧回调失败: ${e.message}")
                     }
@@ -704,21 +701,33 @@ fun AnimatedBackground(
                                     actualPlayCount++
                                     val currentTarget = currentPlayCount
                                     val shouldContinue =
-                                        shouldPlay &&
-                                            !hasPlayCompleted &&
-                                            actualPlayCount < currentTarget
+                                        shouldPlay && actualPlayCount < currentTarget
 
                                     if (actualPlayCount >= currentTarget) {
-                                        drawableParam.stop()
+                                        try {
+                                            drawableParam.stop()
+                                        } catch (e: Exception) {
+                                            LogUtils.e(
+                                                "AnimatedBackground - 回调中停止动画失败: ${e.message}"
+                                            )
+                                        }
                                         hasPlayCompleted = true
                                         isPlaying = false
                                         onIsPlayingChange?.invoke(false)
                                         onPlayComplete()
                                     } else if (shouldContinue) {
-                                        drawableParam.repeatCount = 0
-                                        drawableParam.start()
-                                        isPlaying = true
-                                        onIsPlayingChange?.invoke(true)
+                                        try {
+                                            drawableParam.repeatCount = 0
+                                            drawableParam.start()
+                                            isPlaying = true
+                                            onIsPlayingChange?.invoke(true)
+                                        } catch (e: Exception) {
+                                            LogUtils.e(
+                                                "AnimatedBackground - 回调中启动动画失败: ${e.message}"
+                                            )
+                                            isPlaying = false
+                                            onIsPlayingChange?.invoke(false)
+                                        }
                                     } else {
                                         isPlaying = false
                                         onIsPlayingChange?.invoke(false)
@@ -793,7 +802,11 @@ fun AnimatedBackground(
                     }
                 } else if (!shouldPlay) {
                     if (isPlaying) {
-                        animatedImageDrawable?.stop()
+                        try {
+                            animatedImageDrawable?.stop()
+                        } catch (e: Exception) {
+                            LogUtils.e("AnimatedBackground - 停止动画失败: ${e.message}")
+                        }
                         isPlaying = false
                         lastPlayTrigger = null
                         onIsPlayingChange?.invoke(false)
@@ -807,7 +820,10 @@ fun AnimatedBackground(
                     val callback = animationCallback
                     if (drawable != null && callback != null) {
                         try {
-                            drawable.unregisterAnimationCallback(callback)
+                            // 先停止动画，避免在注销回调时触发新的回调导致崩溃
+                            if (drawable.isRunning) {
+                                drawable.stop()
+                            }
                         } catch (e: Exception) {
                             LogUtils.e("AnimatedBackground - DisposableEffect注销回调失败: ${e.message}")
                         }

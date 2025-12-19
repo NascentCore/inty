@@ -7,8 +7,14 @@ import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.api.model.VoteMessageReq
 import ai.sxwl.android.data.api.model.VoteMessageRsp
+import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
+import com.inty.api.core.RequestOptions
+import java.time.Duration
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
@@ -121,6 +127,39 @@ class ChatRemoteDataSource {
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.voteMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
+        }
+    }
+
+    /** Reset聊天 */
+    suspend fun clearMessage(agentId: String): Boolean {
+
+        return withContext(Dispatchers.IO) {
+            val result =
+                runCatching {
+                        IntyNetworkManager.getClient()
+                            .async()
+                            .api()
+                            .v1()
+                            .chats()
+                            .agents()
+                            .clearMessages(
+                                agentId = agentId,
+                                requestOptions =
+                                    RequestOptions.builder()
+                                        .timeout(
+                                            Duration.ofMillis(
+                                                NetworkConfig.getCurrentEnvironmentConfig()
+                                                    .timeout
+                                                    .connectTimeoutMs
+                                            )
+                                        )
+                                        .build(),
+                            )
+                    }
+                    .onFailure { LogUtils.e(it.localizedMessage) }
+                    .getOrNull()
+
+            result?.success() == true
         }
     }
 }

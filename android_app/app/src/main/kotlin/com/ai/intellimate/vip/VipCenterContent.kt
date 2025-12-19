@@ -2,6 +2,9 @@ package com.ai.intellimate.vip
 
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -11,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,18 +32,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.AutoRenewalNotice
 import com.ai.intellimate.ui.components.EmptyPlanState
-import com.ai.intellimate.ui.components.PremiumBenefitItem
 import com.ai.intellimate.ui.components.PremiumPlanList
 import com.ai.intellimate.ui.components.PurchaseButton
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
@@ -50,32 +51,32 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
-/** 订阅描述文本组件 */
-@Composable
-private fun SubscriptionDescriptionText(text: String) {
-    Text(
-        text = text,
-        color = Color.Gray,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Normal,
-        textAlign = TextAlign.Center,
-        // 保证文字居中
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-
 /** 会员中心页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VipCenterContent(
-    onClose: () -> Unit,
-    onPurchase: () -> Unit,
+    navController: NavController,
+    //    onClose: () -> Unit,
+    //    onPurchase: () -> Unit,
     viewModel: VipCenterViewModel = viewModel(),
 ) {
     val plans by viewModel.plansFlow.collectAsState()
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
     val vipStatus by viewModel.vipStatusFlow.collectAsState()
     val isPurchasing by viewModel.isPurchasing.collectAsState()
+
+    val context = LocalContext.current
+    // 通过扩展函数获取 Activity
+    val activity = context.findActivity()
+    fun onPurchase() {
+        if (activity is MainActivity) {
+            viewModel.purchaseSelectedPlan(activity)
+        }
+    }
+
+    fun onClose() {
+        navController.popBackStack()
+    }
 
     // 当UI显示价格时，上报Firebase事件（100%采样）
     // 使用plans的key来避免重复上报相同的价格信息
@@ -136,10 +137,10 @@ fun VipCenterContent(
 
         val scrollState = rememberScrollState()
         Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            VipCenterTopBar(onClose = onClose)
+            VipCenterTopBar(onClose = { onClose() })
 
             Spacer(Modifier.weight(1f))
-            VipBenefitsDesc(hazeState)
+            VipBenefitsDesc(hazeState, vipStatus.isSubscribed)
 
             Spacer(Modifier.height(12.dp))
             // 动态显示订阅计划列表
@@ -156,7 +157,7 @@ fun VipCenterContent(
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
-                    onPurchase = onPurchase,
+                    onPurchase = { onPurchase() },
                     isLoading = isPurchasing,
                 )
             } else {
@@ -188,49 +189,8 @@ private fun VipCenterTopBar(onClose: () -> Unit) {
     )
 }
 
-/** 会员中心头部 */
 @Composable
-private fun VipCenterHeader() {
-    Column(modifier = Modifier.padding(start = 16.dp)) {
-        Image(
-            painter = painterResource(R.drawable.img_intellimate_premium),
-            contentDescription = null,
-            modifier = Modifier.size(278.dp, 32.dp),
-        )
-        Text(
-            text = stringResource(R.string.premium_subtitle),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White,
-        )
-        Spacer(Modifier.height(10.dp))
-    }
-}
-
-/** 会员权益列表 */
-@Composable
-private fun VipCenterBenefits() {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_unlimited_chat))
-
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_higher_other_limits))
-
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_model))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_flagship_models))
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_chat_style))
-
-        PremiumBenefitItem(stringResource(R.string.premium_benefit_newfeature))
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun VipCenterContentPreview() {
-    VipCenterContent(onClose = {}, onPurchase = {})
-}
-
-@Composable
-private fun VipBenefitsDesc(hazeState: HazeState) {
+private fun VipBenefitsDesc(hazeState: HazeState, isVipSubscribed: Boolean) {
     Box(
         modifier =
             Modifier.fillMaxWidth()
@@ -242,7 +202,12 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
         Column {
             Spacer(modifier = Modifier.height(16.dp))
             Image(
-                painter = painterResource(R.drawable.vip_desc_title),
+                painter =
+                    if (isVipSubscribed) {
+                        painterResource(R.drawable.vip_desc_title_sub)
+                    } else {
+                        painterResource(R.drawable.vip_desc_title)
+                    },
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
                 contentScale = ContentScale.FillWidth,
@@ -260,3 +225,11 @@ private fun VipBenefitsDesc(hazeState: HazeState) {
         }
     }
 }
+
+// Context 扩展函数：安全地查找 Activity
+fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this // 已经是 Activity，直接返回
+        is ContextWrapper -> baseContext.findActivity() // 继续解包 baseContext
+        else -> null // 无法找到
+    }

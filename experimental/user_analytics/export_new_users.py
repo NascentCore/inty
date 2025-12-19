@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-导出新用户列表脚本
+导出用户列表脚本
 
-查询指定时间范围内注册的新用户，并导出为 CSV 文件。
+查询指定时间范围内注册的新用户或导出所有用户，并导出为 CSV 文件。
+支持显示性别和年龄段信息。
 """
 
 import argparse
@@ -75,7 +76,9 @@ def get_new_users(
             auth_type,
             created_at,
             phone,
-            readable_id
+            readable_id,
+            gender,
+            age_group
         FROM users
         WHERE created_at >= %s 
           AND created_at < %s
@@ -85,6 +88,33 @@ def get_new_users(
     cursor = conn.cursor()
     try:
         cursor.execute(query, (start_date, end_date))
+        columns = [desc[0] for desc in cursor.description]
+        data = cursor.fetchall()
+        return pd.DataFrame(data, columns=columns)
+    finally:
+        cursor.close()
+
+
+def get_all_users(conn: psycopg2.extensions.connection) -> pd.DataFrame:
+    """查询所有用户"""
+    query = """
+        SELECT 
+            id as user_id,
+            email,
+            nickname,
+            auth_type,
+            created_at,
+            phone,
+            readable_id,
+            gender,
+            age_group
+        FROM users
+        WHERE deleted_at IS NULL
+        ORDER BY created_at DESC
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query)
         columns = [desc[0] for desc in cursor.description]
         data = cursor.fetchall()
         return pd.DataFrame(data, columns=columns)
@@ -121,12 +151,15 @@ def generate_output_filename(start_date: datetime, end_date: datetime) -> str:
 
 def parse_arguments() -> argparse.Namespace:
     """解析命令行参数"""
-    parser = argparse.ArgumentParser(description="导出新用户列表到 CSV 文件")
+    parser = argparse.ArgumentParser(description="导出用户列表到 CSV 文件")
 
     # 时间范围参数（互斥）
     time_group = parser.add_mutually_exclusive_group(required=True)
     time_group.add_argument("--last-days", type=int, help="导出最近 N 天注册的新用户")
     time_group.add_argument("--start-date", type=str, help="开始日期 (YYYY-MM-DD)")
+    time_group.add_argument(
+        "--all", action="store_true", help="导出所有用户（忽略时间范围）"
+    )
 
     parser.add_argument(
         "--end-date", type=str, help="结束日期 (YYYY-MM-DD)，与 --start-date 配合使用"
@@ -165,11 +198,16 @@ def main():
     logger.remove()
     logger.add(sys.stderr, level="INFO")
 
-    # 计算日期范围
-    start_date, end_date = calculate_date_range(args)
-    logger.info(
-        f"查询时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
-    )
+    # 计算日期范围（--all 模式下不需要）
+    export_all = getattr(args, "all", False)
+    start_date, end_date = None, None
+    if not export_all:
+        start_date, end_date = calculate_date_range(args)
+        logger.info(
+            f"查询时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
+        )
+    else:
+        logger.info("导出所有用户模式")
 
     # 加载数据库配置
     db_config = load_database_config(args.config)
@@ -198,19 +236,27 @@ def main():
         sys.exit(1)
 
     try:
-        # 查询新用户
-        logger.info("查询新用户列表...")
-        users_df = get_new_users(conn, start_date, end_date)
+        # 查询用户
+        if export_all:
+            logger.info("查询所有用户列表...")
+            users_df = get_all_users(conn)
+        else:
+            logger.info("查询新用户列表...")
+            users_df = get_new_users(conn, start_date, end_date)
 
         if users_df.empty:
-            logger.warning("在指定时间范围内没有找到新用户")
-            print(
-                f"\n时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
-            )
-            print("未找到新用户")
+            if export_all:
+                logger.warning("没有找到用户")
+                print("\n未找到用户")
+            else:
+                logger.warning("在指定时间范围内没有找到新用户")
+                print(
+                    f"\n时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
+                )
+                print("未找到新用户")
             return
 
-        logger.info(f"找到 {len(users_df)} 个新用户")
+        logger.info(f"找到 {len(users_df)} 个用户")
 
         # 格式化日期列
         if not users_df.empty and "created_at" in users_df.columns:
@@ -221,6 +267,9 @@ def main():
         # 确定输出文件路径
         if args.output:
             output_path = Path(args.output)
+        elif export_all:
+            today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+            output_path = Path(f"all_users_{today_str}.csv")
         else:
             output_path = Path(generate_output_filename(start_date, end_date))
 
@@ -229,16 +278,19 @@ def main():
 
         # 导出 CSV
         users_df.to_csv(output_path, index=False, encoding="utf-8-sig")
-        logger.info(f"已导出 {len(users_df)} 个新用户到: {output_path}")
+        logger.info(f"已导出 {len(users_df)} 个用户到: {output_path}")
 
         # 显示统计信息
         print("\n" + "=" * 60)
         print("导出完成")
         print("=" * 60)
-        print(
-            f"时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
-        )
-        print(f"新用户数量: {len(users_df)}")
+        if export_all:
+            print("模式: 导出所有用户")
+        else:
+            print(
+                f"时间范围: {start_date.date()} 到 {(end_date - timedelta(days=1)).date()}"
+            )
+        print(f"用户数量: {len(users_df)}")
         print(f"输出文件: {output_path}")
         print("\n字段说明:")
         print("  - user_id: 用户ID")
@@ -248,6 +300,8 @@ def main():
         print("  - created_at: 注册时间")
         print("  - phone: 手机号")
         print("  - readable_id: 可读ID")
+        print("  - gender: 性别 (MALE/FEMALE/OTHER)")
+        print("  - age_group: 年龄段")
 
     except Exception as e:
         logger.error(f"导出过程出错: {e}")

@@ -1,0 +1,31 @@
+/**
+ * DownloadButton 样式
+ * CREATED_BY_AGENT
+ */
+
+.sidebar-download-button {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  img {
+    display: block;
+    height: 40px;
+    width: auto;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    border-radius: 4px;
+  }
+
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}

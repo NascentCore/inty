@@ -1,5 +1,6 @@
 package com.ai.intellimate.settings
 
+// import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -35,12 +36,13 @@ import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.vip.SubsManageActivity
-import com.ai.intellimate.vip.VipCenterActivity
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
 
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
@@ -117,6 +119,7 @@ fun SettingScreen(
 
             // 支持与帮助区域
             SupportAndHelpSection(
+                navController,
                 isVipSubscribed = state.isVipSubscribed,
                 hasAppUpdateTips = state.hasAppUpdateTips,
                 context = context,
@@ -134,6 +137,9 @@ fun SettingScreen(
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
                 Spacer(Modifier.height(16.dp))
                 DebugBackendSettingsEntry()
+
+                Spacer(Modifier.height(16.dp))
+                DebugBoostPointsEntry()
             }
 
             // 对话框
@@ -206,6 +212,7 @@ private fun AccountInfoSection(userId: String, userEmail: String) {
 /** 支持与帮助区域 */
 @Composable
 private fun SupportAndHelpSection(
+    navController: NavController,
     isVipSubscribed: Boolean,
     hasAppUpdateTips: Boolean,
     context: Context,
@@ -302,7 +309,9 @@ private fun SupportAndHelpSection(
                 if (isVipSubscribed) {
                     SubsManageActivity.launch(context)
                 } else {
-                    VipCenterActivity.launch(context, VipCenterActivity.SETTINGS_SUBSCRIPTION)
+                    navController.navigate(Routes.VipCenter)
+                    //                    VipCenterActivity.launch(context,
+                    // VipCenterActivity.SETTINGS_SUBSCRIPTION)
                 }
             },
         )
@@ -408,5 +417,24 @@ private fun mailTo(context: Context, email: String) {
         context.startActivity(Intent.createChooser(intent, "email"))
     } catch (e: Exception) {
         ToastUtils.showShort(R.string.toast_email_error)
+    }
+}
+
+/** Debug 环境 Boost Points 测试入口（仅 debug 可见） */
+@Composable
+private fun DebugBoostPointsEntry() {
+    SettingsItemGroup {
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = "Add 10000 Boost Points (Debug)",
+                    content = "Click to add 10000 boost points for testing",
+                ),
+            isInGroup = true,
+            onItemClick = {
+                BoostManager.requestManualPoints(10000)
+                ToastUtils.showShort("Added 10000 boost points!")
+            },
+        )
     }
 }

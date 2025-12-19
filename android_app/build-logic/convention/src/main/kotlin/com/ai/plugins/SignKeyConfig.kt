@@ -16,14 +16,50 @@ object SignKeyConfig {
     )
 
     private const val CONFIG_FILE_PATH = "build-logic/sign/signing-config.json"
+    private const val MAX_PARENT_LOOKUPS = 10
     private val gson = Gson()
+
+    private fun findAndroidAppDir(): File {
+        var dir: File? = File(System.getProperty("user.dir")).absoluteFile
+        var remaining = MAX_PARENT_LOOKUPS
+        while (dir != null && remaining > 0) {
+            // 场景 1：当前就是 android_app/ 根目录（含 gradlew）
+            if (File(dir, "gradlew").exists() && File(dir, "build-logic").exists()) {
+                return dir
+            }
+
+            // 场景 2：当前在仓库根目录（含 android_app/ 子目录）
+            val androidAppDir = File(dir, "android_app")
+            if (
+                File(androidAppDir, "gradlew").exists() &&
+                    File(androidAppDir, "build-logic").exists()
+            ) {
+                return androidAppDir
+            }
+
+            dir = dir.parentFile
+            remaining -= 1
+        }
+
+        val cwd = File(System.getProperty("user.dir")).absoluteFile.path
+        throw IllegalStateException("无法定位 android_app 目录 (cwd=$cwd)")
+    }
+
+    private fun findSigningConfigFile(): File {
+        val androidAppDir = findAndroidAppDir()
+        val configFile = File(androidAppDir, CONFIG_FILE_PATH)
+        if (configFile.exists()) {
+            return configFile
+        }
+
+        throw IllegalStateException(
+            "签名配置文件不存在: $CONFIG_FILE_PATH (androidAppDir=${androidAppDir.path})"
+        )
+    }
 
     /** 读取签名配置文件 */
     private fun loadSigningConfig(): SigningConfig {
-        val configFile = File(CONFIG_FILE_PATH)
-        if (!configFile.exists()) {
-            throw IllegalStateException("签名配置文件不存在: $CONFIG_FILE_PATH")
-        }
+        val configFile = findSigningConfigFile()
 
         val jsonContent = configFile.readText()
         return gson.fromJson(jsonContent, SigningConfig::class.java)

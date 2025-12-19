@@ -254,7 +254,7 @@ fun VoicePlayer(
                 )
             }
         } else {
-            LogUtils.w(
+            LogUtils.d(
                 "音频LOG测试 VoicePlayer auto play conditions not met: autoPlay=$autoPlay, isPlaying=$isPlaying, hasError=$hasError, agentId='${audioInfo.agentId}'"
             )
         }

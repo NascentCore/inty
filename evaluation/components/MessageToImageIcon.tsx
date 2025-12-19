@@ -18,6 +18,8 @@ interface MessageToImageIconProps {
     image_url: string;
     width: number;
     height: number;
+    is_matched?: boolean;
+    similarity?: number;
   }) => void;
 }
 
@@ -55,6 +57,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
           width: number;
           height: number;
           format: string;
+          is_matched?: boolean;
+          similarity?: number;
         };
         prompt: string;
         message_id: number;
@@ -67,6 +71,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
             image_url: response.image_url,
             width: response.image_metadata.width,
             height: response.image_metadata.height,
+            is_matched: response.image_metadata.is_matched,
+            similarity: response.image_metadata.similarity,
           });
           message.success("图片生成成功！");
         } else {

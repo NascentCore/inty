@@ -198,7 +198,6 @@ coil-kt-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "co
 coil-kt-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-kt-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 coil-kt-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
-coil-kt-network = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
 
 # ===== 网络库 =====
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
@@ -318,7 +317,7 @@ credentials = ["credential-manager", "credential-manager-play-services", "google
 androidx-media3-bundle = ["androidx-media3", "androidx-media3-common", "androidx-media3-ui", "androidx-media3-ui-compose", "androidx-media3-hls", "androidx-media3-dash"]
 
 # ===== 图片加载 =====
-coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-kt-gif", "coil-kt-svg", "coil-kt-video", "coil-network-cache-control", "coil-kt-compose", "coil-kt-network"]
+coil-bundle = ["coil-kt", "coil-network-okhttp", "coil-kt-gif", "coil-kt-svg", "coil-kt-video", "coil-network-cache-control", "coil-kt-compose", ]
 
 # ===== Compose 相关 =====
 compose-jetpack-bundle = ["androidx-activity-compose", "androidx-lifecycle-runtimeCompose", "androidx-lifecycle-viewmodel-compose", "androidx-navigation-compose", "androidx-compose-runtime-livedata", "androidx-paging-compose"]

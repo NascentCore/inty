@@ -1,13 +1,16 @@
 package com.ai.intellimate.messages
 
 import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.ui.HeartRedDot
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,12 +23,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -37,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +76,7 @@ fun MessagesPage(
     modifier: Modifier = Modifier,
     viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
+    onClickFavoriteAgent: (AgentInfo) -> Unit = {},
     pageTrackingContext: String = "MessagesPage",
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -76,6 +90,9 @@ fun MessagesPage(
     // 当页面显示时，主动刷新 IntelliMate agent（如果缓存中没有）
     LaunchedEffect(Unit) { viewModel.refreshIntelliMateAgentIfNeeded() }
 
+    // 收藏列表仅在页面进入时拉取一次，返回该页时会重新触发
+    LaunchedEffect(Unit) { viewModel.loadFavoriteAgents() }
+
     Box(modifier = modifier) {
         AsyncImage(
             modifier = Modifier.align(Alignment.TopEnd),
@@ -87,6 +104,7 @@ fun MessagesPage(
             viewModel = viewModel,
             onClickConversationItem = onClickConversationItem,
             onLoadMore = { viewModel.loadMoreConversations() },
+            onClickFavoriteAgent = onClickFavoriteAgent,
         )
     }
 }
@@ -98,6 +116,7 @@ private fun Content(
     viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
     onLoadMore: () -> Unit,
+    onClickFavoriteAgent: (AgentInfo) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize().background(Color.Transparent),
@@ -124,6 +143,7 @@ private fun Content(
                 viewModel = viewModel,
                 onClickConversationItem = onClickConversationItem,
                 onLoadMore = onLoadMore,
+                onClickFavoriteAgent = onClickFavoriteAgent,
             )
         }
     }
@@ -136,17 +156,57 @@ private fun MessageTabContent(
     viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
     onLoadMore: () -> Unit,
+    onClickFavoriteAgent: (AgentInfo) -> Unit,
+) {
+    var selectedTab by rememberSaveable { mutableStateOf(MessageSecondaryTab.Conversations) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        MessagesTabSwitcher(
+            selectedTab = selectedTab,
+            onTabSelected = { selectedTab = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+        when (selectedTab) {
+            MessageSecondaryTab.Conversations -> {
+                ConversationList(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    onClickConversationItem = onClickConversationItem,
+                    onLoadMore = onLoadMore,
+                )
+            }
+            MessageSecondaryTab.Favorites -> {
+                FavoriteAgentsContent(
+                    favoriteAgents = uiState.favoriteAgents,
+                    isLoading = uiState.isLoadingFavorites,
+                    onClickAgent = onClickFavoriteAgent,
+                    onRefreshFavorites = { viewModel.loadFavoriteAgents() },
+                )
+            }
+        }
+    }
+}
+
+private enum class MessageSecondaryTab {
+    Conversations,
+    Favorites,
+}
+
+@Composable
+private fun ConversationList(
+    uiState: MessagesUiState,
+    viewModel: MessagesViewModel,
+    onClickConversationItem: (ConversationItem) -> Unit,
+    onLoadMore: () -> Unit,
 ) {
     val listState = rememberLazyListState()
-
-    // 检测滚动到底部
     val shouldLoadMore by remember {
         derivedStateOf {
             val layoutInfo = listState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-            // 当滚动到倒数第3项时触发加载更多
             totalItems > 0 &&
                 lastVisibleItem >= totalItems - 3 &&
                 !uiState.isLoading &&
@@ -154,21 +214,15 @@ private fun MessageTabContent(
         }
     }
 
-    // 监听滚动状态，触发加载更多
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
             onLoadMore()
         }
     }
 
-    // 菜单状态（移到 LazyColumn 外部）
     var showMenuForConversationId by remember { mutableStateOf<String?>(null) }
-    // 存储每个 item 的 Y 位置，key 为 agentId（相对于外层 Box）
     val itemPositions = remember { mutableStateMapOf<String, Float>() }
-    // 存储 LazyColumn 的 Y 位置，用于计算 item 相对于外层 Box 的位置
     var lazyColumnY by remember { mutableStateOf(0f) }
-
-    // 在 @Composable 函数中获取 density，以便在回调中使用
     val density = LocalDensity.current
 
     Box(Modifier.fillMaxSize()) {
@@ -176,11 +230,9 @@ private fun MessageTabContent(
             state = listState,
             modifier =
                 Modifier.matchParentSize().onGloballyPositioned { coordinates ->
-                    // 获取 LazyColumn 相对于外层 Box 的位置
                     lazyColumnY = with(density) { coordinates.positionInParent().y.toDp().value }
                 },
         ) {
-            // 刷新指示器
             if (uiState.isRefreshing) {
                 item {
                     Box(
@@ -195,20 +247,17 @@ private fun MessageTabContent(
                 }
             }
 
-            // 会话列表
             if (uiState.conversations.isNotEmpty()) {
                 runCatching {
                         itemsIndexed(
                             items = uiState.conversations,
                             key = { index, conversion ->
-                                // 使用 agentId、isPinned 状态和 refreshKey 作为 key，确保状态变化时 Compose 能检测到
                                 "${conversion.agentId}_${conversion.isPinned}_${uiState.refreshKey}_${index}"
                             },
                         ) { index, conversion ->
                             var lastClickTime by remember { mutableStateOf(0L) }
 
                             val isIntelliMate = conversion.agentId in uiState.intelliMateAgentIds
-                            // 显式读取 isPinned 值，使用 refreshKey 作为依赖，确保状态变化时重新读取
                             val isPinned =
                                 remember(conversion.agentId, uiState.refreshKey) {
                                     conversion.isPinned
@@ -216,14 +265,10 @@ private fun MessageTabContent(
                             val showPushIndicator = conversion.agentId in uiState.pushAgentIds
 
                             val density = LocalDensity.current
-                            // 使用 combinedClickable 同时处理点击和长按
                             Box(
                                 modifier =
                                     Modifier.fillMaxWidth()
                                         .onGloballyPositioned { coordinates ->
-                                            // 持续更新 item 的位置，以便长按时能立即获取
-                                            // item 相对于 LazyColumn 的位置 + LazyColumn 相对于外层 Box 的位置 =
-                                            // item 相对于外层 Box 的位置
                                             val itemYInLazyColumn =
                                                 with(density) {
                                                     coordinates.positionInParent().y.toDp().value
@@ -233,17 +278,14 @@ private fun MessageTabContent(
                                         }
                                         .combinedClickable(
                                             onClick = {
-                                                // 如果菜单显示，点击任何地方都关闭菜单
                                                 if (showMenuForConversationId != null) {
                                                     showMenuForConversationId = null
                                                     return@combinedClickable
                                                 }
 
-                                                // 正常点击：进入聊天
                                                 val currentTime = System.currentTimeMillis()
                                                 if (AntiClick.isValidClick(lastClickTime)) {
                                                     lastClickTime = currentTime
-                                                    // 检查是否已登录
                                                     if (
                                                         IntySetting.isLogin() &&
                                                             IntySetting.getCurToken().isNotEmpty()
@@ -256,16 +298,15 @@ private fun MessageTabContent(
                                                 }
                                             },
                                             onLongClick = {
-                                                // 长按：如果已经有菜单显示，切换到新菜单；如果是同一行，则关闭菜单
-                                                if (
-                                                    showMenuForConversationId == conversion.agentId
-                                                ) {
-                                                    // 长按同一行，关闭菜单
-                                                    showMenuForConversationId = null
-                                                } else {
-                                                    // 长按不同行，切换到新菜单（旧菜单会自动消失）
-                                                    showMenuForConversationId = conversion.agentId
-                                                }
+                                                showMenuForConversationId =
+                                                    if (
+                                                        showMenuForConversationId ==
+                                                            conversion.agentId
+                                                    ) {
+                                                        null
+                                                    } else {
+                                                        conversion.agentId
+                                                    }
                                             },
                                         )
                             ) {
@@ -280,33 +321,13 @@ private fun MessageTabContent(
                     }
                     .onFailure { it.printStackTrace() }
             }
-
-            // 加载更多指示器；有多页的消息记录显示时显示加载更多指示器，就是一个转动的圆圈。
-            // 暂时隐藏，避免影响用户体验。可以随时恢复。
-            // if (uiState.isLoading) {
-            //     item {
-            //         Box(
-            //             modifier = Modifier.fillMaxWidth().height(80.dp),
-            //             contentAlignment = Alignment.Center,
-            //         ) {
-            //             CircularProgressIndicator(
-            //                 color = Color.White,
-            //                 modifier = Modifier.size(24.dp),
-            //             )
-            //         }
-            //     }
-            // }
         }
 
-        // 显示菜单（在 LazyColumn 外部）
         if (showMenuForConversationId != null) {
             val conversation =
                 uiState.conversations.find { it.agentId == showMenuForConversationId }
             conversation?.let { conv ->
                 val isIntelliMate = conv.agentId in uiState.intelliMateAgentIds
-                // 菜单内容（显示在 item 位置附近）
-                // 注意：移除了遮罩层，点击外部关闭菜单的功能通过 LazyColumn 的 onClick 处理
-                // 使用实际测量的 item Y 位置
                 val menuY = itemPositions[conv.agentId]?.let { it.dp } ?: 0.dp
                 ConversationItemMenu(
                     isPinned = conv.isPinned,
@@ -328,7 +349,7 @@ private fun MessageTabContent(
                         showMenuForConversationId = null
                     },
                     onDismiss = { showMenuForConversationId = null },
-                    showHideOption = !isIntelliMate, // IntelliMate agent 不显示 hide 选项
+                    showHideOption = !isIntelliMate,
                     modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp).zIndex(1000f),
                 )
             }
@@ -340,6 +361,149 @@ private fun MessageTabContent(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+}
+
+@Composable
+private fun MessagesTabSwitcher(
+    selectedTab: MessageSecondaryTab,
+    onTabSelected: (MessageSecondaryTab) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tabs =
+        listOf(
+            MessageSecondaryTab.Conversations to
+                stringResource(R.string.messages_tab_conversations),
+            MessageSecondaryTab.Favorites to stringResource(R.string.messages_tab_favorites),
+        )
+    val selectedIndex = tabs.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
+
+    TabRow(
+        selectedTabIndex = selectedIndex,
+        containerColor = Color.Transparent,
+        contentColor = Color.White,
+        indicator = { tabPositions ->
+            if (tabPositions.isNotEmpty()) {
+                TabRowDefaults.Indicator(
+                    modifier =
+                        Modifier.tabIndicatorOffset(tabPositions[selectedIndex]).height(2.dp),
+                    color = Color.White,
+                )
+            }
+        },
+        divider = {},
+        modifier = modifier,
+    ) {
+        tabs.forEach { (tab, title) ->
+            val selected = tab == selectedTab
+            Tab(
+                selected = selected,
+                onClick = { onTabSelected(tab) },
+                text = {
+                    Text(
+                        text = title,
+                        color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FavoriteAgentsContent(
+    favoriteAgents: List<AgentInfo>,
+    isLoading: Boolean,
+    onClickAgent: (AgentInfo) -> Unit,
+    onRefreshFavorites: () -> Unit,
+) {
+    when {
+        isLoading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(32.dp))
+            }
+        }
+        favoriteAgents.isEmpty() -> {
+            EmptyDataState(
+                title = stringResource(R.string.messages_favorites_empty_title),
+                subtitle = stringResource(R.string.messages_favorites_empty_subtitle),
+                showRetryButton = true,
+                onRetry = onRefreshFavorites,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                items(favoriteAgents, key = { it.id }) { agent ->
+                    FavoriteAgentItem(agent = agent, onClick = onClickAgent)
+                }
+                item { Spacer(Modifier.height(60.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteAgentItem(agent: AgentInfo, onClick: (AgentInfo) -> Unit) {
+    val avatarRes = getCdnImageUrl(agent.avatar, width = 128) ?: R.drawable.img_default_avatar
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.06f))
+                .clickable { onClick(agent) }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(
+            modifier = Modifier.size(56.dp).clip(CircleShape),
+            model = avatarRes,
+            placeholder = painterResource(R.drawable.img_default_avatar),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = agent.name,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val subtitle =
+                when {
+                    agent.intro.isNotBlank() -> agent.intro
+                    agent.opening.isNotBlank() -> agent.opening
+                    else -> null
+                }
+            subtitle?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = it,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                    color = Color(0x99FFFFFF),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.Filled.Favorite,
+            contentDescription = null,
+            tint = Color(0xFFFF5A8A),
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

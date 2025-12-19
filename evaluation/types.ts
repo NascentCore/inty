@@ -581,3 +581,47 @@ export interface SessionMessagesResponse {
   size: number;
   has_more: boolean;
 }
+
+// 生成图片
+export interface GeneratedImage {
+  url: string;
+  gcs_url: string;
+  generation_prompt: string;
+  width: number | null;
+  height: number | null;
+  created_at: string | null;
+  user_id: string | null;
+  user_nickname: string | null;
+}
+
+export interface GeneratedImagesResponse {
+  images: GeneratedImage[];
+  total: number;
+}
+
+export interface ImageCountsResponse {
+  counts: Record<string, number>;
+}
+
+// Report/Feedback 相关类型
+export type ReportTargetType = "USER" | "AGENT";
+export type ReportStatus = "PENDING" | "PROCESSING" | "RESOLVED" | "REJECTED";
+export type ReportType = "REPORT" | "FEEDBACK";
+
+export interface ReportItem {
+  id: string;
+  target_id: string;
+  target_type: ReportTargetType;
+  reporter_id: string;
+  reason_codes: string[];
+  image_urls: string[];
+  description: string | null;
+  status: ReportStatus;
+  report_type: ReportType | null;
+  created_at: string;
+}
+
+export interface ReportsListResponse {
+  items: ReportItem[];
+  total: number;
+}

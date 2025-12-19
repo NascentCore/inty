@@ -29,44 +29,44 @@ object AgentService {
         sortSeed: String = "default",
     ): ApiResult<List<AgentInfo>> {
         return IntyNetworkManager.executeRequest("Get Recommend Agents") {
-            val response =
-                IntyNetworkManager.getClient()
-                    .api()
-                    .v1()
-                    .ai()
-                    .agents()
-                    .recommend(
-                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.builder()
-                            .page(page.toLong())
-                            .pageSize(pageSize.toLong())
-                            .sort(
-                                when (sort) {
-                                    "random" ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .RANDOM
+            val params =
+                com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.builder()
+                    .page(page.toLong())
+                    .pageSize(pageSize.toLong())
+                    .sort(
+                        when (sort) {
+                            "random" ->
+                                com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.Sort
+                                    .RANDOM
 
-                                    "created_asc" ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .CREATED_ASC
+                            "created_asc" ->
+                                com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.Sort
+                                    .CREATED_ASC
 
-                                    "created_desc" ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .CREATED_DESC
+                            "created_desc" ->
+                                com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.Sort
+                                    .CREATED_DESC
 
-                                    else ->
-                                        com.inty.api.models.api.v1.ai.agents.AgentRecommendParams
-                                            .Sort
-                                            .RANDOM
-                                }
-                            )
-                            .sortSeed(sortSeed)
-                            .build()
+                            "energy_points" ->
+                                com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.Sort
+                                    .ENERGY_POINTS
+
+                            else ->
+                                com.inty.api.models.api.v1.ai.agents.AgentRecommendParams.Sort
+                                    .RANDOM
+                        }
                     )
+                    .sortSeed(sortSeed)
+                    .build()
 
-            response.data()?.list()?.map { it.toAgentInfo() } ?: emptyList()
+            // 使用 withContext 确保阻塞调用在 IO 线程执行，避免 NetworkOnMainThreadException
+            val response =
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    IntyNetworkManager.getClient().api().v1().ai().agents().recommend(params)
+                }
+
+            val rawData = response.data()
+            rawData?.list()?.map { it.toAgentInfo() } ?: emptyList()
         }
     }
 
@@ -184,6 +184,22 @@ object AgentService {
                     .ai()
                     .agents()
                     .update(agentId, paramsBuilder.build())
+            response.toAgentInfo()
+        }
+    }
+
+    /** 更新智能体的 Boost Points（增量） */
+    suspend fun updateAgentEnergyPoints(
+        agentId: String,
+        energyPointsDelta: Int,
+    ): ApiResult<AgentInfo> {
+        return IntyNetworkManager.executeRequest("Update Agent Boost Points") {
+            val params =
+                com.inty.api.models.api.v1.ai.agents.AgentUpdateParams.builder()
+                    .energyPoints(energyPointsDelta.toLong())
+                    .build()
+            val response =
+                IntyNetworkManager.getClient().api().v1().ai().agents().update(agentId, params)
             response.toAgentInfo()
         }
     }

@@ -1,0 +1,85 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "54960aacac65dfb477ad9138d4818317",
+    "entities": [
+      {
+        "tableName": "characters",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`agent_id` TEXT NOT NULL, `name` TEXT NOT NULL, `avatar` TEXT NOT NULL, `intro` TEXT NOT NULL, `readable_id` TEXT NOT NULL, `category` TEXT NOT NULL, `energy_points` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `background` TEXT NOT NULL, `background_animate` TEXT NOT NULL, PRIMARY KEY(`agent_id`))",
+        "fields": [
+          {
+            "fieldPath": "agentId",
+            "columnName": "agent_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avatar",
+            "columnName": "avatar",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intro",
+            "columnName": "intro",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "readableId",
+            "columnName": "readable_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "energyPoints",
+            "columnName": "energy_points",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "background",
+            "columnName": "background",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "backgroundAnimatedUrl",
+            "columnName": "background_animate",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "agent_id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '54960aacac65dfb477ad9138d4818317')"
+    ]
+  }
+}

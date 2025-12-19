@@ -16,6 +16,32 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
+/**
+ * 头像生成风格模板（用于 UI 选择，并在生成时对 prompt 做轻量“模板化”增强）。
+ *
+ * 注意：
+ * - 这里不改服务端协议，避免 Android/Backend 版本不一致导致请求失败；
+ * - 通过在 prompt 末尾追加风格关键词来影响生成效果；
+ * - 后续新增风格时，只需要新增 enum 项并在 UI 中展示即可。
+ */
+enum class AvatarImageStyleTemplate(
+    /** 用于埋点/日志的稳定 key，避免依赖 UI 文案 */
+    val key: String,
+    /** 发送给模型前拼接到 prompt 末尾的风格描述片段（UI 不展示） */
+    val promptSuffix: String,
+) {
+    REAL_FEEL(
+        key = "real_feel",
+        promptSuffix =
+            "single, adult, real feel, photorealistic, natural skin texture, soft natural lighting, high detail, focus on expression, dynamic composition",
+    ),
+    CARTOON(
+        key = "cartoon",
+        promptSuffix =
+            "single, solo, adult, cartoon style, clean lines, (perfect body), stunningly beautiful, soft natural lighting, high detail, focus on expression, dynamic composition, dynamic pose, depth of field",
+    ),
+}
+
 class AvatarGenerateViewModel : BaseVM() {
 
     // UI States
@@ -37,9 +63,16 @@ class AvatarGenerateViewModel : BaseVM() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _styleTemplate = MutableStateFlow(AvatarImageStyleTemplate.REAL_FEEL)
+    val styleTemplate: StateFlow<AvatarImageStyleTemplate> = _styleTemplate.asStateFlow()
+
     fun updatePrompt(newPrompt: String) {
         _prompt.value = newPrompt
         AvatarManager.updatePromptDraft(newPrompt)
+    }
+
+    fun selectStyleTemplate(template: AvatarImageStyleTemplate) {
+        _styleTemplate.value = template
     }
 
     fun selectImage(index: Int) {
@@ -48,14 +81,16 @@ class AvatarGenerateViewModel : BaseVM() {
     }
 
     fun generateAvatar(onNavigateBack: () -> Unit) {
-        val currentPrompt = _prompt.value
+        val userPrompt = _prompt.value
+        val currentPrompt = buildStyledPrompt(userPrompt)
         if (currentPrompt.isBlank()) {
             _errorMessage.value = "Please enter a prompt"
             return
         }
 
         // Store the prompt and start generation in background
-        AvatarManager.setGenerationPrompt(currentPrompt)
+        // 注意：AvatarManager 的 prompt 会在 UI 中展示，因此只保存用户原始输入
+        AvatarManager.setGenerationPrompt(userPrompt)
         LogUtils.i("Starting background generation with prompt: $currentPrompt")
 
         _isLoading.value = true
@@ -69,6 +104,7 @@ class AvatarGenerateViewModel : BaseVM() {
                 FirebaseManager.Events.AVATAR_GENERATION_BUTTON_CLICKED,
                 FirebaseManager.safeEventParams(
                     "prompt" to currentPrompt,
+                    "style_template" to _styleTemplate.value.key,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                     "timestamp" to startTime,
                 ),
@@ -97,6 +133,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "image_count" to response.imageUrls.size,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
@@ -114,6 +151,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "image_count" to 1,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
@@ -129,6 +167,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "error_message" to "Empty image URLs received from server",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "generation_time_ms" to generationTime,
@@ -172,6 +211,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "error_message" to
                                     "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
@@ -185,6 +225,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "error_message" to
                                     "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
@@ -202,7 +243,8 @@ class AvatarGenerateViewModel : BaseVM() {
     }
 
     fun regenerateAvatar() {
-        val currentPrompt = _prompt.value
+        val userPrompt = _prompt.value
+        val currentPrompt = buildStyledPrompt(userPrompt)
         if (currentPrompt.isBlank()) {
             _errorMessage.value = "Please enter a prompt"
             return
@@ -224,6 +266,7 @@ class AvatarGenerateViewModel : BaseVM() {
                 FirebaseManager.Events.AVATAR_GENERATION_BUTTON_CLICKED,
                 FirebaseManager.safeEventParams(
                     "prompt" to currentPrompt,
+                    "style_template" to _styleTemplate.value.key,
                     "is_regenerate" to true,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                     "timestamp" to startTime,
@@ -250,6 +293,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "image_count" to response.imageUrls.size,
                                 "is_regenerate" to true,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
@@ -268,6 +312,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_SUCCESS,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "image_count" to 1,
                                 "is_regenerate" to true,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
@@ -284,6 +329,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "error_message" to
                                     "Empty image URLs received from server during regeneration",
                                 "is_regenerate" to true,
@@ -320,6 +366,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "error_message" to
                                     "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "is_regenerate" to true,
@@ -334,6 +381,7 @@ class AvatarGenerateViewModel : BaseVM() {
                             FirebaseManager.Events.AVATAR_GENERATION_FAILURE,
                             FirebaseManager.safeEventParams(
                                 "prompt" to currentPrompt,
+                                "style_template" to _styleTemplate.value.key,
                                 "error_message" to
                                     "exception: ${e.javaClass.simpleName}, ${e.message ?: "unknown error"}",
                                 "is_regenerate" to true,
@@ -374,6 +422,18 @@ class AvatarGenerateViewModel : BaseVM() {
             _prompt.value = initialPrompt
             AvatarManager.updatePromptDraft(initialPrompt)
         }
+    }
+
+    private fun buildStyledPrompt(userPrompt: String): String {
+        val normalized = userPrompt.trim()
+        if (normalized.isBlank()) {
+            return ""
+        }
+        val suffix = _styleTemplate.value.promptSuffix.trim()
+        if (suffix.isBlank()) {
+            return normalized
+        }
+        return "$normalized, $suffix"
     }
 
     private suspend fun generateBackground(

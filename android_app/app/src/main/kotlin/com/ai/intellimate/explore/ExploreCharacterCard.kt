@@ -4,6 +4,7 @@ import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.utils.LogUtils
 import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -148,10 +149,18 @@ fun ExploreCharacterCard(
         if (showAnimatedImage && animatedImageDrawable != null) {
             val drawable = animatedImageDrawable
             if (drawable != null && !drawable.isRunning) {
-                drawable.start()
+                try {
+                    drawable.start()
+                } catch (e: Exception) {
+                    LogUtils.e("ExploreCharacterCard - 启动动画失败: ${e.message}")
+                }
             }
         } else if (!showAnimatedImage && animatedImageDrawable != null) {
-            animatedImageDrawable?.stop()
+            try {
+                animatedImageDrawable?.stop()
+            } catch (e: Exception) {
+                LogUtils.e("ExploreCharacterCard - 停止动画失败: ${e.message}")
+            }
         }
     }
 

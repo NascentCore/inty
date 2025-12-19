@@ -84,6 +84,7 @@ class ReportQuery(BaseModel):
     status: Optional[ReportStatus] = None
     reporter_id: Optional[str] = None
     report_type: Optional[ReportType] = None
+    order_by: Optional[str] = "created_at_desc"  # created_at_desc 或 created_at_asc
     skip: int = 0
     limit: int = 100
 

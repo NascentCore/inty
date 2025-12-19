@@ -16,6 +16,8 @@ SUPER_USER_EMAILS = [
     "test.heartmate@gmail.com",
     # 公司公共 IT Google Account；亚雄使用这个账户进行测试。
     "it@sxwl.ai",
+    # Charles 个人 Google 账户，因测试导致被 Google 封禁，加入列表方便测试
+    "charlesfengyu@gmail.com",
 ]
 
 # 公共的 Google Email 用于测试，目前只是记录该信息，没有在后端做特别处理。

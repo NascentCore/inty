@@ -1,7 +1,9 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.PersonaPreferenceStore
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
@@ -16,18 +18,26 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -35,6 +45,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -50,6 +62,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -57,20 +70,56 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
+import com.ai.intellimate.xb.navigation.Routes
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 
+private const val CHAT_MODEL_ID_DEFAULT = "default"
+private const val CHAT_MODEL_ID_GPT_5_2 = "gpt5_2"
+private const val CHAT_MODEL_ID_CLAUDE_OPUS_4_5 = "claude_opus_4_5"
+private const val CHAT_MODEL_ID_GEMINI_3_FLASH = "gemini_3_flash"
+
+private data class ChatModelOption(val id: String, val labelResId: Int)
+
+private val CHAT_MODEL_OPTIONS =
+    listOf(
+        ChatModelOption(CHAT_MODEL_ID_DEFAULT, R.string.chat_settings_model_default),
+        ChatModelOption(CHAT_MODEL_ID_GPT_5_2, R.string.chat_settings_model_gpt_5_2),
+        ChatModelOption(
+            CHAT_MODEL_ID_CLAUDE_OPUS_4_5,
+            R.string.chat_settings_model_claude_opus_4_5,
+        ),
+        ChatModelOption(CHAT_MODEL_ID_GEMINI_3_FLASH, R.string.chat_settings_model_gemini_3_flash),
+    )
+
+private fun chatModelLabelResId(modelId: String): Int {
+    return when (modelId) {
+        CHAT_MODEL_ID_DEFAULT -> R.string.chat_settings_model_default
+        CHAT_MODEL_ID_GPT_5_2 -> R.string.chat_settings_model_gpt_5_2
+        CHAT_MODEL_ID_CLAUDE_OPUS_4_5 -> R.string.chat_settings_model_claude_opus_4_5
+        // 默认模型ID显示为"Default"
+        CHAT_MODEL_ID_GEMINI_3_FLASH -> R.string.chat_settings_model_default
+        else -> R.string.chat_settings_model_default
+    }
+}
+
 /** 聊天设置抽屉组件 */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatSettingsDrawer(
     chatViewModel: ChatViewModel,
     agentInfo: AgentInfo?,
     drawerState: MutableState<DrawerValue>,
     onKeepTalkingChange: (Boolean) -> Unit,
+    navController: NavController,
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    // 订阅状态检查
+    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
 
@@ -79,12 +128,16 @@ fun ChatSettingsDrawer(
 
     // Auto-play animated background全局设置
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
+    val textStreaming by SettingStateManager.textStreaming.collectAsState()
 
     // Show scene action button全局设置 - 使用SettingStateManager的Flow来监听设置变化
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
     val chatFontSize by SettingStateManager.chatFontSizeFlow.collectAsState()
+    val chatModelId by SettingStateManager.chatModelIdFlow.collectAsState()
 
     val horizontalPadding = 16
+    val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
+    val userPreference by preferenceFlow.collectAsState(initial = "")
 
     // 在组件初始化时立即更新用户信息,未添加这部分触发更新userInfo的时候，会因为在chatViewModel中虽然更新了userProfile
     // 但是userProfileState并没有正确触发数据流的更新，引起UI层数据不能正确显示真实数据的问题。
@@ -101,6 +154,7 @@ fun ChatSettingsDrawer(
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
     var editValue by rememberSaveable { mutableStateOf("") }
     var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
+    var showModelMenu by rememberSaveable { mutableStateOf(false) }
     var pendingFontSize by rememberSaveable {
         mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP)
     }
@@ -134,6 +188,8 @@ fun ChatSettingsDrawer(
                 modifier =
                     Modifier.width(319.dp)
                         .fillMaxHeight()
+                        .padding(bottom = 56.dp)
+                        .verticalScroll(rememberScrollState())
                         .background(
                             brush =
                                 Brush.verticalGradient(
@@ -149,7 +205,7 @@ fun ChatSettingsDrawer(
                     color = Color.White,
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup(modifier = Modifier) {
                         SettingsArrowItem(
@@ -211,6 +267,35 @@ fun ChatSettingsDrawer(
                         SettingsArrowItem(
                             item =
                                 SettingsItemData.CommonItemData(
+                                    title = stringResource(R.string.chat_settings_preference_title),
+                                    content =
+                                        userPreference.ifBlank {
+                                            stringResource(
+                                                R.string.chat_settings_preference_placeholder
+                                            )
+                                        },
+                                    arrow = true,
+                                ),
+                            isInGroup = true,
+                            fontLight = true,
+                            horizontalPadding = horizontalPadding,
+                            contentMaxLines = 1,
+                            onItemClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_preference",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                editKey = EditKey.Preference
+                                editValue = userPreference
+                            },
+                        )
+                        IntelliMateDivider()
+                        SettingsArrowItem(
+                            item =
+                                SettingsItemData.CommonItemData(
                                     title = stringResource(R.string.str_persona),
                                     content = userProfileState.description ?: "Edit",
                                 ),
@@ -238,7 +323,7 @@ fun ChatSettingsDrawer(
                     }
                 }
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(20.dp))
 
                 Text(
                     text = stringResource(R.string.chat_settings_settings_title),
@@ -248,7 +333,7 @@ fun ChatSettingsDrawer(
                     color = Color.White,
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
 
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup {
@@ -257,8 +342,7 @@ fun ChatSettingsDrawer(
                             item =
                                 SettingsItemData.SwitchItemData(
                                     title =
-                                        stringResource(R.string.chat_settings_show_keep_talking) +
-                                            "青青河边草，有有利到寒假工i哦啊个",
+                                        stringResource(R.string.chat_settings_show_keep_talking),
                                     checked = showKeepTalking,
                                 ),
                             fontLight = true,
@@ -314,9 +398,7 @@ fun ChatSettingsDrawer(
                             item =
                                 SettingsItemData.SwitchItemData(
                                     title =
-                                        stringResource(
-                                            R.string.chat_settings_auto_play_animation
-                                        ),
+                                        stringResource(R.string.chat_settings_auto_play_animation),
                                     checked = autoPlayAnimation,
                                 ),
                             fontLight = true,
@@ -334,6 +416,32 @@ fun ChatSettingsDrawer(
                                     ),
                                 )
                                 SettingStateManager.updateAutoPlayAnimation(enabled)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title = stringResource(R.string.chat_setting_text_streaming),
+                                    checked = textStreaming,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "toggle_text_streaming",
+                                        "enabled" to enabled,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                SettingStateManager.updateTextStreaming(enabled)
                             },
                         )
 
@@ -369,6 +477,87 @@ fun ChatSettingsDrawer(
 
                         IntelliMateDivider()
 
+                        // Models 下拉菜单
+                        androidx.compose.foundation.layout.Box {
+                            SettingsArrowItem(
+                                item =
+                                    SettingsItemData.CommonItemData(
+                                        title = stringResource(R.string.chat_settings_models_title),
+                                        content = stringResource(chatModelLabelResId(chatModelId)),
+                                        arrow = true,
+                                    ),
+                                fontLight = true,
+                                isInGroup = true,
+                                horizontalPadding = horizontalPadding,
+                                onItemClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "open_models_menu",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    showModelMenu = true
+                                },
+                            )
+
+                            DropdownMenu(
+                                expanded = showModelMenu,
+                                onDismissRequest = { showModelMenu = false },
+                            ) {
+                                CHAT_MODEL_OPTIONS.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(option.labelResId),
+                                                color = Color.White,
+                                                fontSize = 14.sp,
+                                            )
+                                        },
+                                        onClick = {
+                                            showModelMenu = false
+
+                                            // 检查订阅状态：如果未订阅且选择的不是Default，则跳转到订阅页面
+                                            if (
+                                                !vipStatus.isSubscribed &&
+                                                    option.id != CHAT_MODEL_ID_DEFAULT
+                                            ) {
+                                                navController.navigate(Routes.VipCenter)
+                                                FirebaseManager.logEvent(
+                                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                                    FirebaseManager.safeEventParams(
+                                                        "click_type" to
+                                                            "select_model_requires_subscription",
+                                                        "model_id" to option.id,
+                                                        "timestamp" to System.currentTimeMillis(),
+                                                    ),
+                                                )
+                                            } else {
+                                                // 已订阅或选择Default，允许选择
+                                                val modelIdToSet =
+                                                    if (option.id == CHAT_MODEL_ID_DEFAULT) {
+                                                        CHAT_MODEL_ID_DEFAULT
+                                                    } else {
+                                                        option.id
+                                                    }
+                                                SettingStateManager.updateChatModelId(modelIdToSet)
+                                                FirebaseManager.logEvent(
+                                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                                    FirebaseManager.safeEventParams(
+                                                        "click_type" to "select_model",
+                                                        "model_id" to option.id,
+                                                        "timestamp" to System.currentTimeMillis(),
+                                                    ),
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        }
+
+                        IntelliMateDivider()
+
                         // Font size row
                         SettingsArrowItem(
                             item =
@@ -399,7 +588,7 @@ fun ChatSettingsDrawer(
                     }
                 }
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(20.dp))
 
                 Text(
                     text = stringResource(R.string.chat_settings_support_resources_title),
@@ -409,7 +598,7 @@ fun ChatSettingsDrawer(
                     color = Color.White,
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
 
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup {
@@ -505,25 +694,55 @@ fun ChatSettingsDrawer(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(20.dp))
             }
         },
     ) {
+        val sheetState = rememberModalBottomSheetState(true)
+
         // 应该放主屏内容的位置
         // 编辑弹窗（与 MySettingActivity 同样的 UI 交互）
         if (editKey != EditKey.None) {
-            Dialog(
+            ModalBottomSheet(
                 onDismissRequest = { editKey = EditKey.None },
-                properties = DialogProperties(usePlatformDefaultWidth = false),
+                sheetState = sheetState,
+                dragHandle = null,
+                contentWindowInsets = { WindowInsets() },
             ) {
                 EditDialog(
                     editKey = editKey,
                     editValue = editValue,
-                    onDismiss = { editKey = EditKey.None },
+                    onDismiss = {
+                        coroutineScope
+                            .launch { sheetState.hide() }
+                            .invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    editKey = EditKey.None
+                                }
+                            }
+                    },
                     onSave = { key, value ->
-                        modifyProfileViewModel.changeUserProfile(key, value)
-                        editKey = EditKey.None
-                        // 直接保存，事件监听会自动刷新UI
-                        modifyProfileViewModel.onSave()
+                        coroutineScope
+                            .launch {
+                                sheetState.hide()
+
+                                when (key) {
+                                    EditKey.Preference -> {
+                                        PersonaPreferenceStore.savePreference(context, value.trim())
+                                    }
+                                    else -> {
+                                        modifyProfileViewModel.changeUserProfile(key, value)
+                                        // 直接保存，事件监听会自动刷新UI
+                                        modifyProfileViewModel.onSave()
+                                    }
+                                }
+                            }
+                            .invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    editKey = EditKey.None
+                                }
+                            }
                     },
                     onValueChange = { value -> editValue = value },
                 )

@@ -2,6 +2,7 @@ package com.ai.intellimate.login
 
 import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.utils.ToastUtils
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +31,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.AgeItem
-import com.ai.intellimate.ui.components.CloseButton
 import com.ai.intellimate.ui.components.EnterButton
 import com.ai.intellimate.ui.components.GenderItem
 import com.ai.intellimate.ui.components.LabelText
@@ -44,8 +44,35 @@ internal fun RegInfoScreen(
     onClose: () -> Unit = {},
     onSave: (gender: GENDER, age: String) -> Unit = { gender, age -> },
 ) {
-    var selectGender by remember { mutableStateOf(GENDER.OTHER) }
+    var selectGender by remember { mutableStateOf<GENDER?>(null) }
     var selectAge by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
+    val requireGenderMsg = stringResource(R.string.toast_reginfo_required_select_gender)
+    val requireAgeMsg = stringResource(R.string.toast_age_screen_required_select_age)
+    val notEligibleMsg = stringResource(R.string.toast_age_screen_not_eligible)
+
+    // 处理关闭/保存请求：与 EnterButton 逻辑完全一致
+    val handleClose: () -> Unit = {
+        when {
+            selectGender == null -> {
+                coroutineScope.launch { ToastUtils.showShort(requireGenderMsg) }
+            }
+            selectAge.isEmpty() || selectAge.isBlank() -> {
+                coroutineScope.launch { ToastUtils.showShort(requireAgeMsg) }
+            }
+            selectAge == "<18" -> {
+                coroutineScope.launch { ToastUtils.showShort(notEligibleMsg) }
+            }
+            else -> {
+                // 保存数据，成功后会自动关闭并申请通知权限
+                onSave(selectGender!!, selectAge)
+            }
+        }
+    }
+
+    // 拦截系统返回键
+    BackHandler(enabled = true) { handleClose() }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.6f))) {
         Column(
@@ -60,10 +87,7 @@ internal fun RegInfoScreen(
                         shape = RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp),
                     )
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                CloseButton(onClose = onClose)
-            }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(26.dp))
 
             TitleText(title = stringResource(R.string.hello_wave))
             Spacer(Modifier.height(13.dp))
@@ -151,18 +175,21 @@ internal fun RegInfoScreen(
 
             Spacer(Modifier.height(64.dp))
 
-            val coroutineScope = rememberCoroutineScope()
-            val notEligibleMsg = stringResource(R.string.toast_age_screen_not_eligible)
-            val requireMsg = stringResource(R.string.toast_age_screen_required_select_age)
-
             EnterButton(
                 onEnter = {
-                    if (selectAge == "<18") {
-                        coroutineScope.launch { ToastUtils.showShort(notEligibleMsg) }
-                    } else if (selectAge.isEmpty() || selectAge.isBlank()) {
-                        coroutineScope.launch { ToastUtils.showShort(requireMsg) }
-                    } else {
-                        onSave(selectGender, selectAge)
+                    when {
+                        selectGender == null -> {
+                            coroutineScope.launch { ToastUtils.showShort(requireGenderMsg) }
+                        }
+                        selectAge.isEmpty() || selectAge.isBlank() -> {
+                            coroutineScope.launch { ToastUtils.showShort(requireAgeMsg) }
+                        }
+                        selectAge == "<18" -> {
+                            coroutineScope.launch { ToastUtils.showShort(notEligibleMsg) }
+                        }
+                        else -> {
+                            onSave(selectGender!!, selectAge)
+                        }
                     }
                 }
             )

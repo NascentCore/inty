@@ -102,13 +102,14 @@ fun ReportScreen(
             Spacer(Modifier.height(24.dp))
 
             // 举报描述或反馈描述
+            val requiredDescriptionTitle =
+                if (isFeedbackMode) {
+                    "${stringResource(R.string.feedback_description)} *"
+                } else {
+                    "${stringResource(R.string.report_description)} *"
+                }
             ReportDescriptionContainer(
-                title =
-                    if (isFeedbackMode) {
-                        stringResource(R.string.feedback_description)
-                    } else {
-                        stringResource(R.string.report_description)
-                    },
+                title = requiredDescriptionTitle,
                 description = description,
                 onDescriptionChange = onDescriptionChange,
                 placeholder =
@@ -130,7 +131,8 @@ fun ReportScreen(
 
             Spacer(Modifier.height(60.dp))
 
-            SaveBtn(onSave = onSave, isSubmitting = isSubmitting)
+            val canSubmit = selectedReasonCodes.isNotEmpty() && description.trim().isNotEmpty()
+            SaveBtn(onSave = onSave, isSubmitting = isSubmitting, enabled = canSubmit)
             Spacer(Modifier.height(60.dp))
         }
 

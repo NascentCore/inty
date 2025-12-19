@@ -9,24 +9,11 @@
 .chat-page {
   position: relative;
   display: flex;
-  height: 100%;
   background: @dark-bg-primary;
-  overflow: hidden;
-
-  /* 错误提示 - 固定在顶部中央 */
-  .chat-error-alert {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    max-width: 500px;
-    width: 90%;
-    animation: slideDown 0.3s ease-out;
-  }
 
   /* ========== 左侧：聊天主区域 ========== */
   .chat-main {
+    flex: 1 1 auto;
     background: @dark-bg-primary;
     overflow: hidden;
     border-right: 1px solid @dark-border-color;
@@ -34,7 +21,6 @@
     /* ========== 消息内容区 ========== */
     .chat-content {
       padding-top: 70px;
-      padding-right: 400px;
       padding-bottom: 125px;
       overflow: hidden;
       display: flex;
@@ -50,22 +36,19 @@
       z-index: 1000;
       background: @dark-bg-secondary;
       border-top: 1px solid @dark-border-color;
+
+      @media (max-width: @screen-md) {
+        right: 0;
+        left: 0;
+      }
     }
   }
-}
 
-/* ========== 响应式适配 ========== */
-@media (max-width: @screen-md) {
-  .chat-page {
-    flex-direction: column;
+  .chat-right {
+    flex: 0 1 400px;
 
-    .chat-main {
-      border-right: none;
-    }
-
-    .chat-error-alert {
-      top: 10px;
-      max-width: 90%;
+    @media (max-width: @screen-md) {
+      display: none;
     }
   }
 }

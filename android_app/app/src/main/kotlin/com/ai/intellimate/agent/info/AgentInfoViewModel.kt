@@ -4,26 +4,31 @@ import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.agent.info.AgentInfoViewModel.Companion.DEFAULT_GALLERY_DIMENSION
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
 import com.squareup.moshi.JsonClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @JsonClass(generateAdapter = true)
 data class AgentImageGalleryItem(
-    val messageId: String,
+    val messageId: String = "",
     val imageUrl: String,
-    val width: Int,
-    val height: Int,
-    val timestamp: String?,
+    val width: Int = 512,
+    val height: Int = 512,
+    val timestamp: String? = null,
 )
 
 class AgentInfoViewModel : BaseVM() {
@@ -38,8 +43,15 @@ class AgentInfoViewModel : BaseVM() {
     val agentInfo = _agentInfo.asStateFlow()
 
     private val _chatImageGallery = MutableStateFlow<List<AgentImageGalleryItem>>(emptyList())
-    val chatImageGallery = _chatImageGallery.asStateFlow()
+    val chatImageGallery =
+        _chatImageGallery
+            .combine(agentInfo) { gallery, agent ->
+                (gallery + agent?.backgroundImages?.filter { it != agent.avatar }?.map { AgentImageGalleryItem(imageUrl = it) }.orEmpty())
+                    .distinctBy { it.imageUrl }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
+    private val roomDataSource: RoomDataSource = DataModule.getRoomDataSource()
 
     private var galleryAgentId: String? = null
     private var galleryJob: Job? = null
@@ -98,16 +110,13 @@ class AgentInfoViewModel : BaseVM() {
     }
 
     private fun bindGallery(agentId: String) {
-        if (agentId.isBlank()) return
-        if (galleryAgentId == agentId) return
+        if (agentId.isBlank() || galleryAgentId == agentId) return
+
         val cachedGallery = AgentImageGalleryCache.getCachedGallery(agentId)
-        if (cachedGallery.isNotEmpty()) {
-            _chatImageGallery.value = cachedGallery
-        } else {
-            _chatImageGallery.value = emptyList()
-        }
+        _chatImageGallery.value = cachedGallery
         galleryAgentId = agentId
         galleryJob?.cancel()
+
         galleryJob =
             viewModelScope.launch {
                 launch(Dispatchers.IO) {
@@ -119,11 +128,10 @@ class AgentInfoViewModel : BaseVM() {
                         }
                 }
 
-                chatRepository.getMessagesFlow(agentId).collect { messages ->
+                roomDataSource.getMessagesWithImagesFlow(agentId).collect { messages ->
                     val galleryItems =
                         messages
                             .asSequence()
-                            .filter { it.role == "assistant" }
                             .mapNotNull { message -> mapMessageToGalleryItem(message) }
                             .sortedByDescending { it.timestamp ?: "" }
                             .distinctBy { it.imageUrl }
@@ -137,7 +145,6 @@ class AgentInfoViewModel : BaseVM() {
 
     private fun mapMessageToGalleryItem(message: MsgInfo): AgentImageGalleryItem? {
         val generatedImage = message.meta_data?.generatedImage ?: return null
-        if (generatedImage.imageUrl.isBlank() || generatedImage.imageUrl == "loading") return null
         val messageId = message.id.ifBlank { message.localMsgId }
         return AgentImageGalleryItem(
             messageId = messageId,

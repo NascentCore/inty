@@ -25,6 +25,9 @@ object SettingStateManager {
     private val _autoPlayAnimationFlow = MutableStateFlow(IntySetting.isAutoPlayAnimation())
     val autoPlayAnimationFlow: StateFlow<Boolean> = _autoPlayAnimationFlow.asStateFlow()
 
+    private val _textStreamingFlow = MutableStateFlow(IntySetting.isTextStreaming())
+    val textStreaming = _textStreamingFlow.asStateFlow()
+
     // 显示场景动作输入按钮状态
     private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
     val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
@@ -35,6 +38,10 @@ object SettingStateManager {
             IntySetting.getChatFontSizeSp().coerceIn(CHAT_FONT_SIZE_MIN_SP, CHAT_FONT_SIZE_MAX_SP)
         )
     val chatFontSizeFlow: StateFlow<Float> = _chatFontSizeFlow.asStateFlow()
+
+    // 聊天模型选择（全局设置）
+    private val _chatModelIdFlow = MutableStateFlow(IntySetting.getChatModelId())
+    val chatModelIdFlow: StateFlow<String> = _chatModelIdFlow.asStateFlow()
 
     // 标记是否已经初始化过（避免重复初始化）
     @Volatile private var initialized = false
@@ -136,6 +143,12 @@ object SettingStateManager {
         _autoPlayAnimationFlow.value = enabled
     }
 
+    fun updateTextStreaming(enabled: Boolean) {
+        IntySetting.setTextStreaming(enabled)
+        IntySetting.markUserTextStreaming()
+        _textStreamingFlow.value = enabled
+    }
+
     /** 更新显示场景动作输入按钮状态 */
     fun updateShowSceneActionButton(enabled: Boolean) {
         IntySetting.setShowSceneActionButton(enabled)
@@ -148,5 +161,11 @@ object SettingStateManager {
         val clamped = fontSizeSp.coerceIn(CHAT_FONT_SIZE_MIN_SP, CHAT_FONT_SIZE_MAX_SP)
         IntySetting.setChatFontSizeSp(clamped)
         _chatFontSizeFlow.value = clamped
+    }
+
+    /** 更新聊天模型 */
+    fun updateChatModelId(modelId: String) {
+        IntySetting.setChatModelId(modelId)
+        _chatModelIdFlow.value = modelId
     }
 }

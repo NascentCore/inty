@@ -72,6 +72,14 @@ class ProfileViewModel : BaseVM() {
         }
     }
 
+    /** 删除草稿并刷新列表 */
+    fun deleteDraft(draftId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            CreateRoleDraftStorage.deleteDraft(draftId)
+            refreshAgentDrafts()
+        }
+    }
+
     /** 更新用户信息（从本地） */
     fun updateUserInfoLocal() {
         _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }

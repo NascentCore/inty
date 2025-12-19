@@ -3,6 +3,7 @@
  */
 package com.ai.intellimate.chat.ui
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
@@ -96,11 +98,27 @@ fun EnergyCelebrationBanner(
     }
 }
 
-private fun resolveCelebrationLevel(totalPoints: Int): EnergyCelebrationLevel? {
+/**
+ * 根据总积分值解析应该显示的庆祝级别。
+ *
+ * 此函数用于判断用户达到特定积分里程碑时是否应该触发庆祝动画。庆祝规则如下：
+ * - **首次获得积分**：当 totalPoints == 1 时，返回 First 级别，用于庆祝用户首次获得积分
+ * - **十的倍数里程碑**：当积分在 100 以下且是 10 的倍数时（10, 20, 30, ..., 90），返回 Tens 级别
+ * - **百的倍数里程碑**：当积分在 1000 以下且是 100 的倍数时（100, 200, 300, ..., 900），返回 Hundreds 级别
+ * - **千的倍数里程碑**：当积分达到或超过 1000 且是 1000 的倍数时（1000, 2000, 3000, ...），返回 Thousands 级别
+ * - **其他情况**：返回 null，表示不触发庆祝动画
+ *
+ * 注意：此函数仅判断是否达到里程碑，不检查积分是否增加。调用方需要确保只在积分增加时调用此函数。 对于 0 或负数，此函数会返回 null，不会触发庆祝动画。
+ *
+ * @param totalPoints 用户当前的总积分值（必须大于 0）
+ * @return 对应的庆祝级别，如果不需要庆祝则返回 null
+ */
+internal fun resolveCelebrationLevel(totalPoints: Int): EnergyCelebrationLevel? {
+    if (totalPoints <= 0) return null
     if (totalPoints == 1) return EnergyCelebrationLevel.First
-    if (totalPoints % 1000 == 0) return EnergyCelebrationLevel.Thousands
-    if (totalPoints % 100 == 0) return EnergyCelebrationLevel.Hundreds
-    if (totalPoints % 10 == 0) return EnergyCelebrationLevel.Tens
+    if (totalPoints < 100 && totalPoints % 10 == 0) return EnergyCelebrationLevel.Tens
+    if (totalPoints < 1000 && totalPoints % 100 == 0) return EnergyCelebrationLevel.Hundreds
+    if (totalPoints >= 1000 && totalPoints % 1000 == 0) return EnergyCelebrationLevel.Thousands
     return null
 }
 
@@ -155,7 +173,12 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
     val primaryText =
         when (data.level) {
             EnergyCelebrationLevel.First -> stringResource(R.string.energy_points_first_title)
-            else -> stringResource(R.string.energy_points_tens_title, data.totalPoints)
+            EnergyCelebrationLevel.Tens ->
+                stringResource(R.string.energy_points_tens_title, data.totalPoints)
+            EnergyCelebrationLevel.Hundreds ->
+                stringResource(R.string.energy_points_hundreds_title, data.totalPoints)
+            EnergyCelebrationLevel.Thousands ->
+                stringResource(R.string.energy_points_thousands_title, data.totalPoints)
         }
 
     val secondaryText =
@@ -207,5 +230,50 @@ private fun EnergyCelebrationCard(data: EnergyCelebrationUiModel, modifier: Modi
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "First Point")
+@Composable
+private fun EnergyCelebrationCardFirstPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data = EnergyCelebrationUiModel(level = EnergyCelebrationLevel.First, totalPoints = 1)
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Tens (10 points)")
+@Composable
+private fun EnergyCelebrationCardTensPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data = EnergyCelebrationUiModel(level = EnergyCelebrationLevel.Tens, totalPoints = 10)
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Hundreds (100 points)")
+@Composable
+private fun EnergyCelebrationCardHundredsPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data =
+                EnergyCelebrationUiModel(level = EnergyCelebrationLevel.Hundreds, totalPoints = 100)
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Thousands (1000 points)")
+@Composable
+private fun EnergyCelebrationCardThousandsPreview() {
+    IntelliMateTheme {
+        EnergyCelebrationCard(
+            data =
+                EnergyCelebrationUiModel(
+                    level = EnergyCelebrationLevel.Thousands,
+                    totalPoints = 1000,
+                )
+        )
     }
 }

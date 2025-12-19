@@ -74,13 +74,13 @@ fun AgentBackground(
             null
         }
 
-    // 检查是否有自定义背景图片（仅用于静态背景，不覆盖动画背景）
+    // 检查是否有自定义背景图片（优先级最高，会覆盖动画背景和默认背景）
     // 使用状态变量来跟踪背景 URL，并通过 LaunchedEffect 定期检查更新
     // 只在当前页面时检查，避免不必要的资源消耗
     var customBackgroundUrl by
         remember(agentInfo?.id) {
             mutableStateOf<String?>(
-                if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
+                if (agentInfo?.id != null) {
                     IntySetting.getChatBackgroundImage(agentInfo.id)
                 } else {
                     null
@@ -91,12 +91,12 @@ fun AgentBackground(
     // 监听背景设置变化，定期检查以确保及时更新
     // 只在当前页面时检查，减少资源消耗
     val currentPageState = rememberUpdatedState(isCurrentPage)
-    LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
+    LaunchedEffect(agentInfo?.id, isCurrentPage) {
         if (!isCurrentPage) return@LaunchedEffect
 
         while (currentPageState.value) {
             val newBackgroundUrl =
-                if (agentInfo?.id != null && backgroundAnimatedUrl == null) {
+                if (agentInfo?.id != null) {
                     IntySetting.getChatBackgroundImage(agentInfo.id)
                 } else {
                     null
@@ -108,11 +108,11 @@ fun AgentBackground(
         }
     }
 
+    // 确定静态背景 URL：优先使用自定义背景，否则使用默认背景
     val staticImageUrl =
         if (isIntelliMateAgent) {
             null
         } else {
-            // 优先使用自定义背景，然后才是默认背景
             customBackgroundUrl?.takeIf { it.isNotBlank() }
                 ?: agentInfo?.getOriginShowImage()?.takeIf { it.isNotBlank() }
         }
@@ -130,13 +130,14 @@ fun AgentBackground(
      *
      * 触发条件：
      * - agentInfo?.id、backgroundAnimatedUrl 或 isCurrentPage 变化
-     * - backgroundAnimatedUrl != null 且 isCurrentPage == true
+     * - backgroundAnimatedUrl != null 且 isCurrentPage == true 且没有自定义背景
      * - 对于视频：需要视频已缓存（isVideoCached）且未完成过页面切换播放（!hasCompletedPageSwitchPlay）
      * - 对于动图（GIF/WebP/AVIF）：只需要未完成过页面切换播放
      */
-    LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage) {
+    LaunchedEffect(agentInfo?.id, backgroundAnimatedUrl, isCurrentPage, customBackgroundUrl) {
         shouldPlayPageSwitch = false
-        if (backgroundAnimatedUrl != null && isCurrentPage) {
+        // 如果有自定义背景，不触发动画背景播放
+        if (backgroundAnimatedUrl != null && isCurrentPage && customBackgroundUrl.isNullOrBlank()) {
             val isVideo = isVideoUrl(backgroundAnimatedUrl)
             val isAnimatedImage =
                 !isVideo &&
@@ -163,12 +164,14 @@ fun AgentBackground(
         }
     }
 
-    LaunchedEffect(backgroundAnimatedUrl, isVideoCached) {
+    LaunchedEffect(backgroundAnimatedUrl, isVideoCached, customBackgroundUrl) {
+        // 如果有自定义背景，不需要预加载动画背景
         if (
             backgroundAnimatedUrl != null &&
                 !isVideoCached &&
                 isCurrentPage &&
-                isVideoUrl(backgroundAnimatedUrl)
+                isVideoUrl(backgroundAnimatedUrl) &&
+                customBackgroundUrl.isNullOrBlank()
         ) {
             videoCacheManager.preloadVideo(backgroundAnimatedUrl)
         }
@@ -179,14 +182,27 @@ fun AgentBackground(
      *
      * 触发条件：
      * - isLoading 变为 true（即 hasLoadingMessage == true）
-     * - backgroundAnimatedUrl != null 且 isCurrentPage == true
+     * - backgroundAnimatedUrl != null 且 isCurrentPage == true 且没有自定义背景
      * - 对于视频：需要视频已缓存（isVideoCached）且当前未在播放（!isVideoPlaying）
      * - 对于动图：只需要当前未在播放
      *
      * 播放次数：UiConfigs.AnimatedBackground.VIDEO_MESSAGE_PLAY_COUNT = 1
      */
-    LaunchedEffect(isLoading, backgroundAnimatedUrl, isVideoCached, isCurrentPage, isVideoPlaying) {
-        if (isLoading && backgroundAnimatedUrl != null && isCurrentPage) {
+    LaunchedEffect(
+        isLoading,
+        backgroundAnimatedUrl,
+        isVideoCached,
+        isCurrentPage,
+        isVideoPlaying,
+        customBackgroundUrl,
+    ) {
+        // 如果有自定义背景，不触发动画背景播放
+        if (
+            isLoading &&
+                backgroundAnimatedUrl != null &&
+                isCurrentPage &&
+                customBackgroundUrl.isNullOrBlank()
+        ) {
             val isVideo = isVideoUrl(backgroundAnimatedUrl)
             if ((!isVideo || isVideoCached) && !isVideoPlaying) {
                 shouldPlayLoading = true
@@ -209,7 +225,39 @@ fun AgentBackground(
         else UiConfigs.CharacterProfile.VIDEO_MESSAGE_PLAY_COUNT
 
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
-        if (backgroundAnimatedUrl != null) {
+        // 优先级：自定义背景 > 动画背景 > 默认背景
+        // 如果有自定义背景，优先显示静态背景（自定义背景）
+        if (!customBackgroundUrl.isNullOrBlank()) {
+            // 使用 key() 确保当背景 URL 改变时强制重新组合
+            key(customBackgroundUrl) {
+                val staticImageRequest =
+                    remember(customBackgroundUrl) {
+                        val containerWidthPx = with(density) { containerWidthDp.dp.toPx().toInt() }
+                        val containerHeightPx =
+                            with(density) { containerHeightDp.dp.toPx().toInt() }
+                        val url = customBackgroundUrl!!
+                        ImageRequest.Builder(context)
+                            .data(
+                                getCdnImageUrl(
+                                    url,
+                                    width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
+                                    quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
+                                ) ?: url
+                            )
+                            .size(Size(containerWidthPx, containerHeightPx))
+                            .crossfade(true)
+                            .build()
+                    }
+                AsyncImage(
+                    modifier = Modifier.fillMaxWidth().fillMaxSize(),
+                    model = staticImageRequest,
+                    contentDescription = null,
+                    alignment = Alignment.TopCenter,
+                    contentScale = contentScale,
+                )
+            }
+        } else if (backgroundAnimatedUrl != null) {
+            // 如果没有自定义背景，但有动画背景，显示动画背景（使用默认静态背景作为底层）
             AnimatedBackground(
                 videoUrl = backgroundAnimatedUrl,
                 staticImageUrl = staticImageUrl,

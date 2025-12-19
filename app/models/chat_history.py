@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, UUID
+from sqlalchemy import UUID, Column, DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 
@@ -18,3 +18,4 @@ class ChatHistory(Base):
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    deleted_at = Column(DateTime(timezone=True), nullable=True, comment="软删除时间")

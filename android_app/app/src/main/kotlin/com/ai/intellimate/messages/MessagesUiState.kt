@@ -1,5 +1,6 @@
 package com.ai.intellimate.messages
 
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 
 /** Messages页面的UI状态 */
@@ -12,4 +13,6 @@ data class MessagesUiState(
     val intelliMateAgentIds: Set<String> = emptySet(), // 标记哪些 agent 是 IntelliMate（需要置顶且不可长按）
     val refreshKey: Long = 0L, // 用于强制刷新列表的 key
     val pushAgentIds: Set<String> = emptySet(), // 有推送未读的 agentId 列表
+    val favoriteAgents: List<AgentInfo> = emptyList(), // 用户收藏的角色列表
+    val isLoadingFavorites: Boolean = false,
 )

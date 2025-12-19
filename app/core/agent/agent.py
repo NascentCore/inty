@@ -23,12 +23,26 @@ from app import models
 from app.core.agent import prompt_template, prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models import chat_history
+from app.services import chat_history_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
     get_base_openai_client,
     langchain_message_to_openai_message,
     wrap_client_with_langsmith,
 )
+
+# 圣诞节季节性提示词：放在角色人设（personality/scenario/message_example）最后
+CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
+During this period, {{char}} naturally notices small Christmas details around them 
+(e.g., colder weather, office decorations, holiday coffee cups, gift ideas, city lights, end-of-year emotions).
+{{char}} tends to weave these observations subtly into conversation when relevant, especially during reflective or emotionally warm moments. Not forced; keep the integration smooth and diegetic."""
+
+# 圣诞节时间上下文提示词：放在 intro 之前
+CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
+- In-universe date: December 20–26 (active Christmas period).
+- During this week, characters have mild Christmas awareness. Whenever the ongoing conversation contains any cue that can be interpreted as seasonal, atmospheric, or time-related, like context-related, atmosphere-related, sensory-related, time-related, or mood-related, {{char}} may gently link the moment to the Christmas period. 
+- {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
+- Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -346,8 +360,16 @@ class Agent:
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
+        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_prompt))
+
         if self.intro:
-            system_messages.append(SystemMessage(content=self.intro))
+            system_messages.append(
+                SystemMessage(content="##Introduction\n" + self.intro)
+            )
 
         return system_messages
 
@@ -372,6 +394,12 @@ class Agent:
         if self.message_example:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=self.message_example, char=self.name, user=user_name
+            )
+            context_messages.append(SystemMessage(content=rendered_prompt))
+
+        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, char=self.name, user=user_name
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
@@ -737,11 +765,12 @@ class Agent:
                     f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 获取相关的历史消息
+                # 获取相关的历史消息（排除已软删除的）
                 get_history_start = time.time()
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
-                recent_history = self._get_relevant_history(history.messages)
+                history_messages = chat_history_service.get_history_messages(session_id)
+                recent_history = self._get_relevant_history(history_messages)
                 get_history_time = time.time() - get_history_start
                 logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
@@ -877,7 +906,69 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
+                finish_reason = response.choices[0].finish_reason
                 response_text = response.choices[0].message.content
+
+                # 定义需要重试的 finish_reason
+                content_filter_reasons = {"content_filter", "safety"}
+
+                # 处理内容过滤情况：用 "continue" 替换用户消息重试一次
+                if finish_reason in content_filter_reasons:
+                    logger.warning(
+                        f"内容过滤触发 - Agent: {self.agent_id}, User: {user_id}, "
+                        f"Session: {session_id}, finish_reason: {finish_reason}, "
+                        f"被截断内容: {response_text}"
+                    )
+                    # 用 "continue" 替换最后一条用户消息重试
+                    openai_messages[-1] = {"role": "user", "content": "continue"}
+                    retry_response = self._call_openai_api_with_retry(
+                        client=client,
+                        model=model_name,
+                        openai_messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body={
+                            "generation_config": {
+                                "thinking_budget": 0,
+                            },
+                            "user": user_id,
+                        },
+                        user_id=user_id,
+                        max_retries=3,
+                        initial_delay=1.0,
+                    )
+                    retry_finish_reason = retry_response.choices[0].finish_reason
+                    retry_response_text = retry_response.choices[0].message.content
+
+                    # 重试后仍被过滤则记录错误，但使用重试后的响应
+                    if retry_finish_reason in content_filter_reasons:
+                        logger.error(
+                            f"内容过滤重试后仍被截断 - Agent: {self.agent_id}, "
+                            f"Session: {session_id}, finish_reason: {retry_finish_reason}, "
+                            f"被截断内容: {retry_response_text}"
+                        )
+                    else:
+                        logger.info(
+                            f"内容过滤重试成功 - Agent: {self.agent_id}, "
+                            f"Session: {session_id}"
+                        )
+                    response_text = retry_response_text
+
+                # 处理长度限制情况
+                elif finish_reason == "length":
+                    logger.warning(
+                        f"响应被截断(max_tokens) - Agent: {self.agent_id}, "
+                        f"Session: {session_id}, 响应长度: {len(response_text)}"
+                    )
+
+                # 处理其他非正常情况
+                elif finish_reason not in {"stop", None}:
+                    logger.warning(
+                        f"非正常结束 - Agent: {self.agent_id}, "
+                        f"Session: {session_id}, finish_reason: {finish_reason}"
+                    )
+
                 response_process_time = time.time() - response_process_start
                 logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
@@ -960,19 +1051,10 @@ class Agent:
 
         with pool.connection() as conn_local:
             try:
-                # 创建历史记录对象（仅用于读取历史消息，不保存新消息）
-                history_start = time.time()
-                history = PostgresChatMessageHistory(
-                    chat_history.TABLE_NAME, session_id, sync_connection=conn_local
-                )
-                history_init_time = time.time() - history_start
-                logger.debug(
-                    f"历史记录初始化耗时: {history_init_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 获取相关的历史消息
+                # 获取相关的历史消息（排除已软删除的）
                 get_history_start = time.time()
-                recent_history = self._get_relevant_history(history.messages)
+                history_messages = chat_history_service.get_history_messages(session_id)
+                recent_history = self._get_relevant_history(history_messages)
                 get_history_time = time.time() - get_history_start
                 logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"

@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List, Optional
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
 from sqlalchemy import and_, desc, func, select, update
@@ -153,15 +153,15 @@ def get_last_message(session_id: str) -> Optional[str]:
 
 
 def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]:
-    """获取最近一条消息内容和时间戳"""
+    """获取最近一条消息内容和时间戳（排除已软删除的）"""
     try:
         conn = get_chat_history_connection()
 
-        # 查询最近一条消息
+        # 查询最近一条消息（排除已软删除的）
         query = """
             SELECT message, created_at
             FROM chat_history 
-            WHERE session_id = %s 
+            WHERE session_id = %s AND deleted_at IS NULL
             ORDER BY created_at DESC 
             LIMIT 1
         """
@@ -203,6 +203,41 @@ def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]
     except Exception as e:
         logger.error(f"获取最近消息失败 {session_id}: {str(e)}")
         return None
+
+
+def has_user_messages_ever(session_id: str) -> bool:
+    """
+    检查会话是否曾经有用户消息（包括已删除的）
+
+    用于判断聊天会话是否应该显示在列表中：
+    - 如果曾经有用户消息（即使后来被软删除），返回 True
+    - 如果只有开场白消息，返回 False
+
+    Args:
+        session_id: 会话ID
+
+    Returns:
+        是否曾经有用户消息
+    """
+    try:
+        conn = get_chat_history_connection()
+
+        query = """
+            SELECT EXISTS(
+                SELECT 1 FROM chat_history 
+                WHERE session_id = %s 
+                AND message->>'type' IN ('human', 'HumanMessage')
+            )
+        """
+
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id,))
+            result = cur.fetchone()
+            return result[0] if result else False
+
+    except Exception as e:
+        logger.error(f"检查用户消息历史失败 {session_id}: {str(e)}")
+        return False
 
 
 def add_user_message(session_id: str, message: str) -> None:
@@ -291,11 +326,12 @@ async def update_message_metadata(
         是否更新成功
     """
     try:
-        # 查询现有消息
+        # 查询现有消息（排除已软删除的）
         stmt = select(ChatHistory).where(
             and_(
                 ChatHistory.session_id == session_id,
                 ChatHistory.id == message_id,
+                ChatHistory.deleted_at.is_(None),
             )
         )
         result = await db.execute(stmt)
@@ -347,11 +383,12 @@ async def update_message_vote(
         是否更新成功
     """
     try:
-        # 查询现有消息
+        # 查询现有消息（排除已软删除的）
         stmt = select(ChatHistory).where(
             and_(
                 ChatHistory.session_id == session_id,
                 ChatHistory.id == message_id,
+                ChatHistory.deleted_at.is_(None),
             )
         )
         result = await db.execute(stmt)
@@ -475,15 +512,16 @@ async def add_ai_image_message(
 
 
 async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optional[int]:
-    """获取会话中最新的AI消息ID"""
+    """获取会话中最新的AI消息ID（排除已软删除的）"""
     try:
-        # 使用ORM查询最新的AI消息ID
+        # 使用ORM查询最新的AI消息ID（排除已软删除的）
         stmt = (
             select(ChatHistory.id)
             .where(
                 and_(
                     ChatHistory.session_id == session_id,
                     ChatHistory.message["type"].astext == "ai",
+                    ChatHistory.deleted_at.is_(None),
                 )
             )
             .order_by(desc(ChatHistory.created_at), desc(ChatHistory.id))
@@ -515,13 +553,14 @@ async def delete_image_by_source_message(
         被删除的图片URL（GCS URI），如果没有找到则返回None
     """
     try:
-        # 查询并删除该来源消息的图片
+        # 查询并删除该来源消息的图片（排除已软删除的）
         stmt = select(ChatHistory).where(
             and_(
                 ChatHistory.session_id == session_id,
                 ChatHistory.message["type"].astext == "image",
                 ChatHistory.meta_data["source_message_id"].astext
                 == str(source_message_id),
+                ChatHistory.deleted_at.is_(None),
             )
         )
 
@@ -565,15 +604,16 @@ async def delete_image_by_source_message(
 async def get_latest_ai_message_info(
     db: AsyncSession, session_id: str
 ) -> Optional[Dict[str, Any]]:
-    """获取会话中最新AI消息的完整信息"""
+    """获取会话中最新AI消息的完整信息（排除已软删除的）"""
     try:
-        # 使用ORM查询最新的AI消息完整信息
+        # 使用ORM查询最新的AI消息完整信息（排除已软删除的）
         stmt = (
             select(ChatHistory)
             .where(
                 and_(
                     ChatHistory.session_id == session_id,
                     ChatHistory.message["type"].astext == "ai",
+                    ChatHistory.deleted_at.is_(None),
                 )
             )
             .order_by(desc(ChatHistory.created_at), desc(ChatHistory.id))
@@ -632,22 +672,22 @@ def get_messages_paginated(
     try:
         conn = get_chat_history_connection()
 
-        # 查询总消息数
+        # 查询总消息数（排除已软删除的）
         count_query = """
             SELECT COUNT(*) 
             FROM chat_history 
-            WHERE session_id = %s
+            WHERE session_id = %s AND deleted_at IS NULL
         """
 
         with conn.cursor() as cur:
             cur.execute(count_query, (session_id,))
             total_count = cur.fetchone()[0]
 
-        # 分页查询消息（按时间倒序，最新的在前）- 包括消息ID、audio_url和meta_data
+        # 分页查询消息（按时间倒序，最新的在前，排除已软删除的）- 包括消息ID、audio_url和meta_data
         messages_query = """
             SELECT id, message, created_at, audio_url, meta_data
             FROM chat_history 
-            WHERE session_id = %s 
+            WHERE session_id = %s AND deleted_at IS NULL
             ORDER BY created_at DESC 
             LIMIT %s OFFSET %s
         """
@@ -759,6 +799,11 @@ def get_messages_paginated(
                                 "image_url": cdn_url,
                                 "width": generated_image.get("width"),
                                 "height": generated_image.get("height"),
+                                "is_matched": generated_image.get("is_matched"),
+                                "similarity": generated_image.get("similarity"),
+                                "matched_from_user_id": generated_image.get(
+                                    "matched_from_user_id"
+                                ),
                             }
                             # 不包含 prompt 字段
 
@@ -840,6 +885,68 @@ def get_all_messages(session_id: str) -> List[Dict[str, Any]]:
         return []
 
 
+def get_history_messages(session_id: str) -> List[BaseMessage]:
+    """
+    获取会话的历史消息，返回 LangChain BaseMessage 格式（排除已软删除的）
+
+    用于 Agent 对话时获取上下文历史，替代 PostgresChatMessageHistory.messages
+    以支持软删除过滤。
+
+    Args:
+        session_id: 会话ID
+
+    Returns:
+        LangChain BaseMessage 列表，按时间正序排列（最早的在前）
+    """
+    try:
+        conn = get_chat_history_connection()
+
+        query = """
+            SELECT message
+            FROM chat_history 
+            WHERE session_id = %s AND deleted_at IS NULL
+            ORDER BY created_at ASC
+        """
+
+        messages: List[BaseMessage] = []
+        with conn.cursor() as cur:
+            cur.execute(query, (session_id,))
+            rows = cur.fetchall()
+
+            for row in rows:
+                try:
+                    message_raw = row[0]
+                    if isinstance(message_raw, str):
+                        message_data = json.loads(message_raw)
+                    elif isinstance(message_raw, dict):
+                        message_data = message_raw
+                    else:
+                        message_data = json.loads(str(message_raw))
+
+                    message_type = message_data.get("type", "human")
+                    content = ""
+
+                    if "data" in message_data and "content" in message_data["data"]:
+                        content = message_data["data"]["content"]
+                    elif "content" in message_data:
+                        content = message_data["content"]
+
+                    if message_type in ["human", "HumanMessage"]:
+                        messages.append(HumanMessage(content=content))
+                    else:
+                        messages.append(AIMessage(content=content))
+
+                except Exception as e:
+                    logger.warning(f"解析历史消息失败: {str(e)}")
+                    continue
+
+        return messages
+
+    except Exception as e:
+        logger.error(f"获取历史消息失败 {session_id}: {str(e)}")
+        return []
+
+
 def clear_session(session_id: str) -> None:
     """
     清除指定会话的所有聊天历史记录
@@ -889,9 +996,13 @@ async def get_message_content(
             logger.warning(f"无法解析消息ID为整数: {message_id}")
             return None
 
-        # 使用ORM查询消息
+        # 使用ORM查询消息（排除已软删除的）
         stmt = select(ChatHistory).where(
-            and_(ChatHistory.session_id == session_id, ChatHistory.id == db_message_id)
+            and_(
+                ChatHistory.session_id == session_id,
+                ChatHistory.id == db_message_id,
+                ChatHistory.deleted_at.is_(None),
+            )
         )
 
         result = await db.execute(stmt)
@@ -940,7 +1051,7 @@ async def update_message_audio_url(
             logger.warning(f"无法解析消息ID为整数: {message_id}")
             return False
 
-        # 构建更新语句
+        # 构建更新语句（只更新未被软删除的消息）
         if audio_duration is not None:
             # 使用SQLAlchemy的JSONB操作更新audio_url和meta_data
             stmt = (
@@ -949,6 +1060,7 @@ async def update_message_audio_url(
                     and_(
                         ChatHistory.session_id == session_id,
                         ChatHistory.id == db_message_id,
+                        ChatHistory.deleted_at.is_(None),
                     )
                 )
                 .values(
@@ -967,6 +1079,7 @@ async def update_message_audio_url(
                     and_(
                         ChatHistory.session_id == session_id,
                         ChatHistory.id == db_message_id,
+                        ChatHistory.deleted_at.is_(None),
                     )
                 )
                 .values(audio_url=audio_url)
@@ -998,7 +1111,7 @@ async def update_message_audio_url(
 
 def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
     """
-    清除包括指定消息ID在内的后续所有聊天记录
+    软删除包括指定消息ID在内的后续所有聊天记录
 
     Args:
         session_id: 会话ID
@@ -1010,11 +1123,11 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
     try:
         conn = get_chat_history_connection()
 
-        # 首先验证指定的消息是否存在
+        # 首先验证指定的消息是否存在（未被软删除的）
         check_query = """
             SELECT id, message, created_at
             FROM chat_history 
-            WHERE session_id = %s AND id = %s
+            WHERE session_id = %s AND id = %s AND deleted_at IS NULL
         """
 
         with conn.cursor() as cur:
@@ -1029,11 +1142,11 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
                     "target_message": None,
                 }
 
-            # 查询将要删除的消息数量和详情（包括指定ID）
+            # 查询将要软删除的消息数量和详情（包括指定ID，未被软删除的）
             count_query = """
                 SELECT COUNT(*), MIN(created_at), MAX(created_at)
                 FROM chat_history 
-                WHERE session_id = %s AND id >= %s
+                WHERE session_id = %s AND id >= %s AND deleted_at IS NULL
             """
 
             cur.execute(count_query, (session_id, message_id))
@@ -1057,17 +1170,18 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
                     },
                 }
 
-            # 执行删除操作（包括指定ID）
-            delete_query = """
-                DELETE FROM chat_history 
-                WHERE session_id = %s AND id >= %s
+            # 执行软删除操作（包括指定ID）
+            soft_delete_query = """
+                UPDATE chat_history 
+                SET deleted_at = NOW()
+                WHERE session_id = %s AND id >= %s AND deleted_at IS NULL
             """
 
-            cur.execute(delete_query, (session_id, message_id))
+            cur.execute(soft_delete_query, (session_id, message_id))
             actual_deleted = cur.rowcount
 
             logger.info(
-                f"已清除会话 {session_id} 中包括消息ID {message_id} 在内的 {actual_deleted} 条记录"
+                f"已软删除会话 {session_id} 中包括消息ID {message_id} 在内的 {actual_deleted} 条记录"
             )
 
             # 解析目标消息内容
@@ -1098,7 +1212,7 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(
-            f"清除指定消息后记录失败 {session_id}, message_id {message_id}: {str(e)}"
+            f"软删除指定消息后记录失败 {session_id}, message_id {message_id}: {str(e)}"
         )
         return {
             "success": False,
@@ -1110,7 +1224,7 @@ def clear_messages_after_id(session_id: str, message_id: int) -> Dict[str, Any]:
 
 def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str, Any]:
     """
-    清除指定时间戳之后的所有聊天记录
+    软删除指定时间戳之后的所有聊天记录
 
     Args:
         session_id: 会话ID
@@ -1133,11 +1247,11 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
                 "deleted_count": 0,
             }
 
-        # 查询将要删除的消息数量
+        # 查询将要软删除的消息数量（未被软删除的）
         count_query = """
             SELECT COUNT(*)
             FROM chat_history 
-            WHERE session_id = %s AND created_at > %s
+            WHERE session_id = %s AND created_at > %s AND deleted_at IS NULL
         """
 
         with conn.cursor() as cur:
@@ -1151,17 +1265,18 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
                     "deleted_count": 0,
                 }
 
-            # 执行删除操作
-            delete_query = """
-                DELETE FROM chat_history 
-                WHERE session_id = %s AND created_at > %s
+            # 执行软删除操作
+            soft_delete_query = """
+                UPDATE chat_history 
+                SET deleted_at = NOW()
+                WHERE session_id = %s AND created_at > %s AND deleted_at IS NULL
             """
 
-            cur.execute(delete_query, (session_id, target_time))
+            cur.execute(soft_delete_query, (session_id, target_time))
             actual_deleted = cur.rowcount
 
             logger.info(
-                f"已清除会话 {session_id} 中时间 {timestamp} 之后的 {actual_deleted} 条记录"
+                f"已软删除会话 {session_id} 中时间 {timestamp} 之后的 {actual_deleted} 条记录"
             )
 
             return {
@@ -1173,8 +1288,66 @@ def clear_messages_after_timestamp(session_id: str, timestamp: str) -> Dict[str,
 
     except Exception as e:
         logger.error(
-            f"按时间戳清除消息失败 {session_id}, timestamp {timestamp}: {str(e)}"
+            f"按时间戳软删除消息失败 {session_id}, timestamp {timestamp}: {str(e)}"
         )
+        return {
+            "success": False,
+            "message": f"清除操作失败: {str(e)}",
+            "deleted_count": 0,
+        }
+
+
+def clear_all_messages(session_id: str) -> Dict[str, Any]:
+    """
+    软删除指定会话的所有聊天记录
+
+    Args:
+        session_id: 会话ID
+
+    Returns:
+        包含删除结果的字典
+    """
+    try:
+        conn = get_chat_history_connection()
+
+        # 查询将要软删除的消息数量（未被软删除的）
+        count_query = """
+            SELECT COUNT(*)
+            FROM chat_history 
+            WHERE session_id = %s AND deleted_at IS NULL
+        """
+
+        with conn.cursor() as cur:
+            cur.execute(count_query, (session_id,))
+            messages_to_delete = cur.fetchone()[0]
+
+            if messages_to_delete == 0:
+                return {
+                    "success": True,
+                    "message": "没有消息需要删除",
+                    "deleted_count": 0,
+                }
+
+            # 执行软删除操作
+            soft_delete_query = """
+                UPDATE chat_history 
+                SET deleted_at = NOW()
+                WHERE session_id = %s AND deleted_at IS NULL
+            """
+
+            cur.execute(soft_delete_query, (session_id,))
+            actual_deleted = cur.rowcount
+
+            logger.info(f"已软删除会话 {session_id} 中的全部 {actual_deleted} 条记录")
+
+            return {
+                "success": True,
+                "message": f"成功删除全部 {actual_deleted} 条记录",
+                "deleted_count": actual_deleted,
+            }
+
+    except Exception as e:
+        logger.error(f"软删除全部消息失败 {session_id}: {str(e)}")
         return {
             "success": False,
             "message": f"清除操作失败: {str(e)}",

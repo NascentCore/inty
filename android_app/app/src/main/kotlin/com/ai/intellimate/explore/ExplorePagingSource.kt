@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
 import ai.sxwl.android.data.cache.RecommendedAgentCacheProvider
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.PagingSource
@@ -49,11 +50,13 @@ interface ExploreFetchCallback {
 class ExplorePagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.sortSeed(),
-    private val cacheProvider: RecommendedAgentCacheProvider? = null,
+    private val cacheProvider: RecommendedAgentCacheProvider? = null, // 实际缓存仍然使用的MMKV
     private val fetchCallback: ExploreFetchCallback? = null,
+    private val characterRepository: CharacterRepository = CharacterRepository(),
 ) : PagingSource<Int, AgentInfo>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, AgentInfo> {
+
         return withContext(Dispatchers.IO) {
             try {
                 val page = params.key ?: UiConfigs.Explore.INITIAL_PAGE
@@ -72,6 +75,8 @@ class ExplorePagingSource(
                             if (cacheProvider.shouldUpdateFromNetwork()) {
                                 loadFromNetworkAsync(page, pageSize)
                             }
+
+                            characterRepository.cacheAgents(validCachedAgents)
 
                             return@withContext LoadResult.Page(
                                 data = validCachedAgents,
@@ -117,6 +122,9 @@ class ExplorePagingSource(
                                 val estimatedLoadedCount = (page - 1) * pageSize + agents.size
                                 estimatedLoadedCount < result.data.total
                             }
+
+                        // 同步缓存至Room
+                        characterRepository.cacheAgents(validAgents)
 
                         if (
                             page == UiConfigs.Explore.INITIAL_PAGE &&

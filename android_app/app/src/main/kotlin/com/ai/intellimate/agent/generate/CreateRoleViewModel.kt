@@ -1,133 +1,340 @@
 package com.ai.intellimate.agent.generate
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.api.NetServiceMgr
-import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.CreateAgentRequest
+import ai.sxwl.android.utils.ImageCompressUtils
 import ai.sxwl.android.utils.LogUtils
-import ai.sxwl.android.utils.ToastUtils
-import ai.sxwl.android.utils.Utils
-import com.ai.intellimate.R
-import com.ai.intellimate.utils.HttpErrorHandler
-import com.architecture.httplib.core.HttpResult
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.core.graphics.scale
+import androidx.core.net.toUri
+import coil3.SingletonImageLoader
+import coil3.asDrawable
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import com.ai.intellimate.agent.data.AgentGenerateRepository
+import java.io.File
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import retrofit2.HttpException
 
 /** CreateRoleActivity 的 ViewModel 负责管理 Agent 的创建和更新逻辑 */
 class CreateRoleViewModel : BaseVM() {
+    private val repository = AgentGenerateRepository()
 
-    /**
-     * 创建 Agent
-     *
-     * @param request 创建请求
-     * @param onSuccess 成功回调
-     * @param onError 失败回调
-     */
-    fun createAgent(
+    suspend fun updateAgent(
+        agentId: String? = null,
         request: CreateAgentRequest,
-        onSuccess: (AgentInfo) -> Unit,
-        onError: (String) -> Unit,
+        createTempFile: (Uri) -> File,
+        context: Context? = null,
     ) {
-        launchBackground {
+        // 上传背景图片列表，记录每张图片的上传状态
+        val remoteImageUrls = mutableListOf<String>()
+        request.backgroundImages.forEachIndexed { index, uri ->
             try {
-                val result = NetServiceMgr.getAgentApi().createAgent(request)
+                val remoteUrl = convertToRemoteImage(uri, createTempFile, context)
+                remoteImageUrls.add(remoteUrl)
+                LogUtils.i(
+                    "CreateRoleViewModel - Background image $index uploaded successfully: $remoteUrl"
+                )
+            } catch (e: Exception) {
+                LogUtils.e(
+                    "CreateRoleViewModel - Failed to upload background image $index: ${e.message}",
+                    e,
+                )
+                // 提取原始错误信息，避免重复嵌套
+                val errorMessage = e.message ?: "Unknown error"
+                throw Exception("Failed to upload background image ${index + 1}: $errorMessage")
+            }
+        }
 
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            LogUtils.i(
-                                "CreateRoleViewModel - createAgent success: ${result.data.id}"
+        // 上传背景图片（如果不在列表中）
+        val remoteBackgroundImage =
+            request.background?.let { uri ->
+                val index = request.backgroundImages.indexOf(uri)
+
+                if (index >= 0) {
+                    remoteImageUrls[index]
+                } else {
+                    try {
+                        val remoteUrl = convertToRemoteImage(uri, createTempFile, context)
+                        LogUtils.i(
+                            "CreateRoleViewModel - Background image uploaded successfully: $remoteUrl"
+                        )
+                        remoteUrl
+                    } catch (e: Exception) {
+                        LogUtils.e(
+                            "CreateRoleViewModel - Failed to upload background image: ${e.message}",
+                            e,
+                        )
+                        // 提取原始错误信息，避免重复嵌套
+                        val errorMessage = e.message ?: "Unknown error"
+                        throw Exception("Failed to upload background image: $errorMessage")
+                    }
+                }
+            }
+
+        // 上传头像
+        val remoteAvatar =
+            request.avatar?.let {
+                try {
+                    val remoteUrl = convertToRemoteImage(it, createTempFile, context)
+                    LogUtils.i("CreateRoleViewModel - Avatar uploaded successfully: $remoteUrl")
+                    remoteUrl
+                } catch (e: Exception) {
+                    LogUtils.e("CreateRoleViewModel - Failed to upload avatar: ${e.message}", e)
+                    // 提取原始错误信息，避免重复嵌套
+                    val errorMessage = e.message ?: "Unknown error"
+                    throw Exception("Failed to upload avatar: $errorMessage")
+                }
+            } ?: remoteBackgroundImage
+
+        val newRequest =
+            request.copy(
+                background = remoteBackgroundImage,
+                backgroundImages = remoteImageUrls,
+                avatar = remoteAvatar,
+            )
+
+        if (agentId.isNullOrBlank()) {
+            val result = repository.createAgent(newRequest)
+
+            LogUtils.i("CreateRoleViewModel - createAgent success: ${result.id}")
+        } else {
+            repository.updateAgent(agentId, newRequest)
+
+            LogUtils.i("CreateRoleViewModel - updateAgent success: $agentId")
+        }
+    }
+
+    private suspend fun convertToRemoteImage(
+        uri: String,
+        createTempFile: (Uri) -> File,
+        context: Context? = null,
+    ): String {
+        return withContext(Dispatchers.IO) {
+            if (uri.startsWith("http") || uri.startsWith("https")) {
+                uri
+            } else {
+                var tempFile: File? = null
+                var webpFile: File? = null
+                var compressedFile: File? = null
+                try {
+                    tempFile = createTempFile(uri.toUri())
+                    // 验证文件是否存在且可读
+                    if (!tempFile.exists() || tempFile.length() == 0L) {
+                        throw Exception("Image file is empty or does not exist: ${tempFile.name}")
+                    }
+
+                    var fileToUpload = tempFile
+
+                    // 如果是本地文件且有 context，尝试处理图片
+                    if (context != null) {
+                        // 1. 优先尝试转换为 WebP 格式
+                        webpFile =
+                            convertToWebPWithHeicSupport(
+                                context = context,
+                                imageFile = tempFile,
+                                quality = 85,
+                                maxWidth = 1920,
+                                maxHeight = 1920,
                             )
-                            onSuccess(result.data)
-                        }
 
-                        is HttpResult.Failure -> {
-                            LogUtils.e("CreateRoleViewModel - createAgent error: ${result.message}")
-                            val errorMessage =
-                                result.message.ifBlank {
-                                    "Creation failed, please check network connection"
-                                }
-                            onError(errorMessage)
+                        if (webpFile != null && webpFile.exists() && webpFile.length() > 0) {
+                            val webpSizeKB = webpFile.length() / 1024
+                            LogUtils.i(
+                                "CreateRoleViewModel - Image converted to WebP: ${webpSizeKB}KB"
+                            )
+                            fileToUpload = webpFile
+                        } else {
+                            // 2. WebP 转换失败，尝试使用 Luban 压缩
+                            LogUtils.w(
+                                "CreateRoleViewModel - WebP conversion failed, trying Luban compression"
+                            )
+                            compressedFile =
+                                ImageCompressUtils.compressImageSync(
+                                    context = context,
+                                    imageFile = tempFile,
+                                    config =
+                                        ImageCompressUtils.CompressConfig(
+                                            quality = 85,
+                                            maxWidth = 1920,
+                                            maxHeight = 1920,
+                                            maxSize = 800, // 800KB
+                                        ),
+                                )
+
+                            if (
+                                compressedFile != null &&
+                                    compressedFile.exists() &&
+                                    compressedFile.length() > 0
+                            ) {
+                                val compressedSizeKB = compressedFile.length() / 1024
+                                LogUtils.i(
+                                    "CreateRoleViewModel - Image compressed with Luban: ${compressedSizeKB}KB"
+                                )
+                                fileToUpload = compressedFile
+                            } else {
+                                LogUtils.w(
+                                    "CreateRoleViewModel - Compression failed, using original file"
+                                )
+                            }
+                        }
+                    }
+
+                    val result = repository.uploadImage(fileToUpload)
+                    result.url
+                } catch (e: Exception) {
+                    LogUtils.e(
+                        "CreateRoleViewModel - Failed to upload image: ${e.javaClass.simpleName}: ${e.message}",
+                        e,
+                    )
+                    throw e
+                } finally {
+                    // 清理 WebP 临时文件
+                    if (webpFile != null && webpFile != tempFile) {
+                        try {
+                            webpFile.delete()
+                        } catch (e: Exception) {
+                            LogUtils.w(
+                                "CreateRoleViewModel - Failed to delete WebP file: ${e.message}"
+                            )
+                        }
+                    }
+                    // 清理压缩后的临时文件
+                    if (
+                        compressedFile != null &&
+                            compressedFile != tempFile &&
+                            compressedFile != webpFile
+                    ) {
+                        try {
+                            compressedFile.delete()
+                        } catch (e: Exception) {
+                            LogUtils.w(
+                                "CreateRoleViewModel - Failed to delete compressed file: ${e.message}"
+                            )
                         }
                     }
                 }
-            } catch (e: HttpException) {
-                LogUtils.e(
-                    "CreateRoleViewModel - createAgent HTTP Exception: ${e.code()} - ${e.message()}"
-                )
-                val errorMessage = HttpErrorHandler.handleHttpException(e, "create")
-                withContext(Dispatchers.Main) { onError(errorMessage) }
-            } catch (e: Exception) {
-                LogUtils.e("CreateRoleViewModel - createAgent exception: ${e.message}")
-                val errorMessage = HttpErrorHandler.handleGeneralException(e, "create")
-                withContext(Dispatchers.Main) { onError(errorMessage) }
             }
         }
     }
 
     /**
-     * 更新 Agent
-     *
-     * @param agentId Agent ID
-     * @param request 更新请求
-     * @param onSuccess 成功回调
-     * @param onError 失败回调
+     * 将图片转换为 WebP 格式，支持 HEIC/HEIF 格式（使用 Coil 加载） 先尝试使用 ImageCompressUtils.convertToWebPSync（标准格式）
+     * 如果失败，尝试使用 Coil 加载（HEIC 格式）后转换为 WebP
      */
-    fun updateAgent(
-        agentId: String,
-        request: CreateAgentRequest,
-        onSuccess: (AgentInfo) -> Unit,
-        onError: (String) -> Unit,
-    ) {
-        LogUtils.i("CreateRoleViewModel - updateAgent: $agentId")
-        launchBackground {
-            try {
-                val result = NetServiceMgr.getAgentApi().updateAgent(agentId, request)
-
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            LogUtils.i("CreateRoleViewModel - updateAgent success: ${agentId}")
-                            onSuccess(result.data)
-                        }
-
-                        is HttpResult.Failure -> {
-                            LogUtils.e("CreateRoleViewModel - updateAgent error: ${result.message}")
-                            val errorMessage =
-                                result.message.ifBlank {
-                                    Utils.getApp()
-                                        .getString(
-                                            R.string.operation_failed_check_network,
-                                            Utils.getApp().getString(R.string.update_failed),
-                                            Utils.getApp()
-                                                .getString(R.string.check_network_connection),
-                                        )
-                                }
-                            ToastUtils.showShort(
-                                Utils.getApp()
-                                    .getString(R.string.update_failed_with_reason, errorMessage)
-                            )
-                            onError(errorMessage)
-                        }
-                    }
-                }
-            } catch (e: HttpException) {
-                LogUtils.e(
-                    "CreateRoleViewModel - updateAgent HTTP Exception: ${e.code()} - ${e.message()}"
+    private suspend fun convertToWebPWithHeicSupport(
+        context: Context,
+        imageFile: File,
+        quality: Int = 85,
+        maxWidth: Int = 1920,
+        maxHeight: Int = 1920,
+    ): File? {
+        return withContext(Dispatchers.IO) {
+            // 先尝试使用标准方法（BitmapFactory 可以解码的格式）
+            val webpFile =
+                ImageCompressUtils.convertToWebPSync(
+                    context = context,
+                    imageFile = imageFile,
+                    quality = quality,
+                    maxWidth = maxWidth,
+                    maxHeight = maxHeight,
                 )
-                val errorMessage = HttpErrorHandler.handleHttpException(e, "update")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(errorMessage)
-                    onError(errorMessage)
+
+            if (webpFile != null && webpFile.exists() && webpFile.length() > 0) {
+                return@withContext webpFile
+            }
+
+            // 标准方法失败，可能是 HEIC 格式，使用 Coil 加载
+            var bitmap: Bitmap? = null
+            try {
+                val imageLoader = SingletonImageLoader.get(context)
+                val request =
+                    ImageRequest.Builder(context)
+                        .data(imageFile)
+                        .size(coil3.size.Size.ORIGINAL)
+                        .build()
+
+                val result = imageLoader.execute(request)
+                if (result !is SuccessResult) {
+                    return@withContext null
+                }
+
+                val image = result.image
+                val drawable = image.asDrawable(context.resources)
+                bitmap =
+                    if (drawable is android.graphics.drawable.BitmapDrawable) {
+                        drawable.bitmap
+                    } else {
+                        // 从 Drawable 创建 Bitmap
+                        val width = drawable.intrinsicWidth
+                        val height = drawable.intrinsicHeight
+                        if (width <= 0 || height <= 0) {
+                            return@withContext null
+                        }
+                        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(bmp)
+                        drawable.setBounds(0, 0, width, height)
+                        drawable.draw(canvas)
+                        bmp
+                    }
+
+                if (bitmap == null) {
+                    return@withContext null
+                }
+
+                // 如果指定了最大尺寸，进行缩放
+                val finalBitmap =
+                    if (
+                        maxWidth > 0 &&
+                            maxHeight > 0 &&
+                            (bitmap.width > maxWidth || bitmap.height > maxHeight)
+                    ) {
+                        val scale =
+                            minOf(
+                                maxWidth.toFloat() / bitmap.width,
+                                maxHeight.toFloat() / bitmap.height,
+                            )
+                        val scaledWidth = (bitmap.width * scale).toInt()
+                        val scaledHeight = (bitmap.height * scale).toInt()
+                        bitmap.scale(scaledWidth, scaledHeight)
+                    } else {
+                        bitmap
+                    }
+
+                // 创建 WebP 输出文件
+                val cacheDir = File(context.cacheDir, "luban_compress")
+                if (!cacheDir.exists()) {
+                    cacheDir.mkdirs()
+                }
+                val outputWebpFile =
+                    File(
+                        cacheDir,
+                        "${imageFile.nameWithoutExtension}_${System.currentTimeMillis()}.webp",
+                    )
+
+                // 保存为 WebP 格式
+                FileOutputStream(outputWebpFile).use { out ->
+                    finalBitmap.compress(Bitmap.CompressFormat.WEBP, quality, out)
+                }
+
+                // 清理临时 Bitmap
+                if (finalBitmap != bitmap) {
+                    finalBitmap.recycle()
+                }
+                bitmap.recycle()
+
+                if (outputWebpFile.exists() && outputWebpFile.length() > 0) {
+                    outputWebpFile
+                } else {
+                    null
                 }
             } catch (e: Exception) {
-                LogUtils.e("CreateRoleViewModel - updateAgent exception: ${e.message}")
-                val errorMessage = HttpErrorHandler.handleGeneralException(e, "update")
-                withContext(Dispatchers.Main) {
-                    ToastUtils.showShort(errorMessage)
-                    onError(errorMessage)
-                }
+                LogUtils.e("CreateRoleViewModel - Failed to convert HEIC to WebP: ${e.message}", e)
+                bitmap?.recycle()
+                null
             }
         }
     }

@@ -1,4 +1,4 @@
-name: Release - Build and deploy Inty backend
+name: Release - 构建部署 Inty 后端服务器
 
 on:
   push:
