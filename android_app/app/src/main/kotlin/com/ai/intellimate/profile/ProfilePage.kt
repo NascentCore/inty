@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -581,7 +582,15 @@ private fun ProfileHeader(
                 )
             )
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier =
+                    Modifier.weight(1f)
+                        .offset(
+                            y =
+                                UiConfigs.MePage.ProfileNameBlockYOffset *
+                                    (1f - collapseProgress * 0.5f)
+                        )
+            ) {
                 Text(
                     text = userProfile.nickname.ifEmpty { "Guest" },
                     color = Color.White,
@@ -590,39 +599,19 @@ private fun ProfileHeader(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+
+                Spacer(Modifier.height(UiConfigs.MePage.ProfileNameToDescriptionSpacing))
+
+                Text(
+                    text = userProfile.description ?: stringResource(R.string.persona_placeholder),
+                    color = Color.White.copy(alpha = UiConfigs.Alpha.SecondaryText),
+                    fontSize = UiConfigs.Typography.Support,
+                    lineHeight = UiConfigs.LineHeight.Support,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = if (collapseProgress >= 1f) 1 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-
-            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
-        }
-
-        // Intro 和编辑按钮之间的间距 - 折叠时减少
-        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
-
-        // Intro 和编辑按钮 - 折叠时隐藏编辑按钮，但可以显示一行 intro
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
-                    .height(
-                        if (collapseProgress >= 1f)
-                            UiConfigs.MePage.IntroSectionCollapsedHeight // 折叠时只显示一行 intro 的高度
-                        else
-                            UiConfigs.MePage.IntroSectionExpandedHeight *
-                                (1f - collapseProgress * 0.33f) // 展开时正常高度，折叠时逐渐减少
-                    ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Intro 文本 - 折叠时只显示一行，展开时显示两行
-            Text(
-                modifier =
-                    Modifier.weight(1f).alpha(if (collapseProgress >= 1f) 0.7f else 1f), // 折叠时稍微变透明
-                text = userProfile.description ?: stringResource(R.string.persona_placeholder),
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = if (collapseProgress >= 1f) 1 else 2, // 完全折叠时只显示一行
-                overflow = TextOverflow.Ellipsis,
-            )
 
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
@@ -636,9 +625,7 @@ private fun ProfileHeader(
                             val currentTime = System.currentTimeMillis()
                             if (AntiClick.isValidClick(lastClickTimeEdit)) {
                                 lastClickTimeEdit = currentTime
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
+                                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                     // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
                                     val intent =
                                         Intent(context, ModifyProfileActivity::class.java).apply {
@@ -652,10 +639,12 @@ private fun ProfileHeader(
                     contentDescription = null,
                 )
             }
+
+            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
         }
 
-        // Intro 和 Daily Rewards Banner 之间的间距 - 使用较小的间距，折叠时减少
-        Spacer(Modifier.height(12.dp * (1f - collapseProgress)))
+        // 头像区域与 Daily Rewards Banner 之间的间距 - 折叠时减少
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
 
         // Daily Rewards Banner - 折叠时隐藏
         if (collapseProgress < 1f) {
