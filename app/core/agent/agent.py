@@ -906,7 +906,69 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
+                finish_reason = response.choices[0].finish_reason
                 response_text = response.choices[0].message.content
+
+                # 定义需要重试的 finish_reason
+                content_filter_reasons = {"content_filter", "safety"}
+
+                # 处理内容过滤情况：用 "continue" 替换用户消息重试一次
+                if finish_reason in content_filter_reasons:
+                    logger.warning(
+                        f"内容过滤触发 - Agent: {self.agent_id}, User: {user_id}, "
+                        f"Session: {session_id}, finish_reason: {finish_reason}, "
+                        f"被截断内容: {response_text}"
+                    )
+                    # 用 "continue" 替换最后一条用户消息重试
+                    openai_messages[-1] = {"role": "user", "content": "continue"}
+                    retry_response = self._call_openai_api_with_retry(
+                        client=client,
+                        model=model_name,
+                        openai_messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body={
+                            "generation_config": {
+                                "thinking_budget": 0,
+                            },
+                            "user": user_id,
+                        },
+                        user_id=user_id,
+                        max_retries=3,
+                        initial_delay=1.0,
+                    )
+                    retry_finish_reason = retry_response.choices[0].finish_reason
+                    retry_response_text = retry_response.choices[0].message.content
+
+                    # 重试后仍被过滤则记录错误，但使用重试后的响应
+                    if retry_finish_reason in content_filter_reasons:
+                        logger.error(
+                            f"内容过滤重试后仍被截断 - Agent: {self.agent_id}, "
+                            f"Session: {session_id}, finish_reason: {retry_finish_reason}, "
+                            f"被截断内容: {retry_response_text}"
+                        )
+                    else:
+                        logger.info(
+                            f"内容过滤重试成功 - Agent: {self.agent_id}, "
+                            f"Session: {session_id}"
+                        )
+                    response_text = retry_response_text
+
+                # 处理长度限制情况
+                elif finish_reason == "length":
+                    logger.warning(
+                        f"响应被截断(max_tokens) - Agent: {self.agent_id}, "
+                        f"Session: {session_id}, 响应长度: {len(response_text)}"
+                    )
+
+                # 处理其他非正常情况
+                elif finish_reason not in {"stop", None}:
+                    logger.warning(
+                        f"非正常结束 - Agent: {self.agent_id}, "
+                        f"Session: {session_id}, finish_reason: {finish_reason}"
+                    )
+
                 response_process_time = time.time() - response_process_start
                 logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
