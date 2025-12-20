@@ -170,9 +170,19 @@ internal fun PhotoAlbumScreen(
                     dismissOnBackPress = true,
                 ),
         ) {
+            val currentImageUrl = previewImage.orEmpty()
             FullScreenImageViewer(
-                imageUrl = previewImage.orEmpty(),
+                imageUrl = currentImageUrl,
                 onDismiss = { previewImage = null },
+                onAction = {
+                    if (agent.id.isNotBlank() && currentImageUrl.isNotBlank()) {
+                        IntySetting.setChatBackgroundImage(agent.id, currentImageUrl)
+                        currentBackgroundUrl = currentImageUrl
+                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
+                        previewImage = null
+                    }
+                },
+                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
             )
         }
     }
