@@ -76,6 +76,7 @@ import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
+import com.ai.intellimate.chat.ui.ScrollToStartButton
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -360,15 +361,22 @@ internal fun ChatPage(
             // - 在最新消息位置：显示 Keep Talking 按钮（如果启用）
             // - 在历史消息位置：显示滚动到底部按钮
             var isAtLatestMessage by remember { mutableStateOf(true) }
+            var isAtChatStart by remember { mutableStateOf(false) }
 
             // 监听滚动位置变化，实时更新 isAtLatestMessage 状态
             // 当 firstVisibleItemIndex == 0 且 scrollOffset == 0 时，表示用户正在查看最新消息
             LaunchedEffect(listState) {
                 snapshotFlow {
-                        listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                        Triple(
+                            listState.firstVisibleItemIndex,
+                            listState.firstVisibleItemScrollOffset,
+                            listState.canScrollForward,
+                        )
                     }
-                    .collect { (firstVisibleIndex, scrollOffset) ->
+                    .collect { (firstVisibleIndex, scrollOffset, canScrollForward) ->
                         isAtLatestMessage = firstVisibleIndex == 0 && scrollOffset == 0
+                        isAtChatStart =
+                            listState.layoutInfo.totalItemsCount > 0 && !canScrollForward
                     }
             }
 
@@ -817,7 +825,8 @@ internal fun ChatPage(
                 // 滚动到底部按钮显示逻辑：
                 // 当用户不在最新消息位置时（已滚动到历史记录），显示此按钮
                 // 点击后平滑滚动回最新消息位置
-                val showScrollToBottomButton = !isAtLatestMessage
+                // 同时也会显示“回到聊天开始”按钮；当用户到达聊天开始位置时，这两个按钮一起隐藏
+                val showHistoryScrollButtons = !isAtLatestMessage && !isAtChatStart
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
@@ -841,6 +850,31 @@ internal fun ChatPage(
                         buttonBottomOffset
                     }
 
+                val scrollToStartButtonBottomOffset =
+                    scrollToBottomButtonBottomOffset +
+                        UiConfigs.ChatPage.ScrollToBottomButton.ButtonSize +
+                        UiConfigs.ChatPage.ScrollToHistoryButtons.VerticalSpacing
+
+                // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在右下角（位于“回到最新”按钮上方）
+                // 功能：点击后平滑滚动到最旧消息位置（LazyColumn reverseLayout，最旧消息对应最大索引）
+                ScrollToStartButton(
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(
+                                bottom = scrollToStartButtonBottomOffset,
+                                end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,
+                            ),
+                    visible = showHistoryScrollButtons,
+                    onClick = {
+                        scope.launch {
+                            val totalItemsCount = listState.layoutInfo.totalItemsCount
+                            if (totalItemsCount > 0) {
+                                listState.animateScrollToItem(totalItemsCount - 1)
+                            }
+                        }
+                    },
+                )
+
                 // 滚动到底部按钮：当用户滚动到历史消息时显示在右下角
                 // 功能：点击后平滑滚动回最新消息位置（LazyColumn 使用 reverseLayout，索引 0 为最新消息）
                 ScrollToBottomButton(
@@ -850,7 +884,7 @@ internal fun ChatPage(
                                 bottom = scrollToBottomButtonBottomOffset,
                                 end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,
                             ),
-                    visible = showScrollToBottomButton,
+                    visible = showHistoryScrollButtons,
                     onClick = {
                         scope.launch {
                             // 平滑滚动到索引 0（最新消息位置）

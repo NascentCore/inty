@@ -546,6 +546,12 @@ object UiConfigs {
             val BottomOffsetAboveKeepTalking = 60.dp
         }
 
+        /** 聊天页“滚动到开始/滚动到最新”双按钮的布局配置 */
+        object ScrollToHistoryButtons {
+            /** 两个圆形按钮之间的垂直间距 */
+            val VerticalSpacing = 12.dp
+        }
+
         /** 相册配置 - 适用于角色相册页面的列数等设置 */
         object PhotoAlbum {
             /** 预览区域配置 - 适用于角色信息页面中的图片预览区域 */
