@@ -1,6 +1,6 @@
 package com.ai.intellimate.chat.ui
 
-// CREATED_BY_AGENT: chat page scroll-to-start button
+// CREATED_BY_AGENT: chat page back-to-top button
 
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.animation.AnimatedVisibility
@@ -26,7 +26,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
 @Composable
-fun ScrollToStartButton(
+fun BackToTop(
     modifier: Modifier = Modifier,
     visible: Boolean,
     enabled: Boolean = true,
@@ -71,7 +71,7 @@ fun ScrollToStartButton(
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.keyboard_double_arrow_up_24px),
-                contentDescription = "Scroll to start",
+                contentDescription = "Back to top",
                 modifier = Modifier.size(config.IconSize),
                 tint = if (enabled) Color.White else Color.LightGray,
             )

@@ -72,11 +72,11 @@ import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
 import com.ai.intellimate.chat.ui.ChatTopBar
+import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
-import com.ai.intellimate.chat.ui.ScrollToStartButton
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -857,7 +857,7 @@ internal fun ChatPage(
 
                 // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在右下角（位于“回到最新”按钮上方）
                 // 功能：点击后平滑滚动到最旧消息位置（LazyColumn reverseLayout，最旧消息对应最大索引）
-                ScrollToStartButton(
+                BackToTop(
                     modifier =
                         Modifier.align(Alignment.BottomCenter)
                             .padding(
