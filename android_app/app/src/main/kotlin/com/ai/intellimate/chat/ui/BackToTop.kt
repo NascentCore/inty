@@ -32,7 +32,7 @@ fun BackToTop(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    val config = UiConfigs.ChatPage.ScrollToBottomButton
+    val config = UiConfigs.FloatingScrollButton
 
     AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
         Box(

@@ -852,7 +852,7 @@ internal fun ChatPage(
 
                 val scrollToStartButtonBottomOffset =
                     scrollToBottomButtonBottomOffset +
-                        UiConfigs.ChatPage.ScrollToBottomButton.ButtonSize +
+                        UiConfigs.FloatingScrollButton.ButtonSize +
                         UiConfigs.ChatPage.ScrollToHistoryButtons.VerticalSpacing
 
                 // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在右下角（位于“回到最新”按钮上方）
@@ -862,7 +862,7 @@ internal fun ChatPage(
                         Modifier.align(Alignment.BottomCenter)
                             .padding(
                                 bottom = scrollToStartButtonBottomOffset,
-                                end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,
+                                end = UiConfigs.FloatingScrollButton.RightPadding,
                             ),
                     visible = showHistoryScrollButtons,
                     onClick = {
@@ -882,7 +882,7 @@ internal fun ChatPage(
                         Modifier.align(Alignment.BottomCenter)
                             .padding(
                                 bottom = scrollToBottomButtonBottomOffset,
-                                end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,
+                                end = UiConfigs.FloatingScrollButton.RightPadding,
                             ),
                     visible = showHistoryScrollButtons,
                     onClick = {

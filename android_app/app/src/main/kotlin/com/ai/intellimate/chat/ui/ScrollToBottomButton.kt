@@ -35,7 +35,7 @@ import com.ai.intellimate.ui.UiConfigs
  * UI 特性：
  * - 圆形按钮，半透明黑色背景，白色边框渐变
  * - 使用淡入淡出动画，提供流畅的显示/隐藏体验
- * - 按钮大小、位置等视觉效果参数统一在 UiConfigs.ChatPage.ScrollToBottomButton 中管理
+ * - 按钮大小、样式等视觉效果参数统一在 UiConfigs.FloatingScrollButton 中管理
  */
 @Composable
 fun ScrollToBottomButton(
@@ -44,7 +44,7 @@ fun ScrollToBottomButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    val config = UiConfigs.ChatPage.ScrollToBottomButton
+    val config = UiConfigs.FloatingScrollButton
 
     // 使用 AnimatedVisibility 实现按钮的淡入淡出动画
     // modifier 需要传递给 AnimatedVisibility 以确保对齐方式正确应用
