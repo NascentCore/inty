@@ -1,6 +1,7 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
 
@@ -1246,6 +1247,40 @@ class Agent:
             logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
             raise
 
+    async def chat_stream(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        messages: Any,
+        db_session: Any = None,
+        chat_settings: models.chat_settings.ChatSettings = None,
+        interruption_prompt: Optional[str] = None,
+    ):
+        """
+        流式生成 AI 回复。
+
+        注意：
+        - 该方法只负责“生成与分块输出”，不负责把用户/AI 消息写入聊天历史（由调用方决定落库时机）。
+        - `messages` 兼容两种输入：`List[HumanMessage]` 或 `{"messages": List[HumanMessage]}`。
+        """
+        self._update_last_used()
+
+        normalized_messages = self._normalize_stream_messages(messages)
+        user_profile = await self._get_user_profile_async(user_id)
+        openai_messages = self._build_openai_messages_for_stream(
+            session_id=session_id,
+            user_profile=user_profile,
+            chat_settings=chat_settings,
+            new_messages=normalized_messages,
+            interruption_prompt=interruption_prompt,
+        )
+
+        async for delta in self._openai_stream_deltas(
+            user_id=user_id, openai_messages=openai_messages, chat_settings=chat_settings
+        ):
+            yield AIMessage(content=delta), {}
+
     def get_final_prompt(self) -> str:
         """
         获取最终渲染的提示词
@@ -1291,6 +1326,149 @@ class Agent:
         """清理资源"""
         if hasattr(self, "_executor"):
             self._executor.shutdown(wait=False)
+
+    def _normalize_stream_messages(self, messages: Any) -> List[HumanMessage]:
+        if isinstance(messages, dict) and "messages" in messages:
+            res = messages["messages"]
+            if isinstance(res, list):
+                return res
+        if isinstance(messages, list):
+            return messages
+        raise ValueError("Invalid messages for chat_stream")
+
+    async def _get_user_profile_async(self, user_id: str) -> str:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(self._executor, self._get_user_profile_sync, user_id)
+
+    def _build_openai_messages_for_stream(
+        self,
+        *,
+        session_id: str,
+        user_profile: str,
+        chat_settings: models.chat_settings.ChatSettings,
+        new_messages: List[HumanMessage],
+        interruption_prompt: Optional[str],
+    ) -> list[dict[str, str]]:
+        history_messages = chat_history_service.get_history_messages(session_id)
+        recent_history = self._get_relevant_history(history_messages)
+        all_messages = recent_history + new_messages
+
+        user_name = self._extract_user_name_from_profile(user_profile)
+        system_messages = self.build_system_messages(user_profile, chat_settings)
+        if interruption_prompt:
+            system_messages.append(SystemMessage(content=interruption_prompt))
+
+        messages_list: list[BaseMessage] = system_messages + all_messages
+        return [
+            langchain_message_to_openai_message(message, user_name, self.name)
+            for message in messages_list
+        ]
+
+    async def _openai_stream_deltas(
+        self,
+        *,
+        user_id: str,
+        openai_messages: list[dict[str, str]],
+    ):
+        """
+        将 OpenAI SDK 的同步 stream 适配为 async generator（支持任务取消）。
+        """
+        default_model = global_config_loaded_from_config_yaml.agent.model
+        default_temperature = global_config_loaded_from_config_yaml.agent.temperature
+        default_max_tokens = global_config_loaded_from_config_yaml.agent.max_tokens
+        default_top_p = global_config_loaded_from_config_yaml.agent.top_p
+
+        model_name = self.model_config.get("model", default_model)
+        temperature = self.model_config.get("temperature", default_temperature)
+        max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+        top_p = self.model_config.get("top_p", default_top_p)
+
+        chat_name = f"{user_id}:{self.name}"
+        labels = {"user_id": user_id, "agent_id": self.agent_id, "agent_name": self.name}
+        client = self._get_wrapped_client(chat_name, labels)
+
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[Optional[str]] = asyncio.Queue()
+        stop_event = Event()
+        errors: list[Exception] = []
+
+        def _maybe_close(stream_obj: Any) -> None:
+            close_fn = getattr(stream_obj, "close", None)
+            if callable(close_fn):
+                try:
+                    close_fn()
+                except Exception:
+                    return
+
+        def _worker() -> None:
+            stream_obj = None
+            try:
+                try:
+                    stream_obj = client.chat.completions.create(
+                        model=model_name,
+                        messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        stream=True,
+                        extra_body={
+                            "generation_config": {"thinking_budget": 0},
+                            "user": user_id,
+                        },
+                    )
+                    for chunk in stream_obj:
+                        if stop_event.is_set():
+                            _maybe_close(stream_obj)
+                            break
+                        try:
+                            delta = chunk.choices[0].delta.content
+                        except Exception:
+                            delta = None
+                        if delta:
+                            loop.call_soon_threadsafe(queue.put_nowait, delta)
+                except NotImplementedError:
+                    # 测试环境 FakeOpenAI 不支持 streaming：回退为一次性输出。
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body={
+                            "generation_config": {"thinking_budget": 0},
+                            "user": user_id,
+                        },
+                    )
+                    text = response.choices[0].message.content
+                    if text:
+                        loop.call_soon_threadsafe(queue.put_nowait, text)
+            except Exception as e:
+                errors.append(e)
+            finally:
+                if stream_obj is not None:
+                    _maybe_close(stream_obj)
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        worker_future = loop.run_in_executor(self._executor, _worker)
+
+        try:
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                yield item
+            if errors:
+                raise errors[0]
+        except asyncio.CancelledError:
+            stop_event.set()
+            raise
+        finally:
+            stop_event.set()
+            try:
+                await asyncio.wait_for(worker_future, timeout=1.0)
+            except Exception:
+                # 取消/网络中断时，worker 可能无法及时结束；这里不阻塞退出。
+                pass
 
 
 class AgentManager:

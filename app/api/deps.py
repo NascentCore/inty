@@ -2,9 +2,9 @@
 依赖注入：为 FastAPI 接口处理函数注入依赖数据。
 """
 
-from typing import Generator
+from typing import Generator, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, WebSocket, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
@@ -20,19 +20,22 @@ from app.models.user import User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
-def get_db() -> Generator:
-    """获取数据库会话（同步版本，另有 async 版本）"""
-    try:
-        db = SessionLocal()
-        yield db
-    finally:
-        db.close()
+def _get_bearer_token_from_authorization_header(
+    authorization: Optional[str],
+) -> Optional[str]:
+    if not authorization:
+        return None
+
+    prefix = "bearer "
+    if authorization.lower().startswith(prefix):
+        token = authorization[len(prefix) :].strip()
+        return token or None
+
+    return None
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)
-) -> User:
-    """获取当前用户"""
+async def get_current_user_from_token(token: str, db: AsyncSession) -> User:
+    """从 token 获取当前用户（可复用在 WebSocket/HTTP 场景）。"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -87,6 +90,22 @@ async def get_current_user(
         raise credentials_exception
 
 
+def get_db() -> Generator:
+    """获取数据库会话（同步版本，另有 async 版本）"""
+    try:
+        db = SessionLocal()
+        yield db
+    finally:
+        db.close()
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)
+) -> User:
+    """获取当前用户"""
+    return await get_current_user_from_token(token, db)
+
+
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
@@ -104,3 +123,34 @@ async def get_current_active_user(
 
     logger.debug(f"用户活跃状态检查通过: {current_user.id}")
     return current_user
+
+
+async def get_current_active_user_ws(
+    websocket: WebSocket, db: AsyncSession = Depends(get_async_db)
+) -> User:
+    """
+    WebSocket 鉴权：优先取 `Authorization: Bearer <token>`，其次取查询参数 `token`。
+    """
+    authorization = websocket.headers.get("authorization")
+    token = _get_bearer_token_from_authorization_header(authorization)
+
+    if not token:
+        token = websocket.query_params.get("token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = await get_current_user_from_token(token, db)
+    # 复用 active 检查逻辑
+    if user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account has been deleted",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user

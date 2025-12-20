@@ -209,6 +209,7 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/api/v2/chat/completions/{agent_id}` | POST | `app/api/v2/endpoints/chat.py` |
+| `/api/v2/chat/ws/{agent_id}` | WebSocket | `app/api/v2/endpoints/chat_ws.py` |
 
 ### AI 角色 (Agents)
 
