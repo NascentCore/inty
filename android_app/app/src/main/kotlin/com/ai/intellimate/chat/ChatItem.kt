@@ -551,7 +551,8 @@ private fun ChatItemAI(
                 }
 
                 // 生图预览下方的 👍/👎（布局与文字 bubble 一致）
-                if (shouldShowMessageActions && (hasGeneratedImage || isImageLoading)) {
+                // 只在生图完成后显示点赞/点踩按钮，生图过程中不显示
+                if (shouldShowMessageActions && hasGeneratedImage && !isImageLoading) {
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,

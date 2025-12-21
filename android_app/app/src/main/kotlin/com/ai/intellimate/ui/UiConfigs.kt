@@ -440,6 +440,12 @@ object UiConfigs {
 
         /** 音频播放器最小宽度 */
         val AudioPlayerMinWidth = 38.dp
+
+        /** 消息操作按钮图标大小 - 适用于点赞、点踩、召回、图片生成等操作按钮 */
+        val ActionButtonIconSize = 24.dp
+
+        /** 消息操作按钮之间的间距 */
+        val ActionButtonSpacing = 12.dp
     }
 
     /** 聊天顶部栏配置 - 适用于聊天页面顶部栏的尺寸、间距、字体等设置 */

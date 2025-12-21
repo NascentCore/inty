@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 
 /** Like 按钮 - 支持选中状态 */
 @Composable
@@ -25,8 +26,9 @@ private fun LikeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
     Box(
-        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
+        modifier = modifier.size(iconSize).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         // 选中状态使用 ic_like_light（带渐变色），未选中状态使用 ic_like_normal
@@ -36,7 +38,7 @@ private fun LikeButton(
                     if (isSelected) R.drawable.ic_like_light else R.drawable.ic_like_normal
                 ),
             contentDescription = "Like",
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(iconSize),
             tint = Color.Unspecified,
         )
     }
@@ -49,8 +51,9 @@ private fun DislikeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
     Box(
-        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
+        modifier = modifier.size(iconSize).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         // 选中状态使用 ic_dislike_light（带渐变色），未选中状态使用 ic_dislike_normal
@@ -60,7 +63,7 @@ private fun DislikeButton(
                     if (isSelected) R.drawable.ic_dislike_light else R.drawable.ic_dislike_normal
                 ),
             contentDescription = "Dislike",
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(iconSize),
             tint = Color.Unspecified,
         )
     }
@@ -69,14 +72,15 @@ private fun DislikeButton(
 /** Recall 按钮 */
 @Composable
 private fun RecallButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
     Box(
-        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
+        modifier = modifier.size(iconSize).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_recall),
             contentDescription = "Recall",
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(iconSize),
             tint = Color.Unspecified,
         )
     }
@@ -85,14 +89,15 @@ private fun RecallButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 /** Image Generate 按钮 */
 @Composable
 private fun ImageGenerateButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
     Box(
-        modifier = modifier.size(24.dp).noRippleClickable(onClick = onClick),
+        modifier = modifier.size(iconSize).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_image_star),
             contentDescription = "Generate Image",
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(iconSize),
             tint = Color.Unspecified,
         )
     }
@@ -113,7 +118,7 @@ internal fun MessageActionBar(
     // like/dislike互斥，但不影响recall和keep talking的状态
     Row(
         modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(UiConfigs.ChatMessagePane.ActionButtonSpacing),
     ) {
         // Like 按钮 - 如果已dislike则不显示
         if (!isDisliked) {
@@ -149,7 +154,10 @@ internal fun MessageActionBar(
 internal fun MessageCornerActions(onImageGenerate: () -> Unit, modifier: Modifier = Modifier) {
     // image generate不受like/dislike影响，始终显示
     // keep talking按钮已移至ChatInput右上角悬浮
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(UiConfigs.ChatMessagePane.ActionButtonSpacing),
+    ) {
         ImageGenerateButton(onClick = onImageGenerate)
     }
 }
