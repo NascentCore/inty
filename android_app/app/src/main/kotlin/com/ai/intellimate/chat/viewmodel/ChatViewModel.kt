@@ -1129,7 +1129,7 @@ class ChatViewModel : BaseVM() {
                 ),
             )
 
-            // ✅ 修复：参数检查失败时，上报 failure 事件
+            // ✅ 修复：参数检查失败时，上报 failure 事件并重置状态
             if (agentId == null || agent == null) {
                 val endTime = System.currentTimeMillis()
                 FirebaseManager.logEvent(
@@ -1145,6 +1145,8 @@ class ChatViewModel : BaseVM() {
                     ),
                 )
                 LogUtils.e("generateImageForMessage: agentId or agent is null")
+                // 重置生图状态，确保可以再次点击
+                agentId?.let { chatRepository.updateMessageGeneratedImage(it, messageId, null) }
                 return@launch
             }
 
@@ -1186,6 +1188,13 @@ class ChatViewModel : BaseVM() {
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                             ),
                         )
+
+                        // 重置点赞/点踩状态，确保生图后可以重新点赞/点踩
+                        val messages = _msgs.value
+                        val targetMessage = messages.find { it.id == messageId || it.localMsgId == messageId }
+                        targetMessage?.let {
+                            updateMessageFeedbackUseCase(agentId, it.localMsgId, null)
+                        }
                     }
 
                     is HttpResult.Failure -> {
@@ -1307,6 +1316,9 @@ class ChatViewModel : BaseVM() {
                         "generation_time_ms" to generationTime,
                     ),
                 )
+
+                // 重置生图状态，确保可以再次点击
+                chatRepository.updateMessageGeneratedImage(agentId, messageId, null)
 
                 NetworkErrorHandler.showNetworkAwareError("Failed to generate image: ${e.message}")
             }
