@@ -5,7 +5,6 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -53,6 +52,7 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.ChatBackgroundUtils
 
 /** 这是角色相册的单独页面，是通过角色主页的 生图预览区右上角 See All 进入的页面 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -176,9 +176,8 @@ internal fun PhotoAlbumScreen(
                 onDismiss = { previewImage = null },
                 onAction = {
                     if (agent.id.isNotBlank() && currentImageUrl.isNotBlank()) {
-                        IntySetting.setChatBackgroundImage(agent.id, currentImageUrl)
-                        currentBackgroundUrl = currentImageUrl
-                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
+                        currentBackgroundUrl =
+                            ChatBackgroundUtils.setChatBackground(agent.id, currentImageUrl)
                         previewImage = null
                     }
                 },
@@ -238,15 +237,13 @@ private fun PhotoAlbumImageItem(
                 Modifier.fillMaxWidth()
                     .padding(top = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTopPadding)
                     .noRippleClickable {
-                        if (isCurrentBackground) {
-                            IntySetting.clearChatBackgroundImage(agentId)
-                            onBackgroundChanged(null)
-                            ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
-                        } else {
-                            IntySetting.setChatBackgroundImage(agentId, item.imageUrl)
-                            onBackgroundChanged(item.imageUrl)
-                            ToastUtils.showShort(R.string.agent_gallery_background_set_success)
-                        }
+                        val newBackgroundUrl =
+                            ChatBackgroundUtils.toggleChatBackground(
+                                agentId,
+                                item.imageUrl,
+                                isCurrentBackground,
+                            )
+                        onBackgroundChanged(newBackgroundUrl)
                     },
             contentAlignment = Alignment.Center,
         ) {
