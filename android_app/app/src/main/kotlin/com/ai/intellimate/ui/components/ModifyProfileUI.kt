@@ -86,10 +86,12 @@ private fun EditKey.toDisplayName(): String {
 @Composable
 fun ProfileInfoScreen(
     userProfile: UserProfile,
+    preference: String = "",
     onBack: () -> Unit = {},
     onSelectAvatar: () -> Unit = {},
     onClickName: () -> Unit = {},
     onClickPronouns: () -> Unit = {},
+    onClickPreference: () -> Unit = {},
     onClickPersona: () -> Unit = {},
 ) {
     Scaffold(
@@ -142,6 +144,21 @@ fun ProfileInfoScreen(
                     isInGroup = true,
                     horizontalPadding = horizontalPadding,
                     onItemClick = onClickPronouns,
+                )
+                IntelliMateDivider()
+                SettingsArrowItem(
+                    item =
+                        SettingsItemData.CommonItemData(
+                            title = stringResource(R.string.chat_settings_preference_title),
+                            content =
+                                preference.ifBlank {
+                                    stringResource(R.string.chat_settings_preference_placeholder)
+                                },
+                        ),
+                    isInGroup = true,
+                    horizontalPadding = horizontalPadding,
+                    contentMaxLines = 1,
+                    onItemClick = onClickPreference,
                 )
                 IntelliMateDivider()
                 SettingsArrowItem(
