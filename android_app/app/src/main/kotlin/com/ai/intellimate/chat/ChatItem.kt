@@ -258,6 +258,7 @@ private fun ChatItemAI(
 
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
                 val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
+                val shouldShowMessageActions = isLatestMessage && !shouldFlowShow
 
                 if (isNormalLoading) {
                     Box(
@@ -371,7 +372,8 @@ private fun ChatItemAI(
                     }
                 }
 
-                if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
+                // 无生图时，操作区跟随文字 bubble；有生图时操作区挪到图片预览下方（见后续）
+                if (shouldShowMessageActions && !(hasGeneratedImage || isImageLoading)) {
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
@@ -546,6 +548,17 @@ private fun ChatItemAI(
                             )
                         }
                     }
+                }
+
+                // 生图预览下方的 👍/👎（布局与文字 bubble 一致）
+                if (shouldShowMessageActions && (hasGeneratedImage || isImageLoading)) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    MessageActionBar(
+                        message = item,
+                        onLike = { viewModel.likeMessage(item.localMsgId) },
+                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onRecall = { viewModel.recallMessage() },
+                    )
                 }
 
                 if (BuildConfig.DEBUG) {
