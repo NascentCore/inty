@@ -508,8 +508,10 @@ object UiConfigs {
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
         object ChatBubble {
             /** 圣诞装饰图标大小 - 适用于圣诞树、草莓、糖果等装饰图标 */
-            val ChristmasDecorationIconSize = 40.dp
+            val ChristMasTreeSize = 60.dp
+            val CherrySize = 40.dp
             val SnowDecorationSize = 80.dp
+            val ChritsmasDecorationSize = 60.dp
         }
 
         @Composable

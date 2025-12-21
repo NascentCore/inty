@@ -356,7 +356,7 @@ private fun ChatItemAI(
                                     painter = painterResource(R.drawable.img_omela),
                                     contentDescription = null,
                                     modifier =
-                                        Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                        Modifier.size(UiConfigs.ChatPage.ChatBubble.CherrySize)
                                             .align(Alignment.BottomStart)
                                             .offset(x = (-35).dp, y = 10.dp),
                                 )
@@ -494,9 +494,9 @@ private fun ChatItemAI(
                                         painter = painterResource(R.drawable.img_christmas_candy),
                                         contentDescription = null,
                                         modifier =
-                                            Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                            Modifier.size(UiConfigs.ChatPage.ChatBubble.ChritsmasDecorationSize)
                                                 .constrainAs(left) {
-                                                    start.linkTo(img.start, (-15).dp)
+                                                    start.linkTo(img.start, (-20).dp)
                                                     bottom.linkTo(img.bottom, (-12).dp)
                                                 },
                                     )
@@ -504,7 +504,7 @@ private fun ChatItemAI(
                                         painter = painterResource(R.drawable.img_candy_christmas),
                                         contentDescription = null,
                                         modifier =
-                                            Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                            Modifier.size(UiConfigs.ChatPage.ChatBubble.ChritsmasDecorationSize)
                                                 .constrainAs(right) {
                                                     end.linkTo(img.end, (-25).dp)
                                                     bottom.linkTo(img.bottom, (-12).dp)
@@ -650,9 +650,9 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                             painter = painterResource(R.drawable.img_christmas_tree),
                             contentDescription = null,
                             modifier =
-                                Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristMasTreeSize)
                                     .align(Alignment.TopStart)
-                                    .offset(x = (-40).dp),
+                                    .offset(x = (-60).dp),
                         )
                     }
                 }
