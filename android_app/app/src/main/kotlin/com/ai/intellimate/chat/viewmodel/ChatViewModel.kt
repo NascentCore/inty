@@ -1146,7 +1146,16 @@ class ChatViewModel : BaseVM() {
                 )
                 LogUtils.e("generateImageForMessage: agentId or agent is null")
                 // 重置生图状态，确保可以再次点击
-                agentId?.let { chatRepository.updateMessageGeneratedImage(it, messageId, null) }
+                // ✅ 修复：即使 agentId 为 null，也尝试从消息中获取 agentId 来重置状态
+                val actualAgentId =
+                    agentId
+                        ?: run {
+                            val messages = _msgs.value
+                            val targetMessage =
+                                messages.find { it.id == messageId || it.localMsgId == messageId }
+                            targetMessage?.agentId()?.takeIf { it.isNotBlank() }
+                        }
+                actualAgentId?.let { chatRepository.updateMessageGeneratedImage(it, messageId, null) }
                 return@launch
             }
 
