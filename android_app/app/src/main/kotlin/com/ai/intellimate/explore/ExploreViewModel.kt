@@ -511,10 +511,9 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     private fun filterAgentsByTag(agents: List<AgentInfo>, query: String): List<AgentInfo> {
         if (agents.isEmpty()) return emptyList()
         return agents.filter { agent ->
-            agent.tags
-                ?.asSequence()
-                ?.filterNotNull()
-                ?.any { it.contains(query, ignoreCase = true) } == true
+            agent.tags?.asSequence()?.filterNotNull()?.any {
+                it.contains(query, ignoreCase = true)
+            } == true
         }
     }
 

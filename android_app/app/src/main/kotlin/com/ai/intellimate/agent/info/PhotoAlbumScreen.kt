@@ -215,7 +215,9 @@ private fun PhotoAlbumImageItem(
                 Box(
                     modifier =
                         Modifier.align(Alignment.TopEnd)
-                            .padding(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorPadding)
+                            .padding(
+                                UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorPadding
+                            )
                             .size(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorSize)
                             .clip(CircleShape)
                             .background(UiConfigs.ChatPage.PhotoAlbum.All.BackgroundIndicatorColor)

@@ -13,8 +13,8 @@ import com.ai.intellimate.R
 /**
  * CREATED_BY_AGENT: GPT-5.2
  *
- * My Persona 统一设置项（Name / Pronouns / Personality / Persona Description）。
- * 用于在 ChatSettingsDrawer 与 Edit My Persona 页面复用同一段渲染代码。
+ * My Persona 统一设置项（Name / Pronouns / Personality / Persona Description）。 用于在 ChatSettingsDrawer 与
+ * Edit My Persona 页面复用同一段渲染代码。
  */
 private const val DEFAULT_GUEST_NAME = "Guest"
 
@@ -91,4 +91,3 @@ fun MyPersonaSettingsGroup(
         )
     }
 }
-
