@@ -46,12 +46,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.ChatBackgroundUtils
 
@@ -161,31 +158,12 @@ internal fun PhotoAlbumScreen(
         }
     }
 
-    if (previewImage != null) {
-        Dialog(
-            onDismissRequest = { previewImage = null },
-            properties =
-                DialogProperties(
-                    usePlatformDefaultWidth = false,
-                    dismissOnClickOutside = true,
-                    dismissOnBackPress = true,
-                ),
-        ) {
-            val currentImageUrl = previewImage.orEmpty()
-            FullScreenImageViewer(
-                imageUrl = currentImageUrl,
-                onDismiss = { previewImage = null },
-                onAction = {
-                    if (agent.id.isNotBlank() && currentImageUrl.isNotBlank()) {
-                        currentBackgroundUrl =
-                            ChatBackgroundUtils.setChatBackground(agent.id, currentImageUrl)
-                        previewImage = null
-                    }
-                },
-                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
-            )
-        }
-    }
+    AgentGalleryImagePreviewDialog(
+        previewImageUrl = previewImage,
+        agentId = agent.id,
+        onDismiss = { previewImage = null },
+        onBackgroundChanged = { newUrl -> currentBackgroundUrl = newUrl },
+    )
 }
 
 @Composable

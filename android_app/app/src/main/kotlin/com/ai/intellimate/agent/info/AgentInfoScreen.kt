@@ -80,7 +80,6 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
-import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
@@ -582,30 +581,11 @@ private fun PhotoAlbumPreviewSection(
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
     }
 
-    if (previewImage != null) {
-        Dialog(
-            onDismissRequest = { previewImage = null },
-            properties =
-                DialogProperties(
-                    usePlatformDefaultWidth = false,
-                    dismissOnClickOutside = true,
-                    dismissOnBackPress = true,
-                ),
-        ) {
-            val currentImageUrl = previewImage.orEmpty()
-            FullScreenImageViewer(
-                imageUrl = currentImageUrl,
-                onDismiss = { previewImage = null },
-                onAction = {
-                    if (agentId.isNotBlank() && currentImageUrl.isNotBlank()) {
-                        ChatBackgroundUtils.setChatBackground(agentId, currentImageUrl)
-                        previewImage = null
-                    }
-                },
-                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
-            )
-        }
-    }
+    AgentGalleryImagePreviewDialog(
+        previewImageUrl = previewImage,
+        agentId = agentId,
+        onDismiss = { previewImage = null },
+    )
 }
 
 @Composable
