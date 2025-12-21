@@ -1,12 +1,4 @@
-# InTy - AI 智能伴侣平台
-
-```text
-IntelliMate: Ultimate companionship, reimagined with AI
-
-Role-play with AI characters.
-Create your own IntelliMate, powered by carefully tuned AI agents,
-experience your own imagination.
-```
+# InTy - 长期 AI 情感陪伴
 
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
