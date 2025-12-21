@@ -42,10 +42,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.HolidayCelebrationPopupRules
+import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.EmailLoginButton
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
@@ -294,6 +298,18 @@ class MainActivity : BaseActivity() {
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
 
+        var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
+        LifecycleResumeEffect(Unit) {
+            showHolidayCelebrationDialog = HolidayCelebrationPopupRules.shouldShowNow()
+            onPauseOrDispose {}
+        }
+        LaunchedEffect(showHolidayCelebrationDialog) {
+            if (showHolidayCelebrationDialog) {
+                // 记录“今日已展示”，同一天最多弹一次；12/25 后规则会自然停用
+                HolidayCelebrationPopupRules.markShownToday()
+            }
+        }
+
         // 在首次显示时执行初始化操作
         LaunchedEffect(Unit) {
             // 1. 实时检查登录状态变化
@@ -364,6 +380,17 @@ class MainActivity : BaseActivity() {
         //        }
         val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
         AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory)
+
+        if (showHolidayCelebrationDialog) {
+            HolidayCelebrationDialog(
+                title = stringResource(R.string.holiday_celebration_title),
+                subtitle = stringResource(R.string.holiday_celebration_subtitle),
+                primaryButtonText = stringResource(R.string.holiday_celebration_primary_cta),
+                secondaryButtonText = stringResource(R.string.holiday_celebration_secondary_cta),
+                onDismiss = { showHolidayCelebrationDialog = false },
+                onPrimaryClick = { showHolidayCelebrationDialog = false },
+            )
+        }
     }
 
     /** 设置返回拦截功能 */

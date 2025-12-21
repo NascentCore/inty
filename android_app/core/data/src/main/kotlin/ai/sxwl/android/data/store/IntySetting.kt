@@ -19,6 +19,7 @@ private const val DEFAULT_CHAT_MODEL_ID = "gemini_3_flash"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
 private const val KEY_TOTAL_MESSAGE_COUNT = "total_message_count"
+private const val KEY_HOLIDAY_CELEBRATION_LAST_SHOWN_YMD = "holiday_celebration_last_shown_ymd"
 
 object IntySetting {
 
@@ -219,6 +220,24 @@ object IntySetting {
 
     fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
         curUserSetting.putLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
+    }
+
+    /**
+     * 获取节日庆祝弹窗“上次展示日期”（yyyyMMdd，应用级别所有用户共享）。
+     *
+     * 用途：在节日窗口内做到“每天最多弹一次”，同时满足“记录日期”的需求。
+     */
+    fun getHolidayCelebrationLastShownYmd(): String {
+        return allUserSetting.decodeString(KEY_HOLIDAY_CELEBRATION_LAST_SHOWN_YMD).orEmpty()
+    }
+
+    /**
+     * 记录节日庆祝弹窗“已展示日期”（yyyyMMdd，应用级别所有用户共享）。
+     *
+     * @param ymd yyyyMMdd，例如 20251221
+     */
+    fun setHolidayCelebrationLastShownYmd(ymd: String) {
+        allUserSetting.putString(KEY_HOLIDAY_CELEBRATION_LAST_SHOWN_YMD, ymd)
     }
 
     /** 获取总消息数（跨所有AI角色） */

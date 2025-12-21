@@ -516,4 +516,10 @@
     <string name="reset_suc_msg">A new conversation has started.</string>
     <string name="chat_setting_text_streaming">Text streaming</string>
     <string name="my_boost_points">My Boost Points: %1$d</string>
+
+    <!-- Holiday celebration popup -->
+    <string name="holiday_celebration_title">Merry Christmas &amp; Happy New Year!</string>
+    <string name="holiday_celebration_subtitle">Wishing you warmth, magic, and a brand new year full of good surprises.</string>
+    <string name="holiday_celebration_primary_cta">Let’s Celebrate</string>
+    <string name="holiday_celebration_secondary_cta">Not now</string>
 </resources>
