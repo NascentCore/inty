@@ -35,7 +35,7 @@ fun KeepTalkingFloatingButton(
     Box(
         modifier =
             modifier
-                .width(UiConfigs.ChatPage.keepTalkingButtonWidth)
+                .width(UiConfigs.ChatPage.KeepTalkingButton.width)
                 .clip(cornerShape)
                 .border(
                     1.dp,
@@ -58,13 +58,13 @@ fun KeepTalkingFloatingButton(
                         Modifier
                     }
                 )
-                .padding(4.dp),
+                .padding(UiConfigs.ChatPage.KeepTalkingButton.padding),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_keep_talking),
             contentDescription = "Keep Talking",
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(UiConfigs.ChatPage.KeepTalkingButton.iconSize),
             tint = if (enabled) Color.White else Color.LightGray,
         )
     }
