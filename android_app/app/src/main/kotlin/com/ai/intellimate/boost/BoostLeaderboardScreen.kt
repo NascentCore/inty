@@ -15,6 +15,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -31,11 +33,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.ui.BoostLeaderboardTab
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
+import com.ai.intellimate.leaderboard.ui.TopUsersLeaderboardTab
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.EmptyStateComponent
 import com.ai.intellimate.ui.components.EmptyStateType
 import com.ai.intellimate.xb.navigation.Routes
@@ -129,6 +132,7 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
             }
         }
     var showHelpSheet by remember { mutableStateOf(false) }
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -164,38 +168,19 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
             )
         }
     ) { innerPadding ->
-        when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White.copy(alpha = 0.7f),
-                    )
-                }
-            }
-            errorMessage != null -> {
-                EmptyStateComponent(
-                    type = EmptyStateType.NETWORK_ERROR,
-                    title = stringResource(R.string.empty_explore_error),
-                    showRetryButton = true,
-                    onRetry = { retryTrigger++ },
-                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                )
-            }
-            else -> {
-                BoostLeaderboardTab(
-                    navController,
-                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                    availablePoints = boostState.availablePoints,
-                    entries = leaderboardEntries,
-                    onChat = { handleLeaderboardAction(it, false) },
-                    onBoost = { handleLeaderboardAction(it, true) },
-                )
-            }
-        }
+        LeaderboardTabsContent(
+            modifier = Modifier.padding(innerPadding).fillMaxSize(),
+            selectedTabIndex = selectedTabIndex,
+            onSelectTab = { selectedTabIndex = it },
+            isLoading = isLoading,
+            errorMessage = errorMessage,
+            onRetry = { retryTrigger++ },
+            availablePoints = boostState.availablePoints,
+            leaderboardEntries = leaderboardEntries,
+            navController = navController,
+            onChat = { handleLeaderboardAction(it, false) },
+            onBoost = { handleLeaderboardAction(it, true) },
+        )
     }
 
     if (showHelpSheet) {
@@ -208,5 +193,81 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
                 //                BoostLeaderboardActivity.launch(context)
             },
         )
+    }
+}
+
+@Composable
+private fun LeaderboardTabsContent(
+    modifier: Modifier,
+    selectedTabIndex: Int,
+    onSelectTab: (Int) -> Unit,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    availablePoints: Int,
+    leaderboardEntries: List<BoostLeaderboardEntry>,
+    navController: NavController,
+    onChat: (BoostLeaderboardEntry) -> Unit,
+    onBoost: (BoostLeaderboardEntry) -> Unit,
+) {
+    androidx.compose.foundation.layout.Column(modifier = modifier) {
+        TabRow(
+            selectedTabIndex = selectedTabIndex,
+            containerColor = Color.Transparent,
+            contentColor = Color.White,
+            modifier =
+                Modifier.padding(
+                    horizontal = UiConfigs.LeaderBoard.HorizontalPadding,
+                    top = UiConfigs.LeaderBoard.TabsTopPadding,
+                ),
+        ) {
+            Tab(
+                selected = selectedTabIndex == 0,
+                onClick = { onSelectTab(0) },
+                text = { Text(text = stringResource(R.string.leaderboard_tab_top_intellimates)) },
+            )
+            Tab(
+                selected = selectedTabIndex == 1,
+                onClick = { onSelectTab(1) },
+                text = { Text(text = stringResource(R.string.leaderboard_tab_top_users)) },
+            )
+        }
+
+        androidx.compose.foundation.layout.Spacer(
+            Modifier.size(UiConfigs.LeaderBoard.TabsToContentSpacing)
+        )
+
+        when {
+            selectedTabIndex == 1 -> {
+                TopUsersLeaderboardTab(modifier = Modifier.fillMaxSize())
+            }
+
+            isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color.White.copy(alpha = 0.7f))
+                }
+            }
+
+            errorMessage != null -> {
+                EmptyStateComponent(
+                    type = EmptyStateType.NETWORK_ERROR,
+                    title = stringResource(R.string.empty_explore_error),
+                    showRetryButton = true,
+                    onRetry = onRetry,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            else -> {
+                BoostLeaderboardTab(
+                    navController,
+                    modifier = Modifier.fillMaxSize(),
+                    availablePoints = availablePoints,
+                    entries = leaderboardEntries,
+                    onChat = onChat,
+                    onBoost = onBoost,
+                )
+            }
+        }
     }
 }

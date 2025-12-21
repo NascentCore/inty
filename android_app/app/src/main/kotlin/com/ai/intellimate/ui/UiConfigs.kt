@@ -798,5 +798,11 @@ object UiConfigs {
 
         /** Top 10 按钮右侧间距 - 与 Explore 页面角色卡片保持一致 */
         val Top10ButtonRightPadding = 16.dp
+
+        /** 子 Tab 与页面顶部的间距 */
+        val TabsTopPadding = 8.dp
+
+        /** 子 Tab 与内容区域的间距 */
+        val TabsToContentSpacing = 8.dp
     }
 }
