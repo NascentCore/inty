@@ -14,6 +14,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color as AndroidColor
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -21,6 +22,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.exifinterface.media.ExifInterface
 import androidx.activity.viewModels
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -112,6 +114,7 @@ import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -322,6 +325,8 @@ private fun CreateRolePage(
     val croppedInitial =
         if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
     var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
+    val avatarCropInitial = if (isEditMode) null else savedDraft?.avatarCrop
+    var avatarCrop by remember(avatarCropInitial) { mutableStateOf<AvatarCrop?>(avatarCropInitial) }
     val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
 
@@ -329,7 +334,10 @@ private fun CreateRolePage(
     LaunchedEffect(Unit) {
         snapshotFlow { selectedImageIndex }
             .drop(1) // 跳过初始值，只在真正改变时触发
-            .collect { croppedAvatarUrl = null }
+            .collect {
+                croppedAvatarUrl = null
+                avatarCrop = null
+            }
     }
 
     // Track original uploaded image URL (for background) when uploading from gallery
@@ -377,6 +385,7 @@ private fun CreateRolePage(
                         avatarUrls = normalizedUrls,
                         selectedImageIndex = sanitizedIndex,
                         croppedAvatarUrl = croppedAvatarUrl?.takeIf { it.isNotBlank() },
+                        avatarCrop = avatarCrop,
                         avatarPrompt = avatarPrompt,
                     )
                 }
@@ -447,6 +456,7 @@ private fun CreateRolePage(
                 Activity.RESULT_OK -> {
                     result.data?.let { data ->
                         croppedAvatarUrl = UCrop.getOutput(data)?.toString()
+                        avatarCrop = buildAvatarCropFromUCropResult(context, data)
                     }
                 }
                 UCrop.RESULT_ERROR -> {
@@ -455,6 +465,7 @@ private fun CreateRolePage(
                         LogUtils.e("UCrop error: ${cropError?.message}")
                         isUploadingFromGallery = false
                         originalUploadedImageUrl = null
+                        avatarCrop = null
                         ToastUtils.showShort(
                             context.getString(R.string.toast_crop_failed, cropError?.message ?: "")
                         )
@@ -465,12 +476,14 @@ private fun CreateRolePage(
                     LogUtils.i("Crop operation cancelled by user")
                     isUploadingFromGallery = false
                     originalUploadedImageUrl = null
+                    avatarCrop = null
                 }
                 else -> {
                     // 处理其他未知结果代码，确保清除标志
                     LogUtils.w("Unknown crop result code: ${result.resultCode}")
                     isUploadingFromGallery = false
                     originalUploadedImageUrl = null
+                    avatarCrop = null
                 }
             }
         }
@@ -823,19 +836,13 @@ private fun CreateRolePage(
                             return@faceEdit
                         }
 
-                        val previewUrl =
-                            getCdnImageUrl(
-                                originUrl = imageUrl,
-                                width = Config.TextToImage.Preview.WIDTH,
-                                quality = Config.TextToImage.Preview.QUALITY,
-                            )
-
                         createRoleViewModel.viewModelScope.launch(Dispatchers.IO) {
                             try {
                                 val imageLoader = SingletonImageLoader.get(context)
                                 val request =
                                     ImageRequest.Builder(context)
-                                        .data(previewUrl ?: imageUrl)
+                                        // 裁剪坐标需要相对“base/background 原图”，这里使用原始 URL 下载，避免 CDN 预览缩放导致坐标失效
+                                        .data(imageUrl)
                                         .build()
                                 val result = imageLoader.execute(request)
 
@@ -972,17 +979,35 @@ private fun CreateRolePage(
                                     CreateAgentRequest(
                                         name = name,
                                         gender = gender,
+                                        // 不上传裁剪头像：如果有裁剪坐标，则让 avatar 指向 base/background（用于避免服务端自动裁剪上传），并通过 extensions.avatar_crop 生成显示用头像
                                         avatar =
-                                            croppedAvatarUrl
-                                                ?: editAgent?.avatar?.takeIf {
-                                                    editAgent.background == backgroundUrl
-                                                },
+                                            if (avatarCrop != null) {
+                                                backgroundUrl
+                                            } else if (isEditMode) {
+                                                editAgent?.avatar
+                                            } else {
+                                                null
+                                            },
                                         background = backgroundUrl,
                                         backgroundImages = backgroundImagesList,
                                         settings = mapOf("description" to settings),
                                         intro = intro,
                                         opening = opening,
                                         visibility = visibility,
+                                        extensions =
+                                            avatarCrop?.let { crop ->
+                                                mapOf(
+                                                    "avatar_crop" to
+                                                        mapOf(
+                                                            "x" to crop.x,
+                                                            "y" to crop.y,
+                                                            "width" to crop.width,
+                                                            "height" to crop.height,
+                                                            "imageWidth" to crop.imageWidth,
+                                                            "imageHeight" to crop.imageHeight,
+                                                        )
+                                                )
+                                            },
                                         prompt = settings,
                                     )
 
@@ -1300,6 +1325,84 @@ private fun tryStartCropWithLocalImage(
         }
 
         else -> false
+    }
+}
+
+private fun buildAvatarCropFromUCropResult(context: Context, data: Intent): AvatarCrop? {
+    val x = data.getIntExtra(UCrop.EXTRA_OUTPUT_OFFSET_X, 0)
+    val y = data.getIntExtra(UCrop.EXTRA_OUTPUT_OFFSET_Y, 0)
+    val width = UCrop.getOutputImageWidth(data)
+    val height = UCrop.getOutputImageHeight(data)
+
+    if (width <= 0 || height <= 0) return null
+
+    val inputUri =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            data.getParcelableExtra(UCrop.EXTRA_INPUT_URI, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION") data.getParcelableExtra(UCrop.EXTRA_INPUT_URI)
+        } ?: return null
+    val imageSize = getOrientedImageSize(context, inputUri) ?: return null
+
+    if (imageSize.width <= 0 || imageSize.height <= 0) return null
+
+    return AvatarCrop(
+        x = x,
+        y = y,
+        width = width,
+        height = height,
+        imageWidth = imageSize.width,
+        imageHeight = imageSize.height,
+    )
+}
+
+private data class OrientedImageSize(val width: Int, val height: Int)
+
+private fun getOrientedImageSize(context: Context, uri: Uri): OrientedImageSize? {
+    val bounds = decodeImageBounds(context, uri) ?: return null
+    val orientation = readExifOrientation(context, uri)
+
+    val rotated =
+        orientation == ExifInterface.ORIENTATION_ROTATE_90 ||
+            orientation == ExifInterface.ORIENTATION_ROTATE_270 ||
+            orientation == ExifInterface.ORIENTATION_TRANSPOSE ||
+            orientation == ExifInterface.ORIENTATION_TRANSVERSE
+
+    return if (rotated) {
+        OrientedImageSize(width = bounds.height, height = bounds.width)
+    } else {
+        OrientedImageSize(width = bounds.width, height = bounds.height)
+    }
+}
+
+private data class ImageBounds(val width: Int, val height: Int)
+
+private fun decodeImageBounds(context: Context, uri: Uri): ImageBounds? {
+    return try {
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            BitmapFactory.decodeStream(input, null, options)
+        }
+        if (options.outWidth > 0 && options.outHeight > 0) {
+            ImageBounds(options.outWidth, options.outHeight)
+        } else {
+            null
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun readExifOrientation(context: Context, uri: Uri): Int {
+    return try {
+        context.contentResolver.openInputStream(uri)?.use { input: InputStream ->
+            ExifInterface(input).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL,
+            )
+        } ?: ExifInterface.ORIENTATION_NORMAL
+    } catch (_: Exception) {
+        ExifInterface.ORIENTATION_NORMAL
     }
 }
 

@@ -115,6 +115,7 @@ data class CreateAgentRequest(
     val visibility: String,
     val photos: List<String> = emptyList(),
     val category: String = "",
+    val extensions: Map<String, Any>? = null,
     val prompt: String,
 )
 

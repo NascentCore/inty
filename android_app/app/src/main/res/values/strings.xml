@@ -396,7 +396,7 @@
     <string name="version_update_available">%s\nClick to update</string>
 
     <!-- Toast Messages - Additional -->
-    <string name="toast_avatar_cropped_uploaded">Avatar cropped and uploaded</string>
+    <string name="toast_avatar_cropped_uploaded">Avatar crop saved</string>
     <string name="toast_upload_failed_with_message">Upload failed: %s</string>
     <string name="toast_failed_prepare_upload_with_message">Failed to prepare upload: %s</string>
     <string name="toast_failed_download_image_editing">Failed to download image for editing</string>

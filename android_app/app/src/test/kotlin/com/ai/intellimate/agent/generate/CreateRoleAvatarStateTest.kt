@@ -134,35 +134,30 @@ class CreateRoleAvatarStateTest {
         assertEquals(emptyList<String>(), backgroundImagesList3)
     }
 
-    // Test 4: Final Avatar URL Resolution
+    // Test 4: Final Avatar URL Resolution (coordinate-only crop)
     @Test
-    fun `finalAvatarUrl uses croppedAvatarUrl if available otherwise backgroundUrl`() {
-        val croppedAvatarUrl = "https://example.com/cropped.jpg"
+    fun `finalAvatarUrl remains backgroundUrl when using coordinate-only crop`() {
+        // 在“只传坐标、不上传裁剪图”的方案下，最终 avatar 由服务端基于 background + extensions.avatar_crop 生成
+        // 客户端请求里 avatar 可以指向 background（用于避免服务端自动裁剪上传），不应依赖裁剪图 URL
+        val croppedAvatarUrl = "file:///local/cache/cropped.jpg" // 仅用于本地预览
         val backgroundUrl = "https://example.com/background.jpg"
 
-        val finalAvatarUrl = croppedAvatarUrl ?: backgroundUrl
-        assertEquals("https://example.com/cropped.jpg", finalAvatarUrl)
+        val finalAvatarUrl = backgroundUrl
+        assertEquals("https://example.com/background.jpg", finalAvatarUrl)
 
-        // When croppedAvatarUrl is null
-        val finalAvatarUrl2: String? = null
-        val finalAvatarUrl3 = finalAvatarUrl2 ?: backgroundUrl
-        assertEquals("https://example.com/background.jpg", finalAvatarUrl3)
+        // 本地裁剪预览 URL 的存在不影响最终请求的 avatar/base
+        assertEquals("file:///local/cache/cropped.jpg", croppedAvatarUrl)
     }
 
     @Test
-    fun `edit mode avatar update when background changes`() {
+    fun `edit mode avatar can stay as existing when no new crop`() {
         val editAgentBackground = "https://example.com/old-background.jpg"
-        val backgroundUrl = "https://example.com/new-background.jpg"
-        var croppedAvatarUrl = editAgentBackground // Initially same as old background
+        val editAgentAvatar = "https://example.com/existing-avatar.jpg"
 
-        // Simulate edit mode logic: if background changed and avatar is still old, update avatar
-        if (backgroundUrl != editAgentBackground) {
-            if (croppedAvatarUrl == editAgentBackground) {
-                croppedAvatarUrl = backgroundUrl
-            }
-        }
-
-        assertEquals("https://example.com/new-background.jpg", croppedAvatarUrl)
+        // 没有新的裁剪坐标时，客户端应保留既有 avatar（避免无意触发服务端重新裁剪）
+        val requestAvatar = editAgentAvatar
+        assertEquals("https://example.com/existing-avatar.jpg", requestAvatar)
+        assertEquals("https://example.com/old-background.jpg", editAgentBackground)
     }
 
     // Test 5: Draft State Normalization

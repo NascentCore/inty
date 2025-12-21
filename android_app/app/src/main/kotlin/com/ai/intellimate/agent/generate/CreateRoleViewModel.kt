@@ -75,20 +75,30 @@ class CreateRoleViewModel : BaseVM() {
                 }
             }
 
-        // 上传头像
+        // 上传头像（注意：如果 avatar 指向 background 或 backgroundImages 中的同一张图片，则复用已上传的 URL，避免重复上传）
         val remoteAvatar =
-            request.avatar?.let {
-                try {
-                    val remoteUrl = convertToRemoteImage(it, createTempFile, context)
-                    LogUtils.i("CreateRoleViewModel - Avatar uploaded successfully: $remoteUrl")
-                    remoteUrl
-                } catch (e: Exception) {
-                    LogUtils.e("CreateRoleViewModel - Failed to upload avatar: ${e.message}", e)
-                    // 提取原始错误信息，避免重复嵌套
-                    val errorMessage = e.message ?: "Unknown error"
-                    throw Exception("Failed to upload avatar: $errorMessage")
+            when {
+                request.avatar.isNullOrBlank() -> remoteBackgroundImage
+                request.avatar == request.background && remoteBackgroundImage != null ->
+                    remoteBackgroundImage
+                else -> {
+                    val avatarInBackgroundIndex = request.backgroundImages.indexOf(request.avatar)
+                    if (avatarInBackgroundIndex >= 0 && avatarInBackgroundIndex < remoteImageUrls.size) {
+                        remoteImageUrls[avatarInBackgroundIndex]
+                    } else {
+                        try {
+                            val remoteUrl =
+                                convertToRemoteImage(request.avatar!!, createTempFile, context)
+                            LogUtils.i("CreateRoleViewModel - Avatar uploaded successfully: $remoteUrl")
+                            remoteUrl
+                        } catch (e: Exception) {
+                            LogUtils.e("CreateRoleViewModel - Failed to upload avatar: ${e.message}", e)
+                            val errorMessage = e.message ?: "Unknown error"
+                            throw Exception("Failed to upload avatar: $errorMessage")
+                        }
+                    }
                 }
-            } ?: remoteBackgroundImage
+            }
 
         val newRequest =
             request.copy(
@@ -137,8 +147,8 @@ class CreateRoleViewModel : BaseVM() {
                                 context = context,
                                 imageFile = tempFile,
                                 quality = 85,
-                                maxWidth = 1920,
-                                maxHeight = 1920,
+                                maxWidth = -1,
+                                maxHeight = -1,
                             )
 
                         if (webpFile != null && webpFile.exists() && webpFile.length() > 0) {
@@ -148,38 +158,10 @@ class CreateRoleViewModel : BaseVM() {
                             )
                             fileToUpload = webpFile
                         } else {
-                            // 2. WebP 转换失败，尝试使用 Luban 压缩
+                            // WebP 转换失败：保持原图上传，避免尺寸变化导致裁剪坐标失效
                             LogUtils.w(
-                                "CreateRoleViewModel - WebP conversion failed, trying Luban compression"
+                                "CreateRoleViewModel - WebP conversion failed, uploading original file to preserve dimensions"
                             )
-                            compressedFile =
-                                ImageCompressUtils.compressImageSync(
-                                    context = context,
-                                    imageFile = tempFile,
-                                    config =
-                                        ImageCompressUtils.CompressConfig(
-                                            quality = 85,
-                                            maxWidth = 1920,
-                                            maxHeight = 1920,
-                                            maxSize = 800, // 800KB
-                                        ),
-                                )
-
-                            if (
-                                compressedFile != null &&
-                                    compressedFile.exists() &&
-                                    compressedFile.length() > 0
-                            ) {
-                                val compressedSizeKB = compressedFile.length() / 1024
-                                LogUtils.i(
-                                    "CreateRoleViewModel - Image compressed with Luban: ${compressedSizeKB}KB"
-                                )
-                                fileToUpload = compressedFile
-                            } else {
-                                LogUtils.w(
-                                    "CreateRoleViewModel - Compression failed, using original file"
-                                )
-                            }
                         }
                     }
 

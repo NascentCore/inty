@@ -93,6 +93,7 @@ dependencies {
     implementation(libs.androidx.appcompat) // ucropActivity需要
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.exifinterface)
 
     // ===== Inty SDK（用于 ReportReasonMappings 等直接使用 SDK 类型的代码）=====
     // 注意：版本必须与 core/data/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理

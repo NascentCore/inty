@@ -161,6 +161,7 @@ data class CreateRoleDraft(
     val avatarUrls: List<String> = emptyList(),
     val selectedImageIndex: Int = 0,
     val croppedAvatarUrl: String? = null,
+    val avatarCrop: AvatarCrop? = null,
     val avatarPrompt: String = "",
 ) {
     fun isEmpty(): Boolean {
@@ -169,7 +170,8 @@ data class CreateRoleDraft(
         val hasAvatars =
             !avatarUrl.isNullOrBlank() ||
                 avatarUrls.isNotEmpty() ||
-                !croppedAvatarUrl.isNullOrBlank()
+                !croppedAvatarUrl.isNullOrBlank() ||
+                avatarCrop != null
         val hasMeta = gender != DEFAULT_GENDER || visibility != DEFAULT_VISIBILITY
         val hasAvatarPrompt = avatarPrompt.isNotBlank()
         return !(hasTextFields || hasAvatars || hasMeta || hasAvatarPrompt)
@@ -185,3 +187,12 @@ data class CreateRoleDraft(
         const val DEFAULT_VISIBILITY = "PRIVATE"
     }
 }
+
+data class AvatarCrop(
+    val x: Int,
+    val y: Int,
+    val width: Int,
+    val height: Int,
+    val imageWidth: Int,
+    val imageHeight: Int,
+)
