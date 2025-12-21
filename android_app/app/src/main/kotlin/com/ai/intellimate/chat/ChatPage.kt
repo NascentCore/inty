@@ -823,10 +823,15 @@ internal fun ChatPage(
                 val isKeepTalkingEnabled = !hasLoadingMessageForButton
 
                 // 滚动到底部按钮显示逻辑：
-                // 当用户不在最新消息位置时（已滚动到历史记录），显示此按钮
+                // 当用户不在最新消息位置时（已滚动到历史记录），始终显示此按钮
                 // 点击后平滑滚动回最新消息位置
-                // 同时也会显示“回到聊天开始”按钮；当用户到达聊天开始位置时，这两个按钮一起隐藏
-                val showHistoryScrollButtons = !isAtLatestMessage && !isAtChatStart
+                // 即使回到第一条消息，只要有新消息（不在最新消息位置），也显示此按钮
+                val showScrollToBottomButton = !isAtLatestMessage
+                
+                // 回到聊天开始按钮显示逻辑：
+                // 当用户不在最新消息位置且不在聊天开始位置时显示
+                // 当用户到达聊天开始位置时，此按钮隐藏
+                val showBackToTopButton = !isAtLatestMessage && !isAtChatStart
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
@@ -855,7 +860,7 @@ internal fun ChatPage(
                         UiConfigs.ChatPage.FloatingScrollButton.ButtonSize +
                         UiConfigs.ChatPage.ScrollToHistoryButtons.VerticalSpacing
 
-                // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在右下角（位于“回到最新”按钮上方）
+                // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在右下角（位于"回到最新"按钮上方）
                 // 功能：点击后平滑滚动到最旧消息位置（LazyColumn reverseLayout，最旧消息对应最大索引）
                 BackToTop(
                     modifier =
@@ -864,7 +869,7 @@ internal fun ChatPage(
                                 bottom = scrollToStartButtonBottomOffset,
                                 end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
                             ),
-                    visible = showHistoryScrollButtons,
+                    visible = showBackToTopButton,
                     onClick = {
                         scope.launch {
                             val totalItemsCount = listState.layoutInfo.totalItemsCount
@@ -875,8 +880,9 @@ internal fun ChatPage(
                     },
                 )
 
-                // 滚动到底部按钮：当用户滚动到历史消息时显示在右下角
+                // 滚动到底部按钮：当用户不在最新消息位置时显示在右下角
                 // 功能：点击后平滑滚动回最新消息位置（LazyColumn 使用 reverseLayout，索引 0 为最新消息）
+                // 当有新消息时，始终显示此按钮，即使回到第一条消息也不隐藏
                 ScrollToBottomButton(
                     modifier =
                         Modifier.align(Alignment.BottomCenter)
@@ -884,7 +890,7 @@ internal fun ChatPage(
                                 bottom = scrollToBottomButtonBottomOffset,
                                 end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
                             ),
-                    visible = showHistoryScrollButtons,
+                    visible = showScrollToBottomButton,
                     onClick = {
                         scope.launch {
                             // 平滑滚动到索引 0（最新消息位置）
