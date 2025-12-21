@@ -513,6 +513,7 @@
     <string name="leaderboard_tab_top_intellimates">Top IntelliMates</string>
     <string name="leaderboard_tab_top_users">Top Users</string>
     <string name="leaderboard_top_users_activity_score">Activity score: %1$d</string>
+    <string name="under_development">Under Development</string>
     <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
     <string name="reset">Reset</string>
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
