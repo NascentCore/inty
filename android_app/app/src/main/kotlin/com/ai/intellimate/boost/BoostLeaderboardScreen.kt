@@ -5,7 +5,6 @@ import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.store.BoostLeaderboardRankCache
 import ai.sxwl.android.data.store.BoostLeaderboardRankStore
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,10 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,8 +45,6 @@ import com.ai.intellimate.xb.navigation.Routes
 fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? = null) {
     val context = LocalContext.current
     val boostState by BoostManager.boostState.collectAsState()
-
-    var selectedSubTab by remember { mutableStateOf(BoostLeaderboardSubTab.TopIntelliMates) }
 
     // 从后端获取排行榜数据
     var leaderboardEntries by remember { mutableStateOf<List<BoostLeaderboardEntry>>(emptyList()) }
@@ -171,73 +164,36 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            TabRow(
-                selectedTabIndex = selectedSubTab.ordinal,
-                containerColor = Color.Transparent,
-                contentColor = Color.White,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedSubTab.ordinal]),
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
                         color = Color.White.copy(alpha = 0.7f),
-                    )
-                },
-                divider = {},
-            ) {
-                BoostLeaderboardSubTab.entries.forEach { tab ->
-                    Tab(
-                        selected = selectedSubTab == tab,
-                        onClick = { selectedSubTab = tab },
-                        text = { Text(text = stringResource(tab.titleResId)) },
-                        selectedContentColor = Color.White,
-                        unselectedContentColor = Color.White.copy(alpha = 0.6f),
                     )
                 }
             }
-
-            when (selectedSubTab) {
-                BoostLeaderboardSubTab.TopIntelliMates -> {
-                    when {
-                        isLoading -> {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = Color.White.copy(alpha = 0.7f),
-                                )
-                            }
-                        }
-                        errorMessage != null -> {
-                            EmptyStateComponent(
-                                type = EmptyStateType.NETWORK_ERROR,
-                                title = stringResource(R.string.empty_explore_error),
-                                showRetryButton = true,
-                                onRetry = { retryTrigger++ },
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
-                        else -> {
-                            BoostLeaderboardTab(
-                                navController,
-                                modifier = Modifier.fillMaxSize(),
-                                availablePoints = boostState.availablePoints,
-                                entries = leaderboardEntries,
-                                onChat = { handleLeaderboardAction(it, false) },
-                                onBoost = { handleLeaderboardAction(it, true) },
-                            )
-                        }
-                    }
-                }
-                BoostLeaderboardSubTab.TopUsers -> {
-                    // Top Users 子标签：移除所有假数据，暂以占位状态展示
-                    EmptyStateComponent(
-                        type = EmptyStateType.EMPTY_DATA,
-                        title = stringResource(R.string.under_development),
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+            errorMessage != null -> {
+                EmptyStateComponent(
+                    type = EmptyStateType.NETWORK_ERROR,
+                    title = stringResource(R.string.empty_explore_error),
+                    showRetryButton = true,
+                    onRetry = { retryTrigger++ },
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                )
+            }
+            else -> {
+                BoostLeaderboardTab(
+                    navController,
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                    availablePoints = boostState.availablePoints,
+                    entries = leaderboardEntries,
+                    onChat = { handleLeaderboardAction(it, false) },
+                    onBoost = { handleLeaderboardAction(it, true) },
+                )
             }
         }
     }
@@ -253,9 +209,4 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
             },
         )
     }
-}
-
-private enum class BoostLeaderboardSubTab(val titleResId: Int) {
-    TopIntelliMates(R.string.boost_tab_leaderboard),
-    TopUsers(R.string.boost_leaderboard_tab_top_users),
 }

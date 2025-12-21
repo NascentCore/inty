@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 /** 管理 Boost 相关的持久化状态与排行榜。 */
 class BoostRepository(
     context: Context,
+    private val seedProvider: BoostSeedProvider = BoostSeedProvider(),
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
 
@@ -164,7 +165,13 @@ class BoostRepository(
                         isSeed = false,
                     )
                 }
-        return actual
+
+        val seeds =
+            seedProvider.seeds(snapshot.boostsByAgent.keys).mapIndexed { index, entry ->
+                entry.copy(rank = actual.size + index + 1)
+            }
+
+        return (actual + seeds)
             .sortedWith(
                 compareByDescending<BoostLeaderboardEntry> { it.boostCount }.thenBy { it.agentName }
             )
