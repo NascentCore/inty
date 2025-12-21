@@ -217,7 +217,8 @@ private fun LeaderboardTabsContent(
             contentColor = Color.White,
             modifier =
                 Modifier.padding(
-                    horizontal = UiConfigs.LeaderBoard.HorizontalPadding,
+                    start = UiConfigs.LeaderBoard.HorizontalPadding,
+                    end = UiConfigs.LeaderBoard.HorizontalPadding,
                     top = UiConfigs.LeaderBoard.TabsTopPadding,
                 ),
         ) {
