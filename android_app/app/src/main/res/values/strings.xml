@@ -522,4 +522,8 @@
     <string name="holiday_celebration_subtitle">Wishing you warmth, magic, and a brand new year full of good surprises.</string>
     <string name="holiday_celebration_primary_cta">Let’s Celebrate</string>
     <string name="holiday_celebration_secondary_cta">Not now</string>
+
+    <!-- Placeholder -->
+    <string name="under_development">Under Development</string>
+    <string name="boost_leaderboard_tab_top_users">Top Users</string>
 </resources>
