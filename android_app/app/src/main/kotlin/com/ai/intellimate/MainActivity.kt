@@ -396,7 +396,6 @@ class MainActivity : BaseActivity() {
                 title = stringResource(R.string.holiday_celebration_title),
                 subtitle = stringResource(R.string.holiday_celebration_subtitle),
                 primaryButtonText = stringResource(R.string.holiday_celebration_primary_cta),
-                secondaryButtonText = stringResource(R.string.holiday_celebration_secondary_cta),
                 onDismiss = { showHolidayCelebrationDialog = false },
                 onPrimaryClick = { showHolidayCelebrationDialog = false },
             )

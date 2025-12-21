@@ -83,7 +83,6 @@ fun HolidayCelebrationDialog(
     title: String,
     subtitle: String,
     primaryButtonText: String,
-    secondaryButtonText: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     onPrimaryClick: () -> Unit = onDismiss,
@@ -151,7 +150,6 @@ fun HolidayCelebrationDialog(
                 title = title,
                 subtitle = subtitle,
                 primaryButtonText = primaryButtonText,
-                secondaryButtonText = secondaryButtonText,
                 breathe = breathe,
                 onDismiss = onDismiss,
                 onPrimaryClick = onPrimaryClick,
@@ -166,7 +164,6 @@ private fun HolidayCelebrationContent(
     title: String,
     subtitle: String,
     primaryButtonText: String,
-    secondaryButtonText: String,
     breathe: Float,
     onDismiss: () -> Unit,
     onPrimaryClick: () -> Unit,
@@ -224,15 +221,6 @@ private fun HolidayCelebrationContent(
             text = primaryButtonText,
             breathe = breathe,
             onClick = onPrimaryClick,
-        )
-
-        Spacer(modifier = Modifier.height(UiConfigs.Spacing.Medium))
-
-        Text(
-            text = secondaryButtonText,
-            color = HolidayCelebrationColors.FrostWhite.copy(alpha = UiConfigs.Alpha.SecondaryText),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.clickable { onDismiss() }.padding(UiConfigs.Spacing.Small),
         )
     }
 }
