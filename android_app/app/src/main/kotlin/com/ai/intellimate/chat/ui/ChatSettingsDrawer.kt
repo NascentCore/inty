@@ -70,6 +70,7 @@ import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
+import com.ai.intellimate.ui.components.MyPersonaSettingsGroup
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -207,120 +208,64 @@ fun ChatSettingsDrawer(
 
                 Spacer(Modifier.height(10.dp))
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
-                    SettingsItemGroup(modifier = Modifier) {
-                        SettingsArrowItem(
-                            item =
-                                SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.str_name),
-                                    content = userProfileState.nickname.ifEmpty { "Guest" },
-                                ),
-                            isInGroup = true,
-                            fontLight = true,
-                            horizontalPadding = horizontalPadding,
-                            contentMaxLines = 1,
-                            onItemClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "edit_name",
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    editKey = EditKey.Name
-                                    editValue = userProfileState.nickname
-                                }
-                            },
-                        )
-                        IntelliMateDivider()
-                        SettingsArrowItem(
-                            item =
-                                SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.str_pronouns),
-                                    content = userProfileState.pronouns(),
-                                ),
-                            isInGroup = true,
-                            fontLight = true,
-                            horizontalPadding = horizontalPadding,
-                            contentMaxLines = 1,
-                            onItemClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "edit_pronouns",
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    editKey = EditKey.Pronouns
-                                    editValue = userProfileState.gender ?: ""
-                                }
-                            },
-                        )
-                        IntelliMateDivider()
-                        SettingsArrowItem(
-                            item =
-                                SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.chat_settings_preference_title),
-                                    content =
-                                        userPreference.ifBlank {
-                                            stringResource(
-                                                R.string.chat_settings_preference_placeholder
-                                            )
-                                        },
-                                    arrow = true,
-                                ),
-                            isInGroup = true,
-                            fontLight = true,
-                            horizontalPadding = horizontalPadding,
-                            contentMaxLines = 1,
-                            onItemClick = {
+                    MyPersonaSettingsGroup(
+                        userProfile = userProfileState,
+                        preference = userPreference,
+                        modifier = Modifier,
+                        horizontalPadding = horizontalPadding,
+                        fontLight = true,
+                        contentMaxLines = 1,
+                        onClickName = {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                     FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_preference",
+                                        "click_type" to "edit_name",
                                         "timestamp" to System.currentTimeMillis(),
                                     ),
                                 )
-                                editKey = EditKey.Preference
-                                editValue = userPreference
-                            },
-                        )
-                        IntelliMateDivider()
-                        SettingsArrowItem(
-                            item =
-                                SettingsItemData.CommonItemData(
-                                    title = stringResource(R.string.str_persona),
-                                    content = userProfileState.description ?: "Edit",
+                                editKey = EditKey.Name
+                                editValue = userProfileState.nickname
+                            }
+                        },
+                        onClickPronouns = {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_pronouns",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                editKey = EditKey.Pronouns
+                                editValue = userProfileState.gender ?: ""
+                            }
+                        },
+                        onClickPreference = {
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                FirebaseManager.safeEventParams(
+                                    "click_type" to "edit_preference",
+                                    "timestamp" to System.currentTimeMillis(),
                                 ),
-                            isInGroup = true,
-                            fontLight = true,
-                            horizontalPadding = horizontalPadding,
-                            contentMaxLines = 1,
-                            onItemClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "edit_persona",
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    editKey = EditKey.Persona
-                                    editValue = userProfileState.description ?: ""
-                                }
-                            },
-                        )
-                    }
+                            )
+                            editKey = EditKey.Preference
+                            editValue = userPreference
+                        },
+                        onClickPersona = {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "edit_persona",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                editKey = EditKey.Persona
+                                editValue = userProfileState.description ?: ""
+                            }
+                        },
+                    )
                 }
 
                 Spacer(Modifier.height(20.dp))
