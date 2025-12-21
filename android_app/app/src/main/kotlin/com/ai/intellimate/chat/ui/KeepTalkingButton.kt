@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 
 /** Keep Talking悬浮按钮组件 - 固定在ChatInput上方，右侧紧贴屏幕 */
 @Composable
@@ -33,6 +35,7 @@ fun KeepTalkingFloatingButton(
     Box(
         modifier =
             modifier
+                .width(UiConfigs.ChatPage.keepTalkingButtonWidth)
                 .clip(cornerShape)
                 .border(
                     1.dp,

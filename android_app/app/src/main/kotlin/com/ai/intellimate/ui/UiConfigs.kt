@@ -492,6 +492,9 @@ object UiConfigs {
         /** 是否显示订阅按钮 */
         const val showSubscriptionButton = false
 
+        /** Keep Talking 悬浮按钮宽度（用于扩大点击热区） */
+        val keepTalkingButtonWidth = 52.dp
+
         @Composable
         fun enableRemix(): Boolean {
             val visibilityState by RemixButtonVisibilityManager.visibility.collectAsState()
