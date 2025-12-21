@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
+import ai.sxwl.android.design.theme.AppColors
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
@@ -125,8 +126,6 @@ fun ExplorePage(
                         BoostShortcutButton(
                             onClick = {
                                 navController.navigate(Routes.BoostLeaderboard)
-                                //
-                                // BoostLeaderboardActivity.launch(context)
                             }
                         )
                     }
@@ -223,7 +222,7 @@ private fun BoostShortcutButton(onClick: () -> Unit) {
         shape = RoundedCornerShape(100.dp),
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF9C5BFF),
+                containerColor = AppColors.BoostShortcutButtonPurple,
                 contentColor = Color.White,
             ),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),

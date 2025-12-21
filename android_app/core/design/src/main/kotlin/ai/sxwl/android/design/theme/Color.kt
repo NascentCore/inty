@@ -237,6 +237,8 @@ object AppColors {
     val EmailLoginButtonText = Color(0x99FFFFFF)
     /** Material Design Green 500 - 用于表示成功状态、激活状态或选中状态的绿色指示器 */
     val Green500 = Color(0xFF4CAF50)
+    /** Boost快捷按钮的紫色背景色 */
+    val BoostShortcutButtonPurple = Color(0xFF9C5BFF)
 }
 
 object VibeModeColors {
