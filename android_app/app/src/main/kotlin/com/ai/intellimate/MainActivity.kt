@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
@@ -300,7 +301,7 @@ class MainActivity : BaseActivity() {
 
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
         LifecycleResumeEffect(Unit) {
-            // 只在用户已登录时显示庆祝弹窗
+            // 每次应用打开/回到前台时，如果用户已登录，就显示庆祝弹窗
             showHolidayCelebrationDialog = isLoggedIn && HolidayCelebrationPopupRules.shouldShowNow()
             onPauseOrDispose {}
         }
@@ -310,12 +311,6 @@ class MainActivity : BaseActivity() {
                 showHolidayCelebrationDialog = true
             } else if (!isLoggedIn) {
                 showHolidayCelebrationDialog = false
-            }
-        }
-        LaunchedEffect(showHolidayCelebrationDialog) {
-            if (showHolidayCelebrationDialog) {
-                // 记录"今日已展示"，同一天最多弹一次；12/25 后规则会自然停用
-                HolidayCelebrationPopupRules.markShownToday()
             }
         }
 
@@ -397,7 +392,13 @@ class MainActivity : BaseActivity() {
                 subtitle = stringResource(R.string.holiday_celebration_subtitle),
                 primaryButtonText = stringResource(R.string.holiday_celebration_primary_cta),
                 onDismiss = { showHolidayCelebrationDialog = false },
-                onPrimaryClick = { showHolidayCelebrationDialog = false },
+                onPrimaryClick = {
+                    // 添加100个boost points作为节日奖励
+                    LogUtils.d("MainActivity", "Holiday celebration button clicked, adding 100 boost points")
+                    BoostManager.requestManualPoints(100)
+                    ToastUtils.showShort(R.string.holiday_celebration_points_added)
+                    showHolidayCelebrationDialog = false
+                },
             )
         }
     }

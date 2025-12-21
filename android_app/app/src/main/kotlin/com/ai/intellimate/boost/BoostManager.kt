@@ -179,11 +179,23 @@ object BoostManager {
     }
 
     fun requestManualPoints(points: Int) {
-        val repo = repository ?: return
-        if (points <= 0) return
+        val repo = repository
+        if (repo == null) {
+            LogUtils.e("BoostManager", "requestManualPoints: repository is null, BoostManager not initialized")
+            return
+        }
+        if (points <= 0) {
+            LogUtils.w("BoostManager", "requestManualPoints: invalid points value: $points")
+            return
+        }
         scope.launch {
-            repo.addPoints(points, PointSource.Manual)
-            logPointsEvent(PointSource.Manual, points)
+            try {
+                repo.addPoints(points, PointSource.Manual)
+                logPointsEvent(PointSource.Manual, points)
+                LogUtils.d("BoostManager", "requestManualPoints: successfully added $points points")
+            } catch (e: Exception) {
+                LogUtils.e("BoostManager", "requestManualPoints: failed to add points: ${e.message}", e)
+            }
         }
     }
 
