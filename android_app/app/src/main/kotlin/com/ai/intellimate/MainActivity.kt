@@ -300,12 +300,21 @@ class MainActivity : BaseActivity() {
 
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
         LifecycleResumeEffect(Unit) {
-            showHolidayCelebrationDialog = HolidayCelebrationPopupRules.shouldShowNow()
+            // 只在用户已登录时显示庆祝弹窗
+            showHolidayCelebrationDialog = isLoggedIn && HolidayCelebrationPopupRules.shouldShowNow()
             onPauseOrDispose {}
+        }
+        // 当用户登录状态变化时，检查是否需要显示庆祝弹窗
+        LaunchedEffect(isLoggedIn) {
+            if (isLoggedIn && HolidayCelebrationPopupRules.shouldShowNow()) {
+                showHolidayCelebrationDialog = true
+            } else if (!isLoggedIn) {
+                showHolidayCelebrationDialog = false
+            }
         }
         LaunchedEffect(showHolidayCelebrationDialog) {
             if (showHolidayCelebrationDialog) {
-                // 记录“今日已展示”，同一天最多弹一次；12/25 后规则会自然停用
+                // 记录"今日已展示"，同一天最多弹一次；12/25 后规则会自然停用
                 HolidayCelebrationPopupRules.markShownToday()
             }
         }
@@ -381,7 +390,8 @@ class MainActivity : BaseActivity() {
         val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
         AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory)
 
-        if (showHolidayCelebrationDialog) {
+        // 只在用户已登录时显示庆祝弹窗
+        if (showHolidayCelebrationDialog && isLoggedIn) {
             HolidayCelebrationDialog(
                 title = stringResource(R.string.holiday_celebration_title),
                 subtitle = stringResource(R.string.holiday_celebration_subtitle),
