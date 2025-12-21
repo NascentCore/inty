@@ -287,9 +287,7 @@ object UiConfigs {
         /** 标签图标与文字之间的间距 */
         val TabIconLabelSpacing = (-8).dp
 
-        /**
-         * 距离屏幕底部间距
-         */
+        /** 距离屏幕底部间距 */
         val BottomSpacing = 6.dp
     }
 
