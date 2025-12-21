@@ -216,54 +216,20 @@ fun ChatSettingsDrawer(
                         fontLight = true,
                         contentMaxLines = 1,
                         onClickName = {
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_name",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                editKey = EditKey.Name
-                                editValue = userProfileState.nickname
-                            }
+                            editKey = EditKey.Name
+                            editValue = userProfileState.nickname
                         },
                         onClickPronouns = {
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_pronouns",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                editKey = EditKey.Pronouns
-                                editValue = userProfileState.gender ?: ""
-                            }
+                            editKey = EditKey.Pronouns
+                            editValue = userProfileState.gender ?: ""
                         },
                         onClickPreference = {
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                FirebaseManager.safeEventParams(
-                                    "click_type" to "edit_preference",
-                                    "timestamp" to System.currentTimeMillis(),
-                                ),
-                            )
                             editKey = EditKey.Preference
-                            editValue = userPreference
+                            editValue = userPreference ?: ""
                         },
                         onClickPersona = {
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "edit_persona",
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                editKey = EditKey.Persona
-                                editValue = userProfileState.description ?: ""
-                            }
+                            editKey = EditKey.Persona
+                            editValue = userProfileState.description ?: ""
                         },
                     )
                 }
