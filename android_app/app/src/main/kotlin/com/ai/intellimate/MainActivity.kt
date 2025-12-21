@@ -52,6 +52,7 @@ import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
+import com.ai.intellimate.xb.helper.AppConstants.Companion.PUSH_NOTIFICATION
 import com.ai.intellimate.xb.navigation.AppNavHost
 import com.ai.intellimate.xb.navigation.Routes
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -267,7 +268,7 @@ class MainActivity : BaseActivity() {
                 FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
                 FirebaseManager.safeEventParams(
                     "agent_id" to agentId,
-                    "page_source" to com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
+                    "page_source" to PUSH_NOTIFICATION,
                 ),
             )
             // 跳转到 ChatScreen

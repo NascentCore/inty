@@ -463,11 +463,6 @@ private fun MessagesTabContent(navController: NavController) {
         onClickConversationItem = { conversation ->
             AgentStore.addAgent(conversation.convertToAgentInfo())
             navController.navigate(Routes.chatPage(conversation.convertToAgentInfo().id, false))
-            //            ChatActivity.launch(
-            //                context,
-            //                conversation.convertToAgentInfo(),
-            //                pageSource = ChatActivity.MESSAGES_TAB,
-            //            )
         },
         onClickFavoriteAgent = { agent ->
             AgentStore.addAgent(agent)
@@ -616,7 +611,6 @@ private fun ProfileTabContent(
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
             navController.navigate(Routes.chatPage(agent.id, false))
-            //            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
         },
         onClickDraft = { draftId ->
             val intent = CreateRoleActivity.getIntent(context, null, draftId)
