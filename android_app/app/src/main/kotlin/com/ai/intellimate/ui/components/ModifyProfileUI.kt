@@ -6,10 +6,6 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartPrimaryButton
 import ai.sxwl.android.design.ui.HeartTopAppBar
-import ai.sxwl.android.design.ui.IntelliMateDivider
-import ai.sxwl.android.design.ui.SettingsArrowItem
-import ai.sxwl.android.design.ui.SettingsItemData
-import ai.sxwl.android.design.ui.SettingsItemGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -86,10 +82,12 @@ private fun EditKey.toDisplayName(): String {
 @Composable
 fun ProfileInfoScreen(
     userProfile: UserProfile,
+    preference: String = "",
     onBack: () -> Unit = {},
     onSelectAvatar: () -> Unit = {},
     onClickName: () -> Unit = {},
     onClickPronouns: () -> Unit = {},
+    onClickPreference: () -> Unit = {},
     onClickPersona: () -> Unit = {},
 ) {
     Scaffold(
@@ -120,42 +118,15 @@ fun ProfileInfoScreen(
             val horizontalPadding = 16
 
             // 设置项区域
-            SettingsItemGroup {
-                SettingsArrowItem(
-                    item =
-                        SettingsItemData.CommonItemData(
-                            title = stringResource(R.string.str_name),
-                            content = userProfile.nickname,
-                        ),
-                    isInGroup = true,
-                    horizontalPadding = horizontalPadding,
-                    contentMaxLines = 1,
-                    onItemClick = onClickName,
-                )
-                IntelliMateDivider()
-                SettingsArrowItem(
-                    item =
-                        SettingsItemData.CommonItemData(
-                            title = stringResource(R.string.str_pronouns),
-                            content = userProfile.pronouns(),
-                        ),
-                    isInGroup = true,
-                    horizontalPadding = horizontalPadding,
-                    onItemClick = onClickPronouns,
-                )
-                IntelliMateDivider()
-                SettingsArrowItem(
-                    item =
-                        SettingsItemData.CommonItemData(
-                            title = stringResource(R.string.str_persona),
-                            content = userProfile.description ?: "",
-                        ),
-                    isInGroup = true,
-                    horizontalPadding = horizontalPadding,
-                    contentMaxLines = 1,
-                    onItemClick = onClickPersona,
-                )
-            }
+            MyPersonaSettingsGroup(
+                userProfile = userProfile,
+                preference = preference,
+                horizontalPadding = horizontalPadding,
+                onClickName = onClickName,
+                onClickPronouns = onClickPronouns,
+                onClickPreference = onClickPreference,
+                onClickPersona = onClickPersona,
+            )
 
             Spacer(Modifier.weight(1f))
 
