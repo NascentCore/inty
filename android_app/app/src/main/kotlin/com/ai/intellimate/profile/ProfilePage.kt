@@ -54,9 +54,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -621,7 +621,9 @@ private fun ProfileHeader(
                             val currentTime = System.currentTimeMillis()
                             if (AntiClick.isValidClick(lastClickTimeEdit)) {
                                 lastClickTimeEdit = currentTime
-                                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                ) {
                                     // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
                                     val intent =
                                         Intent(context, ModifyProfileActivity::class.java).apply {
@@ -651,7 +653,8 @@ private fun ProfileHeader(
                         .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
                 onClick = {
                     val currentTime = System.currentTimeMillis()
-                    if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
+                    if (!AntiClick.isValidClick(lastDailyRewardsClickTime))
+                        return@DailyRewardsBanner
                     lastDailyRewardsClickTime = currentTime
                     navController.navigate(Routes.CheckIn)
                 },
@@ -1119,31 +1122,24 @@ private object DailyRewardsBannerStyle {
     val VerticalPadding = 14.dp
     val IllustrationHeight = 64.dp
     val IllustrationWidth = 92.dp
-    val BackgroundGradientColors = listOf(
-        Color(0xFF9756FF),
-        Color(0xFFEF56FF),
-    )
+    val BackgroundGradientColors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
 }
 
 @Composable
-private fun DailyRewardsBanner(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
+private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Unit) {
     // 获取签到数据
     val (daysInMonth, _) = remember { getCurrentMonthInfo() }
     val checkedInDays = remember { CheckInRepository.getCheckedInDays() }
     val checkedInCount = checkedInDays.count()
     val progress = if (daysInMonth > 0) checkedInCount.toFloat() / daysInMonth.toFloat() else 0f
 
-    val backgroundBrush =
-        remember {
-            Brush.linearGradient(
-                colors = DailyRewardsBannerStyle.BackgroundGradientColors,
-                start = Offset.Zero,
-                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
-            )
-        }
+    val backgroundBrush = remember {
+        Brush.linearGradient(
+            colors = DailyRewardsBannerStyle.BackgroundGradientColors,
+            start = Offset.Zero,
+            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+        )
+    }
 
     Row(
         modifier =
@@ -1175,7 +1171,11 @@ private fun DailyRewardsBanner(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = stringResource(R.string.profile_daily_rewards_subtitle, BoostConfig.DAILY_SIGN_IN_REWARD),
+                text =
+                    stringResource(
+                        R.string.profile_daily_rewards_subtitle,
+                        BoostConfig.DAILY_SIGN_IN_REWARD,
+                    ),
                 color = DailyRewardsBannerStyle.SubtitleColor,
                 fontSize = DailyRewardsBannerStyle.SubtitleSize,
                 fontWeight = FontWeight.Medium,
@@ -1184,10 +1184,7 @@ private fun DailyRewardsBanner(
             )
         }
 
-        Column(
-            modifier = Modifier.padding(start = 12.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
+        Column(modifier = Modifier.padding(start = 12.dp), horizontalAlignment = Alignment.End) {
             Text(
                 text = stringResource(R.string.check_in_day_together, checkedInCount),
                 color = Color.White,

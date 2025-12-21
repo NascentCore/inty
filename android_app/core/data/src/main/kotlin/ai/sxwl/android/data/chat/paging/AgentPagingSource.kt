@@ -99,12 +99,15 @@ class AgentPagingSource(
                         // 去重：基于 agent.id 进行去重，防止重复数据
                         val uniqueAgents = validAgents.distinctBy { it.id }
 
-                        val hasMore = uniqueAgents.isNotEmpty() && if (result.data.totalPages > 0) {
-                            page < result.data.totalPages
-                        } else {
-                            val estimatedLoadedCount = (page - 1) * pageSize + uniqueAgents.size
-                            estimatedLoadedCount < result.data.total
-                        }
+                        val hasMore =
+                            uniqueAgents.isNotEmpty() &&
+                                if (result.data.totalPages > 0) {
+                                    page < result.data.totalPages
+                                } else {
+                                    val estimatedLoadedCount =
+                                        (page - 1) * pageSize + uniqueAgents.size
+                                    estimatedLoadedCount < result.data.total
+                                }
 
                         // 缓存第一页数据
                         if (

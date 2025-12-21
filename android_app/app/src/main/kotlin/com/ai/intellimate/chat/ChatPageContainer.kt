@@ -127,7 +127,6 @@ fun ChatPageContainer(
     val shouldShowGuide =
         remember(agentList.size, hasShowGuest) { !hasShowGuest && agentList.size > 1 }
 
-
     // 监听页面变化
     LaunchedEffect(pageState.currentPage) {
         onPageChanged(pageState.currentPage)

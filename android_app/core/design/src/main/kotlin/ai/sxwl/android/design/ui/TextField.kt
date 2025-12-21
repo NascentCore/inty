@@ -66,10 +66,7 @@ fun HeartMultiLineEditor(
             maxLines = maxLines,
             placeholder = {
                 if (hintStr.isNotEmpty()) {
-                    Text(
-                        text = hintStr,
-                        style = textStyle
-                    )
+                    Text(text = hintStr, style = textStyle)
                 }
             },
             supportingText = {
