@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +77,7 @@ fun ExplorePage(
     val lazyPagingItems = agentsFlow?.collectAsLazyPagingItems()
 
     // 搜索相关状态
-    var showSearchOverlay by remember { mutableStateOf(false) }
+    var showSearchOverlay by rememberSaveable { mutableStateOf(false) }
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val hasSearchExecuted by viewModel.hasSearchExecuted.collectAsState()
@@ -206,8 +207,8 @@ fun ExplorePage(
                     }
                 },
                 onClickAgent = { agent ->
-                    showSearchOverlay = false
-                    viewModel.resetSearchState()
+//                    showSearchOverlay = false
+//                    viewModel.resetSearchState()
                     onClickAgent(agent)
                 },
             )
