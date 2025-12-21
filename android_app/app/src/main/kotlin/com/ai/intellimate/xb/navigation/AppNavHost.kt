@@ -11,6 +11,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -53,21 +55,23 @@ fun AppNavHost(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     factory: ViewModelProvider.Factory,
+    navController: NavHostController? = null,
 ) {
     // 创建并记住导航控制器，用于管理页面导航栈
-    val navController = rememberNavController()
+    val defaultNavController = rememberNavController()
+    val navControllerToUse = navController ?: defaultNavController
 
     val pushAgentId by mainViewModel.pushAgentId.collectAsState()
     LaunchedEffect(pushAgentId) {
         if (pushAgentId.isEmpty()) return@LaunchedEffect
         mainViewModel.updatePushAgentId("")
-        navController.navigate(Routes.chatPage(pushAgentId, false))
+        navControllerToUse.navigate(Routes.chatPage(pushAgentId, false))
     }
     val agentInfoViewModel: AgentInfoViewModel = viewModel()
 
     // 配置导航宿主，定义所有可导航的页面和转场动画
     NavHost(
-        navController = navController,
+        navController = navControllerToUse,
         // 设置启动时的初始页面，根据登录状态动态决定（登录页或主页）
         startDestination = page,
         // 进入新页面时的转场动画：从右侧滑入 + 淡入效果，持续 400ms
@@ -87,13 +91,13 @@ fun AppNavHost(
     ) {
         // 定义登录/启动页面路由
         composable(Routes.SplashLogin) {
-            SplashLoginUI(navController = navController, mainViewModel = mainViewModel)
+            SplashLoginUI(navController = navControllerToUse, mainViewModel = mainViewModel)
         }
 
         // 定义主页标签页路由（包含 Explore、Messages、Me 等底部导航）
         composable(Routes.HomeTab) {
             HomeScreen(
-                navController = navController,
+                navController = navControllerToUse,
                 mainViewModel = mainViewModel,
                 viewModelFactory = factory,
             )
@@ -102,14 +106,14 @@ fun AppNavHost(
         // 定义设置页面路由
         composable(Routes.Settings) {
             SettingScreen(
-                navController,
+                navControllerToUse,
                 mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
             )
         }
 
         // 定义vip订阅页面路由
-        composable(Routes.VipCenter) { VipCenterContent(navController) }
+        composable(Routes.VipCenter) { VipCenterContent(navControllerToUse) }
 
         // 定义聊天页面路由
         // 深度链接的参数需要指明类型，否则可能会出现类型转换错误
@@ -139,7 +143,7 @@ fun AppNavHost(
             }
 
             ChatScreen(
-                navController,
+                navControllerToUse,
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 shouldShowBoostSheetOnOpen = showBoost == true,
@@ -148,8 +152,8 @@ fun AppNavHost(
             )
         }
 
-        composable(Routes.BoostLeaderboard) { BoostLeaderboardScreen(navController) }
-        composable(Routes.CheckIn) { IgnoreSystemFontScaling { CheckInScreen(navController) } }
+        composable(Routes.BoostLeaderboard) { BoostLeaderboardScreen(navControllerToUse) }
+        composable(Routes.CheckIn) { IgnoreSystemFontScaling { CheckInScreen(navControllerToUse) } }
 
         composable(Routes.AgentInfoPage) { backStackEntry ->
             val agentId = backStackEntry.arguments?.getString("agentId")
@@ -170,7 +174,7 @@ fun AppNavHost(
                 AiAgentInfoScreen(
                     agent = it,
                     galleryItems = galleryImages.value,
-                    navController = navController,
+                    navController = navControllerToUse,
                 )
             }
         }
@@ -191,7 +195,7 @@ fun AppNavHost(
                 PhotoAlbumScreen(
                     agent = agentInfo,
                     galleryItems = galleryImages.value,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navControllerToUse.popBackStack() },
                 )
             } else {
                 Box {}
@@ -253,10 +257,10 @@ fun AppNavHost(
 
             ThemedDetailScreen(
                 viewModel = viewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { navControllerToUse.popBackStack() },
                 onClickAgent = { agent ->
                     AgentStore.addAgent(agent)
-                    navController.navigate(
+                    navControllerToUse.navigate(
                         Routes.chatPage(agent.id, false, shouldAutoFocusInput = false)
                     )
                 },

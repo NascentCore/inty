@@ -47,7 +47,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.http.services.AgentService
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.xb.helper.AgentStore
+import kotlin.random.Random
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
@@ -383,7 +389,9 @@ class MainActivity : BaseActivity() {
         //            }
         //        }
         val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
-        AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory)
+        val navController = rememberNavController()
+        val scope = rememberCoroutineScope()
+        AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory, navController)
 
         // 只在用户已登录时显示庆祝弹窗
         if (showHolidayCelebrationDialog && isLoggedIn) {
@@ -398,6 +406,30 @@ class MainActivity : BaseActivity() {
                     BoostManager.requestManualPoints(100)
                     ToastUtils.showShort(R.string.holiday_celebration_points_added)
                     showHolidayCelebrationDialog = false
+                    
+                    // 随机打开一个圣诞主题角色的聊天页面
+                    scope.launch {
+                        try {
+                            val themesResult = AgentService.getCharacterThemes(limit = 100)
+                            if (themesResult is ai.sxwl.android.data.http.ApiResult.Success) {
+                                val christmasThemes = themesResult.data.filter { it.isChristmas }
+                                val allChristmasAgents = christmasThemes.flatMap { it.agents }
+                                
+                                if (allChristmasAgents.isNotEmpty()) {
+                                    val randomAgent = allChristmasAgents[Random.nextInt(allChristmasAgents.size)]
+                                    AgentStore.addAgent(randomAgent)
+                                    navController.navigate(Routes.chatPage(randomAgent.id, false, shouldAutoFocusInput = false))
+                                    LogUtils.d("MainActivity", "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})")
+                                } else {
+                                    LogUtils.w("MainActivity", "No Christmas characters found")
+                                }
+                            } else {
+                                LogUtils.e("MainActivity", "Failed to get character themes")
+                            }
+                        } catch (e: Exception) {
+                            LogUtils.e("MainActivity", "Error getting Christmas characters: ${e.message}", e)
+                        }
+                    }
                 },
             )
         }
