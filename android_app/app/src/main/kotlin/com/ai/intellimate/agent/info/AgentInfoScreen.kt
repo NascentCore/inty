@@ -535,6 +535,10 @@ private fun PhotoAlbumPreviewSection(
     columnCount: Int = UiConfigs.ChatPage.PhotoAlbum.Preview.COLUMN_COUNT,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
+    // TODO：这里需要手动跟踪状态变化，改为 datastore 后就不需要做这个动作了。
+    var currentBackgroundUrl by remember {
+        mutableStateOf<String?>(IntySetting.getChatBackgroundImage(agentId))
+    }
     val displayedImages = images.take(columnCount)
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -569,6 +573,7 @@ private fun PhotoAlbumPreviewSection(
                     AgentGalleryImageCardCompact(
                         item = item,
                         agentId = agentId,
+                        currentBackgroundUrl = currentBackgroundUrl,
                         onPreview = { previewImage = it },
                         modifier = Modifier.weight(1f),
                     )
@@ -585,6 +590,7 @@ private fun PhotoAlbumPreviewSection(
         previewImageUrl = previewImage,
         agentId = agentId,
         onDismiss = { previewImage = null },
+        onBackgroundChanged = { newUrl -> currentBackgroundUrl = newUrl },
     )
 }
 
@@ -703,11 +709,14 @@ private fun AgentGalleryImageCard(
 private fun AgentGalleryImageCardCompact(
     item: AgentImageGalleryItem,
     agentId: String,
+    currentBackgroundUrl: String? = null,
     onPreview: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
+    // 如果提供了 currentBackgroundUrl，使用它；否则从 IntySetting 读取
+    val isCurrentBackground =
+        (currentBackgroundUrl ?: IntySetting.getChatBackgroundImage(agentId)) == item.imageUrl
 
     Box(
         modifier =
