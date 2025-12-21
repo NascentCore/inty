@@ -374,10 +374,10 @@
 
     <!-- Explore Search -->
     <string name="explore_search_icon_desc">Search characters</string>
-    <string name="explore_search_placeholder">Search by name</string>
+    <string name="explore_search_placeholder">Search by name or #tag</string>
     <string name="explore_search_cancel">Cancel</string>
     <string name="explore_search_empty">No matching characters</string>
-    <string name="explore_search_hint_text">Enter a character name and tap search</string>
+    <string name="explore_search_hint_text">Enter a name or #tag and tap search</string>
     <string name="explore_search_clear_desc">Clear search text</string>
 
     <!-- Bottom Navigation Tab Labels -->
