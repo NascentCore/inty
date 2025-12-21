@@ -356,15 +356,17 @@ private fun ChatItemAI(
                                     painter = painterResource(R.drawable.img_omela),
                                     contentDescription = null,
                                     modifier =
-                                        Modifier.align(Alignment.BottomStart)
-                                            .offset(x = (-10).dp, y = 10.dp),
+                                        Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                            .align(Alignment.BottomStart)
+                                            .offset(x = (-35).dp, y = 10.dp),
                                 )
                                 Image(
                                     painter = painterResource(R.drawable.img_chat_snow_right),
                                     contentDescription = null,
                                     modifier =
-                                        Modifier.align(Alignment.TopEnd)
-                                            .offset(x = 15.dp, y = (-16).dp),
+                                        Modifier.size(UiConfigs.ChatPage.ChatBubble.SnowDecorationSize)
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 10.dp, y = (-60).dp),
                                 )
                             }
                         }
@@ -492,19 +494,21 @@ private fun ChatItemAI(
                                         painter = painterResource(R.drawable.img_christmas_candy),
                                         contentDescription = null,
                                         modifier =
-                                            Modifier.constrainAs(left) {
-                                                start.linkTo(img.start, (-15).dp)
-                                                bottom.linkTo(img.bottom, (-12).dp)
-                                            },
+                                            Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                                .constrainAs(left) {
+                                                    start.linkTo(img.start, (-15).dp)
+                                                    bottom.linkTo(img.bottom, (-12).dp)
+                                                },
                                     )
                                     Image(
                                         painter = painterResource(R.drawable.img_candy_christmas),
                                         contentDescription = null,
                                         modifier =
-                                            Modifier.constrainAs(right) {
-                                                end.linkTo(img.end, (-25).dp)
-                                                bottom.linkTo(img.bottom, (-12).dp)
-                                            },
+                                            Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                                .constrainAs(right) {
+                                                    end.linkTo(img.end, (-25).dp)
+                                                    bottom.linkTo(img.bottom, (-12).dp)
+                                                },
                                     )
                                 }
                             }
@@ -645,7 +649,10 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                         Image(
                             painter = painterResource(R.drawable.img_christmas_tree),
                             contentDescription = null,
-                            modifier = Modifier.align(Alignment.TopStart).offset(x = (-20).dp),
+                            modifier =
+                                Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristmasDecorationIconSize)
+                                    .align(Alignment.TopStart)
+                                    .offset(x = (-40).dp),
                         )
                     }
                 }
