@@ -1,5 +1,7 @@
 package com.ai.intellimate.chat.ui
 
+// CREATED_BY_AGENT: chat page back-to-top button
+
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -23,22 +25,8 @@ import androidx.compose.ui.res.vectorResource
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
-/**
- * 滚动到底部悬浮按钮组件
- *
- * 用户可见功能：
- * - 当用户向上滚动查看历史消息时，此按钮会出现在聊天页面右下角
- * - 按钮显示为圆形，带有双向下箭头图标（KeyboardDoubleArrowDown）
- * - 点击按钮后，聊天列表会平滑滚动回最新消息位置
- * - 当用户回到最新消息位置时，按钮会自动淡出隐藏
- *
- * UI 特性：
- * - 圆形按钮，半透明黑色背景，白色边框渐变
- * - 使用淡入淡出动画，提供流畅的显示/隐藏体验
- * - 按钮大小、样式等视觉效果参数统一在 UiConfigs.ChatPage.FloatingScrollButton 中管理
- */
 @Composable
-fun ScrollToBottomButton(
+fun BackToTop(
     modifier: Modifier = Modifier,
     visible: Boolean,
     enabled: Boolean = true,
@@ -46,8 +34,6 @@ fun ScrollToBottomButton(
 ) {
     val config = UiConfigs.ChatPage.FloatingScrollButton
 
-    // 使用 AnimatedVisibility 实现按钮的淡入淡出动画
-    // modifier 需要传递给 AnimatedVisibility 以确保对齐方式正确应用
     AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
         Box(
             modifier =
@@ -84,12 +70,12 @@ fun ScrollToBottomButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector =
-                    ImageVector.vectorResource(R.drawable.keyboard_double_arrow_down_24px),
-                contentDescription = "Scroll to bottom",
+                imageVector = ImageVector.vectorResource(R.drawable.keyboard_double_arrow_up_24px),
+                contentDescription = "Back to top",
                 modifier = Modifier.size(config.IconSize),
                 tint = if (enabled) Color.White else Color.LightGray,
             )
         }
     }
 }
+
