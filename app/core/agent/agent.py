@@ -741,6 +741,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -838,7 +839,7 @@ class Agent:
 
                 # API调用（带重试机制）
                 api_start = time.time()
-                model_name = self.model_config.get("model", default_model)
+                model_name = model_override or self.model_config.get("model", default_model)
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1025,6 +1026,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """
         生成消息但不保存用户消息到历史记录（用于推送消息）
@@ -1121,7 +1123,7 @@ class Agent:
                 api_start = time.time()
                 response = client.chat.completions.create(
                     messages=openai_messages,
-                    model=self.model_config.get("model", default_model),
+                    model=model_override or self.model_config.get("model", default_model),
                     temperature=self.model_config.get(
                         "temperature", default_temperature
                     ),
@@ -1172,6 +1174,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """
         异步封装：生成消息但不保存用户消息到历史记录（用于推送消息）
@@ -1203,6 +1206,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                model_override,
             )
             return result
         except Exception as e:
@@ -1218,6 +1222,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
         logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
@@ -1240,6 +1245,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                model_override,
             )
             return result
         except Exception as e:

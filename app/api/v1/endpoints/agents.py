@@ -22,6 +22,7 @@ from app.api.tags import (
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.model_selection import select_text_to_image_model
 from app.schemas.character_card import (
     CharacterCardExportRequest,
     CharacterCardImportRequest,
@@ -540,6 +541,13 @@ async def generate_background(
 
         opposite_gender = get_opposite_gender(user_gender)
 
+        subscription = await subscription_service.get_user_current_subscription(
+            db, current_user.id
+        )
+        image_model = select_text_to_image_model(
+            user=current_user, is_subscribed=bool(subscription)
+        )
+
         # Generate images and get actual GCS URLs with RAI reason support
         generated_images = text_to_image(
             request.prompt,
@@ -549,6 +557,7 @@ async def generate_background(
             aspect_ratio=AspectRatio.PORTRAIT,
             gcs_uri_base=gcs_uri_base,
             count=request.count,
+            model=image_model,
         )
 
         result = process_generated_images(generated_images)

@@ -20,6 +20,7 @@ from pydantic import AnyHttpUrl
 # 3. 【如有必要】删除该配置项在 app 客户端相关的使用，部署、发布验证一切正常。
 
 GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
+GEMINI_2_0_FLASH_LITE = "google/gemini-2.0-flash-lite"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
@@ -170,6 +171,10 @@ class AgentConfig:
     api_key: str
     langchain_api_key: str
     model: str = GEMINI_2_5_FLASH
+    # Free users (non-superuser) use this model by default to reduce cost.
+    free_user_chat_model: str = GEMINI_2_0_FLASH_LITE
+    # Subscribed users and superusers use this model by default.
+    sub_user_chat_model: str = GEMINI_2_5_FLASH
     base_url: str = OPENROUTER_BASE_URL
     temperature: float = 0.5
     max_tokens: int = 1000
@@ -180,6 +185,8 @@ class AgentConfig:
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = "imagen-4.0-fast-generate-001"
+    free_user_text_to_image_model: str = "imagen-4.0-fast-generate-001"
+    sub_user_text_to_image_model: str = "imagen-4.0-fast-generate-001"
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置

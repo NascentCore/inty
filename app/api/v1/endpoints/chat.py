@@ -13,6 +13,7 @@ from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.model_selection import select_chat_model
 from app.models.user import AuthType
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.response import (
@@ -186,11 +187,18 @@ async def agent_chat_completions(
                 )
 
             with log_time(f"AI聊天处理: session_id={session_id}"):
+                subscription = await subscription_service.get_user_current_subscription(
+                    db, current_user.id
+                )
+                model_override = select_chat_model(
+                    user=current_user, is_subscribed=bool(subscription)
+                )
                 response_content = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
                     chat_settings=chat_settings,
+                    model_override=model_override,
                 )
 
             logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")

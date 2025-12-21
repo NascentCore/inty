@@ -21,6 +21,7 @@ from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
 from app.api.tags import NOT_USED_TAG
+from app.core.model_selection import select_chat_model
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
@@ -196,12 +197,20 @@ async def agent_chat_completions(
             chat_settings = await settings_task
             logger.debug(f"chat_settings: {chat_settings.__dict__}")
 
+            subscription = await subscription_service.get_user_current_subscription(
+                db, current_user.id
+            )
+            model_override = select_chat_model(
+                user=current_user, is_subscribed=bool(subscription)
+            )
+
             ai_task = asyncio.create_task(
                 agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
                     chat_settings=chat_settings,
+                    model_override=model_override,
                 )
             )
 

@@ -31,6 +31,8 @@ SHARED_EMAILS = [
 logger.debug(f"SUPER_USER_EMAILS: {SUPER_USER_EMAILS}")
 
 
-def is_superuser_based_on_email(email: str) -> bool:
-    """Read the email from the request and check if it is in the SUPER_USER_EMAILS list."""
+def is_superuser_based_on_email(email: str | None) -> bool:
+    """Check if an email is in the SUPER_USER_EMAILS allowlist."""
+    if not email:
+        return False
     return email.lower() in [email.lower() for email in SUPER_USER_EMAILS]

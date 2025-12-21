@@ -275,6 +275,7 @@ def text_to_image(
     aspect_ratio: str,
     gcs_uri_base: str,
     count: int,
+    model: Optional[str] = None,
 ) -> List[ImagenGeneratedImage]:
     """
     使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
@@ -319,7 +320,7 @@ def text_to_image(
         if enhanced_prompt:
             prompt = enhance_prompt(prompt, gender)
         response = client.models.generate_images(
-            model=global_config_loaded_from_config_yaml.agent.vertex_image_model,
+            model=model or global_config_loaded_from_config_yaml.agent.vertex_image_model,
             prompt=prompt,
             config=config,
         )
