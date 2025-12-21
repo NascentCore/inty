@@ -11,8 +11,7 @@ import com.ai.intellimate.utils.ChatBackgroundUtils
 /**
  * 角色相册图片全屏预览对话框
  *
- * 这是一个可复用的组件，封装了角色相册图片的全屏预览功能。
- * 支持设置图片为聊天背景，并统一处理 Dialog 和 FullScreenImageViewer 的逻辑。
+ * 这是一个可复用的组件，封装了角色相册图片的全屏预览功能。 支持设置图片为聊天背景，并统一处理 Dialog 和 FullScreenImageViewer 的逻辑。
  *
  * @param previewImageUrl 要预览的图片 URL，如果为 null 则不显示对话框
  * @param agentId 角色 ID，用于设置聊天背景

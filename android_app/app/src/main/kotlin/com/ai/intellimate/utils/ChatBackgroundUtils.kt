@@ -4,14 +4,10 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.ToastUtils
 import com.ai.intellimate.R
 
-/**
- * 聊天背景工具类
- * 提供聊天背景图片的设置和清除功能
- */
+/** 聊天背景工具类 提供聊天背景图片的设置和清除功能 */
 object ChatBackgroundUtils {
     /**
-     * 切换聊天背景图片
-     * 如果当前图片已经是背景，则清除背景；否则设置为背景
+     * 切换聊天背景图片 如果当前图片已经是背景，则清除背景；否则设置为背景
      *
      * @param agentId 角色ID
      * @param imageUrl 图片URL
@@ -55,4 +51,3 @@ object ChatBackgroundUtils {
         return null
     }
 }
-

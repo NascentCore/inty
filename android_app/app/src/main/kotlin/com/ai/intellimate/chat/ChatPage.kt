@@ -68,11 +68,11 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
 import com.ai.intellimate.chat.ui.ChatTopBar
-import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
@@ -827,7 +827,7 @@ internal fun ChatPage(
                 // 点击后平滑滚动回最新消息位置
                 // 即使回到第一条消息，只要有新消息（不在最新消息位置），也显示此按钮
                 val showScrollToBottomButton = !isAtLatestMessage
-                
+
                 // 回到聊天开始按钮显示逻辑：
                 // 当用户不在最新消息位置且不在聊天开始位置时显示
                 // 当用户到达聊天开始位置时，此按钮隐藏
