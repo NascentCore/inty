@@ -80,10 +80,10 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
-import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
+import com.ai.intellimate.utils.ChatBackgroundUtils
 import com.ai.intellimate.utils.formatDisplayId
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
@@ -535,6 +535,10 @@ private fun PhotoAlbumPreviewSection(
     columnCount: Int = UiConfigs.ChatPage.PhotoAlbum.Preview.COLUMN_COUNT,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
+    // TODO：这里需要手动跟踪状态变化，改为 datastore 后就不需要做这个动作了。
+    var currentBackgroundUrl by remember {
+        mutableStateOf<String?>(IntySetting.getChatBackgroundImage(agentId))
+    }
     val displayedImages = images.take(columnCount)
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -569,6 +573,7 @@ private fun PhotoAlbumPreviewSection(
                     AgentGalleryImageCardCompact(
                         item = item,
                         agentId = agentId,
+                        currentBackgroundUrl = currentBackgroundUrl,
                         onPreview = { previewImage = it },
                         modifier = Modifier.weight(1f),
                     )
@@ -581,31 +586,12 @@ private fun PhotoAlbumPreviewSection(
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
     }
 
-    if (previewImage != null) {
-        Dialog(
-            onDismissRequest = { previewImage = null },
-            properties =
-                DialogProperties(
-                    usePlatformDefaultWidth = false,
-                    dismissOnClickOutside = true,
-                    dismissOnBackPress = true,
-                ),
-        ) {
-            val currentImageUrl = previewImage.orEmpty()
-            FullScreenImageViewer(
-                imageUrl = currentImageUrl,
-                onDismiss = { previewImage = null },
-                onAction = {
-                    if (agentId.isNotBlank() && currentImageUrl.isNotBlank()) {
-                        IntySetting.setChatBackgroundImage(agentId, currentImageUrl)
-                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
-                        previewImage = null
-                    }
-                },
-                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
-            )
-        }
-    }
+    AgentGalleryImagePreviewDialog(
+        previewImageUrl = previewImage,
+        agentId = agentId,
+        onDismiss = { previewImage = null },
+        onBackgroundChanged = { newUrl -> currentBackgroundUrl = newUrl },
+    )
 }
 
 @Composable
@@ -681,8 +667,7 @@ private fun AgentGalleryImageCard(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        IntySetting.clearChatBackgroundImage(agentId)
-                        ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
+                        ChatBackgroundUtils.clearChatBackground(agentId)
                         showResetDialog = false
                     }
                 ) {
@@ -724,11 +709,14 @@ private fun AgentGalleryImageCard(
 private fun AgentGalleryImageCardCompact(
     item: AgentImageGalleryItem,
     agentId: String,
+    currentBackgroundUrl: String? = null,
     onPreview: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
+    // 如果提供了 currentBackgroundUrl，使用它；否则从 IntySetting 读取
+    val isCurrentBackground =
+        (currentBackgroundUrl ?: IntySetting.getChatBackgroundImage(agentId)) == item.imageUrl
 
     Box(
         modifier =
