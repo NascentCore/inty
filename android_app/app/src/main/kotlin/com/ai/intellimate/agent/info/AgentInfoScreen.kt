@@ -84,6 +84,7 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
+import com.ai.intellimate.utils.ChatBackgroundUtils
 import com.ai.intellimate.utils.formatDisplayId
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
@@ -597,8 +598,7 @@ private fun PhotoAlbumPreviewSection(
                 onDismiss = { previewImage = null },
                 onAction = {
                     if (agentId.isNotBlank() && currentImageUrl.isNotBlank()) {
-                        IntySetting.setChatBackgroundImage(agentId, currentImageUrl)
-                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
+                        ChatBackgroundUtils.setChatBackground(agentId, currentImageUrl)
                         previewImage = null
                     }
                 },
@@ -681,8 +681,7 @@ private fun AgentGalleryImageCard(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        IntySetting.clearChatBackgroundImage(agentId)
-                        ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
+                        ChatBackgroundUtils.clearChatBackground(agentId)
                         showResetDialog = false
                     }
                 ) {

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -230,6 +231,18 @@ private fun PhotoAlbumImageItem(
                     stringResource(R.string.agent_gallery_ai_images_content_description),
                 contentScale = ContentScale.Crop,
             )
+
+            // 如果这是当前背景，显示绿色圆点指示器
+            if (isCurrentBackground) {
+                Box(
+                    modifier =
+                        Modifier.align(Alignment.TopEnd)
+                            .padding(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorPadding)
+                            .size(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorSize)
+                            .clip(CircleShape)
+                            .background(UiConfigs.ChatPage.PhotoAlbum.All.BackgroundIndicatorColor)
+                )
+            }
         }
 
         Box(
