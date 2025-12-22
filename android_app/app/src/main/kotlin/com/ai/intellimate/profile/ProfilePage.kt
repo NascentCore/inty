@@ -105,6 +105,7 @@ import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
 import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.settings.check.getCurrentMonthInfo
 import com.ai.intellimate.settings.playStoreUrl
 import com.ai.intellimate.ui.ChatDialogData
@@ -1116,6 +1117,10 @@ private object DailyRewardsBannerStyle {
     val BorderColor = Color.White.copy(alpha = 0.12f)
     val TitleColor = Color.White
     val SubtitleColor = Color.White.copy(alpha = 0.7f)
+    val DisabledAlpha = 0.6f
+    val DisabledBorderColor = Color.White.copy(alpha = 0.08f)
+    val DisabledTitleColor = Color.White.copy(alpha = 0.75f)
+    val DisabledSubtitleColor = Color.White.copy(alpha = 0.55f)
     val TitleSize = 18.sp
     val SubtitleSize = 14.sp
     val HorizontalPadding = 16.dp
@@ -1123,23 +1128,44 @@ private object DailyRewardsBannerStyle {
     val IllustrationHeight = 64.dp
     val IllustrationWidth = 92.dp
     val BackgroundGradientColors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
+    val DisabledBackgroundGradientColors = listOf(Color(0xFF5D5D62), Color(0xFF3A3A3E))
+    val ProgressColor = Color(0xFFFF6B6B)
+    val DisabledProgressColor = Color.White.copy(alpha = 0.35f)
+    val TrackColor = Color.White.copy(alpha = 0.3f)
+    val DisabledTrackColor = Color.White.copy(alpha = 0.18f)
 }
 
 @Composable
 private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    // 获取签到数据
-    val (daysInMonth, _) = remember { getCurrentMonthInfo() }
-    val checkedInDays = remember { CheckInRepository.getCheckedInDays() }
+    val boostState by BoostManager.boostState.collectAsState()
+
+    // 获取签到数据（从签到页返回时刷新）
+    val (daysInMonth, today) = remember { getCurrentMonthInfo() }
+    var checkedInDays by remember { mutableStateOf(CheckInRepository.getCheckedInDays()) }
+    LifecycleResumeEffect(Unit) {
+        checkedInDays = CheckInRepository.getCheckedInDays()
+        onPauseOrDispose {}
+    }
+    LaunchedEffect(boostState.hasClaimedDailyReward) {
+        checkedInDays = CheckInRepository.getCheckedInDays()
+    }
+
+    val hasCheckedInToday = checkedInDays.contains(today) || boostState.hasClaimedDailyReward
     val checkedInCount = checkedInDays.count()
     val progress = if (daysInMonth > 0) checkedInCount.toFloat() / daysInMonth.toFloat() else 0f
 
-    val backgroundBrush = remember {
+    val backgroundBrush = remember(hasCheckedInToday) {
         Brush.linearGradient(
-            colors = DailyRewardsBannerStyle.BackgroundGradientColors,
+            colors =
+                if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledBackgroundGradientColors
+                else DailyRewardsBannerStyle.BackgroundGradientColors,
             start = Offset.Zero,
             end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
         )
     }
+
+    val clickableModifier =
+        if (hasCheckedInToday) Modifier else Modifier.noRippleClickable(onClick = onClick)
 
     Row(
         modifier =
@@ -1150,10 +1176,13 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                 .background(backgroundBrush)
                 .border(
                     width = DailyRewardsBannerStyle.BorderWidth,
-                    color = DailyRewardsBannerStyle.BorderColor,
+                    color =
+                        if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledBorderColor
+                        else DailyRewardsBannerStyle.BorderColor,
                     shape = DailyRewardsBannerStyle.Shape,
                 )
-                .noRippleClickable(onClick = onClick)
+                .then(clickableModifier)
+                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledAlpha else 1f)
                 .padding(
                     horizontal = DailyRewardsBannerStyle.HorizontalPadding,
                     vertical = DailyRewardsBannerStyle.VerticalPadding,
@@ -1163,7 +1192,9 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.profile_daily_rewards_title),
-                color = DailyRewardsBannerStyle.TitleColor,
+                color =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTitleColor
+                    else DailyRewardsBannerStyle.TitleColor,
                 fontSize = DailyRewardsBannerStyle.TitleSize,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -1176,7 +1207,9 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                         R.string.profile_daily_rewards_subtitle,
                         BoostConfig.DAILY_SIGN_IN_REWARD,
                     ),
-                color = DailyRewardsBannerStyle.SubtitleColor,
+                color =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledSubtitleColor
+                    else DailyRewardsBannerStyle.SubtitleColor,
                 fontSize = DailyRewardsBannerStyle.SubtitleSize,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -1195,8 +1228,12 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.width(80.dp).height(4.dp),
-                color = Color(0xFFFF6B6B),
-                trackColor = Color.White.copy(alpha = 0.3f),
+                color =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledProgressColor
+                    else DailyRewardsBannerStyle.ProgressColor,
+                trackColor =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTrackColor
+                    else DailyRewardsBannerStyle.TrackColor,
             )
         }
     }
