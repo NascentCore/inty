@@ -613,8 +613,24 @@ private fun ChatItemAI(
 private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.Bottom
+            ) {
                 val context = LocalContext.current
+
+
+                // 圣诞点缀
+                if (enableChristmasConfig()) {
+                    Image(
+                        painter = painterResource(R.drawable.img_christmas_tree),
+                        contentDescription = null,
+                        modifier =
+                            Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristMasTreeSize),
+                    )
+                }
+
                 Box(
                     modifier =
                         Modifier.background(
@@ -644,17 +660,6 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                         normalColor = Color(0xff090909),
                         actionColor = Color(0xff090909).copy(0.6f),
                     )
-                    // 圣诞点缀
-                    if (enableChristmasConfig()) {
-                        Image(
-                            painter = painterResource(R.drawable.img_christmas_tree),
-                            contentDescription = null,
-                            modifier =
-                                Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristMasTreeSize)
-                                    .align(Alignment.TopStart)
-                                    .offset(x = (-60).dp),
-                        )
-                    }
                 }
             }
         }
