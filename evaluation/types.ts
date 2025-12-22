@@ -531,6 +531,9 @@ export interface UserAnalyticsStatsResponse {
   total_image_generation_success: number;
   total_image_generation_failures: number;
   image_generation_success_rate: number;
+  // 生图细分统计
+  total_image_new_generation: number;
+  total_image_fallback_used: number;
 }
 
 export interface UserDailyMessageItem {

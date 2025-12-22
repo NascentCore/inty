@@ -424,7 +424,16 @@ class UserAnalyticsService:
                 SELECT 
                     COUNT(*) as total_requests,
                     COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
-                    COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures
+                    COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures,
+                    COUNT(*) FILTER (
+                        WHERE extra_data->>'success' = 'true' 
+                        AND (extra_data->>'is_matched' IS NULL 
+                             OR extra_data->>'is_matched' = 'false')
+                    ) as new_generation,
+                    COUNT(*) FILTER (
+                        WHERE extra_data->>'success' = 'true' 
+                        AND extra_data->>'is_matched' = 'true'
+                    ) as fallback_used
                 FROM subscription_usage
                 WHERE usage_type = 'image_generation'
                   AND usage_date >= :start_date 
@@ -438,6 +447,8 @@ class UserAnalyticsService:
             total_requests = image_gen_row[0] if image_gen_row else 0
             total_success = image_gen_row[1] if image_gen_row else 0
             total_failures = image_gen_row[2] if image_gen_row else 0
+            new_generation = image_gen_row[3] if image_gen_row else 0
+            fallback_used = image_gen_row[4] if image_gen_row else 0
             success_rate = (
                 (total_success / total_requests * 100) if total_requests > 0 else 0.0
             )
@@ -446,6 +457,8 @@ class UserAnalyticsService:
                 "total_image_generation_success": total_success,
                 "total_image_generation_failures": total_failures,
                 "image_generation_success_rate": round(success_rate, 2),
+                "total_image_new_generation": new_generation,
+                "total_image_fallback_used": fallback_used,
             }
 
         if not sessions_detail:
