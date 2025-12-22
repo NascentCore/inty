@@ -75,8 +75,12 @@ private fun FavoriteButton(
         remember(agentId) { mutableStateOf(IntySetting.isExploreAgentFavorite(agentId)) }
     // 与探索页角色卡片保持一致：未收藏时显示空心图标，收藏后显示粉色实心图标
     val favoriteIcon = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
-    val favoriteTint = if (isFavorite) Color(0xFFFF5A8A) else Color.White
-    val favoriteDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
+    val favoriteTint =
+        if (isFavorite) UiConfigs.ChatTopBar.FavoriteActiveTint
+        else UiConfigs.ChatTopBar.FavoriteInactiveTint
+    val favoriteDescription =
+        if (isFavorite) stringResource(R.string.favorite_button_remove_from_favorites)
+        else stringResource(R.string.favorite_button_add_to_favorites)
 
     IconButton(
         modifier = modifier.size(UiConfigs.ChatTopBar.FavoriteButtonSize),
