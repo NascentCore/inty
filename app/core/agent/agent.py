@@ -1020,9 +1020,14 @@ class Agent:
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录
+                # 保存AI响应到历史记录（包含LLM调用时间）
                 save_response_start = time.time()
-                history.add_messages([AIMessage(content=response_text)])
+                chat_history_service.add_ai_message_sync(
+                    session_id=session_id,
+                    message=response_text,
+                    agent_id=self.agent_id,
+                    meta_data={"llm_invoke_time": api_time},
+                )
                 save_response_time = time.time() - save_response_start
                 logger.debug(
                     f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
