@@ -179,7 +179,7 @@ class AgentConfig:
     langchain_api_key: str
     model: str = GEMINI_2_5_FLASH
     # Free users (non-superuser) use this model by default to reduce cost.
-    free_user_chat_model: str = GEMINI_2_0_FLASH_LITE
+    free_user_chat_model: str = GEMINI_2_5_FLASH_LITE
     # Subscribed users and superusers use this model by default.
     sub_user_chat_model: str = GEMINI_2_5_FLASH
     base_url: str = OPENROUTER_BASE_URL
