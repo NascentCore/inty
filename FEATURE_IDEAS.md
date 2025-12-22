@@ -470,6 +470,103 @@ AI 主持人成立限定时长的主题群聊，主动抛出亲密暧昧但合�
 - 交付件：角色圣经（可导出）、正史时间线、每周连载回顾、版本变更日志、定期生活片段详情。
 
 ### 风险与缓解
-- **一致性风险**：用“角色圣经 + 正史时间线”作为单一事实源；上线前自动一致性检查（关键设定冲突检测）。
-- **用户期望过高**：明确“代运营交付边界”（不承诺现实关系/现实控制），以模板化 SLA 写入服务说明。
+- **一致性风险**：用"角色圣经 + 正史时间线"作为单一事实源；上线前自动一致性检查（关键设定冲突检测）。
+- **用户期望过高**：明确"代运营交付边界"（不承诺现实关系/现实控制），以模板化 SLA 写入服务说明。
 - **越界内容**：全链路安全过滤 + 人工审校；明确禁用未成年人、强迫/胁迫、露骨内容等。
+
+### 功能组件架构图
+
+```mermaid
+flowchart TB
+    subgraph "用户端组件"
+        A1[App 推介入口<br/>首页 Banner/角色列表/推荐卡片]
+        A2[一周免费试用<br/>完整功能体验]
+        A3[订阅/增值服务页<br/>选择 Creator Muse 档位]
+        A4[创作者意图表<br/>关键词/禁区/剧情期待]
+        A5[Influence Portal<br/>指令提交/查看生活片段]
+        A6[聊天/通话界面<br/>独立人格互动]
+        A7[角色动态通知<br/>FOMO 推送]
+        A8[连载回顾与提案<br/>每周/每月更新]
+    end
+
+    subgraph "团队运营端"
+        B1[角色定位访谈<br/>30-60 分钟确认]
+        B2[角色圣经管理<br/>Canon Bible 编修]
+        B3[指令审核系统<br/>版本管理与变更日志]
+        B4[定期生活片段更新<br/>每周/每两周注入]
+        B5[连载内容创作<br/>角色人生线推进]
+        B6[一致性检查<br/>安全审校]
+    end
+
+    subgraph "技术系统核心"
+        C1[深历史管理系统<br/>分层记忆架构]
+        C2[正史时间线<br/>事件锚点与回溯]
+        C3[记忆系统<br/>公开人设层/私密关系层/事件时间线层]
+        C4[Frontier 级模型<br/>对话/生图/语音]
+        C5[内容生成引擎<br/>图/语音/视频风格一致]
+        C6[检索式记忆<br/>角色圣经/时间线/共同记忆库]
+        C7[安全过滤系统<br/>全链路内容审核]
+    end
+
+    subgraph "商业化组件"
+        D1[订阅管理<br/>会员专属权限]
+        D2[限量名额管理<br/>稀缺性控制]
+        D3[FOMO 策略引擎<br/>动态摘要推送]
+        D4[增值服务<br/>高频连载/专属资产/特别篇]
+        D5[交付件管理<br/>角色圣经/时间线/变更日志]
+    end
+
+    %% 用户旅程流程
+    A1 --> A2
+    A2 --> A3
+    A3 --> A4
+    A4 --> B1
+    B1 --> B2
+    B2 --> A6
+    A6 --> A5
+    A5 --> B3
+    B3 --> B2
+    A6 --> A8
+    A8 --> A5
+
+    %% 技术系统支撑
+    B2 --> C1
+    C1 --> C2
+    C1 --> C3
+    C3 --> C6
+    C6 --> C4
+    C4 --> C5
+    C4 --> A6
+    C5 --> A6
+    B4 --> C3
+    B5 --> C2
+
+    %% 运营流程
+    B3 --> B6
+    B6 --> C7
+    B4 --> A7
+    B4 --> A5
+    B5 --> A8
+
+    %% 商业化流程
+    A3 --> D1
+    D1 --> D2
+    D2 --> A2
+    D3 --> A7
+    B4 --> D3
+    D1 --> D4
+    B2 --> D5
+    B3 --> D5
+    B4 --> D5
+
+    %% 样式
+    classDef userComponent fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef opsComponent fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef techComponent fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef bizComponent fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+
+    class A1,A2,A3,A4,A5,A6,A7,A8 userComponent
+    class B1,B2,B3,B4,B5,B6 opsComponent
+    class C1,C2,C3,C4,C5,C6,C7 techComponent
+    class D1,D2,D3,D4,D5 bizComponent
+```
