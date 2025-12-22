@@ -125,7 +125,7 @@ fun ExplorePage(
                     Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
                         BoostShortcutButton(
                             onClick = {
-                                navController.navigate(Routes.BoostLeaderboard)
+                                navController.navigate(Routes.Explore.BoostLeaderboard)
                                 //
                                 // BoostLeaderboardActivity.launch(context)
                             }

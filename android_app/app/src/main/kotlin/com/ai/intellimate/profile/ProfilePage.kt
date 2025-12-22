@@ -409,7 +409,7 @@ private fun ProfileHeader(
             onCancel = { showSubscribeDialog = false },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.PROFILE_UPGRADE)
                 }
@@ -417,7 +417,7 @@ private fun ProfileHeader(
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.PROFILE_UPGRADE)
                 }
@@ -512,7 +512,7 @@ private fun ProfileHeader(
                         val currentTime = System.currentTimeMillis()
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
-                            navController.navigate(Routes.CheckIn)
+                            navController.navigate(Routes.Me.CheckIn)
                         }
                     },
                 imageVector = Icons.Filled.EventAvailable,
@@ -528,7 +528,7 @@ private fun ProfileHeader(
                         if (AntiClick.isValidClick(lastClickTime)) {
                             lastClickTime = currentTime
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                navController.navigate(Routes.Settings)
+                                navController.navigate(Routes.Me.Settings)
                             }
                         }
                     },
@@ -656,7 +656,7 @@ private fun ProfileHeader(
                     if (!AntiClick.isValidClick(lastDailyRewardsClickTime))
                         return@DailyRewardsBanner
                     lastDailyRewardsClickTime = currentTime
-                    navController.navigate(Routes.CheckIn)
+                    navController.navigate(Routes.Me.CheckIn)
                 },
             )
 
@@ -677,7 +677,7 @@ private fun ProfileHeader(
                     purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
                     expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
                     onClick = {
-                        navController.navigate(Routes.VipCenter)
+                        navController.navigate(Routes.Me.VipCenter)
                         //                        VipCenterActivity.launch(context,
                         // VipCenterActivity.PROFILE_UPGRADE)
                     },

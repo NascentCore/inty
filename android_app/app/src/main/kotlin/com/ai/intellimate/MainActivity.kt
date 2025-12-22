@@ -455,7 +455,7 @@ class MainActivity : BaseActivity() {
                         AgentStore.addAgent(randomAgent)
                         // 设计决策：shouldAutoFocusInput = false
                         // 原因：用户刚进入聊天页面，不应该立即弹出键盘，让用户先看到角色信息
-                        navController.navigate(Routes.chatPage(randomAgent.id, false, shouldAutoFocusInput = false))
+                        navController.navigate(Routes.Chat.chatPage(randomAgent.id, false, shouldAutoFocusInput = false))
                         LogUtils.d("MainActivity", "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})")
                     } else {
                         // 设计决策：静默失败，不打扰用户

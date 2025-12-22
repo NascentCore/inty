@@ -456,7 +456,7 @@ fun ExploreContent(
                                                         ""
                                                     }
                                                 nav.navigate(
-                                                    Routes.collectionDetail(
+                                                    Routes.Explore.collectionDetail(
                                                         themeId = theme.id,
                                                         themeTitle = theme.name,
                                                         themeDescription = theme.description,

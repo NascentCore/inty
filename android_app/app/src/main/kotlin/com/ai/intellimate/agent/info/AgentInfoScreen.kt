@@ -314,7 +314,7 @@ internal fun AiAgentInfoScreen(
                                 Spacer(Modifier.height(8.dp))
                                 TextButton(
                                     onClick = {
-                                        navController.navigate(Routes.BoostLeaderboard)
+                                        navController.navigate(Routes.Explore.BoostLeaderboard)
                                         //
                                         // com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
                                         //                                        context
@@ -451,7 +451,7 @@ internal fun AiAgentInfoScreen(
                                 onNavigateToPhotoAlbum = {
                                     //
                                     // navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
-                                    navController.navigate(Routes.agentPhotoAlbum(agent.id))
+                                    navController.navigate(Routes.Home.agentPhotoAlbum(agent.id))
                                 },
                             )
                         }
@@ -516,7 +516,7 @@ internal fun AiAgentInfoScreen(
             onDismiss = { showBoostHelpSheet = false },
             onOpenLeaderboard = {
                 showBoostHelpSheet = false
-                navController.navigate(Routes.BoostLeaderboard)
+                navController.navigate(Routes.Explore.BoostLeaderboard)
                 //                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
             },
         )

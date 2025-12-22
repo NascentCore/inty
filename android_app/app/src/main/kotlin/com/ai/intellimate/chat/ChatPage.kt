@@ -445,7 +445,7 @@ internal fun ChatPage(
                                         IntySetting.isLogin() &&
                                             IntySetting.getCurToken().isNotEmpty()
                                     ) {
-                                        navController.navigate(Routes.VipCenter)
+                                        navController.navigate(Routes.Me.VipCenter)
                                         //
                                         // VipCenterActivity.launch(context,
                                         // VipCenterActivity.CHAT_PAGE)
@@ -1087,7 +1087,7 @@ private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatVie
             onCancel = { chatViewModel.dismissDialog() },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.CHAT_PAGE)
                 }
@@ -1095,7 +1095,7 @@ private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatVie
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.CHAT_PAGE)
                 }
@@ -1137,7 +1137,7 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.VipCenter)
+                            navController.navigate(Routes.Me.VipCenter)
                             //                            VipCenterActivity.launch(context,
                             // VipCenterActivity.CHAT_PAGE)
                         }
@@ -1151,7 +1151,7 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.VipCenter)
+                            navController.navigate(Routes.Me.VipCenter)
                             //                            VipCenterActivity.launch(context,
                             // VipCenterActivity.CHAT_PAGE)
                         }

@@ -139,7 +139,7 @@ fun ChatMorePanel(
                                         showSheet = true
                                     } else {
                                         // 去会员中心
-                                        navController.navigate(Routes.VipCenter)
+                                        navController.navigate(Routes.Me.VipCenter)
                                         onDismiss() // 要关闭掉panel
                                     }
                                 }

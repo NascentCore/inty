@@ -129,7 +129,7 @@ fun BoostStatusChip(
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                navController.navigate(Routes.BoostLeaderboard)
+                navController.navigate(Routes.Explore.BoostLeaderboard)
                 //                BoostLeaderboardActivity.launch(context)
             },
         )
@@ -255,7 +255,7 @@ fun BoostSheet(
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                navController.navigate(Routes.BoostLeaderboard)
+                navController.navigate(Routes.Explore.BoostLeaderboard)
                 //                BoostLeaderboardActivity.launch(context)
             },
         )

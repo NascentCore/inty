@@ -117,7 +117,7 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
                 navController.navigate(
-                    Routes.chatPage(entry.agentId, showSheet, shouldAutoFocusInput = false)
+                    Routes.Chat.chatPage(entry.agentId, showSheet, shouldAutoFocusInput = false)
                 )
                 //                ChatActivity.launch(
                 //                    context,
@@ -204,7 +204,7 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                navController.navigate(Routes.BoostLeaderboard)
+                navController.navigate(Routes.Explore.BoostLeaderboard)
                 //                BoostLeaderboardActivity.launch(context)
             },
         )

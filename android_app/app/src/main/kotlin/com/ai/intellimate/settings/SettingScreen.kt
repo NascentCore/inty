@@ -309,7 +309,7 @@ private fun SupportAndHelpSection(
                 if (isVipSubscribed) {
                     SubsManageActivity.launch(context)
                 } else {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.SETTINGS_SUBSCRIPTION)
                 }

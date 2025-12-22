@@ -312,7 +312,7 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
                         // 跳转到订阅中心
-                        navController.navigate(Routes.VipCenter)
+                        navController.navigate(Routes.Me.VipCenter)
                         //                        VipCenterActivity.launch(context,
                         // VipCenterActivity.HOME_EXPIRED_DIALOG)
                     }
@@ -462,11 +462,11 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
             AgentStore.addAgent(conversation.convertToAgentInfo())
-            navController.navigate(Routes.chatPage(conversation.convertToAgentInfo().id, false))
+            navController.navigate(Routes.Chat.chatPage(conversation.convertToAgentInfo().id, false))
         },
         onClickFavoriteAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.chatPage(agent.id, false))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
         onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
         pageTrackingContext = "MainActivity",
@@ -497,7 +497,7 @@ private fun ExploreTabContent(
         innerPadding = innerPadding,
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.chatPage(agent.id, false, shouldAutoFocusInput = false))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false))
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,
@@ -611,7 +611,7 @@ private fun ProfileTabContent(
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.chatPage(agent.id, false))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
         onClickDraft = { draftId ->
             val intent = CreateRoleActivity.getIntent(context, null, draftId)
