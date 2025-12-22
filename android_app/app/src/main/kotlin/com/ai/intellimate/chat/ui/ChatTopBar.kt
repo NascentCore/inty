@@ -147,7 +147,7 @@ fun ChatTopBar(
                                 ToastUtils.showShort(R.string.str_agent_is_deleted)
                             } else {
                                 AgentStore.addAgent(agentInfo)
-                                navController.navigate(Routes.agentInfPage(agentInfo.id))
+                                navController.navigate(Routes.Home.agentInfPage(agentInfo.id))
                             }
                         }
                     },

@@ -433,7 +433,7 @@ fun ChatSettingsDrawer(
                                                 !vipStatus.isSubscribed &&
                                                     option.id != CHAT_MODEL_ID_DEFAULT
                                             ) {
-                                                navController.navigate(Routes.VipCenter)
+                                                navController.navigate(Routes.Me.VipCenter)
                                                 FirebaseManager.logEvent(
                                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                                     FirebaseManager.safeEventParams(
