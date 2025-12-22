@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
@@ -16,11 +17,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.rounded.EnergySavingsLeaf
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +53,15 @@ import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.launch
 
+private object ChatTopBarActionsConfig {
+    val FavoriteButtonSize = 36.dp
+    val FavoriteIconSize = 18.dp
+    val ActionButtonSpacing = 8.dp
+    const val ActionButtonContainerAlpha = 0.35f
+    val FavoriteActiveTint = Color(0xFFFF5A8A)
+    val FavoriteInactiveTint = Color.White
+}
+
 /** 聊天页面顶部栏组件 */
 @Composable
 fun ChatTopBar(
@@ -59,6 +77,14 @@ fun ChatTopBar(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    var isFavorite by
+        remember(agentInfo.id) { mutableStateOf(IntySetting.isExploreAgentFavorite(agentInfo.id)) }
+    val favoriteIcon = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
+    val favoriteTint =
+        if (isFavorite) ChatTopBarActionsConfig.FavoriteActiveTint
+        else ChatTopBarActionsConfig.FavoriteInactiveTint
+    val favoriteDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮
@@ -151,6 +177,30 @@ fun ChatTopBar(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        IconButton(
+            modifier = Modifier.size(ChatTopBarActionsConfig.FavoriteButtonSize),
+            onClick = {
+                val nextFavorite = !isFavorite
+                isFavorite = nextFavorite
+                IntySetting.setExploreAgentFavorite(agentInfo.id, nextFavorite)
+            },
+            colors =
+                IconButtonDefaults.iconButtonColors(
+                    contentColor = favoriteTint,
+                    containerColor =
+                        Color.Black.copy(alpha = ChatTopBarActionsConfig.ActionButtonContainerAlpha),
+                ),
+        ) {
+            Icon(
+                imageVector = favoriteIcon,
+                contentDescription = favoriteDescription,
+                tint = favoriteTint,
+                modifier = Modifier.size(ChatTopBarActionsConfig.FavoriteIconSize),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(ChatTopBarActionsConfig.ActionButtonSpacing))
 
         Box(
             modifier =
