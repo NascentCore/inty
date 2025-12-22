@@ -182,6 +182,12 @@ class AgentConfig:
     free_user_chat_model: str = GEMINI_2_5_FLASH_LITE
     # Subscribed users and superusers use this model by default.
     sub_user_chat_model: str = GEMINI_2_5_FLASH
+    # Note: Model selection is handled by app.core.model_selection.select_chat_model(),
+    # which automatically chooses between free_user_chat_model and sub_user_chat_model
+    # based on user subscription status and superuser privileges.
+    # Services using this configuration:
+    # - app/services/push_notification_service.py (updated to use select_chat_model)
+    # - app/services/evaluation_service.py (updated to use select_chat_model)
     base_url: str = OPENROUTER_BASE_URL
     temperature: float = 0.5
     max_tokens: int = 1000
