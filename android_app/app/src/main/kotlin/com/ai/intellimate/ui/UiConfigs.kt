@@ -491,6 +491,24 @@ object UiConfigs {
 
         /** 能量点数字体大小 */
         val EnergyPointsFontSize = 10.sp
+
+        /** 收藏按钮大小 */
+        val FavoriteButtonSize = 36.dp
+
+        /** 收藏图标大小 */
+        val FavoriteIconSize = 18.dp
+
+        /** 操作按钮之间的间距 */
+        val ActionButtonSpacing = 8.dp
+
+        /** 操作按钮容器透明度 */
+        const val ActionButtonContainerAlpha = 0.35f
+
+        /** 收藏按钮激活状态颜色（粉色） */
+        val FavoriteActiveTint = Color(0xFFFF5A8A)
+
+        /** 收藏按钮未激活状态颜色（白色） */
+        val FavoriteInactiveTint = Color.White
     }
 
     /** 聊天页面配置 - 适用于聊天页面的功能开关，如 Remix 按钮可见性等 */
@@ -508,7 +526,7 @@ object UiConfigs {
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
         object ChatBubble {
             /** 圣诞装饰图标大小 - 适用于圣诞树、草莓、糖果等装饰图标 */
-            val ChristMasTreeSize = 60.dp
+            val ChristMasTreeSize = 48.dp
             val CherrySize = 40.dp
             val SnowDecorationSize = 80.dp
             val ChritsmasDecorationSize = 60.dp
