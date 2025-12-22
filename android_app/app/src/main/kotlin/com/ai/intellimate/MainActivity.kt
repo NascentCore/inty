@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,26 +46,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.http.services.AgentService
-import androidx.compose.runtime.saveable.rememberSaveable
 import com.ai.intellimate.boost.BoostManager
-import com.ai.intellimate.xb.helper.AgentStore
-import kotlin.random.Random
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
-import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.EmailLoginButton
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
+import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
+import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.helper.AppConstants.Companion.PUSH_NOTIFICATION
 import com.ai.intellimate.xb.navigation.AppNavHost
 import com.ai.intellimate.xb.navigation.Routes
@@ -317,7 +312,7 @@ class MainActivity : BaseActivity() {
         var hasShownInSession by rememberSaveable { mutableStateOf(false) }
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
         val themeAgents by AgentCacheManager.themeAgentCache.collectAsState()
-        
+
         // 设计决策：使用 LaunchedEffect(Unit) 处理应用首次启动的情况
         // 原因：确保应用启动时如果用户已登录，弹窗能够显示
         // 注意：LaunchedEffect(Unit) 只在首次组合时执行一次，不会在应用恢复时重复执行
@@ -327,7 +322,7 @@ class MainActivity : BaseActivity() {
                 hasShownInSession = true
             }
         }
-        
+
         // 设计决策：使用 LaunchedEffect(isLoggedIn) 处理登录状态变化
         // 原因：处理用户从未登录变为已登录的情况
         // 注意：通过 hasShownInSession 标记确保每个会话只显示一次，避免与 LaunchedEffect(Unit) 重复
@@ -422,7 +417,13 @@ class MainActivity : BaseActivity() {
         // 没有外部 NavController 时创建自己的实例（向后兼容）
         val navController = rememberNavController()
         val scope = rememberCoroutineScope()
-        AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory, navController)
+        AppNavHost(
+            page,
+            mainViewModel,
+            chatViewModel,
+            defaultViewModelProviderFactory,
+            navController,
+        )
 
         // 只在用户已登录时显示庆祝弹窗
         if (showHolidayCelebrationDialog && isLoggedIn && themeAgents.isNotEmpty()) {
@@ -436,7 +437,10 @@ class MainActivity : BaseActivity() {
                     // 1. 添加 100 个 boost points 作为节日奖励（提升用户参与度）
                     // 2. 显示成功提示（即时反馈）
                     // 3. 导航到随机圣诞角色（增强节日主题体验，引导用户探索圣诞内容）
-                    LogUtils.d("MainActivity", "Holiday celebration button clicked, adding 100 boost points")
+                    LogUtils.d(
+                        "MainActivity",
+                        "Holiday celebration button clicked, adding 100 boost points",
+                    )
                     BoostManager.requestManualPoints(100)
                     ToastUtils.showShort(R.string.holiday_celebration_points_added)
                     showHolidayCelebrationDialog = false
@@ -455,8 +459,17 @@ class MainActivity : BaseActivity() {
                         AgentStore.addAgent(randomAgent)
                         // 设计决策：shouldAutoFocusInput = false
                         // 原因：用户刚进入聊天页面，不应该立即弹出键盘，让用户先看到角色信息
-                        navController.navigate(Routes.Chat.chatPage(randomAgent.id, false, shouldAutoFocusInput = false))
-                        LogUtils.d("MainActivity", "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})")
+                        navController.navigate(
+                            Routes.Chat.chatPage(
+                                randomAgent.id,
+                                false,
+                                shouldAutoFocusInput = false,
+                            )
+                        )
+                        LogUtils.d(
+                            "MainActivity",
+                            "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})",
+                        )
                     } else {
                         // 设计决策：静默失败，不打扰用户
                         // 原因：这是增强功能，失败不应影响主要流程

@@ -565,8 +565,11 @@ internal fun ChatPage(
                                                                 val isImageMessage =
                                                                     item.content.isEmpty() &&
                                                                         hasGeneratedImage
-                                                                // latest 消息用于控制 ChatItem 内部的操作区（如 👍/👎、生图入口等）
-                                                                // 这里需要包含“纯图片消息”（content 为空但有 generated image），否则图片预览下方无法显示 👍/👎
+                                                                // latest 消息用于控制 ChatItem 内部的操作区（如
+                                                                // 👍/👎、生图入口等）
+                                                                // 这里需要包含“纯图片消息”（content 为空但有
+                                                                // generated image），否则图片预览下方无法显示
+                                                                // 👍/👎
                                                                 val isLatestAssistantMessageForActions =
                                                                     index == 0 &&
                                                                         item.role == "assistant" &&

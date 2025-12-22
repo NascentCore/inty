@@ -48,5 +48,4 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             agentId = agentId,
         )
     }
-
 }

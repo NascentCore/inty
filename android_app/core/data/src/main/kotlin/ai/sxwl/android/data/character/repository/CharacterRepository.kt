@@ -7,11 +7,11 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.character.local.db.CharacterDao
 import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
+import kotlin.math.max
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import kotlin.math.max
 
 class CharacterRepository(
     private val dao: CharacterDao = CharacterDatabase.getInstance().characterDao(),

@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -47,7 +48,6 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -71,21 +71,19 @@ private val HERO_RING_STROKE_WIDTH = 5.dp
  *
  * 设计决策：
  * 1. 视觉设计：
- *    - 深色夜空渐变背景：营造节日夜晚氛围
- *    - 霓虹辉光环：使用高饱和度颜色（粉、青、金）增强视觉冲击
- *    - 星光闪烁动画：增加动态感和节日氛围
- *    - 彩纸飘落动画：经典的庆祝元素，增强节日感
- *    - 按钮呼吸动画：通过放大缩小吸引用户注意，鼓励点击
- *
+ *     - 深色夜空渐变背景：营造节日夜晚氛围
+ *     - 霓虹辉光环：使用高饱和度颜色（粉、青、金）增强视觉冲击
+ *     - 星光闪烁动画：增加动态感和节日氛围
+ *     - 彩纸飘落动画：经典的庆祝元素，增强节日感
+ *     - 按钮呼吸动画：通过放大缩小吸引用户注意，鼓励点击
  * 2. 交互设计：
- *    - 只提供主按钮，移除"Not now"按钮：简化选择，增强参与度
- *    - 点击外部或返回键可关闭：保持标准对话框行为
- *    - 主按钮点击后执行奖励和导航：增强用户参与感和节日主题体验
- *
+ *     - 只提供主按钮，移除"Not now"按钮：简化选择，增强参与度
+ *     - 点击外部或返回键可关闭：保持标准对话框行为
+ *     - 主按钮点击后执行奖励和导航：增强用户参与感和节日主题体验
  * 3. 性能优化：
- *    - 使用 remember 缓存粒子数据：避免每次重组时重新生成
- *    - 使用 infiniteRepeatable 动画：高效且流畅的循环动画
- *    - 粒子数量固定为 90：平衡视觉效果和性能
+ *     - 使用 remember 缓存粒子数据：避免每次重组时重新生成
+ *     - 使用 infiniteRepeatable 动画：高效且流畅的循环动画
+ *     - 粒子数量固定为 90：平衡视觉效果和性能
  *
  * 预期视觉效果：
  * - 深色夜空渐变背景 + 霓虹辉光环 + 星光闪烁
@@ -105,16 +103,16 @@ fun HolidayCelebrationDialog(
     modifier: Modifier = Modifier,
     onPrimaryClick: () -> Unit = onDismiss,
 ) {
-    val particles =
-        remember { ConfettiParticle.createBatch(seed = CONFETTI_SEED, count = CONFETTI_COUNT) }
+    val particles = remember {
+        ConfettiParticle.createBatch(seed = CONFETTI_SEED, count = CONFETTI_COUNT)
+    }
 
     val infinite = rememberInfiniteTransition(label = "holiday_celebration")
     val t by
         infinite.animateFloat(
             initialValue = 0f,
             targetValue = 1f,
-            animationSpec =
-                infiniteRepeatable(tween(CONFETTI_ANIM_MILLIS, easing = LinearEasing)),
+            animationSpec = infiniteRepeatable(tween(CONFETTI_ANIM_MILLIS, easing = LinearEasing)),
             label = "confetti_progress",
         )
     val twinkle by
@@ -155,7 +153,7 @@ fun HolidayCelebrationDialog(
                     .fillMaxWidth()
                     .padding(horizontal = UiConfigs.Padding.DialogEdge)
                     .clip(RoundedCornerShape(UiConfigs.Shape.DialogLarge))
-                    .background(color = Color.Transparent),
+                    .background(color = Color.Transparent)
         ) {
             HolidayCelebrationBackdrop(
                 modifier = Modifier.matchParentSize(),
@@ -245,10 +243,7 @@ private fun HolidayCelebrationContent(
 
 @Composable
 private fun HolidayCelebrationHero(breathe: Float, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.size(HERO_ICON_CONTAINER_SIZE),
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier = modifier.size(HERO_ICON_CONTAINER_SIZE), contentAlignment = Alignment.Center) {
         Box(
             modifier =
                 Modifier.matchParentSize().drawWithCache {
@@ -400,7 +395,7 @@ private fun HolidayCelebrationBackdrop(
                             cardHeight = size.height,
                         )
                     }
-                },
+                }
     )
 }
 
@@ -430,12 +425,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawConfettiLayer(
                 )
             }
             ConfettiShape.Square -> {
-                withTransform(
-                    {
-                        translate(left = x, top = y)
-                        rotate(degrees = rotation * 57.29578f)
-                    }
-                ) {
+                withTransform({
+                    translate(left = x, top = y)
+                    rotate(degrees = rotation * 57.29578f)
+                }) {
                     drawRect(
                         color = color,
                         topLeft = androidx.compose.ui.geometry.Offset(-sizePx / 2f, -sizePx / 2f),
@@ -447,12 +440,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawConfettiLayer(
             ConfettiShape.Ribbon -> {
                 val w = sizePx * 1.05f
                 val h = sizePx * 0.28f
-                withTransform(
-                    {
-                        translate(left = x, top = y)
-                        rotate(degrees = rotation * 57.29578f)
-                    }
-                ) {
+                withTransform({
+                    translate(left = x, top = y)
+                    rotate(degrees = rotation * 57.29578f)
+                }) {
                     drawRoundRect(
                         color = color,
                         topLeft = androidx.compose.ui.geometry.Offset(-w / 2f, -h / 2f),
