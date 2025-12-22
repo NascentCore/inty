@@ -199,7 +199,6 @@ class Agent:
         self.last_used = time.time()
         self.description = description
         self._last_used_lock = RLock()
-        self._user_info_cache = {}
 
         # 主提示词和模式提示词属性
         self.main_prompt = main_prompt
@@ -472,18 +471,11 @@ class Agent:
         """
         同步获取用户profile信息（优化版本 - 使用全局缓存）
         """
-        # 先检查全局缓存
+        # 检查全局缓存
         cached_user_info = cache_service.get_user_info(user_id)
         if cached_user_info is not None:
             logger.debug(f"从全局缓存获取用户信息: {user_id}")
             return cached_user_info
-
-        # 然后检查本地缓存（保留兼容性）
-        if user_id in self._user_info_cache:
-            user_info = self._user_info_cache[user_id]
-            # 同时更新到全局缓存
-            cache_service.set_user_info(user_id, user_info)
-            return user_info
 
         try:
             # 使用全局同步数据库引擎（避免重复创建）
@@ -504,11 +496,7 @@ class Agent:
                 if not row:
                     logger.debug(f"用户 {user_id} 不存在")
                     user_info_text = ""
-                    # 缓存空结果，避免重复查询
-                    self._user_info_cache[user_id] = user_info_text
-                    cache_service.set_user_info(
-                        user_id, user_info_text, ttl=60
-                    )  # 空结果缓存时间短
+                    cache_service.set_user_info(user_id, user_info_text, ttl=60)
                     return user_info_text
 
                 # 构建用户信息字符串
@@ -532,8 +520,6 @@ class Agent:
                 else:
                     user_info_text = ""
 
-                # 同时更新本地和全局缓存
-                self._user_info_cache[user_id] = user_info_text
                 cache_service.set_user_info(user_id, user_info_text)
 
                 if user_info_text:
@@ -546,10 +532,7 @@ class Agent:
         except Exception as e:
             logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
             user_info_text = ""
-            self._user_info_cache[user_id] = user_info_text
-            cache_service.set_user_info(
-                user_id, user_info_text, ttl=30
-            )  # 失败结果缓存时间很短
+            cache_service.set_user_info(user_id, user_info_text, ttl=30)
             return user_info_text
 
     # 特殊值，表示返回全部消息
