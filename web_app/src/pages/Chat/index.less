@@ -46,6 +46,24 @@
 
   .chat-right {
     flex: 0 1 400px;
+    position: relative; // 相对定位，作为叠加容器
+
+    @media (max-width: @screen-md) {
+      display: none;
+    }
+  }
+
+  // Live2D 叠加层
+  // 使用 fixed 定位固定在视口右侧，叠加在 AgentDetailPanel 上
+  .chat-live2d-overlay {
+    position: fixed;
+    top: 70px; // 与 AgentDetailPanel 的 sticky top 对齐
+    right: 0; // 固定在视口右侧
+    width: 400px; // 与 chat-right 的宽度一致
+    height: calc(100vh - 70px); // 与 AgentDetailPanel 的高度一致
+    pointer-events: none; // 让点击事件穿透到下层
+    z-index: 1; // 确保在 AgentDetailPanel 上方，但低于 agent-info（z-index: 2）
+    overflow: hidden;
 
     @media (max-width: @screen-md) {
       display: none;
