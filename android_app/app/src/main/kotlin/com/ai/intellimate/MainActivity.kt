@@ -314,30 +314,33 @@ class MainActivity : BaseActivity() {
         var hasShownInSession by remember { mutableStateOf(false) }
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
         
-        // 设计决策：使用 LifecycleResumeEffect 在应用首次打开时检查
-        // 注意：LifecycleResumeEffect 会在每次应用恢复时执行，但通过 hasShownInSession 标记
-        // 确保每个会话只显示一次
-        LifecycleResumeEffect(Unit) {
-            // 只在首次打开且用户已登录且本次会话未显示过时，才显示庆祝弹窗
-            if (!hasShownInSession && isLoggedIn && HolidayCelebrationPopupRules.shouldShowNow()) {
-                showHolidayCelebrationDialog = true
-                hasShownInSession = true
-            }
-            onPauseOrDispose {}
-        }
-        
-        // 设计决策：处理登录状态变化时的显示逻辑
-        // 场景：用户可能在未登录状态下打开应用，然后登录，此时应该显示弹窗
-        LaunchedEffect(isLoggedIn) {
+        // 设计决策：使用 LaunchedEffect(Unit) 处理应用首次启动的情况
+        // 原因：确保应用启动时如果用户已登录，弹窗能够显示
+        // 注意：LaunchedEffect(Unit) 只在首次组合时执行一次，不会在应用恢复时重复执行
+        LaunchedEffect(Unit) {
             if (isLoggedIn && !hasShownInSession && HolidayCelebrationPopupRules.shouldShowNow()) {
                 showHolidayCelebrationDialog = true
                 hasShownInSession = true
-            } else if (!isLoggedIn) {
+            }
+        }
+        
+        // 设计决策：使用 LaunchedEffect(isLoggedIn) 处理登录状态变化
+        // 原因：处理用户从未登录变为已登录的情况
+        // 注意：通过 hasShownInSession 标记确保每个会话只显示一次，避免与 LaunchedEffect(Unit) 重复
+        LaunchedEffect(isLoggedIn) {
+            // 场景1：用户从未登录变为已登录，且本次会话未显示过
+            if (isLoggedIn && !hasShownInSession && HolidayCelebrationPopupRules.shouldShowNow()) {
+                showHolidayCelebrationDialog = true
+                hasShownInSession = true
+            }
+            // 场景2：用户登出
+            else if (!isLoggedIn) {
                 showHolidayCelebrationDialog = false
                 // 设计决策：用户登出时重置会话标记，允许下次登录时再次显示
                 // 这确保了每次登录会话都能看到庆祝弹窗
                 hasShownInSession = false
             }
+            // 场景3：用户已登录且已显示过，或日期已过期，不做任何操作
         }
 
         // 在首次显示时执行初始化操作
