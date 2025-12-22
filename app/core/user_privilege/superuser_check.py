@@ -3,13 +3,14 @@ A helper function to check if a user is a superuser.
 Used in various places to allow superusers to bypass limits and restrictions.
 """
 
-from app import schemas
 from app.utils.admin import is_superuser_based_on_email
 
 
-def is_superuser(user: schemas.User) -> bool:
+def is_superuser(user: object) -> bool:
     """
     Check if a user is a superuser.
+
+    Best-effort superuser detection that is safe for partially-populated user objects.
 
     user.is_superuser is a field in the database.
     It's set by admin when creating the user in the database.
@@ -21,7 +22,10 @@ def is_superuser(user: schemas.User) -> bool:
     Also google play testing users. It's also dead simple to implement,
     as the email list is hardcoded in the utils.admin module.
     """
-    return user.is_superuser or is_superuser_based_on_email(user.email)
+    if bool(getattr(user, "is_superuser", False)):
+        return True
+    email = getattr(user, "email", None)
+    return is_superuser_based_on_email(email)
 
 
 # This is a constant to mean there is no limit.
