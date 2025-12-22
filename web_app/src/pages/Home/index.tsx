@@ -7,7 +7,7 @@ import { history, useModel } from '@umijs/max';
 import React, { useEffect, useRef } from 'react';
 import { useInfiniteScroll } from '@/hooks';
 import type { IAgent } from '@/types';
-import { AdHomeTop } from '@/components';
+import { BackToTop } from '@/components';
 import { CharacterList } from './components';
 import './index.less';
 
@@ -61,6 +61,7 @@ const HomePage: React.FC = () => {
           onStartChat={handleStartChat}
         />
       </div>
+      <BackToTop containerRef={scrollContainerRef} />
     </div>
   );
 };

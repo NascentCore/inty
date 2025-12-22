@@ -119,7 +119,7 @@ export const useInfiniteScroll = <T extends HTMLElement = HTMLElement>({
     if (useWindow) {
       window.addEventListener('scroll', handleScroll);
     } else {
-      container.addEventListener('scroll', handleScroll);
+      container?.addEventListener('scroll', handleScroll);
     }
 
     return () => {

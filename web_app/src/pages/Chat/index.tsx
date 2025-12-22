@@ -5,7 +5,6 @@
 
 import { useModel, useParams } from '@umijs/max';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { ErrorAlert } from '@/components';
 import { AgentDetailPanel, MessageInput, MessageList } from './components';
 import './index.less';
 
@@ -20,8 +19,7 @@ const ChatPage: React.FC = () => {
   const prevAgentIdRef = useRef<string | undefined>(undefined);
 
   // 获取 chat model（聊天消息管理）
-  const { messages, loading, sending, error, loadMessages, sendChatMessage, reset } =
-    useModel('chat');
+  const { messages, loading, sending, loadMessages, sendChatMessage, reset } = useModel('chat');
 
   // 获取 agent model（Agent 信息管理）
   const { currentAgent, detailLoading: agentLoading, loadAgentDetail } = useModel('agent');

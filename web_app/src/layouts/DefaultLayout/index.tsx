@@ -1,6 +1,6 @@
 import { Outlet } from '@umijs/max';
 import React from 'react';
-import { GoogleLoginModal, VersionBadge } from '@/components';
+import { GoogleLoginModal } from '@/components';
 
 /**
  * 默认布局组件

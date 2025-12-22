@@ -1,0 +1,48 @@
+/**
+ * BackToTop 样式
+ * CREATED_BY_AGENT
+ */
+
+@import '@/styles/variables.less';
+
+.back-to-top {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: @border-radius-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(36, 36, 36, 0.92);
+  border: 1px solid @dark-border-color;
+  box-shadow: @dark-shadow-md;
+
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition:
+    opacity @transition-fast @ease-out,
+    transform @transition-fast @ease-out,
+    background @transition-fast @ease-out,
+    border-color @transition-fast @ease-out;
+
+  &:hover {
+    background: @dark-bg-hover;
+    border-color: @dark-border-hover;
+  }
+
+  &:active {
+    transform: translateY(10px);
+    background: @dark-bg-active;
+  }
+
+  &.back-to-top--visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+

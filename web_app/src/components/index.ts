@@ -19,6 +19,7 @@ export { default as PageHeader } from './PageHeader';
 /**
  * 通用 UI 组件
  */
+export { default as BackToTop } from './BackToTop';
 export { default as Icon } from './Icon';
 export { default as Loading } from './Loading';
 export { default as SiteInfo } from './SiteInfo';
