@@ -51,6 +51,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.http.services.AgentService
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.xb.helper.AgentStore
 import kotlin.random.Random
@@ -311,7 +312,8 @@ class MainActivity : BaseActivity() {
         // 2. 避免日期格式、时区、跨天等复杂逻辑
         // 3. 性能更好：无需每次检查都读取持久化存储
         // 4. 用户体验：应用重启后可以再次看到，符合"每次打开应用都显示"的需求
-        var hasShownInSession by remember { mutableStateOf(false) }
+        // 避免因恢复Activity而重复显示
+        var hasShownInSession by rememberSaveable { mutableStateOf(false) }
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
         
         // 设计决策：使用 LaunchedEffect(Unit) 处理应用首次启动的情况
