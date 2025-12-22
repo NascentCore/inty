@@ -163,12 +163,12 @@ private fun MessageTabContent(
     onClickFavoriteAgent: (AgentInfo) -> Unit,
     onNavigateToExplore: () -> Unit,
 ) {
-    var selectedTab by rememberSaveable { mutableStateOf(MessageSecondaryTab.Conversations) }
+    val selectedTab by viewModel.selectedTab.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         MessagesTabSwitcher(
             selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
+            onTabSelected = { viewModel.setSelectedTab(it) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
         Spacer(Modifier.height(12.dp))
@@ -193,7 +193,7 @@ private fun MessageTabContent(
     }
 }
 
-private enum class MessageSecondaryTab {
+internal enum class MessageSecondaryTab {
     Conversations,
     Favorites,
 }

@@ -44,6 +44,9 @@ class MessagesViewModel : BaseVM() {
     // CharacterRepository用于从Room数据库查询agents
     private val characterRepository = CharacterRepository()
 
+    private val _selectedTab = MutableStateFlow(MessageSecondaryTab.Conversations)
+    internal val selectedTab = _selectedTab.asStateFlow()
+
     // 收藏列表缓存：保存上一次的收藏ID列表和对应的agents
     // 使用 Set 进行比较，避免顺序问题；使用 @Volatile 确保可见性
     @Volatile
@@ -73,6 +76,10 @@ class MessagesViewModel : BaseVM() {
         val agentId = event.data[FCMConstants.DATA_KEY_AGENT_ID]
         if (agentId.isNullOrBlank()) return
         viewModelScope.launch(Dispatchers.Main) { markConversationHasPush(agentId) }
+    }
+
+    internal fun setSelectedTab(tab: MessageSecondaryTab) {
+        _selectedTab.value = tab
     }
 
     /** 加载用户收藏的角色列表（仅从本地数据源，不发起网络请求） */
