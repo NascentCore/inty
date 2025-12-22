@@ -395,7 +395,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Messages -> {
-            MessagesTabContent(navController)
+            MessagesTabContent(navController, mainViewModel)
         }
 
         HomeTabIndex.Create -> {
@@ -452,7 +452,7 @@ private fun ChatTabContent(
 
 /** 会话列表Tab内容 */
 @Composable
-private fun MessagesTabContent(navController: NavController) {
+private fun MessagesTabContent(navController: NavController, mainViewModel: MainViewModel) {
     val messagesViewModel: MessagesViewModel = viewModel()
 
     LaunchedEffect(Unit) { messagesViewModel.getConversations() }
@@ -468,6 +468,7 @@ private fun MessagesTabContent(navController: NavController) {
             AgentStore.addAgent(agent)
             navController.navigate(Routes.chatPage(agent.id, false))
         },
+        onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
         pageTrackingContext = "MainActivity",
     )
 }

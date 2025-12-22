@@ -77,6 +77,7 @@ fun MessagesPage(
     viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit = {},
+    onNavigateToExplore: () -> Unit = {},
     pageTrackingContext: String = "MessagesPage",
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -105,6 +106,7 @@ fun MessagesPage(
             onClickConversationItem = onClickConversationItem,
             onLoadMore = { viewModel.loadMoreConversations() },
             onClickFavoriteAgent = onClickFavoriteAgent,
+            onNavigateToExplore = onNavigateToExplore,
         )
     }
 }
@@ -117,6 +119,7 @@ private fun Content(
     onClickConversationItem: (ConversationItem) -> Unit,
     onLoadMore: () -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit,
+    onNavigateToExplore: () -> Unit,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize().background(Color.Transparent),
@@ -144,6 +147,7 @@ private fun Content(
                 onClickConversationItem = onClickConversationItem,
                 onLoadMore = onLoadMore,
                 onClickFavoriteAgent = onClickFavoriteAgent,
+                onNavigateToExplore = onNavigateToExplore,
             )
         }
     }
@@ -157,6 +161,7 @@ private fun MessageTabContent(
     onClickConversationItem: (ConversationItem) -> Unit,
     onLoadMore: () -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit,
+    onNavigateToExplore: () -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(MessageSecondaryTab.Conversations) }
 
@@ -181,7 +186,7 @@ private fun MessageTabContent(
                     favoriteAgents = uiState.favoriteAgents,
                     isLoading = uiState.isLoadingFavorites,
                     onClickAgent = onClickFavoriteAgent,
-                    onRefreshFavorites = { viewModel.loadFavoriteAgents() },
+                    onNavigateToExplore = onNavigateToExplore,
                 )
             }
         }
@@ -417,7 +422,7 @@ private fun FavoriteAgentsContent(
     favoriteAgents: List<AgentInfo>,
     isLoading: Boolean,
     onClickAgent: (AgentInfo) -> Unit,
-    onRefreshFavorites: () -> Unit,
+    onNavigateToExplore: () -> Unit,
 ) {
     when {
         isLoading -> {
@@ -430,7 +435,8 @@ private fun FavoriteAgentsContent(
                 title = stringResource(R.string.messages_favorites_empty_title),
                 subtitle = stringResource(R.string.messages_favorites_empty_subtitle),
                 showRetryButton = true,
-                onRetry = onRefreshFavorites,
+                actionTextResId = R.string.messages_favorites_empty_explore_cta,
+                onRetry = onNavigateToExplore,
                 modifier = Modifier.fillMaxSize(),
             )
         }
