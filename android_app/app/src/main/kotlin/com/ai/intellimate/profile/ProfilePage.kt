@@ -1164,8 +1164,7 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
         )
     }
 
-    val clickableModifier =
-        if (hasCheckedInToday) Modifier else Modifier.noRippleClickable(onClick = onClick)
+    val clickableModifier = Modifier.noRippleClickable(onClick = onClick)
 
     Row(
         modifier =
