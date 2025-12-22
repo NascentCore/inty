@@ -35,18 +35,15 @@ import './index.less';
  * 侧边栏内容组件
  */
 const SidebarContent: React.FC = () => {
-  const { chatList, loading, loadChatList } = useModel('chatList');
+  const { chatList, loading } = useModel('chatList');
   const { userProfile, profileLoading, isRegistered, fetchUserProfile } = useModel('user');
 
-  // 初始化加载聊天列表与用户信息，避免重复请求
+  // 初始化加载用户信息（聊天列表由 BasePage 统一加载，避免重复请求）
   useEffect(() => {
-    if (chatList.length === 0 && !loading) {
-      loadChatList({ page: 1, page_size: 10 });
-    }
     if (!userProfile && !profileLoading) {
       fetchUserProfile();
     }
-  }, [chatList.length, fetchUserProfile, loadChatList, loading, profileLoading, userProfile]);
+  }, [fetchUserProfile, profileLoading, userProfile]);
 
   const handleDiscoverClick = useCallback(() => {
     history.push('/');

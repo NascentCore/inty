@@ -33,18 +33,35 @@ interface IBasePageProps {
  * @returns 页面外层容器节点
  */
 const BasePage: React.FC<IBasePageProps> = ({ children }: IBasePageProps): React.ReactElement => {
-  const { chatList, loading, loadChatList } = useModel('chatList');
+  const { chatList, loading, loadChatList, hasTried } = useModel('chatList');
   const { userProfile, profileLoading, fetchUserProfile } = useModel('user');
 
-  // 初始化加载聊天列表与用户信息，仅在数据缺失时触发，避免重复请求
+  // 初始化加载聊天列表与用户信息，仅在数据缺失时触发
+  // 请求去重机制（在 chatList model 中实现）会确保相同参数的请求不会重复发起
   useEffect(() => {
-    if (chatList.length === 0 && !loading) {
-      loadChatList({ page: 1, page_size: 10 });
-    }
+    // 加载用户信息（如果数据缺失且未在加载中）
     if (!userProfile && !profileLoading) {
       fetchUserProfile();
     }
-  }, [chatList.length, fetchUserProfile, loadChatList, loading, profileLoading, userProfile]);
+  }, [fetchUserProfile, profileLoading, userProfile]);
+
+  // 加载聊天列表（单独处理，避免未登录时重复请求）
+  useEffect(() => {
+    // 如果用户信息还在加载中，等待加载完成
+    if (profileLoading) {
+      return;
+    }
+
+    // 如果用户信息已加载完成且为 null（未登录），不加载聊天列表
+    if (!userProfile) {
+      return;
+    }
+
+    // 用户已登录，加载聊天列表（如果数据缺失且未在加载中且未尝试过）
+    if (chatList.length === 0 && !loading && !hasTried) {
+      loadChatList({ page: 1, page_size: 10 });
+    }
+  }, [chatList.length, loadChatList, loading, profileLoading, userProfile, hasTried]);
 
   return (
     <div className="base-page-container">
