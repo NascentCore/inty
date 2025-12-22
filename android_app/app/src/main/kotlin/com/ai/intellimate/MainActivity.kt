@@ -62,6 +62,7 @@ import com.ai.intellimate.ui.components.EmailLoginButton
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
+import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.xb.helper.AppConstants.Companion.PUSH_NOTIFICATION
@@ -315,6 +316,7 @@ class MainActivity : BaseActivity() {
         // 避免因恢复Activity而重复显示
         var hasShownInSession by rememberSaveable { mutableStateOf(false) }
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
+        val themeAgents by AgentCacheManager.themeAgentCache.collectAsState()
         
         // 设计决策：使用 LaunchedEffect(Unit) 处理应用首次启动的情况
         // 原因：确保应用启动时如果用户已登录，弹窗能够显示
@@ -423,7 +425,7 @@ class MainActivity : BaseActivity() {
         AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory, navController)
 
         // 只在用户已登录时显示庆祝弹窗
-        if (showHolidayCelebrationDialog && isLoggedIn) {
+        if (showHolidayCelebrationDialog && isLoggedIn && themeAgents.isNotEmpty()) {
             HolidayCelebrationDialog(
                 title = stringResource(R.string.holiday_celebration_title),
                 subtitle = stringResource(R.string.holiday_celebration_subtitle),
@@ -438,47 +440,27 @@ class MainActivity : BaseActivity() {
                     BoostManager.requestManualPoints(100)
                     ToastUtils.showShort(R.string.holiday_celebration_points_added)
                     showHolidayCelebrationDialog = false
-                    
-                    // 设计决策：异步获取圣诞角色列表并随机导航
-                    // 原因：
-                    // 1. 网络请求是异步操作，不应阻塞 UI
-                    // 2. 如果获取失败，不影响用户继续使用应用
-                    // 3. 使用协程作用域确保在 Activity 生命周期内安全执行
-                    scope.launch {
-                        try {
-                            // 设计决策：获取所有主题并筛选圣诞主题
-                            // limit=100 确保获取足够多的主题，覆盖所有可能的圣诞角色
-                            val themesResult = AgentService.getCharacterThemes(limit = 100)
-                            if (themesResult is ai.sxwl.android.data.http.ApiResult.Success) {
-                                // 设计决策：使用 isChristmas 标志筛选，而非字符串匹配
-                                // 原因：更可靠、性能更好，且由服务端控制，便于维护
-                                val christmasThemes = themesResult.data.filter { it.isChristmas }
-                                val allChristmasAgents = christmasThemes.flatMap { it.agents }
-                                
-                                if (allChristmasAgents.isNotEmpty()) {
-                                    // 设计决策：随机选择而非固定选择
-                                    // 原因：增加趣味性，每次点击可能导航到不同的角色
-                                    val randomAgent = allChristmasAgents[Random.nextInt(allChristmasAgents.size)]
-                                    // 设计决策：先添加到 AgentStore，再导航
-                                    // 原因：确保角色信息已缓存，导航时能正确显示角色信息
-                                    AgentStore.addAgent(randomAgent)
-                                    // 设计决策：shouldAutoFocusInput = false
-                                    // 原因：用户刚进入聊天页面，不应该立即弹出键盘，让用户先看到角色信息
-                                    navController.navigate(Routes.chatPage(randomAgent.id, false, shouldAutoFocusInput = false))
-                                    LogUtils.d("MainActivity", "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})")
-                                } else {
-                                    // 设计决策：静默失败，不打扰用户
-                                    // 原因：这是增强功能，失败不应影响主要流程
-                                    LogUtils.w("MainActivity", "No Christmas characters found")
-                                }
-                            } else {
-                                LogUtils.e("MainActivity", "Failed to get character themes")
-                            }
-                        } catch (e: Exception) {
-                            // 设计决策：捕获所有异常并记录日志，但不向用户显示错误
-                            // 原因：导航到圣诞角色是增强功能，失败不应影响用户体验
-                            LogUtils.e("MainActivity", "Error getting Christmas characters: ${e.message}", e)
-                        }
+
+                    // 设计决策：使用 isChristmas 标志筛选，而非字符串匹配
+                    // 原因：更可靠、性能更好，且由服务端控制，便于维护
+                    val christmasThemes = themeAgents.filter { it.isChristmas }
+                    val allChristmasAgents = christmasThemes.flatMap { it.agents }
+
+                    if (allChristmasAgents.isNotEmpty()) {
+                        // 设计决策：随机选择而非固定选择
+                        // 原因：增加趣味性，每次点击可能导航到不同的角色
+                        val randomAgent = allChristmasAgents.random()
+                        // 设计决策：先添加到 AgentStore，再导航
+                        // 原因：确保角色信息已缓存，导航时能正确显示角色信息
+                        AgentStore.addAgent(randomAgent)
+                        // 设计决策：shouldAutoFocusInput = false
+                        // 原因：用户刚进入聊天页面，不应该立即弹出键盘，让用户先看到角色信息
+                        navController.navigate(Routes.chatPage(randomAgent.id, false, shouldAutoFocusInput = false))
+                        LogUtils.d("MainActivity", "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})")
+                    } else {
+                        // 设计决策：静默失败，不打扰用户
+                        // 原因：这是增强功能，失败不应影响主要流程
+                        LogUtils.w("MainActivity", "No Christmas characters found")
                     }
                 },
             )
