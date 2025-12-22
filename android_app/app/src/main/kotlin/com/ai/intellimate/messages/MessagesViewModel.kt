@@ -9,7 +9,7 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
-import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
+import ai.sxwl.android.data.chat.ChatMessageCountStore
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
@@ -44,8 +44,6 @@ class MessagesViewModel : BaseVM() {
 
     // CharacterRepository用于从Room数据库查询agents
     private val characterRepository = CharacterRepository()
-
-    private val chatMessageDao by lazy { IntyChatDatabase.getInstance().chatMessageDao() }
 
     // 收藏列表缓存：保存上一次的收藏ID列表和对应的agents
     // 使用 Set 进行比较，避免顺序问题；使用 @Volatile 确保可见性
@@ -349,16 +347,13 @@ class MessagesViewModel : BaseVM() {
                 return@launch
             }
 
-            val countsByAgentId =
-                runCatching { chatMessageDao.getMessageCounts(agentIds) }
+            val completed =
+                runCatching { ChatMessageCountStore.getMessageCounts(agentIds) }
                     .onFailure { e ->
                         LogUtils.w("MessagesViewModel - 读取本地消息条数失败: ${e.message}")
                     }
                     .getOrNull()
-                    ?.associate { it.agentId to it.messageCount }
                     .orEmpty()
-
-            val completed = agentIds.associateWith { countsByAgentId[it] ?: 0 }
             _uiState.update { it.copy(intimateMessageCounts = completed) }
         }
     }
