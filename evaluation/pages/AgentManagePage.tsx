@@ -915,6 +915,46 @@ export const AgentManagePage: React.FC = () => {
     }
   };
 
+  // 删除背景图
+  const handleDeleteBackgroundImage = async (imageUrl: string) => {
+    if (!currentAgent) return;
+
+    Modal.confirm({
+      title: "确认删除",
+      content: "确定要删除这张背景图吗？此操作不可恢复。",
+      okText: "删除",
+      okType: "danger",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          const filteredImages = (currentAgent.background_images || []).filter(
+            (img) => img !== imageUrl,
+          );
+
+          // 直接调用 API，使用 replace_background_images 参数来替换而非追加
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const updatedAgent = (await api
+            .getIntyClient()
+            .api.v1.ai.agents.update(currentAgent.id, {
+              background_images: filteredImages,
+              replace_background_images: true,
+            } as any)) as unknown as Agent;
+
+          if (updatedAgent) {
+            setCurrentAgent({
+              ...currentAgent,
+              background_images: filteredImages,
+            });
+            message.success("背景图已删除");
+          }
+        } catch (error) {
+          console.error("删除背景图失败:", error);
+          message.error("删除背景图失败，请重试");
+        }
+      },
+    });
+  };
+
   // 设置创建表单的默认值
   const setCreateFormDefaults = () => {
     setTimeout(() => {
@@ -1967,7 +2007,12 @@ export const AgentManagePage: React.FC = () => {
         ]}
         width={800}
       >
-        {currentAgent && <AgentInfoDisplay agent={currentAgent} />}
+        {currentAgent && (
+          <AgentInfoDisplay
+            agent={currentAgent}
+            onDeleteBackgroundImage={handleDeleteBackgroundImage}
+          />
+        )}
       </Modal>
 
       {/* 生成背景视频模态框 */}

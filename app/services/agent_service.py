@@ -990,13 +990,20 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
 
     if "background_images" in update_data:
         images = update_data.pop("background_images")
-        existing_images = []
-        if db_agent.background_images:
-            existing_images = db_agent.background_images.copy()
-        for image in images:
-            if image not in existing_images:
-                existing_images.append(image)
-        db_agent.background_images = existing_images
+        replace_mode = update_data.pop("replace_background_images", False)
+
+        if replace_mode:
+            db_agent.background_images = images if images else []
+        else:
+            existing_images = []
+            if db_agent.background_images:
+                existing_images = db_agent.background_images.copy()
+            for image in images:
+                if image not in existing_images:
+                    existing_images.append(image)
+            db_agent.background_images = existing_images
+    elif "replace_background_images" in update_data:
+        update_data.pop("replace_background_images")
 
     # 处理 gender 字段：将字符串转换为 Gender 枚举，并将 NON_BINARY 映射到 OTHER
     if "gender" in update_data and update_data["gender"]:
