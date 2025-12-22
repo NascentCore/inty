@@ -89,6 +89,5 @@ fun AppNavHost(
         chatGraph(navController, chatViewModel)
         exploreGraph(navController)
         meGraph(navController, mainViewModel, chatViewModel)
-
     }
 }

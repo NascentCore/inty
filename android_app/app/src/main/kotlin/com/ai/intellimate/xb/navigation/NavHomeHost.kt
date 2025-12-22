@@ -12,7 +12,10 @@ import com.ai.intellimate.agent.info.AiAgentInfoScreen
 import com.ai.intellimate.agent.info.PhotoAlbumScreen
 import com.ai.intellimate.xb.helper.AgentStore
 
-fun NavGraphBuilder.homeGraph(navController: NavController, agentInfoViewModel: AgentInfoViewModel) {
+fun NavGraphBuilder.homeGraph(
+    navController: NavController,
+    agentInfoViewModel: AgentInfoViewModel,
+) {
 
     // AI人设信息详情页面
     composable(Routes.Home.AgentInfoPage) { backStackEntry ->

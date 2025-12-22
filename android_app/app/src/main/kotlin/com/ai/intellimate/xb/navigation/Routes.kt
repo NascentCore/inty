@@ -13,5 +13,4 @@ object Routes {
     val Me = RoutesMe
     val Explore = RoutesExplore
     val Home = RoutesHome
-
 }

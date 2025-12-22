@@ -462,7 +462,9 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
             AgentStore.addAgent(conversation.convertToAgentInfo())
-            navController.navigate(Routes.Chat.chatPage(conversation.convertToAgentInfo().id, false))
+            navController.navigate(
+                Routes.Chat.chatPage(conversation.convertToAgentInfo().id, false)
+            )
         },
         onClickFavoriteAgent = { agent ->
             AgentStore.addAgent(agent)
@@ -497,7 +499,9 @@ private fun ExploreTabContent(
         innerPadding = innerPadding,
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false))
+            navController.navigate(
+                Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false)
+            )
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,

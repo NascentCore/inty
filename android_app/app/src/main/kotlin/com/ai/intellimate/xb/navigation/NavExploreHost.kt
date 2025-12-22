@@ -16,16 +16,13 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.net.URLDecoder
 
 fun NavGraphBuilder.exploreGraph(navController: NavController) {
-    composable(Routes.Explore.BoostLeaderboard) {
-        BoostLeaderboardScreen(navController)
-    }
+    composable(Routes.Explore.BoostLeaderboard) { BoostLeaderboardScreen(navController) }
 
     // 定义角色专区详情页面路由
     composable(Routes.Explore.CollectionDetail) { backStackEntry ->
         val themeId = backStackEntry.arguments?.getString("themeId") ?: ""
         val themeTitleEncoded = backStackEntry.arguments?.getString("themeTitle") ?: ""
-        val themeDescriptionEncoded =
-            backStackEntry.arguments?.getString("themeDescription") ?: ""
+        val themeDescriptionEncoded = backStackEntry.arguments?.getString("themeDescription") ?: ""
         val isChristmasString = backStackEntry.arguments?.getString("isChristmas") ?: "false"
         val isChristmas = isChristmasString.toBoolean()
         val agentsJsonEncoded = backStackEntry.arguments?.getString("agentsJson") ?: ""
@@ -55,8 +52,7 @@ fun NavGraphBuilder.exploreGraph(navController: NavController) {
 
         LaunchedEffect(themeId, themeTitle, themeDescription, isChristmas, agentsJson) {
             val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-            val agentListType =
-                Types.newParameterizedType(List::class.java, AgentInfo::class.java)
+            val agentListType = Types.newParameterizedType(List::class.java, AgentInfo::class.java)
             val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
 
             val agents =

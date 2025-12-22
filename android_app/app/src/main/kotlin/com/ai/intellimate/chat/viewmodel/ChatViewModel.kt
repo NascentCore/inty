@@ -1155,7 +1155,9 @@ class ChatViewModel : BaseVM() {
                                 messages.find { it.id == messageId || it.localMsgId == messageId }
                             targetMessage?.agentId()?.takeIf { it.isNotBlank() }
                         }
-                actualAgentId?.let { chatRepository.updateMessageGeneratedImage(it, messageId, null) }
+                actualAgentId?.let {
+                    chatRepository.updateMessageGeneratedImage(it, messageId, null)
+                }
                 return@launch
             }
 
@@ -1200,7 +1202,8 @@ class ChatViewModel : BaseVM() {
 
                         // 重置点赞/点踩状态，确保生图后可以重新点赞/点踩
                         val messages = _msgs.value
-                        val targetMessage = messages.find { it.id == messageId || it.localMsgId == messageId }
+                        val targetMessage =
+                            messages.find { it.id == messageId || it.localMsgId == messageId }
                         targetMessage?.let {
                             updateMessageFeedbackUseCase(agentId, it.localMsgId, null)
                         }

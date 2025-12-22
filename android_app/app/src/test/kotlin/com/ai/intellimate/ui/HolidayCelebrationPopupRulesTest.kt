@@ -1,10 +1,10 @@
 package com.ai.intellimate.ui
 
+import java.util.Calendar
+import java.util.Locale
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Calendar
-import java.util.Locale
 
 /**
  * 节日庆祝弹窗显示规则测试。
@@ -18,8 +18,7 @@ import java.util.Locale
 class HolidayCelebrationPopupRulesTest {
 
     /**
-     * 测试辅助函数：创建一个指定日期的 Calendar 实例。
-     * 注意：由于 shouldShowNow() 直接调用 Calendar.getInstance()，我们无法直接 mock。
+     * 测试辅助函数：创建一个指定日期的 Calendar 实例。 注意：由于 shouldShowNow() 直接调用 Calendar.getInstance()，我们无法直接 mock。
      * 这个测试主要验证日期比较逻辑的正确性。
      */
     private fun createCalendar(year: Int, month: Int, day: Int): Calendar {
@@ -30,9 +29,7 @@ class HolidayCelebrationPopupRulesTest {
     }
 
     /**
-     * 由于 shouldShowNow() 使用 Calendar.getInstance()，我们无法直接控制日期。
-     * 但我们可以通过验证逻辑来确保代码正确性。
-     * 这里我们测试日期比较逻辑本身。
+     * 由于 shouldShowNow() 使用 Calendar.getInstance()，我们无法直接控制日期。 但我们可以通过验证逻辑来确保代码正确性。 这里我们测试日期比较逻辑本身。
      */
     @Test
     fun testDateComparisonLogic() {
@@ -65,10 +62,7 @@ class HolidayCelebrationPopupRulesTest {
         assertTrue("2027年1月1日应该在截止日期之后", isAfterCutoff(2027, Calendar.JANUARY, 1))
     }
 
-    /**
-     * 测试年份边界情况。
-     * 验证从2025年12月到2026年1月的过渡是否正确处理。
-     */
+    /** 测试年份边界情况。 验证从2025年12月到2026年1月的过渡是否正确处理。 */
     @Test
     fun testYearBoundary() {
         val cutoffYear = 2026
@@ -76,14 +70,15 @@ class HolidayCelebrationPopupRulesTest {
         val cutoffDay = 2
 
         fun shouldShow(year: Int, month: Int, day: Int): Boolean {
-            val isAfterCutoff = when {
-                year > cutoffYear -> true
-                year < cutoffYear -> false
-                month > cutoffMonth -> true
-                month < cutoffMonth -> false
-                day > cutoffDay -> true
-                else -> false
-            }
+            val isAfterCutoff =
+                when {
+                    year > cutoffYear -> true
+                    year < cutoffYear -> false
+                    month > cutoffMonth -> true
+                    month < cutoffMonth -> false
+                    day > cutoffDay -> true
+                    else -> false
+                }
             return !isAfterCutoff
         }
 
@@ -105,10 +100,7 @@ class HolidayCelebrationPopupRulesTest {
         assertFalse("2027年12月25日不应该显示", shouldShow(2027, Calendar.DECEMBER, 25))
     }
 
-    /**
-     * 测试月份边界情况。
-     * 验证12月到1月的过渡是否正确处理。
-     */
+    /** 测试月份边界情况。 验证12月到1月的过渡是否正确处理。 */
     @Test
     fun testMonthBoundary() {
         val cutoffYear = 2026
@@ -116,14 +108,15 @@ class HolidayCelebrationPopupRulesTest {
         val cutoffDay = 2
 
         fun shouldShow(year: Int, month: Int, day: Int): Boolean {
-            val isAfterCutoff = when {
-                year > cutoffYear -> true
-                year < cutoffYear -> false
-                month > cutoffMonth -> true
-                month < cutoffMonth -> false
-                day > cutoffDay -> true
-                else -> false
-            }
+            val isAfterCutoff =
+                when {
+                    year > cutoffYear -> true
+                    year < cutoffYear -> false
+                    month > cutoffMonth -> true
+                    month < cutoffMonth -> false
+                    day > cutoffDay -> true
+                    else -> false
+                }
             return !isAfterCutoff
         }
 
@@ -140,10 +133,7 @@ class HolidayCelebrationPopupRulesTest {
         assertFalse("2026年12月25日不应该显示", shouldShow(2026, Calendar.DECEMBER, 25))
     }
 
-    /**
-     * 测试日期边界情况。
-     * 验证1月2日当天及前后的行为。
-     */
+    /** 测试日期边界情况。 验证1月2日当天及前后的行为。 */
     @Test
     fun testDayBoundary() {
         val cutoffYear = 2026
@@ -151,14 +141,15 @@ class HolidayCelebrationPopupRulesTest {
         val cutoffDay = 2
 
         fun shouldShow(year: Int, month: Int, day: Int): Boolean {
-            val isAfterCutoff = when {
-                year > cutoffYear -> true
-                year < cutoffYear -> false
-                month > cutoffMonth -> true
-                month < cutoffMonth -> false
-                day > cutoffDay -> true
-                else -> false
-            }
+            val isAfterCutoff =
+                when {
+                    year > cutoffYear -> true
+                    year < cutoffYear -> false
+                    month > cutoffMonth -> true
+                    month < cutoffMonth -> false
+                    day > cutoffDay -> true
+                    else -> false
+                }
             return !isAfterCutoff
         }
 
@@ -170,10 +161,7 @@ class HolidayCelebrationPopupRulesTest {
         assertFalse("2026年1月4日不应该显示", shouldShow(2026, Calendar.JANUARY, 4))
     }
 
-    /**
-     * 测试不同年份的情况。
-     * 验证2025年、2026年、2027年的行为。
-     */
+    /** 测试不同年份的情况。 验证2025年、2026年、2027年的行为。 */
     @Test
     fun testDifferentYears() {
         val cutoffYear = 2026
@@ -181,14 +169,15 @@ class HolidayCelebrationPopupRulesTest {
         val cutoffDay = 2
 
         fun shouldShow(year: Int, month: Int, day: Int): Boolean {
-            val isAfterCutoff = when {
-                year > cutoffYear -> true
-                year < cutoffYear -> false
-                month > cutoffMonth -> true
-                month < cutoffMonth -> false
-                day > cutoffDay -> true
-                else -> false
-            }
+            val isAfterCutoff =
+                when {
+                    year > cutoffYear -> true
+                    year < cutoffYear -> false
+                    month > cutoffMonth -> true
+                    month < cutoffMonth -> false
+                    day > cutoffDay -> true
+                    else -> false
+                }
             return !isAfterCutoff
         }
 
@@ -212,4 +201,3 @@ class HolidayCelebrationPopupRulesTest {
         assertFalse("2027年12月25日不应该显示", shouldShow(2027, Calendar.DECEMBER, 25))
     }
 }
-

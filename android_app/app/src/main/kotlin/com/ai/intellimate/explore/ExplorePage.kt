@@ -207,8 +207,8 @@ fun ExplorePage(
                     }
                 },
                 onClickAgent = { agent ->
-//                    showSearchOverlay = false
-//                    viewModel.resetSearchState()
+                    //                    showSearchOverlay = false
+                    //                    viewModel.resetSearchState()
                     onClickAgent(agent)
                 },
             )

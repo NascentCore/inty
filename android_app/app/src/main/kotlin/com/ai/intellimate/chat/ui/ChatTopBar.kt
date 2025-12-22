@@ -27,8 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -214,10 +214,7 @@ fun ChatTopBar(
             Spacer(modifier = Modifier.width(0.dp))
 
             // 收藏按钮 - 移动到横幅内，名字的右侧
-            FavoriteButton(
-                agentId = agentInfo.id,
-                containerColor = Color.Transparent,
-            )
+            FavoriteButton(agentId = agentInfo.id, containerColor = Color.Transparent)
 
             // 收藏按钮右侧内边距
             Spacer(modifier = Modifier.width(4.dp))

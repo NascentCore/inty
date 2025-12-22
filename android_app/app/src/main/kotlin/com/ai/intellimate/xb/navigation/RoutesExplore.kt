@@ -9,8 +9,8 @@ object RoutesExplore {
     /**
      * 角色专区详情页面路由，参数：themeId（专区ID）、themeTitle（专区标题）、themeDescription（专区描述）、isChristmas（是否为圣诞主题）、agentsJson（角色列表JSON）
      */
-    const val CollectionDetail = "collection_detail/{themeId}/{themeTitle}/{themeDescription}/{isChristmas}/{agentsJson}"
-
+    const val CollectionDetail =
+        "collection_detail/{themeId}/{themeTitle}/{themeDescription}/{isChristmas}/{agentsJson}"
 
     /**
      * 构建角色专区详情页面路由路径

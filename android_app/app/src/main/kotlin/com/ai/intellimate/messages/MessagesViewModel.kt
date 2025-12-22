@@ -16,13 +16,13 @@ import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.utils.AgentCacheManager
 import com.architecture.httplib.core.HttpResult
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 /** Messages页面ViewModel 负责管理会话列表的状态和业务逻辑 */
 class MessagesViewModel : BaseVM() {
@@ -49,8 +49,7 @@ class MessagesViewModel : BaseVM() {
 
     // 收藏列表缓存：保存上一次的收藏ID列表和对应的agents
     // 使用 Set 进行比较，避免顺序问题；使用 @Volatile 确保可见性
-    @Volatile
-    private var cachedFavoriteIdsSet: Set<String> = emptySet()
+    @Volatile private var cachedFavoriteIdsSet: Set<String> = emptySet()
     private var cachedFavoriteAgents: List<AgentInfo> = emptyList()
     private val pushMessageSubscriber =
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
@@ -142,10 +141,12 @@ class MessagesViewModel : BaseVM() {
                     } else {
                         val ordered = favoriteIds.mapNotNull { agentMap[it] }
                         if (ordered.isNotEmpty()) ordered
-                        else agentMap.values.sortedBy { 
-                            // 处理空字符串情况，确保排序稳定
-                            it.name.takeIf { it.isNotBlank() }?.lowercase(Locale.getDefault()) ?: ""
-                        }
+                        else
+                            agentMap.values.sortedBy {
+                                // 处理空字符串情况，确保排序稳定
+                                it.name.takeIf { it.isNotBlank() }?.lowercase(Locale.getDefault())
+                                    ?: ""
+                            }
                     }
 
                 // 更新缓存（使用 Set 避免顺序问题）

@@ -183,24 +183,25 @@ object BoostManager {
      *
      * 设计决策：
      * 1. 增强的错误处理和日志记录：
-     *    - 检查 repository 是否初始化：避免空指针异常
-     *    - 验证 points 值是否有效：防止负数或零值
-     *    - 记录成功和失败日志：便于调试和问题追踪
-     *
+     *     - 检查 repository 是否初始化：避免空指针异常
+     *     - 验证 points 值是否有效：防止负数或零值
+     *     - 记录成功和失败日志：便于调试和问题追踪
      * 2. 异步执行：
-     *    - 使用协程在后台执行：不阻塞调用线程
-     *    - 捕获所有异常：确保不会因异常导致应用崩溃
-     *
+     *     - 使用协程在后台执行：不阻塞调用线程
+     *     - 捕获所有异常：确保不会因异常导致应用崩溃
      * 3. 使用场景：
-     *    - 节日庆祝弹窗奖励（100 points）
-     *    - 其他手动奖励场景
+     *     - 节日庆祝弹窗奖励（100 points）
+     *     - 其他手动奖励场景
      *
      * @param points 要添加的 points 数量，必须大于 0
      */
     fun requestManualPoints(points: Int) {
         val repo = repository
         if (repo == null) {
-            LogUtils.e("BoostManager", "requestManualPoints: repository is null, BoostManager not initialized")
+            LogUtils.e(
+                "BoostManager",
+                "requestManualPoints: repository is null, BoostManager not initialized",
+            )
             return
         }
         if (points <= 0) {
@@ -213,7 +214,11 @@ object BoostManager {
                 logPointsEvent(PointSource.Manual, points)
                 LogUtils.d("BoostManager", "requestManualPoints: successfully added $points points")
             } catch (e: Exception) {
-                LogUtils.e("BoostManager", "requestManualPoints: failed to add points: ${e.message}", e)
+                LogUtils.e(
+                    "BoostManager",
+                    "requestManualPoints: failed to add points: ${e.message}",
+                    e,
+                )
             }
         }
     }
