@@ -11,10 +11,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
@@ -42,10 +42,16 @@ import java.net.URLDecoder
  *
  * 这是应用的根导航容器，负责管理应用内所有主要页面的导航和转场动画。 使用 Jetpack Compose Navigation 实现页面间的路由和跳转。
  *
+ * 设计决策：
+ * - navController 参数为必需参数，由调用方传入
+ * - 原因：MainActivity 需要在庆祝弹窗点击后导航到随机圣诞角色，需要访问 NavController
+ * - 调用方负责创建和管理 NavController 的生命周期
+ *
  * @param page 初始页面路由，决定应用启动时显示的第一个页面（如登录页或主页）
  * @param mainViewModel 主视图模型，用于管理应用级别的状态和数据
  * @param chatViewModel 聊天视图模型，用于管理聊天相关的状态
  * @param factory ViewModel 工厂，用于创建和管理 ViewModel 实例
+ * @param navController 导航控制器，由调用方创建并传入
  */
 @Composable
 fun AppNavHost(
@@ -53,9 +59,8 @@ fun AppNavHost(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     factory: ViewModelProvider.Factory,
+    navController: NavHostController,
 ) {
-    // 创建并记住导航控制器，用于管理页面导航栈
-    val navController = rememberNavController()
 
     val pushAgentId by mainViewModel.pushAgentId.collectAsState()
     LaunchedEffect(pushAgentId) {

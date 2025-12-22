@@ -251,4 +251,37 @@ object VibeModeColors {
     val SwitchTrackDisabled = Color(0xFF3B2A43)
 }
 
+/**
+ * 节日庆祝弹窗配色（圣诞 + 新年）。
+ *
+ * 预期视觉效果：
+ * - 背景为深色夜空渐变（紫/深蓝/墨绿），前景为高饱和霓虹与金色高光。
+ * - 适配“极其吸睛、非常 splashy”的氛围：强对比、强辉光、强节日感。
+ */
+object HolidayCelebrationColors {
+    val BackdropTop = Color(0xFF1A0033)
+    val BackdropMid = Color(0xFF0C1238)
+    val BackdropBottom = Color(0xFF00331F)
+
+    val GlowPink = Color(0xFFFF4FD8)
+    val GlowCyan = Color(0xFF3CF3FF)
+    val GlowGold = Color(0xFFFFD66B)
+    val GlowRed = Color(0xFFFF3B3B)
+    val GlowGreen = Color(0xFF42FF9C)
+
+    val FrostWhite = Color(0xCCFFFFFF)
+    val StarWhite = Color(0xFFFFFFFF)
+
+    val ConfettiColors =
+        listOf(
+            GlowPink,
+            GlowCyan,
+            GlowGold,
+            GlowRed,
+            GlowGreen,
+            Color(0xFFFF8A00),
+            Color(0xFFB56BFF),
+        )
+}
+
 // endregion
