@@ -368,6 +368,7 @@
 
     <!-- Messages Page -->
     <string name="messages_tab_conversations">Messages</string>
+    <string name="messages_tab_intimate">Intimate</string>
     <string name="messages_tab_favorites">Favorite</string>
     <string name="messages_favorites_empty_title">No favorites yet</string>
     <string name="messages_favorites_empty_subtitle">Tap the heart icon on any character to save it here.</string>

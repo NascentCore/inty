@@ -15,4 +15,6 @@ data class MessagesUiState(
     val pushAgentIds: Set<String> = emptySet(), // 有推送未读的 agentId 列表
     val favoriteAgents: List<AgentInfo> = emptyList(), // 用户收藏的角色列表
     val isLoadingFavorites: Boolean = false,
+    // Intimate 子标签：按“本地聊天消息条数”统计（key=agentId）
+    val intimateMessageCounts: Map<String, Int> = emptyMap(),
 )
