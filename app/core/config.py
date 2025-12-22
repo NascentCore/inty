@@ -19,9 +19,16 @@ from pydantic import AnyHttpUrl
 # 2. 删除该配置项在 devops/config.yaml.<env> 中的使用，部署、发布验证一切正常。
 # 3. 【如有必要】删除该配置项在 app 客户端相关的使用，部署、发布验证一切正常。
 
-GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
-GEMINI_2_0_FLASH_LITE = "google/gemini-2.0-flash-lite"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# 3X of lite: $0.30	$0.30	$0.030	$0.030	$0.15	$0.15
+GEMINI_2_5_FLASH = "google/gemini-2.5-flash"
+# $0.1	$0.1	$0.010	$0.010	$0.05	$0.05
+GEMINI_2_5_FLASH_LITE = "google/gemini-2.5-flash-lite"
+
+# 3X of fast: $0.06 per image
+VERTEX_AI_IMAGEN_4_ULTRA = "imagen-4.0-ultra-generate-001"
+# 0.02 per image, 这个可以调整为更弱的模型
+VERTEX_AI_IMAGEN_4_FAST = "imagen-4.0-fast-generate-001"
 
 
 class Environment(str, Enum):
@@ -184,9 +191,9 @@ class AgentConfig:
     presence_penalty: float = 0.0
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
-    vertex_image_model: str = "imagen-4.0-fast-generate-001"
-    free_user_text_to_image_model: str = "imagen-4.0-fast-generate-001"
-    sub_user_text_to_image_model: str = "imagen-4.0-fast-generate-001"
+    vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
+    free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
+    sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_ULTRA
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
