@@ -4,9 +4,17 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
 
-import langsmith as ls
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
+
+# LangSmith 导入 - 如果失败则禁用追踪
+try:
+    import langsmith as ls
+
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    ls = None
+    LANGSMITH_AVAILABLE = False
 from loguru import logger
 from openai import (
     APIConnectionError,
@@ -22,7 +30,7 @@ from typing_extensions import deprecated
 
 from app import models
 from app.core.agent import prompt_template, prompts
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.models import chat_history
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
@@ -657,22 +665,63 @@ class Agent:
         """
         last_error = None
 
-        # 准备 LangSmith trace 的输入数据
-        trace_inputs = {
-            "messages": openai_messages,
-            "model": model,
-        }
-        trace_metadata = labels or {}
+        # 检查是否启用 LangSmith 追踪（测试环境禁用，或 langsmith 不可用时禁用）
+        enable_tracing = (
+            LANGSMITH_AVAILABLE
+            and global_config_loaded_from_config_yaml.app.environment
+            != Environment.TEST
+        )
 
         for attempt in range(max_retries):
             try:
-                # 使用 langsmith.trace 创建单个顶级 trace
-                with ls.trace(
-                    name=chat_name or f"{user_id}:{self.name}",
-                    run_type="llm",
-                    inputs=trace_inputs,
-                    metadata=trace_metadata,
-                ) as run:
+                if enable_tracing:
+                    # 使用 langsmith.trace 创建单个顶级 trace
+                    with ls.trace(
+                        name=chat_name or f"{user_id}:{self.name}",
+                        run_type="llm",
+                        inputs={"messages": openai_messages, "model": model},
+                        metadata=labels or {},
+                    ) as run:
+                        response = client.chat.completions.create(
+                            messages=openai_messages,
+                            model=model,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body=extra_body,
+                        )
+                        # 记录输出到 trace
+                        if response.choices:
+                            run.end(
+                                outputs={
+                                    "content": response.choices[0].message.content,
+                                    "finish_reason": response.choices[0].finish_reason,
+                                    "model": response.model,
+                                    "usage": (
+                                        {
+                                            "prompt_tokens": (
+                                                response.usage.prompt_tokens
+                                                if response.usage
+                                                else None
+                                            ),
+                                            "completion_tokens": (
+                                                response.usage.completion_tokens
+                                                if response.usage
+                                                else None
+                                            ),
+                                            "total_tokens": (
+                                                response.usage.total_tokens
+                                                if response.usage
+                                                else None
+                                            ),
+                                        }
+                                        if response.usage
+                                        else None
+                                    ),
+                                }
+                            )
+                else:
+                    # 测试环境：直接调用 API，不使用 LangSmith 追踪
                     response = client.chat.completions.create(
                         messages=openai_messages,
                         model=model,
@@ -681,36 +730,6 @@ class Agent:
                         top_p=top_p,
                         extra_body=extra_body,
                     )
-                    # 记录输出到 trace
-                    if response.choices:
-                        run.end(
-                            outputs={
-                                "content": response.choices[0].message.content,
-                                "finish_reason": response.choices[0].finish_reason,
-                                "model": response.model,
-                                "usage": (
-                                    {
-                                        "prompt_tokens": (
-                                            response.usage.prompt_tokens
-                                            if response.usage
-                                            else None
-                                        ),
-                                        "completion_tokens": (
-                                            response.usage.completion_tokens
-                                            if response.usage
-                                            else None
-                                        ),
-                                        "total_tokens": (
-                                            response.usage.total_tokens
-                                            if response.usage
-                                            else None
-                                        ),
-                                    }
-                                    if response.usage
-                                    else None
-                                ),
-                            }
-                        )
                 # 成功则返回
                 if attempt > 0:
                     logger.info(
