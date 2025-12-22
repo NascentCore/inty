@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +42,7 @@ fun EmptyStateComponent(
     subtitle: String? = null,
     showRetryButton: Boolean = false,
     onRetry: (() -> Unit)? = null,
+    @StringRes actionTextResId: Int = R.string.retry_button,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -87,7 +89,7 @@ fun EmptyStateComponent(
         if (showRetryButton && onRetry != null) {
             Spacer(Modifier.height(16.dp))
             GradientButton(
-                text = stringResource(R.string.retry_button),
+                text = stringResource(actionTextResId),
                 onSave = onRetry,
                 modifier = Modifier.padding(horizontal = 32.dp),
             )
@@ -102,6 +104,7 @@ fun EmptyDataState(
     subtitle: String? = null,
     showRetryButton: Boolean = false,
     onRetry: (() -> Unit)? = null,
+    @StringRes actionTextResId: Int = R.string.retry_button,
     modifier: Modifier = Modifier,
 ) {
     EmptyStateComponent(
@@ -110,6 +113,7 @@ fun EmptyDataState(
         subtitle = subtitle,
         showRetryButton = showRetryButton,
         onRetry = onRetry,
+        actionTextResId = actionTextResId,
         modifier = modifier,
     )
 }
