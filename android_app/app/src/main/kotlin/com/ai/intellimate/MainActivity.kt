@@ -305,18 +305,38 @@ class MainActivity : BaseActivity() {
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
 
+        // 设计决策：使用会话级标记而非日期级持久化
+        // 原因：
+        // 1. 每次应用打开都能看到弹窗，增强节日氛围和用户参与度
+        // 2. 避免日期格式、时区、跨天等复杂逻辑
+        // 3. 性能更好：无需每次检查都读取持久化存储
+        // 4. 用户体验：应用重启后可以再次看到，符合"每次打开应用都显示"的需求
+        var hasShownInSession by remember { mutableStateOf(false) }
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
+        
+        // 设计决策：使用 LifecycleResumeEffect 在应用首次打开时检查
+        // 注意：LifecycleResumeEffect 会在每次应用恢复时执行，但通过 hasShownInSession 标记
+        // 确保每个会话只显示一次
         LifecycleResumeEffect(Unit) {
-            // 每次应用打开/回到前台时，如果用户已登录，就显示庆祝弹窗
-            showHolidayCelebrationDialog = isLoggedIn && HolidayCelebrationPopupRules.shouldShowNow()
+            // 只在首次打开且用户已登录且本次会话未显示过时，才显示庆祝弹窗
+            if (!hasShownInSession && isLoggedIn && HolidayCelebrationPopupRules.shouldShowNow()) {
+                showHolidayCelebrationDialog = true
+                hasShownInSession = true
+            }
             onPauseOrDispose {}
         }
-        // 当用户登录状态变化时，检查是否需要显示庆祝弹窗
+        
+        // 设计决策：处理登录状态变化时的显示逻辑
+        // 场景：用户可能在未登录状态下打开应用，然后登录，此时应该显示弹窗
         LaunchedEffect(isLoggedIn) {
-            if (isLoggedIn && HolidayCelebrationPopupRules.shouldShowNow()) {
+            if (isLoggedIn && !hasShownInSession && HolidayCelebrationPopupRules.shouldShowNow()) {
                 showHolidayCelebrationDialog = true
+                hasShownInSession = true
             } else if (!isLoggedIn) {
                 showHolidayCelebrationDialog = false
+                // 设计决策：用户登出时重置会话标记，允许下次登录时再次显示
+                // 这确保了每次登录会话都能看到庆祝弹窗
+                hasShownInSession = false
             }
         }
 
@@ -389,6 +409,10 @@ class MainActivity : BaseActivity() {
         //            }
         //        }
         val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
+        // 设计决策：在 MainActivity 中创建 NavController 并传递给 AppNavHost
+        // 原因：需要在点击庆祝按钮后导航到随机圣诞角色的聊天页面
+        // 通过传递 NavController，MainActivity 可以控制导航，而 AppNavHost 仍然可以在
+        // 没有外部 NavController 时创建自己的实例（向后兼容）
         val navController = rememberNavController()
         val scope = rememberCoroutineScope()
         AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory, navController)
@@ -401,32 +425,53 @@ class MainActivity : BaseActivity() {
                 primaryButtonText = stringResource(R.string.holiday_celebration_primary_cta),
                 onDismiss = { showHolidayCelebrationDialog = false },
                 onPrimaryClick = {
-                    // 添加100个boost points作为节日奖励
+                    // 设计决策：点击按钮后执行三个操作：
+                    // 1. 添加 100 个 boost points 作为节日奖励（提升用户参与度）
+                    // 2. 显示成功提示（即时反馈）
+                    // 3. 导航到随机圣诞角色（增强节日主题体验，引导用户探索圣诞内容）
                     LogUtils.d("MainActivity", "Holiday celebration button clicked, adding 100 boost points")
                     BoostManager.requestManualPoints(100)
                     ToastUtils.showShort(R.string.holiday_celebration_points_added)
                     showHolidayCelebrationDialog = false
                     
-                    // 随机打开一个圣诞主题角色的聊天页面
+                    // 设计决策：异步获取圣诞角色列表并随机导航
+                    // 原因：
+                    // 1. 网络请求是异步操作，不应阻塞 UI
+                    // 2. 如果获取失败，不影响用户继续使用应用
+                    // 3. 使用协程作用域确保在 Activity 生命周期内安全执行
                     scope.launch {
                         try {
+                            // 设计决策：获取所有主题并筛选圣诞主题
+                            // limit=100 确保获取足够多的主题，覆盖所有可能的圣诞角色
                             val themesResult = AgentService.getCharacterThemes(limit = 100)
                             if (themesResult is ai.sxwl.android.data.http.ApiResult.Success) {
+                                // 设计决策：使用 isChristmas 标志筛选，而非字符串匹配
+                                // 原因：更可靠、性能更好，且由服务端控制，便于维护
                                 val christmasThemes = themesResult.data.filter { it.isChristmas }
                                 val allChristmasAgents = christmasThemes.flatMap { it.agents }
                                 
                                 if (allChristmasAgents.isNotEmpty()) {
+                                    // 设计决策：随机选择而非固定选择
+                                    // 原因：增加趣味性，每次点击可能导航到不同的角色
                                     val randomAgent = allChristmasAgents[Random.nextInt(allChristmasAgents.size)]
+                                    // 设计决策：先添加到 AgentStore，再导航
+                                    // 原因：确保角色信息已缓存，导航时能正确显示角色信息
                                     AgentStore.addAgent(randomAgent)
+                                    // 设计决策：shouldAutoFocusInput = false
+                                    // 原因：用户刚进入聊天页面，不应该立即弹出键盘，让用户先看到角色信息
                                     navController.navigate(Routes.chatPage(randomAgent.id, false, shouldAutoFocusInput = false))
                                     LogUtils.d("MainActivity", "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})")
                                 } else {
+                                    // 设计决策：静默失败，不打扰用户
+                                    // 原因：这是增强功能，失败不应影响主要流程
                                     LogUtils.w("MainActivity", "No Christmas characters found")
                                 }
                             } else {
                                 LogUtils.e("MainActivity", "Failed to get character themes")
                             }
                         } catch (e: Exception) {
+                            // 设计决策：捕获所有异常并记录日志，但不向用户显示错误
+                            // 原因：导航到圣诞角色是增强功能，失败不应影响用户体验
                             LogUtils.e("MainActivity", "Error getting Christmas characters: ${e.message}", e)
                         }
                     }

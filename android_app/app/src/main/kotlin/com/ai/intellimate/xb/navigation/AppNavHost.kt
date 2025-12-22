@@ -44,10 +44,16 @@ import java.net.URLDecoder
  *
  * 这是应用的根导航容器，负责管理应用内所有主要页面的导航和转场动画。 使用 Jetpack Compose Navigation 实现页面间的路由和跳转。
  *
+ * 设计决策：
+ * - navController 参数为可选，支持外部传入或内部创建
+ * - 外部传入：当调用方需要控制导航时（如 MainActivity 需要在庆祝弹窗点击后导航）
+ * - 内部创建：保持向后兼容，其他调用方无需传入 NavController
+ *
  * @param page 初始页面路由，决定应用启动时显示的第一个页面（如登录页或主页）
  * @param mainViewModel 主视图模型，用于管理应用级别的状态和数据
  * @param chatViewModel 聊天视图模型，用于管理聊天相关的状态
  * @param factory ViewModel 工厂，用于创建和管理 ViewModel 实例
+ * @param navController 可选的导航控制器。如果为 null，则内部创建新的 NavController
  */
 @Composable
 fun AppNavHost(
@@ -57,7 +63,9 @@ fun AppNavHost(
     factory: ViewModelProvider.Factory,
     navController: NavHostController? = null,
 ) {
-    // 创建并记住导航控制器，用于管理页面导航栈
+    // 设计决策：支持外部传入 NavController 或内部创建
+    // 原因：MainActivity 需要在庆祝弹窗点击后导航到随机圣诞角色，需要访问 NavController
+    // 如果外部未传入，则创建新的实例，保持向后兼容性
     val defaultNavController = rememberNavController()
     val navControllerToUse = navController ?: defaultNavController
 
