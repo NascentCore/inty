@@ -41,6 +41,7 @@ import type {
   UserSessionsDetailResponse,
   ConversationsDetailResponse,
   UserAnalyticsStatsResponse,
+  LLMLatencyItem,
 } from "../types";
 
 const { RangePicker } = DatePicker;
@@ -100,6 +101,7 @@ export const UserAnalyticsPage: React.FC = () => {
     ConversationsDetailResponse[]
   >([]);
   const [stats, setStats] = useState<UserAnalyticsStatsResponse | null>(null);
+  const [llmLatency, setLlmLatency] = useState<LLMLatencyItem[]>([]);
 
   // 对话详情查看器状态
   const [showConversationsDetail, setShowConversationsDetail] = useState(false);
@@ -181,6 +183,7 @@ export const UserAnalyticsPage: React.FC = () => {
         popularAgentsData,
         usersHittingLimitData,
         userSessionsDetailData,
+        llmLatencyData,
       ] = await Promise.all([
         userAnalyticsApi.getStats(params),
         userAnalyticsApi.getNewUsers(params),
@@ -189,6 +192,7 @@ export const UserAnalyticsPage: React.FC = () => {
         userAnalyticsApi.getPopularAgents(params),
         userAnalyticsApi.getUsersHittingLimit(params),
         userAnalyticsApi.getUserSessionsDetail(params),
+        userAnalyticsApi.getLLMLatency(params),
       ]);
 
       setStats(statsData);
@@ -198,6 +202,7 @@ export const UserAnalyticsPage: React.FC = () => {
       setPopularAgents(popularAgentsData);
       setUsersHittingLimit(usersHittingLimitData);
       setUserSessionsDetail(userSessionsDetailData);
+      setLlmLatency(llmLatencyData.data);
 
       message.success("数据加载成功");
     } catch (error) {
@@ -762,6 +767,39 @@ export const UserAnalyticsPage: React.FC = () => {
                   height: 300,
                   xaxis: { title: "日期" },
                   yaxis: { title: "用户数" },
+                }}
+                style={{ width: "100%", height: "100%" }}
+              />
+            ) : (
+              <Empty description="暂无数据" />
+            )}
+          </Card>
+        </Col>
+
+        {/* 图表2: LLM 延迟趋势 */}
+        <Col xs={24} lg={12}>
+          <Card title="LLM 延迟趋势（按小时）" style={{ height: "400px" }}>
+            {llmLatency.length > 0 ? (
+              <Plot
+                data={[
+                  {
+                    x: llmLatency.map((d) => d.hour),
+                    y: llmLatency.map((d) => d.avg_latency),
+                    name: "平均延迟",
+                    type: "scatter",
+                    mode: "lines+markers",
+                    line: { color: "#1890ff" },
+                    hovertemplate:
+                      "时间: %{x}<br>平均延迟: %{y:.3f}s<br>请求数: %{customdata}<extra></extra>",
+                    customdata: llmLatency.map((d) => d.count),
+                  },
+                ]}
+                layout={{
+                  title: "LLM 延迟趋势",
+                  height: 300,
+                  xaxis: { title: "时间", tickangle: -45 },
+                  yaxis: { title: "平均延迟 (秒)" },
+                  hovermode: "closest",
                 }}
                 style={{ width: "100%", height: "100%" }}
               />
