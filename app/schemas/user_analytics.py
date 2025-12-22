@@ -252,3 +252,17 @@ class SessionMessagesResponse(BaseModel):
     page: int
     size: int
     has_more: bool
+
+
+class LLMLatencyItem(BaseModel):
+    """LLM 延迟统计项"""
+
+    hour: str = Field(description="小时时间戳 (YYYY-MM-DD HH:00)")
+    avg_latency: float = Field(description="平均延迟 (秒)")
+    count: int = Field(description="请求数量")
+
+
+class LLMLatencyResponse(BaseModel):
+    """LLM 延迟趋势响应"""
+
+    data: List[LLMLatencyItem]

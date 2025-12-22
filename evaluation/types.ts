@@ -586,6 +586,17 @@ export interface SessionMessagesResponse {
   has_more: boolean;
 }
 
+// LLM 延迟统计
+export interface LLMLatencyItem {
+  hour: string;
+  avg_latency: number;
+  count: number;
+}
+
+export interface LLMLatencyResponse {
+  data: LLMLatencyItem[];
+}
+
 // 生成图片
 export interface GeneratedImage {
   url: string;

@@ -754,6 +754,12 @@ export const userAnalyticsApi = {
     size?: number;
   }): Promise<import("../types").SessionMessagesResponse> =>
     apiClient.get("/evaluation/user-analytics/session-messages", params),
+
+  // 获取 LLM 调用延迟趋势
+  getLLMLatency: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").LLMLatencyResponse> =>
+    apiClient.get("/evaluation/user-analytics/llm-latency", params),
 };
 
 // =============================================================================

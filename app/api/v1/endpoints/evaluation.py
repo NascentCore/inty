@@ -1745,6 +1745,66 @@ async def get_user_analytics_stats(
 
 
 @router.get(
+    "/user-analytics/llm-latency",
+    response_model=schemas.user_analytics.LLMLatencyResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_llm_latency_trend(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
+) -> Any:
+    """获取 LLM 调用延迟趋势（按小时聚合）"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        now = datetime.now(timezone.utc)
+
+        # 直接解析活跃日期范围（不依赖 register 参数）
+        if activity_last_days:
+            act_end = now
+            act_start = now - timedelta(days=activity_last_days)
+        elif activity_start_date and activity_end_date:
+            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            ) + timedelta(days=1)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="请提供 activity_start_date/activity_end_date 或 activity_last_days",
+            )
+
+        service = UserAnalyticsService(db)
+        data = await service.get_llm_latency_trend(act_start, act_end)
+        return {"data": data}
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取 LLM 延迟趋势失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取 LLM 延迟趋势失败")
+
+
+@router.get(
     "/user-analytics/user-daily-messages",
     response_model=schemas.user_analytics.UserDailyMessagesResponse,
     tags=[INTY_EVAL_TAG],
