@@ -7,11 +7,11 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.character.local.db.CharacterDao
 import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
-import kotlin.math.max
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import kotlin.math.max
 
 class CharacterRepository(
     private val dao: CharacterDao = CharacterDatabase.getInstance().characterDao(),
@@ -116,6 +116,14 @@ class CharacterRepository(
     suspend fun searchCharactersByTag(query: String, limit: Int = 100): List<AgentInfo> {
         return withContext(dispatcher) {
             val entities = dao.searchCharactersByTag(query, limit)
+            entities.map { it.toAgentInfo() }
+        }
+    }
+
+    suspend fun getAgentsByIds(agentIds: List<String>): List<AgentInfo> {
+        if (agentIds.isEmpty()) return emptyList()
+        return withContext(dispatcher) {
+            val entities = dao.getCharacters(agentIds)
             entities.map { it.toAgentInfo() }
         }
     }

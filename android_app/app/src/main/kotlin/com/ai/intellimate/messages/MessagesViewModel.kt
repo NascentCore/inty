@@ -9,20 +9,20 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.utils.AgentCacheManager
 import com.architecture.httplib.core.HttpResult
-import java.util.LinkedHashMap
-import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /** Messages页面ViewModel 负责管理会话列表的状态和业务逻辑 */
 class MessagesViewModel : BaseVM() {
@@ -40,6 +40,15 @@ class MessagesViewModel : BaseVM() {
     // IntelliMate agent 缓存（只在启动时加载一次，避免频繁调用网络接口）
     private var cachedIntelliMateAgent: ConversationItem? = null
     private var intelliMateAgentLoaded = false // 标记是否已尝试加载过
+
+    // CharacterRepository用于从Room数据库查询agents
+    private val characterRepository = CharacterRepository()
+
+    // 收藏列表缓存：保存上一次的收藏ID列表和对应的agents
+    // 使用 Set 进行比较，避免顺序问题；使用 @Volatile 确保可见性
+    @Volatile
+    private var cachedFavoriteIdsSet: Set<String> = emptySet()
+    private var cachedFavoriteAgents: List<AgentInfo> = emptyList()
     private val pushMessageSubscriber =
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
             override fun onEvent(event: PushNotificationEvent.MessageReceived) {
@@ -66,54 +75,75 @@ class MessagesViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.Main) { markConversationHasPush(agentId) }
     }
 
-    /** 加载用户收藏的角色列表 */
+    /** 加载用户收藏的角色列表（仅从本地数据源，不发起网络请求） */
     fun loadFavoriteAgents() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadingFavorites = true) }
             try {
                 val favoriteIds = IntySetting.getExploreFavoriteAgentIds()
+                val favoriteIdsSet = favoriteIds.toSet()
                 if (favoriteIds.isEmpty()) {
+                    cachedFavoriteIdsSet = emptySet()
+                    cachedFavoriteAgents = emptyList()
                     _uiState.update { it.copy(favoriteAgents = emptyList()) }
                     return@launch
                 }
 
-                val favoriteIdSet = favoriteIds.toSet()
+                // 检查收藏ID列表是否变化，如果没变化且已有缓存，直接使用
+                // 使用 Set 比较，避免顺序问题
+                if (favoriteIdsSet == cachedFavoriteIdsSet && cachedFavoriteAgents.isNotEmpty()) {
+                    _uiState.update { it.copy(favoriteAgents = cachedFavoriteAgents) }
+                    return@launch
+                }
+
                 val agentMap = LinkedHashMap<String, AgentInfo>()
 
                 fun collectAgents(source: List<AgentInfo>) {
                     source.forEach { agent ->
-                        if (agent.id in favoriteIdSet) {
+                        // 确保 agent.id 不为空且存在于收藏列表中
+                        if (agent.id.isNotBlank() && agent.id in favoriteIdsSet) {
                             agentMap[agent.id] = agent
                         }
                     }
                 }
 
+                // 优先级1: 从AgentCacheManager查找（内存缓存，最快）
                 collectAgents(AgentCacheManager.getCachedAgents())
                 collectAgents(AgentCacheManager.getCachedChatAgents())
                 collectAgents(AgentCacheManager.getCachedUserCreatedAgents())
 
+                // 优先级2: 从CharacterRepository（Room数据库）批量查询缺失的agents
                 val missingIds = favoriteIds.filterNot { agentMap.containsKey(it) }
-                missingIds.forEach { agentId ->
+                if (missingIds.isNotEmpty()) {
                     try {
-                        when (val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)) {
-                            is HttpResult.Success -> agentMap[agentId] = result.data
-                            is HttpResult.Failure -> {
-                                LogUtils.w("MessagesViewModel - 获取收藏 agent 失败: ${result.message}")
+                        val agentsFromDb = characterRepository.getAgentsByIds(missingIds)
+                        agentsFromDb.forEach { agent ->
+                            // 确保 agent.id 不为空且存在于收藏列表中
+                            if (agent.id.isNotBlank() && agent.id in favoriteIdsSet) {
+                                agentMap[agent.id] = agent
                             }
                         }
                     } catch (e: Exception) {
-                        LogUtils.e("MessagesViewModel - 获取收藏 agent 异常: ${e.message}")
+                        LogUtils.e("MessagesViewModel - 从Room数据库查询收藏agents失败: ${e.message}")
                     }
                 }
 
+                // 对于本地找不到的agent，直接跳过，不显示（不发起网络请求）
                 val orderedAgents =
                     if (agentMap.isEmpty()) {
                         emptyList()
                     } else {
                         val ordered = favoriteIds.mapNotNull { agentMap[it] }
                         if (ordered.isNotEmpty()) ordered
-                        else agentMap.values.sortedBy { it.name.lowercase(Locale.getDefault()) }
+                        else agentMap.values.sortedBy { 
+                            // 处理空字符串情况，确保排序稳定
+                            it.name.takeIf { it.isNotBlank() }?.lowercase(Locale.getDefault()) ?: ""
+                        }
                     }
+
+                // 更新缓存（使用 Set 避免顺序问题）
+                cachedFavoriteIdsSet = favoriteIdsSet
+                cachedFavoriteAgents = orderedAgents
 
                 _uiState.update { it.copy(favoriteAgents = orderedAgents) }
             } finally {
