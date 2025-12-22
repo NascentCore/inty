@@ -105,30 +105,22 @@ def wrap_client_with_langsmith(
     client: OpenAI, chat_name: str, labels: dict[str, str]
 ) -> OpenAI:
     """
-    为已有客户端添加LangSmith包装
+    已废弃：直接返回基础客户端，不再使用 wrap_openai
+
+    wrap_openai 会创建多层嵌套的 trace，导致 LangSmith 显示混乱。
+    现在改用 langsmith.trace context manager 在 API 调用处手动创建单个 trace。
 
     Args:
         client: 基础OpenAI客户端
-        chat_name: 聊天名称，用于LangSmith追踪
-        labels: 元数据标签
+        chat_name: 聊天名称（不再使用）
+        labels: 元数据标签（不再使用）
 
     Returns:
-        包装后的OpenAI客户端，带有LangSmith追踪功能
+        基础OpenAI客户端（不包装）
     """
-    # 在测试环境，如果是 FakeOpenAI，直接返回，不进行 LangSmith 包装
-    if (
-        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
-        and isinstance(client, FakeOpenAI)
-    ):
-        logger.debug("Skipping LangSmith wrapper for FakeOpenAI in test environment")
-        return client
-
-    tracing_extra = {
-        "metadata": labels,
-    }
-    return wrappers.wrap_openai(
-        client, chat_name=chat_name, tracing_extra=tracing_extra
-    )
+    # 直接返回基础客户端，不再使用 wrap_openai
+    # trace 在 agent.py 的 _call_openai_api_with_retry 中手动创建
+    return client
 
 
 @deprecated(
