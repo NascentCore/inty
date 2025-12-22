@@ -654,7 +654,7 @@ export const UserAnalyticsPage: React.FC = () => {
 
       {/* 生图统计 */}
       <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={6} lg={4}>
           <Card>
             <Statistic
               title="总生图请求数"
@@ -663,7 +663,7 @@ export const UserAnalyticsPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={6} lg={4}>
           <Card>
             <Statistic
               title="生图成功次数"
@@ -673,7 +673,7 @@ export const UserAnalyticsPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={6} lg={4}>
           <Card>
             <Statistic
               title="生图失败次数"
@@ -683,7 +683,7 @@ export const UserAnalyticsPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={6} lg={4}>
           <Card>
             <Statistic
               title="生图成功率"
@@ -698,6 +698,30 @@ export const UserAnalyticsPage: React.FC = () => {
                       ? "#faad14"
                       : "#cf1322",
               }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 生图细分统计 */}
+      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="新生成次数"
+              value={stats?.total_image_new_generation ?? 0}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#3f8600" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="兜底图片次数"
+              value={stats?.total_image_fallback_used ?? 0}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#faad14" }}
             />
           </Card>
         </Col>

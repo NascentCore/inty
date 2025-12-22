@@ -186,6 +186,9 @@ class UserAnalyticsStatsResponse(BaseModel):
     image_generation_success_rate: float = Field(
         description="成功率（百分比，0-100）", default=0.0
     )
+    # 生图细分统计
+    total_image_new_generation: int = Field(description="新生成图片次数", default=0)
+    total_image_fallback_used: int = Field(description="使用兜底图片次数", default=0)
 
 
 class UserDailyMessageItem(BaseModel):
