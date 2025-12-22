@@ -11,12 +11,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
@@ -45,15 +43,15 @@ import java.net.URLDecoder
  * 这是应用的根导航容器，负责管理应用内所有主要页面的导航和转场动画。 使用 Jetpack Compose Navigation 实现页面间的路由和跳转。
  *
  * 设计决策：
- * - navController 参数为可选，支持外部传入或内部创建
- * - 外部传入：当调用方需要控制导航时（如 MainActivity 需要在庆祝弹窗点击后导航）
- * - 内部创建：保持向后兼容，其他调用方无需传入 NavController
+ * - navController 参数为必需参数，由调用方传入
+ * - 原因：MainActivity 需要在庆祝弹窗点击后导航到随机圣诞角色，需要访问 NavController
+ * - 调用方负责创建和管理 NavController 的生命周期
  *
  * @param page 初始页面路由，决定应用启动时显示的第一个页面（如登录页或主页）
  * @param mainViewModel 主视图模型，用于管理应用级别的状态和数据
  * @param chatViewModel 聊天视图模型，用于管理聊天相关的状态
  * @param factory ViewModel 工厂，用于创建和管理 ViewModel 实例
- * @param navController 可选的导航控制器。如果为 null，则内部创建新的 NavController
+ * @param navController 导航控制器，由调用方创建并传入
  */
 @Composable
 fun AppNavHost(
@@ -61,25 +59,20 @@ fun AppNavHost(
     mainViewModel: MainViewModel,
     chatViewModel: ChatViewModel,
     factory: ViewModelProvider.Factory,
-    navController: NavHostController? = null,
+    navController: NavHostController,
 ) {
-    // 设计决策：支持外部传入 NavController 或内部创建
-    // 原因：MainActivity 需要在庆祝弹窗点击后导航到随机圣诞角色，需要访问 NavController
-    // 如果外部未传入，则创建新的实例，保持向后兼容性
-    val defaultNavController = rememberNavController()
-    val navControllerToUse = navController ?: defaultNavController
 
     val pushAgentId by mainViewModel.pushAgentId.collectAsState()
     LaunchedEffect(pushAgentId) {
         if (pushAgentId.isEmpty()) return@LaunchedEffect
         mainViewModel.updatePushAgentId("")
-        navControllerToUse.navigate(Routes.chatPage(pushAgentId, false))
+        navController.navigate(Routes.chatPage(pushAgentId, false))
     }
     val agentInfoViewModel: AgentInfoViewModel = viewModel()
 
     // 配置导航宿主，定义所有可导航的页面和转场动画
     NavHost(
-        navController = navControllerToUse,
+        navController = navController,
         // 设置启动时的初始页面，根据登录状态动态决定（登录页或主页）
         startDestination = page,
         // 进入新页面时的转场动画：从右侧滑入 + 淡入效果，持续 400ms
@@ -99,13 +92,13 @@ fun AppNavHost(
     ) {
         // 定义登录/启动页面路由
         composable(Routes.SplashLogin) {
-            SplashLoginUI(navController = navControllerToUse, mainViewModel = mainViewModel)
+            SplashLoginUI(navController = navController, mainViewModel = mainViewModel)
         }
 
         // 定义主页标签页路由（包含 Explore、Messages、Me 等底部导航）
         composable(Routes.HomeTab) {
             HomeScreen(
-                navController = navControllerToUse,
+                navController = navController,
                 mainViewModel = mainViewModel,
                 viewModelFactory = factory,
             )
@@ -114,14 +107,14 @@ fun AppNavHost(
         // 定义设置页面路由
         composable(Routes.Settings) {
             SettingScreen(
-                navControllerToUse,
+                navController,
                 mainViewModel = mainViewModel,
                 chatViewModel = chatViewModel,
             )
         }
 
         // 定义vip订阅页面路由
-        composable(Routes.VipCenter) { VipCenterContent(navControllerToUse) }
+        composable(Routes.VipCenter) { VipCenterContent(navController) }
 
         // 定义聊天页面路由
         // 深度链接的参数需要指明类型，否则可能会出现类型转换错误
@@ -151,7 +144,7 @@ fun AppNavHost(
             }
 
             ChatScreen(
-                navControllerToUse,
+                navController,
                 chatViewModel = chatViewModel,
                 showBackButton = true,
                 shouldShowBoostSheetOnOpen = showBoost == true,
@@ -160,8 +153,8 @@ fun AppNavHost(
             )
         }
 
-        composable(Routes.BoostLeaderboard) { BoostLeaderboardScreen(navControllerToUse) }
-        composable(Routes.CheckIn) { IgnoreSystemFontScaling { CheckInScreen(navControllerToUse) } }
+        composable(Routes.BoostLeaderboard) { BoostLeaderboardScreen(navController) }
+        composable(Routes.CheckIn) { IgnoreSystemFontScaling { CheckInScreen(navController) } }
 
         composable(Routes.AgentInfoPage) { backStackEntry ->
             val agentId = backStackEntry.arguments?.getString("agentId")
@@ -182,7 +175,7 @@ fun AppNavHost(
                 AiAgentInfoScreen(
                     agent = it,
                     galleryItems = galleryImages.value,
-                    navController = navControllerToUse,
+                    navController = navController,
                 )
             }
         }
@@ -203,7 +196,7 @@ fun AppNavHost(
                 PhotoAlbumScreen(
                     agent = agentInfo,
                     galleryItems = galleryImages.value,
-                    onBack = { navControllerToUse.popBackStack() },
+                    onBack = { navController.popBackStack() },
                 )
             } else {
                 Box {}
@@ -265,10 +258,10 @@ fun AppNavHost(
 
             ThemedDetailScreen(
                 viewModel = viewModel,
-                onBack = { navControllerToUse.popBackStack() },
+                onBack = { navController.popBackStack() },
                 onClickAgent = { agent ->
                     AgentStore.addAgent(agent)
-                    navControllerToUse.navigate(
+                    navController.navigate(
                         Routes.chatPage(agent.id, false, shouldAutoFocusInput = false)
                     )
                 },
