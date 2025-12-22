@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
 
+import langsmith as ls
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
@@ -237,10 +238,6 @@ class Agent:
             thread_name_prefix=f"agent-{agent_id}",
         )
 
-        # OpenAI客户端缓存（用于性能优化）
-        self._wrapped_client: Optional[OpenAI] = None
-        self._client_lock = Lock()
-
         # 使用配置中的模型设置
         model_name = model_config.get(
             "model", global_config_loaded_from_config_yaml.agent.model
@@ -445,10 +442,12 @@ class Agent:
 
     def _get_wrapped_client(self, chat_name: str, labels: dict) -> OpenAI:
         """
-        获取或创建带LangSmith包装的OpenAI客户端（缓存版本）
+        为每次请求创建带 LangSmith 包装的 OpenAI 客户端
 
-        使用双重检查锁定模式确保线程安全的客户端创建和复用。
-        客户端在Agent实例的生命周期内复用，避免每次请求都创建新客户端。
+        注意：不缓存 wrapped client，因为：
+        1. chat_name 包含用户名，每个用户不同
+        2. LangSmith wrapper 持有 trace 上下文，缓存会导致 trace 嵌套污染
+        3. 底层 HTTP 连接池在 base_client 中复用，性能不受影响
 
         Args:
             chat_name: 聊天名称，用于LangSmith追踪
@@ -457,15 +456,8 @@ class Agent:
         Returns:
             包装后的OpenAI客户端
         """
-        if self._wrapped_client is None:
-            with self._client_lock:
-                if self._wrapped_client is None:
-                    logger.debug(f"为Agent创建wrapped client - Agent: {self.agent_id}")
-                    base_client = get_base_openai_client()
-                    self._wrapped_client = wrap_client_with_langsmith(
-                        base_client, chat_name, labels
-                    )
-        return self._wrapped_client
+        base_client = get_base_openai_client()
+        return wrap_client_with_langsmith(base_client, chat_name, labels)
 
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
@@ -637,9 +629,11 @@ class Agent:
         user_id: str,
         max_retries: int = 3,
         initial_delay: float = 1.0,
+        chat_name: str = None,
+        labels: Dict[str, Any] = None,
     ):
         """
-        带重试机制的OpenAI API调用
+        带重试机制的OpenAI API调用，并集成LangSmith追踪
 
         Args:
             client: OpenAI客户端
@@ -652,6 +646,8 @@ class Agent:
             user_id: 用户ID（用于日志）
             max_retries: 最大重试次数
             initial_delay: 初始延迟（秒），使用指数退避
+            chat_name: 聊天名称，用于LangSmith追踪
+            labels: 元数据标签
 
         Returns:
             API响应对象
@@ -661,16 +657,60 @@ class Agent:
         """
         last_error = None
 
+        # 准备 LangSmith trace 的输入数据
+        trace_inputs = {
+            "messages": openai_messages,
+            "model": model,
+        }
+        trace_metadata = labels or {}
+
         for attempt in range(max_retries):
             try:
-                response = client.chat.completions.create(
-                    messages=openai_messages,
-                    model=model,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    top_p=top_p,
-                    extra_body=extra_body,
-                )
+                # 使用 langsmith.trace 创建单个顶级 trace
+                with ls.trace(
+                    name=chat_name or f"{user_id}:{self.name}",
+                    run_type="llm",
+                    inputs=trace_inputs,
+                    metadata=trace_metadata,
+                ) as run:
+                    response = client.chat.completions.create(
+                        messages=openai_messages,
+                        model=model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body=extra_body,
+                    )
+                    # 记录输出到 trace
+                    if response.choices:
+                        run.end(
+                            outputs={
+                                "content": response.choices[0].message.content,
+                                "finish_reason": response.choices[0].finish_reason,
+                                "model": response.model,
+                                "usage": (
+                                    {
+                                        "prompt_tokens": (
+                                            response.usage.prompt_tokens
+                                            if response.usage
+                                            else None
+                                        ),
+                                        "completion_tokens": (
+                                            response.usage.completion_tokens
+                                            if response.usage
+                                            else None
+                                        ),
+                                        "total_tokens": (
+                                            response.usage.total_tokens
+                                            if response.usage
+                                            else None
+                                        ),
+                                    }
+                                    if response.usage
+                                    else None
+                                ),
+                            }
+                        )
                 # 成功则返回
                 if attempt > 0:
                     logger.info(
@@ -863,6 +903,8 @@ class Agent:
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
+                        chat_name=chat_name,
+                        labels=labels,
                     )
                 except Exception as api_error:
                     # 记录详细的错误信息
@@ -937,6 +979,8 @@ class Agent:
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
+                        chat_name=chat_name,
+                        labels=labels,
                     )
                     retry_finish_reason = retry_response.choices[0].finish_reason
                     retry_response_text = retry_response.choices[0].message.content
@@ -1117,16 +1161,20 @@ class Agent:
                     f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # API调用
+                # API调用（使用统一的重试和 trace 逻辑）
                 api_start = time.time()
-                response = client.chat.completions.create(
-                    messages=openai_messages,
-                    model=self.model_config.get("model", default_model),
-                    temperature=self.model_config.get(
-                        "temperature", default_temperature
-                    ),
-                    max_tokens=self.model_config.get("max_tokens", default_max_tokens),
-                    top_p=self.model_config.get("top_p", default_top_p),
+                model_name = self.model_config.get("model", default_model)
+                temperature = self.model_config.get("temperature", default_temperature)
+                max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+                top_p = self.model_config.get("top_p", default_top_p)
+
+                response = self._call_openai_api_with_retry(
+                    client=client,
+                    model=model_name,
+                    openai_messages=openai_messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
                     extra_body={
                         # This only works for Gemini models.
                         "generation_config": {
@@ -1136,6 +1184,11 @@ class Agent:
                         # can be used to track end user's usage.
                         "user": user_id,
                     },
+                    user_id=user_id,
+                    max_retries=3,
+                    initial_delay=1.0,
+                    chat_name=chat_name,
+                    labels=labels,
                 )
                 api_time = time.time() - api_start
                 logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
