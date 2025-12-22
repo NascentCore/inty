@@ -53,13 +53,51 @@ import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.launch
 
-private object ChatTopBarActionsConfig {
-    val FavoriteButtonSize = 36.dp
-    val FavoriteIconSize = 18.dp
-    val ActionButtonSpacing = 8.dp
-    const val ActionButtonContainerAlpha = 0.35f
-    val FavoriteActiveTint = Color(0xFFFF5A8A)
-    val FavoriteInactiveTint = Color.White
+/**
+ * 收藏按钮组件
+ *
+ * 使用场景：
+ * - 聊天页面顶部栏中的收藏按钮
+ * - 与探索页角色卡片保持一致的行为：未收藏时显示空心图标，收藏后显示粉色实心图标
+ *
+ * 可配置项：
+ * - agentId: 角色ID，用于获取和设置收藏状态
+ * - modifier: 可选的修饰符
+ * - containerColor: 按钮容器背景色（默认透明）
+ */
+@Composable
+private fun FavoriteButton(
+    agentId: String,
+    modifier: Modifier = Modifier,
+    containerColor: Color = Color.Transparent,
+) {
+    var isFavorite by
+        remember(agentId) { mutableStateOf(IntySetting.isExploreAgentFavorite(agentId)) }
+    // 与探索页角色卡片保持一致：未收藏时显示空心图标，收藏后显示粉色实心图标
+    val favoriteIcon = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
+    val favoriteTint = if (isFavorite) Color(0xFFFF5A8A) else Color.White
+    val favoriteDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
+
+    IconButton(
+        modifier = modifier.size(UiConfigs.ChatTopBar.FavoriteButtonSize),
+        onClick = {
+            val nextFavorite = !isFavorite
+            isFavorite = nextFavorite
+            IntySetting.setExploreAgentFavorite(agentId, nextFavorite)
+        },
+        colors =
+            IconButtonDefaults.iconButtonColors(
+                contentColor = favoriteTint,
+                containerColor = containerColor,
+            ),
+    ) {
+        Icon(
+            imageVector = favoriteIcon,
+            contentDescription = favoriteDescription,
+            tint = favoriteTint,
+            modifier = Modifier.size(UiConfigs.ChatTopBar.FavoriteIconSize),
+        )
+    }
 }
 
 /** 聊天页面顶部栏组件 */
@@ -77,14 +115,6 @@ fun ChatTopBar(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    var isFavorite by
-        remember(agentInfo.id) { mutableStateOf(IntySetting.isExploreAgentFavorite(agentInfo.id)) }
-    val favoriteIcon = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
-    val favoriteTint =
-        if (isFavorite) ChatTopBarActionsConfig.FavoriteActiveTint
-        else ChatTopBarActionsConfig.FavoriteInactiveTint
-    val favoriteDescription = if (isFavorite) "Remove from favorites" else "Add to favorites"
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮
@@ -114,8 +144,6 @@ fun ChatTopBar(
                             } else {
                                 AgentStore.addAgent(agentInfo)
                                 navController.navigate(Routes.agentInfPage(agentInfo.id))
-                                //                                AgentInfoActivity.launch(context,
-                                // agentInfo)
                             }
                         }
                     },
@@ -141,7 +169,8 @@ fun ChatTopBar(
 
             val showPoints = earnedPoints != null
 
-            Column(modifier = Modifier.padding(end = UiConfigs.ChatTopBar.ContentRightPadding)) {
+            // 名字区域 - 不使用 weight，让所有元素靠左对齐
+            Column {
                 if (showPoints) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -174,33 +203,21 @@ fun ChatTopBar(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+
+            // 名字与收藏按钮之间的间距 - 紧贴名字右侧
+            Spacer(modifier = Modifier.width(0.dp))
+
+            // 收藏按钮 - 移动到横幅内，名字的右侧
+            FavoriteButton(
+                agentId = agentInfo.id,
+                containerColor = Color.Transparent,
+            )
+
+            // 收藏按钮右侧内边距
+            Spacer(modifier = Modifier.width(4.dp))
         }
 
         Spacer(modifier = Modifier.weight(1f))
-
-        IconButton(
-            modifier = Modifier.size(ChatTopBarActionsConfig.FavoriteButtonSize),
-            onClick = {
-                val nextFavorite = !isFavorite
-                isFavorite = nextFavorite
-                IntySetting.setExploreAgentFavorite(agentInfo.id, nextFavorite)
-            },
-            colors =
-                IconButtonDefaults.iconButtonColors(
-                    contentColor = favoriteTint,
-                    containerColor =
-                        Color.Black.copy(alpha = ChatTopBarActionsConfig.ActionButtonContainerAlpha),
-                ),
-        ) {
-            Icon(
-                imageVector = favoriteIcon,
-                contentDescription = favoriteDescription,
-                tint = favoriteTint,
-                modifier = Modifier.size(ChatTopBarActionsConfig.FavoriteIconSize),
-            )
-        }
-
-        Spacer(modifier = Modifier.width(ChatTopBarActionsConfig.ActionButtonSpacing))
 
         Box(
             modifier =
