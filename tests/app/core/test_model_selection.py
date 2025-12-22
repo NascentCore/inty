@@ -4,8 +4,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from app.core.config import (
-    GEMINI_2_0_FLASH_LITE,
     GEMINI_2_5_FLASH,
+    GEMINI_2_5_FLASH_LITE,
     AgentConfig,
     global_config_loaded_from_config_yaml,
 )
@@ -15,7 +15,7 @@ from app.core.model_selection import select_chat_model, select_text_to_image_mod
 def test_select_chat_model_free_user_uses_free_model():
     user = SimpleNamespace(is_superuser=False, email=None)
     model = select_chat_model(user=user, is_subscribed=False)
-    assert model == GEMINI_2_0_FLASH_LITE
+    assert model == GEMINI_2_5_FLASH_LITE
 
 
 def test_select_chat_model_subscribed_user_uses_sub_model():
@@ -75,7 +75,7 @@ def test_select_chat_model_falls_back_to_model_when_free_user_chat_model_is_none
 def test_select_chat_model_works_with_partially_populated_user():
     user = SimpleNamespace()
     model = select_chat_model(user=user, is_subscribed=False)
-    assert model == GEMINI_2_0_FLASH_LITE
+    assert model == GEMINI_2_5_FLASH_LITE
 
 
 def test_select_text_to_image_model_free_user():
@@ -136,4 +136,3 @@ def test_select_text_to_image_model_works_with_partially_populated_user():
     user = SimpleNamespace()
     model = select_text_to_image_model(user=user, is_subscribed=False)
     assert model == global_config_loaded_from_config_yaml.agent.free_user_text_to_image_model
-
