@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -25,11 +27,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -40,6 +45,8 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.IntySmallTextField
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 
 /** 聊天输入框组件 */
 @Composable
@@ -65,6 +72,19 @@ fun ChatInput(
 
     val horizontalPadding = 16.dp
     val topPadding = 16.dp
+    val density = LocalDensity.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
+    val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
+
+    fun focusInputAndShowKeyboard() {
+        focusRequester?.requestFocus()
+        // requestFocus() 的生效时机可能在下一帧，show() 放到协程里更稳定
+        scope.launch {
+            yield()
+            keyboardController?.show()
+        }
+    }
 
     Column(
         modifier =
@@ -124,6 +144,9 @@ fun ChatInput(
             val rightPadding = 8.dp
             // 发送/更多按钮区域
             val onSceneActionClick: () -> Unit = {
+                if (!isKeyboardVisible) {
+                    focusInputAndShowKeyboard()
+                }
                 val templateLength = SCENE_ACTION_TEMPLATE.length
                 val currentText = chatViewModel.inputData.value
                 if (currentText.length > CHAT_INPUT_MAX_LENGTH - templateLength) {
@@ -138,7 +161,7 @@ fun ChatInput(
                         }
                     chatViewModel.inputData.value = newText
                     chatViewModel.inputSelection.value = safeSelection + 1
-                    focusRequester?.requestFocus()
+                    focusInputAndShowKeyboard()
                 }
             }
 
@@ -162,7 +185,14 @@ fun ChatInput(
                     hasInput = inputData.value.isNotEmpty(),
                     showMorePanel = showMorePanel,
                     onSendMessage = onSendMessage,
-                    onToggleMorePanel = onToggleMorePanel,
+                    onToggleMorePanel = {
+                        // 只有“+ / v”按钮会走到这里；键盘未弹出时优先弹键盘，避免用户需要点输入框
+                        if (!isKeyboardVisible) {
+                            focusInputAndShowKeyboard()
+                        } else {
+                            onToggleMorePanel()
+                        }
+                    },
                 )
             }
         }
