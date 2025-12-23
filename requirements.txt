@@ -25,6 +25,7 @@ dydantic==0.0.8
 ecdsa==0.19.1
 email_validator==2.2.0
 fastapi==0.115.12
+fal-client==0.10.0
 firebase-admin==6.9.0
 frozenlist==1.6.2
 google==3.0.0
