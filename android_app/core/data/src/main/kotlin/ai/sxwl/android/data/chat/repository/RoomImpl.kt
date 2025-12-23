@@ -43,6 +43,46 @@ class RoomImpl(
         return messages.reversed()
     }
 
+    private fun MsgInfo.stableMergeKey(): String {
+        if (id.isNotBlank()) return "rid:$id"
+        if (localMsgId.isNotBlank()) return "lid:$localMsgId"
+
+        val normalizedContent = content.trim()
+        val ts = timestamp.orEmpty().trim()
+        if (ts.isNotBlank()) {
+            return "ts:$role|$ts|${normalizedContent.hashCode()}"
+        }
+
+        // 兜底：极少数情况下缺少 id/localMsgId/timestamp。
+        // 这里避免使用 content 作为唯一 key（会误合并重复的“Ok”），但此分支只会用于异常数据。
+        return "ct:$role|${normalizedContent.hashCode()}|${normalizedContent.length}"
+    }
+
+    /**
+     * 合并本地与服务器消息，并做去重。
+     *
+     * - 输入 localMessages 为数据库流的顺序（sortKey DESC）
+     * - 输入 serverMessages 为服务器返回（通常也是 DESC）
+     * - 输出按“旧 → 新”的顺序，便于 updateMessages 分配/复用 sortKey，保证顺序稳定
+     */
+    private fun mergeAndDeduplicateMessages(
+        localMessagesDesc: List<MsgInfo>,
+        serverMessagesDesc: List<MsgInfo>,
+    ): List<MsgInfo> {
+        val localAsc = localMessagesDesc.asReversed()
+        val serverAsc = reverseServerMessages(serverMessagesDesc)
+
+        val merged = LinkedHashMap<String, MsgInfo>(localAsc.size + serverAsc.size)
+
+        // 先放本地历史（保留用户本地消息、系统消息等）
+        localAsc.forEach { msg -> merged[msg.stableMergeKey()] = msg }
+
+        // 再用服务器消息覆盖/补齐（保证 user_vote 等状态更新能生效）
+        serverAsc.forEach { msg -> merged[msg.stableMergeKey()] = msg }
+
+        return merged.values.toList()
+    }
+
     override fun getMessagesFlow(agentId: String): StateFlow<List<MsgInfo>> {
         return localDataSource.getMessagesFlow(agentId)
     }
@@ -243,44 +283,24 @@ class RoomImpl(
                         convertUserVoteToFeedback(result.data.messages ?: emptyList())
                     val localMessages = localDataSource.getMessagesFlow(agentId).value
 
-                    // 检查是否有新消息或消息状态变化（如 user_vote）
-                    val hasNewMessages =
-                        serverMessages.any { serverMsg ->
-                            localMessages.none { localMsg ->
-                                localMsg.id == serverMsg.id ||
-                                    (localMsg.content == serverMsg.content &&
-                                        localMsg.role == serverMsg.role)
-                            }
-                        }
+                    val localByKey = localMessages.associateBy { it.stableMergeKey() }
+                    val serverByKey = serverMessages.associateBy { it.stableMergeKey() }
 
-                    // 检查是否有消息状态变化（如 user_vote 更新）
+                    val hasNewMessages = serverByKey.keys.any { it !in localByKey }
                     val hasStatusChanges =
-                        serverMessages.any { serverMsg ->
-                            localMessages.any { localMsg ->
-                                localMsg.id == serverMsg.id &&
-                                    localMsg.user_vote != serverMsg.user_vote
-                            }
+                        serverByKey.any { (key, serverMsg) ->
+                            val localMsg = localByKey[key] ?: return@any false
+                            localMsg.user_vote != serverMsg.user_vote
                         }
 
                     if (hasNewMessages || hasStatusChanges) {
-                        val reversedServerMessages = reverseServerMessages(serverMessages)
+                        val mergedMessages =
+                            mergeAndDeduplicateMessages(
+                                localMessagesDesc = localMessages,
+                                serverMessagesDesc = serverMessages,
+                            )
 
-                        val allMessages = mutableListOf<MsgInfo>()
-                        val serverMessageKeys =
-                            serverMessages
-                                .mapNotNull { it.id.ifEmpty { it.localMsgId.ifEmpty { null } } }
-                                .toSet()
-
-                        localMessages.forEach { localMsg ->
-                            val localKey = localMsg.id.ifEmpty { localMsg.localMsgId }
-                            if (localKey !in serverMessageKeys) {
-                                allMessages.add(localMsg)
-                            }
-                        }
-
-                        allMessages.addAll(reversedServerMessages)
-
-                        localDataSource.updateMessages(agentId, allMessages)
+                        localDataSource.updateMessages(agentId, mergedMessages)
                         localDataSource.setHasMore(agentId, result.data.hasMore)
                         localDataSource.setOffset(
                             agentId,
@@ -288,7 +308,7 @@ class RoomImpl(
                         )
 
                         LogUtils.i(
-                            "RoomImpl.syncLatestMessages found new messages or status changes for $agentId, merged ${allMessages.size} messages (${localMessages.size} local + ${serverMessages.size} server)"
+                            "RoomImpl.syncLatestMessages found new messages or status changes for $agentId, merged ${mergedMessages.size} messages (${localMessages.size} local + ${serverMessages.size} server)"
                         )
                     } else {
                         LogUtils.i(

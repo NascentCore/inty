@@ -6,6 +6,7 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     tableName = "chat_messages",
@@ -150,5 +151,23 @@ private fun MsgInfo.resolveLocalId(agentId: String, existing: ChatMessageEntity?
     if (existing != null) return existing.localId
     if (id.isNotEmpty()) return id
     if (localMsgId.isNotEmpty()) return localMsgId
-    return "${agentId}_${role}_${content.hashCode()}_${System.nanoTime()}"
+
+    // 服务端有时可能返回缺少 id/localMsgId 的消息。
+    // 如果这里使用 nanoTime 生成随机 id，会导致同一条消息在“前后台切换触发同步”时反复被当成新消息插入，从而出现重复。
+    // 使用 name-based UUID 生成稳定 id，使写入变为幂等（REPLACE），避免重复。
+    val stableSeed =
+        buildString {
+            append(agentId)
+            append('|')
+            append(role)
+            append('|')
+            append(timestamp.orEmpty())
+            append('|')
+            append(meta_data?.agentId.orEmpty())
+            append('|')
+            append(meta_data?.isOpening ?: false)
+            append('|')
+            append(content)
+        }
+    return UUID.nameUUIDFromBytes(stableSeed.toByteArray(Charsets.UTF_8)).toString()
 }
