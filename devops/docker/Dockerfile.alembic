@@ -29,3 +29,4 @@ ENV ALEMBIC_CONFIG=/app/alembic.ini
 # 默认执行到最新版本；可通过 `docker run ... -x config=/app/config.yaml upgrade head` 覆盖
 ENTRYPOINT ["alembic"]
 CMD ["upgrade", "head"]
+
