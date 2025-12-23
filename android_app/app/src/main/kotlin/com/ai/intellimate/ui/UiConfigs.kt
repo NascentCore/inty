@@ -495,6 +495,9 @@ object UiConfigs {
             /** 弹出面板圆角 */
             val PickerCornerRadius = 16.dp
 
+            /** 弹出面板边框宽度 */
+            val PickerBorderWidth = 1.dp
+
             /** 弹出面板水平内边距 */
             val PickerHorizontalPadding = 10.dp
 

@@ -77,6 +77,47 @@ class ChatViewModel : BaseVM() {
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog = _showFeedbackRequestDialog.asStateFlow()
 
+    // region 消息 Emoji 反应（纯本地，不与后端通信）
+
+    /**
+     * 消息 Emoji 反应（纯本地状态）。
+     *
+     * key：消息 localMsgId（稳定的本地标识符）
+     * value：用户为该消息追加的 emoji 列表（允许多个，按追加顺序展示）
+     */
+    private val _messageEmojiReactions = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    val messageEmojiReactions = _messageEmojiReactions.asStateFlow()
+
+    /**
+     * 为指定消息追加一个 emoji reaction，并上报 Firebase 埋点。
+     *
+     * 说明：
+     * - 该功能按需求仅在 Android 本地生效，不与后端交互、不写入数据库。
+     */
+    fun addEmojiReaction(localMsgId: String, emoji: String) {
+        val agent = _agentInfo.value ?: return
+        val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId } ?: return
+
+        _messageEmojiReactions.update { current ->
+            val existing = current[localMsgId].orEmpty()
+            current + (localMsgId to (existing + emoji))
+        }
+
+        val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.CHAT_EMOJI_REACTION_CLICK,
+            FirebaseManager.safeEventParams(
+                "agent_id" to agent.id,
+                "agent_name" to agent.name,
+                "message_id" to messageIdForEvent,
+                "emoji" to emoji,
+                "timestamp" to System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    // endregion
+
     // 会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
     private var sessionMessageCount = 0
 
