@@ -1,5 +1,10 @@
 # 业务运营相关信息 - 市场推广
 
+info@intellimate.app
+
+<img width="2518" height="140" alt="image" src="https://github.com/user-attachments/assets/64fcc770-d58f-4ca1-96e4-98dd16a4fb6a" />
+
+
 - Ads platform: ADs power browser
   - Google Ads (yxzhao6@gmail.com)
   - facebook business (yxzhao6@gmail.com)
