@@ -477,6 +477,42 @@ object UiConfigs {
 
         /** 消息操作按钮之间的间距 */
         val ActionButtonSpacing = 12.dp
+
+        /**
+         * 消息 Emoji 反应（Reaction）配置 - 适用于聊天消息底部操作栏中的 emoji 入口与弹出面板。
+         *
+         * 预期视觉效果：
+         * - 操作栏中存在一个“灰色 😀”占位按钮，点击后在其上方弹出一排可选 emoji
+         * - 用户选中 emoji 后，会在灰色 😀 左侧追加展示已选 emoji（可追加多个）
+         */
+        object ReactionEmoji {
+            /** 操作栏中“灰色 😀”占位按钮透明度 */
+            const val PlaceholderAlpha = UiConfigs.Alpha.DimmedText
+
+            /** 操作栏与弹出面板的 emoji 字体大小 */
+            val FontSize = 16.sp
+
+            /** 弹出面板圆角 */
+            val PickerCornerRadius = 16.dp
+
+            /** 弹出面板水平内边距 */
+            val PickerHorizontalPadding = 10.dp
+
+            /** 弹出面板垂直内边距 */
+            val PickerVerticalPadding = 6.dp
+
+            /** 弹出面板内 emoji 之间的间距 */
+            val PickerItemSpacing = 8.dp
+
+            /** 弹出面板与操作栏之间的间距 */
+            val PickerToActionsSpacing = 6.dp
+
+            /** 弹出面板背景透明度 */
+            const val PickerBackgroundAlpha = 0.12f
+
+            /** 弹出面板边框透明度 */
+            const val PickerBorderAlpha = 0.18f
+        }
     }
 
     /** 聊天顶部栏配置 - 适用于聊天页面顶部栏的尺寸、间距、字体等设置 */

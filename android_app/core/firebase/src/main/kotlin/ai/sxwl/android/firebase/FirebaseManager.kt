@@ -541,6 +541,7 @@ object FirebaseManager {
         const val CHAT_PAGE_CLICK = "chat_page_click" // 聊天页面点击
         const val CHAT_SIDEBAR_CLICK = "chat_sidebar_click" // 聊天侧边栏点击
         const val CHAT_MORE_CLICK = "chat_more_click" // 聊天更多面板点击
+        const val CHAT_EMOJI_REACTION_CLICK = "chat_emoji_reaction_click" // 聊天消息 emoji 反应点击
 
         // 页面曝光事件
         const val CHAT_PAGE_VIEW = "chat_page_view" // ChatPage 页面曝光
