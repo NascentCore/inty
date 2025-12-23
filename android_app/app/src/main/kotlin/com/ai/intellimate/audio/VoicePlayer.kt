@@ -1,6 +1,7 @@
 package com.ai.intellimate.audio
 
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -117,6 +118,7 @@ fun VoicePlayer(
     // 本地状态
     var isPlaying by remember(messageId) { mutableStateOf(false) }
     var hasError by remember(messageId) { mutableStateOf(false) }
+    var lastShownPlaybackError by remember(messageId) { mutableStateOf<String?>(null) }
 
     // 监听播放状态变化 - 只监听当前消息的状态
     LaunchedEffect(messageId) {
@@ -210,6 +212,25 @@ fun VoicePlayer(
         }
     }
 
+    // 当播放失败时弹出Toast（只在新错误出现时提示一次）
+    LaunchedEffect(messageId) {
+        audioManager.error.collect { rawError ->
+            if (rawError.isNullOrBlank()) {
+                return@collect
+            }
+            val currentAudioInfo = audioManager.getCurrentAudioInfo()
+            val isCurrentMessage = currentAudioInfo?.messageId == messageId
+            if (!isCurrentMessage) {
+                return@collect
+            }
+            if (rawError == lastShownPlaybackError) {
+                return@collect
+            }
+            lastShownPlaybackError = rawError
+            ToastUtils.showLong(rawError)
+        }
+    }
+
     // 监听时长变化 - 只监听当前消息的时长
     LaunchedEffect(messageId) {
         audioManager.duration.collect { globalDuration ->
@@ -243,6 +264,7 @@ fun VoicePlayer(
                             "音频LOG测试 Auto play TTS generation failed: $error (Agent: ${audioInfo.agentName})"
                         )
                         ttsGenerationFailed = true
+                        ToastUtils.showLong(AudioUserFacingError.forTtsError(error))
                         isLoading = false
                     },
                     serverMessageId = serverMessageId, // 传递服务器端ID用于TTS生成
@@ -317,6 +339,7 @@ fun VoicePlayer(
                         // TTS生成失败，显示错误状态
                         LogUtils.e("音频LOG测试 TTS generation failed: $error")
                         ttsGenerationFailed = true
+                        ToastUtils.showLong(AudioUserFacingError.forTtsError(error))
                     },
                     serverMessageId = serverMessageId, // 传递服务器端ID用于TTS生成
                     agentName = audioInfo.agentName, // 传递Agent名称用于日志分析

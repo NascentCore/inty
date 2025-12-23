@@ -141,7 +141,8 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             // 请求音频焦点
             if (!requestAudioFocus()) {
                 LogUtils.e("音频LOG测试 Failed to request audio focus")
-                _error.value = "无法获取音频焦点"
+                _error.value =
+                    "音频没能播放出来。原因：系统正在被其它声音占用（比如通话/音乐）。你可以先关掉其它正在播放声音的应用，再试一次。"
                 return
             }
 
@@ -178,7 +179,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             }
         } catch (e: Exception) {
             LogUtils.e("音频LOG测试 Failed to play audio: ${e.message}")
-            _error.value = "播放失败: ${e.message}"
+            _error.value = AudioUserFacingError.forGenericPlaybackError(e.message)
             _isLoading.value = false
         }
     }
@@ -430,7 +431,7 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
         LogUtils.e("音频LOG测试 Player error: ${error.message}")
-        _error.value = "播放错误: ${error.message}"
+        _error.value = AudioUserFacingError.forPlaybackException(error)
         _isLoading.value = false
         _playbackState.value = PlaybackState.ERROR
     }
