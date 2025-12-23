@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.api.constants import API_V1_PREFIX
 from app.api.v1.endpoints import (
     agents,
     auth,
@@ -8,6 +9,7 @@ from app.api.v1.endpoints import (
     chats,
     evaluation,
     images,
+    live_chat,
     notification,
     report,
     settings,
@@ -16,7 +18,6 @@ from app.api.v1.endpoints import (
     users,
     version,
 )
-from app.api.constants import API_V1_PREFIX
 
 api_router = APIRouter(prefix=API_V1_PREFIX)
 
@@ -54,3 +55,4 @@ api_router.include_router(
 api_router.include_router(version.router, tags=["version"])
 api_router.include_router(text_to_speech.router, tags=["text_to_speech"])
 api_router.include_router(character_themes.router, tags=["character-themes"])
+api_router.include_router(live_chat.router, tags=["live-chat"])

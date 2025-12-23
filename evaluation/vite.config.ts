@@ -58,6 +58,8 @@ export default defineConfig(() => {
           target: "http://localhost:8000",
           changeOrigin: true,
           secure: false,
+          // 启用 WebSocket 代理
+          ws: true,
           // 确保所有 headers 都被正确传递（包括 Authorization）
           // Vite 默认会传递所有 headers，但为了确保，我们显式配置
         },
