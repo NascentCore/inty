@@ -196,6 +196,37 @@ object UiConfigs {
         }
     }
 
+    /** 创建角色页面配置 - 适用于 CreateRoleActivity 的表单与区块布局 */
+    object CreateRole {
+        /** 视觉形象区域配置 - 头像预览与编辑入口 */
+        object VisualAppearance {
+            /** 空状态时预览框高度（用于降低整体视觉占位） */
+            val EmptyBoxHeight = 160.dp
+
+            /**
+             * 预览框宽高比（width / height）。
+             *
+             * 值越大，显示越“矮”；用于压缩“Visual Appearance”区域高度。
+             */
+            const val PreviewAspectRatio = 0.75f
+
+            /** 空状态内容内边距（用于保持按钮区域不拥挤） */
+            val EmptyStateInnerPadding = 16.dp
+
+            /** 预览框右上角“Crop”浮层按钮的内边距（水平/垂直保持一致） */
+            val FaceEditPillPadding = 12.dp
+
+            /** 空状态按钮内容内边距（水平/垂直保持一致） */
+            val EmptyStateButtonContentPadding = 8.dp
+        }
+
+        /** 性别选择区域配置 */
+        object GenderSelection {
+            /** 性别选择按钮字体大小 */
+            val ButtonFontSize = 14.sp
+        }
+    }
+
     /** 比例配置 - 适用于按钮、输入框等组件相对于父容器的宽度或圆角半径比例设置 */
     object Fractions {
         /** 主要按钮宽度比例（相对于父容器） */

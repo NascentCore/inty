@@ -57,6 +57,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -102,6 +104,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.utils.AvatarManager
@@ -894,14 +897,11 @@ private fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Settings Field
-            CustomTextField(
-                label = "Settings (Determines dialogue effect) *",
-                value = settings,
-                onValueChange = { settings = it },
-                placeholder = "Please fill in the dialogue effect...",
-                minLines = 4,
-                maxLength = 800,
+            VisibilitySwitchSection(
+                isPublic = visibility == "PUBLIC",
+                onPublicChange = { isPublic ->
+                    visibility = if (isPublic) "PUBLIC" else "PRIVATE"
+                },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -913,6 +913,18 @@ private fun CreateRolePage(
                 onValueChange = { intro = it },
                 placeholder = "Please fill in the character introduction...",
                 minLines = 3,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Settings Field
+            CustomTextField(
+                label = "Settings (Determines dialogue effect) *",
+                value = settings,
+                onValueChange = { settings = it },
+                placeholder = "Please fill in the dialogue effect...",
+                minLines = 4,
+                maxLength = 800,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -1325,14 +1337,17 @@ private fun AvatarUploadSection(
         Box(
             modifier =
                 Modifier.then(
-                        if (isEmpty) Modifier.fillMaxWidth().height(200.dp)
-                        else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
+                        if (isEmpty)
+                            Modifier.fillMaxWidth().height(UiConfigs.CreateRole.VisualAppearance.EmptyBoxHeight)
+                        else
+                            Modifier.fillMaxWidth()
+                                .aspectRatio(UiConfigs.CreateRole.VisualAppearance.PreviewAspectRatio)
                     )
                     .let { modifier ->
                         if (isEmpty) {
                             modifier
                                 .background(
-                                    color = Color(0x1A78599A),
+                                    color = UiConfigs.Colors.InputSurface,
                                     shape = RoundedCornerShape(16.dp),
                                 )
                                 .noRippleClickable { onGenerateClick() }
@@ -1435,7 +1450,8 @@ private fun AvatarUploadSection(
                 else -> {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(16.dp),
+                        modifier =
+                            Modifier.padding(UiConfigs.CreateRole.VisualAppearance.EmptyStateInnerPadding),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1452,7 +1468,11 @@ private fun AvatarUploadSection(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier =
+                                        Modifier.padding(
+                                            UiConfigs.CreateRole.VisualAppearance
+                                                .EmptyStateButtonContentPadding
+                                        ),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.instant_mix_24px),
@@ -1480,7 +1500,11 @@ private fun AvatarUploadSection(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier =
+                                        Modifier.padding(
+                                            UiConfigs.CreateRole.VisualAppearance
+                                                .EmptyStateButtonContentPadding
+                                        ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Upload,
@@ -1551,7 +1575,7 @@ private fun AvatarUploadSection(
                                 shape = RoundedCornerShape(16.dp),
                             )
                             .noRippleClickable { onFaceEdit() }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1759,9 +1783,53 @@ private fun GenderButton(
         IgnoreSystemFontScaling {
             Text(
                 text = text,
-                fontSize = 12.sp,
+                fontSize = UiConfigs.CreateRole.GenderSelection.ButtonFontSize,
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun VisibilitySwitchSection(
+    isPublic: Boolean,
+    onPublicChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.visibility_required_title_full),
+            fontSize = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(color = UiConfigs.Colors.InputSurface, shape = RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.visibility_public_full),
+                color = Color.White,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = isPublic,
+                onCheckedChange = onPublicChange,
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        uncheckedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFFE91E63),
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.25f),
+                        checkedBorderColor = Color.Transparent,
+                        uncheckedBorderColor = Color.Transparent,
+                    ),
             )
         }
     }
