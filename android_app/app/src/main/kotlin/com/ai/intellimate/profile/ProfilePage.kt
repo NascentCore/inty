@@ -19,8 +19,6 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,29 +61,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -93,7 +84,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -113,9 +103,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.xb.navigation.Routes
-import kotlin.math.abs
-import kotlin.math.min
-import kotlinx.coroutines.launch
 
 /** "我的"页面 */
 @Composable
@@ -137,8 +124,6 @@ internal fun ProfilePage(
     appUpdateTips: Boolean = false, // 是否有更新提示
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
-    val scope = rememberCoroutineScope()
     val validDrafts = drafts.filter { !it.isEmpty() }
 
     // 创建用于编辑个人资料的 launcher，在 ProfilePage 内部处理
@@ -169,33 +154,19 @@ internal fun ProfilePage(
         }
     }
 
-    // 折叠相关状态
-    val maxCollapseOffset =
-        with(density) {
-            (UiConfigs.MePage.HeaderMaxHeight - UiConfigs.MePage.HeaderMinHeight).toPx()
-        } // 最大折叠距离
-
-    val collapseOffset = remember { Animatable(0f) }
-
-    // 计算折叠比例 (0f = 完全展开, 1f = 完全折叠)
-    val collapseProgress by remember {
-        derivedStateOf { (collapseOffset.value / maxCollapseOffset).coerceIn(0f, 1f) }
-    }
-
-    // LazyGrid state - 需要在 nestedScrollConnection 之前创建
+    // LazyGrid state
     val listState = rememberLazyGridState()
 
-    // 监听用户ID变化，当切换账号时重置滚动状态和折叠状态
+    // 监听用户ID变化，当切换账号时重置列表滚动状态
     var previousUserId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(userProfile.id) {
         val currentUserId = userProfile.id
-        // 当用户ID变化且不是首次加载时，重置滚动位置和折叠状态
+        // 当用户ID变化且不是首次加载时，重置滚动位置
         if (
             currentUserId.isNotEmpty() && previousUserId != null && previousUserId != currentUserId
         ) {
-            // 用户ID发生变化，重置滚动位置和折叠状态
+            // 用户ID发生变化，重置滚动位置
             listState.animateScrollToItem(0)
-            collapseOffset.snapTo(0f)
         }
         // 更新上一次的用户ID
         if (currentUserId.isNotEmpty()) {
@@ -203,84 +174,14 @@ internal fun ProfilePage(
         }
     }
 
-    // 嵌套滚动连接 - 处理折叠逻辑
-    val nestedScrollConnection =
-        remember(listState) {
-            object : NestedScrollConnection {
-                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                    // 向上滚动 (available.y < 0) - 优先折叠 header
-                    if (available.y < 0 && collapseOffset.value < maxCollapseOffset) {
-                        val remainingToCollapse = maxCollapseOffset - collapseOffset.value
-                        val toConsume = min(abs(available.y), remainingToCollapse)
-                        scope.launch { collapseOffset.snapTo(collapseOffset.value + toConsume) }
-                        // 返回消费的滚动量（负数表示向上滚动）
-                        return Offset(0f, -toConsume)
-                    }
-
-                    // 向下滚动 (available.y > 0) - 优先展开 header
-                    if (available.y > 0 && collapseOffset.value > 0f) {
-                        // 检查 LazyGrid 是否已经滚动到顶部
-                        // 只有当 LazyGrid 在顶部时，才展开 header
-                        if (
-                            listState.firstVisibleItemIndex == 0 &&
-                                listState.firstVisibleItemScrollOffset == 0
-                        ) {
-                            val toConsume = min(available.y, collapseOffset.value)
-                            scope.launch { collapseOffset.snapTo(collapseOffset.value - toConsume) }
-                            // 返回消费的滚动量（正数表示向下滚动）
-                            return Offset(0f, toConsume)
-                        }
-                    }
-
-                    // 不消费滚动量，让 LazyGrid 处理
-                    return Offset.Zero
-                }
-
-                override suspend fun onPreFling(available: Velocity): Velocity {
-                    val currentVelocity = available.y
-
-                    // 向上滑动 - 继续折叠到完全折叠状态
-                    if (currentVelocity < 0 && collapseOffset.value < maxCollapseOffset) {
-                        scope.launch {
-                            collapseOffset.animateTo(maxCollapseOffset, animationSpec = tween(300))
-                        }
-                        // 消费部分速度，剩余速度传递给 LazyGrid
-                        val remainingVelocity =
-                            Velocity(0f, currentVelocity * (1f - collapseProgress))
-                        return remainingVelocity
-                    }
-
-                    // 向下滑动 - 继续展开到完全展开状态
-                    if (currentVelocity > 0 && collapseOffset.value > 0f) {
-                        // 只有当 LazyGrid 在顶部时才展开
-                        if (
-                            listState.firstVisibleItemIndex == 0 &&
-                                listState.firstVisibleItemScrollOffset == 0
-                        ) {
-                            scope.launch {
-                                collapseOffset.animateTo(0f, animationSpec = tween(300))
-                            }
-                            // 消费部分速度
-                            val remainingVelocity = Velocity(0f, currentVelocity * collapseProgress)
-                            return remainingVelocity
-                        }
-                    }
-
-                    // 不消费速度，让 LazyGrid 处理
-                    return Velocity.Zero
-                }
-            }
-        }
-
     Box(modifier = modifier) {
         // 背景图区域
         ProfileHeaderBg(Modifier.fillMaxWidth())
-        Column(modifier = Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection)) {
-            // Header 区域 - 可折叠
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Header 区域 - 固定显示（不随列表滚动折叠）
             ProfileHeader(
                 navController,
                 modifier = Modifier,
-                collapseProgress = collapseProgress,
                 userProfile = userProfile,
                 context = context,
                 vipStatus = vipStatus,
@@ -375,12 +276,11 @@ internal fun ProfilePage(
     }
 }
 
-/** Profile Header 可折叠区域 */
+/** Profile Header 固定区域（不随列表上划折叠） */
 @Composable
 private fun ProfileHeader(
     navController: NavController,
     modifier: Modifier,
-    collapseProgress: Float, // 0f = 展开, 1f = 折叠
     userProfile: UserProfile,
     context: Context,
     vipStatus: VipStatus? = null, // 可选的 VIP 状态，用于预览
@@ -540,22 +440,15 @@ private fun ProfileHeader(
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.RightPadding))
         }
 
-        // 头像和昵称之间的间距根据折叠状态调整
-        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress * 0.5f)))
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
 
-        // 头像和昵称 - 始终显示，但大小会变化
+        // 头像和昵称 - 固定显示（不随列表上划变化）
         Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
 
-            // 头像大小根据折叠状态调整：展开时 120.dp，折叠时 60.dp
-            val avatarSize =
-                remember(collapseProgress) {
-                    UiConfigs.MePage.AvatarFullSize * (1f - collapseProgress * 0.5f)
-                }
-
             Box(
                 modifier =
-                    Modifier.size(avatarSize)
+                    Modifier.size(UiConfigs.MePage.AvatarFullSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
             ) {
@@ -572,26 +465,13 @@ private fun ProfileHeader(
                 }
             }
 
-            // 头像和昵称之间的间距根据折叠状态调整
-            Spacer(
-                Modifier.width(
-                    UiConfigs.MePage.AvatarToNicknameSpacing * (1f - collapseProgress * 0.3f)
-                )
-            )
+            Spacer(Modifier.width(UiConfigs.MePage.AvatarToNicknameSpacing))
 
-            Column(
-                modifier =
-                    Modifier.weight(1f)
-                        .offset(
-                            y =
-                                UiConfigs.MePage.ProfileNameBlockYOffset *
-                                    (1f - collapseProgress * 0.5f)
-                        )
-            ) {
+            Column(modifier = Modifier.weight(1f).offset(y = UiConfigs.MePage.ProfileNameBlockYOffset)) {
                 Text(
                     text = userProfile.nickname.ifEmpty { "Guest" },
                     color = Color.White,
-                    fontSize = (20.sp.value * (1f - collapseProgress * 0.2f)).sp, // 折叠时稍微缩小
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -605,109 +485,90 @@ private fun ProfileHeader(
                     fontSize = UiConfigs.Typography.Support,
                     lineHeight = UiConfigs.LineHeight.Support,
                     fontWeight = FontWeight.Medium,
-                    maxLines = if (collapseProgress >= 1f) 1 else 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
 
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
-            // 编辑按钮 - 折叠时隐藏
-            Box(modifier = Modifier.alpha(1f - collapseProgress)) {
-                var lastClickTimeEdit by remember { mutableLongStateOf(0L) }
+            // 编辑按钮 - 固定显示
+            var lastClickTimeEdit by remember { mutableLongStateOf(0L) }
 
-                AsyncImage(
-                    modifier =
-                        Modifier.size(UiConfigs.MePage.EditButtonSize).clickable {
-                            val currentTime = System.currentTimeMillis()
-                            if (AntiClick.isValidClick(lastClickTimeEdit)) {
-                                lastClickTimeEdit = currentTime
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
-                                    val intent =
-                                        Intent(context, ModifyProfileActivity::class.java).apply {
-                                            putExtra("intent_key_agent_info", userProfile)
-                                        }
-                                    editProfileLauncher.launch(intent)
-                                }
+            AsyncImage(
+                modifier =
+                    Modifier.size(UiConfigs.MePage.EditButtonSize).clickable {
+                        val currentTime = System.currentTimeMillis()
+                        if (AntiClick.isValidClick(lastClickTimeEdit)) {
+                            lastClickTimeEdit = currentTime
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
+                                val intent =
+                                    Intent(context, ModifyProfileActivity::class.java).apply {
+                                        putExtra("intent_key_agent_info", userProfile)
+                                    }
+                                editProfileLauncher.launch(intent)
                             }
-                        },
-                    model = R.drawable.icon_edit,
-                    contentDescription = null,
-                )
-            }
+                        }
+                    },
+                model = R.drawable.icon_edit,
+                contentDescription = null,
+            )
 
             Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
         }
 
-        // 头像区域与 Daily Rewards Banner 之间的间距 - 折叠时减少
-        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
 
-        // Daily Rewards Banner - 折叠时隐藏
-        if (collapseProgress < 1f) {
-            var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
-            DailyRewardsBanner(
-                modifier =
-                    Modifier.alpha(1f - collapseProgress)
-                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+        // Daily Rewards Banner - 固定显示（不随上划隐藏）
+        var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
+        DailyRewardsBanner(
+            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            onClick = {
+                val currentTime = System.currentTimeMillis()
+                if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
+                lastDailyRewardsClickTime = currentTime
+                navController.navigate(Routes.Me.CheckIn)
+            },
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // VIP Banner - 固定显示
+        Box(
+            modifier = Modifier.fillMaxWidth().height(UiConfigs.MePage.VipBannerHeight),
+            contentAlignment = Alignment.Center,
+        ) {
+            PremiumBanner(
+                status = currentVipStatus.subscriptionStatus,
+                purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
+                expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
                 onClick = {
-                    val currentTime = System.currentTimeMillis()
-                    if (!AntiClick.isValidClick(lastDailyRewardsClickTime))
-                        return@DailyRewardsBanner
-                    lastDailyRewardsClickTime = currentTime
-                    navController.navigate(Routes.Me.CheckIn)
+                    navController.navigate(Routes.Me.VipCenter)
+                    //                        VipCenterActivity.launch(context,
+                    // VipCenterActivity.PROFILE_UPGRADE)
                 },
             )
-
-            Spacer(Modifier.height(12.dp * (1f - collapseProgress)))
         }
 
-        // VIP Banner - 折叠时隐藏，宽度适配屏幕（不含padding），高度 120.dp
-        if (collapseProgress < 1f) {
-            Box(
+        if (BuildConfig.DEBUG) {
+            Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+            VibeModeBanner(
+                modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                isSubscribed = isSubscribed,
+                onRequestSubscribe = { showSubscribeDialog = true },
+            )
+        }
+
+        if (appUpdateTips) {
+            Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+            NewVersionBanner(
                 modifier =
-                    Modifier.fillMaxWidth()
-                        .alpha(1f - collapseProgress)
-                        .height(UiConfigs.MePage.VipBannerHeight * (1f - collapseProgress)),
-                contentAlignment = Alignment.Center,
-            ) {
-                PremiumBanner(
-                    status = currentVipStatus.subscriptionStatus,
-                    purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
-                    expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
-                    onClick = {
-                        navController.navigate(Routes.Me.VipCenter)
-                        //                        VipCenterActivity.launch(context,
-                        // VipCenterActivity.PROFILE_UPGRADE)
-                    },
-                )
-            }
-
-            if (BuildConfig.DEBUG) {
-                Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
-
-                VibeModeBanner(
-                    modifier =
-                        Modifier.alpha(1f - collapseProgress)
-                            .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-                    isSubscribed = isSubscribed,
-                    onRequestSubscribe = { showSubscribeDialog = true },
-                )
-            }
-
-            if (appUpdateTips) {
-                Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing * (1f - collapseProgress)))
-                NewVersionBanner(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
-                )
-            }
+                    Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
+            )
         }
 
-        Spacer(Modifier.height(UiConfigs.MePage.BottomSpacing * (1f - collapseProgress)))
+        Spacer(Modifier.height(UiConfigs.MePage.BottomSpacing))
     }
 }
 
