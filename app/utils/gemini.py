@@ -320,7 +320,8 @@ def text_to_image(
         if enhanced_prompt:
             prompt = enhance_prompt(prompt, gender)
         response = client.models.generate_images(
-            model=model or global_config_loaded_from_config_yaml.agent.vertex_image_model,
+            model=model
+            or global_config_loaded_from_config_yaml.agent.vertex_image_model,
             prompt=prompt,
             config=config,
         )
