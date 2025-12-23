@@ -97,6 +97,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -182,20 +183,20 @@ class CreateRoleActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        CreateRolePage(
-            modifier = Modifier.fillMaxSize(),
-            createRoleViewModel = createRoleViewModel,
-            onBack = { finish() },
-            onCreateSuccess = {
-                setResult(Activity.RESULT_OK)
-                finish()
-            },
-            onAvatarGenerateClick = { prompt ->
-                AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
-            },
-            editAgent = agent,
-            draftId = draftId,
-        )
+//        CreateRolePage(
+//            modifier = Modifier.fillMaxSize(),
+//            createRoleViewModel = createRoleViewModel,
+//            onBack = { finish() },
+//            onCreateSuccess = {
+//                setResult(Activity.RESULT_OK)
+//                finish()
+//            },
+//            onAvatarGenerateClick = { prompt ->
+//                AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
+//            },
+//            editAgent = agent,
+//            draftId = draftId,
+//        )
     }
 }
 
@@ -206,7 +207,8 @@ private val DraftDialogContainerColor = Color(0xFF2A2A2A)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CreateRolePage(
+fun CreateRolePage(
+    navController: NavController,
     modifier: Modifier = Modifier,
     createRoleViewModel: CreateRoleViewModel,
     onBack: () -> Unit,
@@ -342,13 +344,15 @@ private fun CreateRolePage(
     val hasDraftChanges = !latestDraft.isEmpty()
     val handleExitRequest = {
         if (isEditMode || !hasDraftChanges) {
-            onBack()
+//            onBack()
+            navController.popBackStack()
         } else if (savedDraft != null && hasDraftChanges) {
             // 从 draft 进入，更新草稿列表中的草稿，清除临时草稿，然后退出
             val draftToSave = latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
             CreateRoleDraftStorage.saveDraftToList(draftToSave)
             CreateRoleDraftStorage.clearCurrentDraft()
-            onBack()
+//            onBack()
+            navController.popBackStack()
         } else {
             showSaveDraftDialog = true
         }
@@ -1069,7 +1073,8 @@ private fun CreateRolePage(
                         // 清除临时草稿，以便下次进入时创建新角色
                         CreateRoleDraftStorage.clearCurrentDraft()
                         showSaveDraftDialog = false
-                        onBack()
+                        navController.popBackStack()
+//                        onBack()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = DraftDialogConfirmColor),
                 ) {
@@ -1087,7 +1092,8 @@ private fun CreateRolePage(
                         // 清除临时草稿
                         CreateRoleDraftStorage.clearCurrentDraft()
                         showSaveDraftDialog = false
-                        onBack()
+                        navController.popBackStack()
+//                        onBack()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = DraftDialogDismissColor),
                 ) {

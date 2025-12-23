@@ -198,6 +198,7 @@ fun HomeScreen(
                         lastTabClickTime = currentTime
                         lastTabIndex = tabIndex
                         handleTabSelectionWithLauncher(
+                            navController,
                             tabIndex,
                             context,
                             mainViewModel,
@@ -358,6 +359,7 @@ private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
 
 /** 处理Tab选择逻辑（带 launcher） */
 private fun handleTabSelectionWithLauncher(
+    navController: NavController,
     tabIndex: Int,
     context: Context,
     mainViewModel: MainViewModel,
@@ -366,8 +368,9 @@ private fun handleTabSelectionWithLauncher(
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 使用 CreateRoleActivity 提供的方法获取 Intent
-            val intent = CreateRoleActivity.getIntent(context, null)
-            createRoleLauncher.launch(intent)
+//            val intent = CreateRoleActivity.getIntent(context, null)
+//            createRoleLauncher.launch(intent)
+            navController.navigate(Routes.Creat.CreateRole)
         }
         return
     }

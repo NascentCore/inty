@@ -87,6 +87,7 @@ fun AppNavHost(
 
         homeGraph(navController, agentInfoViewModel)
         chatGraph(navController, chatViewModel)
+        createGraph(navController)
         exploreGraph(navController)
         meGraph(navController, mainViewModel, chatViewModel)
     }
