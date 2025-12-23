@@ -6,11 +6,17 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
+import base64
+import io
+from PIL import Image
+
 
 # Constants for predictable structure and to avoid magic strings
 CHAT_COMPLETION_OBJECT = "chat.completion"
 DEFAULT_FINISH_REASON = "stop"
 DEFAULT_MODEL_NAME = "fake-model"
+IMAGES_GENERATION_OBJECT = "images.response"
+DEFAULT_IMAGE_SIZE: Tuple[int, int] = (64, 64)
 
 
 @dataclass
@@ -41,6 +47,19 @@ class FakeChatCompletionResponse:
     object: str
     choices: List[FakeChatChoice]
     usage: FakeChatUsage
+
+
+@dataclass
+class FakeImageData:
+    b64_json: str
+
+
+@dataclass
+class FakeImagesResponse:
+    created: int
+    model: str
+    object: str
+    data: List[FakeImageData]
 
 
 def _normalize_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -128,6 +147,46 @@ class _FakeChatAPI:
         self.completions = _FakeCompletionsAPI(client)
 
 
+class _FakeImagesAPI:
+    def __init__(self, client: "FakeOpenAI") -> None:
+        self._client = client
+
+    def generate(
+        self,
+        *,
+        model: Optional[str] = None,
+        prompt: str,
+        n: int = 1,
+        response_format: str = "b64_json",
+        size: Optional[str] = None,
+        **kwargs: Any,
+    ) -> FakeImagesResponse:
+        if response_format != "b64_json":
+            raise NotImplementedError(
+                "FakeOpenAI only supports response_format='b64_json'."
+            )
+
+        width, height = _parse_size(size) if size else DEFAULT_IMAGE_SIZE
+        items: List[FakeImageData] = []
+        count = int(n or 1)
+        for i in range(count):
+            img_bytes = _make_png_bytes(
+                index=self._client._image_call_index + i,
+                size=(width, height),
+            )
+            items.append(
+                FakeImageData(b64_json=base64.b64encode(img_bytes).decode("ascii"))
+            )
+
+        self._client._image_call_index += count
+        return FakeImagesResponse(
+            created=int(time.time()),
+            model=model or DEFAULT_MODEL_NAME,
+            object=IMAGES_GENERATION_OBJECT,
+            data=items,
+        )
+
+
 class FakeOpenAI:
     """A minimal, test-focused fake of the OpenAI client.
 
@@ -140,6 +199,7 @@ class FakeOpenAI:
         # Mapping: request_key -> response_content
         self._responses_by_request: Dict[str, str] = {}
         self.chat = _FakeChatAPI(self)
+        self.images = _FakeImagesAPI(self)
         # Optional seed can be used by caller to stabilize randomness if desired
         self._seed = seed
         if seed is not None:
@@ -164,6 +224,29 @@ class FakeOpenAI:
         # Make it obviously fake while practically unique per call
         return f"fake-response-{self._seed_prefix}{uuid.uuid4().hex}"
 
+    _image_call_index: int = 0
+
+
+def _parse_size(size: str) -> Tuple[int, int]:
+    if not size:
+        return DEFAULT_IMAGE_SIZE
+    if "x" not in size:
+        raise ValueError(f"Invalid size: {size!r}. Expect '<w>x<h>'.")
+    w, h = size.split("x", 1)
+    return int(w), int(h)
+
+
+def _make_png_bytes(*, index: int, size: Tuple[int, int]) -> bytes:
+    width, height = size
+    image = Image.new(
+        "RGB",
+        (width, height),
+        color=((index * 40) % 255, (index * 70) % 255, (index * 110) % 255),
+    )
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
 
 __all__ = [
     "FakeOpenAI",
@@ -171,4 +254,6 @@ __all__ = [
     "FakeChatChoice",
     "FakeChatMessage",
     "FakeChatUsage",
+    "FakeImagesResponse",
+    "FakeImageData",
 ]
