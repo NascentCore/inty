@@ -2,9 +2,7 @@
 
 ## 安装 GitHub MCP 到 cursor
 
-[操作记录](./cursor_inty_is.md)
-以为例：https://github.com/NascentCore/inty/issues/1294
-
+[issues/1294](https://github.com/NascentCore/inty/issues/1294) 为例的[操作记录](./cursor_issue_1294.md)
 
 <img width="3022" height="1562" alt="image" src="https://github.com/user-attachments/assets/ee20a13d-e200-4956-8015-6cddb86e33d8" />
 
