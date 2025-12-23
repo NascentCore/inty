@@ -2,6 +2,8 @@
 
 ## 安装 GitHub MCP 到 cursor
 
+[操作记录](./cursor_inty_is.md)
+
 <img width="3022" height="1562" alt="image" src="https://github.com/user-attachments/assets/ee20a13d-e200-4956-8015-6cddb86e33d8" />
 
 <img width="3022" height="1226" alt="image" src="https://github.com/user-attachments/assets/cf870548-4878-43a2-b1b5-4a25b6ee4998" />
