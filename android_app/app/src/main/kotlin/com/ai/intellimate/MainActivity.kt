@@ -40,18 +40,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
-import com.ai.intellimate.ui.components.EmailLoginButton
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
@@ -837,16 +838,24 @@ fun SplashLoginUI(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Email 登录按钮
-                    EmailLoginButton(
-                        isLoading = isLoading,
-                        onLoginClick = { loginScreenState = LoginScreenState.ENTER_EMAIL },
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
                     // 隐私政策文本
                     com.ai.intellimate.ui.components.PolicyText()
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Email + Password 登录入口（仅用于审核/测试）
+                    androidx.compose.material3.TextButton(
+                        onClick = { loginScreenState = LoginScreenState.ENTER_EMAIL },
+                        enabled = !isLoading,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = stringResource(R.string.continue_with_email),
+                            color = Color.White.copy(alpha = 0.35f),
+                            fontSize = 12.sp,
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(80.dp))
                 }
