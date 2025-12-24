@@ -22,7 +22,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,7 +36,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -79,13 +77,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -111,7 +104,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
-import com.ai.intellimate.ui.components.ReportButton
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
@@ -196,7 +188,7 @@ class CreateRoleActivity : BaseActivity() {
             createRoleViewModel = createRoleViewModel,
             onBack = { finish() },
             onCreateSuccess = {
-                setResult(Activity.RESULT_OK)
+                setResult(RESULT_OK)
                 finish()
             },
             onAvatarGenerateClick = { prompt ->
@@ -239,7 +231,7 @@ private fun CreateRolePage(
 
     val nameInitial =
         if (isEditMode) {
-            editAgent?.name ?: ""
+            editAgent.name
         } else {
             savedDraft?.name.orEmpty()
         }
@@ -247,7 +239,7 @@ private fun CreateRolePage(
 
     val genderInitial =
         if (isEditMode) {
-            editAgent?.gender ?: CreateRoleDraft.DEFAULT_GENDER
+            editAgent.gender
         } else {
             savedDraft?.gender ?: CreateRoleDraft.DEFAULT_GENDER
         }
@@ -259,7 +251,7 @@ private fun CreateRolePage(
 
     val introInitial =
         if (isEditMode) {
-            editAgent?.intro ?: ""
+            editAgent.intro
         } else {
             savedDraft?.intro.orEmpty()
         }
@@ -267,7 +259,7 @@ private fun CreateRolePage(
 
     val openingInitial =
         if (isEditMode) {
-            editAgent?.opening ?: ""
+            editAgent.opening
         } else {
             savedDraft?.opening.orEmpty()
         }
@@ -275,7 +267,7 @@ private fun CreateRolePage(
 
     val visibilityInitial =
         if (isEditMode) {
-            editAgent?.visibility ?: CreateRoleDraft.DEFAULT_VISIBILITY
+            editAgent.visibility
         } else {
             savedDraft?.visibility ?: CreateRoleDraft.DEFAULT_VISIBILITY
         }
@@ -283,14 +275,14 @@ private fun CreateRolePage(
 
     var isLoading by remember { mutableStateOf(false) }
 
-    val editAvatarUrls = if (isEditMode) editAgent?.backgroundImages ?: emptyList() else emptyList()
+    val editAvatarUrls = if (isEditMode) editAgent.backgroundImages else emptyList()
     val avatarUrlsInitial =
         if (isEditMode) editAvatarUrls
         else savedDraft?.avatarUrls?.filter { it.isNotBlank() } ?: emptyList()
     var avatarUrls by remember(avatarUrlsInitial) { mutableStateOf(avatarUrlsInitial) }
 
     val editSingleBackground =
-        if (isEditMode && editAgent?.backgroundImages?.isEmpty() == true) {
+        if (isEditMode && editAgent.backgroundImages.isEmpty()) {
             editAgent.background.takeIf { it.isNotBlank() }
         } else {
             null
@@ -303,10 +295,10 @@ private fun CreateRolePage(
         } else {
             savedDraft?.avatarUrl?.takeIf { it.isNotBlank() }
         }
-    var avatarUrl by remember(avatarUrlInitial) { mutableStateOf<String?>(avatarUrlInitial) }
+    var avatarUrl by remember(avatarUrlInitial) { mutableStateOf(avatarUrlInitial) }
 
     val editSelectedIndex =
-        if (isEditMode && editAgent != null && editAgent.backgroundImages.isNotEmpty()) {
+        if (isEditMode && editAgent.backgroundImages.isNotEmpty()) {
             val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
             backgroundUrl?.let { url ->
                 val index = editAgent.backgroundImages.indexOf(url)
@@ -326,11 +318,11 @@ private fun CreateRolePage(
         }
     var isGeneratingAvatar by remember { mutableStateOf(false) }
     val editCroppedAvatar =
-        if (isEditMode) editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent.background }
+        if (isEditMode) editAgent.avatar.takeIf { it.isNotBlank() && it != editAgent.background }
         else null
     val croppedInitial =
-        if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
-    var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
+        if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl
+    var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf(croppedInitial) }
     val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
 
@@ -352,7 +344,7 @@ private fun CreateRolePage(
     val handleExitRequest = {
         if (isEditMode || !hasDraftChanges) {
             onBack()
-        } else if (savedDraft != null && hasDraftChanges) {
+        } else if (savedDraft != null) {
             // 从 draft 进入，更新草稿列表中的草稿，清除临时草稿，然后退出
             val draftToSave = latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
             CreateRoleDraftStorage.saveDraftToList(draftToSave)
@@ -686,7 +678,7 @@ private fun CreateRolePage(
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    TopAppBarDefaults.topAppBarColors()
                         .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
@@ -735,7 +727,7 @@ private fun CreateRolePage(
                 textAlign = TextAlign.Start,
             )
 
-            val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
+            val promptForGeneration = avatarPrompt.ifBlank { settings }
 
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
@@ -1286,6 +1278,7 @@ private fun startUCropWithLocalFile(
 
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
+        LogUtils.e("Failed to start UCrop, error: $e")
         ToastUtils.showShort(R.string.toast_failed_open_crop_editor)
     }
 }
@@ -1785,7 +1778,7 @@ private fun CustomTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    minLines: Int = 1,
+    minLines: Int = 2,
     maxLength: Int = 500,
 ) {
     Column {
