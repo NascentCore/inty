@@ -223,7 +223,7 @@ object UiConfigs {
         /** 性别选择区域配置 */
         object GenderSelection {
             /** 性别选择按钮字体大小 */
-            val ButtonFontSize = 14.sp
+            val ButtonFontSize = 18.sp
         }
     }
 

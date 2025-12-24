@@ -722,8 +722,6 @@ private fun CreateRolePage(
                     },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Spacer(modifier = Modifier.height(24.dp))
-
             // 视觉形象编辑区域标题
             Text(
                 text = "Visual Appearance",
@@ -733,7 +731,6 @@ private fun CreateRolePage(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Start,
             )
-            // Spacer(modifier = Modifier.height(UiConfigs.Spacing.Medium))
 
             val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
 
@@ -882,8 +879,7 @@ private fun CreateRolePage(
                 onUploadFromGallery = { galleryLauncher.launch("image/*") },
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
+            // Spacer(modifier = Modifier.height(24.dp))
             SingleLineInputField(
                 value = name,
                 onValueChange = { name = it },
@@ -909,24 +905,13 @@ private fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Intro Field
-            CustomTextField(
-                label = "Intro (No impact on dialogue effect) *",
-                value = intro,
-                onValueChange = { intro = it },
-                placeholder = "Please fill in the character introduction...",
-                minLines = 3,
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
             // Settings Field
             CustomTextField(
-                label = "Settings (Determines dialogue effect) *",
+                label = "Core Settings (determines dialogue effect) *",
                 value = settings,
                 onValueChange = { settings = it },
                 placeholder = "Please fill in the dialogue effect...",
-                minLines = 3,
+                minLines = 2,
                 maxLength = 800,
             )
 
@@ -934,11 +919,24 @@ private fun CreateRolePage(
 
             // Opening Field
             CustomTextField(
-                label = "Opening *",
+                label = "Opening (set tone and context) *",
                 value = opening,
                 onValueChange = { opening = it },
                 placeholder = "Please fill in the character's opening remarks...",
-                minLines = 3,
+                minLines = 2,
+                maxLength = 200,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Intro Field
+            CustomTextField(
+                label = "Intro for other users (no impact on chat) *",
+                value = intro,
+                onValueChange = { intro = it },
+                placeholder = "Please fill in the character introduction...",
+                minLines = 2,
+                maxLength = 500,
             )
 
             Spacer(modifier = Modifier.height(40.dp))
