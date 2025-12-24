@@ -82,7 +82,17 @@ jobs:
             sudo chmod -R 755 /var/www/dev.intellimate.app
             sudo rm -f /tmp/intellimate-app-dist.tar.gz
 
-      - name: Deploy ads.txt
+      - name: Copy ads.txt to Remote Server /tmp directory
+        uses: appleboy/scp-action@master
+        timeout-minutes: 1
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          source: "bizops/ads.txt"
+          target: "/tmp/ads.txt"
+
+      - name: Copy /tmp/ads.txt to Remote Server /var/www/dev.intellimate.app directory
         uses: appleboy/ssh-action@master
         timeout-minutes: 1
         with:
@@ -90,10 +100,10 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            # 来自 Adsense 账户中确认站点所有权的功能
-            echo "${{ secrets.GOOGLE_ADSENSE_ADS_TXT }}" | sudo tee /var/www/dev.intellimate.app/ads.txt > /dev/null
+            sudo cp /tmp/ads.txt /var/www/dev.intellimate.app/ads.txt
             sudo chown www-data:www-data /var/www/dev.intellimate.app/ads.txt
             sudo chmod 644 /var/www/dev.intellimate.app/ads.txt
+            sudo rm -f /tmp/ads.txt
 
       - name: Sanity check
         run: |
