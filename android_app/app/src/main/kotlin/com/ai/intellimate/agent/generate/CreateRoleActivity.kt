@@ -29,6 +29,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,8 +37,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -719,7 +722,7 @@ private fun CreateRolePage(
                     },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            // Spacer(modifier = Modifier.height(24.dp))
 
             // 视觉形象编辑区域标题
             Text(
@@ -730,7 +733,7 @@ private fun CreateRolePage(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Start,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            // Spacer(modifier = Modifier.height(UiConfigs.Spacing.Medium))
 
             val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
 
@@ -889,7 +892,7 @@ private fun CreateRolePage(
                 placeholder = "Name your IntelliMate",
             )
 
-            // Gender Selection已经创建后的，也就是在修改模式下，性别选项则不显示
+            // Gender Selection 已经创建后的，也就是在修改模式下，性别选项则不显示
             if (!isEditMode) {
                 Spacer(modifier = Modifier.height(24.dp))
                 GenderSelectionSection(selectedGender = gender, onGenderChange = { gender = it })
@@ -1330,36 +1333,43 @@ private fun AvatarUploadSection(
     onUploadFromGallery: () -> Unit = {},
     onRemoveImage: (Int) -> Unit = {},
 ) {
-    // 空状态检查：只有当所有头像 URL 都为空时才认为是空状态
+    // 首次进入页面时，显空状态检查：只有当所有头像 URL 都为空时才认为是空状态
     // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarUrl
     val isEmpty = avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = UiConfigs.CreateRole.VisualAppearance.SectionVerticalPadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        BoxWithConstraints(
             modifier =
-                Modifier.then(
-                        if (isEmpty)
-                            Modifier.fillMaxWidth().height(UiConfigs.CreateRole.VisualAppearance.PlaceHolderHeight)
-                        else
-                            Modifier.fillMaxWidth()
-                                .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
-                    )
+                Modifier.fillMaxWidth()
                     .let { modifier ->
                         if (isEmpty) {
                             modifier
+                                .wrapContentHeight()
                                 .background(
                                     color = UiConfigs.Colors.InputSurface,
                                     shape = RoundedCornerShape(16.dp),
                                 )
                                 .noRippleClickable { onGenerateClick() }
                         } else {
-                            modifier.background(
-                                color = Color.Black,
-                                shape = RoundedCornerShape(16.dp),
-                            )
+                            modifier
+                                .wrapContentHeight()
+                                .background(
+                                    color = Color.Black,
+                                    shape = RoundedCornerShape(16.dp),
+                                )
                         }
                     },
             contentAlignment = Alignment.Center,
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
             when {
                 isGenerating || isUploadingGallery -> {
                     ThreeDotLoadingAnimation()
@@ -1376,7 +1386,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1405,7 +1418,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: croppedAvatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1432,7 +1448,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1540,30 +1559,6 @@ private fun AvatarUploadSection(
                 )
             }
 
-            // Dashed border for empty state
-            // 需要检查所有头像 URL 都为空才显示虚线边框
-            if (avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 1.dp.toPx()
-                    val cornerRadius = 16.dp.toPx()
-                    val dashLength = 10.dp.toPx()
-                    val gapLength = 5.dp.toPx()
-
-                    drawRoundRect(
-                        color = Color.Gray,
-                        topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                        size = Size(size.width - strokeWidth, size.height - strokeWidth),
-                        cornerRadius = CornerRadius(cornerRadius),
-                        style =
-                            Stroke(
-                                width = strokeWidth,
-                                pathEffect =
-                                    PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
-                            ),
-                    )
-                }
-            }
-
             // Face edit button - show only when there's an avatar
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
@@ -1594,6 +1589,7 @@ private fun AvatarUploadSection(
                         )
                     }
                 }
+            }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -1813,7 +1809,11 @@ private fun VisibilitySwitchSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.visibility_public_full),
+                text = if (isPublic) {
+                    stringResource(R.string.visibility_public_full)
+                } else {
+                    stringResource(R.string.visibility_private_full)
+                },
                 color = Color.White,
                 fontSize = 14.sp,
                 modifier = Modifier.weight(1f),

@@ -200,15 +200,12 @@ object UiConfigs {
     object CreateRole {
         /** 视觉形象区域配置 - 头像预览与编辑入口 */
         object VisualAppearance {
-            /** 空状态时预览框高度（用于降低整体视觉占位） */
-            val PlaceHolderHeight = 200.dp
-
             /**
              * 预览框宽高比（width / height）。
              *
-             * 值越大，显示越“矮”；用于压缩“Visual Appearance”区域高度。
+             * 默认 9/16，即竖屏比例。
              */
-            const val ASPECT_RATIO = 0.5625f
+            const val ASPECT_RATIO = 9f / 16f
 
             /** 空状态内容内边距（用于保持按钮区域不拥挤） */
             val EmptyStateInnerPadding = 16.dp
@@ -220,7 +217,7 @@ object UiConfigs {
             val EmptyStateButtonContentPadding = 8.dp
 
             /** 头像上传区域垂直内边距 */
-            val SectionVerticalPadding = 16.dp
+            val SectionVerticalPadding = 8.dp
         }
 
         /** 性别选择区域配置 */
