@@ -1478,11 +1478,7 @@ private fun AvatarUploadSection(
                                 onClick = onGenerateClick,
                                 modifier = Modifier.weight(1f),
                                 colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = Color(
-                                            0x1A78599A
-                                        )
-                                    ),
+                                    ButtonDefaults.buttonColors(containerColor = Color(0x1A78599A)),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Column(
@@ -1514,11 +1510,7 @@ private fun AvatarUploadSection(
                                 onClick = onUploadFromGallery,
                                 modifier = Modifier.weight(1f),
                                 colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = Color(
-                                            0x1A78599A
-                                        )
-                                    ),
+                                    ButtonDefaults.buttonColors(containerColor = Color(0x1A78599A)),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Column(
