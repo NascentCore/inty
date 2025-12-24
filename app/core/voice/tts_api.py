@@ -159,9 +159,48 @@ class GeminiTTSAPI:
         self._model = model
         self._default_voice_name = default_voice_name
         self._temperature = temperature
-        self._client = genai.Client(api_key=self._api_key) if self._api_key else genai.Client()
+        # 延迟初始化：CI/本地可能没有 key 或 Vertex 凭据；此时直接回退 ElevenLabs，
+        # 不应在 import / app 启动阶段硬失败。
+        self._client: Optional[genai.Client] = None
+
+    def _get_client(self) -> Optional[genai.Client]:
+        if self._client is not None:
+            return self._client
+
+        if self._api_key:
+            try:
+                self._client = genai.Client(api_key=self._api_key)
+                return self._client
+            except ValueError as e:
+                logger.warning(f"Gemini TTS client 初始化失败（api_key）: {str(e)}")
+                return None
+
+        # 未提供 api_key：仅在检测到可能存在 Vertex/ADC 配置时才尝试 vertexai client。
+        if not (
+            os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+            or os.environ.get("GOOGLE_CLOUD_PROJECT")
+            or os.environ.get("GCP_PROJECT")
+        ):
+            return None
+
+        try:
+            project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCP_PROJECT")
+            location = os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
+            if project:
+                self._client = genai.Client(vertexai=True, project=project, location=location)
+            else:
+                self._client = genai.Client(vertexai=True)
+            return self._client
+        except Exception as e:
+            logger.warning(f"Gemini TTS client 初始化失败（vertexai）: {str(e)}")
+            return None
 
     async def synthesize(self, request: TTSRequest) -> Optional[TTSResult]:
+        client = self._get_client()
+        if client is None:
+            logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            return None
+
         voice_name = (
             request.voice_id
             if _looks_like_gemini_voice_name(request.voice_id)
@@ -193,7 +232,7 @@ class GeminiTTSAPI:
             def _sync_collect() -> Tuple[bytes, Optional[str]]:
                 collected: list[bytes] = []
                 mt: Optional[str] = None
-                for chunk in self._client.models.generate_content_stream(
+                for chunk in client.models.generate_content_stream(
                     model=self._model,
                     contents=contents,
                     config=config,
