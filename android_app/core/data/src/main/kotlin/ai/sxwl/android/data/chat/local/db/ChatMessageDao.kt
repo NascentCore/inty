@@ -57,6 +57,16 @@ interface ChatMessageDao {
     )
 
     @Query(
+        "UPDATE chat_messages SET isRecalled = :isRecalled, updatedAt = :updatedAt WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"
+    )
+    suspend fun updateRecalled(
+        agentId: String,
+        messageId: String,
+        isRecalled: Boolean,
+        updatedAt: Long,
+    )
+
+    @Query(
         "UPDATE chat_messages SET generatedImageUrl = :url, generatedImageWidth = :width, generatedImageHeight = :height, updatedAt = :updatedAt WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"
     )
     suspend fun updateGeneratedImage(

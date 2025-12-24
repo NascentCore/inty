@@ -35,7 +35,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -262,6 +264,8 @@ private fun ChatItemAI(
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
                 val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
                 val shouldShowMessageActions = isLatestMessage && !shouldFlowShow
+                val isWaitingForReply by viewModel.isWaitingForReply.collectAsState()
+                var showRegenConfirm by remember(item.localMsgId) { mutableStateOf(false) }
 
                 if (isNormalLoading) {
                     Box(
@@ -364,7 +368,8 @@ private fun ChatItemAI(
                         message = item,
                         onLike = { viewModel.likeMessage(item.localMsgId) },
                         onDislike = { viewModel.dislikeMessage(item.localMsgId) },
-                        onRecall = { viewModel.recallMessage() },
+                        onRegen = { showRegenConfirm = true },
+                        regenEnabled = !isWaitingForReply && !item.isRecalled,
                     )
                 }
 
@@ -538,7 +543,30 @@ private fun ChatItemAI(
                         message = item,
                         onLike = { viewModel.likeMessage(item.localMsgId) },
                         onDislike = { viewModel.dislikeMessage(item.localMsgId) },
-                        onRecall = { viewModel.recallMessage() },
+                        onRegen = { showRegenConfirm = true },
+                        regenEnabled = !isWaitingForReply && !item.isRecalled,
+                    )
+                }
+
+                if (showRegenConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { showRegenConfirm = false },
+                        title = { Text(text = stringResource(R.string.chat_regen_confirm_title)) },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showRegenConfirm = false
+                                    viewModel.regenAssistantMessage(item.localMsgId)
+                                }
+                            ) {
+                                Text(text = stringResource(R.string.chat_regen_confirm_regen))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showRegenConfirm = false }) {
+                                Text(text = stringResource(R.string.cancel))
+                            }
+                        },
                     )
                 }
 

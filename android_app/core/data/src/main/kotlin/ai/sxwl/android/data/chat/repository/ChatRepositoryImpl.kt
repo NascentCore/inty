@@ -430,6 +430,11 @@ class ChatRepositoryImpl(
         }
     }
 
+    override suspend fun markMessageRecalled(agentId: String, messageId: String) {
+        LogUtils.d("ChatRepositoryImpl.markMessageRecalled called for $agentId, messageId: $messageId")
+        localDataSource.markMessageRecalled(agentId, messageId, recalled = true)
+    }
+
     override suspend fun generateImageForMessage(
         agentId: String,
         messageId: String,

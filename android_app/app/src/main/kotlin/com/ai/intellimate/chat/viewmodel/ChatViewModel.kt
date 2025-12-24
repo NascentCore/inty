@@ -1101,6 +1101,29 @@ class ChatViewModel : BaseVM() {
         }
     }
 
+    /**
+     * Regen：标记指定 AI 消息为 recalled，并复用 keep talking 触发生成新消息。
+     *
+     * TODO(backend): 扩展 chat completion API，提供“regen last message”专用接口，避免依赖 "continue" 的行为不确定性。
+     */
+    fun regenAssistantMessage(messageLocalId: String) {
+        val agent = _agentInfo.value ?: return
+        val target = _msgs.value.firstOrNull { it.localMsgId == messageLocalId } ?: return
+        if (target.role != "assistant" || target.isRecalled) {
+            return
+        }
+
+        launchBackground {
+            runCatching { chatRepository.markMessageRecalled(agent.id, messageLocalId) }
+                .onFailure { e ->
+                    LogUtils.e("Regen mark recalled error: ${e.message}")
+                }
+        }
+
+        // 复用 keep talking 的调用链（包含限额弹窗、上报、loading 占位等）
+        sendKeepTalkingMessage()
+    }
+
     fun deleteMessage(localMsgId: String) {
         val agentId = _agentInfo.value?.id ?: return
         viewModelScope.launch(Dispatchers.IO) { chatRepository.removeMessage(agentId, localMsgId) }

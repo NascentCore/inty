@@ -259,6 +259,16 @@ class RoomDataSource(
         scope.launch { messageDao.updateUserFeedback(agentId, messageId, feedback?.name, now()) }
     }
 
+    suspend fun markMessageRecalled(agentId: String, messageId: String, recalled: Boolean = true) =
+        withContext(dispatcher) {
+            messageDao.updateRecalled(
+                agentId = agentId,
+                messageId = messageId,
+                isRecalled = recalled,
+                updatedAt = now(),
+            )
+        }
+
     suspend fun updateMessage(agentId: String, messageId: String, updatedMessage: MsgInfo) =
         withContext(dispatcher) {
             val existing = messageDao.getMessage(agentId, messageId)

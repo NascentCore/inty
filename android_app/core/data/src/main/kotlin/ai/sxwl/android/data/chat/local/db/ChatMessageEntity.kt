@@ -26,6 +26,7 @@ data class ChatMessageEntity(
     val audioUrl: String?,
     val userVote: String?,
     val userFeedback: String?,
+    val isRecalled: Boolean,
     val isOpening: Boolean,
     val metaAgentId: String?,
     val generatedImageUrl: String?,
@@ -74,6 +75,9 @@ internal fun MsgInfo.toEntity(
             else -> existing?.generatedImageHeight
         }
 
+    // isRecalled 为本地持久化字段：如果历史上已被标记为 recalled，则保持 true（避免被服务器同步覆盖）
+    val resolvedIsRecalled = existing?.isRecalled == true || isRecalled
+
     // 使用服务器时间戳（用于UI显示），如果不存在则保留现有的timestamp
     // 对于本地消息（如用户消息），如果没有timestamp且没有existing entity，则从当前时间生成
     val resolvedTimestamp =
@@ -96,6 +100,7 @@ internal fun MsgInfo.toEntity(
         audioUrl = audio_url ?: existing?.audioUrl,
         userVote = user_vote ?: existing?.userVote,
         userFeedback = userFeedback?.name ?: existing?.userFeedback,
+        isRecalled = resolvedIsRecalled,
         isOpening = resolvedIsOpening,
         metaAgentId = resolvedMetaAgentId,
         generatedImageUrl = resolvedGeneratedImageUrl,
@@ -143,6 +148,7 @@ internal fun ChatMessageEntity.toModel(): MsgInfo {
         user_vote = userVote,
         localMsgId = localId,
         userFeedback = feedback,
+        isRecalled = isRecalled,
     )
 }
 

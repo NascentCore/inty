@@ -256,6 +256,9 @@
     <string name="chat_input_with_scene_action_placeholder">Click () to describe actions, feelings, thoughts</string>
     <string name="chat_ai_typing_placeholder">%1$s is typing</string>
     <string name="chat_ai_typing_default_name">Your IntelliMate</string>
+    <string name="chat_regen_confirm_title">Regen?</string>
+    <string name="chat_regen_confirm_regen">Regen</string>
+    <string name="content_desc_regen">Regen</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>

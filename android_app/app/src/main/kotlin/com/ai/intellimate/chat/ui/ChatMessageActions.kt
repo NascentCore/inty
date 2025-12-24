@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
@@ -86,6 +89,31 @@ private fun RecallButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+/** Regen 按钮 - 使用 Material 3 refresh（outlined）图标 */
+@Composable
+private fun RegenButton(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
+    val tint = if (enabled) Color.White.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.25f)
+    Box(
+        modifier =
+            modifier
+                .size(iconSize)
+                .noRippleClickable(onClick = if (enabled) onClick else {}),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Refresh,
+            contentDescription = stringResource(R.string.content_desc_regen),
+            modifier = Modifier.size(iconSize),
+            tint = tint,
+        )
+    }
+}
+
 /** Image Generate 按钮 */
 @Composable
 private fun ImageGenerateButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -109,7 +137,8 @@ internal fun MessageActionBar(
     message: MsgInfo,
     onLike: () -> Unit,
     onDislike: () -> Unit,
-    onRecall: () -> Unit,
+    onRegen: () -> Unit,
+    regenEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val isLiked = message.userFeedback == MsgInfo.UserFeedback.LIKE
@@ -144,8 +173,8 @@ internal fun MessageActionBar(
 
         Spacer(Modifier.weight(1f))
 
-        // Recall 按钮 - 始终显示，不受like/dislike影响
-        //        RecallButton(onClick = onRecall)
+        // Regen 按钮 - 始终显示，不受like/dislike影响
+        RegenButton(enabled = regenEnabled, onClick = onRegen)
     }
 }
 

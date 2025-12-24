@@ -64,6 +64,9 @@ interface ChatRepository {
     /** 重新生成最后一条AI消息 */
     suspend fun recallLastAssistantMessage(agentId: String)
 
+    /** 将指定消息标记为已 recalled（本地持久化字段） */
+    suspend fun markMessageRecalled(agentId: String, messageId: String)
+
     /**
      * 生成图片消息
      *

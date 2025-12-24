@@ -81,6 +81,8 @@ data class MsgInfo(
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
     // 本地状态：用户反馈（like/dislike）- 不序列化
     val userFeedback: UserFeedback? = null,
+    // 本地状态：消息是否已被“Regen/Recall”标记（用于持久化与 UI 展示）- 不参与网络序列化
+    @Transient val isRecalled: Boolean = false,
 ) {
 
     fun isOpening(): Boolean {
