@@ -104,6 +104,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.xb.navigation.Routes
+import com.ai.intellimate.agent.report.ReportActivity
 
 /** "我的"页面 */
 @Composable
@@ -772,6 +773,7 @@ private fun MyAgentCard(
     onEditAgent: ((AgentInfo) -> Unit)? = null,
     onDeleteAgent: ((AgentInfo) -> Unit)? = null,
 ) {
+    val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableLongStateOf(0L) }
@@ -897,6 +899,21 @@ private fun MyAgentCard(
                             },
                         )
                     }
+
+                    // 举报选项
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(R.string.str_report),
+                                color = Color.White,
+                                fontSize = 14.sp,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            ReportActivity.launch(context, targetType = "AGENT", targetId = agentInfo.id)
+                        },
+                    )
 
                     onDeleteAgent?.let { deleteCallback ->
                         DropdownMenuItem(
