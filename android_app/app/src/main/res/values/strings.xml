@@ -310,6 +310,8 @@
     <string name="greater_than_symbol">&gt;</string>
     <string name="star_symbol">★</string>
     <string name="visibility_required_title_full">Visibility *</string>
+    <string name="visibility_public_full">Public</string>
+    <string name="visibility_private_full">Private</string>
     <string name="become_a_premium">Become a Premium Member</string>
     <string name="more_information_full">More Information</string>
 

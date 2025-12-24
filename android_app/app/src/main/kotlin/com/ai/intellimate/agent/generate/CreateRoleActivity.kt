@@ -29,6 +29,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,8 +37,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -57,6 +60,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -102,6 +107,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.utils.AvatarManager
@@ -716,8 +722,6 @@ private fun CreateRolePage(
                     },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-
             // 视觉形象编辑区域标题
             Text(
                 text = "Visual Appearance",
@@ -727,7 +731,6 @@ private fun CreateRolePage(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Start,
             )
-            Spacer(modifier = Modifier.height(12.dp))
 
             val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
 
@@ -876,8 +879,8 @@ private fun CreateRolePage(
                 onUploadFromGallery = { galleryLauncher.launch("image/*") },
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
+            // Spacer(modifier = Modifier.height(24.dp))
+            // 该间距并不需要，显示效果不影响该有的间距。
             SingleLineInputField(
                 value = name,
                 onValueChange = { name = it },
@@ -886,7 +889,7 @@ private fun CreateRolePage(
                 placeholder = "Name your IntelliMate",
             )
 
-            // Gender Selection已经创建后的，也就是在修改模式下，性别选项则不显示
+            // Gender Selection 已经创建后的，也就是在修改模式下，性别选项则不显示
             if (!isEditMode) {
                 Spacer(modifier = Modifier.height(24.dp))
                 GenderSelectionSection(selectedGender = gender, onGenderChange = { gender = it })
@@ -894,36 +897,47 @@ private fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Settings Field
-            CustomTextField(
-                label = "Settings (Determines dialogue effect) *",
-                value = settings,
-                onValueChange = { settings = it },
-                placeholder = "Please fill in the dialogue effect...",
-                minLines = 4,
-                maxLength = 800,
+            VisibilitySwitchSection(
+                isPublic = visibility == "PUBLIC",
+                onPublicChange = { isPublic ->
+                    visibility = if (isPublic) "PUBLIC" else "PRIVATE"
+                },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Intro Field
+            // Settings Field
             CustomTextField(
-                label = "Intro (No impact on dialogue effect) *",
-                value = intro,
-                onValueChange = { intro = it },
-                placeholder = "Please fill in the character introduction...",
-                minLines = 3,
+                label = "Core Settings (determines dialogue effect) *",
+                value = settings,
+                onValueChange = { settings = it },
+                placeholder = "Please fill in the dialogue effect...",
+                minLines = 2,
+                maxLength = 800,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Opening Field
             CustomTextField(
-                label = "Opening *",
+                label = "Opening (set tone and context) *",
                 value = opening,
                 onValueChange = { opening = it },
                 placeholder = "Please fill in the character's opening remarks...",
-                minLines = 3,
+                minLines = 2,
+                maxLength = 200,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Intro Field
+            CustomTextField(
+                label = "Intro for other users (no impact on chat) *",
+                value = intro,
+                onValueChange = { intro = it },
+                placeholder = "Please fill in the character introduction...",
+                minLines = 2,
+                maxLength = 500,
             )
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -1318,33 +1332,43 @@ private fun AvatarUploadSection(
     onUploadFromGallery: () -> Unit = {},
     onRemoveImage: (Int) -> Unit = {},
 ) {
-    // 空状态检查：只有当所有头像 URL 都为空时才认为是空状态
+    // 首次进入页面时，显空状态检查：只有当所有头像 URL 都为空时才认为是空状态
     // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarUrl
     val isEmpty = avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = UiConfigs.CreateRole.VisualAppearance.SectionVerticalPadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        BoxWithConstraints(
             modifier =
-                Modifier.then(
-                        if (isEmpty) Modifier.fillMaxWidth().height(200.dp)
-                        else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
-                    )
+                Modifier.fillMaxWidth()
                     .let { modifier ->
                         if (isEmpty) {
                             modifier
+                                .wrapContentHeight()
                                 .background(
-                                    color = Color(0x1A78599A),
+                                    color = UiConfigs.Colors.InputSurface,
                                     shape = RoundedCornerShape(16.dp),
                                 )
                                 .noRippleClickable { onGenerateClick() }
                         } else {
-                            modifier.background(
-                                color = Color.Black,
-                                shape = RoundedCornerShape(16.dp),
-                            )
+                            modifier
+                                .wrapContentHeight()
+                                .background(
+                                    color = Color.Black,
+                                    shape = RoundedCornerShape(16.dp),
+                                )
                         }
                     },
             contentAlignment = Alignment.Center,
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
             when {
                 isGenerating || isUploadingGallery -> {
                     ThreeDotLoadingAnimation()
@@ -1361,7 +1385,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1390,7 +1417,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: croppedAvatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1417,7 +1447,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1435,7 +1468,8 @@ private fun AvatarUploadSection(
                 else -> {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(16.dp),
+                        modifier =
+                            Modifier.padding(UiConfigs.CreateRole.VisualAppearance.EmptyStateInnerPadding),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1452,7 +1486,11 @@ private fun AvatarUploadSection(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier =
+                                        Modifier.padding(
+                                            UiConfigs.CreateRole.VisualAppearance
+                                                .EmptyStateButtonContentPadding
+                                        ),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.instant_mix_24px),
@@ -1480,7 +1518,11 @@ private fun AvatarUploadSection(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier =
+                                        Modifier.padding(
+                                            UiConfigs.CreateRole.VisualAppearance
+                                                .EmptyStateButtonContentPadding
+                                        ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Upload,
@@ -1516,30 +1558,6 @@ private fun AvatarUploadSection(
                 )
             }
 
-            // Dashed border for empty state
-            // 需要检查所有头像 URL 都为空才显示虚线边框
-            if (avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 1.dp.toPx()
-                    val cornerRadius = 16.dp.toPx()
-                    val dashLength = 10.dp.toPx()
-                    val gapLength = 5.dp.toPx()
-
-                    drawRoundRect(
-                        color = Color.Gray,
-                        topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                        size = Size(size.width - strokeWidth, size.height - strokeWidth),
-                        cornerRadius = CornerRadius(cornerRadius),
-                        style =
-                            Stroke(
-                                width = strokeWidth,
-                                pathEffect =
-                                    PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
-                            ),
-                    )
-                }
-            }
-
             // Face edit button - show only when there's an avatar
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                 Box(
@@ -1551,7 +1569,7 @@ private fun AvatarUploadSection(
                                 shape = RoundedCornerShape(16.dp),
                             )
                             .noRippleClickable { onFaceEdit() }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1570,6 +1588,7 @@ private fun AvatarUploadSection(
                         )
                     }
                 }
+            }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -1759,9 +1778,57 @@ private fun GenderButton(
         IgnoreSystemFontScaling {
             Text(
                 text = text,
-                fontSize = 12.sp,
+                fontSize = UiConfigs.CreateRole.GenderSelection.ButtonFontSize,
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun VisibilitySwitchSection(
+    isPublic: Boolean,
+    onPublicChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.visibility_required_title_full),
+            fontSize = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(color = UiConfigs.Colors.InputSurface, shape = RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (isPublic) {
+                    stringResource(R.string.visibility_public_full)
+                } else {
+                    stringResource(R.string.visibility_private_full)
+                },
+                color = Color.White,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = isPublic,
+                onCheckedChange = onPublicChange,
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        uncheckedThumbColor = Color.White,
+                        checkedTrackColor = Color.Green,
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.25f),
+                        checkedBorderColor = Color.Transparent,
+                        uncheckedBorderColor = Color.Transparent,
+                    ),
             )
         }
     }
