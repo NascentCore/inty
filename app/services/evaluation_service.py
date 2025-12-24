@@ -10,7 +10,9 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.model_selection import select_chat_model
 from app.models.agent import Agent
+from app.models.user import User as UserModel
 from app.models.evaluation import (
     EvaluationInteraction,
     EvaluationResult,
@@ -18,6 +20,7 @@ from app.models.evaluation import (
     EvaluationStatus,
 )
 from app.services import agent_service, chat_service
+from app.services.global_services import subscription_service
 from app.services.scoring_service import ScoringService
 
 logger = logging.getLogger(__name__)
@@ -737,10 +740,26 @@ class EvaluationService:
                 user_id = f"guest_{user_identity['device_id']}"
 
             # 调用智能体进行对话
+            is_subscribed = False
+            user_obj = None
+            if user_identity["type"] == "user":
+                subscription = await subscription_service.get_user_current_subscription(
+                    self.db, user_id
+                )
+                is_subscribed = bool(subscription)
+                user_result = await self.db.execute(
+                    select(UserModel).where(UserModel.id == user_id)
+                )
+                user_obj = user_result.scalar_one_or_none()
+
+            model_override = select_chat_model(
+                user=user_obj or object(), is_subscribed=is_subscribed
+            )
             response_content = await agent.chat(
                 user_id=user_id,
                 session_id=eval_session_id,
                 messages=messages,
+                model_override=model_override,
             )
 
             # 如果需要，可以获取或创建聊天会话记录
