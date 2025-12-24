@@ -923,7 +923,7 @@ private fun CreateRolePage(
                 value = settings,
                 onValueChange = { settings = it },
                 placeholder = "Please fill in the dialogue effect...",
-                minLines = 4,
+                minLines = 3,
                 maxLength = 800,
             )
 
@@ -1338,10 +1338,10 @@ private fun AvatarUploadSection(
             modifier =
                 Modifier.then(
                         if (isEmpty)
-                            Modifier.fillMaxWidth().height(UiConfigs.CreateRole.VisualAppearance.EmptyBoxHeight)
+                            Modifier.fillMaxWidth().height(UiConfigs.CreateRole.VisualAppearance.PlaceHolderHeight)
                         else
                             Modifier.fillMaxWidth()
-                                .aspectRatio(UiConfigs.CreateRole.VisualAppearance.PreviewAspectRatio)
+                                .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
                     )
                     .let { modifier ->
                         if (isEmpty) {
@@ -1825,7 +1825,7 @@ private fun VisibilitySwitchSection(
                     SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         uncheckedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFFE91E63),
+                        checkedTrackColor = Color.Green,
                         uncheckedTrackColor = Color.White.copy(alpha = 0.25f),
                         checkedBorderColor = Color.Transparent,
                         uncheckedBorderColor = Color.Transparent,
