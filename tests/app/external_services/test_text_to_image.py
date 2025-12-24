@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from app.external_services.text_to_image_api import (
+from app.external_services.fakes.openai import FakeOpenAI
+from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
     TextToImageProvider,
+    _resolve_provider_and_model,
     generate_text_to_image,
 )
 
@@ -119,3 +121,48 @@ def test_text_to_image_falai_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
         "https://fal.example/2.png",
     ]
 
+
+def test_resolve_provider_and_model_google_strips_org_prefix() -> None:
+    provider, provider_model = _resolve_provider_and_model(
+        "google/imagen-4.0-fast-generate-001"
+    )
+    assert provider == TextToImageProvider.GOOGLE
+    assert provider_model == "imagen-4.0-fast-generate-001"
+
+
+def test_resolve_provider_and_model_openai_keeps_org_prefix() -> None:
+    provider, provider_model = _resolve_provider_and_model("openai/gpt-image-1")
+    assert provider == TextToImageProvider.OPENAI
+    assert provider_model == "openai/gpt-image-1"
+
+
+@pytest.mark.parametrize("model", ["", "google/", "openai/", "unknown/x"])
+def test_resolve_provider_and_model_invalid_raises(model: str) -> None:
+    with pytest.raises(ValueError):
+        _resolve_provider_and_model(model)
+
+
+def test_text_to_image_openai_returns_png_bytes() -> None:
+    fake = FakeOpenAI(seed=123)
+    result = generate_text_to_image(
+        TextToImageGenerationRequest(
+            model="openai/gpt-image-1",
+            prompt="a simple test image",
+            num_images=2,
+            provider_args={
+                "openai_client": fake,
+                "output": "bytes",
+            },
+        )
+    )
+
+    assert result.provider == TextToImageProvider.OPENAI
+    assert result.model == "openai/gpt-image-1"
+    assert len(result.images) == 2
+    for img in result.images:
+        assert img.provider == TextToImageProvider.OPENAI
+        assert img.image_bytes and isinstance(img.image_bytes, (bytes, bytearray))
+        assert img.width == 64
+        assert img.height == 64
+        assert img.format == "png"
+        assert img.gcs_uri is None
