@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -62,11 +63,12 @@ fun MyModalNavigationDrawer(
                         .background(color = Color(0xff000000))
                         .clickable { drawerState.value = DrawerValue.Closed }
             ) {}
-            // 抽屉
+            // 抽屉 - 使用 graphicsLayer 确保在最上层，并添加 navigationBarsPadding 处理系统导航栏
             Box(
                 modifier =
                     Modifier.onSizeChanged { drawerWidth.intValue = it.width }
                         .graphicsLayer { translationX = xOffset }
+                        .navigationBarsPadding()
             ) {
                 drawerContent()
             }
