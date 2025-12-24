@@ -1,8 +1,8 @@
-# IntyEval - 内部运营工具应用
+# IntyEval - 内部运营平台
 
 CREATED_BY_AGENT
 
-（仍在构建当中，目前后端集成了自己的运营 Web ui，API 位于后端代码，Web ui 位于 evaluation/）
+（仍在构建当中，目前 app 后端集成了自己的运营 Web ui，API 位于后端代码，Web ui 位于 evaluation/；由于混合了业务端 API，希望搞一个独立运营 app）
 
 IntyEval 是一个独立的 FastAPI 应用，专门用于内部运营工具，包括评测系统和用户数据分析功能。
 
