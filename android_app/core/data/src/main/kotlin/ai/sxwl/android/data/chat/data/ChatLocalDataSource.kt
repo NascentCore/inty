@@ -109,6 +109,20 @@ class ChatLocalDataSource {
             }
     }
 
+    suspend fun markMessageRecalled(agentId: String, messageId: String, recalled: Boolean = true) {
+        val session = getSession(agentId)
+        session.lock.withLock {
+            session.messages.value =
+                session.messages.value.map { msg ->
+                    if (msg.id == messageId || msg.localMsgId == messageId) {
+                        msg.copy(isRecalled = recalled)
+                    } else {
+                        msg
+                    }
+                }
+        }
+    }
+
     suspend fun updateMessage(agentId: String, messageId: String, updatedMessage: MsgInfo) {
         val session = getSession(agentId)
         session.lock.withLock {
