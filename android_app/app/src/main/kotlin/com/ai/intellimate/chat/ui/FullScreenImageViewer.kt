@@ -26,13 +26,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ReportButton
 
@@ -93,7 +91,7 @@ internal fun FullScreenImageViewer(
     // 注意：zoomChange 是相对于上一次调用的变化量，不是累积值
     val transformableState =
         rememberTransformableState(
-            onTransformation = { zoomChange: Float, panChange: Offset, rotationChange: Float ->
+            onTransformation = { zoomChange: Float, panChange: Offset, _: Float ->
                 // 缩放：最小1倍，最大5倍（不可缩小）
                 val newScale = (scale * zoomChange).coerceIn(1f, 5f)
                 scale = newScale
