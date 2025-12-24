@@ -1555,78 +1555,78 @@ private fun AvatarUploadSection(
                 )
             }
 
-        // Face edit and Report buttons - show only when there's an avatar
-        if (avatarUrls.isNotEmpty() || avatarUrl != null) {
-            Row(
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Report button - show only when agentId is available (edit mode)
-                // 这是生图的中间流程，还没有 agentID，先设置一个临时的 agentId
-                val agentId = "creation_${System.currentTimeMillis()}"
-                val context = LocalContext.current
-                Box(
-                    modifier =
-                        Modifier.background(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(16.dp),
-                        )
-                            .noRippleClickable {
-                                ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
-                            }
-                            .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding),
+            // Face edit and Report buttons - show only when there's an avatar
+            if (avatarUrls.isNotEmpty() || avatarUrl != null) {
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    // Report button - show only when agentId is available (edit mode)
+                    // 这是生图的中间流程，还没有 agentID，先设置一个临时的 agentId
+                    val agentId = "creation_${System.currentTimeMillis()}"
+                    val context = LocalContext.current
+                    Box(
+                        modifier =
+                            Modifier.background(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                                .noRippleClickable {
+                                    ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
+                                }
+                                .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding),
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Flag,
-                            contentDescription = stringResource(R.string.report_button_content_description),
-                            modifier = Modifier.size(16.dp),
-                            tint = Color.White,
-                        )
-                        Text(
-                            text = stringResource(R.string.str_report),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Flag,
+                                contentDescription = stringResource(R.string.report_button_content_description),
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.White,
+                            )
+                            Text(
+                                text = stringResource(R.string.str_report),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
                     }
-                }
 
-                // Crop button
-                Box(
-                    modifier =
-                        Modifier.background(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(16.dp),
-                        )
-                            .noRippleClickable { onFaceEdit() }
-                            .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    // Crop button
+                    Box(
+                        modifier =
+                            Modifier.background(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                                .noRippleClickable { onFaceEdit() }
+                                .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding),
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_crop),
-                            contentDescription = stringResource(R.string.face_edit),
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.face_edit),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_crop),
+                                contentDescription = stringResource(R.string.face_edit),
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.face_edit),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                        }
                     }
                 }
+                }
             }
-            }
-        }
         Spacer(Modifier.height(8.dp))
         // 底部一行，生成的ai模型的照片图像 Floating thumbnail row at the bottom of preview
         if (avatarUrls.isNotEmpty()) {
