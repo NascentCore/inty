@@ -356,7 +356,7 @@ class Config:
     cloudflare: CloudflareConfig
     sentry: SentryConfig
     push_notification: PushNotificationConfig
-    gemini_live: GeminiLiveConfig
+    gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
 
 
 def load_config(path: str) -> Config:

@@ -76,8 +76,23 @@ gemini_live:
 ### WebSocket 端点
 
 ```
-ws://<host>/api/v1/live-chat/{agent_id}?token=<api_key>
+ws://<host>/api/v1/live-chat/{agent_id}
 ```
+
+#### 鉴权方式（推荐）
+
+WebSocket 与其他 HTTP 接口保持一致，使用请求头：
+
+- `Authorization: Bearer <token>`
+
+兼容旧方式：
+
+- `Sec-WebSocket-Protocol: Bearer, <token>`
+- `?token=<token>`（不推荐，仅用于兼容旧客户端）
+
+#### 为什么 Swagger 看不到该 WS 接口
+
+FastAPI 生成的 OpenAPI/Swagger **不会**包含 `@router.websocket(...)` 端点，这是框架常见行为；因此我们在本文档中维护 WebSocket 的使用方式与协议说明。
 
 ### 消息协议
 
@@ -85,13 +100,17 @@ ws://<host>/api/v1/live-chat/{agent_id}?token=<api_key>
 | ---- | ----------------- | ------------------------------------------------- |
 | 上行 | `audio`           | Base64 编码的 16kHz PCM 音频                      |
 | 上行 | `text`            | 可选文本输入（同时发送给 Gemini）                 |
-| 上行 | `config`          | 会话配置（save_history, voice_id 等）             |
 | 上行 | `end`             | 结束通话                                          |
 | 下行 | `audio_response`  | Base64 编码的 24kHz PCM 音频                      |
 | 下行 | `transcript`      | AI 回复的转录文本                                 |
 | 下行 | `user_transcript` | 用户语音的转录文本                                |
 | 下行 | `status`          | 会话状态（connected, speaking, listening, error） |
 | 下行 | `error`           | 错误消息                                          |
+
+#### 配置说明
+
+- **save_history**：语音对话默认保存到聊天历史，由后端配置 `gemini_live.save_voice_history` 控制（默认 `true`）
+- **voice_id**：AI 语音使用 Agent 定义的默认语音或系统默认语音（`gemini_live.default_voice`）
 
 ### 状态查询接口
 
@@ -149,7 +168,7 @@ GET /api/v1/live-chat/status
 
 ### 历史保存
 
-默认开启「保存历史」选项，语音对话的转录文本会保存到聊天历史中，可以在「单角色聊天」页面查看。
+语音对话的转录文本默认会保存到聊天历史中，可以在「单角色聊天」页面查看。此行为由后端配置控制，前端不提供动态开关。
 
 ## 音频规格
 

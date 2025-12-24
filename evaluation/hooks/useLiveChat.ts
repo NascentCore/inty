@@ -6,7 +6,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   LiveChatService,
-  LiveChatConfig,
   ConnectionStatus,
 } from "../services/liveChat";
 
@@ -23,10 +22,7 @@ export interface UseLiveChatReturn {
   transcripts: Transcript[];
   error: { code: string; message: string } | null;
 
-  startCall: (
-    agentId: string,
-    config?: Partial<LiveChatConfig>
-  ) => Promise<void>;
+  startCall: (agentId: string) => Promise<void>;
   endCall: () => void;
   toggleMute: () => void;
   sendText: (text: string) => void;
@@ -86,7 +82,7 @@ export function useLiveChat(): UseLiveChatReturn {
   }, []);
 
   const startCall = useCallback(
-    async (agentId: string, config?: Partial<LiveChatConfig>) => {
+    async (agentId: string) => {
       if (serviceRef.current?.isConnected()) {
         console.warn("Already in a call");
         return;
@@ -101,11 +97,7 @@ export function useLiveChat(): UseLiveChatReturn {
 
       try {
         await service.connect(
-          {
-            agentId,
-            saveHistory: config?.saveHistory ?? true,
-            voiceId: config?.voiceId,
-          },
+          { agentId },
           {
             onAudioReceived: handleAudioReceived,
             onTranscript: handleTranscript,

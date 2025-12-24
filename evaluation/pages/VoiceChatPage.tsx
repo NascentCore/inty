@@ -19,8 +19,6 @@ import {
   Empty,
   message,
   Tag,
-  Switch,
-  Tooltip,
 } from "antd";
 import {
   PhoneOutlined,
@@ -53,7 +51,6 @@ const STATUS_LABELS: Record<string, { text: string; color: string }> = {
 
 export const VoiceChatPage: React.FC = () => {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [saveHistory, setSaveHistory] = useState(true);
   const transcriptsEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -107,7 +104,7 @@ export const VoiceChatPage: React.FC = () => {
     }
 
     try {
-      await startCall(selectedAgent.id, { saveHistory });
+      await startCall(selectedAgent.id);
       message.success("通话已开始");
     } catch (err) {
       message.error("启动通话失败");
@@ -253,21 +250,6 @@ export const VoiceChatPage: React.FC = () => {
                         </Tag>
                       </div>
                     </div>
-                  </Space>
-                }
-                extra={
-                  <Space>
-                    <Tooltip title="是否保存对话到聊天历史">
-                      <span>
-                        保存历史{" "}
-                        <Switch
-                          checked={saveHistory}
-                          onChange={setSaveHistory}
-                          disabled={isInCall}
-                          size="small"
-                        />
-                      </span>
-                    </Tooltip>
                   </Space>
                 }
                 style={{

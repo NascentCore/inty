@@ -18,7 +18,6 @@ from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
 from app.schemas.live_chat import (
     LiveChatAudioResponseMessage,
-    LiveChatConfig,
     LiveChatErrorMessage,
     LiveChatMessageType,
     LiveChatStatus,
@@ -30,6 +29,27 @@ from app.services.live_chat_service import live_chat_service
 router = APIRouter(prefix="/live-chat")
 
 
+@router.get("/status", tags=[INTY_EVAL_TAG])
+async def get_live_chat_status(
+    current_user: schemas.User = Depends(deps.get_current_user),
+):
+    """
+    获取实时语音通话服务状态
+
+    返回 Live Chat 服务的启用状态和配置信息。
+    """
+    config = live_chat_service._config
+    return schemas.APIResponse.success(
+        data={
+            "enabled": config.enabled,
+            "model": config.model,
+            "default_voice": config.default_voice,
+            "send_sample_rate": config.send_sample_rate,
+            "receive_sample_rate": config.receive_sample_rate,
+        }
+    )
+
+
 async def get_current_user_ws(
     websocket: WebSocket,
     db: AsyncSession,
@@ -37,11 +57,18 @@ async def get_current_user_ws(
     """
     从 WebSocket 连接中获取当前用户
 
-    支持两种认证方式：
-    1. URL 查询参数: ?token=xxx
+    支持三种认证方式（按优先级）：
+    1. Header: Authorization: Bearer <token>（与其他 HTTP 接口一致，推荐）
     2. 子协议: Sec-WebSocket-Protocol: Bearer, <token>
+    3. URL 查询参数: ?token=xxx（兼容旧用法）
     """
-    token = websocket.query_params.get("token")
+    token = None
+
+    auth = websocket.headers.get("authorization")
+    if auth:
+        parts = auth.strip().split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1].strip()
 
     if not token:
         protocols = websocket.headers.get("sec-websocket-protocol", "")
@@ -51,6 +78,9 @@ async def get_current_user_ws(
                 if part.strip() == "Bearer" and i + 1 < len(parts):
                     token = parts[i + 1].strip()
                     break
+
+    if not token:
+        token = websocket.query_params.get("token")
 
     if not token:
         logger.warning("WebSocket 连接缺少 token")
@@ -84,7 +114,6 @@ async def live_chat_session(
     消息协议：
     - 上行 audio: {"type": "audio", "data": "<base64_pcm>"}
     - 上行 text: {"type": "text", "data": "<text>"}
-    - 上行 config: {"type": "config", "config": {...}}
     - 上行 activity_start: {"type": "activity_start"}
     - 上行 activity_end: {"type": "activity_end"}
     - 上行 end: {"type": "end"}
@@ -113,14 +142,12 @@ async def live_chat_session(
     )
 
     session = None
-    config = LiveChatConfig()
 
     try:
         session = await live_chat_service.create_session(
             db=db,
             agent_id=agent_id,
             user_id=current_user.id,
-            config=config,
         )
 
         input_queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
@@ -231,11 +258,6 @@ async def live_chat_session(
                         if text and session:
                             await live_chat_service.send_text(session.session_id, text)
 
-                    elif msg_type == "config":
-                        new_config = data.get("config", {})
-                        if session:
-                            session.config = LiveChatConfig(**new_config)
-
                     elif msg_type == "activity_start":
                         await input_queue.put({"type": "activity_start"})
 
@@ -283,29 +305,3 @@ async def live_chat_session(
         logger.info(
             f"Live chat 会话结束 - user_id: {current_user.id}, agent_id: {agent_id}"
         )
-
-
-@router.get(
-    "/status",
-    response_model=schemas.APIResponse[dict],
-    summary="获取实时语音通话服务状态",
-    tags=[INTY_EVAL_TAG],
-)
-async def get_live_chat_status():
-    """获取实时语音通话服务的启用状态和配置信息"""
-    from app.core.config import global_config_loaded_from_config_yaml
-
-    config = global_config_loaded_from_config_yaml.gemini_live
-
-    return schemas.APIResponse.success(
-        data={
-            "enabled": config.enabled,
-            "model": config.model,
-            "default_voice": config.default_voice,
-            "send_sample_rate": config.send_sample_rate,
-            "receive_sample_rate": config.receive_sample_rate,
-            "session_resumption": config.session_resumption,
-            "input_transcription": config.input_transcription,
-            "output_transcription": config.output_transcription,
-        }
-    )

@@ -16,8 +16,6 @@ export type ConnectionStatus =
 
 export interface LiveChatConfig {
   agentId: string;
-  saveHistory?: boolean;
-  voiceId?: string;
 }
 
 export interface LiveChatCallbacks {
@@ -36,10 +34,6 @@ interface WebSocketMessage {
   code?: string;
   sample_rate?: number;
   is_final?: boolean;
-  config?: {
-    save_history?: boolean;
-    voice_id?: string;
-  };
 }
 
 const SEND_SAMPLE_RATE = 16000;
@@ -96,14 +90,6 @@ export class LiveChatService {
 
       this.ws.onopen = () => {
         console.log("WebSocket 连接已建立");
-
-        if (config.saveHistory !== undefined || config.voiceId) {
-          this.sendConfig({
-            save_history: config.saveHistory,
-            voice_id: config.voiceId,
-          });
-        }
-
         resolve();
       };
 
@@ -316,16 +302,6 @@ export class LiveChatService {
     const message: WebSocketMessage = {
       type: "text",
       data: text,
-    };
-    this.ws.send(JSON.stringify(message));
-  }
-
-  private sendConfig(config: { save_history?: boolean; voice_id?: string }): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-
-    const message: WebSocketMessage = {
-      type: "config",
-      config,
     };
     this.ws.send(JSON.stringify(message));
   }

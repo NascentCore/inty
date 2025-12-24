@@ -26,7 +26,6 @@ class LiveChatMessageType(str, Enum):
     # 上行消息类型
     AUDIO = "audio"  # 音频数据 (Base64 编码的 PCM)
     TEXT = "text"  # 文本输入
-    CONFIG = "config"  # 会话配置
     END = "end"  # 结束通话
 
     # 下行消息类型
@@ -79,16 +78,6 @@ class LiveChatTextMessage(BaseModel):
     data: str = Field(..., description="文本内容")
 
 
-class LiveChatConfigMessage(BaseModel):
-    """配置消息"""
-
-    type: LiveChatMessageType = Field(
-        default=LiveChatMessageType.CONFIG,
-        description="消息类型",
-    )
-    config: LiveChatConfig = Field(..., description="会话配置")
-
-
 class LiveChatStatusMessage(BaseModel):
     """状态消息（下行）"""
 
@@ -128,4 +117,3 @@ class LiveChatErrorMessage(BaseModel):
     )
     code: str = Field(..., description="错误代码")
     message: str = Field(..., description="错误描述")
-
