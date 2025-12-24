@@ -185,8 +185,7 @@ class AgentConfig:
     # Note: Model selection is handled by app.core.model_selection.select_chat_model(),
     # which automatically chooses between free_user_chat_model and sub_user_chat_model
     # based on user subscription status and superuser privileges.
-    # Services using this configuration:
-    # - app/services/push_notification_service.py (updated to use select_chat_model)
+    # 下面的代码文件不需要检测订阅状态，因为 evaluation 是做评测，不部面向用户
     # - app/services/evaluation_service.py (updated to use select_chat_model)
     base_url: str = OPENROUTER_BASE_URL
     temperature: float = 0.5
