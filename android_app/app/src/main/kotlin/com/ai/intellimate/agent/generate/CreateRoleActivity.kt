@@ -880,6 +880,7 @@ private fun CreateRolePage(
             )
 
             // Spacer(modifier = Modifier.height(24.dp))
+            // 该间距并不需要，显示效果不影响该有的间距。
             SingleLineInputField(
                 value = name,
                 onValueChange = { name = it },
