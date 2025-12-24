@@ -5,6 +5,9 @@ object RoutesChat {
     const val ChatPage =
         "chat_page/{agentId}/{showBoost}?shouldAutoFocusInput={shouldAutoFocusInput}&isDeleted={isDeleted}"
 
+    /** 语音通话页面路由，参数：agentId（角色ID） */
+    const val VoiceCall = "voice_call/{agentId}"
+
     /**
      * 构建聊天页面路由路径
      *
@@ -19,6 +22,13 @@ object RoutesChat {
         showBoost: Boolean,
         shouldAutoFocusInput: Boolean = true,
         isDeleted: Boolean = false,
-    ) =
-        "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}&isDeleted=${isDeleted}"
+    ) = "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}&isDeleted=${isDeleted}"
+
+    /**
+     * 构建语音通话页面路由路径
+     *
+     * @param agentId 角色ID
+     * @return 语音通话页面路由路径
+     */
+    fun voiceCall(agentId: String) = "voice_call/${agentId}"
 }

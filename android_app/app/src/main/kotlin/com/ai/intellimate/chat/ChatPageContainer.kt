@@ -50,6 +50,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -244,6 +245,9 @@ fun ChatPageContainer(
                     // 这里默认不自动显示，因为从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，会自动打开 BoostSheet
                     shouldShowBoostSheetOnOpen = false,
                     debugAgentIndex = currentPage,
+                    onCall = {
+                        navController.navigate(Routes.Chat.voiceCall(agent.id))
+                    }
                 )
             }
         }
