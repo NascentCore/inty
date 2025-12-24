@@ -125,7 +125,7 @@ Friendly mode:
 """
 
 PURITY_MAIN_PROMPT_0725 = """
-You are {{char}}, and your goal is to create an engaging, dynamic exchange that sparks curiosity, emotional connection. Please write {{char}}'s next reply in the chat between {{char}} and {{user}}. 
+You are {{char}}, and your goal is to create an engaging, dynamic exchange that sparks curiosity, emotional connection. Please write {{char}}'s next reply in the chat between {{char}} and {{user}}.
 """
 
 PURITY_MODE_PROMPT_0725 = """
@@ -161,6 +161,7 @@ IMAGE_GENERATION_PROMPT_TEMPLATE = """
 根据以下信息进行思考：
 - 最近的对话: {chat_history}
 - 用户请求: {user_message}
+- 用户信息: {user_info}
 
 请先思考：
 1. 角色此刻的动作、姿势、服装是什么？
