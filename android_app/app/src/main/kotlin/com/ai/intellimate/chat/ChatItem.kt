@@ -380,8 +380,9 @@ private fun ChatItemAI(
                 // 无生图时，操作区跟随文字 bubble；有生图时操作区挪到图片预览下方（见后续）
                 if (shouldShowMessageActions && !(hasGeneratedImage || isImageLoading)) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    val reactionsByMessageId by viewModel.messageEmojiReactions.collectAsState()
-                    val reactions = reactionsByMessageId[item.localMsgId].orEmpty()
+                    val reactionsByMessageId: Map<String, List<String>> by
+                        viewModel.messageEmojiReactions.collectAsState(initial = emptyMap())
+                    val reactions = reactionsByMessageId[item.localMsgId] ?: emptyList()
                     MessageActionBar(
                         message = item,
                         onLike = { viewModel.likeMessage(item.localMsgId) },
@@ -577,8 +578,9 @@ private fun ChatItemAI(
                 // 只在生图完成后显示点赞/点踩按钮，生图过程中不显示
                 if (shouldShowMessageActions && hasGeneratedImage && !isImageLoading) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    val reactionsByMessageId by viewModel.messageEmojiReactions.collectAsState()
-                    val reactions = reactionsByMessageId[item.localMsgId].orEmpty()
+                    val reactionsByMessageId: Map<String, List<String>> by
+                        viewModel.messageEmojiReactions.collectAsState(initial = emptyMap())
+                    val reactions = reactionsByMessageId[item.localMsgId] ?: emptyList()
                     MessageActionBar(
                         message = item,
                         onLike = { viewModel.likeMessage(item.localMsgId) },

@@ -1,4 +1,4 @@
-# CREATED_BY_AGENT: GPT-5.2
+// CREATED_BY_AGENT: GPT-5.2
 package com.ai.intellimate.chat.reaction
 
 import kotlinx.coroutines.flow.MutableStateFlow
