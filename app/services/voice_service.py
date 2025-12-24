@@ -198,9 +198,7 @@ class VoiceService:
 
             # 生成语音文件
             logger.debug("调用 TTS 生成接口（Gemini 优先，失败回退 ElevenLabs）")
-            audio_result = await self._call_tts_api(
-                text, voice_id, model, language
-            )
+            audio_result = await self._call_tts_api(text, voice_id, model, language)
             if not audio_result:
                 logger.error("TTS 生成返回空数据")
                 return None
@@ -223,7 +221,9 @@ class VoiceService:
             # 创建上传任务
             upload_task = asyncio.create_task(
                 self.gcs_service.upload_voice_file(
-                    file_name, audio_data, content_type=mime_type or "application/octet-stream"
+                    file_name,
+                    audio_data,
+                    content_type=mime_type or "application/octet-stream",
                 )
             )
 

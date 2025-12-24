@@ -43,7 +43,7 @@ const BUFFER_SIZE = 4096;
 export class LiveChatService {
   private ws: WebSocket | null = null;
   private recordingContext: AudioContext | null = null; // 录音用 AudioContext
-  private playbackContext: AudioContext | null = null;  // 播放用 AudioContext
+  private playbackContext: AudioContext | null = null; // 播放用 AudioContext
   private mediaStream: MediaStream | null = null;
   private scriptProcessor: ScriptProcessorNode | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
@@ -65,7 +65,7 @@ export class LiveChatService {
 
   async connect(
     config: LiveChatConfig,
-    callbacks: LiveChatCallbacks
+    callbacks: LiveChatCallbacks,
   ): Promise<void> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       throw new Error("Already connected");
@@ -122,7 +122,9 @@ export class LiveChatService {
       switch (message.type) {
         case "audio_response":
           if (message.data) {
-            console.log(`收到 AI 音频响应: ${message.data.length} 字符 (Base64)`);
+            console.log(
+              `收到 AI 音频响应: ${message.data.length} 字符 (Base64)`,
+            );
             const audioData = this.base64ToArrayBuffer(message.data);
             console.log(`解码后音频数据: ${audioData.byteLength} bytes`);
             this.queueAudio(audioData);
@@ -147,7 +149,9 @@ export class LiveChatService {
             this.status = this.mapStatus(message.status);
             // 更新 AI 说话状态，用于避免回声
             this.isSpeaking = message.status === "speaking";
-            console.log(`状态更新: ${message.status}, AI 说话中: ${this.isSpeaking}`);
+            console.log(
+              `状态更新: ${message.status}, AI 说话中: ${this.isSpeaking}`,
+            );
             this.callbacks.onStatusChange(this.status, message.message);
           }
           break;
@@ -155,7 +159,7 @@ export class LiveChatService {
         case "error":
           this.callbacks.onError(
             message.code || "UNKNOWN",
-            message.message || "未知错误"
+            message.message || "未知错误",
           );
           break;
 
@@ -196,21 +200,23 @@ export class LiveChatService {
       // 使用浏览器原生采样率，然后手动重采样到 16kHz
       this.audioContext = new AudioContext();
       const nativeSampleRate = this.audioContext.sampleRate;
-      console.log(`浏览器原生采样率: ${nativeSampleRate}Hz，目标采样率: ${SEND_SAMPLE_RATE}Hz`);
-      
+      console.log(
+        `浏览器原生采样率: ${nativeSampleRate}Hz，目标采样率: ${SEND_SAMPLE_RATE}Hz`,
+      );
+
       // 如果 AudioContext 被暂停，尝试恢复
       if (this.audioContext.state === "suspended") {
         await this.audioContext.resume();
       }
 
       this.sourceNode = this.audioContext.createMediaStreamSource(
-        this.mediaStream
+        this.mediaStream,
       );
 
       this.scriptProcessor = this.audioContext.createScriptProcessor(
         BUFFER_SIZE,
         1,
-        1
+        1,
       );
 
       this.scriptProcessor.onaudioprocess = (event) => {
@@ -221,9 +227,13 @@ export class LiveChatService {
         // 浏览器的回声消除会过滤掉 AI 播放的声音
 
         const inputData = event.inputBuffer.getChannelData(0);
-        
+
         // 重采样到 16kHz
-        const resampledData = this.resample(inputData, nativeSampleRate, SEND_SAMPLE_RATE);
+        const resampledData = this.resample(
+          inputData,
+          nativeSampleRate,
+          SEND_SAMPLE_RATE,
+        );
         const pcmData = this.floatTo16BitPCM(resampledData);
         const base64Data = this.arrayBufferToBase64(pcmData);
 
@@ -241,25 +251,30 @@ export class LiveChatService {
     }
   }
 
-  private resample(inputData: Float32Array, fromRate: number, toRate: number): Float32Array {
+  private resample(
+    inputData: Float32Array,
+    fromRate: number,
+    toRate: number,
+  ): Float32Array {
     if (fromRate === toRate) {
       return inputData;
     }
-    
+
     const ratio = fromRate / toRate;
     const outputLength = Math.floor(inputData.length / ratio);
     const output = new Float32Array(outputLength);
-    
+
     for (let i = 0; i < outputLength; i++) {
       const srcIndex = i * ratio;
       const srcIndexFloor = Math.floor(srcIndex);
       const srcIndexCeil = Math.min(srcIndexFloor + 1, inputData.length - 1);
       const t = srcIndex - srcIndexFloor;
-      
+
       // 线性插值
-      output[i] = inputData[srcIndexFloor] * (1 - t) + inputData[srcIndexCeil] * t;
+      output[i] =
+        inputData[srcIndexFloor] * (1 - t) + inputData[srcIndexCeil] * t;
     }
-    
+
     return output;
   }
 
@@ -360,7 +375,9 @@ export class LiveChatService {
       // 使用专门的播放 AudioContext（24kHz）
       if (!this.playbackContext || this.playbackContext.state === "closed") {
         this.playbackContext = new AudioContext();
-        console.log(`创建播放 AudioContext，采样率: ${this.playbackContext.sampleRate}Hz`);
+        console.log(
+          `创建播放 AudioContext，采样率: ${this.playbackContext.sampleRate}Hz`,
+        );
       }
 
       const pcmData = new Int16Array(audioData);
@@ -370,7 +387,9 @@ export class LiveChatService {
         floatData[i] = pcmData[i] / 32768;
       }
 
-      console.log(`播放音频: ${floatData.length} 样本, AudioContext 状态: ${this.playbackContext.state}`);
+      console.log(
+        `播放音频: ${floatData.length} 样本, AudioContext 状态: ${this.playbackContext.state}`,
+      );
 
       // 确保 AudioContext 在播放状态
       if (this.playbackContext.state === "suspended") {
@@ -382,7 +401,7 @@ export class LiveChatService {
       const audioBuffer = this.playbackContext.createBuffer(
         1,
         floatData.length,
-        RECEIVE_SAMPLE_RATE
+        RECEIVE_SAMPLE_RATE,
       );
       audioBuffer.getChannelData(0).set(floatData);
 
@@ -443,4 +462,3 @@ export class LiveChatService {
 }
 
 export const liveChatService = new LiveChatService();
-

@@ -95,6 +95,7 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.settings.check.getCurrentMonthInfo
@@ -104,7 +105,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.xb.navigation.Routes
-import com.ai.intellimate.agent.report.ReportActivity
 
 /** "我的"页面 */
 @Composable
@@ -469,7 +469,9 @@ private fun ProfileHeader(
 
             Spacer(Modifier.width(UiConfigs.MePage.AvatarToNicknameSpacing))
 
-            Column(modifier = Modifier.weight(1f).offset(y = UiConfigs.MePage.ProfileNameBlockYOffset)) {
+            Column(
+                modifier = Modifier.weight(1f).offset(y = UiConfigs.MePage.ProfileNameBlockYOffset)
+            ) {
                 Text(
                     text = userProfile.nickname.ifEmpty { "Guest" },
                     color = Color.White,
@@ -911,7 +913,11 @@ private fun MyAgentCard(
                         },
                         onClick = {
                             showMenu = false
-                            ReportActivity.launch(context, targetType = "AGENT", targetId = agentInfo.id)
+                            ReportActivity.launch(
+                                context,
+                                targetType = "AGENT",
+                                targetId = agentInfo.id,
+                            )
                         },
                     )
 
@@ -1033,15 +1039,16 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
     val checkedInCount = checkedInDays.count()
     val progress = if (daysInMonth > 0) checkedInCount.toFloat() / daysInMonth.toFloat() else 0f
 
-    val backgroundBrush = remember(hasCheckedInToday) {
-        Brush.linearGradient(
-            colors =
-                if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledBackgroundGradientColors
-                else DailyRewardsBannerStyle.BackgroundGradientColors,
-            start = Offset.Zero,
-            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
-        )
-    }
+    val backgroundBrush =
+        remember(hasCheckedInToday) {
+            Brush.linearGradient(
+                colors =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledBackgroundGradientColors
+                    else DailyRewardsBannerStyle.BackgroundGradientColors,
+                start = Offset.Zero,
+                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+            )
+        }
 
     val clickableModifier = Modifier.noRippleClickable(onClick = onClick)
 

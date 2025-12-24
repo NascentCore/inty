@@ -59,7 +59,9 @@ class FakeFalAIClient:
                     url=f"https://fal.fake/{model}/{uuid.uuid4().hex}.png",
                     width=int(arguments.get("width") or DEFAULT_WIDTH),
                     height=int(arguments.get("height") or DEFAULT_HEIGHT),
-                    content_type=str(arguments.get("content_type") or DEFAULT_CONTENT_TYPE),
+                    content_type=str(
+                        arguments.get("content_type") or DEFAULT_CONTENT_TYPE
+                    ),
                 )
             )
 
@@ -76,7 +78,9 @@ class FakeFalAIClient:
             "seed": self._seed,
             "prompt": prompt,
         }
-        return FakeFalTextToImageResult(images=images, seed=self._seed, prompt=prompt, raw=raw)
+        return FakeFalTextToImageResult(
+            images=images, seed=self._seed, prompt=prompt, raw=raw
+        )
 
 
 __all__ = [
@@ -84,4 +88,3 @@ __all__ = [
     "FakeFalGeneratedImage",
     "FakeFalTextToImageResult",
 ]
-

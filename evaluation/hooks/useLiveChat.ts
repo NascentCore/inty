@@ -4,10 +4,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import {
-  LiveChatService,
-  ConnectionStatus,
-} from "../services/liveChat";
+import { LiveChatService, ConnectionStatus } from "../services/liveChat";
 
 export interface Transcript {
   role: "user" | "assistant";
@@ -36,7 +33,7 @@ export function useLiveChat(): UseLiveChatReturn {
   const [isMuted, setIsMuted] = useState(false);
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [error, setError] = useState<{ code: string; message: string } | null>(
-    null
+    null,
   );
 
   const serviceRef = useRef<LiveChatService | null>(null);
@@ -66,14 +63,14 @@ export function useLiveChat(): UseLiveChatReturn {
         },
       ]);
     },
-    []
+    [],
   );
 
   const handleStatusChange = useCallback(
     (newStatus: ConnectionStatus, _message?: string) => {
       setStatus(newStatus);
     },
-    []
+    [],
   );
 
   const handleError = useCallback((code: string, message: string) => {
@@ -103,7 +100,7 @@ export function useLiveChat(): UseLiveChatReturn {
             onTranscript: handleTranscript,
             onStatusChange: handleStatusChange,
             onError: handleError,
-          }
+          },
         );
 
         await service.startRecording();
@@ -118,7 +115,7 @@ export function useLiveChat(): UseLiveChatReturn {
         setStatus("error");
       }
     },
-    [handleAudioReceived, handleTranscript, handleStatusChange, handleError]
+    [handleAudioReceived, handleTranscript, handleStatusChange, handleError],
   );
 
   const endCall = useCallback(() => {
@@ -188,4 +185,3 @@ export function useLiveChat(): UseLiveChatReturn {
     clearError,
   };
 }
-
