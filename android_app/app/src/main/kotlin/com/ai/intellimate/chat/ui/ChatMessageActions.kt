@@ -102,7 +102,7 @@ private fun RegenButton(
         modifier =
             modifier
                 .size(iconSize)
-                .noRippleClickable(onClick = if (enabled) onClick else {}),
+                .noRippleClickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
