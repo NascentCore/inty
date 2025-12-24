@@ -4,19 +4,17 @@
 """
 
 import asyncio
-import base64
 import hashlib
 import io
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from elevenlabs import VoiceSettings
-from elevenlabs.client import ElevenLabs
 from loguru import logger
 from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.voice.tts_api import ElevenLabsTTSAPI, TTSRequest
 from app.services.gcs_service import GCSService
 
 # 性别到音色ID的映射
@@ -33,7 +31,7 @@ class VoiceService:
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
-        self.client = ElevenLabs(api_key=self.config.api_key)
+        self.tts_api = ElevenLabsTTSAPI(api_key=self.config.api_key)
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -292,28 +290,20 @@ class VoiceService:
                 f"ElevenLabs API请求数据: voice_id={voice_id}, model={model}, text_length={len(text)}"
             )
 
-            # 创建语音设置
-            voice_settings = VoiceSettings(stability=0.5, similarity_boost=0.5)
+            tts_result = await self.tts_api.synthesize(
+                TTSRequest(
+                    text=text,
+                    voice_id=voice_id,
+                    model_id=model,
+                    output_format=self.config.output_format,
+                    language_code=language,
+                )
+            )
+            if not tts_result:
+                logger.error("ElevenLabs TTS 返回空数据")
+                return None
 
-            # 准备参数
-            kwargs = {
-                "text": text,
-                "voice_id": voice_id,
-                "model_id": model,
-                "output_format": self.config.output_format,
-                "voice_settings": voice_settings,
-            }
-
-            # 注意：eleven_multilingual_v2 模型不支持 language_code 参数
-            # 只有特定模型才支持 language_code 参数
-            if "turbo" in model.lower() and "multilingual" in model.lower():
-                kwargs["language_code"] = language
-
-            # 调用官方SDK的convert_with_timestamps方法
-            response = self.client.text_to_speech.convert_with_timestamps(**kwargs)
-
-            # 从base64解码音频数据
-            audio_data = base64.b64decode(response.audio_base_64)
+            audio_data = tts_result.audio_bytes
 
             # 计算音频时长
             duration = self._calculate_audio_duration(audio_data)
@@ -447,7 +437,7 @@ class VoiceService:
             )
 
             # 1. 获取所有基础语音，包括legacy音色
-            voices_response = self.client.voices.get_all(show_legacy=True)
+            voices_response = await self.tts_api.get_all_voices(show_legacy=True)
             logger.info(f"get_all API返回 {len(voices_response.voices)} 个音色")
 
             # 转换为字典格式并添加来源标识
@@ -540,7 +530,7 @@ class VoiceService:
             logger.debug(f"搜索共享音色，参数: {search_params}")
 
             # 调用 ElevenLabs get_shared API
-            voices_response = self.client.voices.get_shared(**search_params)
+            voices_response = await self.tts_api.get_shared_voices(**search_params)
 
             # 转换为字典格式并添加来源标识
             voices_list = []
@@ -570,7 +560,7 @@ class VoiceService:
         """
         try:
             # 1. 先尝试从常规音色中获取（用户音色 + 预置音色）
-            voice = self.client.voices.get(voice_id)
+            voice = await self.tts_api.get_voice(voice_id)
             voice_dict = voice.model_dump()
             voice_dict["source"] = "regular"
             logger.debug(f"从常规音色中找到 voice_id: {voice_id}")
