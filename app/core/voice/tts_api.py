@@ -53,8 +53,7 @@ class TTSResult:
 
 
 class TextToSpeechAPI(Protocol):
-    async def synthesize(self, request: TTSRequest) -> Optional[TTSResult]:
-        ...
+    async def synthesize(self, request: TTSRequest) -> Optional[TTSResult]: ...
 
 
 def _elevenlabs_supports_language_code(model_id: str) -> bool:
@@ -184,10 +183,14 @@ class GeminiTTSAPI:
             return None
 
         try:
-            project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCP_PROJECT")
+            project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get(
+                "GCP_PROJECT"
+            )
             location = os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
             if project:
-                self._client = genai.Client(vertexai=True, project=project, location=location)
+                self._client = genai.Client(
+                    vertexai=True, project=project, location=location
+                )
             else:
                 self._client = genai.Client(vertexai=True)
             return self._client
@@ -219,7 +222,9 @@ class GeminiTTSAPI:
             response_modalities=["audio"],
             speech_config=types.SpeechConfig(
                 voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=voice_name
+                    )
                 )
             ),
         )
@@ -266,7 +271,10 @@ class GeminiTTSAPI:
                 audio_bytes = _pcm_to_wav(audio_bytes, mime_type=mime_type)
                 mime_type = "audio/wav"
 
-            return TTSResult(audio_bytes=audio_bytes, mime_type=mime_type or "application/octet-stream")
+            return TTSResult(
+                audio_bytes=audio_bytes,
+                mime_type=mime_type or "application/octet-stream",
+            )
 
         except Exception as e:
             logger.error(f"Gemini TTS 调用失败: {str(e)}")
@@ -323,11 +331,12 @@ class ElevenLabsTTSAPI:
             return None
 
     async def get_all_voices(self, *, show_legacy: bool = True) -> Any:
-        return await asyncio.to_thread(self._client.voices.get_all, show_legacy=show_legacy)
+        return await asyncio.to_thread(
+            self._client.voices.get_all, show_legacy=show_legacy
+        )
 
     async def get_shared_voices(self, **search_params: Any) -> Any:
         return await asyncio.to_thread(self._client.voices.get_shared, **search_params)
 
     async def get_voice(self, voice_id: str) -> Any:
         return await asyncio.to_thread(self._client.voices.get, voice_id)
-

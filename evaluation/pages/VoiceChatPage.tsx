@@ -155,7 +155,9 @@ export const VoiceChatPage: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
               }}
-              styles={{ body: { flex: 1, padding: "16px", overflow: "hidden" } }}
+              styles={{
+                body: { flex: 1, padding: "16px", overflow: "hidden" },
+              }}
               extra={
                 <Button
                   icon={<ReloadOutlined />}
@@ -272,7 +274,8 @@ export const VoiceChatPage: React.FC = () => {
                   style={{
                     padding: "24px",
                     textAlign: "center",
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                     color: "#fff",
                   }}
                 >
@@ -322,11 +325,7 @@ export const VoiceChatPage: React.FC = () => {
                         <Button
                           size="large"
                           icon={
-                            isMuted ? (
-                              <AudioMutedOutlined />
-                            ) : (
-                              <AudioOutlined />
-                            )
+                            isMuted ? <AudioMutedOutlined /> : <AudioOutlined />
                           }
                           onClick={handleToggleMute}
                           style={{
@@ -343,7 +342,11 @@ export const VoiceChatPage: React.FC = () => {
                           type="primary"
                           danger
                           size="large"
-                          icon={<PhoneOutlined style={{ transform: "rotate(135deg)" }} />}
+                          icon={
+                            <PhoneOutlined
+                              style={{ transform: "rotate(135deg)" }}
+                            />
+                          }
                           onClick={handleEndCall}
                           style={{
                             height: 60,
@@ -513,4 +516,3 @@ export const VoiceChatPage: React.FC = () => {
     </Layout>
   );
 };
-

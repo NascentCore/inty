@@ -240,7 +240,9 @@ def _write_json(
         "results": [asdict(r) for r in raw],
         "summaries": [asdict(s) for s in summaries],
     }
-    output_json.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_json.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def _plot(
@@ -329,7 +331,9 @@ def main(
 
     api_key = _env("OPENROUTER_API_KEY") or _env("OPENAI_API_KEY")
     if not api_key:
-        raise RuntimeError("缺少 API Key：请设置 OPENROUTER_API_KEY（或 OPENAI_API_KEY）")
+        raise RuntimeError(
+            "缺少 API Key：请设置 OPENROUTER_API_KEY（或 OPENAI_API_KEY）"
+        )
 
     base_url = _env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     extra_headers: dict[str, str] = {}
@@ -388,7 +392,9 @@ async def _run(
             "未安装 openai SDK。请先安装：pip install -r scripts/requirements.txt"
         ) from e
 
-    client = AsyncOpenAI(base_url=base_url, api_key=api_key, default_headers=extra_headers)
+    client = AsyncOpenAI(
+        base_url=base_url, api_key=api_key, default_headers=extra_headers
+    )
 
     raw_results: list[IterationResult] = []
     summaries: list[ModelSummary] = []
@@ -410,13 +416,17 @@ async def _run(
                 )
                 ttfts.append(ttft_ms)
                 raw_results.append(
-                    IterationResult(model=model, iteration=i + 1, ttft_ms=ttft_ms, error=None)
+                    IterationResult(
+                        model=model, iteration=i + 1, ttft_ms=ttft_ms, error=None
+                    )
                 )
                 print(f"  iter {i + 1}/{iterations}: ttft={ttft_ms:.1f}ms")
             except Exception as e:
                 failures += 1
                 raw_results.append(
-                    IterationResult(model=model, iteration=i + 1, ttft_ms=None, error=str(e))
+                    IterationResult(
+                        model=model, iteration=i + 1, ttft_ms=None, error=str(e)
+                    )
                 )
                 print(f"  iter {i + 1}/{iterations}: failed: {e}")
 
@@ -447,4 +457,3 @@ async def _run(
 
 if __name__ == "__main__":
     app()
-

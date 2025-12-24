@@ -26,7 +26,9 @@ def main(output: str = "app/openapi.json", no_commit: bool = False) -> None:
     )
 
     print("OpenAPI JSON 更新并提交 git commit 到本地仓库")
-    print("你还需要更新 app/stainless.yml 中的 openapi_spec 字段来触发新的 api endpoint 构建")
+    print(
+        "你还需要更新 app/stainless.yml 中的 openapi_spec 字段来触发新的 api endpoint 构建"
+    )
 
 
 if __name__ == "__main__":

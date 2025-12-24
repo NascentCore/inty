@@ -95,7 +95,9 @@ class TextToImageGenerationRequest:
     provider_args: dict[str, Any] = field(default_factory=dict)
 
 
-def generate_text_to_image(request: TextToImageGenerationRequest) -> TextToImageGenerationResult:
+def generate_text_to_image(
+    request: TextToImageGenerationRequest,
+) -> TextToImageGenerationResult:
     provider, provider_model = _resolve_provider_and_model(request.model)
     if provider == TextToImageProvider.GOOGLE:
         return _generate_google_imagen(provider_model=provider_model, request=request)
@@ -156,7 +158,9 @@ def _generate_google_imagen(
 
     aspect_ratio = request.provider_args.get("aspect_ratio")
     output_gcs_uri = request.provider_args.get("output_gcs_uri")
-    output_mime_type = request.provider_args.get("output_mime_type") or DEFAULT_GOOGLE_MIME_TYPE
+    output_mime_type = (
+        request.provider_args.get("output_mime_type") or DEFAULT_GOOGLE_MIME_TYPE
+    )
     enhance_prompt = bool(request.provider_args.get("enhance_prompt", False))
 
     config = _build_google_generate_images_config(
@@ -182,7 +186,9 @@ def _generate_google_imagen(
         gcs_uri = getattr(image_obj, "gcs_uri", None) if image_obj else None
         image_bytes = getattr(image_obj, "image_bytes", None) if image_obj else None
 
-        public_url = _gcs_uri_to_public_url(gcs_uri) if isinstance(gcs_uri, str) else None
+        public_url = (
+            _gcs_uri_to_public_url(gcs_uri) if isinstance(gcs_uri, str) else None
+        )
         images.append(
             TextToImageGeneratedImage(
                 provider=TextToImageProvider.GOOGLE,
@@ -190,8 +196,12 @@ def _generate_google_imagen(
                 prompt=request.prompt,
                 gcs_uri=gcs_uri,
                 public_url=public_url,
-                image_bytes=image_bytes if isinstance(image_bytes, (bytes, bytearray)) else None,
-                mime_type=output_mime_type if isinstance(output_mime_type, str) else None,
+                image_bytes=(
+                    image_bytes if isinstance(image_bytes, (bytes, bytearray)) else None
+                ),
+                mime_type=(
+                    output_mime_type if isinstance(output_mime_type, str) else None
+                ),
                 rai_filtered_reason=getattr(generated, "rai_filtered_reason", None),
                 enhanced_prompt=getattr(generated, "enhanced_prompt", None),
             )
@@ -279,9 +289,12 @@ def _generate_fal_text_to_image(
     arguments: dict[str, Any] = dict(request.provider_args.get("arguments") or {})
     arguments.setdefault("prompt", request.prompt)
     arguments.setdefault("num_images", int(request.num_images))
-    arguments.setdefault("image_size", request.provider_args.get("image_size") or DEFAULT_FAL_IMAGE_SIZE)
     arguments.setdefault(
-        "output_format", request.provider_args.get("output_format") or DEFAULT_FAL_OUTPUT_FORMAT
+        "image_size", request.provider_args.get("image_size") or DEFAULT_FAL_IMAGE_SIZE
+    )
+    arguments.setdefault(
+        "output_format",
+        request.provider_args.get("output_format") or DEFAULT_FAL_OUTPUT_FORMAT,
     )
 
     if request.negative_prompt:
@@ -289,7 +302,9 @@ def _generate_fal_text_to_image(
     if request.seed is not None:
         arguments.setdefault("seed", int(request.seed))
 
-    result = client.text_to_image(model=provider_model, arguments=arguments, with_logs=False)
+    result = client.text_to_image(
+        model=provider_model, arguments=arguments, with_logs=False
+    )
 
     images: list[TextToImageGeneratedImage] = []
     for img in result.images:
@@ -362,8 +377,12 @@ def _build_google_generate_images_config(
             person_generation=person_generation,
         )
 
-    resolved_safety_filter_level = safety_filter_level or genai_types.SafetyFilterLevel.BLOCK_LOW_AND_ABOVE
-    resolved_person_generation = person_generation or genai_types.PersonGeneration.ALLOW_ADULT
+    resolved_safety_filter_level = (
+        safety_filter_level or genai_types.SafetyFilterLevel.BLOCK_LOW_AND_ABOVE
+    )
+    resolved_person_generation = (
+        person_generation or genai_types.PersonGeneration.ALLOW_ADULT
+    )
 
     return genai_types.GenerateImagesConfig(
         number_of_images=num_images,

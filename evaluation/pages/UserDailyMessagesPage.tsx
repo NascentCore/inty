@@ -79,7 +79,9 @@ export const UserDailyMessagesPage: React.FC = () => {
   const handleSearch = useCallback(async () => {
     const trimmed = searchValue.trim();
     if (!trimmed) {
-      message.warning(searchType === "email" ? "请输入用户邮箱" : "请输入用户ID");
+      message.warning(
+        searchType === "email" ? "请输入用户邮箱" : "请输入用户ID",
+      );
       return;
     }
 

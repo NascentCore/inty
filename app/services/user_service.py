@@ -205,7 +205,9 @@ async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
         if user.nickname:
             parts.append(f"Name: {user.nickname}")
         if user.gender:
-            parts.append(f"Gender: {GENDER_DISPLAY_MAP.get(user.gender.value, user.gender.value)}")
+            parts.append(
+                f"Gender: {GENDER_DISPLAY_MAP.get(user.gender.value, user.gender.value)}"
+            )
         if user.age_group:
             parts.append(f"Age: {user.age_group}")
         if user.description:
