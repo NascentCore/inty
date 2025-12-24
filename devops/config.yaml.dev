@@ -82,3 +82,16 @@ cloudflare:
   domain: "images.sxwl.dev"
   enabled: true
   fallback_to_original: true
+
+gemini_live:
+  enabled: true
+  project_id: "alien-paratext-461204-i9"
+  location: "us-central1"
+  model: "gemini-live-2.5-flash-preview-native-audio-09-2025"
+  send_sample_rate: 16000
+  receive_sample_rate: 24000
+  default_voice: "Zephyr"
+  session_resumption: true
+  input_transcription: true
+  output_transcription: true
+  save_voice_history: true
