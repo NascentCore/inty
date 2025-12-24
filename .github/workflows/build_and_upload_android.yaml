@@ -1,4 +1,4 @@
-name: Release - 构建上传 IntelliMate Google Play 内测轨道
+name: Release - 内测轨道 GPlay 商店构建上传
 
 on:
   push:
