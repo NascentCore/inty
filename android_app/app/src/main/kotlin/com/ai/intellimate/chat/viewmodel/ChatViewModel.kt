@@ -25,6 +25,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.chat.reaction.MessageEmojiReactionsStore
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
@@ -79,14 +80,8 @@ class ChatViewModel : BaseVM() {
 
     // region 消息 Emoji 反应（纯本地，不与后端通信）
 
-    /**
-     * 消息 Emoji 反应（纯本地状态）。
-     *
-     * key：消息 localMsgId（稳定的本地标识符）
-     * value：用户为该消息追加的 emoji 列表（允许多个，按追加顺序展示）
-     */
-    private val _messageEmojiReactions = MutableStateFlow<Map<String, List<String>>>(emptyMap())
-    val messageEmojiReactions = _messageEmojiReactions.asStateFlow()
+    private val messageEmojiReactionsStore = MessageEmojiReactionsStore()
+    val messageEmojiReactions = messageEmojiReactionsStore.reactions
 
     /**
      * 为指定消息追加一个 emoji reaction，并上报 Firebase 埋点。
@@ -98,10 +93,7 @@ class ChatViewModel : BaseVM() {
         val agent = _agentInfo.value ?: return
         val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId } ?: return
 
-        _messageEmojiReactions.update { current ->
-            val existing = current[localMsgId].orEmpty()
-            current + (localMsgId to (existing + emoji))
-        }
+        messageEmojiReactionsStore.addReaction(localMsgId, emoji)
 
         val messageIdForEvent = targetMessage.id.ifEmpty { localMsgId }
         FirebaseManager.logEvent(
