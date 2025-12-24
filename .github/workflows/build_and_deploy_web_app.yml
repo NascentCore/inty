@@ -1,4 +1,4 @@
-name: Release - 构建部署 IntelliMate web app
+name: Release - intellimate.app 网页版
 
 on:
   workflow_dispatch:
