@@ -22,6 +22,7 @@ from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
+from app.services.user_service import build_user_info_prompt_block
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 
@@ -34,6 +35,7 @@ class ImageGenerationService:
         agent_data: dict,
         chat_history: List[dict],
         user_message: str,
+        user_info: str = "",
     ) -> str:
         """
         构建生图提示词
@@ -42,6 +44,7 @@ class ImageGenerationService:
             agent_data: Agent数据，包含personality、scenario等
             chat_history: 聊天历史记录
             user_message: 用户当前请求的消息内容
+            user_info: 用户信息块（##User Information...），可为空
 
         Returns:
             完整的生图提示词
@@ -76,6 +79,7 @@ class ImageGenerationService:
             agent_personality=agent_personality,
             chat_history=history_text,
             user_message=user_message,
+            user_info=user_info,
         )
 
         logger.debug(f"构建的生图提示词: {prompt}")
@@ -390,11 +394,17 @@ class ImageGenerationService:
             )
             chat_history = messages_data.get("messages", [])
 
+            # 获取用户信息（若有 user_id）
+            user_info = ""
+            if user_id:
+                user_info = await build_user_info_prompt_block(db, user_id)
+
             # 构建提示词
             prompt = self.build_image_prompt(
                 agent_data=agent_data,
                 chat_history=chat_history,
                 user_message=message_content,
+                user_info=user_info,
             )
 
             # 获取Agent参考图（优先使用背景图，如果不存在则使用头像）

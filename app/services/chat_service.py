@@ -17,6 +17,7 @@ from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.global_services import subscription_service
+from app.services.user_service import build_user_info_prompt_block
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -1469,10 +1470,13 @@ async def generate_chat_image(
             offset=0,
         )
         chat_history = messages_data.get("messages", [])
+        # 获取用户信息（与 generate_chat_image_with_gemini 保持一致）
+        user_info = await build_user_info_prompt_block(db, user_id) if user_id else ""
         current_prompt = image_generation_service.build_image_prompt(
             agent_data=agent_data,
             chat_history=chat_history,
             user_message=message_content,
+            user_info=user_info,
         )
     except Exception as e:
         logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
