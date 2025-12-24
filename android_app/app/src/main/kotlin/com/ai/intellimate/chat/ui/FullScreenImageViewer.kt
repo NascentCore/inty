@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.ReportButton
 
 /** 全屏图片查看器 */
 @Composable
@@ -41,6 +42,7 @@ internal fun FullScreenImageViewer(
     modifier: Modifier = Modifier,
     onAction: (() -> Unit)? = null,
     actionLabel: String? = null,
+    onReport: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
@@ -89,7 +91,7 @@ internal fun FullScreenImageViewer(
     // 注意：zoomChange 是相对于上一次调用的变化量，不是累积值
     val transformableState =
         rememberTransformableState(
-            onTransformation = { zoomChange: Float, panChange: Offset, rotationChange: Float ->
+            onTransformation = { zoomChange: Float, panChange: Offset, _: Float ->
                 // 缩放：最小1倍，最大5倍（不可缩小）
                 val newScale = (scale * zoomChange).coerceIn(1f, 5f)
                 scale = newScale
@@ -179,6 +181,14 @@ internal fun FullScreenImageViewer(
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
+            )
+        }
+
+        // 右上角举报按钮（如果提供）
+        if (onReport != null) {
+            ReportButton(
+                onClick = { onReport() },
+                modifier = Modifier.align(Alignment.TopEnd),
             )
         }
 

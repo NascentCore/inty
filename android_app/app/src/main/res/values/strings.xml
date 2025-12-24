@@ -295,6 +295,7 @@
     <string name="please_enter_character_full">How would you describe yourself?</string>
     <string name="character_count_format_my">%d/400</string>
     <string name="str_report">Report</string>
+    <string name="report_button_content_description">Report inappropriate content</string>
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
     <string name="cancel_button">Cancel</string>

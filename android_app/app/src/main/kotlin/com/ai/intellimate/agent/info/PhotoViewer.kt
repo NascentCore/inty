@@ -1,10 +1,12 @@
 package com.ai.intellimate.agent.info
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.utils.ChatBackgroundUtils
 
@@ -36,6 +38,7 @@ fun AgentGalleryImagePreviewDialog(
                 ),
         ) {
             val currentImageUrl = previewImageUrl
+            val context = LocalContext.current
             FullScreenImageViewer(
                 imageUrl = currentImageUrl,
                 onDismiss = onDismiss,
@@ -48,6 +51,11 @@ fun AgentGalleryImagePreviewDialog(
                     }
                 },
                 actionLabel = stringResource(R.string.agent_gallery_set_as_background),
+                onReport = {
+                    if (agentId.isNotBlank()) {
+                        ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
+                    }
+                },
             )
         }
     }
