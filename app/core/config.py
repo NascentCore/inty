@@ -318,6 +318,27 @@ class PushNotificationConfig:
 
 
 @dataclass
+class GeminiLiveConfig:
+    """Gemini Live API 实时语音通话配置
+    使用 Vertex AI 模式，复用 app.gcp_service_account_key 进行认证
+    """
+
+    enabled: bool = False  # 是否启用实时语音通话功能
+    project_id: str = "inty-backend"  # GCP 项目 ID
+    location: str = "us-central1"  # Vertex AI 区域
+    model: str = "gemini-live-2.5-flash-preview-native-audio-09-2025"  # Live API 模型
+    send_sample_rate: int = 16000  # 上行音频采样率 (Hz)
+    receive_sample_rate: int = 24000  # 下行音频采样率 (Hz)
+    default_voice: str = "Zephyr"  # 默认 AI 语音
+    session_resumption: bool = True  # 启用会话恢复支持断线重连
+    input_transcription: bool = True  # 启用用户语音转录
+    output_transcription: bool = True  # 启用 AI 语音转录
+    trigger_tokens: int = 10000  # 上下文压缩触发阈值
+    target_tokens: int = 512  # 压缩后目标 token 数
+    save_voice_history: bool = True  # 是否将语音对话保存到聊天历史
+
+
+@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -334,6 +355,7 @@ class Config:
     cloudflare: CloudflareConfig
     sentry: SentryConfig
     push_notification: PushNotificationConfig
+    gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
 
 
 def load_config(path: str) -> Config:
@@ -371,6 +393,7 @@ def load_config(path: str) -> Config:
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
         sentry=SentryConfig(**data.get("sentry", {})),
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
+        gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
     )
 
 
