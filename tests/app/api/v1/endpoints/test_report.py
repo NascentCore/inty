@@ -344,3 +344,41 @@ def test_create_feedback_with_reason_id_zero(integration_client, db_session):
     assert (
         feedback.report_type == ReportType.FEEDBACK
     ), f"Feedback report_type should be FEEDBACK, got {feedback.report_type}"
+
+
+def test_delete_report_by_reporter(integration_client, db_session):
+    """测试举报人可以删除自己提交的举报记录"""
+    agent_id = integration_client.create_agent(
+        name="Test Delete Report Agent",
+        visibility="PUBLIC",
+    )
+
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["SENSITIVE_CONTENT"],
+        "description": "Test report to be deleted",
+        "image_urls": [],
+    }
+
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+    assert response.status_code == 200, f"Report creation failed: {response.text}"
+    response_data = response.json()
+    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
+
+    reporter_id = _get_reporter_id(integration_client)
+    report = _find_report(db_session, agent_id, reporter_id)
+    assert report is not None, "Report not found in database"
+
+    delete_resp = integration_client.client.delete(
+        f"{integration_client.base_url}/api/v1/report/{report.id}"
+    )
+    assert delete_resp.status_code == 200, f"Report deletion failed: {delete_resp.text}"
+    delete_data = delete_resp.json()
+    assert delete_data.get("code") == 200, f"Report deletion returned error: {delete_data}"
+
+    deleted = db_session.query(Report).filter(Report.id == report.id).first()
+    assert deleted is None, "Report should be deleted from database"

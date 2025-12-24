@@ -18,7 +18,7 @@ import {
   message,
   Empty,
 } from "antd";
-import { ReloadOutlined, EyeOutlined } from "@ant-design/icons";
+import { ReloadOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { reportApi } from "../services/api";
@@ -132,6 +132,43 @@ export const ReportFeedbackPage: React.FC = () => {
     setDetailVisible(true);
   };
 
+  const deleteRecord = async (record: ReportItem) => {
+    await reportApi.delete(record.id);
+    if (selectedItem?.id === record.id) {
+      setDetailVisible(false);
+      setSelectedItem(null);
+    }
+
+    if (data.length === 1 && pagination.current > 1) {
+      setPagination({
+        current: pagination.current - 1,
+        pageSize: pagination.pageSize,
+      });
+      return;
+    }
+    await loadData();
+  };
+
+  const confirmDelete = (record: ReportItem) => {
+    Modal.confirm({
+      title: "确认删除该记录？",
+      content: `将删除该${TYPE_LABELS[record.report_type || "REPORT"]}记录（ID：${record.id}）`,
+      okText: "删除",
+      okType: "danger",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          await deleteRecord(record);
+          message.success("已删除");
+        } catch (error) {
+          console.error("删除失败:", error);
+          message.error("删除失败");
+          throw error;
+        }
+      },
+    });
+  };
+
   // 表格列定义
   const columns: ColumnsType<ReportItem> = [
     {
@@ -204,15 +241,25 @@ export const ReportFeedbackPage: React.FC = () => {
     {
       title: "操作",
       key: "action",
-      width: 80,
+      width: 140,
       render: (_, record) => (
-        <Button
-          type="link"
-          icon={<EyeOutlined />}
-          onClick={() => handleViewDetail(record)}
-        >
-          详情
-        </Button>
+        <Space>
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record)}
+          >
+            详情
+          </Button>
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => confirmDelete(record)}
+          >
+            删除
+          </Button>
+        </Space>
       ),
     },
   ];
