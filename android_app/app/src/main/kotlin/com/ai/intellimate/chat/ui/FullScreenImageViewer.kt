@@ -26,12 +26,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.ReportButton
 
 /** 全屏图片查看器 */
 @Composable
@@ -41,6 +44,7 @@ internal fun FullScreenImageViewer(
     modifier: Modifier = Modifier,
     onAction: (() -> Unit)? = null,
     actionLabel: String? = null,
+    onReport: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
@@ -179,6 +183,14 @@ internal fun FullScreenImageViewer(
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
+            )
+        }
+
+        // 右上角举报按钮（如果提供）
+        if (onReport != null) {
+            ReportButton(
+                onClick = { onReport() },
+                modifier = Modifier.align(Alignment.TopEnd),
             )
         }
 
