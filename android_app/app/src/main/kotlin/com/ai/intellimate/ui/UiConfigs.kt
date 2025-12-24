@@ -346,13 +346,13 @@ object UiConfigs {
         val HeaderMinHeight = 80.dp
 
         /** 头像完整大小 */
-        val AvatarFullSize = 120.dp
+        val AvatarFullSize = 90.dp
 
         /** 头像内边距 */
         val AvatarPadding = 4.dp
 
         /** 头像到昵称之间的间距 */
-        val AvatarToNicknameSpacing = 19.dp
+        val AvatarToNicknameSpacing = 24.dp
 
         /**
          * 个人页 Header 中名字+简介整体上移的偏移量。
