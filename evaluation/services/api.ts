@@ -663,6 +663,11 @@ interface AnalyticsDateParams {
   activity_last_days?: number;
 }
 
+type UserLookupParams = {
+  email?: string;
+  user_id?: string;
+};
+
 export const userAnalyticsApi = {
   // 获取统计数据
   getStats: (
@@ -728,23 +733,24 @@ export const userAnalyticsApi = {
     apiClient.get("/evaluation/user-analytics/conversations-detail", params),
 
   // 获取用户每日消息统计
-  getUserDailyMessages: (params: {
-    email: string;
-    start_date?: string;
-    end_date?: string;
-  }): Promise<import("../types").UserDailyMessagesResponse> =>
+  getUserDailyMessages: (
+    params: UserLookupParams & {
+      start_date?: string;
+      end_date?: string;
+    },
+  ): Promise<import("../types").UserDailyMessagesResponse> =>
     apiClient.get("/evaluation/user-analytics/user-daily-messages", params),
 
   // 获取用户当日统计
-  getUserTodayStats: (params: {
-    email: string;
-  }): Promise<import("../types").UserTodayStatsResponse> =>
+  getUserTodayStats: (
+    params: UserLookupParams,
+  ): Promise<import("../types").UserTodayStatsResponse> =>
     apiClient.get("/evaluation/user-analytics/user-today-stats", params),
 
   // 获取用户的所有会话列表
-  getUserSessions: (params: {
-    email: string;
-  }): Promise<import("../types").UserSessionsResponse> =>
+  getUserSessions: (
+    params: UserLookupParams,
+  ): Promise<import("../types").UserSessionsResponse> =>
     apiClient.get("/evaluation/user-analytics/user-sessions", params),
 
   // 获取指定会话的对话历史

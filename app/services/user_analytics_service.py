@@ -1087,6 +1087,28 @@ class UserAnalyticsService:
             }
         return None
 
+    async def find_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """通过用户 ID 查找用户"""
+        query = text(
+            """
+            SELECT id, email, nickname, auth_type, created_at
+            FROM users
+            WHERE id = :user_id AND deleted_at IS NULL
+            LIMIT 1
+        """
+        )
+        result = await self.db.execute(query, {"user_id": user_id})
+        row = result.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "email": row[1],
+                "nickname": row[2],
+                "auth_type": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+            }
+        return None
+
     async def get_user_chat_ids(self, user_id: str) -> List[str]:
         """获取用户的所有 chat_id"""
         query = text(
