@@ -51,6 +51,14 @@ jobs:
         run: |
           cd android_app
           ./gradlew bundleRelease
+
+      - name: Upload AAB to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android_app/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 7
+
       - name: Upload release bundle to Google Play internal testing
         uses: r0adkll/upload-google-play@v1
         with:
@@ -59,12 +67,8 @@ jobs:
           releaseFiles: android_app/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
-      - name: Upload AAB to GitHub Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-aab
-          path: android_app/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 7
+          changesNotSentForReview: false
+
       - name: Publish upload summary
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
