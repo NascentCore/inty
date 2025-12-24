@@ -20,4 +20,11 @@ object AgentStore {
     fun getAgent(agentId: String?): AgentInfo? {
         return agents.find { it.id == agentId }
     }
+
+    var agentInfoDraft: AgentInfo? = null
+    fun setDraftAgentInfo(agentInfo: AgentInfo?) {
+        synchronized(this) {
+            agentInfoDraft = agentInfo
+        }
+    }
 }

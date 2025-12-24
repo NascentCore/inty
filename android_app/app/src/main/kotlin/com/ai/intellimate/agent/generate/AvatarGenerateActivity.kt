@@ -68,6 +68,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
@@ -106,21 +108,22 @@ class AvatarGenerateActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        AvatarGeneratePage(
-            modifier = Modifier.fillMaxSize(),
-            viewModel = viewModel,
-            onBack = { finish() },
-            initialPrompt = initialPromptArg,
-        )
+//        AvatarGeneratePage(
+//            modifier = Modifier.fillMaxSize(),
+//            viewModel = viewModel,
+//            onBack = { finish() },
+//            initialPrompt = initialPromptArg,
+//        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AvatarGeneratePage(
+fun AvatarGeneratePage(
+    navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: AvatarGenerateViewModel,
-    onBack: () -> Unit,
+    viewModel: AvatarGenerateViewModel = viewModel(),
+//    onBack: () -> Unit,
     initialPrompt: String? = null,
 ) {
     val prompt by viewModel.prompt.collectAsState()
@@ -162,7 +165,10 @@ private fun AvatarGeneratePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable {
+//                                onBack()
+                                navController.popBackStack()
+                            },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -221,7 +227,9 @@ private fun AvatarGeneratePage(
             GenerateButton(
                 isLoading = isLoading,
                 enabled = prompt.isNotBlank(),
-                onClick = { viewModel.generateAvatar(onNavigateBack = onBack) },
+                onClick = { viewModel.generateAvatar(onNavigateBack = {
+                    navController.popBackStack()
+                }) },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -234,7 +242,8 @@ private fun AvatarGeneratePage(
                         if (selectedUrl != null) {
                             AvatarManager.setGeneratedAvatarUrl(selectedUrl)
                         }
-                        onBack()
+//                        onBack()
+                        navController.popBackStack()
                     }
                 )
             }

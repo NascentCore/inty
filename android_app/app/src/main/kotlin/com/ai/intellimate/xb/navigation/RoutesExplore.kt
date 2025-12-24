@@ -3,8 +3,8 @@ package com.ai.intellimate.xb.navigation
 import java.net.URLEncoder
 
 object RoutesExplore {
-    // 打榜排行榜页面
-    const val BoostLeaderboard = "boost_leaderboard"
+
+    const val BoostLeaderboard = "boost_leaderboard"  // 打榜排行榜页面
 
     /**
      * 角色专区详情页面路由，参数：themeId（专区ID）、themeTitle（专区标题）、themeDescription（专区描述）、isChristmas（是否为圣诞主题）、agentsJson（角色列表JSON）

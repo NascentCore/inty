@@ -109,6 +109,7 @@ import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
+import com.ai.intellimate.xb.navigation.Routes
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import java.io.File
@@ -746,7 +747,8 @@ fun CreateRolePage(
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
                     AvatarManager.setSelectedImageIndex(selectedImageIndex)
 
-                    onAvatarGenerateClick(promptForGeneration.takeIf { it.isNotBlank() })
+//                    onAvatarGenerateClick(promptForGeneration.takeIf { it.isNotBlank() })
+                    navController.navigate(Routes.Creat.avatarGenerate(promptForGeneration.takeIf { it.isNotBlank() } ?: ""))
                     // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
                 },
                 onImageSelected = { index ->
@@ -759,7 +761,9 @@ fun CreateRolePage(
 
                     // Navigate to avatar generation page with existing prompt
                     val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
-                    onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
+
+//                    onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
+                    navController.navigate(Routes.Creat.avatarGenerate(promptToUse.takeIf { it.isNotBlank() } ?: ""))
                 },
                 onRemoveImage = { index ->
                     if (avatarUrls.isEmpty() || index !in avatarUrls.indices) {
@@ -1000,7 +1004,7 @@ fun CreateRolePage(
 
                                 if (isEditMode) {
                                     ToastUtils.showShort(R.string.character_updated_successfully)
-                                    onCreateSuccess()
+//                                    onCreateSuccess()
                                 } else {
                                     // 如果是从草稿列表进入的，删除该草稿
                                     if (savedDraft != null && draftId != null) {
@@ -1011,8 +1015,11 @@ fun CreateRolePage(
                                     ToastUtils.showShort(
                                         context.getString(R.string.create_ai_successfully)
                                     )
-                                    onCreateSuccess()
+//                                    onCreateSuccess()
                                 }
+
+                                // 创建成功
+                                navController.previousBackStackEntry?.savedStateHandle?.set("createBackCode", Activity.RESULT_OK)
                             } catch (e: Exception) {
                                 val operation =
                                     if (isEditMode) context.getString(R.string.update_failed)
