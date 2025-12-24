@@ -8,8 +8,6 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.ToastUtils
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -309,7 +307,6 @@ internal fun ChatPage(
     var showMorePanel by remember { mutableStateOf(false) }
     var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
-    var resetSuccess by remember { mutableStateOf(false) }
 
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -754,21 +751,8 @@ internal fun ChatPage(
                                     )
                                 }
                             } else {
-                                // 计算输入框的底部 padding
-                                // 当 panel 显示时，使用 panel 高度；否则使用键盘相关的 bottomPadding
-                                // 使用动画平滑过渡高度变化
-                                val animatedPanelHeight by
-                                    animateDpAsState(
-                                        targetValue = if (showMorePanel) morePanelHeight else 0.dp,
-                                        animationSpec = tween(durationMillis = 300),
-                                        label = "panelHeight",
-                                    )
                                 val effectiveBottomPadding =
-                                    if (showMorePanel) {
-                                        animatedPanelHeight
-                                    } else {
-                                        bottomPadding
-                                    }
+                                    if (showMorePanel) morePanelHeight else bottomPadding
 
                                 CompositionLocalProvider(
                                     LocalDensity provides
@@ -777,67 +761,25 @@ internal fun ChatPage(
                                             fontScale = 1f, // 核心：禁用字体缩放
                                         )
                                 ) {
-                                    Column {
-                                        ChatInput(
-                                            chatViewModel = chatViewModel,
-                                            onSendMessage = { chatViewModel.sendMsg() },
-                                            onToggleMorePanel = {
-                                                // 优化交互：当键盘显示时，先关闭键盘，然后显示 panel
-                                                // 当 panel 显示时，直接关闭 panel
-                                                if (showMorePanel) {
-                                                    // 关闭 panel
-                                                    showMorePanel = false
-                                                } else {
-                                                    // 显示 panel，同时关闭键盘
-                                                    focusManager.clearFocus()
-                                                    // 延迟一小段时间再显示 panel，让键盘先开始收起
-                                                    scope.launch {
-                                                        delay(50)
-                                                        showMorePanel = true
-                                                    }
-                                                }
-                                            },
-                                            showMorePanel = showMorePanel,
-                                            bottomPadding = ChatInputBottomSpacerHeight,
-                                            focusRequester = inputFocusRequester,
-                                            onFocusChange = { focused ->
-                                                if (!isCurrentPage) return@ChatInput
-                                                if (suppressFocusCallback.value) {
-                                                    suppressFocusCallback.value = false
-                                                    return@ChatInput
-                                                }
-                                                // 当输入框失去焦点且 panel 未显示时，可能是用户点击了其他地方
-                                                // 此时不需要特殊处理，让键盘自然收起
-                                                onInputFocusChange(focused)
-                                            },
-                                        )
-
-                                        // 将 ChatMorePanel 放在输入框下方，作为页面的一部分
-                                        ChatMorePanel(
-                                            navController = navController,
-                                            visible = showMorePanel,
-                                            agentInfo = agentInfo,
-                                            chatViewModel = chatViewModel,
-                                            onDismiss = { showMorePanel = false },
-                                            onHeightChange = { h -> morePanelHeight = h },
-                                            onReset = {
-                                                scope.launch {
-                                                    showMorePanel = false
-
-                                                    try {
-                                                        chatViewModel.reset()
-                                                        resetSuccess = true
-                                                    } catch (_: Throwable) {
-                                                        ToastUtils.showShort(R.string.reset_failed_msg)
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            windowInsets =
-                                                if (showBackButton) WindowInsets.navigationBars
-                                                else WindowInsets(),
-                                        )
-                                    }
+                                    ChatInput(
+                                        chatViewModel = chatViewModel,
+                                        onSendMessage = { chatViewModel.sendMsg() },
+                                        onToggleMorePanel = {
+                                            showMorePanel = !showMorePanel
+                                            focusManager.clearFocus()
+                                        },
+                                        showMorePanel = showMorePanel,
+                                        bottomPadding = effectiveBottomPadding,
+                                        focusRequester = inputFocusRequester,
+                                        onFocusChange = { focused ->
+                                            if (!isCurrentPage) return@ChatInput
+                                            if (suppressFocusCallback.value) {
+                                                suppressFocusCallback.value = false
+                                                return@ChatInput
+                                            }
+                                            onInputFocusChange(focused)
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -972,6 +914,7 @@ internal fun ChatPage(
         }
 
         val resetSucMsg = stringResource(R.string.reset_suc_msg)
+        var resetSuccess by remember { mutableStateOf(false) }
 
         // 使用rememberCoroutineScope启动Snackbar存在bug
         LaunchedEffect(snackbarHostState) {
@@ -984,6 +927,27 @@ internal fun ChatPage(
                 }
         }
 
+        ChatMorePanel(
+            navController,
+            visible = showMorePanel,
+            agentInfo = agentInfo,
+            chatViewModel = chatViewModel,
+            onDismiss = { showMorePanel = false },
+            onHeightChange = { h -> morePanelHeight = h },
+            onReset = {
+                scope.launch {
+                    showMorePanel = false
+
+                    try {
+                        chatViewModel.reset()
+                        resetSuccess = true
+                    } catch (_: Throwable) {
+                        ToastUtils.showShort(R.string.reset_failed_msg)
+                    }
+                }
+            },
+            windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets(),
+        )
 
         ChatSettingsDrawer(
             chatViewModel = chatViewModel,
