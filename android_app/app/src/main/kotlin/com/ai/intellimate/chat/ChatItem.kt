@@ -81,8 +81,8 @@ import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.audio.VoicePlayer
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
+import com.ai.intellimate.chat.ui.ImageGenerateButton
 import com.ai.intellimate.chat.ui.MessageActionBar
-import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.enableChristmasConfig
 import com.ai.intellimate.ui.UiConfigs
@@ -94,6 +94,19 @@ private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService<ClipboardManager>()
     val clip = ClipData.newPlainText("Message", text)
     clipboard?.setPrimaryClip(clip)
+}
+
+/** 消息卡片右下角操作按钮（image generate） */
+@Composable
+internal fun MessageCornerActions(onImageGenerate: () -> Unit, modifier: Modifier = Modifier) {
+    // image generate不受like/dislike影响，始终显示
+    // keep talking按钮已移至ChatInput右上角悬浮
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(UiConfigs.ChatMessagePane.ActionButtonSpacing),
+    ) {
+        ImageGenerateButton(onClick = onImageGenerate)
+    }
 }
 
 private const val DEBUG_METADATA_VALUE_MAX = 64

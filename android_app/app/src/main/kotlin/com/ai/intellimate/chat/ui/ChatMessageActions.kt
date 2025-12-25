@@ -17,14 +17,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -102,7 +105,7 @@ private fun RecallButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 
 /** Image Generate 按钮 */
 @Composable
-private fun ImageGenerateButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ImageGenerateButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
     Box(
         modifier = modifier.size(iconSize).noRippleClickable(onClick = onClick),
@@ -217,28 +220,46 @@ internal fun MessageActionBar(
     val emojiOptions =
         remember {
             listOf(
-                "😭",
+                "👍",
+                "👎",
+                "😍",
                 "😁",
                 "😜",
                 "😂",
-                "💕",
                 "❤️",
                 "💯",
-                "💪",
-                "😍",
                 "💘",
                 "🌹",
             )
         }
 
     // like/dislike互斥，但不影响recall和keep talking的状态
-    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement =
-                Arrangement.spacedBy(UiConfigs.ChatMessagePane.ActionButtonSpacing),
-            verticalAlignment = Alignment.CenterVertically,
+    Box(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 2.dp, vertical = 2.dp)
+                .then(
+                    if (showPicker) {
+                        // 当 picker 显示时，添加点击检测来关闭 picker
+                        // 注意：点击 picker 和按钮区域不会触发关闭，因为 Row 上的 pointerInput 会阻止事件传播
+                        Modifier.pointerInput(true) {
+                            detectTapGestures {
+                                // 点击外部区域，关闭 picker
+                                showPicker = false
+                            }
+                        }
+                    } else {
+                        Modifier
+                    }
+                )
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement =
+                    Arrangement.spacedBy(UiConfigs.ChatMessagePane.ActionButtonSpacing),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             // Like 按钮 - 如果已dislike则不显示
             if (!isDisliked) {
                 LikeButton(
@@ -262,19 +283,25 @@ internal fun MessageActionBar(
             }
 
             // 已选 emoji：显示在灰色 😀 左侧（可追加多个）
-            reactions.forEach { emoji ->
-                EmojiButton(
-                    emoji = emoji,
-                    onClick = {},
-                    modifier = Modifier,
-                    alpha = 1f,
-                )
+            reactions.forEachIndexed { index, emoji ->
+                key("emoji_${index}_$emoji") {
+                    EmojiButton(
+                        emoji = emoji,
+                        onClick = {},
+                        modifier = Modifier,
+                        alpha = 1f,
+                    )
+                }
             }
 
             // 灰色 😀 占位 + 按钮：点击展开 emoji 列表
             Row(
                 horizontalArrangement = Arrangement.spacedBy(0.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.pointerInput(showPicker) {
+                    // 阻止点击事件传播，防止关闭 picker
+                    detectTapGestures { }
+                },
             ) {
                 EmojiButton(
                     emoji = "😀",
@@ -301,18 +328,5 @@ internal fun MessageActionBar(
             // Recall 按钮 - 始终显示，不受like/dislike影响
             //        RecallButton(onClick = onRecall)
         }
-    }
-}
-
-/** 消息卡片右下角操作按钮（image generate） */
-@Composable
-internal fun MessageCornerActions(onImageGenerate: () -> Unit, modifier: Modifier = Modifier) {
-    // image generate不受like/dislike影响，始终显示
-    // keep talking按钮已移至ChatInput右上角悬浮
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(UiConfigs.ChatMessagePane.ActionButtonSpacing),
-    ) {
-        ImageGenerateButton(onClick = onImageGenerate)
     }
 }
