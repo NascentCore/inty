@@ -955,6 +955,7 @@ internal fun ChatPage(
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
             navController = navController,
+            showBackButton = showBackButton,
         )
 
         if (shouldShowBoostUi) {

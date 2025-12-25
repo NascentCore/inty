@@ -72,8 +72,8 @@ import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MyPersonaSettingsGroup
 import com.ai.intellimate.xb.navigation.Routes
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -116,6 +116,7 @@ fun ChatSettingsDrawer(
     drawerState: MutableState<DrawerValue>,
     onKeepTalkingChange: (Boolean) -> Unit,
     navController: NavController,
+    showBackButton: Boolean = false, // 是否在独立 ChatScreen 场景下（没有底部导航栏）
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -189,7 +190,7 @@ fun ChatSettingsDrawer(
                 modifier =
                     Modifier.width(319.dp)
                         .fillMaxHeight()
-                        .padding(bottom = 56.dp)
+                        .padding(bottom = if (showBackButton) 0.dp else 56.dp)
                         .verticalScroll(rememberScrollState())
                         .background(
                             brush =
