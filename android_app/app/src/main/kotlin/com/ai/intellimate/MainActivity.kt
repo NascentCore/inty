@@ -57,6 +57,7 @@ import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
+import com.ai.intellimate.ui.components.UltimateCompanionshipBanner
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
@@ -828,7 +829,11 @@ fun SplashLoginUI(
                         contentDescription = "",
                         contentScale = ContentScale.Crop,
                     )
-                    Spacer(modifier = Modifier.height(120.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    UltimateCompanionshipBanner()
+
+                    Spacer(modifier = Modifier.height(96.dp))
 
                     // Google 登录按钮
                     GoogleLoginButton(
@@ -851,7 +856,9 @@ fun SplashLoginUI(
                     ) {
                         androidx.compose.material3.Text(
                             text = stringResource(R.string.continue_with_email),
-                            color = Color.White.copy(alpha = 0.35f),
+                            color =
+                                androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                                    .copy(alpha = 0.35f),
                             fontSize = 12.sp,
                             textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
                         )

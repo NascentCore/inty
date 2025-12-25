@@ -27,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -100,7 +101,7 @@ internal fun PolicyText() {
     val context = LocalContext.current
     val baseTextStyle =
         TextStyle(
-            color = Color.White.copy(alpha = 0.35f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Normal,
             textAlign = TextAlign.Center,
@@ -168,7 +169,7 @@ internal fun EnterEmailScreen(
     var emailError by remember { mutableStateOf<String?>(null) }
     val invalidEmailErrorText = stringResource(R.string.invalid_email_format)
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A2E))) {
+    Box(modifier = Modifier.fillMaxSize().background(AppColors.Background)) {
         Column(
             modifier =
                 Modifier.fillMaxSize()
@@ -191,7 +192,7 @@ internal fun EnterEmailScreen(
             // 标题
             Text(
                 text = stringResource(R.string.enter_email),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth(),
@@ -212,7 +213,10 @@ internal fun EnterEmailScreen(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.enter_email_placeholder),
-                        color = Color.White.copy(alpha = 0.5f),
+                        color =
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = UiConfigs.Alpha.DimmedText
+                            ),
                     )
                 },
                 singleLine = true,
@@ -220,11 +224,11 @@ internal fun EnterEmailScreen(
                     KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 colors =
                     OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF8B5CF6),
-                        unfocusedBorderColor = Color(0xFF8B5CF6),
-                        cursorColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = MaterialTheme.colorScheme.primary,
                     ),
                 shape = RoundedCornerShape(30.dp),
                 isError = emailError != null,
@@ -234,7 +238,7 @@ internal fun EnterEmailScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = it,
-                    color = Color.Red,
+                    color = MaterialTheme.colorScheme.error,
                     fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
                 )
@@ -255,11 +259,14 @@ internal fun EnterEmailScreen(
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(30.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
             ) {
                 Text(
                     text = stringResource(R.string.continue_button),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -286,7 +293,7 @@ internal fun LoginWithEmailScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A2E))) {
+    Box(modifier = Modifier.fillMaxSize().background(AppColors.Background)) {
         Column(
             modifier =
                 Modifier.fillMaxSize()
@@ -309,7 +316,7 @@ internal fun LoginWithEmailScreen(
             // 标题
             Text(
                 text = stringResource(R.string.login_with_email_password),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth(),
@@ -328,13 +335,17 @@ internal fun LoginWithEmailScreen(
                     KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 colors =
                     OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        disabledTextColor = Color.White.copy(alpha = 0.7f),
-                        focusedBorderColor = Color(0xFF8B5CF6),
-                        unfocusedBorderColor = Color(0xFF8B5CF6),
-                        disabledBorderColor = Color(0xFF8B5CF6).copy(alpha = 0.5f),
-                        cursorColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledTextColor =
+                            MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = UiConfigs.Alpha.SecondaryText
+                            ),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                        disabledBorderColor =
+                            MaterialTheme.colorScheme.primary.copy(alpha = UiConfigs.Alpha.DimmedText),
+                        cursorColor = MaterialTheme.colorScheme.primary,
                     ),
                 shape = RoundedCornerShape(30.dp),
             )
@@ -353,7 +364,10 @@ internal fun LoginWithEmailScreen(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.enter_password_placeholder),
-                        color = Color.White.copy(alpha = 0.5f),
+                        color =
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = UiConfigs.Alpha.DimmedText
+                            ),
                     )
                 },
                 singleLine = true,
@@ -373,17 +387,20 @@ internal fun LoginWithEmailScreen(
                                 else Icons.Filled.Visibility,
                             contentDescription =
                                 if (passwordVisible) "Hide password" else "Show password",
-                            tint = Color.White.copy(alpha = 0.7f),
+                            tint =
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = UiConfigs.Alpha.SecondaryText
+                                ),
                         )
                     }
                 },
                 colors =
                     OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF8B5CF6),
-                        unfocusedBorderColor = Color(0xFF8B5CF6),
-                        cursorColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = MaterialTheme.colorScheme.primary,
                     ),
                 shape = RoundedCornerShape(30.dp),
             )
@@ -401,21 +418,24 @@ internal fun LoginWithEmailScreen(
                 shape = RoundedCornerShape(30.dp),
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF8B5CF6),
-                        disabledContainerColor = Color(0xFF8B5CF6).copy(.7f),
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        disabledContainerColor =
+                            MaterialTheme.colorScheme.primaryContainer.copy(
+                                alpha = UiConfigs.Alpha.DisabledButton
+                            ),
                     ),
                 enabled = !isLoading && password.isNotBlank(),
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         strokeWidth = 2.dp,
                     )
                 } else {
                     Text(
                         text = stringResource(R.string.login_button),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
