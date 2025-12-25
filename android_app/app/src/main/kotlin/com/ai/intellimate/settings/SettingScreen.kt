@@ -137,7 +137,7 @@ fun SettingScreen(
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
                 Spacer(Modifier.height(16.dp))
                 DebugBackendSettingsEntry()
-                
+
                 Spacer(Modifier.height(16.dp))
                 DebugBoostPointsEntry()
             }
@@ -309,7 +309,7 @@ private fun SupportAndHelpSection(
                 if (isVipSubscribed) {
                     SubsManageActivity.launch(context)
                 } else {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.SETTINGS_SUBSCRIPTION)
                 }

@@ -49,7 +49,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +76,7 @@ fun MessagesPage(
     viewModel: MessagesViewModel,
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit = {},
+    onNavigateToExplore: () -> Unit = {},
     pageTrackingContext: String = "MessagesPage",
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -105,6 +105,7 @@ fun MessagesPage(
             onClickConversationItem = onClickConversationItem,
             onLoadMore = { viewModel.loadMoreConversations() },
             onClickFavoriteAgent = onClickFavoriteAgent,
+            onNavigateToExplore = onNavigateToExplore,
         )
     }
 }
@@ -117,6 +118,7 @@ private fun Content(
     onClickConversationItem: (ConversationItem) -> Unit,
     onLoadMore: () -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit,
+    onNavigateToExplore: () -> Unit,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize().background(Color.Transparent),
@@ -144,6 +146,7 @@ private fun Content(
                 onClickConversationItem = onClickConversationItem,
                 onLoadMore = onLoadMore,
                 onClickFavoriteAgent = onClickFavoriteAgent,
+                onNavigateToExplore = onNavigateToExplore,
             )
         }
     }
@@ -157,13 +160,14 @@ private fun MessageTabContent(
     onClickConversationItem: (ConversationItem) -> Unit,
     onLoadMore: () -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit,
+    onNavigateToExplore: () -> Unit,
 ) {
-    var selectedTab by rememberSaveable { mutableStateOf(MessageSecondaryTab.Conversations) }
+    val selectedTab by viewModel.selectedTab.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         MessagesTabSwitcher(
             selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
+            onTabSelected = { viewModel.setSelectedTab(it) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
         Spacer(Modifier.height(12.dp))
@@ -181,14 +185,14 @@ private fun MessageTabContent(
                     favoriteAgents = uiState.favoriteAgents,
                     isLoading = uiState.isLoadingFavorites,
                     onClickAgent = onClickFavoriteAgent,
-                    onRefreshFavorites = { viewModel.loadFavoriteAgents() },
+                    onNavigateToExplore = onNavigateToExplore,
                 )
             }
         }
     }
 }
 
-private enum class MessageSecondaryTab {
+internal enum class MessageSecondaryTab {
     Conversations,
     Favorites,
 }
@@ -417,7 +421,7 @@ private fun FavoriteAgentsContent(
     favoriteAgents: List<AgentInfo>,
     isLoading: Boolean,
     onClickAgent: (AgentInfo) -> Unit,
-    onRefreshFavorites: () -> Unit,
+    onNavigateToExplore: () -> Unit,
 ) {
     when {
         isLoading -> {
@@ -430,7 +434,8 @@ private fun FavoriteAgentsContent(
                 title = stringResource(R.string.messages_favorites_empty_title),
                 subtitle = stringResource(R.string.messages_favorites_empty_subtitle),
                 showRetryButton = true,
-                onRetry = onRefreshFavorites,
+                actionTextResId = R.string.messages_favorites_empty_explore_cta,
+                onRetry = onNavigateToExplore,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -467,6 +472,7 @@ private fun FavoriteAgentItem(agent: AgentInfo, onClick: (AgentInfo) -> Unit) {
             placeholder = painterResource(R.drawable.img_default_avatar),
             contentDescription = null,
             contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
         )
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

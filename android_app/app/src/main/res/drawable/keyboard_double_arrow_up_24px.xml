@@ -1,0 +1,12 @@
+<!-- CREATED_BY_AGENT: chat page scroll-to-start icon -->
+<!-- 考虑使用 material3 原生图标替代 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M480,200L240,440L296,496L480,313L664,496L720,440L480,200ZM480,440L240,680L296,736L480,553L664,736L720,680L480,440Z"/>
+</vector>

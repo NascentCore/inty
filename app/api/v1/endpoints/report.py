@@ -2,6 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends
 from loguru import logger
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
@@ -54,3 +55,26 @@ async def create_report(
     except Exception as e:
         logger.error(f"Failed to create report: {str(e)}")
         return APIResponse.error(message=str(e))
+
+
+@router.delete("/{report_id}", response_model=APIResponse, tags=[WEB_APP_TAG])
+async def delete_report(
+    report_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_active_user),
+):
+    try:
+        await report_service.delete_report(
+            db,
+            report_id,
+            current_user_id=current_user.id,
+            is_superuser=current_user.is_superuser,
+        )
+        return APIResponse.success()
+    except PermissionError:
+        return APIResponse.error(message="无权限删除该记录", code=403)
+    except ValueError:
+        return APIResponse.error(message="记录不存在", code=404)
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to delete report: {str(e)}")
+        return APIResponse.error(message="删除失败", code=500)

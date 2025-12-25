@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import com.ai.intellimate.agent.report.ReportActivity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -247,7 +248,9 @@ private fun ChatItemAI(
                     item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
 
                 var showFullScreenImage by remember { mutableStateOf(false) }
-                var imageLoadError by remember { mutableStateOf(false) }
+                // 使用 generatedImageUrl 作为 key，URL 变化时自动重置状态
+                var imageLoadError by remember(generatedImageUrl) { mutableStateOf(false) }
+                var imageLoadSuccess by remember(generatedImageUrl) { mutableStateOf(false) }
 
                 val isNormalLoading =
                     item.content == "loading_animation" &&
@@ -256,6 +259,7 @@ private fun ChatItemAI(
 
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
                 val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
+                val shouldShowMessageActions = isLatestMessage && !shouldFlowShow
 
                 if (isNormalLoading) {
                     Box(
@@ -353,15 +357,19 @@ private fun ChatItemAI(
                                     painter = painterResource(R.drawable.img_omela),
                                     contentDescription = null,
                                     modifier =
-                                        Modifier.align(Alignment.BottomStart)
-                                            .offset(x = (-10).dp, y = 10.dp),
+                                        Modifier.size(UiConfigs.ChatPage.ChatBubble.CherrySize)
+                                            .align(Alignment.BottomStart)
+                                            .offset(x = (-35).dp, y = 10.dp),
                                 )
                                 Image(
                                     painter = painterResource(R.drawable.img_chat_snow_right),
                                     contentDescription = null,
                                     modifier =
-                                        Modifier.align(Alignment.TopEnd)
-                                            .offset(x = 15.dp, y = (-16).dp),
+                                        Modifier.size(
+                                                UiConfigs.ChatPage.ChatBubble.SnowDecorationSize
+                                            )
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 10.dp, y = (-60).dp),
                                 )
                             }
                         }
@@ -369,7 +377,8 @@ private fun ChatItemAI(
                     }
                 }
 
-                if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
+                // 无生图时，操作区跟随文字 bubble；有生图时操作区挪到图片预览下方（见后续）
+                if (shouldShowMessageActions && !(hasGeneratedImage || isImageLoading)) {
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
@@ -410,7 +419,7 @@ private fun ChatItemAI(
                                         .background(Color.Black.copy(alpha = 0.3f))
                                         .padding(16.dp)
                                         .noRippleClickable {
-                                            viewModel.deleteMessage(item.localMsgId)
+                                            viewModel.clearGeneratedImage(item.localMsgId)
                                         },
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -439,7 +448,9 @@ private fun ChatItemAI(
                             // 消息生图的结果图片
                             ConstraintLayout(modifier = Modifier) {
                                 val (img, left, right) = createRefs()
-                                AsyncImage(
+
+                                // 使用 Box 叠加 shimmer 和图片
+                                Box(
                                     modifier =
                                         Modifier.fillMaxWidth(0.35f)
                                             .aspectRatio(aspectRatio)
@@ -449,45 +460,69 @@ private fun ChatItemAI(
                                                 detectTapGestures(
                                                     onTap = { showFullScreenImage = true }
                                                 )
-                                            },
-                                    model =
-                                        ImageRequest.Builder(LocalContext.current)
-                                            .data(
-                                                getCdnImageUrl(
-                                                    generatedImageUrl,
-                                                    width = targetWidth,
-                                                    quality = 70,
+                                            }
+                                ) {
+                                    // 图片加载中显示 shimmer（无 dots）
+                                    if (!imageLoadSuccess) {
+                                        ShimmerPlaceholder(
+                                            modifier = Modifier.matchParentSize(),
+                                            cornerRadius = 12.dp,
+                                            showLoadingDots = false,
+                                        )
+                                    }
+
+                                    // AsyncImage 在后台加载，加载成功后显示
+                                    AsyncImage(
+                                        modifier = Modifier.matchParentSize(),
+                                        model =
+                                            ImageRequest.Builder(LocalContext.current)
+                                                .data(
+                                                    getCdnImageUrl(
+                                                        generatedImageUrl,
+                                                        width = targetWidth,
+                                                        quality = 70,
+                                                    )
                                                 )
-                                            )
-                                            .build(),
-                                    contentDescription = "Generated image",
-                                    contentScale = ContentScale.Fit,
-                                    alignment = Alignment.CenterStart,
-                                    onError = { imageLoadError = true },
-                                )
+                                                .build(),
+                                        contentDescription = "Generated image",
+                                        contentScale = ContentScale.Fit,
+                                        alignment = Alignment.CenterStart,
+                                        onError = { imageLoadError = true },
+                                        onSuccess = { imageLoadSuccess = true },
+                                    )
+                                }
                                 // 圣诞点缀
-                                if (enableChristmasConfig()) {
+                                if (enableChristmasConfig() && imageLoadSuccess) {
                                     Image(
                                         painter = painterResource(R.drawable.img_christmas_candy),
                                         contentDescription = null,
                                         modifier =
-                                            Modifier.constrainAs(left) {
-                                                start.linkTo(img.start, (-15).dp)
-                                                bottom.linkTo(img.bottom, (-12).dp)
-                                            },
+                                            Modifier.size(
+                                                    UiConfigs.ChatPage.ChatBubble
+                                                        .ChritsmasDecorationSize
+                                                )
+                                                .constrainAs(left) {
+                                                    start.linkTo(img.start, (-20).dp)
+                                                    bottom.linkTo(img.bottom, (-12).dp)
+                                                },
                                     )
                                     Image(
                                         painter = painterResource(R.drawable.img_candy_christmas),
                                         contentDescription = null,
                                         modifier =
-                                            Modifier.constrainAs(right) {
-                                                end.linkTo(img.end, (-25).dp)
-                                                bottom.linkTo(img.bottom, (-12).dp)
-                                            },
+                                            Modifier.size(
+                                                    UiConfigs.ChatPage.ChatBubble
+                                                        .ChritsmasDecorationSize
+                                                )
+                                                .constrainAs(right) {
+                                                    end.linkTo(img.end, (-25).dp)
+                                                    bottom.linkTo(img.bottom, (-12).dp)
+                                                },
                                     )
                                 }
                             }
-                        } else if (generatedImageUrl.isNullOrEmpty()) {
+                        } else {
+                            // URL 为空或其他情况，显示 shimmer
                             ShimmerPlaceholder(
                                 modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
@@ -506,6 +541,7 @@ private fun ChatItemAI(
                                 ),
                         ) {
                             val agentId = agentInfo?.id ?: ""
+                            val context = LocalContext.current
                             FullScreenImageViewer(
                                 imageUrl = generatedImageUrl,
                                 onDismiss = { showFullScreenImage = false },
@@ -523,9 +559,26 @@ private fun ChatItemAI(
                                 },
                                 actionLabel =
                                     stringResource(R.string.agent_gallery_set_as_background),
+                                onReport = {
+                                    if (agentId.isNotBlank()) {
+                                        ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
+                                    }
+                                },
                             )
                         }
                     }
+                }
+
+                // 生图预览下方的 👍/👎（布局与文字 bubble 一致）
+                // 只在生图完成后显示点赞/点踩按钮，生图过程中不显示
+                if (shouldShowMessageActions && hasGeneratedImage && !isImageLoading) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    MessageActionBar(
+                        message = item,
+                        onLike = { viewModel.likeMessage(item.localMsgId) },
+                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onRecall = { viewModel.recallMessage() },
+                    )
                 }
 
                 if (BuildConfig.DEBUG) {
@@ -575,8 +628,22 @@ private fun ChatItemAI(
 private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.Bottom,
+            ) {
                 val context = LocalContext.current
+
+                // 圣诞点缀
+                if (enableChristmasConfig()) {
+                    Image(
+                        painter = painterResource(R.drawable.img_christmas_tree),
+                        contentDescription = null,
+                        modifier = Modifier.size(UiConfigs.ChatPage.ChatBubble.ChristMasTreeSize),
+                    )
+                }
+
                 Box(
                     modifier =
                         Modifier.background(
@@ -606,14 +673,6 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                         normalColor = Color(0xff090909),
                         actionColor = Color(0xff090909).copy(0.6f),
                     )
-                    // 圣诞点缀
-                    if (enableChristmasConfig()) {
-                        Image(
-                            painter = painterResource(R.drawable.img_christmas_tree),
-                            contentDescription = null,
-                            modifier = Modifier.align(Alignment.TopStart).offset(x = (-20).dp),
-                        )
-                    }
                 }
             }
         }

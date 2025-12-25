@@ -73,6 +73,7 @@ fun ChatMorePanel(
     onDismiss: () -> Unit,
     onHeightChange: (Dp) -> Unit,
     onReset: () -> Unit,
+    windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
     if (!visible) {
         onHeightChange(0.dp)
@@ -83,8 +84,6 @@ fun ChatMorePanel(
     var showSheet by remember { mutableStateOf(false) }
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-    // reply的vip拦截弹窗标记
-    var showDialog by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
 
     if (showResetConfirmDialog) {
@@ -110,7 +109,7 @@ fun ChatMorePanel(
                     modifier =
                         Modifier.fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
-                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .windowInsetsPadding(windowInsets)
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
                                 onHeightChange(h)
@@ -139,7 +138,9 @@ fun ChatMorePanel(
                                     if (vipStatus.isSubscribed) {
                                         showSheet = true
                                     } else {
-                                        showDialog = true
+                                        // 去会员中心
+                                        navController.navigate(Routes.Me.VipCenter)
+                                        onDismiss() // 要关闭掉panel
                                     }
                                 }
                             },
@@ -150,14 +151,10 @@ fun ChatMorePanel(
                             text = stringResource(R.string.str_reset),
                             onClick = {
                                 // 检查是否已登录
-                                // IntySetting.isLogin()内部已经调用getCurToken().isNotEmpty()，无需重复验证
                                 if (IntySetting.isLogin()) {
                                     // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
                                     // 相当于重新开始和agent初次聊天
-                                    // todo 需要接口
                                     showResetConfirmDialog = true
-                                } else {
-                                    // 未登录或游客时不执行操作（MainActivity已会显示登录界面）
                                 }
                             },
                         )
@@ -242,16 +239,6 @@ fun ChatMorePanel(
                 showSheet = false
             },
         )
-    }
-    // 会员定制回复的拦截跳转到vip center
-    if (showDialog) {
-        // 检查是否已登录
-        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-            // 去会员中心
-            navController.navigate(Routes.VipCenter)
-            //            VipCenterActivity.launch(context, VipCenterActivity.CHAT_MORE_PANEL)
-        }
-        showDialog = false
     }
 }
 

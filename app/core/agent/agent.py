@@ -6,6 +6,15 @@ from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
+
+# LangSmith 导入 - 如果失败则禁用追踪
+try:
+    import langsmith as ls
+
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    ls = None
+    LANGSMITH_AVAILABLE = False
 from loguru import logger
 from openai import (
     APIConnectionError,
@@ -21,7 +30,7 @@ from typing_extensions import deprecated
 
 from app import models
 from app.core.agent import prompt_template, prompts
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.models import chat_history
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
@@ -190,7 +199,6 @@ class Agent:
         self.last_used = time.time()
         self.description = description
         self._last_used_lock = RLock()
-        self._user_info_cache = {}
 
         # 主提示词和模式提示词属性
         self.main_prompt = main_prompt
@@ -236,10 +244,6 @@ class Agent:
             ),
             thread_name_prefix=f"agent-{agent_id}",
         )
-
-        # OpenAI客户端缓存（用于性能优化）
-        self._wrapped_client: Optional[OpenAI] = None
-        self._client_lock = Lock()
 
         # 使用配置中的模型设置
         model_name = model_config.get(
@@ -445,10 +449,12 @@ class Agent:
 
     def _get_wrapped_client(self, chat_name: str, labels: dict) -> OpenAI:
         """
-        获取或创建带LangSmith包装的OpenAI客户端（缓存版本）
+        为每次请求创建带 LangSmith 包装的 OpenAI 客户端
 
-        使用双重检查锁定模式确保线程安全的客户端创建和复用。
-        客户端在Agent实例的生命周期内复用，避免每次请求都创建新客户端。
+        注意：不缓存 wrapped client，因为：
+        1. chat_name 包含用户名，每个用户不同
+        2. LangSmith wrapper 持有 trace 上下文，缓存会导致 trace 嵌套污染
+        3. 底层 HTTP 连接池在 base_client 中复用，性能不受影响
 
         Args:
             chat_name: 聊天名称，用于LangSmith追踪
@@ -457,33 +463,19 @@ class Agent:
         Returns:
             包装后的OpenAI客户端
         """
-        if self._wrapped_client is None:
-            with self._client_lock:
-                if self._wrapped_client is None:
-                    logger.debug(f"为Agent创建wrapped client - Agent: {self.agent_id}")
-                    base_client = get_base_openai_client()
-                    self._wrapped_client = wrap_client_with_langsmith(
-                        base_client, chat_name, labels
-                    )
-        return self._wrapped_client
+        base_client = get_base_openai_client()
+        return wrap_client_with_langsmith(base_client, chat_name, labels)
 
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
         同步获取用户profile信息（优化版本 - 使用全局缓存）
         """
-        # 先检查全局缓存
+        # 检查全局缓存
         cached_user_info = cache_service.get_user_info(user_id)
         if cached_user_info is not None:
             logger.debug(f"从全局缓存获取用户信息: {user_id}")
             return cached_user_info
-
-        # 然后检查本地缓存（保留兼容性）
-        if user_id in self._user_info_cache:
-            user_info = self._user_info_cache[user_id]
-            # 同时更新到全局缓存
-            cache_service.set_user_info(user_id, user_info)
-            return user_info
 
         try:
             # 使用全局同步数据库引擎（避免重复创建）
@@ -504,11 +496,7 @@ class Agent:
                 if not row:
                     logger.debug(f"用户 {user_id} 不存在")
                     user_info_text = ""
-                    # 缓存空结果，避免重复查询
-                    self._user_info_cache[user_id] = user_info_text
-                    cache_service.set_user_info(
-                        user_id, user_info_text, ttl=60
-                    )  # 空结果缓存时间短
+                    cache_service.set_user_info(user_id, user_info_text, ttl=60)
                     return user_info_text
 
                 # 构建用户信息字符串
@@ -532,8 +520,6 @@ class Agent:
                 else:
                     user_info_text = ""
 
-                # 同时更新本地和全局缓存
-                self._user_info_cache[user_id] = user_info_text
                 cache_service.set_user_info(user_id, user_info_text)
 
                 if user_info_text:
@@ -546,10 +532,7 @@ class Agent:
         except Exception as e:
             logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
             user_info_text = ""
-            self._user_info_cache[user_id] = user_info_text
-            cache_service.set_user_info(
-                user_id, user_info_text, ttl=30
-            )  # 失败结果缓存时间很短
+            cache_service.set_user_info(user_id, user_info_text, ttl=30)
             return user_info_text
 
     # 特殊值，表示返回全部消息
@@ -637,9 +620,11 @@ class Agent:
         user_id: str,
         max_retries: int = 3,
         initial_delay: float = 1.0,
+        chat_name: str = None,
+        labels: Dict[str, Any] = None,
     ):
         """
-        带重试机制的OpenAI API调用
+        带重试机制的OpenAI API调用，并集成LangSmith追踪
 
         Args:
             client: OpenAI客户端
@@ -652,6 +637,8 @@ class Agent:
             user_id: 用户ID（用于日志）
             max_retries: 最大重试次数
             initial_delay: 初始延迟（秒），使用指数退避
+            chat_name: 聊天名称，用于LangSmith追踪
+            labels: 元数据标签
 
         Returns:
             API响应对象
@@ -661,16 +648,71 @@ class Agent:
         """
         last_error = None
 
+        # 检查是否启用 LangSmith 追踪（测试环境禁用，或 langsmith 不可用时禁用）
+        enable_tracing = (
+            LANGSMITH_AVAILABLE
+            and global_config_loaded_from_config_yaml.app.environment
+            != Environment.TEST
+        )
+
         for attempt in range(max_retries):
             try:
-                response = client.chat.completions.create(
-                    messages=openai_messages,
-                    model=model,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    top_p=top_p,
-                    extra_body=extra_body,
-                )
+                if enable_tracing:
+                    # 使用 langsmith.trace 创建单个顶级 trace
+                    with ls.trace(
+                        name=chat_name or f"{user_id}:{self.name}",
+                        run_type="llm",
+                        inputs={"messages": openai_messages, "model": model},
+                        metadata=labels or {},
+                    ) as run:
+                        response = client.chat.completions.create(
+                            messages=openai_messages,
+                            model=model,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body=extra_body,
+                        )
+                        # 记录输出到 trace
+                        if response.choices:
+                            run.end(
+                                outputs={
+                                    "content": response.choices[0].message.content,
+                                    "finish_reason": response.choices[0].finish_reason,
+                                    "model": response.model,
+                                    "usage": (
+                                        {
+                                            "prompt_tokens": (
+                                                response.usage.prompt_tokens
+                                                if response.usage
+                                                else None
+                                            ),
+                                            "completion_tokens": (
+                                                response.usage.completion_tokens
+                                                if response.usage
+                                                else None
+                                            ),
+                                            "total_tokens": (
+                                                response.usage.total_tokens
+                                                if response.usage
+                                                else None
+                                            ),
+                                        }
+                                        if response.usage
+                                        else None
+                                    ),
+                                }
+                            )
+                else:
+                    # 测试环境：直接调用 API，不使用 LangSmith 追踪
+                    response = client.chat.completions.create(
+                        messages=openai_messages,
+                        model=model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body=extra_body,
+                    )
                 # 成功则返回
                 if attempt > 0:
                     logger.info(
@@ -741,6 +783,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -838,7 +881,9 @@ class Agent:
 
                 # API调用（带重试机制）
                 api_start = time.time()
-                model_name = self.model_config.get("model", default_model)
+                model_name = model_override or self.model_config.get(
+                    "model", default_model
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -863,6 +908,8 @@ class Agent:
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
+                        chat_name=chat_name,
+                        labels=labels,
                     )
                 except Exception as api_error:
                     # 记录详细的错误信息
@@ -906,15 +953,84 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
+                finish_reason = response.choices[0].finish_reason
                 response_text = response.choices[0].message.content
+
+                # 定义需要重试的 finish_reason
+                content_filter_reasons = {"content_filter", "safety"}
+
+                # 处理内容过滤情况：用 "continue" 替换用户消息重试一次
+                if finish_reason in content_filter_reasons:
+                    logger.warning(
+                        f"内容过滤触发 - Agent: {self.agent_id}, User: {user_id}, "
+                        f"Session: {session_id}, finish_reason: {finish_reason}, "
+                        f"被截断内容: {response_text}"
+                    )
+                    # 用 "continue" 替换最后一条用户消息重试
+                    openai_messages[-1] = {"role": "user", "content": "continue"}
+                    retry_response = self._call_openai_api_with_retry(
+                        client=client,
+                        model=model_name,
+                        openai_messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body={
+                            "generation_config": {
+                                "thinking_budget": 0,
+                            },
+                            "user": user_id,
+                        },
+                        user_id=user_id,
+                        max_retries=3,
+                        initial_delay=1.0,
+                        chat_name=chat_name,
+                        labels=labels,
+                    )
+                    retry_finish_reason = retry_response.choices[0].finish_reason
+                    retry_response_text = retry_response.choices[0].message.content
+
+                    # 重试后仍被过滤则记录错误，但使用重试后的响应
+                    if retry_finish_reason in content_filter_reasons:
+                        logger.error(
+                            f"内容过滤重试后仍被截断 - Agent: {self.agent_id}, "
+                            f"Session: {session_id}, finish_reason: {retry_finish_reason}, "
+                            f"被截断内容: {retry_response_text}"
+                        )
+                    else:
+                        logger.info(
+                            f"内容过滤重试成功 - Agent: {self.agent_id}, "
+                            f"Session: {session_id}"
+                        )
+                    response_text = retry_response_text
+
+                # 处理长度限制情况
+                elif finish_reason == "length":
+                    logger.warning(
+                        f"响应被截断(max_tokens) - Agent: {self.agent_id}, "
+                        f"Session: {session_id}, 响应长度: {len(response_text)}"
+                    )
+
+                # 处理其他非正常情况
+                elif finish_reason not in {"stop", None}:
+                    logger.warning(
+                        f"非正常结束 - Agent: {self.agent_id}, "
+                        f"Session: {session_id}, finish_reason: {finish_reason}"
+                    )
+
                 response_process_time = time.time() - response_process_start
                 logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录
+                # 保存AI响应到历史记录（包含LLM调用时间）
                 save_response_start = time.time()
-                history.add_messages([AIMessage(content=response_text)])
+                chat_history_service.add_ai_message_sync(
+                    session_id=session_id,
+                    message=response_text,
+                    agent_id=self.agent_id,
+                    meta_data={"llm_invoke_time": api_time},
+                )
                 save_response_time = time.time() - save_response_start
                 logger.debug(
                     f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
@@ -963,6 +1079,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """
         生成消息但不保存用户消息到历史记录（用于推送消息）
@@ -1055,16 +1172,22 @@ class Agent:
                     f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # API调用
+                # API调用（使用统一的重试和 trace 逻辑）
                 api_start = time.time()
-                response = client.chat.completions.create(
-                    messages=openai_messages,
-                    model=self.model_config.get("model", default_model),
-                    temperature=self.model_config.get(
-                        "temperature", default_temperature
-                    ),
-                    max_tokens=self.model_config.get("max_tokens", default_max_tokens),
-                    top_p=self.model_config.get("top_p", default_top_p),
+                model_name = model_override or self.model_config.get(
+                    "model", default_model
+                )
+                temperature = self.model_config.get("temperature", default_temperature)
+                max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+                top_p = self.model_config.get("top_p", default_top_p)
+
+                response = self._call_openai_api_with_retry(
+                    client=client,
+                    model=model_name,
+                    openai_messages=openai_messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
                     extra_body={
                         # This only works for Gemini models.
                         "generation_config": {
@@ -1074,6 +1197,11 @@ class Agent:
                         # can be used to track end user's usage.
                         "user": user_id,
                     },
+                    user_id=user_id,
+                    max_retries=3,
+                    initial_delay=1.0,
+                    chat_name=chat_name,
+                    labels=labels,
                 )
                 api_time = time.time() - api_start
                 logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
@@ -1110,6 +1238,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """
         异步封装：生成消息但不保存用户消息到历史记录（用于推送消息）
@@ -1141,6 +1270,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                model_override,
             )
             return result
         except Exception as e:
@@ -1156,6 +1286,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         chat_settings: models.chat_settings.ChatSettings = None,
+        model_override: Optional[str] = None,
     ) -> str:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
         logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
@@ -1178,6 +1309,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                model_override,
             )
             return result
         except Exception as e:

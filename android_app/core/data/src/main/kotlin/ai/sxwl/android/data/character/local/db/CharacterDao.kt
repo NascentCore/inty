@@ -34,4 +34,11 @@ interface CharacterDao {
         "SELECT * FROM characters WHERE name LIKE '%' || :query || '%' COLLATE NOCASE ORDER BY name LIMIT :limit"
     )
     suspend fun searchCharactersByName(query: String, limit: Int = 100): List<CharacterEntity>
+
+    @Query(
+        "SELECT * FROM characters " +
+            "WHERE tags IS NOT NULL AND LOWER(tags) LIKE '%' || LOWER(:query) || '%' " +
+            "ORDER BY name LIMIT :limit"
+    )
+    suspend fun searchCharactersByTag(query: String, limit: Int = 100): List<CharacterEntity>
 }

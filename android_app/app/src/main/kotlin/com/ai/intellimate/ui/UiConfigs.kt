@@ -196,6 +196,37 @@ object UiConfigs {
         }
     }
 
+    /** 创建角色页面配置 - 适用于 CreateRoleActivity 的表单与区块布局 */
+    object CreateRole {
+        /** 视觉形象区域配置 - 头像预览与编辑入口 */
+        object VisualAppearance {
+            /**
+             * 预览框宽高比（width / height）。
+             *
+             * 默认 9/16，即竖屏比例。
+             */
+            const val ASPECT_RATIO = 9f / 16f
+
+            /** 空状态内容内边距（用于保持按钮区域不拥挤） */
+            val EmptyStateInnerPadding = 16.dp
+
+            /** 预览框右上角“Crop”浮层按钮的内边距（水平/垂直保持一致） */
+            val FaceEditPillPadding = 12.dp
+
+            /** 空状态按钮内容内边距（水平/垂直保持一致） */
+            val EmptyStateButtonContentPadding = 8.dp
+
+            /** 头像上传区域垂直内边距 */
+            val SectionVerticalPadding = 8.dp
+        }
+
+        /** 性别选择区域配置 */
+        object GenderSelection {
+            /** 性别选择按钮字体大小 */
+            val ButtonFontSize = 18.sp
+        }
+    }
+
     /** 比例配置 - 适用于按钮、输入框等组件相对于父容器的宽度或圆角半径比例设置 */
     object Fractions {
         /** 主要按钮宽度比例（相对于父容器） */
@@ -279,13 +310,16 @@ object UiConfigs {
     /** 底部导航栏配置 - 适用于底部导航栏的高度、图标大小、间距等设置 */
     object BottomBar {
         /** 底部导航栏高度 */
-        val Height = 64.dp
+        val Height = 66.dp
 
         /** 标签图标大小 */
-        val TabIconSize = 24.dp
+        val TabIconSize = 23.dp
 
         /** 标签图标与文字之间的间距 */
-        val TabIconLabelSpacing = (-6).dp
+        val TabIconLabelSpacing = (-8).dp
+
+        /** 距离屏幕底部间距 */
+        val BottomSpacing = 6.dp
     }
 
     /** 个人页面配置 - 适用于个人资料页面的头像、卡片、网格、空状态等组件的尺寸和间距设置 */
@@ -293,7 +327,7 @@ object UiConfigs {
         /** 顶部图标行配置 - 适用于个人页面顶部图标行的图标大小、间距和内边距设置 */
         object TopIconsRow {
             /** 顶部图标行图标大小 */
-            val Size = 24.dp
+            val Size = 28.dp
 
             /** 顶部图标行图标间距 */
             val Spacing = 8.dp
@@ -312,13 +346,23 @@ object UiConfigs {
         val HeaderMinHeight = 80.dp
 
         /** 头像完整大小 */
-        val AvatarFullSize = 120.dp
+        val AvatarFullSize = 90.dp
 
         /** 头像内边距 */
         val AvatarPadding = 4.dp
 
         /** 头像到昵称之间的间距 */
-        val AvatarToNicknameSpacing = 19.dp
+        val AvatarToNicknameSpacing = 24.dp
+
+        /**
+         * 个人页 Header 中名字+简介整体上移的偏移量。
+         *
+         * 预期视觉效果：名字与 persona description 更贴近头像上方区域，避免整体偏下。
+         */
+        val ProfileNameBlockYOffset = (-6).dp
+
+        /** 名字与 persona description 之间的垂直间距 */
+        val ProfileNameToDescriptionSpacing = Spacing.Tiny / 3
 
         /** 区域之间的间距 */
         val SectionSpacing = 16.dp
@@ -427,6 +471,12 @@ object UiConfigs {
 
         /** 音频播放器最小宽度 */
         val AudioPlayerMinWidth = 38.dp
+
+        /** 消息操作按钮图标大小 - 适用于点赞、点踩、召回、图片生成等操作按钮 */
+        val ActionButtonIconSize = 24.dp
+
+        /** 消息操作按钮之间的间距 */
+        val ActionButtonSpacing = 12.dp
     }
 
     /** 聊天顶部栏配置 - 适用于聊天页面顶部栏的尺寸、间距、字体等设置 */
@@ -472,12 +522,46 @@ object UiConfigs {
 
         /** 能量点数字体大小 */
         val EnergyPointsFontSize = 10.sp
+
+        /** 收藏按钮大小 */
+        val FavoriteButtonSize = 36.dp
+
+        /** 收藏图标大小 */
+        val FavoriteIconSize = 18.dp
+
+        /** 操作按钮之间的间距 */
+        val ActionButtonSpacing = 8.dp
+
+        /** 操作按钮容器透明度 */
+        const val ActionButtonContainerAlpha = 0.35f
+
+        /** 收藏按钮激活状态颜色（粉色） */
+        val FavoriteActiveTint = Color(0xFFFF5A8A)
+
+        /** 收藏按钮未激活状态颜色（白色） */
+        val FavoriteInactiveTint = Color.White
     }
 
     /** 聊天页面配置 - 适用于聊天页面的功能开关，如 Remix 按钮可见性等 */
     object ChatPage {
         /** 是否显示订阅按钮 */
         const val showSubscriptionButton = false
+
+        object KeepTalkingButton {
+            /** Keep Talking 悬浮按钮宽度（用于扩大点击热区） */
+            val width = 50.dp
+            val padding = 4.dp
+            val iconSize = 24.dp
+        }
+
+        /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
+        object ChatBubble {
+            /** 圣诞装饰图标大小 - 适用于圣诞树、草莓、糖果等装饰图标 */
+            val ChristMasTreeSize = 48.dp
+            val CherrySize = 40.dp
+            val SnowDecorationSize = 80.dp
+            val ChritsmasDecorationSize = 60.dp
+        }
 
         @Composable
         fun enableRemix(): Boolean {
@@ -531,6 +615,12 @@ object UiConfigs {
 
             /** 位于 KeepTalkingFloatingButton 上方的间距 */
             val BottomOffsetAboveKeepTalking = 60.dp
+        }
+
+        /** 聊天页“滚动到开始/滚动到最新”双按钮的布局配置 */
+        object ScrollToHistoryButtons {
+            /** 两个圆形按钮之间的垂直间距 */
+            val VerticalSpacing = 12.dp
         }
 
         /** 相册配置 - 适用于角色相册页面的列数等设置 */
@@ -600,6 +690,39 @@ object UiConfigs {
                 /** 背景状态指示器颜色 */
                 val BackgroundIndicatorColor = ai.sxwl.android.design.theme.AppColors.Green500
             }
+        }
+
+        /** 通用悬浮圆形滚动按钮样式（用于 Chat/Explore 等页面复用） */
+        object FloatingScrollButton {
+            /** 边框宽度 */
+            val BorderWidth = 1.dp
+
+            /** 边框渐变起始颜色透明度（启用状态） */
+            const val BorderGradientStartAlpha = 0.7f
+
+            /** 边框渐变起始颜色透明度（禁用状态） */
+            const val BorderGradientStartAlphaDisabled = 0.3f
+
+            /** 边框渐变结束颜色透明度 */
+            const val BorderGradientEndAlpha = 0.2f
+
+            /** 背景颜色透明度 */
+            const val BackgroundAlpha = 0.6f
+
+            /** 禁用状态整体透明度 */
+            const val DisabledAlpha = 0.5f
+
+            /** 按钮内部内边距 */
+            val InnerPadding = 4.dp
+
+            /** 图标大小 */
+            val IconSize = 30.dp
+
+            /** 按钮整体大小（圆形按钮的直径） */
+            val ButtonSize = IconSize + InnerPadding * 2 + BorderWidth * 2
+
+            /** 右侧内边距（用于靠右悬浮布局） */
+            val RightPadding = 16.dp
         }
     }
 

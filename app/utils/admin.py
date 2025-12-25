@@ -18,6 +18,8 @@ SUPER_USER_EMAILS = [
     "it@sxwl.ai",
     # Charles 个人 Google 账户，因测试导致被 Google 封禁，加入列表方便测试
     "charlesfengyu@gmail.com",
+    # 与上面原因类似，学宝的 Google 账户 email
+    "1032505449sl@gmail.com",
 ]
 
 # 公共的 Google Email 用于测试，目前只是记录该信息，没有在后端做特别处理。
@@ -29,8 +31,8 @@ SHARED_EMAILS = [
 logger.debug(f"SUPER_USER_EMAILS: {SUPER_USER_EMAILS}")
 
 
-def is_superuser_based_on_email(email: str) -> bool:
-    """Read the email from the request and check if it is in the SUPER_USER_EMAILS list."""
-    if email is None:
+def is_superuser_based_on_email(email: str | None) -> bool:
+    """Check if an email is in the SUPER_USER_EMAILS allowlist."""
+    if not email:
         return False
     return email.lower() in [email.lower() for email in SUPER_USER_EMAILS]

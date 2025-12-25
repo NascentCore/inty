@@ -371,9 +371,8 @@ agent.voice_id = "VR6AewLTigWG4xSOukaG"  # Jessica 专业女声
 
 ### 集成其他语音服务（规划）
 
-- 当前 `VoiceService` 直接使用 ElevenLabs SDK；若要接入其它 TTS 服务，可创建新的 `CustomVoiceService`，实现与现有 `generate_voice` 相同的签名与返回值 `(audio_url, duration)`。
-- 将 `app/services/voice_service.py` 中的 `voice_service = VoiceService()` 替换或封装为工厂，即可在 API 层无感切换。
-- 推荐尽量复用 `VoiceCacheService` 与 `GCSService`，这样即使底层供应商不同，缓存、配额与监控逻辑也能保持一致。
+- 当前 `VoiceService` 通过 `app/core/voice/tts_api.py` 的 TTS wrapper 调用 ElevenLabs；若要接入其它 TTS 服务，建议新增一个实现同样接口的 Provider，并在 `VoiceService` 内切换依赖（保持 `generate_voice` 的签名与返回值 `(audio_url, duration)` 不变）。
+- 这样可以尽量复用 `VoiceCacheService` 与 `GCSService`，让缓存、配额与监控逻辑保持一致。
 
 ## 更新日志
 

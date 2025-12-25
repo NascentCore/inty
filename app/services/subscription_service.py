@@ -1201,6 +1201,10 @@ class SubscriptionService:
             purchase_token = subscription_notification.get("purchaseToken")
             notification_type = subscription_notification.get("notificationType")
 
+            logger.info(
+                f"处理订阅通知: {subscription_notification}, notification_type: {notification_type}"
+            )
+
             if not purchase_token:
                 return False
 
@@ -1508,7 +1512,14 @@ class SubscriptionService:
             db.add(transaction)
 
             await db.commit()
-            await db.refresh(subscription)
+
+            # 重新查询订阅记录，确保 plan 关系已预加载（避免后续访问 subscription.plan 触发懒加载）
+            result = await db.execute(
+                select(UserSubscription)
+                .options(selectinload(UserSubscription.plan))
+                .where(UserSubscription.id == subscription.id)
+            )
+            subscription = result.scalar_one()
 
             # 确认购买（向Google Play发送确认）
             try:
@@ -1538,6 +1549,21 @@ class SubscriptionService:
     ) -> None:
         """根据通知类型更新订阅状态"""
         try:
+            # 防御式获取 plan（避免懒加载触发 greenlet_spawn 错误）
+            plan = subscription.plan
+            if plan is None:
+                result = await db.execute(
+                    select(SubscriptionPlan).where(
+                        SubscriptionPlan.id == subscription.plan_id
+                    )
+                )
+                plan = result.scalar_one_or_none()
+                if plan is None:
+                    logger.error(
+                        f"更新订阅状态失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
+                    )
+                    raise ValueError(f"找不到订阅计划: {subscription.plan_id}")
+
             # Google Play通知类型映射
             # 1: SUBSCRIPTION_RECOVERED (订阅恢复)
             # 2: SUBSCRIPTION_RENEWED (订阅续费)
@@ -1592,7 +1618,7 @@ class SubscriptionService:
 
             # 获取最新的订阅信息
             latest_info = self.google_play_service.get_subscription_details(
-                subscription.plan.google_play_product_id,
+                plan.google_play_product_id,
                 subscription.google_play_purchase_token,
             )
 
@@ -1617,7 +1643,9 @@ class SubscriptionService:
 
         except Exception as e:
             await db.rollback()
-            logger.error(f"更新订阅状态失败: {str(e)}")
+            logger.error(
+                f"更新订阅状态失败: {str(e)}, notification_type: {notification_type}"
+            )
             raise
 
     async def _create_renewal_transaction(
@@ -1628,13 +1656,28 @@ class SubscriptionService:
     ) -> None:
         """创建续费交易记录"""
         try:
+            # 防御式获取 plan（避免懒加载触发 greenlet_spawn 错误）
+            plan = subscription.plan
+            if plan is None:
+                result = await db.execute(
+                    select(SubscriptionPlan).where(
+                        SubscriptionPlan.id == subscription.plan_id
+                    )
+                )
+                plan = result.scalar_one_or_none()
+                if plan is None:
+                    logger.error(
+                        f"创建续费交易记录失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
+                    )
+                    raise ValueError(f"找不到订阅计划: {subscription.plan_id}")
+
             transaction = SubscriptionTransaction(
                 id=str(uuid.uuid4()),
                 subscription_id=subscription.id,
                 user_id=subscription.user_id,
                 transaction_type=TransactionType.RENEWAL,
-                amount=subscription.plan.price,
-                currency=subscription.plan.currency,
+                amount=plan.price,
+                currency=plan.currency,
                 google_play_purchase_token=subscription.google_play_purchase_token,
                 status="COMPLETED",
                 transaction_time=datetime.now(timezone.utc),
@@ -1656,6 +1699,21 @@ class SubscriptionService:
     ) -> None:
         """处理退款逻辑"""
         try:
+            # 防御式获取 plan（避免懒加载触发 greenlet_spawn 错误）
+            plan = subscription.plan
+            if plan is None:
+                result = await db.execute(
+                    select(SubscriptionPlan).where(
+                        SubscriptionPlan.id == subscription.plan_id
+                    )
+                )
+                plan = result.scalar_one_or_none()
+                if plan is None:
+                    logger.error(
+                        f"退款处理失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
+                    )
+                    raise ValueError(f"找不到订阅计划: {subscription.plan_id}")
+
             # 更新订阅状态为退款
             subscription.status = SubscriptionStatus.REFUNDED
             subscription.auto_renew = False
@@ -1664,7 +1722,7 @@ class SubscriptionService:
             subscription.end_date = datetime.now(timezone.utc)
 
             # 创建退款交易记录
-            refund_amount = refund_data.get("amount") or subscription.plan.price
+            refund_amount = refund_data.get("amount") or plan.price
 
             transaction = SubscriptionTransaction(
                 id=str(uuid.uuid4()),
@@ -1672,7 +1730,7 @@ class SubscriptionService:
                 user_id=subscription.user_id,
                 transaction_type=TransactionType.REFUND,
                 amount=-abs(refund_amount),  # 退款金额为负数
-                currency=subscription.plan.currency,
+                currency=plan.currency,
                 google_play_purchase_token=subscription.google_play_purchase_token,
                 google_play_order_id=subscription.google_play_order_id,
                 status="COMPLETED",

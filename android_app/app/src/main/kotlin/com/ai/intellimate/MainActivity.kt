@@ -35,33 +35,43 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.ui.components.EmailLoginButton
+import com.ai.intellimate.ui.HolidayCelebrationPopupRules
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
+import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
+import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
+import com.ai.intellimate.xb.helper.AgentStore
+import com.ai.intellimate.xb.helper.AppConstants.Companion.PUSH_NOTIFICATION
 import com.ai.intellimate.xb.navigation.AppNavHost
 import com.ai.intellimate.xb.navigation.Routes
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -267,7 +277,7 @@ class MainActivity : BaseActivity() {
                 FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
                 FirebaseManager.safeEventParams(
                     "agent_id" to agentId,
-                    "page_source" to com.ai.intellimate.chat.ChatActivity.PUSH_NOTIFICATION,
+                    "page_source" to PUSH_NOTIFICATION,
                 ),
             )
             // 跳转到 ChatScreen
@@ -292,6 +302,46 @@ class MainActivity : BaseActivity() {
         // 直接使用ViewModel的StateFlow，实现响应式UI更新
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
+
+        // 设计决策：使用会话级标记而非日期级持久化
+        // 原因：
+        // 1. 每次应用打开都能看到弹窗，增强节日氛围和用户参与度
+        // 2. 避免日期格式、时区、跨天等复杂逻辑
+        // 3. 性能更好：无需每次检查都读取持久化存储
+        // 4. 用户体验：应用重启后可以再次看到，符合"每次打开应用都显示"的需求
+        // 避免因恢复Activity而重复显示
+        var hasShownInSession by rememberSaveable { mutableStateOf(false) }
+        var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
+        val themeAgents by AgentCacheManager.themeAgentCache.collectAsState()
+
+        // 设计决策：使用 LaunchedEffect(Unit) 处理应用首次启动的情况
+        // 原因：确保应用启动时如果用户已登录，弹窗能够显示
+        // 注意：LaunchedEffect(Unit) 只在首次组合时执行一次，不会在应用恢复时重复执行
+        LaunchedEffect(Unit) {
+            if (isLoggedIn && !hasShownInSession && HolidayCelebrationPopupRules.shouldShowNow()) {
+                showHolidayCelebrationDialog = true
+                hasShownInSession = true
+            }
+        }
+
+        // 设计决策：使用 LaunchedEffect(isLoggedIn) 处理登录状态变化
+        // 原因：处理用户从未登录变为已登录的情况
+        // 注意：通过 hasShownInSession 标记确保每个会话只显示一次，避免与 LaunchedEffect(Unit) 重复
+        LaunchedEffect(isLoggedIn) {
+            // 场景1：用户从未登录变为已登录，且本次会话未显示过
+            if (isLoggedIn && !hasShownInSession && HolidayCelebrationPopupRules.shouldShowNow()) {
+                showHolidayCelebrationDialog = true
+                hasShownInSession = true
+            }
+            // 场景2：用户登出
+            else if (!isLoggedIn) {
+                showHolidayCelebrationDialog = false
+                // 设计决策：用户登出时重置会话标记，允许下次登录时再次显示
+                // 这确保了每次登录会话都能看到庆祝弹窗
+                hasShownInSession = false
+            }
+            // 场景3：用户已登录且已显示过，或日期已过期，不做任何操作
+        }
 
         // 在首次显示时执行初始化操作
         LaunchedEffect(Unit) {
@@ -362,7 +412,73 @@ class MainActivity : BaseActivity() {
         //            }
         //        }
         val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
-        AppNavHost(page, mainViewModel, chatViewModel, defaultViewModelProviderFactory)
+        // 设计决策：在 MainActivity 中创建 NavController 并传递给 AppNavHost
+        // 原因：需要在点击庆祝按钮后导航到随机圣诞角色的聊天页面
+        // 通过传递 NavController，MainActivity 可以控制导航，而 AppNavHost 仍然可以在
+        // 没有外部 NavController 时创建自己的实例（向后兼容）
+        val navController = rememberNavController()
+        val scope = rememberCoroutineScope()
+        AppNavHost(
+            page,
+            mainViewModel,
+            chatViewModel,
+            defaultViewModelProviderFactory,
+            navController,
+        )
+
+        // 只在用户已登录时显示庆祝弹窗
+        if (showHolidayCelebrationDialog && isLoggedIn && themeAgents.isNotEmpty()) {
+            HolidayCelebrationDialog(
+                title = stringResource(R.string.holiday_celebration_title),
+                subtitle = stringResource(R.string.holiday_celebration_subtitle),
+                primaryButtonText = stringResource(R.string.holiday_celebration_primary_cta),
+                onDismiss = { showHolidayCelebrationDialog = false },
+                onPrimaryClick = {
+                    // 设计决策：点击按钮后执行三个操作：
+                    // 1. 添加 100 个 boost points 作为节日奖励（提升用户参与度）
+                    // 2. 显示成功提示（即时反馈）
+                    // 3. 导航到随机圣诞角色（增强节日主题体验，引导用户探索圣诞内容）
+                    LogUtils.d(
+                        "MainActivity",
+                        "Holiday celebration button clicked, adding 100 boost points",
+                    )
+                    BoostManager.requestManualPoints(100)
+                    ToastUtils.showShort(R.string.holiday_celebration_points_added)
+                    showHolidayCelebrationDialog = false
+
+                    // 设计决策：使用 isChristmas 标志筛选，而非字符串匹配
+                    // 原因：更可靠、性能更好，且由服务端控制，便于维护
+                    val christmasThemes = themeAgents.filter { it.isChristmas }
+                    val allChristmasAgents = christmasThemes.flatMap { it.agents }
+
+                    if (allChristmasAgents.isNotEmpty()) {
+                        // 设计决策：随机选择而非固定选择
+                        // 原因：增加趣味性，每次点击可能导航到不同的角色
+                        val randomAgent = allChristmasAgents.random()
+                        // 设计决策：先添加到 AgentStore，再导航
+                        // 原因：确保角色信息已缓存，导航时能正确显示角色信息
+                        AgentStore.addAgent(randomAgent)
+                        // 设计决策：shouldAutoFocusInput = false
+                        // 原因：用户刚进入聊天页面，不应该立即弹出键盘，让用户先看到角色信息
+                        navController.navigate(
+                            Routes.Chat.chatPage(
+                                randomAgent.id,
+                                false,
+                                shouldAutoFocusInput = false,
+                            )
+                        )
+                        LogUtils.d(
+                            "MainActivity",
+                            "Navigated to Christmas character: ${randomAgent.name} (${randomAgent.id})",
+                        )
+                    } else {
+                        // 设计决策：静默失败，不打扰用户
+                        // 原因：这是增强功能，失败不应影响主要流程
+                        LogUtils.w("MainActivity", "No Christmas characters found")
+                    }
+                },
+            )
+        }
     }
 
     /** 设置返回拦截功能 */
@@ -722,16 +838,24 @@ fun SplashLoginUI(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Email 登录按钮
-                    EmailLoginButton(
-                        isLoading = isLoading,
-                        onLoginClick = { loginScreenState = LoginScreenState.ENTER_EMAIL },
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
                     // 隐私政策文本
                     com.ai.intellimate.ui.components.PolicyText()
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Email + Password 登录入口（仅用于审核/测试）
+                    androidx.compose.material3.TextButton(
+                        onClick = { loginScreenState = LoginScreenState.ENTER_EMAIL },
+                        enabled = !isLoading,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = stringResource(R.string.continue_with_email),
+                            color = Color.White.copy(alpha = 0.35f),
+                            fontSize = 12.sp,
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(80.dp))
                 }
@@ -789,7 +913,8 @@ private fun performEmailLogin(
                     // 使用 withContext 确保在 IO 线程执行，并等待完成
                     withContext(Dispatchers.IO) {
                         try {
-                            ai.sxwl.android.data.di.DataModule.getChatRepository().clearAllChatData()
+                            ai.sxwl.android.data.di.DataModule.getChatRepository()
+                                .clearAllChatData()
                             LogUtils.i(
                                 "MainActivity: cleared all chat data before email login for user ${userProfile.id}"
                             )

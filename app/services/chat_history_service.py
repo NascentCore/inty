@@ -251,6 +251,67 @@ def add_user_message(session_id: str, message: str) -> None:
         raise
 
 
+def add_ai_message_sync(
+    session_id: str,
+    message: str,
+    agent_id: Optional[str] = None,
+    meta_data: Optional[dict] = None,
+) -> Optional[int]:
+    """
+    同步版本：添加AI消息到聊天历史，返回插入的消息ID
+
+    Args:
+        session_id: 会话ID
+        message: 消息内容
+        agent_id: Agent ID（可选）
+        meta_data: 自定义元数据（可选，会与默认元数据合并）
+
+    Returns:
+        插入的消息ID
+    """
+    try:
+        conn = get_chat_history_connection()
+
+        # 构建AIMessage的JSON格式数据
+        message_data = {"type": "ai", "data": {"content": message}}
+
+        # 构建meta_data
+        final_meta_data = meta_data.copy() if meta_data else {}
+
+        if agent_id:
+            final_meta_data["agentId"] = agent_id
+            if "isOpening" not in final_meta_data:
+                final_meta_data["isOpening"] = False
+
+        # 执行SQL插入
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """
+
+        with conn.cursor() as cur:
+            cur.execute(
+                insert_query,
+                (
+                    session_id,
+                    json.dumps(message_data),
+                    json.dumps(final_meta_data) if final_meta_data else None,
+                ),
+            )
+            result = cur.fetchone()
+            message_id = result[0] if result else None
+
+        logger.debug(
+            f"添加AI消息到会话 {session_id}: {message[:50]}..., ID: {message_id}"
+        )
+        return message_id
+
+    except Exception as e:
+        logger.error(f"添加AI消息失败(sync) {session_id}: {str(e)}")
+        raise
+
+
 async def add_ai_message(
     db: AsyncSession,
     session_id: str,

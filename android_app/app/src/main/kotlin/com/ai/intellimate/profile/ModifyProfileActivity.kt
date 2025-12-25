@@ -2,6 +2,7 @@ package com.ai.intellimate.profile
 
 import ai.sxwl.android.common.base.BaseActivity
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.store.PersonaPreferenceStore
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Context
 import android.content.Intent
@@ -152,10 +153,13 @@ class ModifyProfileActivity : BaseActivity() {
         val scope = rememberCoroutineScope()
         val sheetState = rememberModalBottomSheetState(true)
         val isSaving by viewModel.isSaving.collectAsState()
+        val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
+        val userPreference by preferenceFlow.collectAsState(initial = "")
 
         Box(modifier = Modifier.fillMaxSize()) {
             ProfileInfoScreen(
                 userProfile = userProfile.value,
+                preference = userPreference,
                 onBack = { finish() },
                 onClickName = {
                     editKey = EditKey.Name
@@ -168,6 +172,10 @@ class ModifyProfileActivity : BaseActivity() {
                 onClickPronouns = {
                     editKey = EditKey.Pronouns
                     editValue = userProfile.value.gender ?: ""
+                },
+                onClickPreference = {
+                    editKey = EditKey.Preference
+                    editValue = userPreference
                 },
                 onSelectAvatar = { galleryLauncher.launch("image/*") },
             )
@@ -194,7 +202,13 @@ class ModifyProfileActivity : BaseActivity() {
                         onSave = { key, value ->
                             // 在各自的 sheet 中点击 save 时，立即调用接口更新
                             // updateFieldAndSave 会判断是否变化，并更新本地状态
-                            viewModel.updateFieldAndSave(key, value)
+                            if (key == EditKey.Preference) {
+                                scope.launch {
+                                    PersonaPreferenceStore.savePreference(context, value.trim())
+                                }
+                            } else {
+                                viewModel.updateFieldAndSave(key, value)
+                            }
 
                             scope
                                 .launch { sheetState.hide() }

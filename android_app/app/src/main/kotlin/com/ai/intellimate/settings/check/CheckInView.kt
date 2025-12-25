@@ -108,7 +108,7 @@ fun CheckInScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(screenHeightDp * 0.08f))
             Text(
-                text = "💗 Day ${checkedInDays.count()} Together",
+                text = stringResource(R.string.check_in_day_together, checkedInDays.count()),
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 letterSpacing = 0.6.sp,
                 style =

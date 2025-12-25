@@ -98,12 +98,21 @@ fun IntySmallTextField(
             contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
         ) {
             var textFieldValue by remember {
-                mutableStateOf(TextFieldValue(value, selection = TextRange(selection)))
+                mutableStateOf(
+                    TextFieldValue(
+                        value,
+                        selection = TextRange(selection.coerceAtMost(value.length)),
+                    )
+                )
             }
 
             // 使用LaunchedEffect来监听外部value和selection的变化
             LaunchedEffect(value, selection) {
-                textFieldValue = textFieldValue.copy(text = value, selection = TextRange(selection))
+                textFieldValue =
+                    textFieldValue.copy(
+                        text = value,
+                        selection = TextRange(selection.coerceAtMost(value.length)),
+                    )
             }
             val scope = rememberCoroutineScope()
             val textFieldModifier =

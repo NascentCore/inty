@@ -5,6 +5,7 @@
 
 import React from "react";
 import { Card, Row, Col, Tag } from "antd";
+import { CloseCircleOutlined } from "@ant-design/icons";
 import type { Agent } from "../../types";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { BackgroundWithCropOverlay } from "./BackgroundWithCropOverlay";
@@ -16,6 +17,7 @@ interface AgentInfoDisplayProps {
   showPrompts?: boolean;
   showLLMConfig?: boolean;
   compact?: boolean;
+  onDeleteBackgroundImage?: (imageUrl: string) => void;
 }
 
 export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
@@ -24,6 +26,7 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
   showPrompts = true,
   showLLMConfig = true,
   compact = false,
+  onDeleteBackgroundImage,
 }) => {
   // 统一的图片样式
   const imageStyle = {
@@ -285,12 +288,34 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {agent.background_images.map((img, index) => (
-                <img
+                <div
                   key={index}
-                  src={img}
-                  alt={`background-${index}`}
-                  style={imageStyle}
-                />
+                  style={{
+                    position: "relative",
+                    display: "inline-block",
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`background-${index}`}
+                    style={imageStyle}
+                  />
+                  {onDeleteBackgroundImage && (
+                    <CloseCircleOutlined
+                      onClick={() => onDeleteBackgroundImage(img)}
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        fontSize: 18,
+                        color: "#ff4d4f",
+                        backgroundColor: "white",
+                        borderRadius: "50%",
+                        cursor: "pointer",
+                      }}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </>

@@ -114,6 +114,7 @@
   - `{agent_personality}`: 角色性格
   - `{chat_history}`: 格式化的聊天历史
   - `{user_message}`: 用户消息内容
+  - `{user_info}`: 用户信息块（`##User Information` 格式，包含 Name/Gender/Age/Description）
 
 - **提示词模板**（默认）:
 

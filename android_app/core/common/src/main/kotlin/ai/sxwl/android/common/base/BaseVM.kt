@@ -3,6 +3,7 @@ package ai.sxwl.android.common.base
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -18,10 +19,10 @@ abstract class BaseVM : ViewModel() {
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // UI相关任务列表
-    private val uiJobs: MutableList<Job> = mutableListOf()
+    private val uiJobs: MutableList<Job> = CopyOnWriteArrayList()
 
     // 后台任务列表
-    private val backgroundJobs: MutableList<Job> = mutableListOf()
+    private val backgroundJobs: MutableList<Job> = CopyOnWriteArrayList()
 
     // 异常处理器
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->

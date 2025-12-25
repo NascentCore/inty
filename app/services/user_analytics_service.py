@@ -424,7 +424,16 @@ class UserAnalyticsService:
                 SELECT 
                     COUNT(*) as total_requests,
                     COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
-                    COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures
+                    COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures,
+                    COUNT(*) FILTER (
+                        WHERE extra_data->>'success' = 'true' 
+                        AND (extra_data->>'is_matched' IS NULL 
+                             OR extra_data->>'is_matched' = 'false')
+                    ) as new_generation,
+                    COUNT(*) FILTER (
+                        WHERE extra_data->>'success' = 'true' 
+                        AND extra_data->>'is_matched' = 'true'
+                    ) as fallback_used
                 FROM subscription_usage
                 WHERE usage_type = 'image_generation'
                   AND usage_date >= :start_date 
@@ -438,6 +447,8 @@ class UserAnalyticsService:
             total_requests = image_gen_row[0] if image_gen_row else 0
             total_success = image_gen_row[1] if image_gen_row else 0
             total_failures = image_gen_row[2] if image_gen_row else 0
+            new_generation = image_gen_row[3] if image_gen_row else 0
+            fallback_used = image_gen_row[4] if image_gen_row else 0
             success_rate = (
                 (total_success / total_requests * 100) if total_requests > 0 else 0.0
             )
@@ -446,6 +457,8 @@ class UserAnalyticsService:
                 "total_image_generation_success": total_success,
                 "total_image_generation_failures": total_failures,
                 "image_generation_success_rate": round(success_rate, 2),
+                "total_image_new_generation": new_generation,
+                "total_image_fallback_used": fallback_used,
             }
 
         if not sessions_detail:
@@ -1074,6 +1087,28 @@ class UserAnalyticsService:
             }
         return None
 
+    async def find_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """通过用户 ID 查找用户"""
+        query = text(
+            """
+            SELECT id, email, nickname, auth_type, created_at
+            FROM users
+            WHERE id = :user_id AND deleted_at IS NULL
+            LIMIT 1
+        """
+        )
+        result = await self.db.execute(query, {"user_id": user_id})
+        row = result.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "email": row[1],
+                "nickname": row[2],
+                "auth_type": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+            }
+        return None
+
     async def get_user_chat_ids(self, user_id: str) -> List[str]:
         """获取用户的所有 chat_id"""
         query = text(
@@ -1379,3 +1414,41 @@ class UserAnalyticsService:
             "size": size,
             "has_more": offset + len(messages) < total,
         }
+
+    async def get_llm_latency_trend(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+    ) -> List[Dict[str, Any]]:
+        """按小时聚合 LLM 调用延迟"""
+        query = text(
+            """
+            SELECT 
+                DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC') as hour,
+                AVG((meta_data->>'llm_invoke_time')::float) as avg_latency,
+                COUNT(*) as count
+            FROM chat_history
+            WHERE created_at >= :start_date 
+              AND created_at < :end_date
+              AND meta_data->>'llm_invoke_time' IS NOT NULL
+              AND deleted_at IS NULL
+            GROUP BY DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC')
+            ORDER BY hour
+        """
+        )
+        result = await self.db.execute(
+            query,
+            {
+                "start_date": activity_start_date,
+                "end_date": activity_end_date,
+            },
+        )
+        rows = result.fetchall()
+        return [
+            {
+                "hour": row[0].strftime("%Y-%m-%d %H:00") if row[0] else None,
+                "avg_latency": round(row[1], 3) if row[1] else 0.0,
+                "count": row[2] or 0,
+            }
+            for row in rows
+        ]

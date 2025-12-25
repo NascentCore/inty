@@ -116,7 +116,9 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
     val handleLeaderboardAction =
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
-                navController.navigate(Routes.chatPage(entry.agentId, showSheet))
+                navController.navigate(
+                    Routes.Chat.chatPage(entry.agentId, showSheet, shouldAutoFocusInput = false)
+                )
                 //                ChatActivity.launch(
                 //                    context,
                 //                    agentInfo = null,
@@ -202,7 +204,7 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
             onDismiss = { showHelpSheet = false },
             onOpenLeaderboard = {
                 showHelpSheet = false
-                navController.navigate(Routes.BoostLeaderboard)
+                navController.navigate(Routes.Explore.BoostLeaderboard)
                 //                BoostLeaderboardActivity.launch(context)
             },
         )

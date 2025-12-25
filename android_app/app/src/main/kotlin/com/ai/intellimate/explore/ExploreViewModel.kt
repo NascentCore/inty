@@ -11,6 +11,7 @@ import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
@@ -80,6 +82,13 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     private val _hasSearchExecuted = MutableStateFlow(false)
     val hasSearchExecuted: StateFlow<Boolean> = _hasSearchExecuted.asStateFlow()
 
+    private enum class ExploreSearchMode {
+        Name,
+        Tag,
+    }
+
+    private data class ParsedExploreSearch(val mode: ExploreSearchMode, val query: String)
+
     // 实现 ExploreFetchCallback 接口
     override suspend fun onSuccess(
         page: Int,
@@ -136,7 +145,22 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
         // 使用app层的ExplorePagingRepository，支持事件回调
         val initialFlow =
-            explorePagingRepository.getRecommendAgentsFlow(useCache = true).cachedIn(viewModelScope)
+            explorePagingRepository
+                .getRecommendAgentsFlow(useCache = true)
+                .map { pagingData ->
+                    // 分页会导致不同页面可能存在相同agent，临时去重解决方案，更好的解决方式需要重构整个流程，从根源上去重
+                    val agentIds = mutableSetOf<String>()
+
+                    pagingData.filter { item ->
+                        if (agentIds.contains(item.id)) {
+                            false // 过滤重复
+                        } else {
+                            agentIds.add(item.id)
+                            true
+                        }
+                    }
+                }
+                .cachedIn(viewModelScope)
 
         _agentsFlow.value = initialFlow
         isInitialized = true
@@ -391,8 +415,8 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
     /** 搜索角色（从本地数据库搜索，按名称模糊匹配） */
     fun searchAgentsByName(keyword: String) {
-        val query = keyword.trim()
-        if (query.isBlank()) {
+        val parsed = parseExploreSearch(keyword)
+        if (parsed == null) {
             resetSearchState()
             return
         }
@@ -401,47 +425,95 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             _isSearching.value = true
             _hasSearchExecuted.value = true
             try {
-                // 优先从数据库搜索（包含所有已同步的角色）
-                val dbResults = characterRepository.searchCharactersByName(query, limit = 100)
-                LogUtils.d("ExploreViewModel - 从数据库搜索关键词'$query'，找到${dbResults.size}个匹配结果")
-
-                // 如果数据库结果为空，尝试从缓存搜索作为补充
-                if (dbResults.isEmpty()) {
-                    val recommendedAgents = AgentCacheManager.getCachedAgents()
-                    val chatAgents = AgentCacheManager.getCachedChatAgents()
-                    val userCreatedAgents = AgentCacheManager.getCachedUserCreatedAgents()
-
-                    val allCachedAgents = mutableListOf<AgentInfo>()
-                    val seenIds = mutableSetOf<String>()
-
-                    (recommendedAgents + chatAgents + userCreatedAgents).forEach { agent ->
-                        if (agent.id.isNotEmpty() && !seenIds.contains(agent.id)) {
-                            allCachedAgents.add(agent)
-                            seenIds.add(agent.id)
-                        }
+                val dbResults =
+                    when (parsed.mode) {
+                        ExploreSearchMode.Name ->
+                            characterRepository.searchCharactersByName(parsed.query, limit = 100)
+                        ExploreSearchMode.Tag ->
+                            characterRepository.searchCharactersByTag(parsed.query, limit = 100)
                     }
 
-                    val cacheResults =
-                        allCachedAgents.filter { agent ->
-                            agent.name.contains(query, ignoreCase = true)
-                        }
+                LogUtils.d(
+                    "ExploreViewModel - 从数据库搜索(mode=${parsed.mode}) 关键词'${parsed.query}'，找到${dbResults.size}个匹配结果"
+                )
 
-                    LogUtils.d(
-                        "ExploreViewModel - 数据库无结果，从缓存搜索: " +
-                            "推荐${recommendedAgents.size}个, 聊天${chatAgents.size}个, " +
-                            "用户创建${userCreatedAgents.size}个, 找到${cacheResults.size}个匹配结果"
-                    )
-
-                    _searchResults.value = cacheResults
-                } else {
+                if (dbResults.isNotEmpty()) {
                     _searchResults.value = dbResults
+                    return@launch
                 }
+
+                val recommendedAgents = AgentCacheManager.getCachedAgents()
+                val chatAgents = AgentCacheManager.getCachedChatAgents()
+                val userCreatedAgents = AgentCacheManager.getCachedUserCreatedAgents()
+                val allCachedAgents =
+                    mergeAgentsUniqueById(recommendedAgents + chatAgents + userCreatedAgents)
+
+                val cacheResults =
+                    when (parsed.mode) {
+                        ExploreSearchMode.Name -> filterAgentsByName(allCachedAgents, parsed.query)
+                        ExploreSearchMode.Tag -> filterAgentsByTag(allCachedAgents, parsed.query)
+                    }
+
+                LogUtils.d(
+                    "ExploreViewModel - 数据库无结果，从缓存搜索(mode=${parsed.mode}): " +
+                        "推荐${recommendedAgents.size}个, 聊天${chatAgents.size}个, " +
+                        "用户创建${userCreatedAgents.size}个, 找到${cacheResults.size}个匹配结果"
+                )
+
+                _searchResults.value = cacheResults
             } catch (e: Exception) {
                 LogUtils.e("ExploreViewModel - searchAgentsByName异常: ${e.message}", e)
                 _searchResults.value = emptyList()
             } finally {
                 _isSearching.value = false
             }
+        }
+    }
+
+    private fun parseExploreSearch(raw: String): ParsedExploreSearch? {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return null
+
+        val normalizedPrefix =
+            if (trimmed.firstOrNull() == '＃') {
+                "#${trimmed.drop(1)}"
+            } else {
+                trimmed
+            }
+
+        if (!normalizedPrefix.startsWith("#")) {
+            return ParsedExploreSearch(mode = ExploreSearchMode.Name, query = trimmed)
+        }
+
+        val tagQuery = normalizedPrefix.removePrefix("#").trim()
+        if (tagQuery.isBlank()) return null
+        return ParsedExploreSearch(mode = ExploreSearchMode.Tag, query = tagQuery)
+    }
+
+    private fun mergeAgentsUniqueById(agents: List<AgentInfo>): List<AgentInfo> {
+        if (agents.isEmpty()) return emptyList()
+        val unique = ArrayList<AgentInfo>(agents.size)
+        val seenIds = HashSet<String>(agents.size)
+        agents.forEach { agent ->
+            val id = agent.id
+            if (id.isNotEmpty() && seenIds.add(id)) {
+                unique.add(agent)
+            }
+        }
+        return unique
+    }
+
+    private fun filterAgentsByName(agents: List<AgentInfo>, query: String): List<AgentInfo> {
+        if (agents.isEmpty()) return emptyList()
+        return agents.filter { it.name.contains(query, ignoreCase = true) }
+    }
+
+    private fun filterAgentsByTag(agents: List<AgentInfo>, query: String): List<AgentInfo> {
+        if (agents.isEmpty()) return emptyList()
+        return agents.filter { agent ->
+            agent.tags?.asSequence()?.filterNotNull()?.any {
+                it.contains(query, ignoreCase = true)
+            } == true
         }
     }
 

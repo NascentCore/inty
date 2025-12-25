@@ -7,6 +7,8 @@ import ai.sxwl.android.utils.LogUtils
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /** Agent缓存管理器 负责缓存推荐agents和关注agents数据 */
 object AgentCacheManager {
@@ -31,6 +33,9 @@ object AgentCacheManager {
         Types.newParameterizedType(List::class.java, AgentService.CharacterThemeItem::class.java)
     private val characterThemeListAdapter =
         moshi.adapter<List<AgentService.CharacterThemeItem>>(characterThemeListType)
+
+    private val _themeAgentCache = MutableStateFlow(emptyList<AgentService.CharacterThemeItem>())
+    val themeAgentCache = _themeAgentCache.asStateFlow()
 
     /** 缓存推荐agents */
     fun cacheAgents(agents: List<AgentInfo>) {
@@ -194,6 +199,7 @@ object AgentCacheManager {
                 KEY_CHARACTER_THEMES_CACHE_TIMESTAMP,
                 System.currentTimeMillis().toString(),
             )
+            _themeAgentCache.value = themes
             LogUtils.d("AgentCacheManager - 缓存主题专区列表成功: ${themes.size}个")
         } catch (e: Exception) {
             LogUtils.e("AgentCacheManager - 缓存主题专区列表失败: ${e.message}")

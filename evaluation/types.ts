@@ -74,6 +74,7 @@ export interface AgentUpdateRequest {
   avatar?: string;
   background?: string;
   background_images?: string[];
+  replace_background_images?: boolean; // 是否替换 background_images 列表
   background_animated?: string; // webp 动图 URL
   voice_id?: string;
   llm_config?: LLMConfig | null;
@@ -530,6 +531,9 @@ export interface UserAnalyticsStatsResponse {
   total_image_generation_success: number;
   total_image_generation_failures: number;
   image_generation_success_rate: number;
+  // 生图细分统计
+  total_image_new_generation: number;
+  total_image_fallback_used: number;
 }
 
 export interface UserDailyMessageItem {
@@ -580,6 +584,17 @@ export interface SessionMessagesResponse {
   page: number;
   size: number;
   has_more: boolean;
+}
+
+// LLM 延迟统计
+export interface LLMLatencyItem {
+  hour: string;
+  avg_latency: number;
+  count: number;
+}
+
+export interface LLMLatencyResponse {
+  data: LLMLatencyItem[];
 }
 
 // 生成图片

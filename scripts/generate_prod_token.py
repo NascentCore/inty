@@ -28,10 +28,12 @@
     python scripts/generate_prod_token.py --env local user-01JWZ34Y4D1C92GD86A5R6EWYJ 7
 """
 
-import argparse
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Annotated, Literal
+
+import cyclopts
 
 try:
     import yaml
@@ -88,50 +90,30 @@ def generate_token(
     return encoded_jwt
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="使用配置文件中的 secret_key 生成 JWT token"
-    )
-    parser.add_argument(
-        "--env",
-        choices=["local", "dev", "prod"],
-        default="prod",
-        help="环境配置 (默认: prod)",
-    )
-    parser.add_argument(
-        "user_id",
-        nargs="?",
-        default="user-01JWZ34Y4D1C92GD86A5R6EWYJ",
-        help="用户ID (默认: user-01JWZ34Y4D1C92GD86A5R6EWYJ)",
-    )
-    parser.add_argument(
-        "expire_days",
-        nargs="?",
-        type=int,
-        default=7,
-        help="过期天数 (默认: 7)",
-    )
-
-    args = parser.parse_args()
-
+def main(
+    user_id: str = "user-01JWZ34Y4D1C92GD86A5R6EWYJ",
+    expire_days: int = 7,
+    env: Annotated[
+        Literal["local", "dev", "prod"],
+        cyclopts.Parameter(name="--env", help="环境配置 (默认: prod)"),
+    ] = "prod",
+):
     try:
-        config = load_config(args.env)
+        config = load_config(env)
         security_config = config.get("security", {})
         secret_key = security_config.get("secret_key")
         algorithm = security_config.get("algorithm", "HS256")
 
         if not secret_key:
-            print(f"错误: 配置文件 {args.env} 中未找到 secret_key", file=sys.stderr)
+            print(f"错误: 配置文件 {env} 中未找到 secret_key", file=sys.stderr)
             sys.exit(1)
-    except Exception as e:
+    except (ValueError, FileNotFoundError, OSError) as e:
         print(f"错误: 加载配置文件失败: {e}", file=sys.stderr)
         sys.exit(1)
 
-    token = generate_token(args.user_id, secret_key, algorithm, args.expire_days)
+    token = generate_token(user_id, secret_key, algorithm, expire_days)
 
-    print(
-        f"生成的 Token (环境: {args.env}, 用户ID: {args.user_id}, 过期天数: {args.expire_days}):"
-    )
+    print(f"生成的 Token (环境: {env}, 用户ID: {user_id}, 过期天数: {expire_days}):")
     print(token)
     print()
     print("可以在 evaluation/start.sh 中使用:")
@@ -149,4 +131,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    cyclopts.run(main)

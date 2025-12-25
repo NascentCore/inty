@@ -5,7 +5,6 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -21,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -46,13 +46,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
-import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.ChatBackgroundUtils
 
 /** 这是角色相册的单独页面，是通过角色主页的 生图预览区右上角 See All 进入的页面 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,22 +158,12 @@ internal fun PhotoAlbumScreen(
         }
     }
 
-    if (previewImage != null) {
-        Dialog(
-            onDismissRequest = { previewImage = null },
-            properties =
-                DialogProperties(
-                    usePlatformDefaultWidth = false,
-                    dismissOnClickOutside = true,
-                    dismissOnBackPress = true,
-                ),
-        ) {
-            FullScreenImageViewer(
-                imageUrl = previewImage.orEmpty(),
-                onDismiss = { previewImage = null },
-            )
-        }
-    }
+    AgentGalleryImagePreviewDialog(
+        previewImageUrl = previewImage,
+        agentId = agent.id,
+        onDismiss = { previewImage = null },
+        onBackgroundChanged = { newUrl -> currentBackgroundUrl = newUrl },
+    )
 }
 
 @Composable
@@ -206,21 +194,35 @@ private fun PhotoAlbumImageItem(
                     }
         ) {
             AsyncImage(
-                modifier = Modifier.fillMaxWidth().aspectRatio(9f/16f),
+                modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f),
                 model =
                     ImageRequest.Builder(context)
                         .data(
                             getCdnImageUrl(
                                 item.imageUrl,
                                 width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
-                                quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY
-                            ) //确保设置聊天背景后能使用相同url的缓存，以避免出现加载过程。
+                                quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
+                            ) // 确保设置聊天背景后能使用相同url的缓存，以避免出现加载过程。
                         )
                         .build(),
                 contentDescription =
                     stringResource(R.string.agent_gallery_ai_images_content_description),
                 contentScale = ContentScale.Crop,
             )
+
+            // 如果这是当前背景，显示绿色圆点指示器
+            if (isCurrentBackground) {
+                Box(
+                    modifier =
+                        Modifier.align(Alignment.TopEnd)
+                            .padding(
+                                UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorPadding
+                            )
+                            .size(UiConfigs.ChatPage.PhotoAlbum.Preview.BackgroundIndicatorSize)
+                            .clip(CircleShape)
+                            .background(UiConfigs.ChatPage.PhotoAlbum.All.BackgroundIndicatorColor)
+                )
+            }
         }
 
         Box(
@@ -228,15 +230,13 @@ private fun PhotoAlbumImageItem(
                 Modifier.fillMaxWidth()
                     .padding(top = UiConfigs.ChatPage.PhotoAlbum.All.ImageItemButtonTopPadding)
                     .noRippleClickable {
-                        if (isCurrentBackground) {
-                            IntySetting.clearChatBackgroundImage(agentId)
-                            onBackgroundChanged(null)
-                            ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
-                        } else {
-                            IntySetting.setChatBackgroundImage(agentId, item.imageUrl)
-                            onBackgroundChanged(item.imageUrl)
-                            ToastUtils.showShort(R.string.agent_gallery_background_set_success)
-                        }
+                        val newBackgroundUrl =
+                            ChatBackgroundUtils.toggleChatBackground(
+                                agentId,
+                                item.imageUrl,
+                                isCurrentBackground,
+                            )
+                        onBackgroundChanged(newBackgroundUrl)
                     },
             contentAlignment = Alignment.Center,
         ) {

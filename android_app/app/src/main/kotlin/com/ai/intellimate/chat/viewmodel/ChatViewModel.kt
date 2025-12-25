@@ -159,7 +159,22 @@ class ChatViewModel : BaseVM() {
         // 如果是同一个 agent，总是触发后台同步以确保获取最新消息
         // syncLatestMessages 内部已经有逻辑判断是否有新消息，如果没有新消息不会更新本地数据
         if (_agentInfo.value?.id == agentInfo.id) {
-            _agentInfo.value = agentInfo
+            val previousIsDeleted = _agentInfo.value?.isDeleted ?: false
+            val currentIsDeleted = agentInfo.isDeleted
+            
+            // StateFlow使用引用相等性检测变化，如果传入同一个对象引用，即使内部属性变化也不会触发更新
+            // 如果isDeleted状态变化，需要创建新对象确保StateFlow能检测到变化
+            if (previousIsDeleted != currentIsDeleted) {
+                // 使用copy函数创建新对象,找一个无用字段readableId触发更新，然后设置isDeleted属性
+                val updatedAgent = agentInfo.copy(readableId = "deleted").apply {
+                    this.isDeleted = agentInfo.isDeleted
+                }
+                _agentInfo.value = updatedAgent
+            } else {
+                // isDeleted状态没有变化，直接更新
+                _agentInfo.value = agentInfo
+            }
+            
             // 重新启动能量点数观察，确保数据实时更新
             observeCharacterEnergy(agentInfo.id)
             viewModelScope.launch(Dispatchers.IO) {
@@ -207,6 +222,10 @@ class ChatViewModel : BaseVM() {
         currentOffset = 0
         _hasMoreMessages.value = true
         _isLoadingMore.value = false
+
+        // 切换到不同 agent 时，清空输入状态，避免输入文案残留
+        inputData.value = ""
+        inputSelection.value = 0
 
         // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
@@ -1086,6 +1105,11 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) { chatRepository.removeMessage(agentId, localMsgId) }
     }
 
+    fun clearGeneratedImage(messageId: String) {
+        val agentId = _agentInfo.value?.id ?: return
+        chatRepository.updateMessageGeneratedImage(agentId, messageId, null)
+    }
+
     fun generateImageForMessage(messageId: String) {
         val agentId = _agentInfo.value?.id
         val agent = _agentInfo.value
@@ -1120,7 +1144,7 @@ class ChatViewModel : BaseVM() {
                 ),
             )
 
-            // ✅ 修复：参数检查失败时，上报 failure 事件
+            // ✅ 修复：参数检查失败时，上报 failure 事件并重置状态
             if (agentId == null || agent == null) {
                 val endTime = System.currentTimeMillis()
                 FirebaseManager.logEvent(
@@ -1136,6 +1160,19 @@ class ChatViewModel : BaseVM() {
                     ),
                 )
                 LogUtils.e("generateImageForMessage: agentId or agent is null")
+                // 重置生图状态，确保可以再次点击
+                // ✅ 修复：即使 agentId 为 null，也尝试从消息中获取 agentId 来重置状态
+                val actualAgentId =
+                    agentId
+                        ?: run {
+                            val messages = _msgs.value
+                            val targetMessage =
+                                messages.find { it.id == messageId || it.localMsgId == messageId }
+                            targetMessage?.agentId()?.takeIf { it.isNotBlank() }
+                        }
+                actualAgentId?.let {
+                    chatRepository.updateMessageGeneratedImage(it, messageId, null)
+                }
                 return@launch
             }
 
@@ -1177,6 +1214,14 @@ class ChatViewModel : BaseVM() {
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                             ),
                         )
+
+                        // 重置点赞/点踩状态，确保生图后可以重新点赞/点踩
+                        val messages = _msgs.value
+                        val targetMessage =
+                            messages.find { it.id == messageId || it.localMsgId == messageId }
+                        targetMessage?.let {
+                            updateMessageFeedbackUseCase(agentId, it.localMsgId, null)
+                        }
                     }
 
                     is HttpResult.Failure -> {
@@ -1298,6 +1343,9 @@ class ChatViewModel : BaseVM() {
                         "generation_time_ms" to generationTime,
                     ),
                 )
+
+                // 重置生图状态，确保可以再次点击
+                chatRepository.updateMessageGeneratedImage(agentId, messageId, null)
 
                 NetworkErrorHandler.showNetworkAwareError("Failed to generate image: ${e.message}")
             }

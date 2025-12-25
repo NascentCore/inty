@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -67,6 +68,7 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
@@ -178,14 +180,8 @@ internal fun ChatPage(
         if (isCurrentPage && agentInfo?.id != null) {
             // 确定页面来源
             val pageSource: String =
-                if (pageSourceOverride != null) {
-                    // ChatActivity 场景：使用传入的 pageSourceOverride
-                    // 注意：ChatActivity 已经通过 BaseActivity 追踪了 SCREEN_VIEW 事件
-                    // 这里只上报 chat_page_view 事件，不再重复追踪 PageTrackingHelper
-                    pageSourceOverride
-                } else {
-                    // HorizontalPager 场景（MainActivity）：根据是否从其他 agent 滑动而来确定来源
-                    if (showBackButton) {
+                pageSourceOverride
+                    ?: if (showBackButton) {
                         // 理论上不应该出现这种情况，但为了安全起见保留
                         ChatPageSource.CHAT_ACTIVITY
                     } else {
@@ -202,7 +198,6 @@ internal fun ChatPage(
                             ChatPageSource.MAIN_ACTIVITY_HOME_TAB
                         }
                     }
-                }
 
             // 生成唯一 key，用于判断是否需要上报（避免在同一状态下重复上报）
             // 包含 Agent ID、页面来源和开关状态，确保这些关键参数变化时会重新上报
@@ -366,15 +361,22 @@ internal fun ChatPage(
             // - 在最新消息位置：显示 Keep Talking 按钮（如果启用）
             // - 在历史消息位置：显示滚动到底部按钮
             var isAtLatestMessage by remember { mutableStateOf(true) }
+            var isAtChatStart by remember { mutableStateOf(false) }
 
             // 监听滚动位置变化，实时更新 isAtLatestMessage 状态
             // 当 firstVisibleItemIndex == 0 且 scrollOffset == 0 时，表示用户正在查看最新消息
             LaunchedEffect(listState) {
                 snapshotFlow {
-                        listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                        Triple(
+                            listState.firstVisibleItemIndex,
+                            listState.firstVisibleItemScrollOffset,
+                            listState.canScrollForward,
+                        )
                     }
-                    .collect { (firstVisibleIndex, scrollOffset) ->
+                    .collect { (firstVisibleIndex, scrollOffset, canScrollForward) ->
                         isAtLatestMessage = firstVisibleIndex == 0 && scrollOffset == 0
+                        isAtChatStart =
+                            listState.layoutInfo.totalItemsCount > 0 && !canScrollForward
                     }
             }
 
@@ -443,7 +445,7 @@ internal fun ChatPage(
                                         IntySetting.isLogin() &&
                                             IntySetting.getCurToken().isNotEmpty()
                                     ) {
-                                        navController.navigate(Routes.VipCenter)
+                                        navController.navigate(Routes.Me.VipCenter)
                                         //
                                         // VipCenterActivity.launch(context,
                                         // VipCenterActivity.CHAT_PAGE)
@@ -563,19 +565,24 @@ internal fun ChatPage(
                                                                 val isImageMessage =
                                                                     item.content.isEmpty() &&
                                                                         hasGeneratedImage
-                                                                val isLatestAssistantTextMessage =
+                                                                // latest 消息用于控制 ChatItem 内部的操作区（如
+                                                                // 👍/👎、生图入口等）
+                                                                // 这里需要包含“纯图片消息”（content 为空但有
+                                                                // generated image），否则图片预览下方无法显示
+                                                                // 👍/👎
+                                                                val isLatestAssistantMessageForActions =
                                                                     index == 0 &&
                                                                         item.role == "assistant" &&
                                                                         item.content !=
                                                                             "loading_animation" &&
-                                                                        !isImageMessage
+                                                                        !item.isOpening()
 
                                                                 ChatItem(
                                                                     item,
                                                                     isCurrentPage = isCurrentPage,
                                                                     chatViewModel = chatViewModel,
                                                                     isLatestMessage =
-                                                                        isLatestAssistantTextMessage,
+                                                                        isLatestAssistantMessageForActions,
                                                                     isGuideVisible = isGuideVisible,
                                                                     messageFontSizeSp =
                                                                         chatFontSizeSp,
@@ -814,13 +821,22 @@ internal fun ChatPage(
                 // 4. Agent 未被删除
                 // 当用户滚动到历史记录时，此按钮会自动隐藏
                 val showKeepTalkingButton =
-                    showKeepTalking && hasLatestAssistantMessage && isAtLatestMessage && agentInfo?.isDeleted != true
+                    showKeepTalking &&
+                        hasLatestAssistantMessage &&
+                        isAtLatestMessage &&
+                        agentInfo?.isDeleted != true
                 val isKeepTalkingEnabled = !hasLoadingMessageForButton
 
                 // 滚动到底部按钮显示逻辑：
-                // 当用户不在最新消息位置时（已滚动到历史记录），显示此按钮
+                // 当用户不在最新消息位置时（已滚动到历史记录），始终显示此按钮
                 // 点击后平滑滚动回最新消息位置
+                // 即使回到第一条消息，只要有新消息（不在最新消息位置），也显示此按钮
                 val showScrollToBottomButton = !isAtLatestMessage
+
+                // 回到聊天开始按钮显示逻辑：
+                // 当用户不在最新消息位置且不在聊天开始位置时显示
+                // 当用户到达聊天开始位置时，此按钮隐藏
+                val showBackToTopButton = !isAtLatestMessage && !isAtChatStart
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
@@ -836,22 +852,44 @@ internal fun ChatPage(
                 // 计算滚动到底部按钮的垂直位置
                 // 如果 Keep Talking 按钮可见，则滚动到底部按钮位于其上方，避免重叠
                 // 否则，滚动到底部按钮使用与 Keep Talking 按钮相同的位置
-                val scrollToBottomButtonBottomOffset =
-                    if (showKeepTalkingButton) {
-                        buttonBottomOffset +
-                            UiConfigs.ChatPage.ScrollToBottomButton.BottomOffsetAboveKeepTalking
-                    } else {
-                        buttonBottomOffset
-                    }
+                // 注意：只有当 ScrollToBottomButton 可见时才考虑 KeepTalking 的影响，
+                // 避免在按钮隐藏时位置突然变化导致跳动
+                val scrollToBottomButtonBottomOffset = buttonBottomOffset
 
-                // 滚动到底部按钮：当用户滚动到历史消息时显示在右下角
+                val scrollToStartButtonBottomOffset =
+                    scrollToBottomButtonBottomOffset +
+                        UiConfigs.ChatPage.FloatingScrollButton.ButtonSize +
+                        UiConfigs.ChatPage.ScrollToHistoryButtons.VerticalSpacing
+
+                // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在右下角（位于"回到最新"按钮上方）
+                // 功能：点击后平滑滚动到最旧消息位置（LazyColumn reverseLayout，最旧消息对应最大索引）
+                BackToTop(
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(
+                                bottom = scrollToStartButtonBottomOffset,
+                                end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
+                            ),
+                    visible = showBackToTopButton,
+                    onClick = {
+                        scope.launch {
+                            val totalItemsCount = listState.layoutInfo.totalItemsCount
+                            if (totalItemsCount > 0) {
+                                listState.animateScrollToItem(totalItemsCount - 1)
+                            }
+                        }
+                    },
+                )
+
+                // 滚动到底部按钮：当用户不在最新消息位置时显示在右下角
                 // 功能：点击后平滑滚动回最新消息位置（LazyColumn 使用 reverseLayout，索引 0 为最新消息）
+                // 当有新消息时，始终显示此按钮，即使回到第一条消息也不隐藏
                 ScrollToBottomButton(
                     modifier =
                         Modifier.align(Alignment.BottomCenter)
                             .padding(
                                 bottom = scrollToBottomButtonBottomOffset,
-                                end = UiConfigs.ChatPage.ScrollToBottomButton.RightPadding,
+                                end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
                             ),
                     visible = showScrollToBottomButton,
                     onClick = {
@@ -878,7 +916,7 @@ internal fun ChatPage(
         val resetSucMsg = stringResource(R.string.reset_suc_msg)
         var resetSuccess by remember { mutableStateOf(false) }
 
-        //使用rememberCoroutineScope启动Snackbar存在bug
+        // 使用rememberCoroutineScope启动Snackbar存在bug
         LaunchedEffect(snackbarHostState) {
             snapshotFlow { resetSuccess }
                 .collect {
@@ -908,6 +946,7 @@ internal fun ChatPage(
                     }
                 }
             },
+            windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets(),
         )
 
         ChatSettingsDrawer(
@@ -916,6 +955,7 @@ internal fun ChatPage(
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
             navController = navController,
+            showBackButton = showBackButton,
         )
 
         if (shouldShowBoostUi) {
@@ -1047,7 +1087,7 @@ private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatVie
             onCancel = { chatViewModel.dismissDialog() },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.CHAT_PAGE)
                 }
@@ -1055,7 +1095,7 @@ private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatVie
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.VipCenter)
+                    navController.navigate(Routes.Me.VipCenter)
                     //                    VipCenterActivity.launch(context,
                     // VipCenterActivity.CHAT_PAGE)
                 }
@@ -1097,7 +1137,7 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.VipCenter)
+                            navController.navigate(Routes.Me.VipCenter)
                             //                            VipCenterActivity.launch(context,
                             // VipCenterActivity.CHAT_PAGE)
                         }
@@ -1111,7 +1151,7 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.VipCenter)
+                            navController.navigate(Routes.Me.VipCenter)
                             //                            VipCenterActivity.launch(context,
                             // VipCenterActivity.CHAT_PAGE)
                         }

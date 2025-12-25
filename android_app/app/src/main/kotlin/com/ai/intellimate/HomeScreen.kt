@@ -8,6 +8,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartBottomAppBar
 import ai.sxwl.android.design.ui.HeartBottomTabItem
+import ai.sxwl.android.firebase.FirebaseManager
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -17,7 +18,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,11 +76,10 @@ fun HomeScreen(
         // 获取默认首页 tab
         val defaultTabIndex =
             try {
-                ai.sxwl.android.firebase.FirebaseManager.getRemoteConfigLong(
-                        ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys
-                            .HOME_PAGE_DEFAULT_TAB_INDEX
-                    )
-                    .toInt()
+                FirebaseManager.getRemoteConfigLong(
+                    FirebaseManager.RemoteConfigKeys
+                        .HOME_PAGE_DEFAULT_TAB_INDEX
+                ).toInt()
             } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
@@ -145,9 +144,11 @@ fun HomeScreen(
                     HomeTabIndex.Messages.ordinal -> {
                         tab.copy(hasRedDot = messagesTabHasPush)
                     }
+
                     HomeTabIndex.Profile.ordinal -> {
                         tab.copy(hasRedDot = appUpdateTipsRedDot)
                     }
+
                     else -> {
                         tab
                     }
@@ -160,17 +161,20 @@ fun HomeScreen(
             HomeTabIndex.Messages -> {
                 mainViewModel.clearMessagesTabPush()
             }
+
             HomeTabIndex.Profile -> {
                 // 当前 app 运行期间不会改变是否有新版的提示，所以不需要清除
                 mainViewModel.clearAppUpdateTipsRedDot()
             }
+
             else -> {}
         }
     }
 
     Scaffold(
-        modifier =
-            modifier.fillMaxSize().background(HeartColor.primaryColor).navigationBarsPadding(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(HeartColor.primaryColor),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -185,8 +189,8 @@ fun HomeScreen(
                     // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
                     if (
                         tabIndex == exploreTabIndex &&
-                            tabIndex == lastTabIndex &&
-                            currentTime - lastTabClickTime < doubleTapTimeoutMs
+                        tabIndex == lastTabIndex &&
+                        currentTime - lastTabClickTime < doubleTapTimeoutMs
                     ) {
                         // 双击Explore tab，触发重置
                         if (selectedTab.value == HomeTabIndex.Explore) {
@@ -211,6 +215,7 @@ fun HomeScreen(
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
                 height = UiConfigs.BottomBar.Height,
                 labelSpacing = UiConfigs.BottomBar.TabIconLabelSpacing,
+                bottomSpace = UiConfigs.BottomBar.BottomSpacing,
             )
         },
     ) { innerPadding ->
@@ -313,7 +318,7 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
                         // 跳转到订阅中心
-                        navController.navigate(Routes.VipCenter)
+                        navController.navigate(Routes.Me.VipCenter)
                         //                        VipCenterActivity.launch(context,
                         // VipCenterActivity.HOME_EXPIRED_DIALOG)
                     }
@@ -396,7 +401,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Messages -> {
-            MessagesTabContent(navController)
+            MessagesTabContent(navController, mainViewModel)
         }
 
         HomeTabIndex.Create -> {
@@ -453,7 +458,7 @@ private fun ChatTabContent(
 
 /** 会话列表Tab内容 */
 @Composable
-private fun MessagesTabContent(navController: NavController) {
+private fun MessagesTabContent(navController: NavController, mainViewModel: MainViewModel) {
     val messagesViewModel: MessagesViewModel = viewModel()
 
     LaunchedEffect(Unit) { messagesViewModel.getConversations() }
@@ -463,17 +468,19 @@ private fun MessagesTabContent(navController: NavController) {
         viewModel = messagesViewModel,
         onClickConversationItem = { conversation ->
             AgentStore.addAgent(conversation.convertToAgentInfo())
-            navController.navigate(Routes.chatPage(conversation.convertToAgentInfo().id, false))
-            //            ChatActivity.launch(
-            //                context,
-            //                conversation.convertToAgentInfo(),
-            //                pageSource = ChatActivity.MESSAGES_TAB,
-            //            )
+            navController.navigate(
+                Routes.Chat.chatPage(
+                    conversation.convertToAgentInfo().id,
+                    false,
+                    isDeleted = conversation.isDeleted,
+                )
+            )
         },
         onClickFavoriteAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.chatPage(agent.id, false))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
+        onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
         pageTrackingContext = "MainActivity",
     )
 }
@@ -503,7 +510,7 @@ private fun ExploreTabContent(
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
             navController.navigate(
-                Routes.chatPage(agentId = agent.id, showBoost = false, shouldAutoFocusInput = false)
+                Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false)
             )
         },
         viewModel = exploreViewModel,
@@ -618,8 +625,7 @@ private fun ProfileTabContent(
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.chatPage(agent.id, false))
-            //            ChatActivity.launch(context, agent, pageSource = ChatActivity.PROFILE_TAB)
+            navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
         onClickDraft = { draftId ->
             val intent = CreateRoleActivity.getIntent(context, null, draftId)

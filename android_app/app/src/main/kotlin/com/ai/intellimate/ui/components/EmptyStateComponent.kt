@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +42,7 @@ fun EmptyStateComponent(
     subtitle: String? = null,
     showRetryButton: Boolean = false,
     onRetry: (() -> Unit)? = null,
+    @StringRes actionTextResId: Int = R.string.retry_button,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -55,7 +57,7 @@ fun EmptyStateComponent(
             contentDescription = null,
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
         // 标题
         if (title != null) {
@@ -63,6 +65,7 @@ fun EmptyStateComponent(
                 text = title,
                 color = Color.White.copy(.8f),
                 fontSize = 14.sp,
+                lineHeight = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -71,11 +74,11 @@ fun EmptyStateComponent(
 
         // 副标题
         if (subtitle != null) {
-            Spacer(Modifier.height(8.dp))
             Text(
                 text = subtitle,
                 color = Color.White.copy(0.6f),
                 fontSize = 14.sp,
+                lineHeight = 14.sp,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -84,9 +87,9 @@ fun EmptyStateComponent(
 
         // 重试按钮
         if (showRetryButton && onRetry != null) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             GradientButton(
-                text = stringResource(R.string.retry_button),
+                text = stringResource(actionTextResId),
                 onSave = onRetry,
                 modifier = Modifier.padding(horizontal = 32.dp),
             )
@@ -101,6 +104,7 @@ fun EmptyDataState(
     subtitle: String? = null,
     showRetryButton: Boolean = false,
     onRetry: (() -> Unit)? = null,
+    @StringRes actionTextResId: Int = R.string.retry_button,
     modifier: Modifier = Modifier,
 ) {
     EmptyStateComponent(
@@ -109,6 +113,7 @@ fun EmptyDataState(
         subtitle = subtitle,
         showRetryButton = showRetryButton,
         onRetry = onRetry,
+        actionTextResId = actionTextResId,
         modifier = modifier,
     )
 }

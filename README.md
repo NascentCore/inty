@@ -1,12 +1,4 @@
-# InTy - AI 智能伴侣平台
-
-```text
-IntelliMate: Ultimate companionship, reimagined with AI
-
-Role-play with AI characters.
-Create your own IntelliMate, powered by carefully tuned AI agents,
-experience your own imagination.
-```
+# InTy - 长期 AI 情感陪伴
 
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
@@ -21,23 +13,20 @@ TODO: 添加 web app dev 环境部署流程
 ![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=for-the-badge&theme=default&responseTime=true)
 ![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=for-the-badge&theme=default&responseTime=true)
 
-InTy 是一个 AI 智能伴侣平台，包含后端服务、Android 应用和 Web 应用。后端基于 FastAPI 和 PostgreSQL，集成了 LangChain 和 LangGraph 技术栈，支持多种 AI 模型和智能体管理。
+InTy 是基于 AI 的情感伴侣系统，包含后端服务、Android 应用和 Web 应用。
 
 ## 快速开始
 
-添加 SSH key 到你的 GitHub 账户：
-https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
+[添加 SSH key 到你的 GitHub 账户](https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
 
 ```bash
 # 克隆仓库并初始化子模块：
 git clone --recurse-submodules git@github.com:NascentCore/inty.git
 ```
 
-Android App 开发使用 Android Studio 打开`inty/android_app`，
-详情参考 [android_app/README.md](android_app/README.md)。
+Android Studio 打开`inty/android_app`，详情参考 [android_app/README.md](android_app/README.md)。
 
-后端开发，代码位于 `app` 目录（目前正在逐步向 `backend` 目录迁移），
-请参考 [backend/README.md](backend/README.md)。
+后端系统代码位于 `app` 目录（目前正在逐步向 `backend` 目录迁移），参考 [backend/README.md](backend/README.md)。
 
 如果子模块出现脏数据（如下图所示），可以按照下面的流程重置：
 

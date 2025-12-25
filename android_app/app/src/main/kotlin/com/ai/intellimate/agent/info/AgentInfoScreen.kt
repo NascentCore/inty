@@ -68,8 +68,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -80,10 +78,10 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.boost.ui.BoostStatusChip
-import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.ui.components.SmartTagsLayout
+import com.ai.intellimate.utils.ChatBackgroundUtils
 import com.ai.intellimate.utils.formatDisplayId
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
@@ -307,7 +305,8 @@ internal fun AiAgentInfoScreen(
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    text = stringResource(R.string.boost_character_energy_points_hint),
+                                    text =
+                                        stringResource(R.string.boost_character_energy_points_hint),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Light,
                                     color = Color.White.copy(alpha = 0.75f),
@@ -315,7 +314,7 @@ internal fun AiAgentInfoScreen(
                                 Spacer(Modifier.height(8.dp))
                                 TextButton(
                                     onClick = {
-                                        navController.navigate(Routes.BoostLeaderboard)
+                                        navController.navigate(Routes.Explore.BoostLeaderboard)
                                         //
                                         // com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
                                         //                                        context
@@ -325,7 +324,9 @@ internal fun AiAgentInfoScreen(
                                 ) {
                                     Text(
                                         text =
-                                            stringResource(R.string.boost_points_help_cta_leaderboard),
+                                            stringResource(
+                                                R.string.boost_points_help_cta_leaderboard
+                                            ),
                                         color = Color.White,
                                     )
                                 }
@@ -450,7 +451,7 @@ internal fun AiAgentInfoScreen(
                                 onNavigateToPhotoAlbum = {
                                     //
                                     // navController.navigate(AgentInfoRoutes.photoAlbum(agent.id))
-                                    navController.navigate(Routes.agentPhotoAlbum(agent.id))
+                                    navController.navigate(Routes.Home.agentPhotoAlbum(agent.id))
                                 },
                             )
                         }
@@ -515,7 +516,7 @@ internal fun AiAgentInfoScreen(
             onDismiss = { showBoostHelpSheet = false },
             onOpenLeaderboard = {
                 showBoostHelpSheet = false
-                navController.navigate(Routes.BoostLeaderboard)
+                navController.navigate(Routes.Explore.BoostLeaderboard)
                 //                com.ai.intellimate.boost.BoostLeaderboardActivity.launch(context)
             },
         )
@@ -532,6 +533,10 @@ private fun PhotoAlbumPreviewSection(
     columnCount: Int = UiConfigs.ChatPage.PhotoAlbum.Preview.COLUMN_COUNT,
 ) {
     var previewImage by remember { mutableStateOf<String?>(null) }
+    // TODO：这里需要手动跟踪状态变化，改为 datastore 后就不需要做这个动作了。
+    var currentBackgroundUrl by remember {
+        mutableStateOf<String?>(IntySetting.getChatBackgroundImage(agentId))
+    }
     val displayedImages = images.take(columnCount)
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -566,6 +571,7 @@ private fun PhotoAlbumPreviewSection(
                     AgentGalleryImageCardCompact(
                         item = item,
                         agentId = agentId,
+                        currentBackgroundUrl = currentBackgroundUrl,
                         onPreview = { previewImage = it },
                         modifier = Modifier.weight(1f),
                     )
@@ -578,31 +584,12 @@ private fun PhotoAlbumPreviewSection(
         Spacer(Modifier.height(UiConfigs.CharacterGallery.SectionBottomPadding))
     }
 
-    if (previewImage != null) {
-        Dialog(
-            onDismissRequest = { previewImage = null },
-            properties =
-                DialogProperties(
-                    usePlatformDefaultWidth = false,
-                    dismissOnClickOutside = true,
-                    dismissOnBackPress = true,
-                ),
-        ) {
-            val currentImageUrl = previewImage.orEmpty()
-            FullScreenImageViewer(
-                imageUrl = currentImageUrl,
-                onDismiss = { previewImage = null },
-                onAction = {
-                    if (agentId.isNotBlank() && currentImageUrl.isNotBlank()) {
-                        IntySetting.setChatBackgroundImage(agentId, currentImageUrl)
-                        ToastUtils.showShort(R.string.agent_gallery_background_set_success)
-                        previewImage = null
-                    }
-                },
-                actionLabel = stringResource(R.string.agent_gallery_set_as_background),
-            )
-        }
-    }
+    AgentGalleryImagePreviewDialog(
+        previewImageUrl = previewImage,
+        agentId = agentId,
+        onDismiss = { previewImage = null },
+        onBackgroundChanged = { newUrl -> currentBackgroundUrl = newUrl },
+    )
 }
 
 @Composable
@@ -678,8 +665,7 @@ private fun AgentGalleryImageCard(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        IntySetting.clearChatBackgroundImage(agentId)
-                        ToastUtils.showShort(R.string.agent_gallery_background_reset_success)
+                        ChatBackgroundUtils.clearChatBackground(agentId)
                         showResetDialog = false
                     }
                 ) {
@@ -721,11 +707,14 @@ private fun AgentGalleryImageCard(
 private fun AgentGalleryImageCardCompact(
     item: AgentImageGalleryItem,
     agentId: String,
+    currentBackgroundUrl: String? = null,
     onPreview: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val isCurrentBackground = IntySetting.getChatBackgroundImage(agentId) == item.imageUrl
+    // 如果提供了 currentBackgroundUrl，使用它；否则从 IntySetting 读取
+    val isCurrentBackground =
+        (currentBackgroundUrl ?: IntySetting.getChatBackgroundImage(agentId)) == item.imageUrl
 
     Box(
         modifier =
@@ -741,9 +730,7 @@ private fun AgentGalleryImageCardCompact(
                 }
     ) {
         AsyncImage(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(9f / 16f),
+            modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f),
             model =
                 ImageRequest.Builder(context)
                     .data(

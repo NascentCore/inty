@@ -207,7 +207,7 @@ class FCMService : FirebaseMessagingService() {
      */
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        LogUtils.i("FCMService", "收到新的 FCM Token - token: ${token.take(20)}...")
+        LogUtils.i("FCMService", "收到新的 FCM Token - token: $token")
         uploadTokenToServer(token)
     }
 

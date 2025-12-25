@@ -104,3 +104,40 @@ async def get_current_active_user(
 
     logger.debug(f"用户活跃状态检查通过: {current_user.id}")
     return current_user
+
+
+async def get_user_from_token(token: str, db: AsyncSession) -> User:
+    """
+    从 token 获取用户（供 WebSocket 使用）
+
+    与 get_current_user 类似，但接受 token 字符串而非依赖注入
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+    )
+
+    try:
+        payload = jwt.decode(
+            token,
+            global_config_loaded_from_config_yaml.security.secret_key,
+            algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
+        )
+
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+
+    except JWTError:
+        raise credentials_exception
+
+    user = await db.execute(select(User).where(User.id == user_id))
+    user = user.scalar_one_or_none()
+
+    if not user:
+        raise credentials_exception
+
+    if user.deleted_at:
+        raise credentials_exception
+
+    return user

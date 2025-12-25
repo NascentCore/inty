@@ -1,0 +1,41 @@
+<!doctype html>
+<!--
+CREATED_BY_AGENT
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini Native Audio WebSocket Demo</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 24px; }
+      .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      button { padding: 8px 12px; }
+      select { padding: 6px 10px; }
+      pre { background: #111; color: #eee; padding: 12px; border-radius: 8px; height: 260px; overflow: auto; }
+      .hint { color: #666; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <h2>Gemini Native Audio WebSocket Demo</h2>
+    <div class="row">
+      <label>模式：</label>
+      <select id="mode">
+        <option value="single">single（复现 #1224）</option>
+        <option value="reconnect">reconnect（每轮重连绕过）</option>
+      </select>
+      <button id="btnStart">Start</button>
+      <button id="btnStop" disabled>Stop</button>
+      <span id="status" class="hint">未连接</span>
+    </div>
+
+    <p class="hint">
+      提示：如果 single 模式第二轮不回，可切到 reconnect 验证绕过是否生效。
+    </p>
+
+    <pre id="log"></pre>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+

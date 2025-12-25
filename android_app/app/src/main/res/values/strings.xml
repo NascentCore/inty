@@ -236,7 +236,7 @@
     <string name="chat_settings_model_default">Default</string>
     <string name="chat_settings_model_gpt_5_2">GPT-5.2</string>
     <string name="chat_settings_model_claude_opus_4_5">Claude Opus 4.5</string>
-    <string name="chat_settings_model_gemini_3_flash">Gemini 3 Flash</string>
+    <string name="chat_settings_model_gemini_3_flash">Gemini 3</string>
     <string name="chat_settings_font_size_dialog_title">Message font size</string>
     <string name="chat_settings_font_size_dialog_description">Adjust how large chat bubbles look.</string>
     <string name="chat_settings_font_size_preview_label">Preview</string>
@@ -281,6 +281,8 @@
     <string name="content_desc_swipe_guide">Swipe guide gesture</string>
     <string name="content_desc_selected_avatar">Selected Avatar</string>
     <string name="content_desc_back">back</string>
+    <string name="download_image_content_description">Download image</string>
+    <string name="download_button">Download</string>
 
     <!-- Additional UI Text -->
     <string name="generate_avatar_button">Generate</string>
@@ -295,6 +297,7 @@
     <string name="please_enter_character_full">How would you describe yourself?</string>
     <string name="character_count_format_my">%d/400</string>
     <string name="str_report">Report</string>
+    <string name="report_button_content_description">Report inappropriate content</string>
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
     <string name="cancel_button">Cancel</string>
@@ -310,6 +313,8 @@
     <string name="greater_than_symbol">&gt;</string>
     <string name="star_symbol">★</string>
     <string name="visibility_required_title_full">Visibility *</string>
+    <string name="visibility_public_full">Public</string>
+    <string name="visibility_private_full">Private</string>
     <string name="become_a_premium">Become a Premium Member</string>
     <string name="more_information_full">More Information</string>
 
@@ -322,6 +327,9 @@
     <string name="profile_premium_banner_title_upgrade">Upgrade to Premium</string>
     <string name="profile_premium_banner_subtitle_unlock">Unlock all privileges now</string>
     <string name="profile_premium_banner_button_activate">Activate now</string>
+    <string name="profile_daily_rewards_title">Daily Check-in</string>
+    <string name="profile_daily_rewards_subtitle">Get %1$d Boost Points</string>
+    <string name="check_in_day_together">💗 Day %1$d Together</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
     <string name="edit_button">Edit</string>
@@ -368,13 +376,16 @@
     <string name="messages_tab_favorites">Favorite</string>
     <string name="messages_favorites_empty_title">No favorites yet</string>
     <string name="messages_favorites_empty_subtitle">Tap the heart icon on any character to save it here.</string>
+    <string name="messages_favorites_empty_explore_cta">Explore IntelliMates</string>
+    <string name="favorite_button_add_to_favorites">Add to favorites</string>
+    <string name="favorite_button_remove_from_favorites">Remove from favorites</string>
 
     <!-- Explore Search -->
     <string name="explore_search_icon_desc">Search characters</string>
-    <string name="explore_search_placeholder">Search by name</string>
+    <string name="explore_search_placeholder">Search by name or #tag</string>
     <string name="explore_search_cancel">Cancel</string>
     <string name="explore_search_empty">No matching characters</string>
-    <string name="explore_search_hint_text">Enter a character name and tap search</string>
+    <string name="explore_search_hint_text">Enter a name or #tag and tap search</string>
     <string name="explore_search_clear_desc">Clear search text</string>
 
     <!-- Bottom Navigation Tab Labels -->
@@ -397,6 +408,8 @@
     <string name="toast_upload_failed_with_message">Upload failed: %s</string>
     <string name="toast_failed_prepare_upload_with_message">Failed to prepare upload: %s</string>
     <string name="toast_failed_download_image_editing">Failed to download image for editing</string>
+    <string name="toast_image_saved_to_album">Saved to Photos</string>
+    <string name="toast_image_save_failed">Failed to save image</string>
     <string name="toast_please_select_reason">Please select at least one reason</string>
     <string name="toast_please_enter_description">Please enter a description</string>
     <string name="toast_submitted_successfully">Submitted successfully. We will review it soon.</string>
@@ -513,4 +526,15 @@
     <string name="reset_suc_msg">A new conversation has started.</string>
     <string name="chat_setting_text_streaming">Text streaming</string>
     <string name="my_boost_points">My Boost Points: %1$d</string>
+
+    <!-- Holiday celebration popup -->
+    <string name="holiday_celebration_title">Merry Christmas &amp; Happy New Year!</string>
+    <string name="holiday_celebration_subtitle">Wishing you warmth, magic, and a brand new year full of good surprises.</string>
+    <string name="holiday_celebration_primary_cta">🎉 Let\'s Celebrate 💝</string>
+    <string name="holiday_celebration_secondary_cta">Not now</string>
+    <string name="holiday_celebration_points_added">🥳 100 Boost Points!</string>
+
+    <!-- Placeholder -->
+    <string name="under_development">Under Development</string>
+    <string name="boost_leaderboard_tab_top_users">Top Users</string>
 </resources>

@@ -18,6 +18,7 @@ import {
   AppstoreOutlined,
   PictureOutlined,
   ExclamationCircleOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -30,6 +31,7 @@ import { UserAnalyticsPage } from "./pages/UserAnalyticsPage";
 import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
 import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
+import { VoiceChatPage } from "./pages/VoiceChatPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -41,6 +43,7 @@ type PageKey =
   | "evaluation"
   | "history"
   | "chat"
+  | "voice-chat"
   | "agents"
   | "live2d"
   | "settings"
@@ -148,6 +151,12 @@ const AppContent: React.FC = () => {
       description: "与智能体进行一对一聊天",
     },
     {
+      key: "voice-chat",
+      icon: <PhoneOutlined />,
+      label: "语音通话",
+      description: "与智能体进行实时语音对话",
+    },
+    {
       key: "live2d",
       icon: <BgColorsOutlined />,
       label: "Live2D 情绪聊天",
@@ -218,6 +227,8 @@ const AppContent: React.FC = () => {
         return "评测记录";
       case "chat":
         return "单角色聊天";
+      case "voice-chat":
+        return "语音通话";
       case "live2d":
         return "Live2D 情绪聊天 (Gemini Demo)";
       case "agents":
@@ -252,6 +263,8 @@ const AppContent: React.FC = () => {
         );
       case "chat":
         return <ChatPage />;
+      case "voice-chat":
+        return <VoiceChatPage />;
       case "live2d":
         return <Live2DEmotionChatDemo />;
       case "agents":
