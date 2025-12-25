@@ -21,15 +21,21 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
                 navArgument("agentId") { type = NavType.StringType },
                 navArgument("showBoost") { type = NavType.BoolType },
                 navArgument("shouldAutoFocusInput") { type = NavType.BoolType },
+                navArgument("isDeleted") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
             ),
     ) { backStackEntry ->
         val agentId = backStackEntry.arguments?.getString("agentId")
         val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
         val shouldAutoFocusInput = backStackEntry.arguments?.getBoolean("shouldAutoFocusInput")
+        val isDeleted = backStackEntry.arguments?.getBoolean("isDeleted") ?: false
         LaunchedEffect(agentId) {
             val agent = AgentStore.getAgent(agentId = agentId)
             if (agentId != null) {
                 if (agent != null) {
+                    if (isDeleted) agent.isDeleted = true
                     chatViewModel.setAgentInfo(agent, true)
                 } else {
                     chatViewModel.clearAllData()
@@ -45,7 +51,6 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             showBackButton = true,
             shouldShowBoostSheetOnOpen = showBoost == true,
             shouldAutoFocusInput = shouldAutoFocusInput ?: true,
-            agentId = agentId,
         )
     }
 }
