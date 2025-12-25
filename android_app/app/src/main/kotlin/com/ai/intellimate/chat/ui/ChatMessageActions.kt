@@ -296,7 +296,7 @@ internal fun MessageActionBar(
 
                 // 灰色 😀 占位 + 按钮：点击展开 emoji 列表
                 Column(
-                    horizontalAlignment = Alignment.Start,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.pointerInput(showPicker) {
                         // 阻止点击事件传播，防止关闭 picker
                         detectTapGestures { }
@@ -309,7 +309,7 @@ internal fun MessageActionBar(
                         isGray = true, // 灰色占位按钮
                     )
                     
-                    // emoji 选择器显示在按钮下方
+                    // emoji 选择器显示在按钮下方，与按钮中心对齐
                     if (showPicker) {
                         ReactionEmojiPicker(
                             emojis = emojiOptions,
