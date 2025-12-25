@@ -285,6 +285,7 @@ internal fun MessageActionBar(
                 // 已选 emoji：显示在灰色 😀 左侧（可追加多个）
                 reactions.forEachIndexed { index, emoji ->
                     key("emoji_${index}_$emoji") {
+                        # TODO：注意到与生图按钮紧挨着（在其左边）并且同一行
                         EmojiButton(
                             emoji = emoji,
                             onClick = {},
