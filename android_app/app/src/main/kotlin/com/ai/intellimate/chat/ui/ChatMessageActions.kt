@@ -22,7 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,10 +126,41 @@ private fun EmojiButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     alpha: Float = 1f,
+    isGray: Boolean = false,
 ) {
     val fontSize = UiConfigs.ChatMessagePane.ReactionEmoji.FontSize
+    // 创建灰度 ColorFilter：将饱和度设为 0
+    val grayColorFilter = remember(isGray) {
+        if (isGray) {
+            ColorFilter.colorMatrix(
+                ColorMatrix().apply {
+                    setSaturation(0f) // 设置为灰度
+                }
+            )
+        } else {
+            null
+        }
+    }
+    
     Box(
-        modifier = modifier.noRippleClickable(onClick = onClick),
+        modifier = modifier
+            .noRippleClickable(onClick = onClick)
+            .then(
+                if (isGray && grayColorFilter != null) {
+                    // 使用 drawWithContent 应用灰度滤镜
+                    Modifier.drawWithContent {
+                        // 先绘制内容
+                        drawContent()
+                        // 然后应用灰度遮罩
+                        drawRect(
+                            color = Color.Gray.copy(alpha = 0.4f),
+                            blendMode = BlendMode.Saturation
+                        )
+                    }
+                } else {
+                    Modifier
+                }
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -197,7 +232,6 @@ internal fun MessageActionBar(
     val emojiOptions =
         remember {
             listOf(
-                "😀",
                 "😭",
                 "😁",
                 "😜",
@@ -207,32 +241,13 @@ internal fun MessageActionBar(
                 "💯",
                 "💪",
                 "😍",
-                "🥳",
-                "✨",
-                "🎊",
                 "💘",
-                "💌",
-                "💓",
-                "👅",
-                "👩‍❤️‍👨",
                 "🌹",
-                "🥀",
             )
         }
 
     // like/dislike互斥，但不影响recall和keep talking的状态
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp)) {
-        if (showPicker) {
-            ReactionEmojiPicker(
-                emojis = emojiOptions,
-                onEmojiClick = { emoji ->
-                    onAddReaction(emoji)
-                    showPicker = false
-                },
-                modifier = Modifier.padding(bottom = cfg.PickerToActionsSpacing),
-            )
-        }
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement =
@@ -272,11 +287,29 @@ internal fun MessageActionBar(
             }
 
             // 灰色 😀 占位 + 按钮：点击展开 emoji 列表
-            EmojiButton(
-                emoji = "😀",
-                onClick = { showPicker = !showPicker },
-                alpha = cfg.PlaceholderAlpha,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EmojiButton(
+                    emoji = "😀",
+                    onClick = { showPicker = !showPicker },
+                    alpha = cfg.PlaceholderAlpha,
+                    isGray = true, // 灰色占位按钮
+                )
+                
+                // emoji 选择器显示在按钮右边
+                if (showPicker) {
+                    ReactionEmojiPicker(
+                        emojis = emojiOptions,
+                        onEmojiClick = { emoji ->
+                            onAddReaction(emoji)
+                            showPicker = false
+                        },
+                        modifier = Modifier.padding(start = cfg.PickerToActionsSpacing),
+                    )
+                }
+            }
 
             Spacer(Modifier.weight(1f))
 
