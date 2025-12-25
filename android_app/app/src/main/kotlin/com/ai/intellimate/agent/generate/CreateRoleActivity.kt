@@ -13,7 +13,6 @@ import android.app.Activity
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -37,9 +36,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -100,26 +99,26 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
-import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
-import com.ai.intellimate.agent.report.ReportActivity
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {
@@ -321,16 +320,23 @@ private fun CreateRolePage(
         else null
     val croppedInitial =
         if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl
-    var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf(croppedInitial) }
+    // 使用 Map 存储每个图片索引对应的裁剪头像 URL
+    val croppedInitialMap =
+        if (isEditMode && editCroppedAvatar != null && avatarUrlsInitial.isNotEmpty()) {
+            // 编辑模式下，如果有裁剪头像，找到对应的图片索引
+            val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
+            val imageIndex =
+                backgroundUrl?.let { url ->
+                    val index = avatarUrlsInitial.indexOf(url)
+                    if (index >= 0) index else null
+                } ?: 0
+            mapOf(imageIndex to editCroppedAvatar)
+        } else {
+            emptyMap<Int, String>()
+        }
+    var croppedAvatarUrls by remember(croppedInitialMap) { mutableStateOf(croppedInitialMap) }
     val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
-
-    // 当 selectedImageIndex 改变时，将 croppedAvatarUrl 设置为空
-    LaunchedEffect(Unit) {
-        snapshotFlow { selectedImageIndex }
-            .drop(1) // 跳过初始值，只在真正改变时触发
-            .collect { croppedAvatarUrl = null }
-    }
 
     // Track original uploaded image URL (for background) when uploading from gallery
     var originalUploadedImageUrl by remember { mutableStateOf<String?>(null) }
@@ -376,7 +382,7 @@ private fun CreateRolePage(
                         avatarUrl = avatarUrl?.takeIf { it.isNotBlank() },
                         avatarUrls = normalizedUrls,
                         selectedImageIndex = sanitizedIndex,
-                        croppedAvatarUrl = croppedAvatarUrl?.takeIf { it.isNotBlank() },
+                        croppedAvatarUrl = croppedAvatarUrls[selectedImageIndex]?.takeIf { it.isNotBlank() },
                         avatarPrompt = avatarPrompt,
                     )
                 }
@@ -446,7 +452,13 @@ private fun CreateRolePage(
             when (result.resultCode) {
                 Activity.RESULT_OK -> {
                     result.data?.let { data ->
-                        croppedAvatarUrl = UCrop.getOutput(data)?.toString()
+                        val croppedUrl = UCrop.getOutput(data)?.toString()
+                        if (croppedUrl != null && avatarUrls.isNotEmpty()) {
+                            // 保存当前选中图片索引对应的裁剪头像
+                            croppedAvatarUrls = croppedAvatarUrls.toMutableMap().apply {
+                                put(selectedImageIndex, croppedUrl)
+                            }
+                        }
                     }
                 }
                 UCrop.RESULT_ERROR -> {
@@ -734,7 +746,7 @@ private fun CreateRolePage(
                 selectedIndex = selectedImageIndex,
                 isGenerating = isGeneratingAvatar,
                 isUploadingGallery = isUploadingFromGallery,
-                croppedAvatarUrl = croppedAvatarUrl,
+                croppedAvatarUrl = croppedAvatarUrls[selectedImageIndex],
                 agentId = editAgent?.id,
                 onGenerateClick = {
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
@@ -776,6 +788,18 @@ private fun CreateRolePage(
 
                     avatarUrls = updatedList
                     selectedImageIndex = newIndex
+
+                    // 更新裁剪头像 map：删除被删除图片的裁剪头像，并重新映射索引
+                    croppedAvatarUrls = croppedAvatarUrls.toMutableMap().apply {
+                        // 删除被删除索引的裁剪头像
+                        remove(index)
+                        // 重新映射所有大于被删除索引的裁剪头像
+                        val entriesToUpdate = entries.filter { it.key > index }.toList()
+                        entriesToUpdate.forEach { (oldKey, value) ->
+                            remove(oldKey)
+                            put(oldKey - 1, value) // 索引前移
+                        }
+                    }
 
                     AvatarManager.setGeneratedAvatarUrls(updatedList)
                     AvatarManager.setSelectedImageIndex(newIndex)
@@ -977,15 +1001,16 @@ private fun CreateRolePage(
                                     AvatarManager.setChatBackgroundUrl(backgroundUrl)
                                 }
 
+                                val currentCroppedAvatar =
+                                    croppedAvatarUrls[selectedImageIndex]
+                                        ?: editAgent?.avatar?.takeIf {
+                                            editAgent.background == backgroundUrl
+                                        }
                                 val request =
                                     CreateAgentRequest(
                                         name = name,
                                         gender = gender,
-                                        avatar =
-                                            croppedAvatarUrl
-                                                ?: editAgent?.avatar?.takeIf {
-                                                    editAgent.background == backgroundUrl
-                                                },
+                                        avatar = currentCroppedAvatar,
                                         background = backgroundUrl,
                                         backgroundImages = backgroundImagesList,
                                         settings = mapOf("description" to settings),
