@@ -49,6 +49,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -105,6 +106,7 @@ import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.AvatarManager
+import com.ai.intellimate.utils.ShareUtils
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
@@ -1620,6 +1622,58 @@ private fun AvatarUploadSection(
                         // 这是生图的中间流程，还没有 agentID，先设置一个临时的 agentId
                         val agentId = "creation_${System.currentTimeMillis()}"
                         val context = LocalContext.current
+                        val shareImageUrl =
+                            if (avatarUrls.isNotEmpty()) {
+                                avatarUrls.getOrNull(selectedIndex) ?: avatarUrls.first()
+                            } else {
+                                avatarUrl
+                            }
+
+                        // Share button
+                        Box(
+                            modifier =
+                                Modifier.background(
+                                        color = Color.Black.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(16.dp),
+                                    )
+                                    .noRippleClickable {
+                                        if (ShareUtils.canShareAsUrl(shareImageUrl)) {
+                                            ShareUtils.shareUrl(
+                                                context = context,
+                                                url = shareImageUrl!!,
+                                                chooserTitle =
+                                                    context.getString(R.string.share_button),
+                                            )
+                                        } else {
+                                            ToastUtils.showShort(
+                                                R.string.toast_no_shareable_image
+                                            )
+                                        }
+                                    }
+                                    .padding(
+                                        UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding
+                                    )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Share,
+                                    contentDescription =
+                                        stringResource(R.string.share_image_content_description),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = Color.White,
+                                )
+                                Text(
+                                    text = stringResource(R.string.share_button),
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                            }
+                        }
+
                         Box(
                             modifier =
                                 Modifier.background(

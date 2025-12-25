@@ -291,6 +291,9 @@
     <string name="content_desc_back">back</string>
     <string name="download_image_content_description">Download image</string>
     <string name="download_button">Download</string>
+    <string name="share_image_content_description">Share image</string>
+    <string name="share_button">Share</string>
+    <string name="toast_no_shareable_image">No image to share</string>
 
     <!-- Additional UI Text -->
     <string name="generate_avatar_button">Generate</string>
