@@ -13,15 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
-/.idea/
-/.vscode/
-/.kotlin/
 .claude
 bundletool.jar
 *.apks
 *.aab
 # Sometime Android Studio writes build outputs here.
-/app/release/
-/app/debug/
-/app/local/
-/app/playdebug/
+app/local/
+app/debug/
+app/playdebug/
+app/release/
