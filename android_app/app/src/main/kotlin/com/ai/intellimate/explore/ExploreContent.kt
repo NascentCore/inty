@@ -536,7 +536,13 @@ fun ExploreContent(
 
                 // 复用 Chat 的回到顶部按钮样式与交互：不在顶部时显示，点击平滑滚动回第一个 item。
                 BackToTop(
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(
+                                bottom =
+                                    innerPadding.calculateBottomPadding() +
+                                        UiConfigs.Spacing.MediumPlus,
+                            ),
                     visible = showBackToTopButton,
                     onClick = { scope.launch { gridState.animateScrollToItem(0) } },
                 )
