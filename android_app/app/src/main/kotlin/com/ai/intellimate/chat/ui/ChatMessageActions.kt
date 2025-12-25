@@ -260,73 +260,74 @@ internal fun MessageActionBar(
                     Arrangement.spacedBy(UiConfigs.ChatMessagePane.ActionButtonSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-            // Like 按钮 - 如果已dislike则不显示
-            if (!isDisliked) {
-                LikeButton(
-                    isSelected = isLiked,
-                    onClick =
-                        if (isLiked) {
-                            {}
-                        } else onLike, // 已选中状态，不可再次点击
-                )
-            }
+                // Like 按钮 - 如果已dislike则不显示
+                if (!isDisliked) {
+                    LikeButton(
+                        isSelected = isLiked,
+                        onClick =
+                            if (isLiked) {
+                                {}
+                            } else onLike, // 已选中状态，不可再次点击
+                    )
+                }
 
-            // Dislike 按钮 - 如果已like则不显示
-            if (!isLiked) {
-                DislikeButton(
-                    isSelected = isDisliked,
-                    onClick =
-                        if (isDisliked) {
-                            {}
-                        } else onDislike, // 已选中状态，不可再次点击
-                )
-            }
+                // Dislike 按钮 - 如果已like则不显示
+                if (!isLiked) {
+                    DislikeButton(
+                        isSelected = isDisliked,
+                        onClick =
+                            if (isDisliked) {
+                                {}
+                            } else onDislike, // 已选中状态，不可再次点击
+                    )
+                }
 
-            // 已选 emoji：显示在灰色 😀 左侧（可追加多个）
-            reactions.forEachIndexed { index, emoji ->
-                key("emoji_${index}_$emoji") {
+                // 已选 emoji：显示在灰色 😀 左侧（可追加多个）
+                reactions.forEachIndexed { index, emoji ->
+                    key("emoji_${index}_$emoji") {
+                        EmojiButton(
+                            emoji = emoji,
+                            onClick = {},
+                            modifier = Modifier,
+                            alpha = 1f,
+                        )
+                    }
+                }
+
+                // 灰色 😀 占位 + 按钮：点击展开 emoji 列表
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.pointerInput(showPicker) {
+                        // 阻止点击事件传播，防止关闭 picker
+                        detectTapGestures { }
+                    },
+                ) {
                     EmojiButton(
-                        emoji = emoji,
-                        onClick = {},
-                        modifier = Modifier,
-                        alpha = 1f,
+                        emoji = "😀",
+                        onClick = { showPicker = !showPicker },
+                        alpha = cfg.PlaceholderAlpha,
+                        isGray = true, // 灰色占位按钮
                     )
+                    
+                    // emoji 选择器显示在按钮右边
+                    if (showPicker) {
+                        ReactionEmojiPicker(
+                            emojis = emojiOptions,
+                            onEmojiClick = { emoji ->
+                                onAddReaction(emoji)
+                                showPicker = false
+                            },
+                            modifier = Modifier.padding(start = cfg.PickerToActionsSpacing),
+                        )
+                    }
                 }
+
+                Spacer(Modifier.weight(1f))
+
+                // Recall 按钮 - 始终显示，不受like/dislike影响
+                //        RecallButton(onClick = onRecall)
             }
-
-            // 灰色 😀 占位 + 按钮：点击展开 emoji 列表
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(0.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.pointerInput(showPicker) {
-                    // 阻止点击事件传播，防止关闭 picker
-                    detectTapGestures { }
-                },
-            ) {
-                EmojiButton(
-                    emoji = "😀",
-                    onClick = { showPicker = !showPicker },
-                    alpha = cfg.PlaceholderAlpha,
-                    isGray = true, // 灰色占位按钮
-                )
-                
-                // emoji 选择器显示在按钮右边
-                if (showPicker) {
-                    ReactionEmojiPicker(
-                        emojis = emojiOptions,
-                        onEmojiClick = { emoji ->
-                            onAddReaction(emoji)
-                            showPicker = false
-                        },
-                        modifier = Modifier.padding(start = cfg.PickerToActionsSpacing),
-                    )
-                }
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            // Recall 按钮 - 始终显示，不受like/dislike影响
-            //        RecallButton(onClick = onRecall)
         }
     }
 }
