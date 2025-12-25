@@ -281,6 +281,8 @@
     <string name="content_desc_swipe_guide">Swipe guide gesture</string>
     <string name="content_desc_selected_avatar">Selected Avatar</string>
     <string name="content_desc_back">back</string>
+    <string name="download_image_content_description">Download image</string>
+    <string name="download_button">Download</string>
 
     <!-- Additional UI Text -->
     <string name="generate_avatar_button">Generate</string>
@@ -406,6 +408,8 @@
     <string name="toast_upload_failed_with_message">Upload failed: %s</string>
     <string name="toast_failed_prepare_upload_with_message">Failed to prepare upload: %s</string>
     <string name="toast_failed_download_image_editing">Failed to download image for editing</string>
+    <string name="toast_image_saved_to_album">Saved to Photos</string>
+    <string name="toast_image_save_failed">Failed to save image</string>
     <string name="toast_please_select_reason">Please select at least one reason</string>
     <string name="toast_please_enter_description">Please enter a description</string>
     <string name="toast_submitted_successfully">Submitted successfully. We will review it soon.</string>

@@ -2,20 +2,29 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.design.ImageLoaderUtils
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,13 +35,19 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ReportButton
+import com.ai.intellimate.utils.GalleryImageDownloadUtils
+import kotlinx.coroutines.launch
+import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.material3.IconButton
 
 /** 全屏图片查看器 */
 @Composable
@@ -45,6 +60,17 @@ internal fun FullScreenImageViewer(
     onReport: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isSavingToGallery by remember { mutableStateOf(false) }
+
+    val cdnImageUrl =
+        remember(imageUrl) {
+            getCdnImageUrl(
+                imageUrl,
+                width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
+                quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
+            ) ?: imageUrl
+        }
 
     // 缩放、平移状态（不支持旋转）
     var scale by remember { mutableFloatStateOf(1f) }
@@ -157,12 +183,7 @@ internal fun FullScreenImageViewer(
             model =
                 ImageLoaderUtils.createDeviceAdaptiveImageRequest(
                     context = context,
-                    imageUrl =
-                        getCdnImageUrl(
-                            imageUrl,
-                            width = UiConfigs.CharacterProfile.CDN_STATIC_BACKGROUND_WIDTH,
-                            quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
-                        ),
+                    imageUrl = cdnImageUrl,
                     maxWidth = 1920,
                     maxHeight = 1920,
                 ),
@@ -176,7 +197,7 @@ internal fun FullScreenImageViewer(
             onClick = { onDismiss() },
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
         ) {
-            androidx.compose.material3.Text(
+            Text(
                 text = "✕",
                 color = Color.White,
                 fontSize = 24.sp,
@@ -184,12 +205,70 @@ internal fun FullScreenImageViewer(
             )
         }
 
-        // 右上角举报按钮（如果提供）
-        if (onReport != null) {
-            ReportButton(
-                onClick = { onReport() },
-                modifier = Modifier.align(Alignment.TopEnd),
-            )
+        // 右上角：下载 + 举报（如果提供）
+        Row(
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp)
+                    .widthIn(min = 0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (isSavingToGallery) Color.Gray.copy(alpha = 0.5f)
+                        else Color.Black.copy(alpha = 0.7f),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .noRippleClickable(enabled = !isSavingToGallery) {
+                        if (isSavingToGallery) return@noRippleClickable
+                        isSavingToGallery = true
+                        scope.launch {
+                            val saveResult: Result<android.net.Uri>
+                            try {
+                                saveResult =
+                                    GalleryImageDownloadUtils.saveImageUrlToGallery(
+                                        context = context,
+                                        imageUrl = cdnImageUrl,
+                                    )
+                            } finally {
+                                isSavingToGallery = false
+                            }
+
+                            if (saveResult.isSuccess) {
+                                ToastUtils.showShort(R.string.toast_image_saved_to_album)
+                            } else {
+                                ToastUtils.showShort(R.string.toast_image_save_failed)
+                            }
+                        }
+                    }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Download,
+                        contentDescription =
+                            stringResource(R.string.download_image_content_description),
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.White,
+                    )
+                    Text(
+                        text = stringResource(R.string.download_button),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+
+            if (onReport != null) {
+                ReportButton(onClick = { onReport() })
+            }
         }
 
         // 右下角操作按钮（如果提供）
@@ -202,7 +281,7 @@ internal fun FullScreenImageViewer(
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp)),
             ) {
-                androidx.compose.material3.Text(
+                Text(
                     text = actionLabel,
                     color = Color.White,
                     fontSize = 16.sp,
