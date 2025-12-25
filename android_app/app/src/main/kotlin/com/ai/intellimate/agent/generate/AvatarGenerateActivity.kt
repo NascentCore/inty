@@ -78,6 +78,7 @@ import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
 
 /** Ai 模型形象的 封面头像生成页面 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Create.AvatarGenerate 替代")
 class AvatarGenerateActivity : BaseActivity() {
 
     companion object {

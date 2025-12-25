@@ -123,6 +123,7 @@ import java.util.UUID
 import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Create.CreateRole 替代")
 class CreateRoleActivity : BaseActivity() {
 
     companion object {
