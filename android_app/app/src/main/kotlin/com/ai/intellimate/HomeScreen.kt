@@ -77,9 +77,9 @@ fun HomeScreen(
         val defaultTabIndex =
             try {
                 FirebaseManager.getRemoteConfigLong(
-                    FirebaseManager.RemoteConfigKeys
-                        .HOME_PAGE_DEFAULT_TAB_INDEX
-                ).toInt()
+                        FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
+                    )
+                    .toInt()
             } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
@@ -172,9 +172,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .background(HeartColor.primaryColor),
+        modifier = modifier.fillMaxSize().background(HeartColor.primaryColor),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -189,8 +187,8 @@ fun HomeScreen(
                     // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
                     if (
                         tabIndex == exploreTabIndex &&
-                        tabIndex == lastTabIndex &&
-                        currentTime - lastTabClickTime < doubleTapTimeoutMs
+                            tabIndex == lastTabIndex &&
+                            currentTime - lastTabClickTime < doubleTapTimeoutMs
                     ) {
                         // 双击Explore tab，触发重置
                         if (selectedTab.value == HomeTabIndex.Explore) {

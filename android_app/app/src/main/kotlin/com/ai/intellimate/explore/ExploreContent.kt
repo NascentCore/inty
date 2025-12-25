@@ -541,7 +541,7 @@ fun ExploreContent(
                             .padding(
                                 bottom =
                                     innerPadding.calculateBottomPadding() +
-                                        UiConfigs.Spacing.MediumPlus,
+                                        UiConfigs.Spacing.MediumPlus
                             ),
                     visible = showBackToTopButton,
                     onClick = { scope.launch { gridState.animateScrollToItem(0) } },

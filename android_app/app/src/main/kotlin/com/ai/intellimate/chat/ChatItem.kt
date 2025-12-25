@@ -55,7 +55,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import com.ai.intellimate.agent.report.ReportActivity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -77,6 +76,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.audio.VoicePlayer
@@ -561,7 +561,11 @@ private fun ChatItemAI(
                                     stringResource(R.string.agent_gallery_set_as_background),
                                 onReport = {
                                     if (agentId.isNotBlank()) {
-                                        ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
+                                        ReportActivity.launch(
+                                            context,
+                                            targetType = "AGENT",
+                                            targetId = agentId,
+                                        )
                                     }
                                 },
                             )

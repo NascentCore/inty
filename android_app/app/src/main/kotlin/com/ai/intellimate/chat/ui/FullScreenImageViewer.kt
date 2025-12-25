@@ -3,20 +3,22 @@ package com.ai.intellimate.chat.ui
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.design.ImageLoaderUtils
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,8 +48,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ReportButton
 import com.ai.intellimate.utils.GalleryImageDownloadUtils
 import kotlinx.coroutines.launch
-import ai.sxwl.android.utils.ToastUtils
-import androidx.compose.material3.IconButton
 
 /** 全屏图片查看器 */
 @Composable
@@ -197,12 +197,7 @@ internal fun FullScreenImageViewer(
             onClick = { onDismiss() },
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
         ) {
-            Text(
-                text = "✕",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            Text(text = "✕", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
 
         // 右上角：下载 + 举报（如果提供）
@@ -214,36 +209,36 @@ internal fun FullScreenImageViewer(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (isSavingToGallery) Color.Gray.copy(alpha = 0.5f)
-                        else Color.Black.copy(alpha = 0.7f),
-                        RoundedCornerShape(8.dp)
-                    )
-                    .noRippleClickable(enabled = !isSavingToGallery) {
-                        if (isSavingToGallery) return@noRippleClickable
-                        isSavingToGallery = true
-                        scope.launch {
-                            val saveResult: Result<android.net.Uri>
-                            try {
-                                saveResult =
-                                    GalleryImageDownloadUtils.saveImageUrlToGallery(
-                                        context = context,
-                                        imageUrl = cdnImageUrl,
-                                    )
-                            } finally {
-                                isSavingToGallery = false
-                            }
+                modifier =
+                    Modifier.clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isSavingToGallery) Color.Gray.copy(alpha = 0.5f)
+                            else Color.Black.copy(alpha = 0.7f),
+                            RoundedCornerShape(8.dp),
+                        )
+                        .noRippleClickable(enabled = !isSavingToGallery) {
+                            if (isSavingToGallery) return@noRippleClickable
+                            isSavingToGallery = true
+                            scope.launch {
+                                val saveResult: Result<android.net.Uri>
+                                try {
+                                    saveResult =
+                                        GalleryImageDownloadUtils.saveImageUrlToGallery(
+                                            context = context,
+                                            imageUrl = cdnImageUrl,
+                                        )
+                                } finally {
+                                    isSavingToGallery = false
+                                }
 
-                            if (saveResult.isSuccess) {
-                                ToastUtils.showShort(R.string.toast_image_saved_to_album)
-                            } else {
-                                ToastUtils.showShort(R.string.toast_image_save_failed)
+                                if (saveResult.isSuccess) {
+                                    ToastUtils.showShort(R.string.toast_image_saved_to_album)
+                                } else {
+                                    ToastUtils.showShort(R.string.toast_image_save_failed)
+                                }
                             }
                         }
-                    }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
