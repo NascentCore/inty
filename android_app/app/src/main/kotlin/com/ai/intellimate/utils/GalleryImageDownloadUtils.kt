@@ -26,13 +26,9 @@ object GalleryImageDownloadUtils {
 
     private val RELATIVE_PATH = "${Environment.DIRECTORY_PICTURES}/IntelliMate"
     private const val FILE_NAME_PREFIX = "IntelliMate_"
-    private val FILE_NAME_TIME_FORMATTER =
-        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss", Locale.US)
+    private val FILE_NAME_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss", Locale.US)
 
-    suspend fun saveImageUrlToGallery(
-        context: Context,
-        imageUrl: String,
-    ): Result<Uri> =
+    suspend fun saveImageUrlToGallery(context: Context, imageUrl: String): Result<Uri> =
         withContext(Dispatchers.IO) {
             if (imageUrl.isBlank()) {
                 return@withContext Result.failure(IllegalArgumentException("imageUrl is blank"))
@@ -41,11 +37,7 @@ object GalleryImageDownloadUtils {
             val output = inferOutputFromUrl(imageUrl)
             val imageLoader = SingletonImageLoader.get(context)
 
-            val request =
-                ImageRequest.Builder(context)
-                    .data(imageUrl)
-                    .size(Size.ORIGINAL)
-                    .build()
+            val request = ImageRequest.Builder(context).data(imageUrl).size(Size.ORIGINAL).build()
 
             val result = imageLoader.execute(request)
             if (result !is SuccessResult) {
@@ -55,9 +47,9 @@ object GalleryImageDownloadUtils {
             val displayName = buildDisplayName(output.fileExtension)
 
             val cachedFile =
-                result.diskCacheKey?.let { key -> imageLoader.diskCache?.openSnapshot(key) }?.use {
-                    it.data.toFile()
-                }
+                result.diskCacheKey
+                    ?.let { key -> imageLoader.diskCache?.openSnapshot(key) }
+                    ?.use { it.data.toFile() }
 
             val savedUri =
                 if (cachedFile != null && cachedFile.exists() && cachedFile.length() > 0) {
@@ -70,7 +62,9 @@ object GalleryImageDownloadUtils {
                 } else {
                     val bitmap =
                         tryDecodeBitmapFromResult(context = context, result = result)
-                            ?: return@withContext Result.failure(IOException("Decode bitmap failed"))
+                            ?: return@withContext Result.failure(
+                                IOException("Decode bitmap failed")
+                            )
 
                     saveBitmapToGallery(
                         context = context,
@@ -144,9 +138,9 @@ object GalleryImageDownloadUtils {
                 }
             }
 
-            ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }.also { doneValues ->
-                resolver.update(uri, doneValues, null, null)
-            }
+            ContentValues()
+                .apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+                .also { doneValues -> resolver.update(uri, doneValues, null, null) }
 
             return Result.success(uri)
         } catch (e: IOException) {
@@ -194,9 +188,9 @@ object GalleryImageDownloadUtils {
                 }
             }
 
-            ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }.also { doneValues ->
-                resolver.update(uri, doneValues, null, null)
-            }
+            ContentValues()
+                .apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+                .also { doneValues -> resolver.update(uri, doneValues, null, null) }
 
             return Result.success(uri)
         } catch (e: IOException) {
@@ -208,10 +202,7 @@ object GalleryImageDownloadUtils {
         }
     }
 
-    private fun tryDecodeBitmapFromResult(
-        context: Context,
-        result: SuccessResult,
-    ): Bitmap? {
+    private fun tryDecodeBitmapFromResult(context: Context, result: SuccessResult): Bitmap? {
         val drawable = result.image.asDrawable(context.resources)
         return if (drawable is android.graphics.drawable.BitmapDrawable) {
             drawable.bitmap
@@ -235,4 +226,3 @@ object GalleryImageDownloadUtils {
         val compressFormat: Bitmap.CompressFormat,
     )
 }
-

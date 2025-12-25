@@ -26,17 +26,13 @@ import com.ai.intellimate.ui.UiConfigs
 /**
  * 举报按钮组件
  *
- * 用于在全屏图片查看器中显示举报按钮，样式与 Crop 按钮一致。
- * 包含图标和"Report"文字，点击后触发举报回调。
+ * 用于在全屏图片查看器中显示举报按钮，样式与 Crop 按钮一致。 包含图标和"Report"文字，点击后触发举报回调。
  *
  * @param onClick 点击按钮时的回调
  * @param modifier 修饰符
  */
 @Composable
-fun ReportButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun ReportButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier =
             modifier
@@ -46,7 +42,7 @@ fun ReportButton(
                     shape = RoundedCornerShape(16.dp),
                 )
                 .noRippleClickable { onClick() }
-                .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding),
+                .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -67,4 +63,3 @@ fun ReportButton(
         }
     }
 }
-
