@@ -6,8 +6,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
+
+// TODO: 使用 Room Database 存储而非目前的内存数据存储。
 /**
- * 消息 Emoji 反应存储（纯本地）。
+ * 消息 Emoji 反应存储，内存内保持，新的 session 会丢失掉内容。
  *
  * 使用场景：
  * - 聊天消息底部操作栏允许用户为单条消息追加多个 emoji reaction
