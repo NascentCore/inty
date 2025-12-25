@@ -285,3 +285,72 @@ object HolidayCelebrationColors {
 }
 
 // endregion
+
+// region IntelliMate 主题方案（可切换）
+
+/**
+ * 圣诞主题色（全局）。
+ *
+ * 设计目标：
+ * - 深墨绿/夜色作为背景基底（保持暗黑风格与对比度）
+ * - 红 / 金 作为主强调色（节日氛围）
+ * - 辅助用冷白与松针绿做层次
+ */
+val christmasPrimaryLight = Color(0xFFB80E2C)
+val christmasOnPrimaryLight = Color(0xFFFFFFFF)
+val christmasPrimaryContainerLight = Color(0xFFFFDAD9)
+val christmasOnPrimaryContainerLight = Color(0xFF41000B)
+val christmasSecondaryLight = Color(0xFF1B7F4A)
+val christmasOnSecondaryLight = Color(0xFFFFFFFF)
+val christmasTertiaryLight = Color(0xFF8A6B00)
+val christmasOnTertiaryLight = Color(0xFFFFFFFF)
+val christmasBackgroundLight = Color(0xFFFFFBF7)
+val christmasOnBackgroundLight = Color(0xFF1B1B1B)
+val christmasSurfaceLight = Color(0xFFFFFBF7)
+val christmasOnSurfaceLight = Color(0xFF1B1B1B)
+val christmasSurfaceVariantLight = Color(0xFFF4E6E3)
+val christmasOnSurfaceVariantLight = Color(0xFF4A3F3C)
+val christmasOutlineLight = Color(0xFF7C6E6B)
+
+val christmasPrimaryDark = Color(0xFFFF5A6E)
+val christmasOnPrimaryDark = Color(0xFF4B0010)
+val christmasPrimaryContainerDark = Color(0xFF8F0521)
+val christmasOnPrimaryContainerDark = Color(0xFFFFDADB)
+val christmasSecondaryDark = Color(0xFF4FE0A0)
+val christmasOnSecondaryDark = Color(0xFF003920)
+val christmasTertiaryDark = Color(0xFFFFD66B)
+val christmasOnTertiaryDark = Color(0xFF3A2B00)
+val christmasBackgroundDark = Color(0xFF07150E)
+val christmasOnBackgroundDark = Color(0xFFEAF4EE)
+val christmasSurfaceDark = Color(0xFF07150E)
+val christmasOnSurfaceDark = Color(0xFFEAF4EE)
+val christmasSurfaceVariantDark = Color(0xFF1F2A23)
+val christmasOnSurfaceVariantDark = Color(0xFFC9D6CE)
+val christmasOutlineDark = Color(0xFF7A8B81)
+
+// endregion
+
+// region app/UiConfigs 颜色常量（值集中管理）
+
+object UiConfigColors {
+    val GradientStart = Color(0xFFC122FF)
+    val GradientEnd = Color(0xFFFF905D)
+
+    val DialogSurface = Color(0xFF1B0130)
+
+    val VipSecondaryText = Color(0x8CFFFFFF)
+    val VipTertiaryText = Color(0x59FFFFFF)
+
+    val InputSurface = Color(0x1A78599A)
+    val SheetSurfaceOverlay = Color(0x1AFFFFFF)
+
+    val ReplySheetGradientTop = Color(0xFF322341)
+    val ReplySheetGradientBottom = Color(0xFF120E24)
+
+    // ChatTopBar 背景（原先为 Color(33, 0, 0, 77)）
+    val ChatTopBarBackground = Color(0x4D210000)
+
+    val FavoriteActiveTint = Color(0xFFFF5A8A)
+}
+
+// endregion

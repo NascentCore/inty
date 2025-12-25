@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.sxwl.android.design.theme.UiConfigColors
 import com.ai.intellimate.settings.RemixButtonVisibilityManager
 
 /** 聚合 UI 层常用尺寸、颜色、比例等配置，避免在组件中直接写裸数字。 */
@@ -146,31 +147,31 @@ object UiConfigs {
     /** 颜色配置 - 适用于渐变、对话框、VIP 文字、输入框等组件的颜色设置 */
     object Colors {
         /** 渐变起始颜色 */
-        val GradientStart = Color(0xFFC122FF)
+        val GradientStart = UiConfigColors.GradientStart
 
         /** 渐变结束颜色 */
-        val GradientEnd = Color(0xFFFF905D)
+        val GradientEnd = UiConfigColors.GradientEnd
 
         /** 对话框背景颜色 */
-        val DialogSurface = Color(0xFF1B0130)
+        val DialogSurface = UiConfigColors.DialogSurface
 
         /** VIP 次要文字颜色 */
-        val VipSecondaryText = Color(0x8CFFFFFF)
+        val VipSecondaryText = UiConfigColors.VipSecondaryText
 
         /** VIP 第三级文字颜色 */
-        val VipTertiaryText = Color(0x59FFFFFF)
+        val VipTertiaryText = UiConfigColors.VipTertiaryText
 
         /** 输入框背景颜色 */
-        val InputSurface = Color(0x1A78599A)
+        val InputSurface = UiConfigColors.InputSurface
 
         /** 底部表单表面遮罩颜色 */
-        val SheetSurfaceOverlay = Color(0x1AFFFFFF)
+        val SheetSurfaceOverlay = UiConfigColors.SheetSurfaceOverlay
 
         /** 回复表单渐变顶部颜色 */
-        val ReplySheetGradientTop = Color(0xFF322341)
+        val ReplySheetGradientTop = UiConfigColors.ReplySheetGradientTop
 
         /** 回复表单渐变底部颜色 */
-        val ReplySheetGradientBottom = Color(0xFF120E24)
+        val ReplySheetGradientBottom = UiConfigColors.ReplySheetGradientBottom
 
         /** 主要渐变颜色列表 */
         val PrimaryGradient = listOf(GradientStart, GradientEnd)
@@ -491,7 +492,7 @@ object UiConfigs {
         val CornerRadius = 28.dp
 
         /** 顶部栏背景颜色 */
-        val BackgroundColor = Color(33, 0, 0, 77)
+        val BackgroundColor = UiConfigColors.ChatTopBarBackground
 
         /** 返回按钮图标大小 */
         val BackButtonIconSize = 24.dp
@@ -536,7 +537,7 @@ object UiConfigs {
         const val ActionButtonContainerAlpha = 0.35f
 
         /** 收藏按钮激活状态颜色（粉色） */
-        val FavoriteActiveTint = Color(0xFFFF5A8A)
+        val FavoriteActiveTint = UiConfigColors.FavoriteActiveTint
 
         /** 收藏按钮未激活状态颜色（白色） */
         val FavoriteInactiveTint = Color.White

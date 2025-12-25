@@ -10,6 +10,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+enum class IntelliMateThemeScheme {
+    Default,
+    Christmas,
+}
+
 private val lightScheme =
     lightColorScheme(
         primary = primaryLight,
@@ -244,15 +249,61 @@ private val highContrastDarkColorScheme =
         surfaceContainerHighest = surfaceContainerHighestDarkHighContrast,
     )
 
+private val christmasLightScheme =
+    lightColorScheme(
+        primary = christmasPrimaryLight,
+        onPrimary = christmasOnPrimaryLight,
+        primaryContainer = christmasPrimaryContainerLight,
+        onPrimaryContainer = christmasOnPrimaryContainerLight,
+        secondary = christmasSecondaryLight,
+        onSecondary = christmasOnSecondaryLight,
+        tertiary = christmasTertiaryLight,
+        onTertiary = christmasOnTertiaryLight,
+        background = christmasBackgroundLight,
+        onBackground = christmasOnBackgroundLight,
+        surface = christmasSurfaceLight,
+        onSurface = christmasOnSurfaceLight,
+        surfaceVariant = christmasSurfaceVariantLight,
+        onSurfaceVariant = christmasOnSurfaceVariantLight,
+        outline = christmasOutlineLight,
+        error = errorLight,
+        onError = onErrorLight,
+    )
+
+private val christmasDarkScheme =
+    darkColorScheme(
+        primary = christmasPrimaryDark,
+        onPrimary = christmasOnPrimaryDark,
+        primaryContainer = christmasPrimaryContainerDark,
+        onPrimaryContainer = christmasOnPrimaryContainerDark,
+        secondary = christmasSecondaryDark,
+        onSecondary = christmasOnSecondaryDark,
+        tertiary = christmasTertiaryDark,
+        onTertiary = christmasOnTertiaryDark,
+        background = christmasBackgroundDark,
+        onBackground = christmasOnBackgroundDark,
+        surface = christmasSurfaceDark,
+        onSurface = christmasOnSurfaceDark,
+        surfaceVariant = christmasSurfaceVariantDark,
+        onSurfaceVariant = christmasOnSurfaceVariantDark,
+        outline = christmasOutlineDark,
+        error = errorDark,
+        onError = onErrorDark,
+    )
+
 @Composable
 fun IntelliMateTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
+    scheme: IntelliMateThemeScheme = IntelliMateThemeScheme.Default,
     content: @Composable() () -> Unit,
 ) {
     val colorScheme =
         when {
+            scheme == IntelliMateThemeScheme.Christmas -> {
+                if (darkTheme) christmasDarkScheme else christmasLightScheme
+            }
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 val context = LocalContext.current
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)

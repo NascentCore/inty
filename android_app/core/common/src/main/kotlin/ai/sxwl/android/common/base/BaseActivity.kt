@@ -1,14 +1,21 @@
 package ai.sxwl.android.common.base
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.common.ui.ThemeSchemeManager
 import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.design.theme.intelliMateSeasonalOverlay
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 
 /** 简单封装的activity的基类，继承自ComponentActivity而非AppcompatActivity */
 abstract class BaseActivity : ComponentActivity() {
@@ -35,7 +42,12 @@ abstract class BaseActivity : ComponentActivity() {
         // initUI
         setContent {
             // IntelliMate的app风格是dark模式
-            IntelliMateTheme(darkTheme = true, dynamicColor = false) { ConfigComposeUI() }
+            val scheme by ThemeSchemeManager.scheme.collectAsState()
+            IntelliMateTheme(darkTheme = true, dynamicColor = false, scheme = scheme) {
+                Box(modifier = Modifier.fillMaxSize().intelliMateSeasonalOverlay(scheme)) {
+                    ConfigComposeUI()
+                }
+            }
         }
     }
 

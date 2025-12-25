@@ -1,6 +1,8 @@
 package com.ai.intellimate.settings
 
 import ai.sxwl.android.design.ui.SettingsItemGroup
+import ai.sxwl.android.common.ui.ThemeSchemeManager
+import ai.sxwl.android.design.theme.IntelliMateThemeScheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -42,6 +44,7 @@ private object TextConfig {
 fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
     val viewModel: DebugBackendSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeScheme by ThemeSchemeManager.scheme.collectAsStateWithLifecycle()
 
     SettingsItemGroup {
         Column(modifier = Modifier.fillMaxWidth().padding(Spacing.ContentHorizontalPadding)) {
@@ -101,6 +104,37 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(Spacing.SmallSpacer))
             TextButton(onClick = viewModel::resetRemixButtonOverride) {
+                Text(text = "恢复默认", color = Color.White)
+            }
+
+            // UI 主题配色方案（运行时切换）
+            Spacer(Modifier.height(Spacing.MediumSpacer * 2))
+            Text(
+                text = "主题配色方案",
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = if (themeScheme == IntelliMateThemeScheme.Christmas) "圣诞主题" else "默认主题",
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                )
+                Switch(
+                    checked = themeScheme == IntelliMateThemeScheme.Christmas,
+                    onCheckedChange = { checked ->
+                        ThemeSchemeManager.setScheme(
+                            if (checked) IntelliMateThemeScheme.Christmas else IntelliMateThemeScheme.Default
+                        )
+                    },
+                )
+            }
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            TextButton(onClick = ThemeSchemeManager::resetToDefault) {
                 Text(text = "恢复默认", color = Color.White)
             }
         }
