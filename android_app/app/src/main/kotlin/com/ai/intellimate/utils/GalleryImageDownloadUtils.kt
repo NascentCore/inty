@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 
 object GalleryImageDownloadUtils {
 
-    private const val RELATIVE_PATH = "${Environment.DIRECTORY_PICTURES}/IntelliMate"
+    private val RELATIVE_PATH = "${Environment.DIRECTORY_PICTURES}/IntelliMate"
     private const val FILE_NAME_PREFIX = "IntelliMate_"
     private val FILE_NAME_TIME_FORMATTER =
         DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss", Locale.US)
