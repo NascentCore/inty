@@ -282,6 +282,7 @@
     <string name="content_desc_selected_avatar">Selected Avatar</string>
     <string name="content_desc_back">back</string>
     <string name="download_image_content_description">Download image</string>
+    <string name="download_button">Download</string>
 
     <!-- Additional UI Text -->
     <string name="generate_avatar_button">Generate</string>

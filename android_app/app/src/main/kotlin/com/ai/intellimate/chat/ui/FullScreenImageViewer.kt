@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.design.ImageLoaderUtils
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -11,11 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +47,7 @@ import com.ai.intellimate.ui.components.ReportButton
 import com.ai.intellimate.utils.GalleryImageDownloadUtils
 import kotlinx.coroutines.launch
 import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.material3.IconButton
 
 /** 全屏图片查看器 */
 @Composable
@@ -194,7 +197,7 @@ internal fun FullScreenImageViewer(
             onClick = { onDismiss() },
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
         ) {
-            androidx.compose.material3.Text(
+            Text(
                 text = "✕",
                 color = Color.White,
                 fontSize = 24.sp,
@@ -210,38 +213,57 @@ internal fun FullScreenImageViewer(
                     .widthIn(min = 0.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                enabled = !isSavingToGallery,
-                onClick = {
-                    if (isSavingToGallery) return@IconButton
-                    isSavingToGallery = true
-                    scope.launch {
-                        val saveResult: Result<android.net.Uri>
-                        try {
-                            saveResult =
-                                GalleryImageDownloadUtils.saveImageUrlToGallery(
-                                    context = context,
-                                    imageUrl = cdnImageUrl,
-                                )
-                        } finally {
-                            isSavingToGallery = false
-                        }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (isSavingToGallery) Color.Gray.copy(alpha = 0.5f)
+                        else Color.Black.copy(alpha = 0.7f),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .noRippleClickable(enabled = !isSavingToGallery) {
+                        if (isSavingToGallery) return@noRippleClickable
+                        isSavingToGallery = true
+                        scope.launch {
+                            val saveResult: Result<android.net.Uri>
+                            try {
+                                saveResult =
+                                    GalleryImageDownloadUtils.saveImageUrlToGallery(
+                                        context = context,
+                                        imageUrl = cdnImageUrl,
+                                    )
+                            } finally {
+                                isSavingToGallery = false
+                            }
 
-                        if (saveResult.isSuccess) {
-                            ToastUtils.showShort(R.string.toast_image_saved_to_album)
-                        } else {
-                            ToastUtils.showShort(R.string.toast_image_save_failed)
+                            if (saveResult.isSuccess) {
+                                ToastUtils.showShort(R.string.toast_image_saved_to_album)
+                            } else {
+                                ToastUtils.showShort(R.string.toast_image_save_failed)
+                            }
                         }
                     }
-                },
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Download,
-                    contentDescription =
-                        stringResource(R.string.download_image_content_description),
-                    modifier = Modifier.size(24.dp),
-                    tint = Color.White,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Download,
+                        contentDescription =
+                            stringResource(R.string.download_image_content_description),
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.White,
+                    )
+                    Text(
+                        text = stringResource(R.string.download_button),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
 
             if (onReport != null) {
@@ -259,7 +281,7 @@ internal fun FullScreenImageViewer(
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp)),
             ) {
-                androidx.compose.material3.Text(
+                Text(
                     text = actionLabel,
                     color = Color.White,
                     fontSize = 16.sp,
