@@ -381,6 +381,7 @@
     <string name="favorite_button_remove_from_favorites">Remove from favorites</string>
 
     <!-- Explore Search -->
+    <string name="explore_page_title">Serendipity</string>
     <string name="explore_search_icon_desc">Search characters</string>
     <string name="explore_search_placeholder">Search by name or #tag</string>
     <string name="explore_search_cancel">Cancel</string>
