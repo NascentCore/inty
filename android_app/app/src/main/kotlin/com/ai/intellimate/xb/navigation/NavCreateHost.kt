@@ -11,10 +11,18 @@ import com.ai.intellimate.xb.helper.AgentStore
 
 fun NavGraphBuilder.createGraph(navController: NavController) {
     // 定义创建角色路由
-    composable(Routes.Creat.CreateRole) {
+    composable(
+        route = Routes.Creat.CreateRole,
+        arguments = listOf(
+            navArgument("draftId") { type = NavType.StringType }
+        )
+    ) { backStackEntry ->
+        val draftId = backStackEntry.arguments?.getString("draftId")
+        val agentInfo = AgentStore.getDraftAgentInfo()
         CreateRoleScreen(
             navController,
-            agentInfo = AgentStore.agentInfoDraft
+            agentInfo = agentInfo,
+            draftId = draftId
         )
     }
 

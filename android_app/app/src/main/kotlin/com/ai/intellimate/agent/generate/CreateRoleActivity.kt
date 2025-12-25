@@ -1020,6 +1020,7 @@ fun CreateRolePage(
 
                                 // 创建成功
                                 navController.previousBackStackEntry?.savedStateHandle?.set("createBackCode", Activity.RESULT_OK)
+                                navController.popBackStack()
                             } catch (e: Exception) {
                                 val operation =
                                     if (isEditMode) context.getString(R.string.update_failed)

@@ -37,7 +37,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
@@ -384,7 +383,6 @@ private fun handleTabSelectionWithLauncher(
             // 使用 CreateRoleActivity 提供的方法获取 Intent
 //            val intent = CreateRoleActivity.getIntent(context, null)
 //            createRoleLauncher.launch(intent)
-            AgentStore.setDraftAgentInfo(null)
             navController.navigate(Routes.Creat.CreateRole)
         }
         return
@@ -653,8 +651,7 @@ private fun ProfileTabContent(
         onClickDraft = { draftId ->
 //            val intent = CreateRoleActivity.getIntent(context, null, draftId)
 //            createFromProfileLauncher.launch(intent)
-            AgentStore.setDraftAgentInfo(null)
-            navController.navigate(Routes.Creat.CreateRole)
+            navController.navigate(Routes.Creat.createRole(draftId))
         },
         onDeleteDraft = { draftId -> profileViewModel.deleteDraft(draftId) },
         onEditAgent = { agent ->
