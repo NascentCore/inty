@@ -339,15 +339,6 @@ internal fun ChatPage(
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }
         val keyboard = LocalSoftwareKeyboardController.current
 
-        LaunchedEffect(drawerState) {
-            snapshotFlow { drawerState.value }
-                .collect {
-                    if (it == DrawerValue.Open) {
-                        keyboard?.hide()
-                    }
-                }
-        }
-
         LifecycleResumeEffect(keyboard) { onPauseOrDispose { keyboard?.hide() } }
 
         Scaffold(
