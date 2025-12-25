@@ -1,14 +1,5 @@
-# 第一阶段：构建前端
-FROM node:18-slim AS frontend-builder
-
-WORKDIR /
-
-# 复制前端代码和依赖文件
-COPY evaluation/ evaluation/
-
-RUN ./evaluation/build.sh
-
-# 第二阶段：构建后端
+# 后端镜像仅打包后端代码与静态资源。
+# evaluation 静态资源应在 CI 中提前构建并同步到 app/static/evaluation 后再进行 docker build。
 FROM python:3.12-slim AS base
 
 WORKDIR /
@@ -56,10 +47,6 @@ COPY start.sh .
 
 # 复制指定的配置文件到 config.yaml
 COPY ${CONFIG_FILE} config.yaml
-
-# 从前端构建阶段复制构建结果
-COPY --from=frontend-builder /app/static/evaluation/ app/static/evaluation/
-COPY --from=frontend-builder /app/static/evaluation/resources/ app/static/evaluation/resources/
 
 # 暴露端口
 EXPOSE 8000
