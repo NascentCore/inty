@@ -861,10 +861,15 @@ internal fun ChatPage(
                         UiConfigs.ChatPage.FloatingScrollButton.ButtonSize +
                         UiConfigs.ChatPage.ScrollToHistoryButtons.VerticalSpacing
 
-                // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在屏幕中间
+                // 滚动到聊天开始按钮：当用户滚动到历史消息时显示在右下角（位于"回到最新"按钮上方）
                 // 功能：点击后平滑滚动到最旧消息位置（LazyColumn reverseLayout，最旧消息对应最大索引）
                 BackToTop(
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(
+                                bottom = scrollToStartButtonBottomOffset,
+                                end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
+                            ),
                     visible = showBackToTopButton,
                     onClick = {
                         scope.launch {
