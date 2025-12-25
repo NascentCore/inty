@@ -1,6 +1,8 @@
 #!/bin/bash -e
 
 DEV=false
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -22,7 +24,8 @@ done
 # Run database migrations
 echo "Starting database migrations..."
 export PYTHONPATH=.
-alembic upgrade head
+export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${SCRIPT_DIR}/alembic/alembic.ini}"
+alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 
 # 启动推送服务
