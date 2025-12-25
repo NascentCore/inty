@@ -10,13 +10,15 @@ python scripts/generate_long_term_token.py --readable-id 10000001 --days 365
 """
 
 import asyncio
-import argparse
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import cyclopts
 
 from app.core.security import create_access_token
 from app.db.session import get_async_db
@@ -109,47 +111,44 @@ async def generate_long_term_token(
         sys.exit(1)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="生成长期有效Token")
+def _count_non_empty(values: list[Optional[str]]) -> int:
+    return sum(1 for v in values if v is not None and str(v).strip() != "")
 
-    # 用户查找参数（互斥）
-    user_group = parser.add_mutually_exclusive_group(required=True)
-    user_group.add_argument("--user-id", help="用户ID")
-    user_group.add_argument("--phone", help="手机号")
-    user_group.add_argument("--email", help="邮箱")
-    user_group.add_argument("--readable-id", help="用户可读ID")
 
-    # Token有效期参数
-    parser.add_argument(
-        "--days", type=int, default=365, help="Token有效期（天数），默认365天"
-    )
+def main(
+    user_id: Optional[str] = None,
+    phone: Optional[str] = None,
+    email: Optional[str] = None,
+    readable_id: Optional[str] = None,
+    days: int = 365,
+):
+    if _count_non_empty([user_id, phone, email, readable_id]) != 1:
+        raise ValueError(
+            "必须且只能提供 --user-id、--phone、--email、--readable-id 中的一个"
+        )
 
-    args = parser.parse_args()
-
-    # 验证参数
-    if args.days <= 0:
+    if days <= 0:
         print("❌ 错误: 有效期必须大于0天")
         sys.exit(1)
 
-    if args.days > 3650:  # 10年
+    if days > 3650:  # 10年
         print("⚠️  警告: 有效期超过10年，这可能存在安全风险")
         confirm = input("是否继续？(y/N): ")
         if confirm.lower() != "y":
             print("已取消")
             sys.exit(0)
 
-    # 生成token
     print("🔄 正在生成长期Token...")
     asyncio.run(
         generate_long_term_token(
-            user_id=args.user_id,
-            phone=args.phone,
-            email=args.email,
-            readable_id=args.readable_id,
-            days=args.days,
+            user_id=user_id,
+            phone=phone,
+            email=email,
+            readable_id=readable_id,
+            days=days,
         )
     )
 
 
 if __name__ == "__main__":
-    main()
+    cyclopts.run(main)

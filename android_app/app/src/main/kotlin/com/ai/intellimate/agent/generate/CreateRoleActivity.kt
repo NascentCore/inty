@@ -13,7 +13,6 @@ import android.app.Activity
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -22,7 +21,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +38,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -48,6 +47,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -57,6 +57,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -73,13 +75,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -103,8 +100,10 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
@@ -112,16 +111,16 @@ import com.ai.intellimate.xb.components.MultiLineBasicTextField
 import com.ai.intellimate.xb.navigation.Routes
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import android.graphics.Color as AndroidColor
 
 /** 创建角色的页面 */
 class CreateRoleActivity : BaseActivity() {
@@ -189,7 +188,7 @@ class CreateRoleActivity : BaseActivity() {
 //            createRoleViewModel = createRoleViewModel,
 //            onBack = { finish() },
 //            onCreateSuccess = {
-//                setResult(Activity.RESULT_OK)
+//                setResult(RESULT_OK)
 //                finish()
 //            },
 //            onAvatarGenerateClick = { prompt ->
@@ -233,7 +232,7 @@ fun CreateRolePage(
 
     val nameInitial =
         if (isEditMode) {
-            editAgent?.name ?: ""
+            editAgent.name
         } else {
             savedDraft?.name.orEmpty()
         }
@@ -241,7 +240,7 @@ fun CreateRolePage(
 
     val genderInitial =
         if (isEditMode) {
-            editAgent?.gender ?: CreateRoleDraft.DEFAULT_GENDER
+            editAgent.gender
         } else {
             savedDraft?.gender ?: CreateRoleDraft.DEFAULT_GENDER
         }
@@ -253,7 +252,7 @@ fun CreateRolePage(
 
     val introInitial =
         if (isEditMode) {
-            editAgent?.intro ?: ""
+            editAgent.intro
         } else {
             savedDraft?.intro.orEmpty()
         }
@@ -261,7 +260,7 @@ fun CreateRolePage(
 
     val openingInitial =
         if (isEditMode) {
-            editAgent?.opening ?: ""
+            editAgent.opening
         } else {
             savedDraft?.opening.orEmpty()
         }
@@ -269,7 +268,7 @@ fun CreateRolePage(
 
     val visibilityInitial =
         if (isEditMode) {
-            editAgent?.visibility ?: CreateRoleDraft.DEFAULT_VISIBILITY
+            editAgent.visibility
         } else {
             savedDraft?.visibility ?: CreateRoleDraft.DEFAULT_VISIBILITY
         }
@@ -277,14 +276,14 @@ fun CreateRolePage(
 
     var isLoading by remember { mutableStateOf(false) }
 
-    val editAvatarUrls = if (isEditMode) editAgent?.backgroundImages ?: emptyList() else emptyList()
+    val editAvatarUrls = if (isEditMode) editAgent.backgroundImages else emptyList()
     val avatarUrlsInitial =
         if (isEditMode) editAvatarUrls
         else savedDraft?.avatarUrls?.filter { it.isNotBlank() } ?: emptyList()
     var avatarUrls by remember(avatarUrlsInitial) { mutableStateOf(avatarUrlsInitial) }
 
     val editSingleBackground =
-        if (isEditMode && editAgent?.backgroundImages?.isEmpty() == true) {
+        if (isEditMode && editAgent.backgroundImages.isEmpty()) {
             editAgent.background.takeIf { it.isNotBlank() }
         } else {
             null
@@ -297,10 +296,10 @@ fun CreateRolePage(
         } else {
             savedDraft?.avatarUrl?.takeIf { it.isNotBlank() }
         }
-    var avatarUrl by remember(avatarUrlInitial) { mutableStateOf<String?>(avatarUrlInitial) }
+    var avatarUrl by remember(avatarUrlInitial) { mutableStateOf(avatarUrlInitial) }
 
     val editSelectedIndex =
-        if (isEditMode && editAgent != null && editAgent.backgroundImages.isNotEmpty()) {
+        if (isEditMode && editAgent.backgroundImages.isNotEmpty()) {
             val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
             backgroundUrl?.let { url ->
                 val index = editAgent.backgroundImages.indexOf(url)
@@ -320,20 +319,27 @@ fun CreateRolePage(
         }
     var isGeneratingAvatar by remember { mutableStateOf(false) }
     val editCroppedAvatar =
-        if (isEditMode) editAgent?.avatar?.takeIf { it.isNotBlank() && it != editAgent.background }
+        if (isEditMode) editAgent.avatar.takeIf { it.isNotBlank() && it != editAgent.background }
         else null
     val croppedInitial =
-        if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl ?: editCroppedAvatar
-    var croppedAvatarUrl by remember(croppedInitial) { mutableStateOf<String?>(croppedInitial) }
+        if (isEditMode) editCroppedAvatar else savedDraft?.croppedAvatarUrl
+    // 使用 Map 存储每个图片索引对应的裁剪头像 URL
+    val croppedInitialMap =
+        if (isEditMode && editCroppedAvatar != null && avatarUrlsInitial.isNotEmpty()) {
+            // 编辑模式下，如果有裁剪头像，找到对应的图片索引
+            val backgroundUrl = editAgent.background.takeIf { it.isNotBlank() }
+            val imageIndex =
+                backgroundUrl?.let { url ->
+                    val index = avatarUrlsInitial.indexOf(url)
+                    if (index >= 0) index else null
+                } ?: 0
+            mapOf(imageIndex to editCroppedAvatar)
+        } else {
+            emptyMap<Int, String>()
+        }
+    var croppedAvatarUrls by remember(croppedInitialMap) { mutableStateOf(croppedInitialMap) }
     val avatarPromptInitial = if (isEditMode) "" else savedDraft?.avatarPrompt.orEmpty()
     var avatarPrompt by remember(avatarPromptInitial) { mutableStateOf(avatarPromptInitial) }
-
-    // 当 selectedImageIndex 改变时，将 croppedAvatarUrl 设置为空
-    LaunchedEffect(Unit) {
-        snapshotFlow { selectedImageIndex }
-            .drop(1) // 跳过初始值，只在真正改变时触发
-            .collect { croppedAvatarUrl = null }
-    }
 
     // Track original uploaded image URL (for background) when uploading from gallery
     var originalUploadedImageUrl by remember { mutableStateOf<String?>(null) }
@@ -347,7 +353,7 @@ fun CreateRolePage(
         if (isEditMode || !hasDraftChanges) {
 //            onBack()
             navController.popBackStack()
-        } else if (savedDraft != null && hasDraftChanges) {
+        } else if (savedDraft != null) {
             // 从 draft 进入，更新草稿列表中的草稿，清除临时草稿，然后退出
             val draftToSave = latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
             CreateRoleDraftStorage.saveDraftToList(draftToSave)
@@ -381,7 +387,7 @@ fun CreateRolePage(
                         avatarUrl = avatarUrl?.takeIf { it.isNotBlank() },
                         avatarUrls = normalizedUrls,
                         selectedImageIndex = sanitizedIndex,
-                        croppedAvatarUrl = croppedAvatarUrl?.takeIf { it.isNotBlank() },
+                        croppedAvatarUrl = croppedAvatarUrls[selectedImageIndex]?.takeIf { it.isNotBlank() },
                         avatarPrompt = avatarPrompt,
                     )
                 }
@@ -451,7 +457,13 @@ fun CreateRolePage(
             when (result.resultCode) {
                 Activity.RESULT_OK -> {
                     result.data?.let { data ->
-                        croppedAvatarUrl = UCrop.getOutput(data)?.toString()
+                        val croppedUrl = UCrop.getOutput(data)?.toString()
+                        if (croppedUrl != null && avatarUrls.isNotEmpty()) {
+                            // 保存当前选中图片索引对应的裁剪头像
+                            croppedAvatarUrls = croppedAvatarUrls.toMutableMap().apply {
+                                put(selectedImageIndex, croppedUrl)
+                            }
+                        }
                     }
                 }
                 UCrop.RESULT_ERROR -> {
@@ -682,7 +694,7 @@ fun CreateRolePage(
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
-                    TopAppBarDefaults.centerAlignedTopAppBarColors()
+                    TopAppBarDefaults.topAppBarColors()
                         .copy(containerColor = Color.Transparent),
                 title = {
                     Text(
@@ -721,8 +733,6 @@ fun CreateRolePage(
                     },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-
             // 视觉形象编辑区域标题
             Text(
                 text = "Visual Appearance",
@@ -732,9 +742,8 @@ fun CreateRolePage(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Start,
             )
-            Spacer(modifier = Modifier.height(12.dp))
 
-            val promptForGeneration = if (avatarPrompt.isNotBlank()) avatarPrompt else settings
+            val promptForGeneration = avatarPrompt.ifBlank { settings }
 
             AvatarUploadSection(
                 avatarUrl = avatarUrl,
@@ -742,7 +751,8 @@ fun CreateRolePage(
                 selectedIndex = selectedImageIndex,
                 isGenerating = isGeneratingAvatar,
                 isUploadingGallery = isUploadingFromGallery,
-                croppedAvatarUrl = croppedAvatarUrl,
+                croppedAvatarUrl = croppedAvatarUrls[selectedImageIndex],
+                agentId = editAgent?.id,
                 onGenerateClick = {
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
                     AvatarManager.setSelectedImageIndex(selectedImageIndex)
@@ -786,6 +796,18 @@ fun CreateRolePage(
 
                     avatarUrls = updatedList
                     selectedImageIndex = newIndex
+
+                    // 更新裁剪头像 map：删除被删除图片的裁剪头像，并重新映射索引
+                    croppedAvatarUrls = croppedAvatarUrls.toMutableMap().apply {
+                        // 删除被删除索引的裁剪头像
+                        remove(index)
+                        // 重新映射所有大于被删除索引的裁剪头像
+                        val entriesToUpdate = entries.filter { it.key > index }.toList()
+                        entriesToUpdate.forEach { (oldKey, value) ->
+                            remove(oldKey)
+                            put(oldKey - 1, value) // 索引前移
+                        }
+                    }
 
                     AvatarManager.setGeneratedAvatarUrls(updatedList)
                     AvatarManager.setSelectedImageIndex(newIndex)
@@ -884,8 +906,8 @@ fun CreateRolePage(
                 onUploadFromGallery = { galleryLauncher.launch("image/*") },
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
+            // Spacer(modifier = Modifier.height(24.dp))
+            // 该间距并不需要，显示效果不影响该有的间距。
             SingleLineInputField(
                 value = name,
                 onValueChange = { name = it },
@@ -894,7 +916,7 @@ fun CreateRolePage(
                 placeholder = "Name your IntelliMate",
             )
 
-            // Gender Selection已经创建后的，也就是在修改模式下，性别选项则不显示
+            // Gender Selection 已经创建后的，也就是在修改模式下，性别选项则不显示
             if (!isEditMode) {
                 Spacer(modifier = Modifier.height(24.dp))
                 GenderSelectionSection(selectedGender = gender, onGenderChange = { gender = it })
@@ -902,36 +924,47 @@ fun CreateRolePage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Settings Field
-            CustomTextField(
-                label = "Settings (Determines dialogue effect) *",
-                value = settings,
-                onValueChange = { settings = it },
-                placeholder = "Please fill in the dialogue effect...",
-                minLines = 4,
-                maxLength = 800,
+            VisibilitySwitchSection(
+                isPublic = visibility == "PUBLIC",
+                onPublicChange = { isPublic ->
+                    visibility = if (isPublic) "PUBLIC" else "PRIVATE"
+                },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Intro Field
+            // Settings Field
             CustomTextField(
-                label = "Intro (No impact on dialogue effect) *",
-                value = intro,
-                onValueChange = { intro = it },
-                placeholder = "Please fill in the character introduction...",
-                minLines = 3,
+                label = "Core Settings (determines dialogue effect) *",
+                value = settings,
+                onValueChange = { settings = it },
+                placeholder = "Please fill in the dialogue effect...",
+                minLines = 2,
+                maxLength = 800,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Opening Field
             CustomTextField(
-                label = "Opening *",
+                label = "Opening (set tone and context) *",
                 value = opening,
                 onValueChange = { opening = it },
                 placeholder = "Please fill in the character's opening remarks...",
-                minLines = 3,
+                minLines = 2,
+                maxLength = 200,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Intro Field
+            CustomTextField(
+                label = "Intro for other users (no impact on chat) *",
+                value = intro,
+                onValueChange = { intro = it },
+                placeholder = "Please fill in the character introduction...",
+                minLines = 2,
+                maxLength = 500,
             )
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -976,15 +1009,16 @@ fun CreateRolePage(
                                     AvatarManager.setChatBackgroundUrl(backgroundUrl)
                                 }
 
+                                val currentCroppedAvatar =
+                                    croppedAvatarUrls[selectedImageIndex]
+                                        ?: editAgent?.avatar?.takeIf {
+                                            editAgent.background == backgroundUrl
+                                        }
                                 val request =
                                     CreateAgentRequest(
                                         name = name,
                                         gender = gender,
-                                        avatar =
-                                            croppedAvatarUrl
-                                                ?: editAgent?.avatar?.takeIf {
-                                                    editAgent.background == backgroundUrl
-                                                },
+                                        avatar = currentCroppedAvatar,
                                         background = backgroundUrl,
                                         backgroundImages = backgroundImagesList,
                                         settings = mapOf("description" to settings),
@@ -1282,6 +1316,7 @@ private fun startUCropWithLocalFile(
 
         cropLauncher.launch(cropIntent)
     } catch (e: Exception) {
+        LogUtils.e("Failed to start UCrop, error: $e")
         ToastUtils.showShort(R.string.toast_failed_open_crop_editor)
     }
 }
@@ -1325,6 +1360,7 @@ private fun AvatarUploadSection(
     isGenerating: Boolean = false,
     isUploadingGallery: Boolean = false,
     croppedAvatarUrl: String? = null,
+    agentId: String? = null,
     onGenerateClick: () -> Unit,
     onImageSelected: (Int) -> Unit = {},
     onRegenerate: (String) -> Unit = {},
@@ -1332,33 +1368,43 @@ private fun AvatarUploadSection(
     onUploadFromGallery: () -> Unit = {},
     onRemoveImage: (Int) -> Unit = {},
 ) {
-    // 空状态检查：只有当所有头像 URL 都为空时才认为是空状态
+    // 首次进入页面时，显空状态检查：只有当所有头像 URL 都为空时才认为是空状态
     // 需要检查 avatarUrls、avatarUrl 和 croppedAvatarUrl
     val isEmpty = avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = UiConfigs.CreateRole.VisualAppearance.SectionVerticalPadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Box(
             modifier =
-                Modifier.then(
-                        if (isEmpty) Modifier.fillMaxWidth().height(200.dp)
-                        else Modifier.fillMaxWidth().aspectRatio(9.div(16f))
-                    )
+                Modifier.fillMaxWidth()
                     .let { modifier ->
                         if (isEmpty) {
                             modifier
+                                .wrapContentHeight()
                                 .background(
-                                    color = Color(0x1A78599A),
+                                    color = UiConfigs.Colors.InputSurface,
                                     shape = RoundedCornerShape(16.dp),
                                 )
                                 .noRippleClickable { onGenerateClick() }
                         } else {
-                            modifier.background(
-                                color = Color.Black,
-                                shape = RoundedCornerShape(16.dp),
-                            )
+                            modifier
+                                .wrapContentHeight()
+                                .background(
+                                    color = Color.Black,
+                                    shape = RoundedCornerShape(16.dp),
+                                )
                         }
                     },
             contentAlignment = Alignment.Center,
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
             when {
                 isGenerating || isUploadingGallery -> {
                     ThreeDotLoadingAnimation()
@@ -1375,7 +1421,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: displayUrl,
                         contentDescription = stringResource(R.string.content_desc_selected_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1404,7 +1453,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: croppedAvatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1431,7 +1483,10 @@ private fun AvatarUploadSection(
                     AsyncImage(
                         model = previewUrl ?: avatarUrl,
                         contentDescription = stringResource(R.string.content_desc_generated_avatar),
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop,
                         onSuccess = {
                             LogUtils.d(
@@ -1449,7 +1504,8 @@ private fun AvatarUploadSection(
                 else -> {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(16.dp),
+                        modifier =
+                            Modifier.padding(UiConfigs.CreateRole.VisualAppearance.EmptyStateInnerPadding),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1466,7 +1522,11 @@ private fun AvatarUploadSection(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier =
+                                        Modifier.padding(
+                                            UiConfigs.CreateRole.VisualAppearance
+                                                .EmptyStateButtonContentPadding
+                                        ),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.instant_mix_24px),
@@ -1494,7 +1554,11 @@ private fun AvatarUploadSection(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier =
+                                        Modifier.padding(
+                                            UiConfigs.CreateRole.VisualAppearance
+                                                .EmptyStateButtonContentPadding
+                                        ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Upload,
@@ -1530,62 +1594,78 @@ private fun AvatarUploadSection(
                 )
             }
 
-            // Dashed border for empty state
-            // 需要检查所有头像 URL 都为空才显示虚线边框
-            if (avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 1.dp.toPx()
-                    val cornerRadius = 16.dp.toPx()
-                    val dashLength = 10.dp.toPx()
-                    val gapLength = 5.dp.toPx()
-
-                    drawRoundRect(
-                        color = Color.Gray,
-                        topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                        size = Size(size.width - strokeWidth, size.height - strokeWidth),
-                        cornerRadius = CornerRadius(cornerRadius),
-                        style =
-                            Stroke(
-                                width = strokeWidth,
-                                pathEffect =
-                                    PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
-                            ),
-                    )
-                }
-            }
-
-            // Face edit button - show only when there's an avatar
+            // Face edit and Report buttons - show only when there's an avatar
             if (avatarUrls.isNotEmpty() || avatarUrl != null) {
-                Box(
-                    modifier =
-                        Modifier.align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .background(
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Report button - show only when agentId is available (edit mode)
+                    // 这是生图的中间流程，还没有 agentID，先设置一个临时的 agentId
+                    val agentId = "creation_${System.currentTimeMillis()}"
+                    val context = LocalContext.current
+                    Box(
+                        modifier =
+                            Modifier.background(
                                 color = Color.Black.copy(alpha = 0.5f),
                                 shape = RoundedCornerShape(16.dp),
                             )
-                            .noRippleClickable { onFaceEdit() }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                .noRippleClickable {
+                                    ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
+                                }
+                                .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding),
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_crop),
-                            contentDescription = stringResource(R.string.face_edit),
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.face_edit),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Flag,
+                                contentDescription = stringResource(R.string.report_button_content_description),
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.White,
+                            )
+                            Text(
+                                text = stringResource(R.string.str_report),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
+
+                    // Crop button
+                    Box(
+                        modifier =
+                            Modifier.background(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                                .noRippleClickable { onFaceEdit() }
+                                .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_crop),
+                                contentDescription = stringResource(R.string.face_edit),
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.face_edit),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                        }
                     }
                 }
+                }
             }
-        }
         Spacer(Modifier.height(8.dp))
         // 底部一行，生成的ai模型的照片图像 Floating thumbnail row at the bottom of preview
         if (avatarUrls.isNotEmpty()) {
@@ -1728,7 +1808,7 @@ private fun CustomTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    minLines: Int = 1,
+    minLines: Int = 2,
     maxLength: Int = 500,
 ) {
     Column {
@@ -1773,9 +1853,57 @@ private fun GenderButton(
         IgnoreSystemFontScaling {
             Text(
                 text = text,
-                fontSize = 12.sp,
+                fontSize = UiConfigs.CreateRole.GenderSelection.ButtonFontSize,
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun VisibilitySwitchSection(
+    isPublic: Boolean,
+    onPublicChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.visibility_required_title_full),
+            fontSize = 16.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(color = UiConfigs.Colors.InputSurface, shape = RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (isPublic) {
+                    stringResource(R.string.visibility_public_full)
+                } else {
+                    stringResource(R.string.visibility_private_full)
+                },
+                color = Color.White,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = isPublic,
+                onCheckedChange = onPublicChange,
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        uncheckedThumbColor = Color.White,
+                        checkedTrackColor = Color.Green,
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.25f),
+                        checkedBorderColor = Color.Transparent,
+                        uncheckedBorderColor = Color.Transparent,
+                    ),
             )
         }
     }

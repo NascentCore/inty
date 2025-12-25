@@ -17,6 +17,7 @@ cffi==1.17.1
 charset-normalizer==3.4.2
 click==8.2.1
 cryptography==45.0.3
+cyclopts==4.4.1
 dataclasses-json==0.6.7
 distro==1.9.0
 dnspython==2.7.0
@@ -25,6 +26,7 @@ dydantic==0.0.8
 ecdsa==0.19.1
 email_validator==2.2.0
 fastapi==0.115.12
+fal-client==0.10.0
 firebase-admin==6.9.0
 frozenlist==1.6.2
 google==3.0.0

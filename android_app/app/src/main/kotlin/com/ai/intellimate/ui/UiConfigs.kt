@@ -196,6 +196,37 @@ object UiConfigs {
         }
     }
 
+    /** 创建角色页面配置 - 适用于 CreateRoleActivity 的表单与区块布局 */
+    object CreateRole {
+        /** 视觉形象区域配置 - 头像预览与编辑入口 */
+        object VisualAppearance {
+            /**
+             * 预览框宽高比（width / height）。
+             *
+             * 默认 9/16，即竖屏比例。
+             */
+            const val ASPECT_RATIO = 9f / 16f
+
+            /** 空状态内容内边距（用于保持按钮区域不拥挤） */
+            val EmptyStateInnerPadding = 16.dp
+
+            /** 预览框右上角“Crop”浮层按钮的内边距（水平/垂直保持一致） */
+            val FaceEditPillPadding = 12.dp
+
+            /** 空状态按钮内容内边距（水平/垂直保持一致） */
+            val EmptyStateButtonContentPadding = 8.dp
+
+            /** 头像上传区域垂直内边距 */
+            val SectionVerticalPadding = 8.dp
+        }
+
+        /** 性别选择区域配置 */
+        object GenderSelection {
+            /** 性别选择按钮字体大小 */
+            val ButtonFontSize = 18.sp
+        }
+    }
+
     /** 比例配置 - 适用于按钮、输入框等组件相对于父容器的宽度或圆角半径比例设置 */
     object Fractions {
         /** 主要按钮宽度比例（相对于父容器） */
@@ -315,13 +346,13 @@ object UiConfigs {
         val HeaderMinHeight = 80.dp
 
         /** 头像完整大小 */
-        val AvatarFullSize = 120.dp
+        val AvatarFullSize = 90.dp
 
         /** 头像内边距 */
         val AvatarPadding = 4.dp
 
         /** 头像到昵称之间的间距 */
-        val AvatarToNicknameSpacing = 19.dp
+        val AvatarToNicknameSpacing = 24.dp
 
         /**
          * 个人页 Header 中名字+简介整体上移的偏移量。

@@ -1,7 +1,7 @@
 """评测系统API端点 - 专门用于评测聊天系统效果"""
 
 import logging
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1088,6 +1088,40 @@ def _parse_analytics_date_ranges(
     return reg_start, reg_end, act_start, act_end
 
 
+def _normalize_user_lookup_params(
+    email: Optional[str], user_id: Optional[str]
+) -> tuple[Optional[str], Optional[str]]:
+    normalized_email = email.strip() if email else None
+    normalized_user_id = user_id.strip() if user_id else None
+
+    # 必须且只能提供其中一个
+    if bool(normalized_email) == bool(normalized_user_id):
+        raise HTTPException(status_code=400, detail="必须且只能提供 email 或 user_id")
+
+    return normalized_email, normalized_user_id
+
+
+async def _find_user_info_by_identifier(
+    service: Any, *, email: Optional[str], user_id: Optional[str]
+) -> Dict[str, Any]:
+    normalized_email, normalized_user_id = _normalize_user_lookup_params(email, user_id)
+
+    if normalized_email:
+        user_info = await service.find_user_by_email(normalized_email)
+        if not user_info:
+            raise HTTPException(
+                status_code=404, detail=f"未找到邮箱为 {normalized_email} 的用户"
+            )
+        return user_info
+
+    user_info = await service.find_user_by_id(normalized_user_id)
+    if not user_info:
+        raise HTTPException(
+            status_code=404, detail=f"未找到ID为 {normalized_user_id} 的用户"
+        )
+    return user_info
+
+
 @router.get(
     "/user-analytics/new-users",
     response_model=List[schemas.user_analytics.DailyNewUsersResponse],
@@ -1813,7 +1847,8 @@ async def get_user_daily_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    email: str = Query(..., description="用户邮箱"),
+    email: Optional[str] = Query(None, description="用户邮箱"),
+    user_id: Optional[str] = Query(None, description="用户ID"),
     start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
 ) -> Any:
@@ -1829,9 +1864,9 @@ async def get_user_daily_messages(
         service = UserAnalyticsService(db)
 
         # 查找用户
-        user_info = await service.find_user_by_email(email)
-        if not user_info:
-            raise HTTPException(status_code=404, detail=f"未找到邮箱为 {email} 的用户")
+        user_info = await _find_user_info_by_identifier(
+            service, email=email, user_id=user_id
+        )
 
         # 解析日期范围
         start_date_obj = None
@@ -1881,7 +1916,8 @@ async def get_user_today_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    email: str = Query(..., description="用户邮箱"),
+    email: Optional[str] = Query(None, description="用户邮箱"),
+    user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
     """获取用户当日统计"""
     if not current_user.is_superuser:
@@ -1893,9 +1929,9 @@ async def get_user_today_stats(
         service = UserAnalyticsService(db)
 
         # 查找用户
-        user_info = await service.find_user_by_email(email)
-        if not user_info:
-            raise HTTPException(status_code=404, detail=f"未找到邮箱为 {email} 的用户")
+        user_info = await _find_user_info_by_identifier(
+            service, email=email, user_id=user_id
+        )
 
         # 获取当日统计
         today_stats = await service.get_user_today_stats(user_info["id"])
@@ -1918,7 +1954,8 @@ async def get_user_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
-    email: str = Query(..., description="用户邮箱"),
+    email: Optional[str] = Query(None, description="用户邮箱"),
+    user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
     """获取用户的所有会话列表"""
     if not current_user.is_superuser:
@@ -1930,9 +1967,9 @@ async def get_user_sessions(
         service = UserAnalyticsService(db)
 
         # 查找用户
-        user_info = await service.find_user_by_email(email)
-        if not user_info:
-            raise HTTPException(status_code=404, detail=f"未找到邮箱为 {email} 的用户")
+        user_info = await _find_user_info_by_identifier(
+            service, email=email, user_id=user_id
+        )
 
         # 获取会话列表
         sessions = await service.get_user_sessions(user_info["id"])

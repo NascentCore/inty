@@ -71,3 +71,8 @@ def init_logger():
     ):
         logging.getLogger(name).handlers = [intercept_handler]
         logging.getLogger(name).propagate = False
+
+    # 抑制 google-genai SDK 的 WebSocket DEBUG 日志
+    logging.getLogger("websockets").setLevel(logging.WARNING)
+    logging.getLogger("websockets.client").setLevel(logging.WARNING)
+    logging.getLogger("websockets.protocol").setLevel(logging.WARNING)

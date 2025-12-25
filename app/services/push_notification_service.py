@@ -17,6 +17,7 @@ from sqlalchemy.orm import load_only
 
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.model_selection import select_chat_model
 from app.core.prompting.push_message_prompt import (
     build_simple_push_message_prompt,
     build_welcome_message_prompt,
@@ -38,6 +39,7 @@ from app.services.chat_history_service import (
     get_chat_history_connection,
 )
 from app.services.chat_service import generate_session_id
+from app.services.global_services import subscription_service
 from app.services.image_transform_service import image_transform_service
 
 # ============================================================================
@@ -1571,9 +1573,17 @@ async def generate_agent_message(
             logger.error(f"Agent实例获取失败: {agent_id}")
             return None
 
-        # 获取用户信息
-        user_result = await db.execute(select(User.nickname).where(User.id == user_id))
-        user_nickname = user_result.scalar_one_or_none() or "你"
+        # 获取用户信息（昵称 + 订阅/超级用户状态判定）
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            logger.warning(f"用户不存在，无法生成推送消息: user_id={user_id}")
+            return None
+        user_nickname = user.nickname or "You"
+        subscription = await subscription_service.get_user_current_subscription(
+            db, user_id
+        )
+        model_override = select_chat_model(user=user, is_subscribed=bool(subscription))
 
         # 查询之前的推送消息内容（用于避免重复生成）
         previous_push_messages = await get_previous_push_messages(
@@ -1625,6 +1635,7 @@ async def generate_agent_message(
             messages=messages,
             user_profile=None,
             chat_settings=chat_settings,
+            model_override=model_override,
         )
 
         if not response_content:

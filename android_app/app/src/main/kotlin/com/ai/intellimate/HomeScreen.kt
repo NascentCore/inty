@@ -8,6 +8,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartBottomAppBar
 import ai.sxwl.android.design.ui.HeartBottomTabItem
+import ai.sxwl.android.firebase.FirebaseManager
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -74,11 +75,10 @@ fun HomeScreen(
         // 获取默认首页 tab
         val defaultTabIndex =
             try {
-                ai.sxwl.android.firebase.FirebaseManager.getRemoteConfigLong(
-                        ai.sxwl.android.firebase.FirebaseManager.RemoteConfigKeys
-                            .HOME_PAGE_DEFAULT_TAB_INDEX
-                    )
-                    .toInt()
+                FirebaseManager.getRemoteConfigLong(
+                    FirebaseManager.RemoteConfigKeys
+                        .HOME_PAGE_DEFAULT_TAB_INDEX
+                ).toInt()
             } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
@@ -157,9 +157,11 @@ fun HomeScreen(
                     HomeTabIndex.Messages.ordinal -> {
                         tab.copy(hasRedDot = messagesTabHasPush)
                     }
+
                     HomeTabIndex.Profile.ordinal -> {
                         tab.copy(hasRedDot = appUpdateTipsRedDot)
                     }
+
                     else -> {
                         tab
                     }
@@ -172,16 +174,20 @@ fun HomeScreen(
             HomeTabIndex.Messages -> {
                 mainViewModel.clearMessagesTabPush()
             }
+
             HomeTabIndex.Profile -> {
                 // 当前 app 运行期间不会改变是否有新版的提示，所以不需要清除
                 mainViewModel.clearAppUpdateTipsRedDot()
             }
+
             else -> {}
         }
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize().background(HeartColor.primaryColor),
+        modifier = modifier
+            .fillMaxSize()
+            .background(HeartColor.primaryColor),
         containerColor = Color.Transparent,
         bottomBar = {
             val context = LocalContext.current
@@ -196,8 +202,8 @@ fun HomeScreen(
                     // 检测双击：如果点击的是Explore tab，且与上次点击相同，且在时间窗口内
                     if (
                         tabIndex == exploreTabIndex &&
-                            tabIndex == lastTabIndex &&
-                            currentTime - lastTabClickTime < doubleTapTimeoutMs
+                        tabIndex == lastTabIndex &&
+                        currentTime - lastTabClickTime < doubleTapTimeoutMs
                     ) {
                         // 双击Explore tab，触发重置
                         if (selectedTab.value == HomeTabIndex.Explore) {
@@ -479,7 +485,11 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
         onClickConversationItem = { conversation ->
             AgentStore.addAgent(conversation.convertToAgentInfo())
             navController.navigate(
-                Routes.Chat.chatPage(conversation.convertToAgentInfo().id, false)
+                Routes.Chat.chatPage(
+                    conversation.convertToAgentInfo().id,
+                    false,
+                    isDeleted = conversation.isDeleted,
+                )
             )
         },
         onClickFavoriteAgent = { agent ->

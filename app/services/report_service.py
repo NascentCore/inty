@@ -177,3 +177,23 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
             item.report_type = ReportType.REPORT
 
     return items, total
+
+
+async def delete_report(
+    db: AsyncSession,
+    report_id: str,
+    *,
+    current_user_id: str,
+    is_superuser: bool,
+) -> None:
+    report = (
+        await db.execute(select(Report).where(Report.id == report_id))
+    ).scalar_one_or_none()
+    if not report:
+        raise ValueError("Report not found")
+
+    if not is_superuser and report.reporter_id != current_user_id:
+        raise PermissionError("Not allowed to delete this report")
+
+    await db.delete(report)
+    await db.commit()

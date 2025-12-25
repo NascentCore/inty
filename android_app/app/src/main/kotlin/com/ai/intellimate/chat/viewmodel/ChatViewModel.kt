@@ -159,7 +159,22 @@ class ChatViewModel : BaseVM() {
         // 如果是同一个 agent，总是触发后台同步以确保获取最新消息
         // syncLatestMessages 内部已经有逻辑判断是否有新消息，如果没有新消息不会更新本地数据
         if (_agentInfo.value?.id == agentInfo.id) {
-            _agentInfo.value = agentInfo
+            val previousIsDeleted = _agentInfo.value?.isDeleted ?: false
+            val currentIsDeleted = agentInfo.isDeleted
+            
+            // StateFlow使用引用相等性检测变化，如果传入同一个对象引用，即使内部属性变化也不会触发更新
+            // 如果isDeleted状态变化，需要创建新对象确保StateFlow能检测到变化
+            if (previousIsDeleted != currentIsDeleted) {
+                // 使用copy函数创建新对象,找一个无用字段readableId触发更新，然后设置isDeleted属性
+                val updatedAgent = agentInfo.copy(readableId = "deleted").apply {
+                    this.isDeleted = agentInfo.isDeleted
+                }
+                _agentInfo.value = updatedAgent
+            } else {
+                // isDeleted状态没有变化，直接更新
+                _agentInfo.value = agentInfo
+            }
+            
             // 重新启动能量点数观察，确保数据实时更新
             observeCharacterEnergy(agentInfo.id)
             viewModelScope.launch(Dispatchers.IO) {

@@ -56,46 +56,62 @@ def test_rewrite_copy(fake_client: FakeGCSClient):
 
 
 def test_integration_with_app_external_services_gcs_module(
-    monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ):
     # 将 fake client 注入到 app.external_services.gcs.gcs_client 中，验证最常用方法的兼容性
     import importlib
 
+    # 保存原始模块以便恢复
+    original_config_mod = sys.modules.get("app.core.config")
+
     # 在导入目标模块前，用最小 stub 替换 app.core.config，避免加载大量依赖
     cfg_mod = types.ModuleType("app.core.config")
     cfg_mod.global_config_loaded_from_config_yaml = types.SimpleNamespace(
-        app=types.SimpleNamespace(debug=True, gcp_service_account_key="/non/existent.json")
+        app=types.SimpleNamespace(
+            debug=True, gcp_service_account_key="/non/existent.json"
+        ),
+        gemini_live=types.SimpleNamespace(enabled=False),
     )
     sys.modules["app.core.config"] = cfg_mod
 
-    fake = FakeGCSClient()
+    try:
+        fake = FakeGCSClient()
 
-    # 懒加载目标模块，避免提前初始化
-    gcs_module = importlib.import_module("app.external_services.gcs")
+        # 懒加载目标模块，避免提前初始化
+        gcs_module = importlib.import_module("app.external_services.gcs")
 
-    # 注入
-    monkeypatch.setattr(gcs_module, "gcs_client", fake, raising=True)
+        # 注入
+        monkeypatch.setattr(gcs_module, "gcs_client", fake, raising=True)
 
-    # 使用模块函数进行一次完整的上传->存在性检查->下载->删除
-    content = b"payload"
-    bucket = "inty-test"
-    path = "unit/test/file.dat"
+        # 使用模块函数进行一次完整的上传->存在性检查->下载->删除
+        content = b"payload"
+        bucket = "inty-test"
+        path = "unit/test/file.dat"
 
-    url = gcs_module.upload_to_gcs(content, "application/octet-stream", bucket, path)
-    assert url == f"https://storage.googleapis.com/{bucket}/{path}"
+        url = gcs_module.upload_to_gcs(
+            content, "application/octet-stream", bucket, path
+        )
+        assert url == f"https://storage.googleapis.com/{bucket}/{path}"
 
-    assert gcs_module.check_gcs_file_exists(bucket, path) is True
+        assert gcs_module.check_gcs_file_exists(bucket, path) is True
 
-    downloaded = gcs_module.download_from_gcs(url)
-    assert downloaded == content
+        downloaded = gcs_module.download_from_gcs(url)
+        assert downloaded == content
 
-    # 复制
-    copied_url = gcs_module.copy_gcs_file(url, "unit/test/file-copy.dat", bucket)
-    assert copied_url == f"https://storage.googleapis.com/{bucket}/unit/test/file-copy.dat"
+        # 复制
+        copied_url = gcs_module.copy_gcs_file(url, "unit/test/file-copy.dat", bucket)
+        assert (
+            copied_url
+            == f"https://storage.googleapis.com/{bucket}/unit/test/file-copy.dat"
+        )
 
-    # 删除
-    assert gcs_module.delete_from_gcs(bucket, path) is True
-    assert gcs_module.check_gcs_file_exists(bucket, path) is False
+        # 删除
+        assert gcs_module.delete_from_gcs(bucket, path) is True
+        assert gcs_module.check_gcs_file_exists(bucket, path) is False
+    finally:
+        # 恢复原始 config 模块
+        if original_config_mod is not None:
+            sys.modules["app.core.config"] = original_config_mod
 
 
 def test_fake_gcs_client_cleanup():

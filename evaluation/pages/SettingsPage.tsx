@@ -100,7 +100,7 @@ export const SettingsPage: React.FC = () => {
               extra={
                 <Text type="secondary">
                   支持变量：{"{agent_background}"}, {"{agent_personality}"},{" "}
-                  {"{chat_history}"}, {"{user_message}"}
+                  {"{chat_history}"}, {"{user_message}"}, {"{user_info}"}
                 </Text>
               }
             >

@@ -4,19 +4,18 @@
 """
 
 import asyncio
-import base64
 import hashlib
 import io
 import re
+import wave
 from typing import Any, Dict, List, Optional, Tuple
 
-from elevenlabs import VoiceSettings
-from elevenlabs.client import ElevenLabs
 from loguru import logger
 from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.voice.tts_api import ElevenLabsTTSAPI, GeminiTTSAPI, TTSRequest
 from app.services.gcs_service import GCSService
 
 # 性别到音色ID的映射
@@ -33,7 +32,10 @@ class VoiceService:
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
-        self.client = ElevenLabs(api_key=self.config.api_key)
+        # 语音元数据（音色列表/详情）仍复用 ElevenLabs；
+        # 语音生成优先使用 Gemini TTS，失败时回退 ElevenLabs。
+        self.tts_api = ElevenLabsTTSAPI(api_key=self.config.api_key)
+        self.gemini_tts_api = GeminiTTSAPI()
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -195,22 +197,22 @@ class VoiceService:
                 logger.debug("未找到缓存，开始新的语音生成")
 
             # 生成语音文件
-            logger.debug("调用ElevenLabs API")
-            audio_result = await self._call_elevenlabs_api(
-                text, voice_id, model, language
-            )
+            logger.debug("调用 TTS 生成接口（Gemini 优先，失败回退 ElevenLabs）")
+            audio_result = await self._call_tts_api(text, voice_id, model, language)
             if not audio_result:
-                logger.error("ElevenLabs API返回空数据")
+                logger.error("TTS 生成返回空数据")
                 return None
 
-            audio_data, duration = audio_result
+            audio_data, duration, mime_type = audio_result
 
             logger.debug(
-                f"ElevenLabs API调用成功，音频数据大小: {len(audio_data)} bytes"
+                f"TTS 生成成功，音频数据大小: {len(audio_data)} bytes, mime_type={mime_type}"
             )
 
             # 生成唯一文件名
-            file_name = self._generate_file_name(text, voice_id, model)
+            file_name = self._generate_file_name(
+                text, voice_id, model, self._get_audio_extension(mime_type)
+            )
             logger.debug(f"生成文件名: {file_name}")
 
             # 并行上传到GCS和准备缓存保存
@@ -219,7 +221,9 @@ class VoiceService:
             # 创建上传任务
             upload_task = asyncio.create_task(
                 self.gcs_service.upload_voice_file(
-                    file_name, audio_data, content_type="audio/mpeg"
+                    file_name,
+                    audio_data,
+                    content_type=mime_type or "application/octet-stream",
                 )
             )
 
@@ -278,57 +282,64 @@ class VoiceService:
             logger.exception("语音生成异常详细信息:")
             return None
 
-    async def _call_elevenlabs_api(
+    def _get_audio_extension(self, mime_type: str) -> str:
+        normalized = (mime_type or "").lower()
+        if normalized.startswith("audio/wav") or normalized.startswith("audio/x-wav"):
+            return ".wav"
+        if normalized in {"audio/mpeg", "audio/mp3"}:
+            return ".mp3"
+        # Gemini TTS 常见返回 PCM 后会被封装成 WAV；未知类型默认用 wav，便于播放与兼容
+        return ".wav"
+
+    async def _call_tts_api(
         self, text: str, voice_id: str, model: str, language: str
-    ) -> Optional[Tuple[bytes, float]]:
+    ) -> Optional[Tuple[bytes, float, str]]:
         """
-        调用ElevenLabs API生成语音
+        调用 TTS 生成语音（Gemini 优先，失败回退 ElevenLabs）
 
         Returns:
-            音频数据的字节流和时长(秒)的元组
+            音频数据的字节流、时长(秒)、mime_type
         """
         try:
             logger.debug(
-                f"ElevenLabs API请求数据: voice_id={voice_id}, model={model}, text_length={len(text)}"
+                f"TTS 请求数据: voice_id={voice_id}, model={model}, language={language}, text_length={len(text)}"
             )
 
-            # 创建语音设置
-            voice_settings = VoiceSettings(stability=0.5, similarity_boost=0.5)
+            req = TTSRequest(
+                text=text,
+                voice_id=voice_id,
+                model_id=model,
+                output_format=self.config.output_format,
+                language_code=language,
+            )
 
-            # 准备参数
-            kwargs = {
-                "text": text,
-                "voice_id": voice_id,
-                "model_id": model,
-                "output_format": self.config.output_format,
-                "voice_settings": voice_settings,
-            }
+            tts_result = await self.gemini_tts_api.synthesize(req)
+            if not tts_result:
+                logger.warning("Gemini TTS 失败，尝试回退 ElevenLabs")
+                tts_result = await self.tts_api.synthesize(req)
+                if not tts_result:
+                    logger.error("ElevenLabs TTS 也返回空数据")
+                    return None
 
-            # 注意：eleven_multilingual_v2 模型不支持 language_code 参数
-            # 只有特定模型才支持 language_code 参数
-            if "turbo" in model.lower() and "multilingual" in model.lower():
-                kwargs["language_code"] = language
-
-            # 调用官方SDK的convert_with_timestamps方法
-            response = self.client.text_to_speech.convert_with_timestamps(**kwargs)
-
-            # 从base64解码音频数据
-            audio_data = base64.b64decode(response.audio_base_64)
+            audio_data = tts_result.audio_bytes
+            mime_type = tts_result.mime_type
 
             # 计算音频时长
-            duration = self._calculate_audio_duration(audio_data)
+            duration = self._calculate_audio_duration(audio_data, mime_type=mime_type)
 
             logger.debug(
-                f"ElevenLabs API调用成功，音频大小: {len(audio_data)} bytes, 时长: {duration:.2f}秒"
+                f"TTS 调用成功，音频大小: {len(audio_data)} bytes, 时长: {duration:.2f}秒, mime_type={mime_type}"
             )
-            return (audio_data, duration)
+            return (audio_data, duration, mime_type)
 
         except Exception as e:
-            logger.error(f"ElevenLabs API调用异常: {str(e)}")
-            logger.exception("ElevenLabs API调用异常详细信息:")
+            logger.error(f"TTS 调用异常: {str(e)}")
+            logger.exception("TTS 调用异常详细信息:")
             return None
 
-    def _generate_file_name(self, text: str, voice_id: str, model: str) -> str:
+    def _generate_file_name(
+        self, text: str, voice_id: str, model: str, extension: str
+    ) -> str:
         """
         生成语音文件名
         使用文本内容的哈希值确保相同内容生成相同文件名（用于缓存）
@@ -336,12 +347,12 @@ class VoiceService:
         # 创建内容哈希
         content_hash = hashlib.md5(f"{text}_{voice_id}_{model}".encode()).hexdigest()
 
-        # 生成文件名：voice_时间戳_哈希值.mp3
-        file_name = f"voice_{content_hash}.mp3"
+        # 生成文件名：voice_<hash>.<ext>
+        file_name = f"voice_{content_hash}{extension}"
 
         return file_name
 
-    def _calculate_audio_duration(self, audio_data: bytes) -> float:
+    def _calculate_audio_duration(self, audio_data: bytes, *, mime_type: str) -> float:
         """
         计算音频数据的时长
 
@@ -351,14 +362,37 @@ class VoiceService:
         Returns:
             音频时长（秒）
         """
+        normalized = (mime_type or "").lower()
+        if normalized.startswith("audio/wav") or normalized.startswith("audio/x-wav"):
+            return self._calculate_wav_duration(audio_data)
+        if normalized in {"audio/mpeg", "audio/mp3"}:
+            return self._calculate_mp3_duration(audio_data)
+
+        # 兜底：先按 mp3 解析，失败再按 wav 解析
+        duration = self._calculate_mp3_duration(audio_data)
+        if duration > 0:
+            return duration
+        return self._calculate_wav_duration(audio_data)
+
+    def _calculate_mp3_duration(self, audio_data: bytes) -> float:
         try:
-            # 使用mutagen计算MP3时长，从字节数据
             audio_file = io.BytesIO(audio_data)
             audio = MP3(audio_file)
-            duration_seconds = audio.info.length
-            return duration_seconds
+            return float(audio.info.length or 0.0)
         except Exception as e:
-            logger.error(f"计算音频时长失败: {str(e)}")
+            logger.debug(f"按 MP3 解析时长失败: {str(e)}")
+            return 0.0
+
+    def _calculate_wav_duration(self, audio_data: bytes) -> float:
+        try:
+            with wave.open(io.BytesIO(audio_data), "rb") as wf:
+                frames = wf.getnframes()
+                rate = wf.getframerate()
+                if rate <= 0:
+                    return 0.0
+                return float(frames) / float(rate)
+        except Exception as e:
+            logger.debug(f"按 WAV 解析时长失败: {str(e)}")
             return 0.0
 
     async def get_available_voices(
@@ -447,7 +481,7 @@ class VoiceService:
             )
 
             # 1. 获取所有基础语音，包括legacy音色
-            voices_response = self.client.voices.get_all(show_legacy=True)
+            voices_response = await self.tts_api.get_all_voices(show_legacy=True)
             logger.info(f"get_all API返回 {len(voices_response.voices)} 个音色")
 
             # 转换为字典格式并添加来源标识
@@ -540,7 +574,7 @@ class VoiceService:
             logger.debug(f"搜索共享音色，参数: {search_params}")
 
             # 调用 ElevenLabs get_shared API
-            voices_response = self.client.voices.get_shared(**search_params)
+            voices_response = await self.tts_api.get_shared_voices(**search_params)
 
             # 转换为字典格式并添加来源标识
             voices_list = []
@@ -570,7 +604,7 @@ class VoiceService:
         """
         try:
             # 1. 先尝试从常规音色中获取（用户音色 + 预置音色）
-            voice = self.client.voices.get(voice_id)
+            voice = await self.tts_api.get_voice(voice_id)
             voice_dict = voice.model_dump()
             voice_dict["source"] = "regular"
             logger.debug(f"从常规音色中找到 voice_id: {voice_id}")

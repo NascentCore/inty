@@ -881,7 +881,9 @@ class Agent:
 
                 # API调用（带重试机制）
                 api_start = time.time()
-                model_name = model_override or self.model_config.get("model", default_model)
+                model_name = model_override or self.model_config.get(
+                    "model", default_model
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1172,7 +1174,9 @@ class Agent:
 
                 # API调用（使用统一的重试和 trace 逻辑）
                 api_start = time.time()
-                model_name = model_override or self.model_config.get("model", default_model)
+                model_name = model_override or self.model_config.get(
+                    "model", default_model
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)

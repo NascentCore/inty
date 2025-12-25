@@ -3,7 +3,6 @@
 Script to initialize an admin user in the database.
 This script creates a superuser with admin privileges.
 """
-import argparse
 import random
 import sys
 from pathlib import Path
@@ -13,6 +12,7 @@ script_dir = Path(__file__).parent
 parent_dir = script_dir.parent
 sys.path.insert(0, str(parent_dir))
 
+import cyclopts
 from loguru import logger
 from sqlalchemy.orm import Session
 
@@ -71,13 +71,5 @@ def create_user(
     logger.info(f"🔑 Bearer Token: {access_token}")
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Create an user")
-    parser.add_argument("--user-id", type=str, default=DEFAULT_ADMIN_USER_ID)
-    parser.add_argument("--is-superuser", type=bool, default=True)
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_args()
-    create_user(user_id=args.user_id, is_superuser=args.is_superuser)
+    cyclopts.run(create_user)

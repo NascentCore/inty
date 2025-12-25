@@ -1,12 +1,13 @@
 /**
  * 用户每日聊天记录查询页面
- * 通过邮箱查询用户的每日聊天记录和当日统计，并可查看每个会话的详细对话历史
+ * 通过邮箱或用户 ID 查询用户的每日聊天记录和当日统计，并可查看每个会话的详细对话历史
  */
 
 import React, { useState, useCallback } from "react";
 import {
   Card,
   DatePicker,
+  Select,
   Button,
   Space,
   Row,
@@ -41,10 +42,12 @@ import type {
 } from "../types";
 
 const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 export const UserDailyMessagesPage: React.FC = () => {
   // 查询表单状态
-  const [email, setEmail] = useState<string>("");
+  const [searchType, setSearchType] = useState<"email" | "user_id">("email");
+  const [searchValue, setSearchValue] = useState<string>("");
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   // 数据加载状态
@@ -74,20 +77,23 @@ export const UserDailyMessagesPage: React.FC = () => {
 
   // 查询用户每日消息
   const handleSearch = useCallback(async () => {
-    if (!email.trim()) {
-      message.warning("请输入用户邮箱");
+    const trimmed = searchValue.trim();
+    if (!trimmed) {
+      message.warning(
+        searchType === "email" ? "请输入用户邮箱" : "请输入用户ID",
+      );
       return;
     }
 
     setLoading(true);
     try {
-      const params: {
-        email: string;
+      const identifierParams =
+        searchType === "email" ? { email: trimmed } : { user_id: trimmed };
+
+      const params: typeof identifierParams & {
         start_date?: string;
         end_date?: string;
-      } = {
-        email: email.trim(),
-      };
+      } = { ...identifierParams };
 
       if (dateRange && dateRange[0] && dateRange[1]) {
         params.start_date = dateRange[0].format("YYYY-MM-DD");
@@ -96,7 +102,7 @@ export const UserDailyMessagesPage: React.FC = () => {
 
       const [dailyMessagesData, todayStatsData] = await Promise.all([
         userAnalyticsApi.getUserDailyMessages(params),
-        userAnalyticsApi.getUserTodayStats({ email: email.trim() }),
+        userAnalyticsApi.getUserTodayStats(identifierParams),
       ]);
 
       setUserInfo(dailyMessagesData);
@@ -104,9 +110,8 @@ export const UserDailyMessagesPage: React.FC = () => {
 
       // 自动加载会话列表
       try {
-        const sessionsData = await userAnalyticsApi.getUserSessions({
-          email: email.trim(),
-        });
+        const sessionsData =
+          await userAnalyticsApi.getUserSessions(identifierParams);
         setSessions(sessionsData.sessions);
       } catch (error: any) {
         console.error("加载会话列表失败:", error);
@@ -122,19 +127,20 @@ export const UserDailyMessagesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [email, dateRange]);
+  }, [searchType, searchValue, dateRange]);
 
   // 加载会话列表
   const loadSessions = useCallback(async () => {
-    if (!email.trim()) {
+    const trimmed = searchValue.trim();
+    if (!trimmed) {
       return;
     }
 
     setLoadingSessions(true);
     try {
-      const data = await userAnalyticsApi.getUserSessions({
-        email: email.trim(),
-      });
+      const identifierParams =
+        searchType === "email" ? { email: trimmed } : { user_id: trimmed };
+      const data = await userAnalyticsApi.getUserSessions(identifierParams);
       setSessions(data.sessions);
     } catch (error: any) {
       console.error("加载会话列表失败:", error);
@@ -142,7 +148,7 @@ export const UserDailyMessagesPage: React.FC = () => {
     } finally {
       setLoadingSessions(false);
     }
-  }, [email]);
+  }, [searchType, searchValue]);
 
   // 加载会话消息
   const loadSessionMessages = useCallback(
@@ -423,11 +429,22 @@ export const UserDailyMessagesPage: React.FC = () => {
       <Card style={{ marginBottom: "24px" }}>
         <Space direction="vertical" style={{ width: "100%" }} size="large">
           <Space>
-            <span>用户邮箱：</span>
+            <span>查询方式：</span>
+            <Select
+              value={searchType}
+              onChange={(value) => setSearchType(value)}
+              style={{ width: 120 }}
+            >
+              <Option value="email">邮箱</Option>
+              <Option value="user_id">用户ID</Option>
+            </Select>
+            <span>查询值：</span>
             <Input
-              placeholder="请输入用户邮箱"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder={
+                searchType === "email" ? "请输入用户邮箱" : "请输入用户ID"
+              }
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
               style={{ width: 300 }}
               onPressEnter={handleSearch}
             />
@@ -825,7 +842,7 @@ export const UserDailyMessagesPage: React.FC = () => {
 
       {!userInfo && !loading && (
         <Card>
-          <Empty description="请输入用户邮箱并点击查询" />
+          <Empty description="请输入用户邮箱或用户ID并点击查询" />
         </Card>
       )}
     </div>

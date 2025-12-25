@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import com.ai.intellimate.agent.report.ReportActivity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -540,6 +541,7 @@ private fun ChatItemAI(
                                 ),
                         ) {
                             val agentId = agentInfo?.id ?: ""
+                            val context = LocalContext.current
                             FullScreenImageViewer(
                                 imageUrl = generatedImageUrl,
                                 onDismiss = { showFullScreenImage = false },
@@ -557,6 +559,11 @@ private fun ChatItemAI(
                                 },
                                 actionLabel =
                                     stringResource(R.string.agent_gallery_set_as_background),
+                                onReport = {
+                                    if (agentId.isNotBlank()) {
+                                        ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
+                                    }
+                                },
                             )
                         }
                     }

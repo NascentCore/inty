@@ -852,13 +852,9 @@ internal fun ChatPage(
                 // 计算滚动到底部按钮的垂直位置
                 // 如果 Keep Talking 按钮可见，则滚动到底部按钮位于其上方，避免重叠
                 // 否则，滚动到底部按钮使用与 Keep Talking 按钮相同的位置
-                val scrollToBottomButtonBottomOffset =
-                    if (showKeepTalkingButton) {
-                        buttonBottomOffset +
-                            UiConfigs.ChatPage.ScrollToBottomButton.BottomOffsetAboveKeepTalking
-                    } else {
-                        buttonBottomOffset
-                    }
+                // 注意：只有当 ScrollToBottomButton 可见时才考虑 KeepTalking 的影响，
+                // 避免在按钮隐藏时位置突然变化导致跳动
+                val scrollToBottomButtonBottomOffset = buttonBottomOffset
 
                 val scrollToStartButtonBottomOffset =
                     scrollToBottomButtonBottomOffset +
@@ -959,6 +955,7 @@ internal fun ChatPage(
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
             navController = navController,
+            showBackButton = showBackButton,
         )
 
         if (shouldShowBoostUi) {

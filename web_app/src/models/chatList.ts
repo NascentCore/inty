@@ -40,9 +40,7 @@ export default function useChatListModel() {
   const loadChatList = useCallback(async (params: IChatListRequest = {}) => {
     // 生成请求参数的缓存键（用于判断是否为相同请求）
     const paramsKey = JSON.stringify(params);
-    const pendingKey = pendingParamsRef.current
-      ? JSON.stringify(pendingParamsRef.current)
-      : null;
+    const pendingKey = pendingParamsRef.current ? JSON.stringify(pendingParamsRef.current) : null;
 
     // 如果存在相同参数的正在进行的请求，直接返回该 Promise
     if (pendingRequestRef.current && paramsKey === pendingKey) {

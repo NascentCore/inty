@@ -40,15 +40,8 @@ internal fun ChatScreen(
     navController: NavController,
     chatViewModel: ChatViewModel,
     showBackButton: Boolean = false,
-    onBack: (() -> Unit)? = null,
-    isCurrentPage: Boolean = true,
     shouldAutoFocusInput: Boolean = true,
-    onInputFocusChange: (Boolean) -> Unit = {},
-    onKeyboardVisible: (Boolean) -> Unit = {},
-    pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
-    isGuideVisible: Boolean = false,
     shouldShowBoostSheetOnOpen: Boolean = false,
-    agentId: String? = null,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
@@ -79,7 +72,7 @@ internal fun ChatScreen(
             navController,
             modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
             chatViewModel = chatViewModel,
-            showBackButton = true,
+            showBackButton = showBackButton,
             onBack = { navController.popBackStack() },
             shouldShowBoostSheetOnOpen = shouldShowBoostSheetOnOpen,
             shouldAutoFocusInput = shouldAutoFocusInput,

@@ -1,7 +1,7 @@
 ---
-name: Android App UI 细节改进
-about: IntelliMate 安卓 app UI 上的细节改进
-title: "【UI 细节改动】"
+name: Android App UI 改进
+about: 对用户可见的 IntelliMate 安卓 app UI 上的改进
+title: "【Android App UI 改进】"
 labels: bug, UI, ui-nits
 assignees: ''
 

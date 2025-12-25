@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -46,6 +47,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.ai.intellimate.R
+import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.explore.special.HorizontalAgentCardList
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.EmptyDataState
@@ -57,6 +59,7 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 // 判断是否为动图URL（非视频）
 private fun isAnimatedImageUrl(url: String?): Boolean {
@@ -166,6 +169,14 @@ fun ExploreContent(
             initialFirstVisibleItemIndex = vm.getRestoredGridIndex(themeItemCount),
             initialFirstVisibleItemScrollOffset = savedOffset,
         )
+
+    val scope = rememberCoroutineScope()
+    val isAtExploreStart by remember {
+        derivedStateOf {
+            gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+        }
+    }
+    val showBackToTopButton by remember { derivedStateOf { !isAtExploreStart } }
 
     // 标记是否正在恢复滚动位置，用于防止在恢复期间保存错误的位置
     var isRestoringScrollPosition by remember { mutableStateOf(false) }
@@ -418,108 +429,123 @@ fun ExploreContent(
         }
 
         else -> {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier =
-                    modifier
-                        .padding(bottom = innerPadding.calculateBottomPadding())
-                        .nestedScroll(scrollConnection),
-                state = gridState,
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // 如果没有Paging数据，显示加载状态
-                if (lazyPagingItems == null) {
-                    item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
-                } else {
-                    // 主题专区的item数据，如果有接口数据则显示，无则不显示
-                    // 注意：主题专区需要全屏宽度，不受 contentPadding 影响
-                    characterThemes.forEach { theme ->
-                        if (theme.agents.isNotEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                // 使用全屏宽度布局，突破 LazyVerticalGrid 的 contentPadding 限制
-                                Box(modifier = Modifier.fullWidthLayout(screenWidthPx)) {
-                                    HorizontalAgentCardList(
-                                        title = theme.name,
-                                        description = theme.description,
-                                        agents = theme.agents,
-                                        isChristmas = theme.isChristmas,
-                                        onAgentClick = onClickAgent,
-                                        onTitleClick = {
-                                            // 跳转到主题详情页面
-                                            navController?.let { nav ->
-                                                val agentsJson =
-                                                    try {
-                                                        agentListAdapter.toJson(theme.agents)
-                                                    } catch (e: Exception) {
-                                                        ""
-                                                    }
-                                                nav.navigate(
-                                                    Routes.Explore.collectionDetail(
-                                                        themeId = theme.id,
-                                                        themeTitle = theme.name,
-                                                        themeDescription = theme.description,
-                                                        isChristmas = theme.isChristmas,
-                                                        agentsJson = agentsJson,
+            Box(modifier = modifier.fillMaxSize()) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .padding(bottom = innerPadding.calculateBottomPadding())
+                            .nestedScroll(scrollConnection),
+                    state = gridState,
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // 如果没有Paging数据，显示加载状态
+                    if (lazyPagingItems == null) {
+                        item(span = { GridItemSpan(maxLineSpan) }) { EmptyStateIndicator() }
+                    } else {
+                        // 主题专区的item数据，如果有接口数据则显示，无则不显示
+                        // 注意：主题专区需要全屏宽度，不受 contentPadding 影响
+                        characterThemes.forEach { theme ->
+                            if (theme.agents.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    // 使用全屏宽度布局，突破 LazyVerticalGrid 的 contentPadding 限制
+                                    Box(modifier = Modifier.fullWidthLayout(screenWidthPx)) {
+                                        HorizontalAgentCardList(
+                                            title = theme.name,
+                                            description = theme.description,
+                                            agents = theme.agents,
+                                            isChristmas = theme.isChristmas,
+                                            onAgentClick = onClickAgent,
+                                            onTitleClick = {
+                                                // 跳转到主题详情页面
+                                                navController?.let { nav ->
+                                                    val agentsJson =
+                                                        try {
+                                                            agentListAdapter.toJson(theme.agents)
+                                                        } catch (e: Exception) {
+                                                            ""
+                                                        }
+                                                    nav.navigate(
+                                                        Routes.Explore.collectionDetail(
+                                                            themeId = theme.id,
+                                                            themeTitle = theme.name,
+                                                            themeDescription = theme.description,
+                                                            isChristmas = theme.isChristmas,
+                                                            agentsJson = agentsJson,
+                                                        )
                                                     )
-                                                )
-                                            }
-                                        },
-                                    )
+                                                }
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // 使用Paging的items
-                    items(
-                        count = lazyPagingItems.itemCount,
-                        key =
-                            lazyPagingItems.itemKey { agent ->
-                                // 确保key的唯一性，避免空id导致的重复key问题
-                                agent.id.ifEmpty {
-                                    // 如果id为空，使用其他字段组合生成唯一key
-                                    "${agent.name}_${agent.avatar}_${agent.createdAt}"
-                                }
-                            },
-                    ) { index ->
-                        val agent = lazyPagingItems[index]
-                        if (agent != null) {
-                            // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
-                            // index 是 lazyPagingItems 的索引（从 0 开始），firstPlayingItemIndex 也是
-                            val shouldPlay = index == firstPlayingItemIndex
+                        // 使用Paging的items
+                        items(
+                            count = lazyPagingItems.itemCount,
+                            key =
+                                lazyPagingItems.itemKey { agent ->
+                                    // 确保key的唯一性，避免空id导致的重复key问题
+                                    agent.id.ifEmpty {
+                                        // 如果id为空，使用其他字段组合生成唯一key
+                                        "${agent.name}_${agent.avatar}_${agent.createdAt}"
+                                    }
+                                },
+                        ) { index ->
+                            val agent = lazyPagingItems[index]
+                            if (agent != null) {
+                                // 只播放第一个可见且有 backgroundAnimatedUrl 的 item
+                                // index 是 lazyPagingItems 的索引（从 0 开始），firstPlayingItemIndex 也是
+                                val shouldPlay = index == firstPlayingItemIndex
 
-                            ExploreCharacterCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                agentInfo = agent,
-                                onClick = { onClickAgent(agent) },
-                                index = index,
-                                shouldPlayAnimated = shouldPlay,
-                            )
-                        } else {
-                            // 显示加载占位符
-                            ShimmerPlaceholder(
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .height(200.dp)
-                                        .clip(RoundedCornerShape(8.dp))
+                                ExploreCharacterCard(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    agentInfo = agent,
+                                    onClick = { onClickAgent(agent) },
+                                    index = index,
+                                    shouldPlayAnimated = shouldPlay,
+                                )
+                            } else {
+                                // 显示加载占位符
+                                ShimmerPlaceholder(
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .height(200.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                )
+                            }
+                        }
+
+                        // 加载状态指示器
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            ExploreLoadingStates(
+                                onRetry = { lazyPagingItems.retry() },
+                                lazyPagingItems,
+                                showLoadMoreLoading,
+                                isRefreshing,
                             )
                         }
                     }
 
-                    // 加载状态指示器
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        ExploreLoadingStates(
-                            onRetry = { lazyPagingItems.retry() },
-                            lazyPagingItems,
-                            showLoadMoreLoading,
-                            isRefreshing,
-                        )
-                    }
+                    item { Spacer(Modifier.height(16.dp)) }
                 }
 
-                item { Spacer(Modifier.height(16.dp)) }
+                // 复用 Chat 的回到顶部按钮样式与交互：不在顶部时显示，点击平滑滚动回第一个 item。
+                BackToTop(
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(
+                                bottom =
+                                    innerPadding.calculateBottomPadding() +
+                                        UiConfigs.Spacing.MediumPlus,
+                            ),
+                    visible = showBackToTopButton,
+                    onClick = { scope.launch { gridState.animateScrollToItem(0) } },
+                )
             }
         }
     }

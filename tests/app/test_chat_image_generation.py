@@ -65,6 +65,35 @@ class TestImageGenerationService:
         assert "给我画一张你在咖啡厅的图片" in prompt
 
     @pytest.mark.asyncio
+    async def test_build_image_prompt_with_user_info(self):
+        """测试提示词构建（包含用户信息）"""
+        agent_data = {
+            "personality": "温柔善良的女孩",
+            "scenario": "在咖啡厅里与用户聊天",
+        }
+
+        chat_history = [
+            {"role": "user", "content": "你好"},
+            {"role": "assistant", "content": "你好呀！"},
+        ]
+
+        user_message = "给我画一张图片"
+        user_info = "##User Information\nName: TestUser\nGender: Male\nAge: 25-30"
+
+        prompt = image_generation_service.build_image_prompt(
+            agent_data=agent_data,
+            chat_history=chat_history,
+            user_message=user_message,
+            user_info=user_info,
+        )
+
+        # 验证提示词包含用户信息
+        assert "##User Information" in prompt
+        assert "Name: TestUser" in prompt
+        assert "Gender: Male" in prompt
+        assert "Age: 25-30" in prompt
+
+    @pytest.mark.asyncio
     @patch("app.services.image_generation_service.agent_service.append_agent_background_image")
     @patch("app.services.image_generation_service.image_transform_service")
     @patch("app.services.image_generation_service.get_genai_client")
