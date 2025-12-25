@@ -3,8 +3,8 @@ package ai.sxwl.android.design.theme
 // CREATED_BY_AGENT
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.composed
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -35,15 +35,16 @@ private data class SnowDot(
  * - 非侵入：非常轻的糖果条纹 + 雪点
  * - 覆盖整个屏幕：即使页面内部自绘 background，也能保持节日氛围
  */
-fun Modifier.intelliMateSeasonalOverlay(scheme: IntelliMateThemeScheme): Modifier = composed {
-    if (scheme != IntelliMateThemeScheme.Christmas) return@composed this
+@Composable
+fun Modifier.intelliMateSeasonalOverlay(scheme: IntelliMateThemeScheme): Modifier {
+    if (scheme != IntelliMateThemeScheme.Christmas) return this
 
     val stripeRed = MaterialTheme.colorScheme.primary.copy(alpha = 0.055f)
     val stripeGreen = MaterialTheme.colorScheme.secondary.copy(alpha = 0.045f)
     val snowWhite = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f)
     val snowGold = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.055f)
 
-    drawWithCache {
+    return drawWithCache {
         val rnd = Random(CHRISTMAS_OVERLAY_SEED)
         val width = size.width
         val height = size.height
