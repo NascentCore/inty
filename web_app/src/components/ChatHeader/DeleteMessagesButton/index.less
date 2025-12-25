@@ -1,0 +1,39 @@
+/**
+ * DeleteMessagesButton 组件样式
+ */
+
+.delete-all-button {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  backdrop-filter: blur(10px);
+
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    transform: translateX(2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateX(2px) scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

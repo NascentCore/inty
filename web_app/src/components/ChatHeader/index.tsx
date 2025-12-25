@@ -16,6 +16,7 @@ import { ArrowLeft, Bot } from 'lucide-react';
 import { history, useModel } from '@umijs/max';
 import React from 'react';
 import Icon from '@/components/Icon';
+import DeleteMessagesButton from './DeleteMessagesButton';
 import './index.less';
 
 /**
@@ -86,6 +87,7 @@ const ChatHeader: React.FC = () => {
           {agent.intro && <p className="agent-intro">{agent.intro}</p>}
         </div>
       </div>
+      <DeleteMessagesButton agentId={agent.id} />
     </div>
   );
 };
