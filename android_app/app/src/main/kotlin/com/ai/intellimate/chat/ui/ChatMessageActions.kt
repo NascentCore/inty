@@ -25,13 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
@@ -39,9 +36,9 @@ import com.ai.intellimate.ui.UiConfigs
 /** Like 按钮 - 支持选中状态 */
 @Composable
 private fun LikeButton(
+    modifier: Modifier = Modifier,
     isSelected: Boolean = false,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
     Box(
@@ -64,9 +61,9 @@ private fun LikeButton(
 /** Dislike 按钮 - 支持选中状态 */
 @Composable
 private fun DislikeButton(
+    modifier: Modifier = Modifier,
     isSelected: Boolean = false,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val iconSize = UiConfigs.ChatMessagePane.ActionButtonIconSize
     Box(
@@ -129,31 +126,19 @@ private fun EmojiButton(
     isGray: Boolean = false,
 ) {
     val fontSize = UiConfigs.ChatMessagePane.ReactionEmoji.FontSize
-    // 创建灰度 ColorFilter：将饱和度设为 0
-    val grayColorFilter = remember(isGray) {
-        if (isGray) {
-            ColorFilter.colorMatrix(
-                ColorMatrix().apply {
-                    setSaturation(0f) // 设置为灰度
-                }
-            )
-        } else {
-            null
-        }
-    }
     
     Box(
         modifier = modifier
             .noRippleClickable(onClick = onClick)
             .then(
-                if (isGray && grayColorFilter != null) {
-                    // 使用 drawWithContent 应用灰度滤镜
+                if (isGray) {
+                    // 使用 drawWithContent 应用灰度效果
                     Modifier.drawWithContent {
                         // 先绘制内容
                         drawContent()
-                        // 然后应用灰度遮罩
+                        // 然后应用灰度遮罩：使用 BlendMode.Saturation 降低饱和度
                         drawRect(
-                            color = Color.Gray.copy(alpha = 0.4f),
+                            color = Color.Gray.copy(alpha = 0.5f),
                             blendMode = BlendMode.Saturation
                         )
                     }
