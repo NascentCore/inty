@@ -3,6 +3,8 @@
 # IntyEval 启动脚本
 
 DEV=false
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -23,7 +25,8 @@ done
 # 确保数据库迁移已完成
 echo "检查数据库迁移状态..."
 export PYTHONPATH=.
-alembic upgrade head
+export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${SCRIPT_DIR}/../alembic/alembic.ini}"
+alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 if [ "$DEV" = true ]; then
   echo "Starting IntyEval in development mode..."

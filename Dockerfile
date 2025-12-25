@@ -48,7 +48,6 @@ fi
 # 复制应用代码
 COPY app/ app/
 COPY alembic/ alembic/
-COPY alembic.ini .
 # Used for manipulate backend system with bundled configurations.
 COPY scripts/ scripts/
 # 方便操作后端数据库

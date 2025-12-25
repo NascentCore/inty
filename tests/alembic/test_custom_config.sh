@@ -147,7 +147,7 @@ main() {
         default_config_created=true
     fi
 
-    if ! alembic -x "config=$config_path" upgrade head; then
+    if ! alembic -c "${REPO_ROOT}/alembic/alembic.ini" -x "config=$config_path" upgrade head; then
         log_error "Alembic upgrade 失败"
         return 1
     fi

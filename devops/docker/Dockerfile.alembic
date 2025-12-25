@@ -17,14 +17,13 @@ RUN pip install --no-cache-dir \
 
 # 仅复制 Alembic 迁移及其依赖的最小 Python 模块
 COPY alembic/ alembic/
-COPY alembic.ini ./
 COPY app/models app/models
 COPY app/api/__init__.py app/api/__init__.py
 COPY app/api/constants.py app/api/constants.py
 COPY app/core/__init__.py app/core/__init__.py
 COPY app/core/config.py app/core/config.py
 
-ENV ALEMBIC_CONFIG=/app/alembic.ini
+ENV ALEMBIC_CONFIG=/app/alembic/alembic.ini
 
 # 默认执行到最新版本；可通过 `docker run ... -x config=/app/config.yaml upgrade head` 覆盖
 ENTRYPOINT ["alembic"]
