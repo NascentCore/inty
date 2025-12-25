@@ -145,7 +145,7 @@ internal fun MessageActionBar(
         Spacer(Modifier.weight(1f))
 
         // Recall 按钮 - 始终显示，不受like/dislike影响
-        //        RecallButton(onClick = onRecall)
+        RecallButton(onClick = onRecall)
     }
 }
 
