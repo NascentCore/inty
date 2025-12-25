@@ -596,3 +596,8 @@ flowchart TB
 - Music Generation：旋律/和声/编曲（可接第三方音乐生成模型或自建管线）
 - Singing Voice / TTS：角色音色演唱与歌词对齐（LRC）
 - Text-to-Image：生成单曲封面（与记忆瞬间氛围一致）
+
+
+## 更新提醒页面（开屏第一次，提醒用户有新功能）
+
+类似 c.ai
