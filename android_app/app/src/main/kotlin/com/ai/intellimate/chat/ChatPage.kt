@@ -527,15 +527,19 @@ internal fun ChatPage(
                                 }
                             }
 
+                            // 非全屏模式下，先添加空白区域
+                            if (!chatListFullScreen) {
+                                Spacer(Modifier.weight(UiConfigs.ChatPage.chatListBlankZone))
+                            }
+
                             val lazyColumnModifier =
                                 if (chatListFullScreen) {
                                     // 全屏模式：使用 weight(1f) 保持现有布局
                                     Modifier.weight(1f).padding(horizontal = 16.dp)
                                 } else {
-                                    //非全屏模式下，加一个空白区，和lazyColumn的占比是1:2
-                                    Spacer((Modifier.weight(1f)))
+                                    // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
                                     Modifier
-                                        .weight(2f)
+                                        .weight(1f - UiConfigs.ChatPage.chatListBlankZone)
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
                                 }
