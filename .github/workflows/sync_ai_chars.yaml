@@ -29,6 +29,56 @@ jobs:
       - name: Sync AI characters from dev to prod
         env:
           PYTHONPATH: .
+        shell: bash
         run: |
-          python scripts/sync_agents_dev_to_prod/sync_agents.py --config config.yaml.example
-          python scripts/sync_character_themes_dev_to_prod/sync_character_themes.py --config config.yaml.example
+          set -euo pipefail
+
+          LOG_FILE="${RUNNER_TEMP:-/tmp}/sync_ai_chars.log"
+          : > "$LOG_FILE"
+
+          echo "Writing sync logs to: $LOG_FILE"
+
+          python scripts/sync_agents_dev_to_prod/sync_agents.py --config config.yaml.example 2>&1 | tee -a "$LOG_FILE"
+          status_agents="${PIPESTATUS[0]}"
+          if [ "$status_agents" -ne 0 ]; then
+            echo "sync_agents.py failed with exit code: $status_agents" | tee -a "$LOG_FILE"
+            exit "$status_agents"
+          fi
+
+          python scripts/sync_character_themes_dev_to_prod/sync_character_themes.py --config config.yaml.example 2>&1 | tee -a "$LOG_FILE"
+          status_themes="${PIPESTATUS[0]}"
+          if [ "$status_themes" -ne 0 ]; then
+            echo "sync_character_themes.py failed with exit code: $status_themes" | tee -a "$LOG_FILE"
+            exit "$status_themes"
+          fi
+
+      - name: Write sync output to step summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LOG_FILE="${RUNNER_TEMP:-/tmp}/sync_ai_chars.log"
+
+          {
+            echo "## Sync AI characters output"
+            echo
+            if [ -f "$LOG_FILE" ]; then
+              echo "Log file: \`$LOG_FILE\`"
+              echo
+              echo "<details><summary>Full output (truncated to last 2000 lines if needed)</summary>"
+              echo
+              echo '```text'
+              # Avoid overly large summaries (GitHub step summary has limits).
+              if [ "$(wc -l < "$LOG_FILE")" -gt 2000 ]; then
+                tail -n 2000 "$LOG_FILE"
+              else
+                cat "$LOG_FILE"
+              fi
+              echo '```'
+              echo
+              echo "</details>"
+            else
+              echo "_No log file found. (The sync step may not have started.)_"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
