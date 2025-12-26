@@ -10,6 +10,7 @@ import type { Agent } from "../../types";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { BackgroundWithCropOverlay } from "./BackgroundWithCropOverlay";
 import ScoreSelector from "./ScoreSelector";
+import { formatUtcTime } from "../../utils/dateUtils";
 
 interface AgentInfoDisplayProps {
   agent: Agent;
@@ -71,16 +72,10 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
             <strong>背景设定:</strong> {agent.scenario || "无"}
           </p>
           <p>
-            <strong>创建时间:</strong>{" "}
-            {agent.created_at
-              ? new Date(agent.created_at).toLocaleString()
-              : "无"}
+            <strong>创建时间 (UTC):</strong> {formatUtcTime(agent.created_at)}
           </p>
           <p>
-            <strong>更新时间:</strong>{" "}
-            {agent.updated_at
-              ? new Date(agent.updated_at).toLocaleString()
-              : "无"}
+            <strong>更新时间 (UTC):</strong> {formatUtcTime(agent.updated_at)}
           </p>
           <p>
             <strong>音色ID:</strong> {agent.voice_id || "未设置"}

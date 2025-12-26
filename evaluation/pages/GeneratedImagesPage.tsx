@@ -36,6 +36,7 @@ import {
 } from "@ant-design/icons";
 import { agentApi, generatedImagesApi } from "../services/api";
 import type { Agent, GeneratedImage } from "../types";
+import { formatUtcTimeRaw } from "../utils/dateUtils";
 
 const { Text, Paragraph, Title } = Typography;
 const { Search } = Input;
@@ -129,17 +130,10 @@ const GeneratedImagesPage: React.FC = () => {
     return Object.values(groups);
   }, [images]);
 
-  // 格式化日期
+  // 格式化日期 (UTC)
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "未知";
-    const date = new Date(dateStr);
-    return date.toLocaleString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatUtcTimeRaw(dateStr, "YYYY-MM-DD HH:mm") + " (UTC)";
   };
 
   return (

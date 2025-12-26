@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, Image, Tag, Typography } from "antd";
 import { PictureOutlined } from "@ant-design/icons";
+import { formatUtcTime } from "../utils/dateUtils";
 
 const { Text, Paragraph } = Typography;
 
@@ -61,7 +62,7 @@ export const ImageMessage: React.FC<ImageMessageProps> = ({
       )}
       {timestamp && (
         <Text type="secondary" style={{ fontSize: 12 }}>
-          {new Date(timestamp).toLocaleString("zh-CN")}
+          {formatUtcTime(timestamp)}
         </Text>
       )}
       {prompt && (

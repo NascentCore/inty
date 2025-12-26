@@ -20,8 +20,8 @@ import {
 } from "antd";
 import { ReloadOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import { reportApi } from "../services/api";
+import { formatUtcTimeRaw } from "../utils/dateUtils";
 import type {
   ReportItem,
   ReportTargetType,
@@ -232,11 +232,11 @@ export const ReportFeedbackPage: React.FC = () => {
       ),
     },
     {
-      title: "创建时间",
+      title: "创建时间 (UTC)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 170,
-      render: (time: string) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
+      width: 190,
+      render: (time: string) => formatUtcTimeRaw(time),
     },
     {
       title: "操作",
@@ -396,8 +396,8 @@ export const ReportFeedbackPage: React.FC = () => {
             <Descriptions.Item label="描述" span={2}>
               {selectedItem.description || "无"}
             </Descriptions.Item>
-            <Descriptions.Item label="创建时间" span={2}>
-              {dayjs(selectedItem.created_at).format("YYYY-MM-DD HH:mm:ss")}
+            <Descriptions.Item label="创建时间 (UTC)" span={2}>
+              {formatUtcTimeRaw(selectedItem.created_at)}
             </Descriptions.Item>
             {selectedItem.image_urls && selectedItem.image_urls.length > 0 && (
               <Descriptions.Item label="附图" span={2}>

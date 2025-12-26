@@ -43,6 +43,7 @@ import { MultiAgentChatDisplay } from "../components/evaluation/MultiAgentChatDi
 import { JsonDisplayModal } from "../components/common/JsonDisplayModal";
 import { useJsonDisplay } from "../hooks/useJsonDisplay";
 import type { EvaluationSession, EvaluationResult } from "../types";
+import { formatUtcTimeRaw } from "../utils/dateUtils";
 
 const { Content } = Layout;
 const { Text } = Typography;
@@ -505,11 +506,11 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       sorter: (a, b) => (a.average_score || 0) - (b.average_score || 0),
     },
     {
-      title: "创建时间",
+      title: "创建时间 (UTC)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 150,
-      render: (time) => new Date(time).toLocaleString("zh-CN"),
+      width: 180,
+      render: (time) => formatUtcTimeRaw(time),
       sorter: (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     },
@@ -785,10 +786,8 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
                     <Text strong>{selectedSession.questions?.length || 0}</Text>
                   </Col>
                   <Col span={6}>
-                    <Text type="secondary">创建时间: </Text>
-                    <Text>
-                      {new Date(selectedSession.created_at).toLocaleString()}
-                    </Text>
+                    <Text type="secondary">创建时间 (UTC): </Text>
+                    <Text>{formatUtcTimeRaw(selectedSession.created_at)}</Text>
                   </Col>
                 </Row>
               </Card>

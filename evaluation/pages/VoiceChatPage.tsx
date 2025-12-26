@@ -35,6 +35,7 @@ import { useAgents } from "../hooks/useAgents";
 import { useLiveChat, Transcript } from "../hooks/useLiveChat";
 import type { Agent } from "../types";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
+import { formatUtcTimeOnly } from "../utils/dateUtils";
 
 const { Content } = Layout;
 const { Text, Paragraph, Title } = Typography;
@@ -471,7 +472,7 @@ export const VoiceChatPage: React.FC = () => {
                                 <ClockCircleOutlined
                                   style={{ marginRight: "2px" }}
                                 />
-                                {transcript.timestamp.toLocaleTimeString()}
+                                {formatUtcTimeOnly(transcript.timestamp)}
                               </div>
                             </div>
                           </div>

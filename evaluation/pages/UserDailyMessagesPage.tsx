@@ -32,6 +32,11 @@ import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
 import { userAnalyticsApi } from "../services/api";
+import {
+  formatUtcTime,
+  formatUtcTimeRaw,
+  getCurrentUtcTime,
+} from "../utils/dateUtils";
 import type {
   UserDailyMessagesResponse,
   UserTodayStatsResponse,
@@ -241,20 +246,8 @@ export const UserDailyMessagesPage: React.FC = () => {
         lines.push("====================");
         lines.push(`角色名称: ${agentName}`);
         lines.push(`会话ID: ${chatId}`);
-        lines.push(
-          `创建时间: ${
-            session.created_at
-              ? dayjs(session.created_at).format("YYYY-MM-DD HH:mm:ss")
-              : "-"
-          }`,
-        );
-        lines.push(
-          `更新时间: ${
-            session.updated_at
-              ? dayjs(session.updated_at).format("YYYY-MM-DD HH:mm:ss")
-              : "-"
-          }`,
-        );
+        lines.push(`创建时间: ${formatUtcTime(session.created_at)}`);
+        lines.push(`更新时间: ${formatUtcTime(session.updated_at)}`);
         lines.push(`消息总数: ${allMessages.length}`);
         lines.push("");
         lines.push("对话记录");
@@ -262,9 +255,7 @@ export const UserDailyMessagesPage: React.FC = () => {
         lines.push("");
 
         allMessages.forEach((msg) => {
-          const timestamp = msg.created_at
-            ? dayjs(msg.created_at).format("YYYY-MM-DD HH:mm:ss")
-            : "未知时间";
+          const timestamp = formatUtcTime(msg.created_at);
           const isUser =
             msg.message_type === "human" || msg.message_type === "HumanMessage";
           const sender = isUser ? "👤 用户" : "🤖 AI";
@@ -314,7 +305,7 @@ export const UserDailyMessagesPage: React.FC = () => {
           return name.replace(/[<>:"/\\|?*]/g, "_");
         };
 
-        const timestamp = dayjs().format("YYYY-MM-DD_HH-mm-ss");
+        const timestamp = getCurrentUtcTime();
         const safeAgentName = sanitizeFileName(agentName);
         const safeChatId = chatId.substring(0, 20); // 限制长度
         const filename = `session_${safeAgentName}_${safeChatId}_${timestamp}.txt`;
@@ -382,20 +373,18 @@ export const UserDailyMessagesPage: React.FC = () => {
       sorter: (a, b) => a.message_count - b.message_count,
     },
     {
-      title: "创建时间",
+      title: "创建时间 (UTC)",
       dataIndex: "created_at",
       key: "created_at",
-      width: 180,
-      render: (text: string) =>
-        text ? dayjs(text).format("YYYY-MM-DD HH:mm:ss") : "-",
+      width: 200,
+      render: (text: string) => formatUtcTimeRaw(text),
     },
     {
-      title: "更新时间",
+      title: "更新时间 (UTC)",
       dataIndex: "updated_at",
       key: "updated_at",
-      width: 180,
-      render: (text: string) =>
-        text ? dayjs(text).format("YYYY-MM-DD HH:mm:ss") : "-",
+      width: 200,
+      render: (text: string) => formatUtcTimeRaw(text),
     },
     {
       title: "操作",
@@ -519,10 +508,8 @@ export const UserDailyMessagesPage: React.FC = () => {
               <Row gutter={16} style={{ marginTop: 16 }}>
                 <Col span={12}>
                   <Statistic
-                    title="注册时间"
-                    value={dayjs(userInfo.created_at).format(
-                      "YYYY-MM-DD HH:mm:ss",
-                    )}
+                    title="注册时间 (UTC)"
+                    value={formatUtcTimeRaw(userInfo.created_at)}
                     prefix={<CalendarOutlined />}
                     valueStyle={{ fontSize: "14px" }}
                   />
@@ -704,9 +691,7 @@ export const UserDailyMessagesPage: React.FC = () => {
                                   : "🤖 AI"}{" "}
                                 •{" "}
                                 {msg.created_at
-                                  ? dayjs(msg.created_at).format(
-                                      "YYYY-MM-DD HH:mm:ss",
-                                    )
+                                  ? formatUtcTimeRaw(msg.created_at)
                                   : ""}
                               </div>
                               <div
