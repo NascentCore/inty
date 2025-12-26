@@ -581,6 +581,12 @@ object UiConfigs {
             val iconSize = 24.dp
         }
 
+        /** 聊天输入框配置 - 适用于聊天输入框的尺寸、间距等设置 */
+        object ChatInput {
+            /** 聊天输入框底部空白边距 - 输入框与键盘或更多面板之间的间距 */
+            val BottomSpacerHeight = 6.dp
+        }
+
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
         object ChatBubble {
             /** 圣诞装饰图标大小 - 适用于圣诞树、草莓、糖果等装饰图标 */
