@@ -25,8 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,18 +60,9 @@ fun ChatInput(
 ) {
     val inputData = chatViewModel.inputData.collectAsState()
     val inputSelection = chatViewModel.inputSelection.collectAsState()
-    val isInputFocused = remember { mutableStateOf(false) }
-
-    // 键盘弹出状态跟踪
-    // 获取agent信息用于事件上报
     val agentInfo by chatViewModel.agentInfo.collectAsState()
-
-    // Show scene action button全局设置
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
 
-    val horizontalPadding = UiConfigs.ChatPage.ChatInput.HorizontalPadding
-    val topPadding = UiConfigs.ChatPage.ChatInput.TopPadding
-    val cornerRadius = UiConfigs.ChatPage.ChatInput.CornerRadius
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
@@ -88,31 +77,31 @@ fun ChatInput(
         }
     }
 
+    val config = UiConfigs.ChatPage.ChatInput
+    val minHeight = config.MinHeight
+    val maxHeight = config.MaxHeight
+
     Column(
         modifier =
             Modifier.padding(
-                    start = horizontalPadding,
-                    top = topPadding,
-                    end = horizontalPadding,
+                    start = config.HorizontalPadding,
+                    top = config.TopPadding,
+                    end = config.HorizontalPadding,
                     bottom = bottomPadding,
                 )
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(cornerRadius))
+                .clip(RoundedCornerShape(config.CornerRadius))
                 .background(AppColors.DarkPurpleOverlay60)
     ) {
-        // 主输入区域
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(
-                    min = UiConfigs.ChatPage.ChatInput.MinHeight,
-                    max = UiConfigs.ChatPage.ChatInput.MaxHeight
-                )
+                .heightIn(min = minHeight, max = maxHeight)
                 .wrapContentHeight()
         ) {
             IntySmallTextField(
                 modifier = Modifier
-                    .padding(end = UiConfigs.ChatPage.ChatInput.TrailingControlsPadding)
+                    .padding(end = config.TrailingControlsPadding)
                     .align(Alignment.Center),
                 value = inputData.value,
                 singleLine = false,
@@ -129,37 +118,27 @@ fun ChatInput(
                             )
                         }
                     },
-                onValueChange = { input -> chatViewModel.inputData.value = input },
+                onValueChange = { chatViewModel.inputData.value = it },
                 keyboardOptions =
                     KeyboardOptions(
                         imeAction = ImeAction.Default,
                         capitalization = KeyboardCapitalization.Sentences,
                     ),
                 keyboardActions = KeyboardActions(),
-                onFocusChanged = { focused ->
-                    isInputFocused.value = focused
-                    onFocusChange(focused)
-                },
-                onSelectionChanged = { selection ->
-                    chatViewModel.inputSelection.value = selection
-                },
+                onFocusChanged = onFocusChange,
+                onSelectionChanged = { chatViewModel.inputSelection.value = it },
                 selection = inputSelection.value,
                 maxLines = 4,
                 maxLength = CHAT_INPUT_MAX_LENGTH,
                 focusRequester = focusRequester,
             )
 
-            // 视觉上保持与底部一定的间距，这样初始，只有一行输入时，其位置位于
-            // 输入框垂直方向中央位置。增加输入行数，则位置不变。
-            val verticalPadding = UiConfigs.ChatPage.ChatInput.VerticalPadding
-            val rightPadding = UiConfigs.ChatPage.ChatInput.ButtonRightPadding
-            // 发送/更多按钮区域
-            val onSceneActionClick: () -> Unit = {
+            val onSceneActionClick = {
                 if (!isKeyboardVisible) {
                     focusInputAndShowKeyboard()
                 }
                 val templateLength = SCENE_ACTION_TEMPLATE.length
-                val currentText = chatViewModel.inputData.value
+                val currentText = inputData.value
                 if (currentText.length > CHAT_INPUT_MAX_LENGTH - templateLength) {
                     ToastUtils.showShort(R.string.str_message_is_too_long)
                 } else {
@@ -176,23 +155,22 @@ fun ChatInput(
                 }
             }
 
-            val buttonSize = UiConfigs.ChatPage.ChatInput.ButtonSize
             Row(
                 modifier =
                     Modifier.align(Alignment.BottomEnd)
                         .padding(
-                            end = rightPadding,
-                            top = verticalPadding,
-                            bottom = verticalPadding,
+                            end = config.ButtonRightPadding,
+                            top = config.VerticalPadding,
+                            bottom = config.VerticalPadding,
                         ),
-                horizontalArrangement = Arrangement.spacedBy(UiConfigs.ChatPage.ChatInput.SceneActionButtonSpacing),
+                horizontalArrangement = Arrangement.spacedBy(config.SceneActionButtonSpacing),
                 verticalAlignment = Alignment.Bottom,
             ) {
                 if (showSceneActionButton) {
-                    SceneActionQuickButton(buttonHeight = buttonSize, onClick = onSceneActionClick)
+                    SceneActionQuickButton(buttonHeight = config.ButtonSize, onClick = onSceneActionClick)
                 }
                 MultiUseAccessButton(
-                    buttonSize = buttonSize,
+                    buttonSize = config.ButtonSize,
                     hasInput = inputData.value.isNotEmpty(),
                     showMorePanel = showMorePanel,
                     onSendMessage = onSendMessage,

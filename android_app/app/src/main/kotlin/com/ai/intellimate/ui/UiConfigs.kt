@@ -593,7 +593,7 @@ object UiConfigs {
             val HorizontalPadding = 16.dp
             
             /** 聊天输入框顶部内边距 - 输入框顶部的内边距 */
-            val TopPadding = 16.dp
+            val TopPadding = 12.dp
             
             /** 聊天输入框圆角半径 - 与水平内边距保持一致 */
             val CornerRadius = HorizontalPadding
@@ -605,7 +605,7 @@ object UiConfigs {
             val MaxHeight = 120.dp
             
             /** 输入区域垂直内边距 - 输入框内部文本区域的上下内边距 */
-            val VerticalPadding = 13.dp
+            val VerticalPadding = 10.dp
             
             /** 按钮区域右侧内边距 - 发送/更多按钮距离右侧的距离 */
             val ButtonRightPadding = 8.dp
