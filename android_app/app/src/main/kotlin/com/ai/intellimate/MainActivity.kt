@@ -301,13 +301,7 @@ class MainActivity : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
 
-        KoinApplication(
-            application = {
-
-            }
-        ) {
-            ComposeUI()
-        }
+        KoinApplication(application = {}) { ComposeUI() }
     }
 
     @Composable

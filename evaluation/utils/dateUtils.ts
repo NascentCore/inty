@@ -56,4 +56,3 @@ export function getCurrentUtcTime(
 ): string {
   return dayjs.utc().format(format);
 }
-

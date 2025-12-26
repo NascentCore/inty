@@ -94,15 +94,14 @@ fun ChatInput(
                 .background(AppColors.DarkPurpleOverlay60)
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = minHeight, max = maxHeight)
-                .wrapContentHeight()
+            modifier =
+                Modifier.fillMaxWidth()
+                    .heightIn(min = minHeight, max = maxHeight)
+                    .wrapContentHeight()
         ) {
             IntySmallTextField(
-                modifier = Modifier
-                    .padding(end = config.TrailingControlsPadding)
-                    .align(Alignment.Center),
+                modifier =
+                    Modifier.padding(end = config.TrailingControlsPadding).align(Alignment.Center),
                 value = inputData.value,
                 singleLine = false,
                 placeholder =
@@ -167,7 +166,10 @@ fun ChatInput(
                 verticalAlignment = Alignment.Bottom,
             ) {
                 if (showSceneActionButton) {
-                    SceneActionQuickButton(buttonHeight = config.ButtonSize, onClick = onSceneActionClick)
+                    SceneActionQuickButton(
+                        buttonHeight = config.ButtonSize,
+                        onClick = onSceneActionClick,
+                    )
                 }
                 MultiUseAccessButton(
                     buttonSize = config.ButtonSize,

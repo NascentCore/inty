@@ -275,9 +275,7 @@ object UiConfigs {
             "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
 
         /**
-         * 语音通话WebSocket URL
-         * 注意：此URL需要根据实际后端服务地址配置
-         * 格式：wss://domain.com/voice/ws?agentId={agentId}
+         * 语音通话WebSocket URL 注意：此URL需要根据实际后端服务地址配置 格式：wss://domain.com/voice/ws?agentId={agentId}
          */
         fun getVoiceCallWebSocketUrl(agentId: String): String {
             // TODO: 替换为实际的WebSocket服务器地址
@@ -287,8 +285,7 @@ object UiConfigs {
 
     /** 语音通话配置 - 适用于实时语音通话的队列大小、缓冲区等设置 */
     object VoiceCall {
-        /** 播放队列最大大小（音频数据包数量） - 约3秒的音频数据（24kHz，16bit，单声道）
-         *  增大队列以提高播放流畅度，减少因网络波动导致的卡顿 */
+        /** 播放队列最大大小（音频数据包数量） - 约3秒的音频数据（24kHz，16bit，单声道） 增大队列以提高播放流畅度，减少因网络波动导致的卡顿 */
         const val MAX_PLAYBACK_QUEUE_SIZE = 75
 
         /** 发送队列最大大小（音频数据包数量） - 约1秒的音频数据（16kHz，16bit，单声道） */
@@ -585,37 +582,37 @@ object UiConfigs {
         object ChatInput {
             /** 聊天输入框底部空白边距 - 输入框与键盘或更多面板之间的间距 */
             val BottomSpacerHeight = 6.dp
-            
+
             /** 聊天输入框估算高度 - 用于计算keeptalking 悬浮按钮位置 */
             val EstimatedHeight = 120.dp
-            
+
             /** 聊天输入框水平方向内边距 - 输入框左右两侧的内边距 */
             val HorizontalPadding = 16.dp
-            
+
             /** 聊天输入框顶部内边距 - 输入框顶部的内边距 */
             val TopPadding = 12.dp
-            
+
             /** 聊天输入框圆角半径 - 与水平内边距保持一致 */
             val CornerRadius = HorizontalPadding
-            
+
             /** 输入区域最小高度 - 输入框主区域的最小高度 */
             val MinHeight = 48.dp
-            
+
             /** 输入区域最大高度 - 输入框主区域的最大高度（基于最大行数计算） */
             val MaxHeight = 120.dp
-            
+
             /** 输入区域垂直内边距 - 输入框内部文本区域的上下内边距 */
             val VerticalPadding = 10.dp
-            
+
             /** 按钮区域右侧内边距 - 发送/更多按钮距离右侧的距离 */
             val ButtonRightPadding = 8.dp
-            
+
             /** 按钮大小 - 发送/更多按钮的尺寸 */
             val ButtonSize = 30.dp
-            
+
             /** 尾部控件内边距 - 输入框文本区域距离右侧按钮区域的距离 */
             val TrailingControlsPadding = 104.dp
-            
+
             /** 场景操作按钮间距 - 场景操作按钮与发送/更多按钮之间的间距 */
             val SceneActionButtonSpacing = 6.dp
         }
