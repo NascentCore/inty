@@ -1,5 +1,11 @@
 ## 仓库任务文档索引
 
+模型选型考虑参数指标：延时、成本、质量（按重要性递减顺序排列）
+
+文本模型：Gemini qwen claude openai
+生图：Gemini qwen/fal.ai
+tts：elevenlabs Gemini fal.ai/开源模型
+
 以下列出了当前仓库内所有记录待办/任务信息的 Markdown 文档，方便团队快速定位具体负责范围的 backlog。
 
 - [`app/TODOS.md`](../app/TODOS.md)：后端（FastAPI）架构级任务，包括依赖注入、配置管理、可观测性、数据治理等重构计划。
