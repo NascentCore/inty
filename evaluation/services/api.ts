@@ -625,6 +625,7 @@ export const voiceApi = {
     page_size?: number;
     voice_type?: string;
     category?: string;
+    provider?: string;
   }): Promise<Voice[]> => apiClient.get("/text-to-speech/list-voices", params),
 };
 
