@@ -547,6 +547,9 @@ object UiConfigs {
         /** 是否显示订阅按钮 */
         const val showSubscriptionButton = false
 
+        /** 消息列表非全屏模式下，上部分空白区占比 */
+        const val chatListBlankZone = 1f / 3f
+
         object KeepTalkingButton {
             /** Keep Talking 悬浮按钮宽度（用于扩大点击热区） */
             val width = 50.dp

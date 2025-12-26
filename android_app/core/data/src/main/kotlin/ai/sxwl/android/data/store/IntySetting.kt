@@ -177,6 +177,16 @@ object IntySetting {
         curUserSetting.putBoolean("user_set_scene_action_button", true)
     }
 
+    /** 消息列表是否全屏（全局设置，默认开启） */
+    fun setChatListFullScreen(fullScreen: Boolean) {
+        curUserSetting.putBoolean("chat_list_full_screen", fullScreen)
+    }
+
+    fun isChatListFullScreen(): Boolean {
+        // 默认值为true（开启全屏）
+        return curUserSetting.decodeBool("chat_list_full_screen", true)
+    }
+
     /** 聊天消息字体大小（单位 sp，默认 14f） */
     fun setChatFontSizeSp(size: Float) {
         curUserSetting.putFloat(KEY_CHAT_FONT_SIZE_SP, size)

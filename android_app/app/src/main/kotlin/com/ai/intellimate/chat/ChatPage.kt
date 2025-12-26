@@ -162,6 +162,7 @@ internal fun ChatPage(
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
     val chatFontSizeSp by SettingStateManager.chatFontSizeFlow.collectAsState()
+    val chatListFullScreen by SettingStateManager.chatListFullScreenFlow.collectAsState()
 
     // 记录上次上报的 key，避免在同一页面状态下重复上报
     // 使用 agentInfo?.id 作为 key 的一部分，确保不同 Agent 的页面会分别上报
@@ -526,8 +527,25 @@ internal fun ChatPage(
                                 }
                             }
 
+                            // 非全屏模式下，先添加空白区域
+                            if (!chatListFullScreen) {
+                                Spacer(Modifier.weight(UiConfigs.ChatPage.chatListBlankZone))
+                            }
+
+                            val lazyColumnModifier =
+                                if (chatListFullScreen) {
+                                    // 全屏模式：使用 weight(1f) 保持现有布局
+                                    Modifier.weight(1f).padding(horizontal = 16.dp)
+                                } else {
+                                    // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
+                                    Modifier
+                                        .weight(1f - UiConfigs.ChatPage.chatListBlankZone)
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                }
+
                             LazyColumn(
-                                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                                modifier = lazyColumnModifier,
                                 state = listState,
                                 reverseLayout = true,
                             ) {
