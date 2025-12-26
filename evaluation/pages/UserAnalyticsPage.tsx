@@ -32,6 +32,7 @@ import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { Dayjs } from "dayjs";
 import { userAnalyticsApi } from "../services/api";
+import { formatUtcTimeOnly } from "../utils/dateUtils";
 import type {
   DailyNewUsers,
   ConversationRoundsResponse,
@@ -1166,7 +1167,7 @@ export const UserAnalyticsPage: React.FC = () => {
                                       : "🤖 AI"}{" "}
                                     •{" "}
                                     {msg.created_at
-                                      ? dayjs(msg.created_at).format("HH:mm:ss")
+                                      ? formatUtcTimeOnly(msg.created_at)
                                       : ""}
                                   </div>
                                   <div>

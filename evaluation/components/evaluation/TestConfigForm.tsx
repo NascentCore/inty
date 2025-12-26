@@ -18,6 +18,7 @@ import { InfoCircleOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { useForm } from "../../hooks/useForm";
 import modelCacheService from "../../services/modelCache";
 import { ModelSelector } from "../common/ModelSelector";
+import { formatUtcTimeRaw } from "../../utils/dateUtils";
 import type {
   EvaluationSessionCreateRequest,
   OpenRouterModel,
@@ -94,7 +95,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
   // 表单Hook
   const form = useForm<FormValues>({
     initialValues: {
-      name: `智能体评测 - ${new Date().toLocaleString()}`,
+      name: `智能体评测 - ${formatUtcTimeRaw(new Date())}`,
       questions: [],
       selected_agents: [],
       scoring_model: "",

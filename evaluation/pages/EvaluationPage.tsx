@@ -32,6 +32,7 @@ import { QuestionManager } from "../components/evaluation/QuestionManager";
 import { EvaluationMonitor } from "../components/evaluation/EvaluationMonitor";
 import { useEvaluationSession } from "../hooks/useEvaluationSession";
 import type { EvaluationSessionCreateRequest } from "../types";
+import { formatUtcTime } from "../utils/dateUtils";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -245,7 +246,7 @@ export const EvaluationPage: React.FC = () => {
 
       Modal.confirm({
         title: "加载草稿",
-        content: `发现草稿 (${new Date(draft.timestamp).toLocaleString()})，是否加载？这将覆盖当前配置。`,
+        content: `发现草稿 (${formatUtcTime(draft.timestamp)})，是否加载？这将覆盖当前配置。`,
         okText: "加载",
         cancelText: "取消",
         onOk: () => {

@@ -45,6 +45,11 @@ import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
 import { MessageToImageIcon } from "../components/MessageToImageIcon";
+import {
+  formatUtcTimeOnly,
+  formatUtcTimeRaw,
+  getCurrentUtcTime,
+} from "../utils/dateUtils";
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
@@ -832,7 +837,7 @@ export const ChatPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `chat_${currentSession.agent_name}_${new Date().toLocaleDateString()}.json`;
+    a.download = `chat_${currentSession.agent_name}_${getCurrentUtcTime("YYYY-MM-DD")}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1526,9 +1531,7 @@ export const ChatPage: React.FC = () => {
                                       <ClockCircleOutlined
                                         style={{ marginRight: "2px" }}
                                       />
-                                      {new Date(
-                                        message.timestamp,
-                                      ).toLocaleTimeString()}
+                                      {formatUtcTimeOnly(message.timestamp)}
                                     </span>
                                     <div
                                       className="message-actions"
@@ -1912,7 +1915,7 @@ export const ChatPage: React.FC = () => {
                             {message.role === "user" ? "用户" : "AI助手"}
                           </Text>
                           <Text type="secondary" style={{ fontSize: "12px" }}>
-                            {new Date(message.timestamp).toLocaleString()}
+                            {formatUtcTimeRaw(message.timestamp)}
                           </Text>
                         </Space>
                       }

@@ -37,6 +37,7 @@ import { MultiAgentChatDisplay } from "./MultiAgentChatDisplay";
 import { JsonDisplayModal } from "../common/JsonDisplayModal";
 import api from "../../services/api";
 import type { EvaluationSession, EvaluationResult } from "../../types";
+import { formatUtcTimeRaw } from "../../utils/dateUtils";
 
 type EvaluationStatus = EvaluationSession["status"];
 
@@ -402,8 +403,8 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
         {/* 会话信息 */}
         <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
           <Descriptions.Item label="会话名称">{session.name}</Descriptions.Item>
-          <Descriptions.Item label="创建时间">
-            {new Date(session.created_at).toLocaleString()}
+          <Descriptions.Item label="创建时间 (UTC)">
+            {formatUtcTimeRaw(session.created_at)}
           </Descriptions.Item>
           <Descriptions.Item label="测试问题">
             {session.config?.questions?.length || 0} 个
