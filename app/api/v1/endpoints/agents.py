@@ -14,6 +14,7 @@ from app import schemas
 from app.api import deps
 from app.api.tags import (
     ANDROID_APP_TAG,
+    INTERNAL_API_TAG,
     INTY_EVAL_TAG,
     NOT_USED_TAG,
     WEB_APP_TAG,
