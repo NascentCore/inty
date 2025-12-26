@@ -859,23 +859,29 @@ internal fun ChatPage(
             // 当用户到达聊天开始位置时，此按钮隐藏
             val showBackToTopButton = !isAtLatestMessage && !isAtChatStart
 
-            val chatInputEstimatedHeight = 70.dp
-            val effectiveBottomPaddingForButton =
+            // 聊天输入框的高度（从 UiConfigs 获取）
+            val chatInputHeight = UiConfigs.ChatPage.ChatInput.EstimatedHeight
+            // 按钮底部边距：如果显示更多面板，使用面板高度；否则使用正常的底部边距
+            val buttonBottomMargin =
                 if (showMorePanel) morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight else bottomPadding
-            val imeHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
-            val buttonBottomOffset =
-                if (showBackButton) {
-                    chatInputEstimatedHeight + effectiveBottomPaddingForButton
-                } else {
-                    chatInputEstimatedHeight + effectiveBottomPaddingForButton + imeHeightDp
-                }
+            val keyboardHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
+            
+            // Keep Talking 按钮的底部偏移量（基础位置）
+            // 基础位置 = 输入框高度 + 底部边距 + 键盘高度（如果不在 ChatActivity 中）
+            val keepTalkingButtonBaseBottomOffset = if (showBackButton) {
+                // ChatActivity 中：输入框高度 + 底部边距
+                chatInputHeight + buttonBottomMargin
+            } else {
+                // MainActivity 中：输入框高度 + 底部边距 + 键盘高度
+                chatInputHeight + buttonBottomMargin + keyboardHeightDp
+            }
 
             // 计算滚动到底部按钮的垂直位置
             // 如果 Keep Talking 按钮可见，则滚动到底部按钮位于其上方，避免重叠
             // 否则，滚动到底部按钮使用与 Keep Talking 按钮相同的位置
             // 注意：只有当 ScrollToBottomButton 可见时才考虑 KeepTalking 的影响，
             // 避免在按钮隐藏时位置突然变化导致跳动
-            val scrollToBottomButtonBottomOffset = buttonBottomOffset
+            val scrollToBottomButtonBottomOffset = keepTalkingButtonBaseBottomOffset
 
             val scrollToStartButtonBottomOffset =
                 scrollToBottomButtonBottomOffset +
@@ -930,7 +936,7 @@ internal fun ChatPage(
                 modifier =
                     Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(bottom = buttonBottomOffset),
+                        .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
                 onClick = { chatViewModel.sendKeepTalkingMessage() },
