@@ -4,11 +4,13 @@ import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.LogUtils
 import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,8 +40,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,6 +76,12 @@ private object CardConfig {
     val FavoriteButtonPadding = 10.dp
     val FavoriteButtonSize = 36.dp
     val FavoriteIconSize = 18.dp
+    val VipCornerSize = 64.dp
+    val VipFavoriteExtraPadding = 8.dp
+    val VipFavoriteTopOffset = 4.dp // VIP 角标与收藏按钮之间的间距
+    val VipTextPaddingTop = 6.dp
+    val VipTextPaddingEnd = 6.dp
+    val VipTextSize = 11.sp
 }
 
 // 判断是否为动图URL（非视频）
@@ -82,6 +94,59 @@ private fun isAnimatedImageUrl(url: String?): Boolean {
         lowerUrl.contains(".gif?") ||
         lowerUrl.contains(".webp?") ||
         lowerUrl.contains(".avif?")
+}
+
+private fun normalizeTag(tag: String): String {
+    val trimmed = tag.trim()
+    if (trimmed.isEmpty()) return ""
+    return trimmed.removePrefix("#").lowercase()
+}
+
+/**
+ * Explore 网格角色卡片的 VIP 右上角高亮角标。
+ *
+ * 使用范围：
+ * - 仅用于 Explore 推荐列表的 `ExploreCharacterCard`。
+ *
+ * 预期视觉效果：
+ * - 在卡片右上角绘制一个高饱和强对比色的三角角标，覆盖在图片上方但不影响收藏按钮的点击。
+ * - 角标内显示 “VIP” 文案，强化视觉提醒。
+ *
+ * 可配置项：
+ * - [label]：角标文案（来自 string 资源，便于本地化与一致性管理）。
+ */
+@Composable
+private fun VipCornerHighlighter(
+    modifier: Modifier = Modifier,
+    label: String,
+    contentDescription: String,
+) {
+    Box(
+        modifier =
+            modifier.size(CardConfig.VipCornerSize).semantics { this.contentDescription = contentDescription }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val triangle =
+                Path().apply {
+                    moveTo(size.width, 0f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, 0f)
+                    close()
+                }
+            drawPath(path = triangle, color = AppColors.VipHighlighterStrong)
+        }
+
+        Text(
+            text = label,
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = CardConfig.VipTextPaddingTop, end = CardConfig.VipTextPaddingEnd),
+            fontSize = CardConfig.VipTextSize,
+            fontWeight = FontWeight.Black,
+            color = AppColors.Background,
+            maxLines = 1,
+        )
+    }
 }
 
 /** Explore页面的角色卡片组件 */
@@ -115,6 +180,23 @@ fun ExploreCharacterCard(
 
     // 缓存过滤后的标签
     val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
+    val isVip = remember(filteredTags) { filteredTags.any { normalizeTag(it) == "vip" } }
+    val favoriteButtonTopPadding =
+        remember(isVip) {
+            if (isVip) {
+                CardConfig.VipCornerSize + CardConfig.VipFavoriteTopOffset
+            } else {
+                CardConfig.FavoriteButtonPadding
+            }
+        }
+    val favoriteButtonEndPadding =
+        remember(isVip) {
+            if (isVip) {
+                CardConfig.FavoriteButtonPadding + CardConfig.VipFavoriteExtraPadding
+            } else {
+                CardConfig.FavoriteButtonPadding
+            }
+        }
 
     // 获取静态图片URL
     val staticImageUrl =
@@ -291,11 +373,26 @@ fun ExploreCharacterCard(
             }
         }
 
+        if (isVip) {
+            VipCornerHighlighter(
+                modifier =
+                    Modifier.align(Alignment.TopEnd)
+                        .clip(
+                            RoundedCornerShape(
+                                topEnd = CardConfig.CornerRadius,
+                            )
+                        ),
+                label = stringResource(com.ai.intellimate.R.string.vip_badge_label),
+                contentDescription =
+                    stringResource(com.ai.intellimate.R.string.vip_badge_content_description),
+            )
+        }
+
         // 收藏按钮
         IconButton(
             modifier =
                 Modifier.align(Alignment.TopEnd)
-                    .padding(CardConfig.FavoriteButtonPadding)
+                    .padding(top = favoriteButtonTopPadding, end = favoriteButtonEndPadding)
                     .size(CardConfig.FavoriteButtonSize),
             onClick = {
                 val nextFavorite = !isFavorite

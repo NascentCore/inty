@@ -235,6 +235,8 @@ object AppColors {
     val DiscountBlue = Color(0xFF7B96FB)
     val EmailLoginButtonGray = Color(0xFF241D27)
     val EmailLoginButtonText = Color(0x99FFFFFF)
+    /** Explore 角色卡片 VIP 角标：高饱和强对比底色，用于强化视觉提醒 */
+    val VipHighlighterStrong = Color(0xFFFFD54F)
     /** Material Design Green 500 - 用于表示成功状态、激活状态或选中状态的绿色指示器 */
     val Green500 = Color(0xFF4CAF50)
 }
