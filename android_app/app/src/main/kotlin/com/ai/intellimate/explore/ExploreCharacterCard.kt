@@ -78,6 +78,7 @@ private object CardConfig {
     val FavoriteIconSize = 18.dp
     val VipCornerSize = 64.dp
     val VipFavoriteExtraPadding = 8.dp
+    val VipFavoriteTopOffset = 4.dp // VIP 角标与收藏按钮之间的间距
     val VipTextPaddingTop = 6.dp
     val VipTextPaddingEnd = 6.dp
     val VipTextSize = 11.sp
@@ -180,7 +181,15 @@ fun ExploreCharacterCard(
     // 缓存过滤后的标签
     val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
     val isVip = remember(filteredTags) { filteredTags.any { normalizeTag(it) == "vip" } }
-    val favoriteButtonPadding =
+    val favoriteButtonTopPadding =
+        remember(isVip) {
+            if (isVip) {
+                CardConfig.VipCornerSize + CardConfig.VipFavoriteTopOffset
+            } else {
+                CardConfig.FavoriteButtonPadding
+            }
+        }
+    val favoriteButtonEndPadding =
         remember(isVip) {
             if (isVip) {
                 CardConfig.FavoriteButtonPadding + CardConfig.VipFavoriteExtraPadding
@@ -383,7 +392,7 @@ fun ExploreCharacterCard(
         IconButton(
             modifier =
                 Modifier.align(Alignment.TopEnd)
-                    .padding(favoriteButtonPadding)
+                    .padding(top = favoriteButtonTopPadding, end = favoriteButtonEndPadding)
                     .size(CardConfig.FavoriteButtonSize),
             onClick = {
                 val nextFavorite = !isFavorite
