@@ -4,17 +4,11 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallStatus
 
-/**
- * Ui状态
- */
+/** Ui状态 */
 data class VoiceCallUiState(
-    /**
-     * 网络连接状态
-     */
+    /** 网络连接状态 */
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
-    /**
-     * 通话状态
-     */
+    /** 通话状态 */
     val callState: CallStatus? = null,
-    val agent: AgentInfo? = null
+    val agent: AgentInfo? = null,
 )

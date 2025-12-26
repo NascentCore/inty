@@ -96,10 +96,7 @@ fun AppNavHost(
             val agentId = backStackEntry.arguments?.getString("agentId")
 
             if (agentId != null) {
-                VoiceCallScreen(
-                    onBack = { navController.popBackStack() },
-                    agentId = agentId
-                )
+                VoiceCallScreen(onBack = { navController.popBackStack() }, agentId = agentId)
             }
         }
 

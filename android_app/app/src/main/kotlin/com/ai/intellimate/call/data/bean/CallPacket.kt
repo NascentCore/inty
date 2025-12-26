@@ -11,74 +11,42 @@ data class CallPacket(
     val data: String = "",
     val status: CallStatus? = null,
     val message: String? = null,
-    @SerialName("sample_rate")
-    val sampleRate: Int = 0,
+    @SerialName("sample_rate") val sampleRate: Int = 0,
     val text: String = "",
-    @SerialName("is_final")
-    val isFinal: Boolean = false
+    @SerialName("is_final") val isFinal: Boolean = false,
 )
 
-/**
- * 消息类型
- */
+/** 消息类型 */
 @Serializable
 enum class CallType {
-    /**
-     * 发送Base64编码的16kHz PCM音频
-     */
-    @SerialName("audio")
-    AUDIO,
+    /** 发送Base64编码的16kHz PCM音频 */
+    @SerialName("audio") AUDIO,
 
-    /**
-     * 文本输入
-     */
-    @SerialName("text")
-    TEXT,
+    /** 文本输入 */
+    @SerialName("text") TEXT,
 
-    /**
-     * 结束通话
-     */
-    @SerialName("end")
-    END,
+    /** 结束通话 */
+    @SerialName("end") END,
 
-    /**
-     * 回复的Base64编码的24kHz PCM音频
-     */
-    @SerialName("audio_response")
-    AUDIO_RESPONSE,
+    /** 回复的Base64编码的24kHz PCM音频 */
+    @SerialName("audio_response") AUDIO_RESPONSE,
 
-    /**
-     * 当前状态[CallStatus]
-     */
-    @SerialName("status")
-    STATUS,
+    /** 当前状态[CallStatus] */
+    @SerialName("status") STATUS,
 
-    /**
-     * 错误
-     */
-    @SerialName("error")
-    ERROR,
-    @SerialName("user_transcript")
-    USER_TRANSCRIPT,
-    @SerialName("transcript")
-    TRANSCRIPT
+    /** 错误 */
+    @SerialName("error") ERROR,
+    @SerialName("user_transcript") USER_TRANSCRIPT,
+    @SerialName("transcript") TRANSCRIPT,
 }
 
-/**
- * 当前状态
- */
+/** 当前状态 */
 @Serializable
 enum class CallStatus {
-    @SerialName("connecting")
-    CONNECTING,
-    @SerialName("connected")
-    CONNECTED,
-    @SerialName("speaking")
-    SPEAKING,
-    @SerialName("listening")
-    LISTENING,
-    @SerialName("error")
-    ERROR,
-    @SerialName("user_transcript")
-    USER_TRANSCRIPT
+    @SerialName("connecting") CONNECTING,
+    @SerialName("connected") CONNECTED,
+    @SerialName("speaking") SPEAKING,
+    @SerialName("listening") LISTENING,
+    @SerialName("error") ERROR,
+    @SerialName("user_transcript") USER_TRANSCRIPT,
 }

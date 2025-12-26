@@ -22,30 +22,25 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * 录制状态
- */
+/** 录制状态 */
 enum class RecordingState {
-    IDLE,      // 空闲
+    IDLE, // 空闲
     RECORDING, // 录制中
-    PAUSED,    // 暂停
-    ERROR      // 错误
+    PAUSED, // 暂停
+    ERROR, // 错误
 }
 
-/**
- * 音频录制管理器
- * 使用AudioRecord录制PCM格式音频，支持实时流式读取
- */
+/** 音频录制管理器 使用AudioRecord录制PCM格式音频，支持实时流式读取 */
 class AudioRecordManager private constructor(private val context: Context) {
 
     companion object {
-        @Volatile
-        private var INSTANCE: AudioRecordManager? = null
+        @Volatile private var INSTANCE: AudioRecordManager? = null
 
         fun getInstance(context: Context): AudioRecordManager {
             return INSTANCE
                 ?: synchronized(this) {
-                    INSTANCE ?: AudioRecordManager(context.applicationContext).also { INSTANCE = it }
+                    INSTANCE
+                        ?: AudioRecordManager(context.applicationContext).also { INSTANCE = it }
                 }
         }
 
@@ -77,28 +72,18 @@ class AudioRecordManager private constructor(private val context: Context) {
     // 缓冲区大小
     private var bufferSize = 0
 
-    /**
-     * 检查录音权限
-     */
+    /** 检查录音权限 */
     fun hasPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
-    /**
-     * 初始化AudioRecord
-     */
+    /** 初始化AudioRecord */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun initializeAudioRecord(): Boolean {
         return try {
             // 计算缓冲区大小
-            bufferSize = AudioRecord.getMinBufferSize(
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT
-            )
+            bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
 
             if (bufferSize == AudioRecord.ERROR_BAD_VALUE || bufferSize == AudioRecord.ERROR) {
                 LogUtils.e("无法获取有效的缓冲区大小")
@@ -107,13 +92,14 @@ class AudioRecordManager private constructor(private val context: Context) {
             }
 
             // 创建AudioRecord实例
-            audioRecord = AudioRecord(
-                AUDIO_SOURCE,
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT,
-                bufferSize * 2 // 使用2倍缓冲区大小以确保稳定
-            )
+            audioRecord =
+                AudioRecord(
+                    AUDIO_SOURCE,
+                    SAMPLE_RATE,
+                    CHANNEL_CONFIG,
+                    AUDIO_FORMAT,
+                    bufferSize * 2, // 使用2倍缓冲区大小以确保稳定
+                )
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
                 LogUtils.e("AudioRecord初始化失败")
@@ -134,6 +120,7 @@ class AudioRecordManager private constructor(private val context: Context) {
 
     /**
      * 开始录制
+     *
      * @param onAudioData 音频数据回调，每次读取到数据时调用
      */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -156,70 +143,69 @@ class AudioRecordManager private constructor(private val context: Context) {
             return
         }
 
-        val record = audioRecord ?: run {
-            _error.value = "音频录制器未初始化"
-            _recordingState.value = RecordingState.ERROR
-            return
-        }
+        val record =
+            audioRecord
+                ?: run {
+                    _error.value = "音频录制器未初始化"
+                    _recordingState.value = RecordingState.ERROR
+                    return
+                }
 
         onAudioDataCallback = onAudioData
         _error.value = null
         _recordingState.value = RecordingState.RECORDING
 
         // 启动录制协程
-        recordingJob = scope.launch {
-            try {
-                record.startRecording()
-                LogUtils.d("开始录制音频")
-
-                val buffer = ByteArray(bufferSize)
-
-                while (isActive && _recordingState.value == RecordingState.RECORDING) {
-                    val bytesRead = record.read(buffer, 0, buffer.size)
-
-                    when {
-                        bytesRead == AudioRecord.ERROR_INVALID_OPERATION -> {
-                            LogUtils.e("读取音频数据失败：无效操作")
-                            break
-                        }
-                        bytesRead == AudioRecord.ERROR_BAD_VALUE -> {
-                            LogUtils.e("读取音频数据失败：无效值")
-                            break
-                        }
-                        bytesRead > 0 -> {
-                            // 复制实际读取的数据
-                            val audioData = ByteArray(bytesRead)
-                            buffer.copyInto(audioData, 0, 0, bytesRead)
-                            // 回调音频数据
-                            onAudioDataCallback?.invoke(audioData)
-                        }
-                        bytesRead == 0 -> {
-                            // 没有数据，短暂等待
-                            delay(10)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e("录制音频异常: ${e.message}")
-                _error.value = "录制失败: ${e.message}"
-                withContext(Dispatchers.Main) {
-                    _recordingState.value = RecordingState.ERROR
-                }
-            } finally {
+        recordingJob =
+            scope.launch {
                 try {
-                    if (record.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                        record.stop()
+                    record.startRecording()
+                    LogUtils.d("开始录制音频")
+
+                    val buffer = ByteArray(bufferSize)
+
+                    while (isActive && _recordingState.value == RecordingState.RECORDING) {
+                        val bytesRead = record.read(buffer, 0, buffer.size)
+
+                        when {
+                            bytesRead == AudioRecord.ERROR_INVALID_OPERATION -> {
+                                LogUtils.e("读取音频数据失败：无效操作")
+                                break
+                            }
+                            bytesRead == AudioRecord.ERROR_BAD_VALUE -> {
+                                LogUtils.e("读取音频数据失败：无效值")
+                                break
+                            }
+                            bytesRead > 0 -> {
+                                // 复制实际读取的数据
+                                val audioData = ByteArray(bytesRead)
+                                buffer.copyInto(audioData, 0, 0, bytesRead)
+                                // 回调音频数据
+                                onAudioDataCallback?.invoke(audioData)
+                            }
+                            bytesRead == 0 -> {
+                                // 没有数据，短暂等待
+                                delay(10)
+                            }
+                        }
                     }
                 } catch (e: Exception) {
-                    LogUtils.e("停止录制异常: ${e.message}")
+                    LogUtils.e("录制音频异常: ${e.message}")
+                    _error.value = "录制失败: ${e.message}"
+                    withContext(Dispatchers.Main) { _recordingState.value = RecordingState.ERROR }
+                } finally {
+                    try {
+                        if (record.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                            record.stop()
+                        }
+                    } catch (e: Exception) {
+                        LogUtils.e("停止录制异常: ${e.message}")
+                    }
                 }
             }
-        }
     }
 
-    /**
-     * 停止录制
-     */
+    /** 停止录制 */
     fun stopRecording() {
         if (_recordingState.value != RecordingState.RECORDING) {
             return
@@ -238,9 +224,7 @@ class AudioRecordManager private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * 暂停录制
-     */
+    /** 暂停录制 */
     fun pauseRecording() {
         if (_recordingState.value == RecordingState.RECORDING) {
             _recordingState.value = RecordingState.PAUSED
@@ -254,9 +238,7 @@ class AudioRecordManager private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * 恢复录制
-     */
+    /** 恢复录制 */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun resumeRecording(onAudioData: (ByteArray) -> Unit) {
         if (_recordingState.value == RecordingState.PAUSED) {
@@ -264,9 +246,7 @@ class AudioRecordManager private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * 释放AudioRecord资源
-     */
+    /** 释放AudioRecord资源 */
     private fun releaseAudioRecord() {
         try {
             audioRecord?.release()
@@ -276,33 +256,22 @@ class AudioRecordManager private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * 释放所有资源
-     */
+    /** 释放所有资源 */
     fun release() {
         stopRecording()
         releaseAudioRecord()
         scope.cancel()
     }
 
-    /**
-     * 获取音频参数（供播放器使用）
-     */
+    /** 获取音频参数（供播放器使用） */
     fun getAudioParams(): AudioParams {
         return AudioParams(
             sampleRate = SAMPLE_RATE,
             channelConfig = CHANNEL_CONFIG,
-            audioFormat = AUDIO_FORMAT
+            audioFormat = AUDIO_FORMAT,
         )
     }
 }
 
-/**
- * 音频参数
- */
-data class AudioParams(
-    val sampleRate: Int,
-    val channelConfig: Int,
-    val audioFormat: Int
-)
-
+/** 音频参数 */
+data class AudioParams(val sampleRate: Int, val channelConfig: Int, val audioFormat: Int)

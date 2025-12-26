@@ -22,7 +22,8 @@ object RoutesChat {
         showBoost: Boolean,
         shouldAutoFocusInput: Boolean = true,
         isDeleted: Boolean = false,
-    ) = "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}&isDeleted=${isDeleted}"
+    ) =
+        "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}&isDeleted=${isDeleted}"
 
     /**
      * 构建语音通话页面路由路径

@@ -245,9 +245,7 @@ fun ChatPageContainer(
                     // 这里默认不自动显示，因为从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，会自动打开 BoostSheet
                     shouldShowBoostSheetOnOpen = false,
                     debugAgentIndex = currentPage,
-                    onCall = {
-                        navController.navigate(Routes.Chat.voiceCall(agent.id))
-                    }
+                    onCall = { navController.navigate(Routes.Chat.voiceCall(agent.id)) },
                 )
             }
         }

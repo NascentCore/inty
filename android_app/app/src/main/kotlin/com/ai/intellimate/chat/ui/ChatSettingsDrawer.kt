@@ -72,8 +72,8 @@ import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MyPersonaSettingsGroup
 import com.ai.intellimate.xb.navigation.Routes
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -286,7 +286,9 @@ fun ChatSettingsDrawer(
                             item =
                                 SettingsItemData.SwitchItemData(
                                     title =
-                                        stringResource(R.string.chat_settings_chat_list_full_screen),
+                                        stringResource(
+                                            R.string.chat_settings_chat_list_full_screen
+                                        ),
                                     checked = chatListFullScreen,
                                 ),
                             fontLight = true,

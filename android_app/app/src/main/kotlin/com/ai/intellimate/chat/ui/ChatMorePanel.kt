@@ -205,10 +205,7 @@ fun ChatMorePanel(
                         )
                         Spacer(Modifier.width(16.dp))
 
-                        if (BuildConfig.DEBUG) {
-
-                        } else {
-                        }
+                        if (BuildConfig.DEBUG) {} else {}
                     }
 
                     if (BuildConfig.BUILD_TYPE != NetworkConfig.BuildType.RELEASE.value) {

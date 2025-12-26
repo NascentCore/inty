@@ -5,20 +5,12 @@ import android.util.Base64
 import com.ai.intellimate.call.data.bean.CallPacket
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.ui.UiConfigs
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 
-/**
- * AI语音通话Repository实现
- * 只负责WebSocket连接和数据传输，不处理音频录制和播放
- */
+/** AI语音通话Repository实现 只负责WebSocket连接和数据传输，不处理音频录制和播放 */
 class AICallRepository(
     private val dataSource: AICallDataSource = AICallDataSource(KtorHttpClientFactory.getInstance())
 ) {
@@ -30,6 +22,7 @@ class AICallRepository(
 
     /**
      * 建立WebSocket连接（带重连机制）
+     *
      * @return 接收到的CallPacket数据流
      */
     fun call(agentId: String): Flow<CallPacket> {
@@ -42,9 +35,7 @@ class AICallRepository(
         return createReconnectableFlow(url)
     }
 
-    /**
-     * 创建可重连的Flow
-     */
+    /** 创建可重连的Flow */
     private fun createReconnectableFlow(url: String): Flow<CallPacket> = flow {
         while (shouldReconnect && reconnectAttempts < maxReconnectAttempts) {
             try {
@@ -53,9 +44,7 @@ class AICallRepository(
                 reconnectAttempts = 0 // 连接成功，重置重连次数
 
                 // 收集数据，如果Flow完成（正常或异常），会继续循环尝试重连
-                packetFlow.collect { packet ->
-                    emit(packet)
-                }
+                packetFlow.collect { packet -> emit(packet) }
 
                 // 如果Flow正常完成（没有异常），退出循环
                 if (!shouldReconnect) {
@@ -81,9 +70,7 @@ class AICallRepository(
         }
     }
 
-    /**
-     * 发送CallPacket数据
-     */
+    /** 发送CallPacket数据 */
     suspend fun sendPacket(packet: CallPacket) {
         dataSource.sendPacket(packet)
     }
@@ -95,20 +82,15 @@ class AICallRepository(
         dataSource.sendPacket(packet)
     }
 
-    /**
-     * 关闭连接
-     */
+    /** 关闭连接 */
     suspend fun closeCall() {
         LogUtils.d("关闭语音通话")
         shouldReconnect = false // 停止重连
         dataSource.close()
     }
 
-    /**
-     * 获取连接状态
-     */
+    /** 获取连接状态 */
     fun getConnectionState(): StateFlow<ConnectionState> {
         return dataSource.connectionState
     }
 }
-

@@ -6,6 +6,8 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Build
+import com.ai.intellimate.ui.UiConfigs
+import java.util.concurrent.LinkedBlockingQueue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,25 +19,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.ai.intellimate.ui.UiConfigs
-import java.util.concurrent.LinkedBlockingQueue
 
-
-/**
- * 实时音频流播放管理器
- * 使用AudioTrack实时播放PCM数据流，支持流式播放
- */
+/** 实时音频流播放管理器 使用AudioTrack实时播放PCM数据流，支持流式播放 */
 class AudioStreamPlayer private constructor() {
 
     companion object {
-        @Volatile
-        private var INSTANCE: AudioStreamPlayer? = null
+        @Volatile private var INSTANCE: AudioStreamPlayer? = null
 
         fun getInstance(): AudioStreamPlayer {
             return INSTANCE
-                ?: synchronized(this) {
-                    INSTANCE ?: AudioStreamPlayer().also { INSTANCE = it }
-                }
+                ?: synchronized(this) { INSTANCE ?: AudioStreamPlayer().also { INSTANCE = it } }
         }
     }
 
@@ -55,9 +48,8 @@ class AudioStreamPlayer private constructor() {
     private var playbackJob: Job? = null
 
     // 音频数据队列 - 使用有界队列避免内存溢出
-    private val audioDataQueue = LinkedBlockingQueue<ByteArray>(
-        UiConfigs.VoiceCall.MAX_PLAYBACK_QUEUE_SIZE
-    )
+    private val audioDataQueue =
+        LinkedBlockingQueue<ByteArray>(UiConfigs.VoiceCall.MAX_PLAYBACK_QUEUE_SIZE)
 
     // 音频参数
     private var audioParams: AudioParams? = null
@@ -65,26 +57,25 @@ class AudioStreamPlayer private constructor() {
     // 日志节流：记录上次打印警告的时间
     private var lastWarningLogTime = 0L
     private val warningLogInterval = 5000L // 5秒内最多打印一次警告
-    
+
     // 缓冲区倍数 - 增大缓冲区以减少卡顿
     private val bufferSizeMultiplier = 8
-    
+
     // 预填充阈值 - 在开始播放前需要填充的最小数据量（字节）
     private var prefillThreshold = 0
 
-    /**
-     * 初始化AudioTrack
-     */
+    /** 初始化AudioTrack */
     private fun initializeAudioTrack(params: AudioParams): Boolean {
         return try {
             audioParams = params
 
             // 计算缓冲区大小
-            val bufferSize = AudioTrack.getMinBufferSize(
-                params.sampleRate,
-                params.channelConfig,
-                params.audioFormat
-            )
+            val bufferSize =
+                AudioTrack.getMinBufferSize(
+                    params.sampleRate,
+                    params.channelConfig,
+                    params.audioFormat,
+                )
 
             if (bufferSize == AudioTrack.ERROR_BAD_VALUE || bufferSize == AudioTrack.ERROR) {
                 LogUtils.e("无法获取有效的缓冲区大小")
@@ -98,35 +89,36 @@ class AudioStreamPlayer private constructor() {
             prefillThreshold = actualBufferSize / 2
 
             // 创建AudioTrack实例
-            audioTrack = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                AudioTrack.Builder()
-                    .setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build()
+            audioTrack =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .build()
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setSampleRate(params.sampleRate)
+                                .setEncoding(params.audioFormat)
+                                .setChannelMask(params.channelConfig)
+                                .build()
+                        )
+                        .setBufferSizeInBytes(actualBufferSize)
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .build()
+                } else {
+                    @Suppress("DEPRECATION")
+                    AudioTrack(
+                        AudioManager.STREAM_MUSIC,
+                        params.sampleRate,
+                        params.channelConfig,
+                        params.audioFormat,
+                        actualBufferSize,
+                        AudioTrack.MODE_STREAM,
                     )
-                    .setAudioFormat(
-                        AudioFormat.Builder()
-                            .setSampleRate(params.sampleRate)
-                            .setEncoding(params.audioFormat)
-                            .setChannelMask(params.channelConfig)
-                            .build()
-                    )
-                    .setBufferSizeInBytes(actualBufferSize)
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                AudioTrack(
-                    AudioManager.STREAM_MUSIC,
-                    params.sampleRate,
-                    params.channelConfig,
-                    params.audioFormat,
-                    actualBufferSize,
-                    AudioTrack.MODE_STREAM
-                )
-            }
+                }
 
             if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
                 LogUtils.e("AudioTrack初始化失败")
@@ -135,7 +127,9 @@ class AudioStreamPlayer private constructor() {
                 return false
             }
 
-            LogUtils.d("AudioTrack初始化成功，缓冲区大小: $actualBufferSize (最小: $bufferSize, 倍数: $bufferSizeMultiplier)")
+            LogUtils.d(
+                "AudioTrack初始化成功，缓冲区大小: $actualBufferSize (最小: $bufferSize, 倍数: $bufferSizeMultiplier)"
+            )
             true
         } catch (e: Exception) {
             LogUtils.e("初始化AudioTrack异常: ${e.message}")
@@ -147,6 +141,7 @@ class AudioStreamPlayer private constructor() {
 
     /**
      * 开始播放
+     *
      * @param params 音频参数（需要与录制参数一致）
      */
     fun startPlayback(params: AudioParams) {
@@ -163,11 +158,13 @@ class AudioStreamPlayer private constructor() {
             }
         }
 
-        val track = audioTrack ?: run {
-            _error.value = "音频播放器未初始化"
-            _playbackState.value = PlaybackState.ERROR
-            return
-        }
+        val track =
+            audioTrack
+                ?: run {
+                    _error.value = "音频播放器未初始化"
+                    _playbackState.value = PlaybackState.ERROR
+                    return
+                }
 
         // 清空队列
         audioDataQueue.clear()
@@ -175,90 +172,94 @@ class AudioStreamPlayer private constructor() {
         _playbackState.value = PlaybackState.PLAYING
 
         // 启动播放协程
-        playbackJob = scope.launch {
-            try {
-                // 预填充缓冲区：在开始播放前先填充一些数据，避免启动时卡顿
-                var prefillBytes = 0
-                val prefillStartTime = System.currentTimeMillis()
-                val prefillTimeout = 2000L // 预填充超时时间 2 秒
-                
-                while (prefillBytes < prefillThreshold && 
-                       isActive && 
-                       _playbackState.value == PlaybackState.PLAYING &&
-                       (System.currentTimeMillis() - prefillStartTime) < prefillTimeout) {
-                    try {
-                        // 使用 poll 非阻塞方式获取数据，避免长时间等待
-                        val audioData = audioDataQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)
-                        if (audioData != null) {
-                            val bytesWritten = writeAudioDataWithRetry(track, audioData)
-                            if (bytesWritten > 0) {
-                                prefillBytes += bytesWritten
-                            }
-                        }
-                    } catch (e: InterruptedException) {
-                        break
-                    } catch (e: Exception) {
-                        LogUtils.w("预填充音频数据异常: ${e.message}")
-                        break
-                    }
-                }
-                
-                if (prefillBytes > 0) {
-                    LogUtils.d("预填充完成，已填充: $prefillBytes 字节")
-                }
-                
-                // 开始播放
-                track.play()
-                LogUtils.d("开始播放音频流")
-
-                // 主播放循环：持续从队列中读取并播放音频数据
-                while (isActive && _playbackState.value == PlaybackState.PLAYING) {
-                    try {
-                        // 从队列中获取音频数据（阻塞等待，但设置超时以避免永久阻塞）
-                        val audioData = audioDataQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)
-                        if (audioData != null) {
-                            // 使用重试机制写入音频数据
-                            writeAudioDataWithRetry(track, audioData)
-                        } else {
-                            // 队列为空时，检查 AudioTrack 状态，确保播放不中断
-                            // 如果 AudioTrack 还有数据在播放，继续循环等待新数据
-                            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                                LogUtils.w("AudioTrack 播放状态异常，停止播放")
-                                break
-                            }
-                        }
-                    } catch (e: InterruptedException) {
-                        // 队列poll被中断，正常退出
-                        break
-                    } catch (e: Exception) {
-                        LogUtils.e("播放音频异常: ${e.message}")
-                        _error.value = "播放失败: ${e.message}"
-                        withContext(Dispatchers.Main) {
-                            _playbackState.value = PlaybackState.ERROR
-                        }
-                        break
-                    }
-                }
-            } catch (e: Exception) {
-                LogUtils.e("播放音频流异常: ${e.message}")
-                _error.value = "播放失败: ${e.message}"
-                withContext(Dispatchers.Main) {
-                    _playbackState.value = PlaybackState.ERROR
-                }
-            } finally {
+        playbackJob =
+            scope.launch {
                 try {
-                    if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                        track.stop()
+                    // 预填充缓冲区：在开始播放前先填充一些数据，避免启动时卡顿
+                    var prefillBytes = 0
+                    val prefillStartTime = System.currentTimeMillis()
+                    val prefillTimeout = 2000L // 预填充超时时间 2 秒
+
+                    while (
+                        prefillBytes < prefillThreshold &&
+                            isActive &&
+                            _playbackState.value == PlaybackState.PLAYING &&
+                            (System.currentTimeMillis() - prefillStartTime) < prefillTimeout
+                    ) {
+                        try {
+                            // 使用 poll 非阻塞方式获取数据，避免长时间等待
+                            val audioData =
+                                audioDataQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)
+                            if (audioData != null) {
+                                val bytesWritten = writeAudioDataWithRetry(track, audioData)
+                                if (bytesWritten > 0) {
+                                    prefillBytes += bytesWritten
+                                }
+                            }
+                        } catch (e: InterruptedException) {
+                            break
+                        } catch (e: Exception) {
+                            LogUtils.w("预填充音频数据异常: ${e.message}")
+                            break
+                        }
+                    }
+
+                    if (prefillBytes > 0) {
+                        LogUtils.d("预填充完成，已填充: $prefillBytes 字节")
+                    }
+
+                    // 开始播放
+                    track.play()
+                    LogUtils.d("开始播放音频流")
+
+                    // 主播放循环：持续从队列中读取并播放音频数据
+                    while (isActive && _playbackState.value == PlaybackState.PLAYING) {
+                        try {
+                            // 从队列中获取音频数据（阻塞等待，但设置超时以避免永久阻塞）
+                            val audioData =
+                                audioDataQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)
+                            if (audioData != null) {
+                                // 使用重试机制写入音频数据
+                                writeAudioDataWithRetry(track, audioData)
+                            } else {
+                                // 队列为空时，检查 AudioTrack 状态，确保播放不中断
+                                // 如果 AudioTrack 还有数据在播放，继续循环等待新数据
+                                if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                                    LogUtils.w("AudioTrack 播放状态异常，停止播放")
+                                    break
+                                }
+                            }
+                        } catch (e: InterruptedException) {
+                            // 队列poll被中断，正常退出
+                            break
+                        } catch (e: Exception) {
+                            LogUtils.e("播放音频异常: ${e.message}")
+                            _error.value = "播放失败: ${e.message}"
+                            withContext(Dispatchers.Main) {
+                                _playbackState.value = PlaybackState.ERROR
+                            }
+                            break
+                        }
                     }
                 } catch (e: Exception) {
-                    LogUtils.e("停止播放异常: ${e.message}")
+                    LogUtils.e("播放音频流异常: ${e.message}")
+                    _error.value = "播放失败: ${e.message}"
+                    withContext(Dispatchers.Main) { _playbackState.value = PlaybackState.ERROR }
+                } finally {
+                    try {
+                        if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                            track.stop()
+                        }
+                    } catch (e: Exception) {
+                        LogUtils.e("停止播放异常: ${e.message}")
+                    }
                 }
             }
-        }
     }
 
     /**
      * 写入音频数据到 AudioTrack，支持部分写入重试
+     *
      * @param track AudioTrack 实例
      * @param audioData 要写入的音频数据
      * @return 实际写入的字节数
@@ -268,12 +269,16 @@ class AudioStreamPlayer private constructor() {
         var totalWritten = 0
         val maxRetries = 3
         var retryCount = 0
-        
-        while (offset < audioData.size && retryCount < maxRetries && _playbackState.value == PlaybackState.PLAYING) {
+
+        while (
+            offset < audioData.size &&
+                retryCount < maxRetries &&
+                _playbackState.value == PlaybackState.PLAYING
+        ) {
             try {
                 val remaining = audioData.size - offset
                 val bytesWritten = track.write(audioData, offset, remaining)
-                
+
                 when {
                     bytesWritten == AudioTrack.ERROR_INVALID_OPERATION -> {
                         LogUtils.e("写入音频数据失败：无效操作")
@@ -320,17 +325,17 @@ class AudioStreamPlayer private constructor() {
                 }
             }
         }
-        
+
         if (offset < audioData.size) {
             LogUtils.w("音频数据未完全写入，期望: ${audioData.size}, 实际: $totalWritten")
         }
-        
+
         return totalWritten
     }
 
     /**
-     * 添加音频数据到播放队列
-     * 优化：使用 offer 非阻塞方式，避免阻塞主线程
+     * 添加音频数据到播放队列 优化：使用 offer 非阻塞方式，避免阻塞主线程
+     *
      * @param audioData PCM格式的音频数据
      */
     fun addAudioData(audioData: ByteArray) {
@@ -348,14 +353,18 @@ class AudioStreamPlayer private constructor() {
                         LogUtils.w("添加音频数据失败，队列可能已满")
                     }
                 }
-                
+
                 // 监控队列大小，超过警告阈值时记录日志（带节流）
                 val queueSize = audioDataQueue.size
                 val queueUsage = queueSize.toFloat() / UiConfigs.VoiceCall.MAX_PLAYBACK_QUEUE_SIZE
                 val currentTime = System.currentTimeMillis()
-                if (queueUsage >= UiConfigs.VoiceCall.QUEUE_WARNING_THRESHOLD && 
-                    (currentTime - lastWarningLogTime) >= warningLogInterval) {
-                    LogUtils.w("播放队列使用率较高: ${(queueUsage * 100).toInt()}% ($queueSize/${UiConfigs.VoiceCall.MAX_PLAYBACK_QUEUE_SIZE})")
+                if (
+                    queueUsage >= UiConfigs.VoiceCall.QUEUE_WARNING_THRESHOLD &&
+                        (currentTime - lastWarningLogTime) >= warningLogInterval
+                ) {
+                    LogUtils.w(
+                        "播放队列使用率较高: ${(queueUsage * 100).toInt()}% ($queueSize/${UiConfigs.VoiceCall.MAX_PLAYBACK_QUEUE_SIZE})"
+                    )
                     lastWarningLogTime = currentTime
                 }
             } catch (e: Exception) {
@@ -364,9 +373,7 @@ class AudioStreamPlayer private constructor() {
         }
     }
 
-    /**
-     * 停止播放
-     */
+    /** 停止播放 */
     fun stopPlayback() {
         if (_playbackState.value != PlaybackState.PLAYING) {
             return
@@ -387,9 +394,7 @@ class AudioStreamPlayer private constructor() {
         }
     }
 
-    /**
-     * 暂停播放
-     */
+    /** 暂停播放 */
     fun pausePlayback() {
         if (_playbackState.value == PlaybackState.PLAYING) {
             _playbackState.value = PlaybackState.PAUSED
@@ -403,18 +408,14 @@ class AudioStreamPlayer private constructor() {
         }
     }
 
-    /**
-     * 恢复播放
-     */
+    /** 恢复播放 */
     fun resumePlayback() {
         if (_playbackState.value == PlaybackState.PAUSED && audioParams != null) {
             startPlayback(audioParams!!)
         }
     }
 
-    /**
-     * 释放AudioTrack资源
-     */
+    /** 释放AudioTrack资源 */
     private fun releaseAudioTrack() {
         try {
             audioTrack?.release()
@@ -424,13 +425,10 @@ class AudioStreamPlayer private constructor() {
         }
     }
 
-    /**
-     * 释放所有资源
-     */
+    /** 释放所有资源 */
     fun release() {
         stopPlayback()
         releaseAudioTrack()
         scope.cancel()
     }
 }
-
