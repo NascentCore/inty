@@ -155,7 +155,7 @@ fun ChatInput(
                     val safeSelection = inputSelection.value.coerceIn(0, currentText.length)
                     val newText =
                         buildString(currentText.length + templateLength) {
-                            append(currentText.substring(0, safeSelection))
+                            append(currentText.take(safeSelection))
                             append(SCENE_ACTION_TEMPLATE)
                             append(currentText.substring(safeSelection))
                         }
