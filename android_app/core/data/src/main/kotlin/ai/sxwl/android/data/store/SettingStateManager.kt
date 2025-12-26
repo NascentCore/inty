@@ -43,6 +43,10 @@ object SettingStateManager {
     private val _chatModelIdFlow = MutableStateFlow(IntySetting.getChatModelId())
     val chatModelIdFlow: StateFlow<String> = _chatModelIdFlow.asStateFlow()
 
+    // 消息列表是否全屏状态
+    private val _chatListFullScreenFlow = MutableStateFlow(IntySetting.isChatListFullScreen())
+    val chatListFullScreenFlow: StateFlow<Boolean> = _chatListFullScreenFlow.asStateFlow()
+
     // 标记是否已经初始化过（避免重复初始化）
     @Volatile private var initialized = false
 
@@ -167,5 +171,11 @@ object SettingStateManager {
     fun updateChatModelId(modelId: String) {
         IntySetting.setChatModelId(modelId)
         _chatModelIdFlow.value = modelId
+    }
+
+    /** 更新消息列表是否全屏状态 */
+    fun updateChatListFullScreen(fullScreen: Boolean) {
+        IntySetting.setChatListFullScreen(fullScreen)
+        _chatListFullScreenFlow.value = fullScreen
     }
 }

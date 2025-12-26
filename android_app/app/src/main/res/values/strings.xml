@@ -229,6 +229,7 @@
     <string name="chat_settings_show_keep_talking">Show \"Keep Talking\" button</string>
     <string name="chat_settings_auto_play_voice">Auto-play voice messages</string>
     <string name="chat_settings_auto_play_animation">Auto-play animated BGs</string>
+    <string name="chat_settings_chat_list_full_screen">Full-screen message list</string>
     <string name="chat_settings_show_scene_action_button">Show action button</string>
     <string name="chat_settings_font_size">Message font size</string>
     <string name="chat_settings_font_size_value">%1$d sp</string>

@@ -72,8 +72,8 @@ import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.MyPersonaSettingsGroup
 import com.ai.intellimate.xb.navigation.Routes
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -136,6 +136,9 @@ fun ChatSettingsDrawer(
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
     val chatFontSize by SettingStateManager.chatFontSizeFlow.collectAsState()
     val chatModelId by SettingStateManager.chatModelIdFlow.collectAsState()
+
+    // 消息列表是否全屏全局设置
+    val chatListFullScreen by SettingStateManager.chatListFullScreenFlow.collectAsState()
 
     val horizontalPadding = 16
     val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
@@ -273,6 +276,34 @@ fun ChatSettingsDrawer(
                                 )
                                 SettingStateManager.updateShowKeepTalking(enabled)
                                 onKeepTalkingChange(enabled)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
+                        // 消息列表是否全屏开关
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title =
+                                        stringResource(R.string.chat_settings_chat_list_full_screen),
+                                    checked = chatListFullScreen,
+                                ),
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "toggle_chat_list_full_screen",
+                                        "enabled" to enabled,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                SettingStateManager.updateChatListFullScreen(enabled)
                             },
                         )
 
