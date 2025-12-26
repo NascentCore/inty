@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -73,6 +75,7 @@ fun ChatMorePanel(
     onDismiss: () -> Unit,
     onHeightChange: (Dp) -> Unit,
     onReset: () -> Unit,
+    onCall: () -> Unit,
     windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
     if (!visible) {
@@ -201,6 +204,23 @@ fun ChatMorePanel(
                             },
                         )
                         Spacer(Modifier.width(16.dp))
+
+                        if (BuildConfig.DEBUG) {
+
+                        } else {
+                        }
+                    }
+
+                    if (BuildConfig.BUILD_TYPE != NetworkConfig.BuildType.RELEASE.value) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Spacer(Modifier.width(16.dp))
+                            MorePanelItem(
+                                icon = R.drawable.icon_report,
+                                text = "Call",
+                                onClick = onCall,
+                            )
+                            Spacer(Modifier.width(16.dp))
+                        }
                     }
                 }
             }

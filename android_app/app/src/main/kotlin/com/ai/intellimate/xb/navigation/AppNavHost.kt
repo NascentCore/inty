@@ -10,12 +10,15 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.SplashLoginUI
 import com.ai.intellimate.agent.info.AgentInfoViewModel
+import com.ai.intellimate.call.VoiceCallScreen
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 
 /**
@@ -83,6 +86,21 @@ fun AppNavHost(
                 mainViewModel = mainViewModel,
                 viewModelFactory = factory,
             )
+        }
+
+        // 定义语音通话页面路由
+        composable(
+            route = Routes.Chat.VoiceCall,
+            arguments = listOf(navArgument("agentId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val agentId = backStackEntry.arguments?.getString("agentId")
+
+            if (agentId != null) {
+                VoiceCallScreen(
+                    onBack = { navController.popBackStack() },
+                    agentId = agentId
+                )
+            }
         }
 
         homeGraph(navController, agentInfoViewModel)

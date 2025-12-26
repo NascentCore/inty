@@ -41,6 +41,7 @@ internal fun ChatScreen(
     chatViewModel: ChatViewModel,
     showBackButton: Boolean = false,
     shouldAutoFocusInput: Boolean = true,
+    onCall: () -> Unit = {},
     shouldShowBoostSheetOnOpen: Boolean = false,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
@@ -76,6 +77,7 @@ internal fun ChatScreen(
             onBack = { navController.popBackStack() },
             shouldShowBoostSheetOnOpen = shouldShowBoostSheetOnOpen,
             shouldAutoFocusInput = shouldAutoFocusInput,
+            onCall = onCall,
         )
 
         // 反馈请求对话框

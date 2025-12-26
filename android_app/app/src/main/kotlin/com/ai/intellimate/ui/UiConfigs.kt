@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui
 
+import ai.sxwl.android.data.store.IntySetting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -272,6 +273,29 @@ object UiConfigs {
         /** 帮助中心链接 */
         const val HelpCenter =
             "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
+
+        /**
+         * 语音通话WebSocket URL
+         * 注意：此URL需要根据实际后端服务地址配置
+         * 格式：wss://domain.com/voice/ws?agentId={agentId}
+         */
+        fun getVoiceCallWebSocketUrl(agentId: String): String {
+            // TODO: 替换为实际的WebSocket服务器地址
+            return "wss://dev.inty.sxwl.ai/api/v1/live-chat/$agentId?token=${IntySetting.getCurToken()}"
+        }
+    }
+
+    /** 语音通话配置 - 适用于实时语音通话的队列大小、缓冲区等设置 */
+    object VoiceCall {
+        /** 播放队列最大大小（音频数据包数量） - 约3秒的音频数据（24kHz，16bit，单声道）
+         *  增大队列以提高播放流畅度，减少因网络波动导致的卡顿 */
+        const val MAX_PLAYBACK_QUEUE_SIZE = 75
+
+        /** 发送队列最大大小（音频数据包数量） - 约1秒的音频数据（16kHz，16bit，单声道） */
+        const val MAX_SEND_QUEUE_SIZE = 30
+
+        /** 队列大小警告阈值（百分比） - 当队列使用率超过此值时记录警告日志 */
+        const val QUEUE_WARNING_THRESHOLD = 0.8f // 80%
     }
 
     /** Explore 页面配置 - 适用于发现页面的分页、预加载、滚动行为等设置 */

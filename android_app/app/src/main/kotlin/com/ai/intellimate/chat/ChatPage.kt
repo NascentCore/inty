@@ -113,6 +113,7 @@ internal fun ChatPage(
     shouldAutoFocusInput: Boolean = true,
     onInputFocusChange: (Boolean) -> Unit = {},
     onKeyboardVisible: (Boolean) -> Unit = {},
+    onCall: () -> Unit = {},
     pageSourceOverride: String? = null, // 如果提供，则使用此 pageSource（通常来自 ChatActivity）
     isGuideVisible: Boolean = false,
     shouldShowBoostSheetOnOpen: Boolean = false,
@@ -955,6 +956,7 @@ internal fun ChatPage(
                     }
                 }
             },
+            onCall = onCall,
             windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets(),
         )
 

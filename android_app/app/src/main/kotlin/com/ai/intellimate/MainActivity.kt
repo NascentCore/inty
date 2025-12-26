@@ -72,6 +72,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.KoinApplication
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -299,6 +300,18 @@ class MainActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
+
+        KoinApplication(
+            application = {
+
+            }
+        ) {
+            ComposeUI()
+        }
+    }
+
+    @Composable
+    private fun ComposeUI() {
         // 直接使用ViewModel的StateFlow，实现响应式UI更新
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
@@ -377,40 +390,6 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        //        when {
-        //            !isLoggedIn -> {
-        //                // 用户未登录，显示登录界面
-        //                SplashLoginUI(mainViewModel = mainViewModel)
-        //            }
-        //
-        //            showSettings -> {
-        //                // 显示设置界面
-        //                com.ai.intellimate.settings.SettingScreen(
-        //                    modifier =
-        //                        Modifier.fillMaxSize()
-        //
-        // .background(ai.sxwl.android.design.theme.HeartColor.primaryColor),
-        //                    onBack = { mainViewModel.hideSettings() },
-        //                    onLogout = { isDelete ->
-        //                        mainViewModel.logout()
-        //                        chatViewModel.clearAllData()
-        //                        val str =
-        //                            if (isDelete) getString(R.string.delete_account_successfully)
-        //                            else getString(R.string.logout_successfully)
-        //                        ai.sxwl.android.utils.ToastUtils.showShort(str)
-        //                    },
-        //                )
-        //            }
-        //
-        //            else -> {
-        //                // 用户已登录，显示主界面
-        //                HomeScreen(
-        //                    modifier = Modifier.fillMaxSize(),
-        //                    mainViewModel = mainViewModel,
-        //                    viewModelFactory = defaultViewModelProviderFactory,
-        //                )
-        //            }
-        //        }
         val page = if (isLoggedIn) Routes.HomeTab else Routes.SplashLogin
         // 设计决策：在 MainActivity 中创建 NavController 并传递给 AppNavHost
         // 原因：需要在点击庆祝按钮后导航到随机圣诞角色的聊天页面

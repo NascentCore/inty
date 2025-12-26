@@ -130,4 +130,15 @@ dependencies {
     // ===== 背景/前景虚化库 =====
     // https://chrisbanes.github.io/haze/latest/usage/
     implementation(libs.haze)
+
+    // ===== Websockets =====
+    implementation(libs.bundles.websockets)
+
+    // ===== 权限管理 =====
+    implementation(libs.accompanist.permissions)
+
+    // ===== 依赖注入 =====
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.androidx.navigation)
 }
