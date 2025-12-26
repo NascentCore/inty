@@ -17,6 +17,7 @@ from typing_extensions import deprecated
 
 from app import models, schemas
 from app.core.agent.agent import agent_manager
+from app.core.user_privilege.superuser_check import is_superuser
 from app.core.agent.prompt_template import (
     has_template_variable,
     render_prompt_jinja2_template,
@@ -514,9 +515,13 @@ def get_deterministic_random_order(sort_seed: str):
     return func.md5(func.concat(models.Agent.id, sort_seed))
 
 
-def _select_agents_with_sizes() -> select:
+def _select_agents_with_sizes(*, include_private: bool) -> select:
     avatar_resource = models.Resource.__table__.alias("avatar_resource")
     background_resource = models.Resource.__table__.alias("background_resource")
+    conditions = [models.Agent.deleted_at.is_(None)]
+    if not include_private:
+        # Public ones, users can create private agents
+        conditions.append(models.Agent.visibility == AgentVisibility.PUBLIC)
     return (
         select(
             models.Agent,
@@ -537,12 +542,7 @@ def _select_agents_with_sizes() -> select:
             background_resource,
             background_resource.c.url == models.Agent.background,
         )
-        .where(
-            # Public ones, users can create private agents
-            models.Agent.visibility == AgentVisibility.PUBLIC,
-            # Not deleted
-            models.Agent.deleted_at.is_(None),
-        )
+        .where(*conditions)
     )
 
 
@@ -562,6 +562,8 @@ async def get_balanced_score_based_agents(
     page_size: int,
     sort_seed: str = "",
     current_user_id: Optional[str] = None,  # pylint: disable=unused-argument
+    *,
+    include_private: bool = False,
 ) -> List[models.Agent]:
     """
     简化的平衡权重排序：score * 2 + random(0-100)
@@ -571,7 +573,7 @@ async def get_balanced_score_based_agents(
 
     # 平衡权重排序查询，同时获取头像和背景图的尺寸信息
     query = (
-        _select_agents_with_sizes()
+        _select_agents_with_sizes(include_private=include_private)
         .order_by(
             (
                 # score * 2 + random(0-100)
@@ -605,6 +607,10 @@ async def get_recommended_agents_paginated(
 ) -> schemas.PaginationData[schemas.Agent]:
     """
     获取推荐的AI角色列表（分页版本）
+    
+    注意：该函数返回所有符合条件的角色，包括请求用户自己创建的角色。
+    这是预期行为，不会过滤掉用户自己创建的角色。
+    如需仅获取其他用户创建的角色，请使用其他接口或添加额外的过滤条件。
     """
     try:
         # 验证参数
@@ -617,14 +623,13 @@ async def get_recommended_agents_paginated(
                 status_code=400, detail="Page size parameter must be between 1-100"
             )
 
+        include_private = is_superuser(current_user)
+
         # 构建基础查询条件
-        base_query = select(models.Agent).where(
-            and_(
-                models.Agent.visibility == AgentVisibility.PUBLIC,
-                models.Agent.deleted_at.is_(None),
-                # models.Agent.status == AgentStatus.APPROVED
-            )
-        )
+        base_conditions = [models.Agent.deleted_at.is_(None)]
+        if not include_private:
+            base_conditions.append(models.Agent.visibility == AgentVisibility.PUBLIC)
+        base_query = select(models.Agent).where(and_(*base_conditions))
 
         # 获取总数
         count_query = select(func.count()).select_from(base_query.subquery())
@@ -635,7 +640,12 @@ async def get_recommended_agents_paginated(
         if sort_by == AgentSortOption.SCORE_BASED_RANDOM:
             # 使用新的平衡权重排序算法
             agents_list = await get_balanced_score_based_agents(
-                db, page, page_size, sort_seed, current_user.id
+                db,
+                page,
+                page_size,
+                sort_seed,
+                current_user.id,
+                include_private=include_private,
             )
             # 保持使用原来的总数计算（基于基础查询条件）
         else:
@@ -658,7 +668,7 @@ async def get_recommended_agents_paginated(
 
             # 获取分页数据，同时获取头像和背景图的尺寸信息
             data_query = (
-                _select_agents_with_sizes()
+                _select_agents_with_sizes(include_private=include_private)
                 .offset(skip)
                 .limit(page_size)
                 .order_by(*order_by_clauses)
