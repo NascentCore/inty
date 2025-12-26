@@ -164,6 +164,7 @@ fun ExploreCharacterCard(
     shouldPlayAnimated: Boolean = false,
 ) {
     val context = LocalContext.current
+    val newTagLabel = stringResource(com.ai.intellimate.R.string.explore_tag_new_label)
 
     // 缓存渐变画笔
     val gradientBrush = remember {
@@ -185,6 +186,17 @@ fun ExploreCharacterCard(
 
     // 缓存过滤后的标签
     val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
+    val isNewTagVisible = remember(agentInfo.createdAt) { shouldShowNewTag(agentInfo.createdAt) }
+    val displayTags =
+        remember(filteredTags, isNewTagVisible, newTagLabel) {
+            if (!isNewTagVisible) {
+                filteredTags
+            } else {
+                val dedupedTags =
+                    filteredTags.filterNot { it.trim().equals(newTagLabel, ignoreCase = true) }
+                listOf(newTagLabel) + dedupedTags
+            }
+        }
     val isVip = remember(filteredTags) { filteredTags.any { normalizeTag(it) == "vip" } }
     val favoriteButtonTopPadding =
         remember(isVip) {
@@ -472,12 +484,12 @@ fun ExploreCharacterCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            if (filteredTags.isNotEmpty()) {
+            if (displayTags.isNotEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().height(CardConfig.TagHeight)) {
                     IgnoreSystemFontScaling {
                         SmartTagsLayout(
                             modifier = Modifier.matchParentSize(),
-                            tags = filteredTags,
+                            tags = displayTags,
                             isCardTag = true,
                         )
                     }
