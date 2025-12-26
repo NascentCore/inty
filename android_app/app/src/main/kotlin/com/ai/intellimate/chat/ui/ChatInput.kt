@@ -45,6 +45,7 @@ import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.IntySmallTextField
+import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 
@@ -70,8 +71,9 @@ fun ChatInput(
     // Show scene action button全局设置
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
 
-    val horizontalPadding = 16.dp
-    val topPadding = 16.dp
+    val horizontalPadding = UiConfigs.ChatPage.ChatInput.HorizontalPadding
+    val topPadding = UiConfigs.ChatPage.ChatInput.TopPadding
+    val cornerRadius = UiConfigs.ChatPage.ChatInput.CornerRadius
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
@@ -95,13 +97,23 @@ fun ChatInput(
                     bottom = bottomPadding,
                 )
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(horizontalPadding))
+                .clip(RoundedCornerShape(cornerRadius))
                 .background(AppColors.DarkPurpleOverlay60)
     ) {
         // 主输入区域
-        Box(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).wrapContentHeight()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(
+                    min = UiConfigs.ChatPage.ChatInput.MinHeight,
+                    max = UiConfigs.ChatPage.ChatInput.MaxHeight
+                )
+                .wrapContentHeight()
+        ) {
             IntySmallTextField(
-                modifier = Modifier.padding(end = TrailingControlsPadding).align(Alignment.Center),
+                modifier = Modifier
+                    .padding(end = UiConfigs.ChatPage.ChatInput.TrailingControlsPadding)
+                    .align(Alignment.Center),
                 value = inputData.value,
                 singleLine = false,
                 placeholder =
@@ -137,11 +149,10 @@ fun ChatInput(
                 focusRequester = focusRequester,
             )
 
-            // 视觉上保持与底部 8.dp 的坚决，这样初始，只有一行输入时，其位置位于
+            // 视觉上保持与底部一定的间距，这样初始，只有一行输入时，其位置位于
             // 输入框垂直方向中央位置。增加输入行数，则位置不变。
-            //            val verticalPadding = 16.dp
-            val verticalPadding = 13.dp
-            val rightPadding = 8.dp
+            val verticalPadding = UiConfigs.ChatPage.ChatInput.VerticalPadding
+            val rightPadding = UiConfigs.ChatPage.ChatInput.ButtonRightPadding
             // 发送/更多按钮区域
             val onSceneActionClick: () -> Unit = {
                 if (!isKeyboardVisible) {
@@ -165,7 +176,7 @@ fun ChatInput(
                 }
             }
 
-            val buttonSize = 30.dp
+            val buttonSize = UiConfigs.ChatPage.ChatInput.ButtonSize
             Row(
                 modifier =
                     Modifier.align(Alignment.BottomEnd)
@@ -174,7 +185,7 @@ fun ChatInput(
                             top = verticalPadding,
                             bottom = verticalPadding,
                         ),
-                horizontalArrangement = Arrangement.spacedBy(SceneActionButtonSpacing),
+                horizontalArrangement = Arrangement.spacedBy(UiConfigs.ChatPage.ChatInput.SceneActionButtonSpacing),
                 verticalAlignment = Alignment.Bottom,
             ) {
                 if (showSceneActionButton) {
@@ -260,8 +271,6 @@ private fun SceneActionQuickButton(
     }
 }
 
-private val TrailingControlsPadding = 104.dp
-private val SceneActionButtonSpacing = 6.dp
 private val NameDelimiterRegex = "\\s+".toRegex()
 private const val SCENE_ACTION_TEMPLATE = "()"
 private const val CHAT_INPUT_MAX_LENGTH = 500
