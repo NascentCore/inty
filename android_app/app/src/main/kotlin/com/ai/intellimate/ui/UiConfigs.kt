@@ -586,9 +586,38 @@ object UiConfigs {
             /** 聊天输入框底部空白边距 - 输入框与键盘或更多面板之间的间距 */
             val BottomSpacerHeight = 6.dp
             
-            /** 聊天输入框估算高度 - 用于计算keeptalking 悬浮按钮位置
-             */
+            /** 聊天输入框估算高度 - 用于计算keeptalking 悬浮按钮位置 */
             val EstimatedHeight = 120.dp
+            
+            /** 聊天输入框水平方向内边距 - 输入框左右两侧的内边距 */
+            val HorizontalPadding = 16.dp
+            
+            /** 聊天输入框顶部内边距 - 输入框顶部的内边距 */
+            val TopPadding = 12.dp
+            
+            /** 聊天输入框圆角半径 - 与水平内边距保持一致 */
+            val CornerRadius = HorizontalPadding
+            
+            /** 输入区域最小高度 - 输入框主区域的最小高度 */
+            val MinHeight = 48.dp
+            
+            /** 输入区域最大高度 - 输入框主区域的最大高度（基于最大行数计算） */
+            val MaxHeight = 120.dp
+            
+            /** 输入区域垂直内边距 - 输入框内部文本区域的上下内边距 */
+            val VerticalPadding = 10.dp
+            
+            /** 按钮区域右侧内边距 - 发送/更多按钮距离右侧的距离 */
+            val ButtonRightPadding = 8.dp
+            
+            /** 按钮大小 - 发送/更多按钮的尺寸 */
+            val ButtonSize = 30.dp
+            
+            /** 尾部控件内边距 - 输入框文本区域距离右侧按钮区域的距离 */
+            val TrailingControlsPadding = 104.dp
+            
+            /** 场景操作按钮间距 - 场景操作按钮与发送/更多按钮之间的间距 */
+            val SceneActionButtonSpacing = 6.dp
         }
 
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
