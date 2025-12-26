@@ -761,7 +761,7 @@ internal fun ChatPage(
                                 }
                             } else {
                                 val effectiveBottomPadding =
-                                    if (showMorePanel) morePanelHeight else bottomPadding
+                                    if (showMorePanel) morePanelHeight + ChatInputBottomSpacerHeight else bottomPadding
 
                                 CompositionLocalProvider(
                                     LocalDensity provides
@@ -849,7 +849,7 @@ internal fun ChatPage(
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
-                    if (showMorePanel) morePanelHeight else bottomPadding
+                    if (showMorePanel) morePanelHeight + ChatInputBottomSpacerHeight else bottomPadding
                 val imeHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
                 val buttonBottomOffset =
                     if (showBackButton) {
