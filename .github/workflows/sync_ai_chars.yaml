@@ -30,5 +30,207 @@ jobs:
         env:
           PYTHONPATH: .
         run: |
-          python scripts/sync_agents_dev_to_prod/sync_agents.py --config config.yaml.example
-          python scripts/sync_character_themes_dev_to_prod/sync_character_themes.py --config config.yaml.example
+          set -euo pipefail
+          python scripts/sync_agents_dev_to_prod/sync_agents.py --config config.yaml.example 2>&1 | tee sync_agents.log
+          python scripts/sync_character_themes_dev_to_prod/sync_character_themes.py --config config.yaml.example 2>&1 | tee sync_character_themes.log
+
+      - name: Write sync summary
+        if: ${{ always() }}
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import re
+          from dataclasses import dataclass
+          from pathlib import Path
+
+
+          @dataclass(frozen=True)
+          class Item:
+              name: str
+              item_id: str
+              extra: str = ""
+
+              def to_markdown_bullet(self) -> str:
+                  extra = f" — {self.extra}" if self.extra else ""
+                  return f"- {self.name} (`{self.item_id}`){extra}"
+
+
+          def read_lines(path: Path) -> list[str]:
+              if not path.exists():
+                  return []
+              return path.read_text(encoding="utf-8", errors="replace").splitlines()
+
+
+          def parse_agents(lines: list[str]) -> tuple[list[Item], list[Item]]:
+              created: list[Item] = []
+              updated: list[Item] = []
+
+              # loguru 默认带前缀，这里用 search 而不是 match
+              created_re = re.compile(r"✨ 创建成功: (.+?) \(ID: ([^)]+)\)")
+              updated_re = re.compile(r"🔄 更新成功: (.+?) \(ID: ([^)]+)\)")
+
+              for line in lines:
+                  m = created_re.search(line)
+                  if m:
+                      created.append(Item(name=m.group(1), item_id=m.group(2)))
+                      continue
+
+                  m = updated_re.search(line)
+                  if m:
+                      updated.append(Item(name=m.group(1), item_id=m.group(2)))
+                      continue
+
+              return created, updated
+
+
+          def parse_themes(lines: list[str]) -> tuple[list[Item], list[Item], list[Item]]:
+              deleted: list[Item] = []
+              created: list[Item] = []
+              updated: list[Item] = []
+
+              deleted_re = re.compile(r"🗑️\s+删除成功: (.+?) \(ID: ([^)]+)\)")
+              created_re = re.compile(
+                  r"✨ 创建成功: (.+?) \(ID: ([^,]+),\s*角色数:\s*([0-9]+)(?:\s*\(跳过\s*([0-9]+)\s*个角色\))?\)"
+              )
+              updated_re = re.compile(
+                  r"🔄 更新成功: (.+?) \(ID: ([^,]+),\s*角色数:\s*([0-9]+)(?:\s*\(跳过\s*([0-9]+)\s*个角色\))?\)"
+              )
+
+              for line in lines:
+                  m = deleted_re.search(line)
+                  if m:
+                      deleted.append(Item(name=m.group(1), item_id=m.group(2)))
+                      continue
+
+                  m = created_re.search(line)
+                  if m:
+                      synced = m.group(3)
+                      skipped = m.group(4)
+                      extra = f"角色数: {synced}"
+                      if skipped:
+                          extra += f"，跳过: {skipped}"
+                      created.append(Item(name=m.group(1), item_id=m.group(2), extra=extra))
+                      continue
+
+                  m = updated_re.search(line)
+                  if m:
+                      synced = m.group(3)
+                      skipped = m.group(4)
+                      extra = f"角色数: {synced}"
+                      if skipped:
+                          extra += f"，跳过: {skipped}"
+                      updated.append(Item(name=m.group(1), item_id=m.group(2), extra=extra))
+                      continue
+
+              return deleted, created, updated
+
+
+          def write_section(title: str, lines: list[str], out: list[str]) -> None:
+              out.append(f"### {title}")
+              if not lines:
+                  out.append("- （无）")
+                  out.append("")
+                  return
+              out.extend(lines)
+              out.append("")
+
+
+          def truncate(items: list[str], limit: int) -> tuple[list[str], bool]:
+              if len(items) <= limit:
+                  return items, False
+              return items[:limit], True
+
+
+          agents_log = Path("sync_agents.log")
+          themes_log = Path("sync_character_themes.log")
+
+          agents_lines = read_lines(agents_log)
+          themes_lines = read_lines(themes_log)
+
+          agent_created, agent_updated = parse_agents(agents_lines)
+          theme_deleted, theme_created, theme_updated = parse_themes(themes_lines)
+
+          out: list[str] = []
+          out.append("## AI 角色同步摘要")
+          out.append("")
+
+          run_id = os.environ.get("GITHUB_RUN_ID", "")
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
+          sha = os.environ.get("GITHUB_SHA", "")
+          out.append("### 运行信息")
+          out.append(f"- Run: {run_number} (ID: {run_id})" if run_number or run_id else "- Run: （未知）")
+          out.append(f"- Commit: `{sha}`" if sha else "- Commit: （未知）")
+          out.append("")
+
+          out.append("### 同步概览")
+          out.append(f"- Agent：创建 {len(agent_created)} 个，更新 {len(agent_updated)} 个")
+          out.append(
+              f"- CharacterTheme：删除 {len(theme_deleted)} 个，创建 {len(theme_created)} 个，更新 {len(theme_updated)} 个"
+          )
+          out.append("")
+
+          detail_limit = 200
+
+          agent_created_md, agent_created_truncated = truncate(
+              [x.to_markdown_bullet() for x in agent_created], detail_limit
+          )
+          agent_updated_md, agent_updated_truncated = truncate(
+              [x.to_markdown_bullet() for x in agent_updated], detail_limit
+          )
+          theme_deleted_md, theme_deleted_truncated = truncate(
+              [x.to_markdown_bullet() for x in theme_deleted], detail_limit
+          )
+          theme_created_md, theme_created_truncated = truncate(
+              [x.to_markdown_bullet() for x in theme_created], detail_limit
+          )
+          theme_updated_md, theme_updated_truncated = truncate(
+              [x.to_markdown_bullet() for x in theme_updated], detail_limit
+          )
+
+          out.append("## 明细")
+          out.append("")
+
+          write_section("Agent - 创建", agent_created_md, out)
+          if agent_created_truncated:
+              out.append(f"> 仅展示前 {detail_limit} 条，更多请查看 job log。")
+              out.append("")
+
+          write_section("Agent - 更新", agent_updated_md, out)
+          if agent_updated_truncated:
+              out.append(f"> 仅展示前 {detail_limit} 条，更多请查看 job log。")
+              out.append("")
+
+          write_section("CharacterTheme - 删除", theme_deleted_md, out)
+          if theme_deleted_truncated:
+              out.append(f"> 仅展示前 {detail_limit} 条，更多请查看 job log。")
+              out.append("")
+
+          write_section("CharacterTheme - 创建", theme_created_md, out)
+          if theme_created_truncated:
+              out.append(f"> 仅展示前 {detail_limit} 条，更多请查看 job log。")
+              out.append("")
+
+          write_section("CharacterTheme - 更新", theme_updated_md, out)
+          if theme_updated_truncated:
+              out.append(f"> 仅展示前 {detail_limit} 条，更多请查看 job log。")
+              out.append("")
+
+          if (
+              not agent_created
+              and not agent_updated
+              and not theme_deleted
+              and not theme_created
+              and not theme_updated
+          ):
+              out.append("> 未识别到同步明细：可能是本次无变更，或日志格式发生变化。请查看 job log。")
+              out.append("")
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if not summary_path:
+              print("GITHUB_STEP_SUMMARY not set; printing summary to stdout instead.")
+              print("\n".join(out))
+          else:
+              Path(summary_path).write_text("\n".join(out) + "\n", encoding="utf-8")
+          PY
