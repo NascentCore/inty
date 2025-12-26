@@ -18,7 +18,8 @@ from app.external_services.gcs import (
     get_bucket_and_path_from_gcs_url,
     get_gcs_client,
 )
-from app.schemas.agent import AgentUpdate, ModelConfig
+from app.models.agent import AgentVisibility
+from app.schemas.agent import AgentSortOption, AgentUpdate, ModelConfig
 from app.schemas.user import UserCreate
 from app.services import agent_service
 from app.services.agent_service import (
@@ -314,3 +315,59 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
     assert (
         first_query_results == third_query_results
     ), "The results of the two queries should be the same"
+
+
+@pytest.mark.asyncio
+async def test_get_recommended_agents_paginated_superuser_includes_private(db_session):
+    test_id = str(uuid.uuid4())[:6]
+
+    public_agent = models.Agent(
+        id=f"test-reco-public-{test_id}",
+        readable_id=f"rp{test_id}"[:8],
+        name=f"Reco Public {test_id}",
+        gender=models.Gender.FEMALE,
+        visibility=AgentVisibility.PUBLIC,
+        creator_id=admin_user.id,
+    )
+    private_agent = models.Agent(
+        id=f"test-reco-private-{test_id}",
+        readable_id=f"rv{test_id}"[:8],
+        name=f"Reco Private {test_id}",
+        gender=models.Gender.FEMALE,
+        visibility=AgentVisibility.PRIVATE,
+        creator_id=admin_user.id,
+    )
+    db_session.add(public_agent)
+    db_session.add(private_agent)
+    await db_session.commit()
+
+    class DummyUser:
+        def __init__(self, user_id: str, nickname: str, is_superuser: bool):
+            self.id = user_id
+            self.nickname = nickname
+            self.is_superuser = is_superuser
+
+    normal_user = DummyUser("test-user-normal", "normal", False)
+    super_user = DummyUser("test-user-super", "super", True)
+
+    normal_page = await agent_service.get_recommended_agents_paginated(
+        db_session,
+        current_user=normal_user,  # type: ignore[arg-type]
+        page=1,
+        page_size=50,
+        sort_by=AgentSortOption.CREATED_DESC,
+    )
+    normal_ids = {agent.id for agent in normal_page.list}
+    assert public_agent.id in normal_ids
+    assert private_agent.id not in normal_ids
+
+    super_page = await agent_service.get_recommended_agents_paginated(
+        db_session,
+        current_user=super_user,  # type: ignore[arg-type]
+        page=1,
+        page_size=50,
+        sort_by=AgentSortOption.CREATED_DESC,
+    )
+    super_ids = {agent.id for agent in super_page.list}
+    assert public_agent.id in super_ids
+    assert private_agent.id in super_ids

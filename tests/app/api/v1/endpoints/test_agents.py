@@ -265,6 +265,74 @@ def test_recommend_agents_energy_points_sorting(
             integration_client.delete_agent(agent_id)
 
 
+def test_recommend_agents_superuser_can_see_private_agents(
+    integration_client: TestClient, db_session
+):
+    """验证 superuser 通过 /recommend 可以看到 PRIVATE 角色，普通用户不可以。"""
+    superuser_id = get_new_user_id()
+    readable_id = generate_next_readable_id_sync(db_session)
+    test_email = f"test-superuser-{uuid.uuid4().hex[:8]}@example.com"
+
+    superuser = User(
+        id=superuser_id,
+        gender=Gender.OTHER,
+        readable_id=readable_id,
+        auth_type=AuthType.EMAIL,
+        email=test_email,
+        nickname=f"Test Superuser {uuid.uuid4().hex[:6]}",
+        system_language="en",
+        is_superuser=True,
+    )
+    db_session.add(superuser)
+    db_session.commit()
+    db_session.refresh(superuser)
+
+    token = create_access_token(superuser.id)
+
+    superuser_client = TestClient(integration_client.base_url)
+    superuser_client.token = token
+    superuser_client.client.headers.update({"Authorization": f"Bearer {token}"})
+
+    private_agent_id = superuser_client.create_agent(
+        name=f"Private Agent {uuid.uuid4().hex[:6]}",
+        visibility="PRIVATE",
+    )
+    public_agent_id = superuser_client.create_agent(
+        name=f"Public Agent {uuid.uuid4().hex[:6]}",
+        visibility="PUBLIC",
+    )
+
+    try:
+        # 普通用户（guest）调用 /recommend，不应看到 private
+        guest_resp = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={"page": 1, "page_size": 50, "sort": "created_desc"},
+        )
+        assert guest_resp.status_code == 200, guest_resp.text
+        guest_payload = guest_resp.json()
+        assert guest_payload.get("code") == 200, guest_payload
+        guest_ids = [item["id"] for item in guest_payload["data"]["list"]]
+        assert private_agent_id not in guest_ids
+
+        # superuser 调用 /recommend，应能看到 private + public
+        su_resp = superuser_client.client.get(
+            f"{superuser_client.base_url}/api/v1/ai/agents/recommend",
+            params={"page": 1, "page_size": 50, "sort": "created_desc"},
+        )
+        assert su_resp.status_code == 200, su_resp.text
+        su_payload = su_resp.json()
+        assert su_payload.get("code") == 200, su_payload
+        su_ids = [item["id"] for item in su_payload["data"]["list"]]
+        assert private_agent_id in su_ids
+        assert public_agent_id in su_ids
+    finally:
+        superuser_client.delete_agent(private_agent_id)
+        superuser_client.delete_agent(public_agent_id)
+        superuser_client.close()
+        db_session.delete(superuser)
+        db_session.commit()
+
+
 def test_update_agent_adds_energy_points(
     integration_client: TestClient, db_session
 ):
