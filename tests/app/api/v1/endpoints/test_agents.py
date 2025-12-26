@@ -269,40 +269,18 @@ def test_recommend_agents_superuser_can_see_private_agents(
     integration_client: TestClient, db_session
 ):
     """验证 superuser 通过 /recommend 可以看到 PRIVATE 角色，普通用户不可以。"""
-    superuser_id = get_new_user_id()
-    readable_id = generate_next_readable_id_sync(db_session)
-    test_email = f"test-superuser-{uuid.uuid4().hex[:8]}@example.com"
-
-    superuser = User(
-        id=superuser_id,
-        gender=Gender.OTHER,
-        readable_id=readable_id,
-        auth_type=AuthType.EMAIL,
-        email=test_email,
-        nickname=f"Test Superuser {uuid.uuid4().hex[:6]}",
-        system_language="en",
-        is_superuser=True,
-    )
-    db_session.add(superuser)
-    db_session.commit()
-    db_session.refresh(superuser)
-
-    token = create_access_token(superuser.id)
-
-    superuser_client = TestClient(integration_client.base_url)
-    superuser_client.token = token
-    superuser_client.client.headers.update({"Authorization": f"Bearer {token}"})
-
-    private_agent_id = superuser_client.create_agent(
+    # 使用当前 integration_client（guest 用户）创建角色，然后把该用户临时提升为 superuser。
+    private_agent_id = integration_client.create_agent(
         name=f"Private Agent {uuid.uuid4().hex[:6]}",
         visibility="PRIVATE",
     )
-    public_agent_id = superuser_client.create_agent(
+    public_agent_id = integration_client.create_agent(
         name=f"Public Agent {uuid.uuid4().hex[:6]}",
         visibility="PUBLIC",
     )
 
     try:
+        # 先确认普通用户调用 /recommend，不应看到 private
         # 普通用户（guest）调用 /recommend，不应看到 private
         guest_resp = integration_client.client.get(
             f"{integration_client.base_url}/api/v1/ai/agents/recommend",
@@ -314,9 +292,22 @@ def test_recommend_agents_superuser_can_see_private_agents(
         guest_ids = [item["id"] for item in guest_payload["data"]["list"]]
         assert private_agent_id not in guest_ids
 
+        # 将当前用户提升为 superuser（只影响本测试）
+        me_resp = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/users/me",
+        )
+        assert me_resp.status_code == 200, me_resp.text
+        me_payload = me_resp.json()
+        user_id = me_payload["data"]["id"]
+
+        db_user = db_session.query(User).filter(User.id == user_id).first()
+        assert db_user is not None
+        db_user.is_superuser = True
+        db_session.commit()
+
         # superuser 调用 /recommend，应能看到 private + public
-        su_resp = superuser_client.client.get(
-            f"{superuser_client.base_url}/api/v1/ai/agents/recommend",
+        su_resp = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
             params={"page": 1, "page_size": 50, "sort": "created_desc"},
         )
         assert su_resp.status_code == 200, su_resp.text
@@ -326,11 +317,20 @@ def test_recommend_agents_superuser_can_see_private_agents(
         assert private_agent_id in su_ids
         assert public_agent_id in su_ids
     finally:
-        superuser_client.delete_agent(private_agent_id)
-        superuser_client.delete_agent(public_agent_id)
-        superuser_client.close()
-        db_session.delete(superuser)
-        db_session.commit()
+        # 恢复用户权限，避免影响后续测试
+        try:
+            me_resp = integration_client.client.get(
+                f"{integration_client.base_url}/api/v1/users/me",
+            )
+            if me_resp.status_code == 200:
+                user_id = me_resp.json()["data"]["id"]
+                db_user = db_session.query(User).filter(User.id == user_id).first()
+                if db_user is not None:
+                    db_user.is_superuser = False
+                    db_session.commit()
+        finally:
+            integration_client.delete_agent(private_agent_id)
+            integration_client.delete_agent(public_agent_id)
 
 
 def test_update_agent_adds_energy_points(
