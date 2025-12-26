@@ -87,8 +87,6 @@ import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// The spacer from the bottom of the chat input to what ever that flows underneath it.
-val ChatInputBottomSpacerHeight = 8.dp
 private const val LOAD_MORE_NEAR_TOP_THRESHOLD = 3
 private const val LOAD_MORE_MIN_EXTRA_ITEMS = 5
 
@@ -297,7 +295,7 @@ internal fun ChatPage(
     val gap = if (showBackButton) 0.dp else UiConfigs.BottomBar.Height * ratio
     val isKeyboardVisible = imeHeight > 0
     onKeyboardVisible(isKeyboardVisible)
-    val bottomPadding = gap + ChatInputBottomSpacerHeight
+    val bottomPadding = gap + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
 
     fun onKeepTalkingChange(enabled: Boolean) {
         SettingStateManager.updateShowKeepTalking(enabled)
@@ -761,7 +759,7 @@ internal fun ChatPage(
                                 }
                             } else {
                                 val effectiveBottomPadding =
-                                    if (showMorePanel) morePanelHeight + ChatInputBottomSpacerHeight else bottomPadding
+                                    if (showMorePanel) morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight else bottomPadding
 
                                 CompositionLocalProvider(
                                     LocalDensity provides
@@ -849,7 +847,7 @@ internal fun ChatPage(
 
                 val chatInputEstimatedHeight = 70.dp
                 val effectiveBottomPaddingForButton =
-                    if (showMorePanel) morePanelHeight + ChatInputBottomSpacerHeight else bottomPadding
+                    if (showMorePanel) morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight else bottomPadding
                 val imeHeightDp = with(LocalDensity.current) { imeHeight.toDp() }
                 val buttonBottomOffset =
                     if (showBackButton) {
