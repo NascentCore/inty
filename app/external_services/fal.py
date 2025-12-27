@@ -131,10 +131,14 @@ def _parse_fal_text_to_image_result(result: dict[str, Any]) -> FalTextToImageRes
             FalGeneratedImage(
                 url=str(img["url"]),
                 width=img.get("width") if isinstance(img.get("width"), int) else None,
-                height=img.get("height") if isinstance(img.get("height"), int) else None,
-                content_type=img.get("content_type")
-                if isinstance(img.get("content_type"), str)
-                else None,
+                height=(
+                    img.get("height") if isinstance(img.get("height"), int) else None
+                ),
+                content_type=(
+                    img.get("content_type")
+                    if isinstance(img.get("content_type"), str)
+                    else None
+                ),
             )
         )
 
@@ -195,9 +199,11 @@ def _parse_fal_text_to_video_result(result: dict[str, Any]) -> FalTextToVideoRes
             videos.append(
                 FalGeneratedVideo(
                     url=item["url"],
-                    content_type=item.get("content_type")
-                    if isinstance(item.get("content_type"), str)
-                    else None,
+                    content_type=(
+                        item.get("content_type")
+                        if isinstance(item.get("content_type"), str)
+                        else None
+                    ),
                 )
             )
     elif isinstance(result.get("video"), dict):
@@ -206,9 +212,11 @@ def _parse_fal_text_to_video_result(result: dict[str, Any]) -> FalTextToVideoRes
             videos.append(
                 FalGeneratedVideo(
                     url=item["url"],
-                    content_type=item.get("content_type")
-                    if isinstance(item.get("content_type"), str)
-                    else None,
+                    content_type=(
+                        item.get("content_type")
+                        if isinstance(item.get("content_type"), str)
+                        else None
+                    ),
                 )
             )
         elif isinstance(item.get("uri"), str):
@@ -228,4 +236,3 @@ __all__ = [
     "FalTextToVideoResult",
     "is_fal_model",
 ]
-

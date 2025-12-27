@@ -9,8 +9,8 @@ import ai.sxwl.android.utils.LogUtils
 import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -123,7 +123,9 @@ private fun VipCornerHighlighter(
 ) {
     Box(
         modifier =
-            modifier.size(CardConfig.VipCornerSize).semantics { this.contentDescription = contentDescription }
+            modifier.size(CardConfig.VipCornerSize).semantics {
+                this.contentDescription = contentDescription
+            }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val triangle =
@@ -140,7 +142,10 @@ private fun VipCornerHighlighter(
             text = label,
             modifier =
                 Modifier.align(Alignment.TopEnd)
-                    .padding(top = CardConfig.VipTextPaddingTop, end = CardConfig.VipTextPaddingEnd),
+                    .padding(
+                        top = CardConfig.VipTextPaddingTop,
+                        end = CardConfig.VipTextPaddingEnd,
+                    ),
             fontSize = CardConfig.VipTextSize,
             fontWeight = FontWeight.Black,
             color = AppColors.Background,
@@ -377,11 +382,7 @@ fun ExploreCharacterCard(
             VipCornerHighlighter(
                 modifier =
                     Modifier.align(Alignment.TopEnd)
-                        .clip(
-                            RoundedCornerShape(
-                                topEnd = CardConfig.CornerRadius,
-                            )
-                        ),
+                        .clip(RoundedCornerShape(topEnd = CardConfig.CornerRadius)),
                 label = stringResource(com.ai.intellimate.R.string.vip_badge_label),
                 contentDescription =
                     stringResource(com.ai.intellimate.R.string.vip_badge_content_description),
