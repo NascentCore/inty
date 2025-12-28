@@ -38,7 +38,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.ai.intellimate.agent.generate.CreateRoleActivity
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
@@ -119,6 +118,20 @@ fun HomeScreen(
                 mainViewModel.selectTab(HomeTabIndex.Profile.ordinal)
             }
         }
+
+    // 处理从CreateRoleScreen 页面返回的数据
+    val currentEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentEntry?.savedStateHandle
+    val result = savedStateHandle?.getLiveData<Int>("createBackCode")
+    LaunchedEffect(result?.value) {
+        result?.value?.let {
+            if (result.value == Activity.RESULT_OK) {
+                // 标记需要刷新 Profile 列表，并切换回 “Me” 页面
+                shouldRefreshProfile = true
+                mainViewModel.selectTab(HomeTabIndex.Profile.ordinal)
+            }
+        }
+    }
 
     // 双击检测：跟踪最后点击的tab和时间
     var lastTabClickTime by remember { mutableLongStateOf(0L) }
@@ -202,6 +215,7 @@ fun HomeScreen(
                         lastTabClickTime = currentTime
                         lastTabIndex = tabIndex
                         handleTabSelectionWithLauncher(
+                            navController,
                             tabIndex,
                             context,
                             mainViewModel,
@@ -362,6 +376,7 @@ private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
 
 /** 处理Tab选择逻辑（带 launcher） */
 private fun handleTabSelectionWithLauncher(
+    navController: NavController,
     tabIndex: Int,
     context: Context,
     mainViewModel: MainViewModel,
@@ -370,8 +385,9 @@ private fun handleTabSelectionWithLauncher(
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 使用 CreateRoleActivity 提供的方法获取 Intent
-            val intent = CreateRoleActivity.getIntent(context, null)
-            createRoleLauncher.launch(intent)
+//            val intent = CreateRoleActivity.getIntent(context, null)
+//            createRoleLauncher.launch(intent)
+            navController.navigate(Routes.Creat.CreateRole)
         }
         return
     }
@@ -542,27 +558,42 @@ private fun ProfileTabContent(
         }
 
     // 创建用于编辑的 launcher（独立于 Create Tab 的 launcher）
-    val editAgentLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            // 编辑成功后刷新列表
-            if (result.resultCode == Activity.RESULT_OK) {
-                profileViewModel.refreshCreatedAgents()
-            }
-        }
+//    val editAgentLauncher =
+//        rememberLauncherForActivityResult(
+//            contract = ActivityResultContracts.StartActivityForResult()
+//        ) { result ->
+//            // 编辑成功后刷新列表
+//            if (result.resultCode == Activity.RESULT_OK) {
+//                profileViewModel.refreshCreatedAgents()
+//            }
+//        }
 
     // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
-    val createFromProfileLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            // 创建成功后刷新列表和草稿
-            if (result.resultCode == Activity.RESULT_OK) {
+//    val createFromProfileLauncher =
+//        rememberLauncherForActivityResult(
+//            contract = ActivityResultContracts.StartActivityForResult()
+//        ) { result ->
+//            // 创建成功后刷新列表和草稿
+//            if (result.resultCode == Activity.RESULT_OK) {
+//                profileViewModel.refreshCreatedAgents()
+//                profileViewModel.refreshAgentDrafts()
+//            }
+//        }
+
+
+    // 处理从CreateRoleScreen 页面返回的数据
+    val currentEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentEntry?.savedStateHandle
+    val result = savedStateHandle?.getLiveData<Int>("createBackCode")
+    LaunchedEffect(result?.value) {
+        result?.value?.let {
+            if (result.value == Activity.RESULT_OK) {
+                // 标记需要刷新 Profile 列表，并切换回 “Me” 页面
                 profileViewModel.refreshCreatedAgents()
                 profileViewModel.refreshAgentDrafts()
             }
         }
+    }
 
     // 初始化数据：优先从缓存加载，避免闪现
     var hasInitialized by remember { mutableStateOf(false) }
@@ -626,14 +657,18 @@ private fun ProfileTabContent(
             navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
         onClickDraft = { draftId ->
-            val intent = CreateRoleActivity.getIntent(context, null, draftId)
-            createFromProfileLauncher.launch(intent)
+//            val intent = CreateRoleActivity.getIntent(context, null, draftId)
+//            createFromProfileLauncher.launch(intent)
+            navController.navigate(Routes.Creat.createRole(draftId))
         },
         onDeleteDraft = { draftId -> profileViewModel.deleteDraft(draftId) },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
-            val intent = CreateRoleActivity.getIntent(context, agent)
-            editAgentLauncher.launch(intent)
+//            val intent = CreateRoleActivity.getIntent(context, agent)
+//            editAgentLauncher.launch(intent)
+
+            AgentStore.setDraftAgentInfo(agent)
+            navController.navigate(Routes.Creat.CreateRole)
         },
         appUpdateTips = appUpdateTips,
         onDeleteAgent = { agent ->

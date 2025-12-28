@@ -9,8 +9,10 @@ object Routes {
     const val SplashLogin = "splash_login"
     const val HomeTab = "home_screen"
 
-    val Chat = RoutesChat
-    val Me = RoutesMe
-    val Explore = RoutesExplore
     val Home = RoutesHome
+    val Chat = RoutesChat
+    val Creat = RoutesCreate
+    val Explore = RoutesExplore
+    val Me = RoutesMe
+
 }

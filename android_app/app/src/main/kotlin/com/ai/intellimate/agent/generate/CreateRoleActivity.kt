@@ -95,6 +95,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -108,6 +109,7 @@ import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 import com.ai.intellimate.xb.components.MultiLineBasicTextField
+import com.ai.intellimate.xb.navigation.Routes
 import com.yalantis.ucrop.UCrop
 import com.yalantis.ucrop.UCropActivity
 import java.io.File
@@ -121,6 +123,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** 创建角色的页面 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Create.CreateRole 替代")
 class CreateRoleActivity : BaseActivity() {
 
     companion object {
@@ -181,20 +184,20 @@ class CreateRoleActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-        CreateRolePage(
-            modifier = Modifier.fillMaxSize(),
-            createRoleViewModel = createRoleViewModel,
-            onBack = { finish() },
-            onCreateSuccess = {
-                setResult(RESULT_OK)
-                finish()
-            },
-            onAvatarGenerateClick = { prompt ->
-                AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
-            },
-            editAgent = agent,
-            draftId = draftId,
-        )
+//        CreateRolePage(
+//            modifier = Modifier.fillMaxSize(),
+//            createRoleViewModel = createRoleViewModel,
+//            onBack = { finish() },
+//            onCreateSuccess = {
+//                setResult(RESULT_OK)
+//                finish()
+//            },
+//            onAvatarGenerateClick = { prompt ->
+//                AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
+//            },
+//            editAgent = agent,
+//            draftId = draftId,
+//        )
     }
 }
 
@@ -205,7 +208,8 @@ private val DraftDialogContainerColor = Color(0xFF2A2A2A)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CreateRolePage(
+fun CreateRolePage(
+    navController: NavController,
     modifier: Modifier = Modifier,
     createRoleViewModel: CreateRoleViewModel,
     onBack: () -> Unit,
@@ -347,13 +351,15 @@ private fun CreateRolePage(
     val hasDraftChanges = !latestDraft.isEmpty()
     val handleExitRequest = {
         if (isEditMode || !hasDraftChanges) {
-            onBack()
+//            onBack()
+            navController.popBackStack()
         } else if (savedDraft != null) {
             // 从 draft 进入，更新草稿列表中的草稿，清除临时草稿，然后退出
             val draftToSave = latestDraft.copy(id = savedDraft.id, createdAt = savedDraft.createdAt)
             CreateRoleDraftStorage.saveDraftToList(draftToSave)
             CreateRoleDraftStorage.clearCurrentDraft()
-            onBack()
+//            onBack()
+            navController.popBackStack()
         } else {
             showSaveDraftDialog = true
         }
@@ -752,7 +758,8 @@ private fun CreateRolePage(
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
                     AvatarManager.setSelectedImageIndex(selectedImageIndex)
 
-                    onAvatarGenerateClick(promptForGeneration.takeIf { it.isNotBlank() })
+//                    onAvatarGenerateClick(promptForGeneration.takeIf { it.isNotBlank() })
+                    navController.navigate(Routes.Creat.avatarGenerate(promptForGeneration.takeIf { it.isNotBlank() } ?: ""))
                     // 当点击生成头像时，不清除当前URL，让用户返回时检查新的URL
                 },
                 onImageSelected = { index ->
@@ -765,7 +772,9 @@ private fun CreateRolePage(
 
                     // Navigate to avatar generation page with existing prompt
                     val promptToUse = prompt.takeIf { it.isNotBlank() } ?: promptForGeneration
-                    onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
+
+//                    onAvatarGenerateClick(promptToUse.takeIf { it.isNotBlank() })
+                    navController.navigate(Routes.Creat.avatarGenerate(promptToUse.takeIf { it.isNotBlank() } ?: ""))
                 },
                 onRemoveImage = { index ->
                     if (avatarUrls.isEmpty() || index !in avatarUrls.indices) {
@@ -1029,7 +1038,7 @@ private fun CreateRolePage(
 
                                 if (isEditMode) {
                                     ToastUtils.showShort(R.string.character_updated_successfully)
-                                    onCreateSuccess()
+//                                    onCreateSuccess()
                                 } else {
                                     // 如果是从草稿列表进入的，删除该草稿
                                     if (savedDraft != null && draftId != null) {
@@ -1040,8 +1049,12 @@ private fun CreateRolePage(
                                     ToastUtils.showShort(
                                         context.getString(R.string.create_ai_successfully)
                                     )
-                                    onCreateSuccess()
+//                                    onCreateSuccess()
                                 }
+
+                                // 创建成功
+                                navController.previousBackStackEntry?.savedStateHandle?.set("createBackCode", Activity.RESULT_OK)
+                                navController.popBackStack()
                             } catch (e: Exception) {
                                 val operation =
                                     if (isEditMode) context.getString(R.string.update_failed)
@@ -1102,7 +1115,8 @@ private fun CreateRolePage(
                         // 清除临时草稿，以便下次进入时创建新角色
                         CreateRoleDraftStorage.clearCurrentDraft()
                         showSaveDraftDialog = false
-                        onBack()
+                        navController.popBackStack()
+//                        onBack()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = DraftDialogConfirmColor),
                 ) {
@@ -1120,7 +1134,8 @@ private fun CreateRolePage(
                         // 清除临时草稿
                         CreateRoleDraftStorage.clearCurrentDraft()
                         showSaveDraftDialog = false
-                        onBack()
+                        navController.popBackStack()
+//                        onBack()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = DraftDialogDismissColor),
                 ) {

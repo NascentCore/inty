@@ -1,6 +1,7 @@
 package com.ai.intellimate.xb.helper
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import java.util.concurrent.atomic.AtomicReference
 
 object AgentStore {
     // App 中用到的Agent缓存
@@ -19,5 +20,15 @@ object AgentStore {
     // 获取缓存中的AgentInfo
     fun getAgent(agentId: String?): AgentInfo? {
         return agents.find { it.id == agentId }
+    }
+
+    @Volatile
+    private var agentInfoDraft = AtomicReference<AgentInfo?>(null)  // 缓存跨页面用的草稿
+    fun setDraftAgentInfo(agentInfo: AgentInfo?) {
+        agentInfoDraft.set(agentInfo)
+    }
+
+    fun getDraftAgentInfo(): AgentInfo? {
+        return  agentInfoDraft.getAndSet(null)
     }
 }
