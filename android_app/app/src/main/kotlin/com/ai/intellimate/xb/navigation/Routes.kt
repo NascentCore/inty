@@ -14,5 +14,4 @@ object Routes {
     val Creat = RoutesCreate
     val Explore = RoutesExplore
     val Me = RoutesMe
-
 }

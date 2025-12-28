@@ -13,31 +13,19 @@ fun NavGraphBuilder.createGraph(navController: NavController) {
     // 定义创建角色路由
     composable(
         route = Routes.Creat.CreateRole,
-        arguments = listOf(
-            navArgument("draftId") { type = NavType.StringType }
-        )
+        arguments = listOf(navArgument("draftId") { type = NavType.StringType }),
     ) { backStackEntry ->
         val draftId = backStackEntry.arguments?.getString("draftId")
         val agentInfo = AgentStore.getDraftAgentInfo()
-        CreateRoleScreen(
-            navController,
-            agentInfo = agentInfo,
-            draftId = draftId
-        )
+        CreateRoleScreen(navController, agentInfo = agentInfo, draftId = draftId)
     }
 
     // 定义生成头像路由
     composable(
         route = Routes.Creat.AvatarGenerate,
-        arguments =
-            listOf(
-                navArgument("initialPrompt") { type = NavType.StringType },
-            ),
+        arguments = listOf(navArgument("initialPrompt") { type = NavType.StringType }),
     ) { backStackEntry ->
         val initialPrompt = backStackEntry.arguments?.getString("initialPrompt")
-        AvatarGeneratePage(
-            navController,
-            initialPrompt = initialPrompt,
-        )
+        AvatarGeneratePage(navController, initialPrompt = initialPrompt)
     }
 }

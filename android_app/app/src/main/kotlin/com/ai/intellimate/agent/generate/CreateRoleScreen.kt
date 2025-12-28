@@ -19,15 +19,13 @@ internal fun CreateRoleScreen(
         modifier = Modifier.fillMaxSize(),
         createRoleViewModel = createRoleViewModel,
         onCreateSuccess = {
-//            setResult(Activity.RESULT_OK)
-//            finish()
+            //            setResult(Activity.RESULT_OK)
+            //            finish()
         },
         onAvatarGenerateClick = { prompt ->
-//            AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
+            //            AvatarGenerateActivity.launch(this, prompt?.takeIf { it.isNotBlank() })
         },
-        onBack = {
-
-        },
+        onBack = {},
         editAgent = agentInfo,
         draftId = draftId,
     )
