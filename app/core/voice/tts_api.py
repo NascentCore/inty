@@ -19,7 +19,7 @@ import base64
 import os
 import struct
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Protocol, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Set, Tuple
 
 import google.genai as genai
 from elevenlabs import VoiceSettings
@@ -27,12 +27,304 @@ from elevenlabs.client import ElevenLabs
 from google.genai import types
 from loguru import logger
 
-
 DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY_BOOST = 0.5
 DEFAULT_GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
 DEFAULT_GEMINI_TTS_VOICE_NAME = "Zephyr"
 DEFAULT_GEMINI_TTS_TEMPERATURE = 1.3
+
+TTS_PROVIDER_GEMINI = "gemini"
+TTS_PROVIDER_ELEVENLABS = "elevenlabs"
+
+# Gemini TTS 预置音色列表
+# 来源: https://ai.google.dev/gemini-api/docs/speech-generation
+GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
+    {
+        "voice_id": "Zephyr",
+        "name": "Zephyr",
+        "gender": "female",
+        "description": "Bright",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Puck",
+        "name": "Puck",
+        "gender": "male",
+        "description": "Upbeat",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Charon",
+        "name": "Charon",
+        "gender": "male",
+        "description": "Informative",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Kore",
+        "name": "Kore",
+        "gender": "female",
+        "description": "Firm",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Fenrir",
+        "name": "Fenrir",
+        "gender": "male",
+        "description": "Excitable",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Aoede",
+        "name": "Aoede",
+        "gender": "female",
+        "description": "Breezy",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Orus",
+        "name": "Orus",
+        "gender": "male",
+        "description": "Firm",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Leda",
+        "name": "Leda",
+        "gender": "female",
+        "description": "Youthful",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Elf",
+        "name": "Elf",
+        "gender": "male",
+        "description": "Soft",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Orbit",
+        "name": "Orbit",
+        "gender": "male",
+        "description": "Clear",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Altair",
+        "name": "Altair",
+        "gender": "male",
+        "description": "Informative",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Cove",
+        "name": "Cove",
+        "gender": "male",
+        "description": "Calm",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Birch",
+        "name": "Birch",
+        "gender": "female",
+        "description": "Calm",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Maple",
+        "name": "Maple",
+        "gender": "female",
+        "description": "Clear",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Vale",
+        "name": "Vale",
+        "gender": "male",
+        "description": "Gentle",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Breeze",
+        "name": "Breeze",
+        "gender": "female",
+        "description": "Animated",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Juniper",
+        "name": "Juniper",
+        "gender": "female",
+        "description": "Open",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Solaris",
+        "name": "Solaris",
+        "gender": "male",
+        "description": "Smooth",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Vega",
+        "name": "Vega",
+        "gender": "female",
+        "description": "Raspy",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Nova",
+        "name": "Nova",
+        "gender": "male",
+        "description": "Even",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Stella",
+        "name": "Stella",
+        "gender": "female",
+        "description": "Spirited",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Eclipse",
+        "name": "Eclipse",
+        "gender": "female",
+        "description": "Assured",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Dawn",
+        "name": "Dawn",
+        "gender": "female",
+        "description": "Composed",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Ember",
+        "name": "Ember",
+        "gender": "male",
+        "description": "Even",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Shade",
+        "name": "Shade",
+        "gender": "male",
+        "description": "Measured",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Cosmos",
+        "name": "Cosmos",
+        "gender": "male",
+        "description": "Relaxed",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Saga",
+        "name": "Saga",
+        "gender": "female",
+        "description": "Poised",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Aurora",
+        "name": "Aurora",
+        "gender": "female",
+        "description": "Warm",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Summit",
+        "name": "Summit",
+        "gender": "male",
+        "description": "Direct",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+    {
+        "voice_id": "Meadow",
+        "name": "Meadow",
+        "gender": "female",
+        "description": "Serene",
+        "provider": TTS_PROVIDER_GEMINI,
+        "source": "preset",
+        "category": "prebuilt",
+    },
+]
+
+# 预计算 Gemini 音色名称集合，用于快速查找
+_GEMINI_VOICE_NAMES: Set[str] = {v["voice_id"] for v in GEMINI_PREBUILT_VOICES}
+
+
+def is_gemini_voice(voice_id: Optional[str]) -> bool:
+    """判断给定的 voice_id 是否为 Gemini TTS 预置音色"""
+    if not voice_id:
+        return False
+    return voice_id in _GEMINI_VOICE_NAMES
+
+
+def get_gemini_voices() -> List[Dict[str, Any]]:
+    """获取 Gemini TTS 预置音色列表（返回副本，避免外部修改）"""
+    return [v.copy() for v in GEMINI_PREBUILT_VOICES]
 
 
 @dataclass(frozen=True)
@@ -128,15 +420,14 @@ def _looks_like_gemini_voice_name(voice_id: str) -> bool:
     """
     兼容旧字段：如果上层仍沿用 voice_id 字段，但存的是 Gemini 预置音色名（如 Zephyr），
     这里允许直接复用；否则回退到默认音色。
-    """
 
+    优先使用精确匹配（is_gemini_voice），回退到启发式判断（纯字母 + 长度限制）。
+    """
     if not voice_id:
         return False
+    if is_gemini_voice(voice_id):
+        return True
     return voice_id.isalpha() and 2 <= len(voice_id) <= 32
-
-
-def _get_gemini_api_key_from_env() -> Optional[str]:
-    return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 
 
 class GeminiTTSAPI:
@@ -144,21 +435,20 @@ class GeminiTTSAPI:
     Gemini TTS wrapper（基于 google-genai 官方 demo）。
 
     注意：目前 Gemini TTS 通常返回裸 PCM（如 audio/L16;rate=24000），本实现会自动封装为 WAV。
+    认证方式与 LiveChatService 统一，使用 app.gcp_service_account_key 配置。
     """
 
     def __init__(
         self,
         *,
-        api_key: Optional[str] = None,
         model: str = DEFAULT_GEMINI_TTS_MODEL,
         default_voice_name: str = DEFAULT_GEMINI_TTS_VOICE_NAME,
         temperature: float = DEFAULT_GEMINI_TTS_TEMPERATURE,
     ):
-        self._api_key = api_key or _get_gemini_api_key_from_env()
         self._model = model
         self._default_voice_name = default_voice_name
         self._temperature = temperature
-        # 延迟初始化：CI/本地可能没有 key 或 Vertex 凭据；此时直接回退 ElevenLabs，
+        # 延迟初始化：CI/本地可能没有凭据；此时直接回退 ElevenLabs，
         # 不应在 import / app 启动阶段硬失败。
         self._client: Optional[genai.Client] = None
 
@@ -166,36 +456,31 @@ class GeminiTTSAPI:
         if self._client is not None:
             return self._client
 
-        if self._api_key:
-            try:
-                self._client = genai.Client(api_key=self._api_key)
-                return self._client
-            except ValueError as e:
-                logger.warning(f"Gemini TTS client 初始化失败（api_key）: {str(e)}")
-                return None
-
-        # 未提供 api_key：仅在检测到可能存在 Vertex/ADC 配置时才尝试 vertexai client。
-        if not (
-            os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-            or os.environ.get("GOOGLE_CLOUD_PROJECT")
-            or os.environ.get("GCP_PROJECT")
-        ):
-            return None
-
         try:
-            project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get(
-                "GCP_PROJECT"
+            # 统一使用 app.gcp_service_account_key 配置进行认证
+            # 与 LiveChatService 保持一致
+            from app.core.config import global_config_loaded_from_config_yaml
+
+            gcp_key_path = (
+                global_config_loaded_from_config_yaml.app.gcp_service_account_key
             )
-            location = os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
-            if project:
-                self._client = genai.Client(
-                    vertexai=True, project=project, location=location
-                )
-            else:
-                self._client = genai.Client(vertexai=True)
+            if gcp_key_path and os.path.exists(gcp_key_path):
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_key_path
+                logger.debug(f"Gemini TTS 设置 GCP 凭证: {gcp_key_path}")
+
+            gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
+            self._client = genai.Client(
+                vertexai=True,
+                project=gemini_live_config.project_id,
+                location=gemini_live_config.location,
+            )
+            logger.info(
+                f"Gemini TTS 客户端已初始化 - project: {gemini_live_config.project_id}, "
+                f"location: {gemini_live_config.location}"
+            )
             return self._client
         except Exception as e:
-            logger.warning(f"Gemini TTS client 初始化失败（vertexai）: {str(e)}")
+            logger.warning(f"Gemini TTS client 初始化失败: {str(e)}")
             return None
 
     async def synthesize(self, request: TTSRequest) -> Optional[TTSResult]:

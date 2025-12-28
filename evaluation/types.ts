@@ -357,6 +357,9 @@ export interface Voice {
   category?: string;
   description?: string;
   voice_type?: string;
+  provider?: "gemini" | "elevenlabs";
+  gender?: string;
+  source?: string;
   settings?: {
     stability?: number;
     similarity_boost?: number;

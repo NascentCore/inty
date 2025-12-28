@@ -51,6 +51,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [providerFilter, setProviderFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState(false);
   const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(
     null,
@@ -58,15 +59,20 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 加载音色列表
   const loadVoices = useCallback(
-    async (forceRefresh = false, search = "", source = "all") => {
+    async (
+      forceRefresh = false,
+      search = "",
+      source = "all",
+      provider = "all",
+    ) => {
       setLoading(true);
       try {
         const params: any = {
           // 移除page_size限制，让后端返回所有音色
         };
         if (search) params.search = search;
-        // 注意：这里不传递source参数到后端，因为后端API不支持source筛选
-        // 我们在前端进行source筛选
+        // 后端支持 provider 筛选
+        if (provider !== "all") params.provider = provider;
 
         const voiceList = await api.voices.listVoices(params);
         let filteredVoices = voiceList || [];
@@ -159,14 +165,14 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         timeoutId = setTimeout(() => func(...args), delay);
       };
     };
-    return debounce((search: string, source: string) => {
-      loadVoices(false, search, source);
+    return debounce((search: string, source: string, provider: string) => {
+      loadVoices(false, search, source, provider);
     }, 500);
   }, [loadVoices]);
 
   // 初始加载
   useEffect(() => {
-    loadVoices(false, searchText, sourceFilter);
+    loadVoices(false, searchText, sourceFilter, providerFilter);
   }, []); // 只在组件挂载时加载一次
 
   // 当 value 变化时，立即显示基本信息并异步加载详细信息
@@ -190,8 +196,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 搜索和筛选变化时的防抖处理
   useEffect(() => {
-    debouncedLoadVoices(searchText, sourceFilter);
-  }, [searchText, sourceFilter, debouncedLoadVoices]);
+    debouncedLoadVoices(searchText, sourceFilter, providerFilter);
+  }, [searchText, sourceFilter, providerFilter, debouncedLoadVoices]);
 
   // 获取当前选中的音色
   const selectedVoice = useMemo(() => {
@@ -203,14 +209,25 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     return voices.find((voice) => voice.voice_id === value);
   }, [voices, value, selectedVoiceInfo]);
 
-  // 获取音色来源统计 - 使用后端返回的voice_type字段
-  const sourceStats = useMemo(() => {
-    const stats = { personal: 0, preset: 0, total: voices.length };
+  // 获取音色来源统计 - 使用后端返回的voice_type和provider字段
+  const voiceStats = useMemo(() => {
+    const stats = {
+      personal: 0,
+      preset: 0,
+      total: voices.length,
+      gemini: 0,
+      elevenlabs: 0,
+    };
     voices.forEach((voice) => {
       if (voice.voice_type === "personal") {
         stats.personal++;
       } else if (voice.voice_type === "preset") {
         stats.preset++;
+      }
+      if (voice.provider === "gemini") {
+        stats.gemini++;
+      } else if (voice.provider === "elevenlabs") {
+        stats.elevenlabs++;
       }
     });
     return stats;
@@ -283,14 +300,29 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             </Tooltip>
           </div>
 
-          {voice.category && (
-            <Tag
-              color={isSelected ? "green" : "blue"}
-              style={{ marginBottom: 4 }}
-            >
-              {voice.category}
-            </Tag>
-          )}
+          <Space size={4} style={{ marginBottom: 4 }} wrap>
+            {voice.provider && (
+              <Tag
+                color={voice.provider === "gemini" ? "green" : "blue"}
+                style={{ margin: 0 }}
+              >
+                {voice.provider === "gemini" ? "Gemini" : "ElevenLabs"}
+              </Tag>
+            )}
+            {voice.category && (
+              <Tag color={isSelected ? "success" : "default"} style={{ margin: 0 }}>
+                {voice.category}
+              </Tag>
+            )}
+            {voice.gender && (
+              <Tag
+                color={voice.gender === "female" ? "magenta" : "cyan"}
+                style={{ margin: 0 }}
+              >
+                {voice.gender === "female" ? "女" : "男"}
+              </Tag>
+            )}
+          </Space>
 
           {/* 预览播放按钮 */}
           <div
@@ -416,7 +448,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       {/* 搜索和过滤控件 */}
       <div style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
-          <Col span={12}>
+          <Col span={8}>
             <Search
               placeholder="搜索音色名称"
               allowClear
@@ -426,26 +458,51 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               prefix={<SearchOutlined />}
             />
           </Col>
-          <Col span={8}>
+          <Col span={5}>
             <Select
-              placeholder="选择音色类型"
+              placeholder="音色类型"
               style={{ width: "100%" }}
               value={sourceFilter}
               onChange={setSourceFilter}
               disabled={disabled}
             >
-              <Option value="all">全部音色 ({sourceStats.total})</Option>
+              <Option value="all">全部类型 ({voiceStats.total})</Option>
               <Option value="personal">
-                个人音色 ({sourceStats.personal})
+                个人音色 ({voiceStats.personal})
               </Option>
-              <Option value="preset">预置音色 ({sourceStats.preset})</Option>
+              <Option value="preset">预置音色 ({voiceStats.preset})</Option>
             </Select>
           </Col>
-          <Col span={4}>
+          <Col span={5}>
+            <Select
+              placeholder="TTS 服务商"
+              style={{ width: "100%" }}
+              value={providerFilter}
+              onChange={setProviderFilter}
+              disabled={disabled}
+            >
+              <Option value="all">全部服务商</Option>
+              <Option value="gemini">
+                <Tag color="green" style={{ marginRight: 4 }}>
+                  Gemini
+                </Tag>
+                ({voiceStats.gemini})
+              </Option>
+              <Option value="elevenlabs">
+                <Tag color="blue" style={{ marginRight: 4 }}>
+                  ElevenLabs
+                </Tag>
+                ({voiceStats.elevenlabs})
+              </Option>
+            </Select>
+          </Col>
+          <Col span={6}>
             <Space>
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => loadVoices(true, searchText, sourceFilter)}
+                onClick={() =>
+                  loadVoices(true, searchText, sourceFilter, providerFilter)
+                }
                 loading={loading}
                 disabled={disabled}
               >
@@ -517,6 +574,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           }}
         >
           共找到 {voices.length} 个音色
+          {voiceStats.gemini > 0 && voiceStats.elevenlabs > 0 && (
+            <span>
+              {" "}
+              (Gemini: {voiceStats.gemini}, ElevenLabs: {voiceStats.elevenlabs})
+            </span>
+          )}
           {selectedVoice && ` • 已选择：${selectedVoice.name}`}
         </div>
       )}
