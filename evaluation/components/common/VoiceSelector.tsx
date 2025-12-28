@@ -310,7 +310,10 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               </Tag>
             )}
             {voice.category && (
-              <Tag color={isSelected ? "success" : "default"} style={{ margin: 0 }}>
+              <Tag
+                color={isSelected ? "success" : "default"}
+                style={{ margin: 0 }}
+              >
                 {voice.category}
               </Tag>
             )}
@@ -467,9 +470,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               disabled={disabled}
             >
               <Option value="all">全部类型 ({voiceStats.total})</Option>
-              <Option value="personal">
-                个人音色 ({voiceStats.personal})
-              </Option>
+              <Option value="personal">个人音色 ({voiceStats.personal})</Option>
               <Option value="preset">预置音色 ({voiceStats.preset})</Option>
             </Select>
           </Col>

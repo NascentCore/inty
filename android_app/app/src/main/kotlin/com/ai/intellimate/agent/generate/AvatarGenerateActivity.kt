@@ -109,12 +109,12 @@ class AvatarGenerateActivity : BaseActivity() {
     @Composable
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
-//        AvatarGeneratePage(
-//            modifier = Modifier.fillMaxSize(),
-//            viewModel = viewModel,
-//            onBack = { finish() },
-//            initialPrompt = initialPromptArg,
-//        )
+        //        AvatarGeneratePage(
+        //            modifier = Modifier.fillMaxSize(),
+        //            viewModel = viewModel,
+        //            onBack = { finish() },
+        //            initialPrompt = initialPromptArg,
+        //        )
     }
 }
 
@@ -124,7 +124,7 @@ fun AvatarGeneratePage(
     navController: NavController,
     modifier: Modifier = Modifier,
     viewModel: AvatarGenerateViewModel = viewModel(),
-//    onBack: () -> Unit,
+    //    onBack: () -> Unit,
     initialPrompt: String? = null,
 ) {
     val prompt by viewModel.prompt.collectAsState()
@@ -167,7 +167,7 @@ fun AvatarGeneratePage(
                     Image(
                         modifier =
                             Modifier.padding(horizontal = 12.dp).noRippleClickable {
-//                                onBack()
+                                //                                onBack()
                                 navController.popBackStack()
                             },
                         painter = painterResource(R.drawable.close),
@@ -228,9 +228,9 @@ fun AvatarGeneratePage(
             GenerateButton(
                 isLoading = isLoading,
                 enabled = prompt.isNotBlank(),
-                onClick = { viewModel.generateAvatar(onNavigateBack = {
-                    navController.popBackStack()
-                }) },
+                onClick = {
+                    viewModel.generateAvatar(onNavigateBack = { navController.popBackStack() })
+                },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -243,7 +243,7 @@ fun AvatarGeneratePage(
                         if (selectedUrl != null) {
                             AvatarManager.setGeneratedAvatarUrl(selectedUrl)
                         }
-//                        onBack()
+                        //                        onBack()
                         navController.popBackStack()
                     }
                 )

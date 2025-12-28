@@ -385,8 +385,8 @@ private fun handleTabSelectionWithLauncher(
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
             // 使用 CreateRoleActivity 提供的方法获取 Intent
-//            val intent = CreateRoleActivity.getIntent(context, null)
-//            createRoleLauncher.launch(intent)
+            //            val intent = CreateRoleActivity.getIntent(context, null)
+            //            createRoleLauncher.launch(intent)
             navController.navigate(Routes.Creat.CreateRole)
         }
         return
@@ -558,28 +558,27 @@ private fun ProfileTabContent(
         }
 
     // 创建用于编辑的 launcher（独立于 Create Tab 的 launcher）
-//    val editAgentLauncher =
-//        rememberLauncherForActivityResult(
-//            contract = ActivityResultContracts.StartActivityForResult()
-//        ) { result ->
-//            // 编辑成功后刷新列表
-//            if (result.resultCode == Activity.RESULT_OK) {
-//                profileViewModel.refreshCreatedAgents()
-//            }
-//        }
+    //    val editAgentLauncher =
+    //        rememberLauncherForActivityResult(
+    //            contract = ActivityResultContracts.StartActivityForResult()
+    //        ) { result ->
+    //            // 编辑成功后刷新列表
+    //            if (result.resultCode == Activity.RESULT_OK) {
+    //                profileViewModel.refreshCreatedAgents()
+    //            }
+    //        }
 
     // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
-//    val createFromProfileLauncher =
-//        rememberLauncherForActivityResult(
-//            contract = ActivityResultContracts.StartActivityForResult()
-//        ) { result ->
-//            // 创建成功后刷新列表和草稿
-//            if (result.resultCode == Activity.RESULT_OK) {
-//                profileViewModel.refreshCreatedAgents()
-//                profileViewModel.refreshAgentDrafts()
-//            }
-//        }
-
+    //    val createFromProfileLauncher =
+    //        rememberLauncherForActivityResult(
+    //            contract = ActivityResultContracts.StartActivityForResult()
+    //        ) { result ->
+    //            // 创建成功后刷新列表和草稿
+    //            if (result.resultCode == Activity.RESULT_OK) {
+    //                profileViewModel.refreshCreatedAgents()
+    //                profileViewModel.refreshAgentDrafts()
+    //            }
+    //        }
 
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
@@ -657,15 +656,15 @@ private fun ProfileTabContent(
             navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
         onClickDraft = { draftId ->
-//            val intent = CreateRoleActivity.getIntent(context, null, draftId)
-//            createFromProfileLauncher.launch(intent)
+            //            val intent = CreateRoleActivity.getIntent(context, null, draftId)
+            //            createFromProfileLauncher.launch(intent)
             navController.navigate(Routes.Creat.createRole(draftId))
         },
         onDeleteDraft = { draftId -> profileViewModel.deleteDraft(draftId) },
         onEditAgent = { agent ->
             // 使用 CreateRoleActivity 提供的方法获取 Intent，并监听返回结果
-//            val intent = CreateRoleActivity.getIntent(context, agent)
-//            editAgentLauncher.launch(intent)
+            //            val intent = CreateRoleActivity.getIntent(context, agent)
+            //            editAgentLauncher.launch(intent)
 
             AgentStore.setDraftAgentInfo(agent)
             navController.navigate(Routes.Creat.CreateRole)

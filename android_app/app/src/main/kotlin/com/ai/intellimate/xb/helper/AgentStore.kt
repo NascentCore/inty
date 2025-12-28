@@ -22,13 +22,13 @@ object AgentStore {
         return agents.find { it.id == agentId }
     }
 
-    @Volatile
-    private var agentInfoDraft = AtomicReference<AgentInfo?>(null)  // 缓存跨页面用的草稿
+    @Volatile private var agentInfoDraft = AtomicReference<AgentInfo?>(null) // 缓存跨页面用的草稿
+
     fun setDraftAgentInfo(agentInfo: AgentInfo?) {
         agentInfoDraft.set(agentInfo)
     }
 
     fun getDraftAgentInfo(): AgentInfo? {
-        return  agentInfoDraft.getAndSet(null)
+        return agentInfoDraft.getAndSet(null)
     }
 }

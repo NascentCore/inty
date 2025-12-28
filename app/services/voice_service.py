@@ -335,9 +335,7 @@ class VoiceService:
                 tts_result = await self.gemini_tts_api.synthesize(req)
                 if not tts_result:
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
-                    logger.warning(
-                        "Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）"
-                    )
+                    logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")
                     # 使用 ElevenLabs 默认音色，因为 Gemini 音色名无法在 ElevenLabs 中使用
                     fallback_req = TTSRequest(
                         text=text,
