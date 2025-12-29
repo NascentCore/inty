@@ -221,7 +221,7 @@ fun ChatMorePanel(
 
                     if (BuildConfig.BUILD_TYPE != NetworkConfig.BuildType.RELEASE.value) {
                         MorePanelItem(
-                            icon = R.drawable.icon_report,
+                            icon = R.drawable.icon_call,
                             text = "Call",
                             onClick = onCall,
                         )
