@@ -16,19 +16,13 @@ import org.koin.dsl.module
  * 提供：
  * - Ktor HttpClient：支持Http和WebSocket
  */
-val networkModule = module {
-    single<HttpClient> { provideHttpClient() }
-}
+val networkModule = module { single<HttpClient> { provideHttpClient() } }
 
-/**
- * 创建Ktor HttpClient
- */
+/** 创建Ktor HttpClient */
 private fun provideHttpClient(): HttpClient {
     return HttpClient(OkHttp) {
         // 使用统一的OkHttpClient，复用所有拦截器和配置
-        engine {
-            preconfigured = UnifiedOkHttpClient.create()
-        }
+        engine { preconfigured = UnifiedOkHttpClient.create() }
 
         // 安装内容协商插件，支持JSON序列化
         install(ContentNegotiation) {
@@ -44,14 +38,14 @@ private fun provideHttpClient(): HttpClient {
         // 安装WebSocket插件
         install(WebSockets) {
             // WebSocket相关配置可以在这里添加
-            contentConverter = KotlinxWebsocketSerializationConverter(
-                Json {
-                    ignoreUnknownKeys = true
-                    isLenient = true
-                    encodeDefaults = false
-                }
-            )
+            contentConverter =
+                KotlinxWebsocketSerializationConverter(
+                    Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                        encodeDefaults = false
+                    }
+                )
         }
     }
 }
-

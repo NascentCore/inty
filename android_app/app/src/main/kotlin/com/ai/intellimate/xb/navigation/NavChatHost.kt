@@ -6,7 +6,6 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.ai.intellimate.call.VoiceCallScreen
 import com.ai.intellimate.chat.ChatScreen
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.xb.helper.AgentStore
@@ -52,9 +51,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             showBackButton = true,
             shouldShowBoostSheetOnOpen = showBoost == true,
             shouldAutoFocusInput = shouldAutoFocusInput ?: true,
-            onCall = {
-                agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) }
-            }
+            onCall = { agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) } },
         )
     }
 }

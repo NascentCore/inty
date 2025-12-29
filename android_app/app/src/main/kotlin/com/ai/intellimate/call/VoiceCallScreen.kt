@@ -21,14 +21,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeMute
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,7 +35,6 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -58,11 +54,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioParams
@@ -76,8 +70,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * 语音通话页面
- * 提供与AI的实时语音通讯功能
+ * 语音通话页面 提供与AI的实时语音通讯功能
  *
  * @param onBack 退出界面
  * @param agentId 角色ID
@@ -85,10 +78,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun VoiceCallScreen(
-    onBack: () -> Unit,
-    agentId: String
-) {
+fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
     val context = LocalContext.current
     val viewModel = koinViewModel<VoiceCallViewModel>()
     val uiState by viewModel.uiState.collectAsState()
@@ -100,17 +90,14 @@ fun VoiceCallScreen(
         val audioRecordManager = AudioRecordManager.getInstance(context)
 
         // 启动通话连接
-        LaunchedEffect(agentId) {
-            viewModel.startCalling(agentId)
-        }
+        LaunchedEffect(agentId) { viewModel.startCalling(agentId) }
 
         // 播放接收的音频数据
         LaunchedEffect(Unit) {
-            viewModel.audioResponse
-                .collect { audioData ->
-                    // 播放音频
-                    audioStreamPlayer.addAudioData(audioData)
-                }
+            viewModel.audioResponse.collect { audioData ->
+                // 播放音频
+                audioStreamPlayer.addAudioData(audioData)
+            }
         }
 
         // 管理播放器生命周期
@@ -118,11 +105,12 @@ fun VoiceCallScreen(
             when (uiState.connectionState) {
                 ConnectionState.CONNECTED -> {
                     // 连接建立时启动播放（24kHz PCM，单声道，16位）
-                    val playbackParams = AudioParams(
-                        sampleRate = 24000,
-                        channelConfig = AudioFormat.CHANNEL_OUT_MONO,
-                        audioFormat = AudioFormat.ENCODING_PCM_16BIT
-                    )
+                    val playbackParams =
+                        AudioParams(
+                            sampleRate = 24000,
+                            channelConfig = AudioFormat.CHANNEL_OUT_MONO,
+                            audioFormat = AudioFormat.ENCODING_PCM_16BIT,
+                        )
                     audioStreamPlayer.startPlayback(playbackParams)
                 }
                 ConnectionState.DISCONNECTED,
@@ -136,9 +124,11 @@ fun VoiceCallScreen(
         }
 
         LaunchedEffect(Unit) {
-            snapshotFlow { uiState.connectionState == ConnectionState.CONNECTED && !uiState.isMuted }
+            snapshotFlow {
+                    uiState.connectionState == ConnectionState.CONNECTED && !uiState.isMuted
+                }
                 .collect {
-                    if(it) {
+                    if (it) {
                         audioRecordManager.startRecording { audioData ->
                             viewModel.sendVoice(audioData)
                         }
@@ -157,21 +147,10 @@ fun VoiceCallScreen(
             }
         }
 
-        VoiceCallScreen(
-            onBack = onBack,
-            uiState = uiState,
-            onMuteChange = viewModel::setMuted
-        )
+        VoiceCallScreen(onBack = onBack, uiState = uiState, onMuteChange = viewModel::setMuted)
     } else {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Button(
-                onClick = { audioPermissionState.launchPermissionRequest()}
-            ) {
-                Text("需要录音权限")
-            }
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Button(onClick = { audioPermissionState.launchPermissionRequest() }) { Text("需要录音权限") }
         }
     }
 }
@@ -181,7 +160,7 @@ fun VoiceCallScreen(
 private fun VoiceCallScreen(
     onBack: () -> Unit,
     onMuteChange: (Boolean) -> Unit,
-    uiState: VoiceCallUiState
+    uiState: VoiceCallUiState,
 ) {
 
     Scaffold(
@@ -189,48 +168,36 @@ private fun VoiceCallScreen(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(
-                        onClick = onBack
-                    ) {
+                    IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.back),
-                            contentDescription = "back"
+                            contentDescription = "back",
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    navigationIconContentColor = Color.White
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        navigationIconContentColor = Color.White,
+                    ),
             )
         },
         containerColor = Color.Transparent,
-        modifier = Modifier.background(
-            brush = Brush.verticalGradient(
-                0f to Color(0xFF6685D1),
-                1f to Color(0xFF926BCE)
-            )
-        )
+        modifier =
+            Modifier.background(
+                brush = Brush.verticalGradient(0f to Color(0xFF6685D1), 1f to Color(0xFF926BCE))
+            ),
     ) { contentPadding ->
-        Box(
-            modifier = Modifier
-                .padding(contentPadding)
-                .fillMaxSize()
-        ) {
+        Box(modifier = Modifier.padding(contentPadding).fillMaxSize()) {
             Column(
-                modifier = Modifier
-                    .align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 uiState.agent?.run {
-                    val avatarModifier = Modifier
-                        .size(120.dp)
-                        .border(
-                            width = 1.dp,
-                            color = Color.White,
-                            shape = CircleShape
-                        )
-                        .clip(CircleShape)
+                    val avatarModifier =
+                        Modifier.size(120.dp)
+                            .border(width = 1.dp, color = Color.White, shape = CircleShape)
+                            .clip(CircleShape)
 
                     if (isInEditMode) {
                         Box(avatarModifier.background(color = Color.Black))
@@ -239,7 +206,7 @@ private fun VoiceCallScreen(
                             model = getCdnImageUrl(avatar),
                             contentDescription = "avatar",
                             contentScale = ContentScale.Crop,
-                            modifier = avatarModifier
+                            modifier = avatarModifier,
                         )
                     }
 
@@ -250,7 +217,7 @@ private fun VoiceCallScreen(
                         color = Color.White,
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
 
                     Spacer(Modifier.height(8.dp))
@@ -266,11 +233,9 @@ private fun VoiceCallScreen(
             }
 
             Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(bottom = 50.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier =
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 50.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 MenuItem(
                     button = {
@@ -278,44 +243,34 @@ private fun VoiceCallScreen(
                             checked = uiState.isMuted,
                             onCheckedChange = onMuteChange,
                             shape = CircleShape,
-                            colors = IconButtonDefaults.iconToggleButtonColors(
-                                containerColor = Color.White.copy(alpha = 0.3f),
-                                checkedContainerColor = Color.White.copy(alpha = 0.3f),
-                                contentColor = Color.White,
-                                checkedContentColor = Color.White
-                            )
+                            colors =
+                                IconButtonDefaults.iconToggleButtonColors(
+                                    containerColor = Color.White.copy(alpha = 0.3f),
+                                    checkedContainerColor = Color.White.copy(alpha = 0.3f),
+                                    contentColor = Color.White,
+                                    checkedContentColor = Color.White,
+                                ),
                         ) {
                             if (uiState.isMuted) {
                                 Icon(
                                     imageVector = Icons.Rounded.MicOff,
-                                    contentDescription = "muted"
+                                    contentDescription = "muted",
                                 )
                             } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.Mic,
-                                    contentDescription = "mute"
-                                )
+                                Icon(imageVector = Icons.Rounded.Mic, contentDescription = "mute")
                             }
                         }
                     },
-                    text = {
-                        Text(text = stringResource(R.string.mute))
-                    }
+                    text = { Text(text = stringResource(R.string.mute)) },
                 )
 
-                MenuItem(
-                    text = { Text(stringResource(R.string.end)) }
-                ) {
+                MenuItem(text = { Text(stringResource(R.string.end)) }) {
                     IconButton(
                         onClick = onBack,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = Color(0xFFEB4E3D)
-                        )
+                        colors =
+                            IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFEB4E3D)),
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = "end"
-                        )
+                        Icon(imageVector = Icons.Rounded.Close, contentDescription = "end")
                     }
                 }
             }
@@ -327,15 +282,11 @@ private fun VoiceCallScreen(
 private fun MenuItem(
     text: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    button: @Composable () -> Unit
+    button: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = modifier
-    ) {
+    Box(modifier = modifier) {
         CompositionLocalProvider(LocalContentColor provides Color.White) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 button()
 
                 ProvideTextStyle(MaterialTheme.typography.bodySmall, text)
@@ -351,12 +302,11 @@ private fun VoiceCallPreview() {
         VoiceCallScreen(
             onBack = {},
             onMuteChange = {},
-            uiState = VoiceCallUiState(
-                agent = AgentInfo(
-                    name = "July"
+            uiState =
+                VoiceCallUiState(
+                    agent = AgentInfo(name = "July"),
+                    connectionState = ConnectionState.CONNECTING,
                 ),
-                connectionState = ConnectionState.CONNECTING
-            )
         )
     }
 }

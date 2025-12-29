@@ -65,14 +65,11 @@ fun BottomSheetDialog(
         ) {
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(color = Color.Transparent)
-                        .clickableNoRipple {
-                            if (canceledOnTouchOutside) {
-                                onDismissRequest()
-                            }
+                    Modifier.fillMaxSize().background(color = Color.Transparent).clickableNoRipple {
+                        if (canceledOnTouchOutside) {
+                            onDismissRequest()
                         }
+                    }
             )
         }
         InnerDialog(visible = visible, slideInOnEnter = slideInOnEnter, content = content)
@@ -89,8 +86,7 @@ private fun BoxScope.InnerDialog(
     val offsetYAnimate by animateFloatAsState(targetValue = offsetY, label = "")
     AnimatedVisibility(
         modifier =
-            Modifier
-                .align(alignment = Alignment.BottomCenter)
+            Modifier.align(alignment = Alignment.BottomCenter)
                 .offset(offset = { IntOffset(0, offsetYAnimate.roundToInt()) }),
         visible = visible,
         enter =
@@ -131,8 +127,7 @@ fun DiaAmountLayout(content: @Composable DiaAmountWindowScope.() -> Unit) {
 }
 
 interface DiaAmountWindowScope {
-    @Composable
-    fun SetDiaAmount(dimAmount: Float)
+    @Composable fun SetDiaAmount(dimAmount: Float)
 }
 
 private object DiaAmountWindowScopeInstance : DiaAmountWindowScope {

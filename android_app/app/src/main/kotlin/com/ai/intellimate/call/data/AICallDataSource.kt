@@ -10,45 +10,27 @@ import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.client.request.url
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.websocket.Frame
 import io.ktor.websocket.close
-import io.ktor.websocket.readText
-import io.ktor.websocket.send
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.isActive
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
 
-/**
- * WebSocket连接状态
- */
+/** WebSocket连接状态 */
 enum class ConnectionState(@StringRes val textRes: Int? = null) {
     DISCONNECTED, // 未连接
-    CONNECTING(R.string.voice_call_connecting),  // 连接中
-    CONNECTED(R.string.voice_call_connected),   // 已连接
+    CONNECTING(R.string.voice_call_connecting), // 连接中
+    CONNECTED(R.string.voice_call_connected), // 已连接
     DISCONNECTING, // 断开中
-    ERROR(R.string.voice_call_error)        // 错误
+    ERROR(R.string.voice_call_error), // 错误
 }
 
-/**
- * AI语音通话数据源
- * 负责WebSocket连接的建立、维护和数据传输
- */
-class AICallDataSource(
-    private val httpClient: HttpClient
-) {
+/** AI语音通话数据源 负责WebSocket连接的建立、维护和数据传输 */
+class AICallDataSource(private val httpClient: HttpClient) {
     private var _session: DefaultClientWebSocketSession? = null
     private val sessionMutex = Mutex()
 
@@ -62,6 +44,7 @@ class AICallDataSource(
 
     /**
      * 建立websocket连接
+     *
      * @param url WebSocket服务器地址
      * @return 接收到的CallPacket数据流
      */
@@ -72,29 +55,26 @@ class AICallDataSource(
         LogUtils.d("开始建立WebSocket连接: $url")
 
         return try {
-            val session = httpClient.webSocketSession {
-                url(url)
-            }
+            val session = httpClient.webSocketSession { url(url) }
 
-            sessionMutex.withLock {
-                _session = session
-            }
+            sessionMutex.withLock { _session = session }
 
             _connectionState.value = ConnectionState.CONNECTED
             LogUtils.d("WebSocket连接已建立")
 
             flow {
-                while (true) {
-                    emit(session.receiveDeserialized<CallPacket>())
+                    while (true) {
+                        emit(session.receiveDeserialized<CallPacket>())
+                    }
                 }
-            }.onCompletion { cause ->
-                LogUtils.d("WebSocket接收流完成，原因: ${cause?.message}")
-                if (cause != null) {
-                    _connectionState.value = ConnectionState.ERROR
-                } else {
-                    _connectionState.value = ConnectionState.DISCONNECTED
+                .onCompletion { cause ->
+                    LogUtils.d("WebSocket接收流完成，原因: ${cause?.message}")
+                    if (cause != null) {
+                        _connectionState.value = ConnectionState.ERROR
+                    } else {
+                        _connectionState.value = ConnectionState.DISCONNECTED
+                    }
                 }
-            }
         } catch (e: Exception) {
             LogUtils.e("建立WebSocket连接失败: ${e.message}")
             _connectionState.value = ConnectionState.ERROR
@@ -104,6 +84,7 @@ class AICallDataSource(
 
     /**
      * 发送CallPacket数据
+     *
      * @param packet CallPacket数据包
      */
     suspend fun sendPacket(packet: CallPacket) {
@@ -127,24 +108,21 @@ class AICallDataSource(
         }
     }
 
-    /**
-     * 检查连接状态
-     */
+    /** 检查连接状态 */
     fun isConnected(): Boolean {
         return _connectionState.value == ConnectionState.CONNECTED && _session != null
     }
 
-    /**
-     * 关闭连接
-     */
+    /** 关闭连接 */
     suspend fun close() {
         _connectionState.value = ConnectionState.DISCONNECTING
 
-        val session = sessionMutex.withLock {
-            val current = _session
-            _session = null
-            current
-        }
+        val session =
+            sessionMutex.withLock {
+                val current = _session
+                _session = null
+                current
+            }
 
         session?.let {
             try {

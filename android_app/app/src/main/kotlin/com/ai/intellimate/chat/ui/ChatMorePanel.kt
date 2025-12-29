@@ -90,7 +90,7 @@ fun ChatMorePanel(
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     var showResetConfirmDialog by remember { mutableStateOf(false) }
-    
+
     // 内部状态控制Dialog和BottomSheetDialog的显示
     // 当visible变为false时，先让BottomSheetDialog执行退出动画，然后再关闭Dialog
     var showDialog by remember { mutableStateOf(visible) }
@@ -162,24 +162,24 @@ fun ChatMorePanel(
                 val keyboardHeightDp = with(density) { imeHeight.toDp() }
 
                 FlowRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = HeartColor.primaryColor)
-                        .windowInsetsPadding(windowInsets)
-                        // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
-                        // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
-                        .then(
-                            if (keyboardHeightDp > 0.dp) {
-                                Modifier.heightIn(min = keyboardHeightDp)
-                            } else {
-                                Modifier
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .background(color = HeartColor.primaryColor)
+                            .windowInsetsPadding(windowInsets)
+                            // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
+                            // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
+                            .then(
+                                if (keyboardHeightDp > 0.dp) {
+                                    Modifier.heightIn(min = keyboardHeightDp)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .onGloballyPositioned { coords ->
+                                val h = with(density) { coords.size.height.toDp() }
+                                onHeightChange(h)
                             }
-                        )
-                        .onGloballyPositioned { coords ->
-                            val h = with(density) { coords.size.height.toDp() }
-                            onHeightChange(h)
-                        }
-                        .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
+                            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                     maxItemsInEachRow = 4,
@@ -190,9 +190,7 @@ fun ChatMorePanel(
                         isVip = true,
                         onClick = {
                             // 检查是否已登录
-                            if (
-                                IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                            ) {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.CHAT_MORE_CLICK,
                                     FirebaseManager.safeEventParams(
@@ -229,9 +227,7 @@ fun ChatMorePanel(
                         text = stringResource(R.string.str_feedback),
                         onClick = {
                             // 检查是否已登录
-                            if (
-                                IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                            ) {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.CHAT_MORE_CLICK,
                                     FirebaseManager.safeEventParams(
@@ -249,9 +245,7 @@ fun ChatMorePanel(
                         text = stringResource(R.string.str_report),
                         onClick = {
                             // 检查是否已登录
-                            if (
-                                IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                            ) {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.CHAT_MORE_CLICK,
                                     FirebaseManager.safeEventParams(
@@ -266,11 +260,7 @@ fun ChatMorePanel(
                     )
 
                     if (BuildConfig.BUILD_TYPE != NetworkConfig.BuildType.RELEASE.value) {
-                        MorePanelItem(
-                            icon = R.drawable.icon_call,
-                            text = "Call",
-                            onClick = onCall,
-                        )
+                        MorePanelItem(icon = R.drawable.icon_call, text = "Call", onClick = onCall)
                     }
                 }
             }
@@ -287,16 +277,16 @@ fun ChatMorePanel(
 
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-    remember(agentInfo?.id, chatSettings) {
-        derivedStateOf {
-            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+        remember(agentInfo?.id, chatSettings) {
+            derivedStateOf {
+                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
+            }
         }
-    }
 
     val replyStr by
-    remember(agentInfo?.id, currentChatSetting) {
-        derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
-    }
+        remember(agentInfo?.id, currentChatSetting) {
+            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
+        }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -321,22 +311,17 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
     ) {
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -360,10 +345,7 @@ private fun ChatMorePanelPreview() {
         // 简化版Preview，仅用于预览MorePanelItem的布局效果
         Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(color = HeartColor.primaryColor)
-                    .padding(16.dp)
+                Modifier.fillMaxWidth().background(color = HeartColor.primaryColor).padding(16.dp)
         ) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -377,26 +359,10 @@ private fun ChatMorePanelPreview() {
                     isVip = true,
                     onClick = {},
                 )
-                MorePanelItem(
-                    icon = R.drawable.icon_reset_chat,
-                    text = "重置",
-                    onClick = {},
-                )
-                MorePanelItem(
-                    icon = R.drawable.icon_feedback,
-                    text = "反馈",
-                    onClick = {},
-                )
-                MorePanelItem(
-                    icon = R.drawable.icon_report,
-                    text = "举报",
-                    onClick = {},
-                )
-                MorePanelItem(
-                    icon = R.drawable.icon_report,
-                    text = "第5个",
-                    onClick = {},
-                )
+                MorePanelItem(icon = R.drawable.icon_reset_chat, text = "重置", onClick = {})
+                MorePanelItem(icon = R.drawable.icon_feedback, text = "反馈", onClick = {})
+                MorePanelItem(icon = R.drawable.icon_report, text = "举报", onClick = {})
+                MorePanelItem(icon = R.drawable.icon_report, text = "第5个", onClick = {})
             }
         }
     }
@@ -406,8 +372,7 @@ private fun ChatMorePanelPreview() {
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier
-                .clip(RoundedCornerShape(24.dp))
+            Modifier.clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -427,9 +392,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -441,9 +404,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),
