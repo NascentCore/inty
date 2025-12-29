@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -109,18 +111,31 @@ fun ChatMorePanel(
             SetDiaAmount(0f)
             BottomSheetDialog(modifier = Modifier, visible = true, onDismissRequest = onDismiss) {
                 val density = LocalDensity.current
+                // 获取键盘高度，用于匹配panel高度，避免键盘消失时输入框高度变化
+                val imeHeight = WindowInsets.ime.getBottom(density)
+                val keyboardHeightDp = with(density) { imeHeight.toDp() }
+
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(color = HeartColor.primaryColor)
                         .windowInsetsPadding(windowInsets)
+                        // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
+                        // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
+                        .then(
+                            if (keyboardHeightDp > 0.dp) {
+                                Modifier.heightIn(min = keyboardHeightDp)
+                            } else {
+                                Modifier
+                            }
+                        )
                         .onGloballyPositioned { coords ->
                             val h = with(density) { coords.size.height.toDp() }
                             onHeightChange(h)
                         }
-                        .padding(horizontal = 16.dp, vertical = 24.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
                     maxItemsInEachRow = 4,
                 ) {
                     MorePanelItem(

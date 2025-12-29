@@ -7,8 +7,8 @@ import android.view.View
 import android.view.Window
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -58,16 +58,19 @@ fun BottomSheetDialog(
     Box(modifier = modifier) {
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(animationSpec = tween(durationMillis = 400, easing = LinearEasing)),
-            exit = fadeOut(animationSpec = tween(durationMillis = 400, easing = LinearEasing)),
+            enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
         ) {
             Box(
                 modifier =
-                    Modifier.fillMaxSize().background(color = Color.Transparent).clickableNoRipple {
-                        if (canceledOnTouchOutside) {
-                            onDismissRequest()
+                    Modifier
+                        .fillMaxSize()
+                        .background(color = Color.Transparent)
+                        .clickableNoRipple {
+                            if (canceledOnTouchOutside) {
+                                onDismissRequest()
+                            }
                         }
-                    }
             )
         }
         InnerDialog(visible = visible, content = content)
@@ -80,17 +83,18 @@ private fun BoxScope.InnerDialog(visible: Boolean, content: @Composable () -> Un
     val offsetYAnimate by animateFloatAsState(targetValue = offsetY, label = "")
     AnimatedVisibility(
         modifier =
-            Modifier.align(alignment = Alignment.BottomCenter)
+            Modifier
+                .align(alignment = Alignment.BottomCenter)
                 .offset(offset = { IntOffset(0, offsetYAnimate.roundToInt()) }),
         visible = visible,
         enter =
             slideInVertically(
-                animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
-                initialOffsetY = { 2 * it },
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                initialOffsetY = { it },
             ),
         exit =
             slideOutVertically(
-                animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                 targetOffsetY = { it },
             ),
     ) {
@@ -114,7 +118,8 @@ fun DiaAmountLayout(content: @Composable DiaAmountWindowScope.() -> Unit) {
 }
 
 interface DiaAmountWindowScope {
-    @Composable fun SetDiaAmount(dimAmount: Float)
+    @Composable
+    fun SetDiaAmount(dimAmount: Float)
 }
 
 private object DiaAmountWindowScopeInstance : DiaAmountWindowScope {
