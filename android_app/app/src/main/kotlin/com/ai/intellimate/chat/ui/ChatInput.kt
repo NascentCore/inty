@@ -177,12 +177,13 @@ fun ChatInput(
                     showMorePanel = showMorePanel,
                     onSendMessage = onSendMessage,
                     onToggleMorePanel = {
-                        // 只有“+ / v”按钮会走到这里；键盘未弹出时优先弹键盘，避免用户需要点输入框
-                        if (!isKeyboardVisible) {
-                            focusInputAndShowKeyboard()
-                        } else {
-                            onToggleMorePanel()
+                        // 点击加号按钮时，直接切换更多面板
+                        // 如果键盘已显示，先隐藏键盘，然后显示更多面板
+                        // 注意：这与"()"按钮的逻辑不同，"()"按钮会弹出键盘并插入文本
+                        if (isKeyboardVisible) {
+                            keyboardController?.hide()
                         }
+                        onToggleMorePanel()
                     },
                 )
             }
