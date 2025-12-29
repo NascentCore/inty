@@ -12,17 +12,20 @@ import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +40,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +67,8 @@ import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.xb.navigation.Routes
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** 聊天更多面板组件 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,16 +84,37 @@ fun ChatMorePanel(
     onCall: () -> Unit,
     windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
-    if (!visible) {
-        onHeightChange(0.dp)
-        return
-    }
-
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showSheet by remember { mutableStateOf(false) }
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    
+    // 内部状态控制Dialog和BottomSheetDialog的显示
+    // 当visible变为false时，先让BottomSheetDialog执行退出动画，然后再关闭Dialog
+    var showDialog by remember { mutableStateOf(visible) }
+    var showBottomSheet by remember { mutableStateOf(visible) }
+
+    // 当visible变为false时，先触发退出动画，延迟后再关闭Dialog
+    LaunchedEffect(visible) {
+        if (!visible) {
+            // 先让BottomSheetDialog执行退出动画
+            showBottomSheet = false
+            // 等待退出动画完成（300ms）后再关闭Dialog
+            delay(350)
+            showDialog = false
+            onHeightChange(0.dp)
+        } else {
+            // visible变为true时，立即显示Dialog和BottomSheet
+            showDialog = true
+            showBottomSheet = true
+        }
+    }
+
+    if (!showDialog) {
+        return
+    }
 
     if (showResetConfirmDialog) {
         ResetConfirmDialog(
@@ -100,124 +127,150 @@ fun ChatMorePanel(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            // 点击外部关闭时，也先执行退出动画
+            scope.launch {
+                showBottomSheet = false
+                delay(350)
+                showDialog = false
+                onDismiss()
+            }
+        },
         properties =
             DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         DiaAmountLayout {
             SetDiaAmount(0f)
-            BottomSheetDialog(modifier = Modifier, visible = true, onDismissRequest = onDismiss) {
-                val density = LocalDensity.current
-                Column(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .background(color = HeartColor.primaryColor)
-                            .windowInsetsPadding(windowInsets)
-                            .onGloballyPositioned { coords ->
-                                val h = with(density) { coords.size.height.toDp() }
-                                onHeightChange(h)
-                            }
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Spacer(Modifier.width(16.dp))
-                        MorePanelItem(
-                            icon = R.drawable.icon_reply_chat,
-                            text = stringResource(R.string.reply_style),
-                            isVip = true,
-                            onClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "reply_style",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
-                                    if (vipStatus.isSubscribed) {
-                                        showSheet = true
-                                    } else {
-                                        // 去会员中心
-                                        navController.navigate(Routes.Me.VipCenter)
-                                        onDismiss() // 要关闭掉panel
-                                    }
-                                }
-                            },
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        MorePanelItem(
-                            icon = R.drawable.icon_reset_chat,
-                            text = stringResource(R.string.str_reset),
-                            onClick = {
-                                // 检查是否已登录
-                                if (IntySetting.isLogin()) {
-                                    // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
-                                    // 相当于重新开始和agent初次聊天
-                                    showResetConfirmDialog = true
-                                }
-                            },
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        MorePanelItem(
-                            icon = R.drawable.icon_feedback,
-                            text = stringResource(R.string.str_feedback),
-                            onClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "feedback",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    ReportActivity.launchFeedback(context)
-                                }
-                            },
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        MorePanelItem(
-                            icon = R.drawable.icon_report,
-                            text = stringResource(R.string.str_report),
-                            onClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "report",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
-                                }
-                            },
-                        )
-                        Spacer(Modifier.width(16.dp))
-
-                        if (BuildConfig.DEBUG) {} else {}
+            BottomSheetDialog(
+                modifier = Modifier,
+                visible = showBottomSheet,
+                onDismissRequest = {
+                    // 关闭时先执行退出动画
+                    scope.launch {
+                        showBottomSheet = false
+                        delay(350)
+                        showDialog = false
+                        onDismiss()
                     }
+                },
+                // ChatMorePanel 出现时直接展示并占据位置，不使用滑入动画
+                slideInOnEnter = false,
+            ) {
+                val density = LocalDensity.current
+                // 获取键盘高度，用于匹配panel高度，避免键盘消失时输入框高度变化
+                val imeHeight = WindowInsets.ime.getBottom(density)
+                val keyboardHeightDp = with(density) { imeHeight.toDp() }
+
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = HeartColor.primaryColor)
+                        .windowInsetsPadding(windowInsets)
+                        // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
+                        // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
+                        .then(
+                            if (keyboardHeightDp > 0.dp) {
+                                Modifier.heightIn(min = keyboardHeightDp)
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .onGloballyPositioned { coords ->
+                            val h = with(density) { coords.size.height.toDp() }
+                            onHeightChange(h)
+                        }
+                        .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    maxItemsInEachRow = 4,
+                ) {
+                    MorePanelItem(
+                        icon = R.drawable.icon_reply_chat,
+                        text = stringResource(R.string.reply_style),
+                        isVip = true,
+                        onClick = {
+                            // 检查是否已登录
+                            if (
+                                IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                            ) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_MORE_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "reply_style",
+                                        "agent_id" to (agentInfo?.id ?: ""),
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
+                                if (vipStatus.isSubscribed) {
+                                    showSheet = true
+                                } else {
+                                    // 去会员中心
+                                    navController.navigate(Routes.Me.VipCenter)
+                                    onDismiss() // 要关闭掉panel
+                                }
+                            }
+                        },
+                    )
+                    MorePanelItem(
+                        icon = R.drawable.icon_reset_chat,
+                        text = stringResource(R.string.str_reset),
+                        onClick = {
+                            // 检查是否已登录
+                            if (IntySetting.isLogin()) {
+                                // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
+                                // 相当于重新开始和agent初次聊天
+                                showResetConfirmDialog = true
+                            }
+                        },
+                    )
+                    MorePanelItem(
+                        icon = R.drawable.icon_feedback,
+                        text = stringResource(R.string.str_feedback),
+                        onClick = {
+                            // 检查是否已登录
+                            if (
+                                IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                            ) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_MORE_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "feedback",
+                                        "agent_id" to (agentInfo?.id ?: ""),
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                ReportActivity.launchFeedback(context)
+                            }
+                        },
+                    )
+                    MorePanelItem(
+                        icon = R.drawable.icon_report,
+                        text = stringResource(R.string.str_report),
+                        onClick = {
+                            // 检查是否已登录
+                            if (
+                                IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                            ) {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_MORE_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "report",
+                                        "agent_id" to (agentInfo?.id ?: ""),
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
+                            }
+                        },
+                    )
 
                     if (BuildConfig.BUILD_TYPE != NetworkConfig.BuildType.RELEASE.value) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Spacer(Modifier.width(16.dp))
-                            MorePanelItem(
-                                icon = R.drawable.icon_report,
-                                text = "Call",
-                                onClick = onCall,
-                            )
-                            Spacer(Modifier.width(16.dp))
-                        }
+                        MorePanelItem(
+                            icon = R.drawable.icon_call,
+                            text = "Call",
+                            onClick = onCall,
+                        )
                     }
                 }
             }
@@ -234,16 +287,16 @@ fun ChatMorePanel(
 
     // 获取当前agent的聊天设置，确保按agent隔离，并监听chatSettings变化
     val currentChatSetting by
-        remember(agentInfo?.id, chatSettings) {
-            derivedStateOf {
-                agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
-            }
+    remember(agentInfo?.id, chatSettings) {
+        derivedStateOf {
+            agentInfo?.id?.let { agentId -> chatViewModel.getChatSettingForAgent(agentId) }
         }
+    }
 
     val replyStr by
-        remember(agentInfo?.id, currentChatSetting) {
-            derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
-        }
+    remember(agentInfo?.id, currentChatSetting) {
+        derivedStateOf { (currentChatSetting?.style_prompt ?: "") }
+    }
     if (showSheet) {
         ReplyStyleSheet(
             sheetState = sheetState,
@@ -266,20 +319,24 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         modifier = Modifier.noRippleClickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -287,7 +344,61 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         }
         Spacer(Modifier.height(6.dp))
         Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White)
-        Spacer(Modifier.height(60.dp))
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewPanelItem() {
+    MorePanelItem(icon = R.drawable.icon_reply_chat, "Chat Style", false, {})
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChatMorePanelPreview() {
+    IntelliMateTheme {
+        // 简化版Preview，仅用于预览MorePanelItem的布局效果
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(color = HeartColor.primaryColor)
+                    .padding(16.dp)
+        ) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+                maxItemsInEachRow = 4,
+            ) {
+                MorePanelItem(
+                    icon = R.drawable.icon_reply_chat,
+                    text = "回复风格",
+                    isVip = true,
+                    onClick = {},
+                )
+                MorePanelItem(
+                    icon = R.drawable.icon_reset_chat,
+                    text = "重置",
+                    onClick = {},
+                )
+                MorePanelItem(
+                    icon = R.drawable.icon_feedback,
+                    text = "反馈",
+                    onClick = {},
+                )
+                MorePanelItem(
+                    icon = R.drawable.icon_report,
+                    text = "举报",
+                    onClick = {},
+                )
+                MorePanelItem(
+                    icon = R.drawable.icon_report,
+                    text = "第5个",
+                    onClick = {},
+                )
+            }
+        }
     }
 }
 
@@ -295,7 +406,8 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier.clip(RoundedCornerShape(24.dp))
+            Modifier
+                .clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -315,7 +427,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -327,7 +441,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),

@@ -7,8 +7,8 @@ import android.view.View
 import android.view.Window
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -45,6 +45,8 @@ fun BottomSheetDialog(
     cancelable: Boolean = true,
     canceledOnTouchOutside: Boolean = true,
     onDismissRequest: () -> Unit,
+    // 是否在出现时使用滑入动画，false 时直接展示（淡入）
+    slideInOnEnter: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     BackHandler(
@@ -58,41 +60,56 @@ fun BottomSheetDialog(
     Box(modifier = modifier) {
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(animationSpec = tween(durationMillis = 400, easing = LinearEasing)),
-            exit = fadeOut(animationSpec = tween(durationMillis = 400, easing = LinearEasing)),
+            enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
         ) {
             Box(
                 modifier =
-                    Modifier.fillMaxSize().background(color = Color.Transparent).clickableNoRipple {
-                        if (canceledOnTouchOutside) {
-                            onDismissRequest()
+                    Modifier
+                        .fillMaxSize()
+                        .background(color = Color.Transparent)
+                        .clickableNoRipple {
+                            if (canceledOnTouchOutside) {
+                                onDismissRequest()
+                            }
                         }
-                    }
             )
         }
-        InnerDialog(visible = visible, content = content)
+        InnerDialog(visible = visible, slideInOnEnter = slideInOnEnter, content = content)
     }
 }
 
 @Composable
-private fun BoxScope.InnerDialog(visible: Boolean, content: @Composable () -> Unit) {
+private fun BoxScope.InnerDialog(
+    visible: Boolean,
+    slideInOnEnter: Boolean = true,
+    content: @Composable () -> Unit,
+) {
     var offsetY by remember { mutableFloatStateOf(value = 0f) }
     val offsetYAnimate by animateFloatAsState(targetValue = offsetY, label = "")
     AnimatedVisibility(
         modifier =
-            Modifier.align(alignment = Alignment.BottomCenter)
+            Modifier
+                .align(alignment = Alignment.BottomCenter)
                 .offset(offset = { IntOffset(0, offsetYAnimate.roundToInt()) }),
         visible = visible,
         enter =
-            slideInVertically(
-                animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
-                initialOffsetY = { 2 * it },
-            ),
+            if (slideInOnEnter) {
+                // 从下方滑入
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    initialOffsetY = { it },
+                )
+            } else {
+                // 直接展示（淡入，不移动）
+                fadeIn(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
+            },
         exit =
+            // 向下退出（类似 Compose BottomSheet）+ 淡出，避免icon残留
             slideOutVertically(
-                animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing),
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                 targetOffsetY = { it },
-            ),
+            ) + fadeOut(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)),
     ) {
         DisposableEffect(key1 = null) { onDispose { offsetY = 0f } }
         Box { content() }
@@ -114,7 +131,8 @@ fun DiaAmountLayout(content: @Composable DiaAmountWindowScope.() -> Unit) {
 }
 
 interface DiaAmountWindowScope {
-    @Composable fun SetDiaAmount(dimAmount: Float)
+    @Composable
+    fun SetDiaAmount(dimAmount: Float)
 }
 
 private object DiaAmountWindowScopeInstance : DiaAmountWindowScope {
