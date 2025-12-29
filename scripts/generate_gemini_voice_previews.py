@@ -110,9 +110,7 @@ async def generate_preview_for_voice(
                 f"转换后大小: {len(audio_bytes)} bytes"
             )
         except ImportError:
-            logger.warning(
-                "pydub 未安装，将直接上传 WAV 格式（浏览器兼容性可能受限）"
-            )
+            logger.warning("pydub 未安装，将直接上传 WAV 格式（浏览器兼容性可能受限）")
             content_type = "audio/wav"
         except Exception as e:
             logger.warning(f"WAV 转 MP3 失败: {e}，将直接上传 WAV 格式")
@@ -168,7 +166,7 @@ async def generate_all_previews(
             return {}
 
     logger.info(f"将为 {len(voices)} 个音色生成预览音频")
-    logger.info(f"预览文本: \"{PREVIEW_TEXT}\"")
+    logger.info(f'预览文本: "{PREVIEW_TEXT}"')
 
     results: dict[str, Optional[str]] = {}
 
@@ -229,4 +227,3 @@ def main(
 
 if __name__ == "__main__":
     cyclopts.run(main)
-

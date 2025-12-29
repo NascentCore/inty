@@ -94,13 +94,13 @@ object DeviceUtils {
     /** 判断是否为模拟器 */
     fun isEmulator(): Boolean {
         return (Build.FINGERPRINT.startsWith("generic") ||
-                Build.FINGERPRINT.startsWith("unknown") ||
-                Build.MODEL.contains("google_sdk") ||
-                Build.MODEL.contains("Emulator") ||
-                Build.MODEL.contains("Android SDK built for x86") ||
-                Build.MANUFACTURER.contains("Genymotion") ||
-                (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
-                "google_sdk" == Build.PRODUCT)
+            Build.FINGERPRINT.startsWith("unknown") ||
+            Build.MODEL.contains("google_sdk") ||
+            Build.MODEL.contains("Emulator") ||
+            Build.MODEL.contains("Android SDK built for x86") ||
+            Build.MANUFACTURER.contains("Genymotion") ||
+            (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+            "google_sdk" == Build.PRODUCT)
     }
 
     /** 获取设备屏幕宽度 */
@@ -143,7 +143,6 @@ object DeviceUtils {
         }
     }
 
-
     /** 获取设备时区ID（如 "Asia/Shanghai"） */
     fun getTimeZoneId(): String {
         return try {
@@ -152,7 +151,6 @@ object DeviceUtils {
             "UTC"
         }
     }
-
 
     /** 获取设备当前语言代码（如 "zh", "en"） */
     fun getLanguageCode(): String {
@@ -171,5 +169,4 @@ object DeviceUtils {
             ""
         }
     }
-
 }
