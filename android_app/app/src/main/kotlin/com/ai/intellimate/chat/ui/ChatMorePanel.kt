@@ -12,11 +12,14 @@ import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -24,9 +27,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -43,12 +52,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -108,21 +119,22 @@ fun ChatMorePanel(
             SetDiaAmount(0f)
             BottomSheetDialog(modifier = Modifier, visible = true, onDismissRequest = onDismiss) {
                 val density = LocalDensity.current
-                Column(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .background(color = HeartColor.primaryColor)
-                            .windowInsetsPadding(windowInsets)
-                            .onGloballyPositioned { coords ->
-                                val h = with(density) { coords.size.height.toDp() }
-                                onHeightChange(h)
-                            }
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = HeartColor.primaryColor)
+                        .windowInsetsPadding(windowInsets)
+                        .onGloballyPositioned { coords ->
+                            val h = with(density) { coords.size.height.toDp() }
+                            onHeightChange(h)
+                        },
+                    contentPadding = PaddingValues(vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Spacer(Modifier.width(16.dp))
+                    item("Chat Style") {
                         MorePanelItem(
-                            icon = R.drawable.icon_reply_chat,
-                            text = stringResource(R.string.reply_style),
                             isVip = true,
                             onClick = {
                                 // 检查是否已登录
@@ -147,11 +159,21 @@ fun ChatMorePanel(
                                     }
                                 }
                             },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_reply_chat),
+                                    contentDescription = "chatStyle",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            },
+                            text = {
+                                Text(stringResource(R.string.reply_style))
+                            }
                         )
-                        Spacer(Modifier.width(16.dp))
+                    }
+                    
+                    item("Reset") {
                         MorePanelItem(
-                            icon = R.drawable.icon_reset_chat,
-                            text = stringResource(R.string.str_reset),
                             onClick = {
                                 // 检查是否已登录
                                 if (IntySetting.isLogin()) {
@@ -160,11 +182,21 @@ fun ChatMorePanel(
                                     showResetConfirmDialog = true
                                 }
                             },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_reset_chat),
+                                    contentDescription = "reset",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            },
+                            text = {
+                                Text(stringResource(R.string.str_reset))
+                            }
                         )
-                        Spacer(Modifier.width(16.dp))
+                    }
+                    
+                    item("Feedback") {
                         MorePanelItem(
-                            icon = R.drawable.icon_feedback,
-                            text = stringResource(R.string.str_feedback),
                             onClick = {
                                 // 检查是否已登录
                                 if (
@@ -181,11 +213,21 @@ fun ChatMorePanel(
                                     ReportActivity.launchFeedback(context)
                                 }
                             },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_feedback),
+                                    contentDescription = "feedback",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            },
+                            text = {
+                                Text(stringResource(R.string.str_feedback))
+                            }
                         )
-                        Spacer(Modifier.width(16.dp))
+                    }
+                    
+                    item("Report") {
                         MorePanelItem(
-                            icon = R.drawable.icon_report,
-                            text = stringResource(R.string.str_report),
                             onClick = {
                                 // 检查是否已登录
                                 if (
@@ -202,21 +244,35 @@ fun ChatMorePanel(
                                     ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
                                 }
                             },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_report),
+                                    contentDescription = "report",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            },
+                            text = {
+                                Text(stringResource(R.string.str_report))
+                            }
                         )
-                        Spacer(Modifier.width(16.dp))
-
-                        if (BuildConfig.DEBUG) {} else {}
                     }
-
+                    
                     if (BuildConfig.BUILD_TYPE != NetworkConfig.BuildType.RELEASE.value) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Spacer(Modifier.width(16.dp))
+                        item("Call") {
                             MorePanelItem(
-                                icon = R.drawable.icon_report,
-                                text = "Call",
                                 onClick = onCall,
+                                icon = {
+                                    Image(
+                                        imageVector = Icons.Rounded.Call,
+                                        contentDescription = "call",
+                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                },
+                                text = {
+                                    Text(stringResource(R.string.call))
+                                }
                             )
-                            Spacer(Modifier.width(16.dp))
                         }
                     }
                 }
@@ -259,6 +315,52 @@ fun ChatMorePanel(
     }
 }
 
+@Composable
+private fun MorePanelItem(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isVip: Boolean = false,
+    icon: @Composable () -> Unit,
+    text: @Composable () -> Unit
+) {
+    Column(
+        modifier = modifier.noRippleClickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(64.dp)
+                    .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(36.dp)
+            ) {
+
+                icon()
+            }
+
+            if (isVip) {
+                Image(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
+                    painter = painterResource(R.drawable.ic_vip_badge),
+                    contentDescription = null,
+                )
+            }
+        }
+        ProvideTextStyle(
+            TextStyle(
+                fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White
+            ),
+            text
+        )
+    }
+}
+
 /** 更多面板项目组件 */
 @Composable
 private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onClick: () -> Unit) {
@@ -269,17 +371,22 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         Spacer(Modifier.height(20.dp))
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -287,7 +394,6 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         }
         Spacer(Modifier.height(6.dp))
         Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White)
-        Spacer(Modifier.height(60.dp))
     }
 }
 
@@ -295,7 +401,8 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier.clip(RoundedCornerShape(24.dp))
+            Modifier
+                .clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -315,7 +422,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -327,7 +436,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),

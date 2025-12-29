@@ -551,4 +551,5 @@
     <string name="voice_call_start">开始通话</string>
     <string name="voice_call_end">结束通话</string>
     <string name="voice_call_request_permission">请求权限</string>
+    <string name="call">Call</string>
 </resources>
