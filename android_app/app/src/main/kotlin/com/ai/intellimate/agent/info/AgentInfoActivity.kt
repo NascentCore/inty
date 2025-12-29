@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
 /** Ai模型的信息介绍页面 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Home.AgentInfoPage 替代")
 class AgentInfoActivity : BaseActivity() {
 
     companion object {

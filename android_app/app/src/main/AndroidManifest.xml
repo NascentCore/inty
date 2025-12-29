@@ -76,12 +76,12 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".profile.ModifyProfileActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Inty.Popup"
-            android:windowSoftInputMode="adjustResize" />
+<!--        <activity-->
+<!--            android:name=".profile.ModifyProfileActivity"-->
+<!--            android:launchMode="singleTop"-->
+<!--            android:screenOrientation="portrait"-->
+<!--            android:theme="@style/Theme.Inty.Popup"-->
+<!--            android:windowSoftInputMode="adjustResize" />-->
 
         <activity
             android:name=".login.RegInfoActivity"
