@@ -166,6 +166,12 @@ class VoiceCallViewModel(
         }
     }
 
+    fun setMuted(isMuted: Boolean) {
+        _uiState.update {
+            it.copy(isMuted = isMuted)
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         stopCalling()

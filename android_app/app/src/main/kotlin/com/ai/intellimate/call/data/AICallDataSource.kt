@@ -1,6 +1,8 @@
 package com.ai.intellimate.call.data
 
 import ai.sxwl.android.utils.LogUtils
+import androidx.annotation.StringRes
+import com.ai.intellimate.R
 import com.ai.intellimate.call.data.bean.CallPacket
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
@@ -32,12 +34,12 @@ import kotlinx.serialization.decodeFromString
 /**
  * WebSocket连接状态
  */
-enum class ConnectionState {
+enum class ConnectionState(@StringRes val textRes: Int? = null) {
     DISCONNECTED, // 未连接
-    CONNECTING,  // 连接中
-    CONNECTED,   // 已连接
+    CONNECTING(R.string.voice_call_connecting),  // 连接中
+    CONNECTED(R.string.voice_call_connected),   // 已连接
     DISCONNECTING, // 断开中
-    ERROR        // 错误
+    ERROR(R.string.voice_call_error)        // 错误
 }
 
 /**

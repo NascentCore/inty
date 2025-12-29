@@ -10,5 +10,7 @@ data class VoiceCallUiState(
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
     /** 通话状态 */
     val callState: CallStatus? = null,
+    /** 静音 */
+    val isMuted: Boolean = true,
     val agent: AgentInfo? = null,
 )

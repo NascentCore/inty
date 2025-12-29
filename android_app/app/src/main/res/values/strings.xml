@@ -542,13 +542,11 @@
     <string name="boost_leaderboard_tab_top_users">Top Users</string>
 
     <!-- Voice Call -->
-    <string name="voice_call_connecting">连接中…</string>
-    <string name="voice_call_connected">已连接</string>
-    <string name="voice_call_disconnected">未连接</string>
-    <string name="voice_call_recording">正在录制…</string>
-    <string name="voice_call_playing">正在播放…</string>
-    <string name="voice_call_error">连接错误</string>
-    <string name="voice_call_start">开始通话</string>
-    <string name="voice_call_end">结束通话</string>
+    <string name="voice_call_connecting">Requesting…</string>
+    <string name="voice_call_connected">In a call</string>
+    <string name="voice_call_error">error</string>
     <string name="voice_call_request_permission">请求权限</string>
+    <string name="call">Call</string>
+    <string name="end">end</string>
+    <string name="mute">mute</string>
 </resources>

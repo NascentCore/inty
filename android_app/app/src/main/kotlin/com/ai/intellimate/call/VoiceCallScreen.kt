@@ -1,32 +1,66 @@
 package com.ai.intellimate.call
 
+import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.design.isInEditMode
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import android.Manifest
 import android.annotation.SuppressLint
 import android.media.AudioFormat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeMute
+import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -101,23 +135,23 @@ fun VoiceCallScreen(
             }
         }
 
-        // 录制音频，通过viewModel.sendVoice实时发送音频数据
-        DisposableEffect(uiState.connectionState) {
-            when (uiState.connectionState) {
-                ConnectionState.CONNECTED -> {
-                    // 连接建立时开始录制
-                    audioRecordManager.startRecording { audioData ->
-                        viewModel.sendVoice(audioData)
+        LaunchedEffect(Unit) {
+            snapshotFlow { uiState.connectionState == ConnectionState.CONNECTED && !uiState.isMuted }
+                .collect {
+                    if(it) {
+                        audioRecordManager.startRecording { audioData ->
+                            viewModel.sendVoice(audioData)
+                        }
+                    } else {
+                        // 断开连接或静音时停止录制
+                        audioRecordManager.stopRecording()
                     }
                 }
-                else -> {
-                    // 断开连接时停止录制
-                    audioRecordManager.stopRecording()
-                }
-            }
+        }
 
+        // 组件销毁时清理所有资源
+        DisposableEffect(Unit) {
             onDispose {
-                // 组件销毁时停止录制和播放
                 audioRecordManager.stopRecording()
                 audioStreamPlayer.stopPlayback()
             }
@@ -125,7 +159,8 @@ fun VoiceCallScreen(
 
         VoiceCallScreen(
             onBack = onBack,
-            uiState = uiState
+            uiState = uiState,
+            onMuteChange = viewModel::setMuted
         )
     } else {
         Box(
@@ -141,139 +176,187 @@ fun VoiceCallScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VoiceCallScreen(
     onBack: () -> Unit,
+    onMuteChange: (Boolean) -> Unit,
     uiState: VoiceCallUiState
 ) {
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AsyncImage(
-            model = uiState.agent?.background,
-            contentDescription = "background",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(Modifier.weight(1f))
-
-            Text(text = "连接状态:${uiState.connectionState.name}", color = Color.White)
-
-            if (uiState.callState != null) {
-                Text(text = "通话状态:${uiState.callState.name}", color = Color.White)
-            }
-
-            Spacer(Modifier.weight(1f))
-            Button(
-                onClick = onBack,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBack
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.back),
+                            contentDescription = "back"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    navigationIconContentColor = Color.White
                 )
-            ) {
-                Text("结束通话")
-            }
-            Spacer(Modifier.height(50.dp))
-        }
-    }
-}
-
-/**
- * 连接状态文本
- */
-@Composable
-private fun ConnectionStatusText(
-    connectionState: ConnectionState,
-    recordingState: com.ai.intellimate.audio.RecordingState,
-    playbackState: com.ai.intellimate.audio.PlaybackState
-) {
-    val statusText = when {
-        connectionState == ConnectionState.CONNECTING -> stringResource(R.string.voice_call_connecting)
-        connectionState == ConnectionState.CONNECTED -> {
-            when {
-                recordingState == com.ai.intellimate.audio.RecordingState.RECORDING ->
-                    stringResource(R.string.voice_call_recording)
-                playbackState == com.ai.intellimate.audio.PlaybackState.PLAYING ->
-                    stringResource(R.string.voice_call_playing)
-                else -> stringResource(R.string.voice_call_connected)
-            }
-        }
-        connectionState == ConnectionState.ERROR -> stringResource(R.string.voice_call_error)
-        else -> stringResource(R.string.voice_call_disconnected)
-    }
-
-    Text(
-        text = statusText,
-        color = Color.White,
-        fontSize = 18.sp,
-        textAlign = TextAlign.Center
-    )
-}
-
-/**
- * 权限请求按钮
- */
-@Composable
-private fun PermissionRequestButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.size(120.dp),
-        shape = CircleShape
-    ) {
-        Text(
-            text = stringResource(R.string.voice_call_request_permission),
-            fontSize = 14.sp
+            )
+        },
+        containerColor = Color.Transparent,
+        modifier = Modifier.background(
+            brush = Brush.verticalGradient(
+                0f to Color(0xFF6685D1),
+                1f to Color(0xFF926BCE)
+            )
         )
+    ) { contentPadding ->
+        Box(
+            modifier = Modifier
+                .padding(contentPadding)
+                .fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                uiState.agent?.run {
+                    val avatarModifier = Modifier
+                        .size(120.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.White,
+                            shape = CircleShape
+                        )
+                        .clip(CircleShape)
+
+                    if (isInEditMode) {
+                        Box(avatarModifier.background(color = Color.Black))
+                    } else {
+                        AsyncImage(
+                            model = getCdnImageUrl(avatar),
+                            contentDescription = "avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = avatarModifier
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = name,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                uiState.connectionState.textRes?.let {
+                    Text(
+                        text = stringResource(it),
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 50.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                MenuItem(
+                    button = {
+                        IconToggleButton(
+                            checked = uiState.isMuted,
+                            onCheckedChange = onMuteChange,
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.iconToggleButtonColors(
+                                containerColor = Color.White.copy(alpha = 0.3f),
+                                checkedContainerColor = Color.White.copy(alpha = 0.3f),
+                                contentColor = Color.White,
+                                checkedContentColor = Color.White
+                            )
+                        ) {
+                            if (uiState.isMuted) {
+                                Icon(
+                                    imageVector = Icons.Rounded.MicOff,
+                                    contentDescription = "muted"
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Rounded.Mic,
+                                    contentDescription = "mute"
+                                )
+                            }
+                        }
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.mute))
+                    }
+                )
+
+                MenuItem(
+                    text = { Text(stringResource(R.string.end)) }
+                ) {
+                    IconButton(
+                        onClick = onBack,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = Color(0xFFEB4E3D)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "end"
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
-/**
- * 通话控制按钮
- */
 @Composable
-private fun CallControlButton(
-    isCallActive: Boolean,
-    connectionState: ConnectionState,
-    onClick: () -> Unit
+private fun MenuItem(
+    text: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    button: @Composable () -> Unit
 ) {
     Box(
-        modifier = Modifier.size(120.dp),
-        contentAlignment = Alignment.Center
+        modifier = modifier
     ) {
-        if (connectionState == ConnectionState.CONNECTING) {
-            CircularProgressIndicator(
-                color = Color.White,
-                modifier = Modifier.size(60.dp)
-            )
-        } else {
-            Button(
-                onClick = onClick,
-                modifier = Modifier.size(120.dp),
-                shape = CircleShape,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor =
-                            if (isCallActive) {
-                                Color.Red
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            }
-                    )
+        CompositionLocalProvider(LocalContentColor provides Color.White) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text =
-                        if (isCallActive) {
-                            stringResource(R.string.voice_call_end)
-                        } else {
-                            stringResource(R.string.voice_call_start)
-                        },
-                    fontSize = 16.sp,
-                    color = Color.White
-                )
+                button()
+
+                ProvideTextStyle(MaterialTheme.typography.bodySmall, text)
             }
         }
     }
 }
 
+@Preview
+@Composable
+private fun VoiceCallPreview() {
+    IntelliMateTheme {
+        VoiceCallScreen(
+            onBack = {},
+            onMuteChange = {},
+            uiState = VoiceCallUiState(
+                agent = AgentInfo(
+                    name = "July"
+                ),
+                connectionState = ConnectionState.CONNECTING
+            )
+        )
+    }
+}
