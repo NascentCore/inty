@@ -62,6 +62,10 @@ PURITY_MAIN_PROMPT_0725 = _get_prompt_text("PURITY_MAIN_PROMPT_0725")
 
 PURITY_MODE_PROMPT_0725 = _get_prompt_text("PURITY_MODE_PROMPT_0725")
 
+ROLEPLAY_MAIN_PROMPT_1225 = _get_prompt_text("ROLEPLAY_MAIN_PROMPT_1225")
+
+RP_MODE_PROMPT_1225 = _get_prompt_text("RP_MODE_PROMPT_1225")
+
 
 @dataclass
 class PromptOption:
@@ -85,6 +89,12 @@ AVAILABLE_MAIN_PROMPTS: list[PromptOption] = [
         name="纯净模式主提示词 (0725)",
         description="纯净模式主提示词，用于建立更安全的对话框架",
         content=PURITY_MAIN_PROMPT_0725,
+    ),
+    PromptOption(
+        id="roleplay_main_1225",
+        name="角色扮演主提示词 (1225)",
+        description="角色扮演主提示词（1225版本），强调情感连接和角色代入",
+        content=ROLEPLAY_MAIN_PROMPT_1225,
     ),
 ]
 
@@ -112,6 +122,12 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
         name="纯净模式 (0725)",
         description="纯净模式提示词（0725版本），用于更安全的对话",
         content=PURITY_MODE_PROMPT_0725,
+    ),
+    PromptOption(
+        id="rp_mode_1225",
+        name="RP模式 (1225)",
+        description="角色扮演模式提示词（1225版本），强调主动推动剧情和场景变化",
+        content=RP_MODE_PROMPT_1225,
     ),
 ]
 
