@@ -9,6 +9,7 @@ import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.GoogleLoginRequest
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.di.networkModule
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
@@ -51,6 +52,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.call.voiceCallModule
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
 import com.ai.intellimate.ui.components.EnterEmailScreen
@@ -65,7 +67,6 @@ import com.ai.intellimate.xb.helper.AppConstants.Companion.PUSH_NOTIFICATION
 import com.ai.intellimate.xb.navigation.AppNavHost
 import com.ai.intellimate.xb.navigation.Routes
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -73,6 +74,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.KoinApplication
+import org.koin.core.option.viewModelScopeFactory
+import kotlin.math.abs
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -301,7 +304,14 @@ class MainActivity : BaseActivity() {
     override fun ConfigComposeUI() {
         super.ConfigComposeUI()
 
-        KoinApplication(application = {}) { ComposeUI() }
+        KoinApplication(
+            application = {
+                modules(networkModule, voiceCallModule)
+                options(viewModelScopeFactory())
+            }
+        ) {
+            ComposeUI()
+        }
     }
 
     @Composable
