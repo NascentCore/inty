@@ -428,7 +428,7 @@ async def get_recommended_agents(
     current_user_id: Optional[str] = None,
 ) -> List[models.Agent]:
     """
-    Get recommended AI agents list (public and approved agents, ordered by energy points desc)
+    Get recommended AI agents list (public agents created by superusers, ordered by energy points desc)
     """
     try:
         # Validate parameters
@@ -441,19 +441,20 @@ async def get_recommended_agents(
                 status_code=400, detail="Limit parameter must be between 1-1000"
             )
 
-        # 获取agents和关注者数量
+        # 获取agents和关注者数量，只返回超级用户创建的角色
         query = (
             select(
                 models.Agent,
                 func.count(agent_followers.c.user_id).label("follower_count"),
             )
+            .join(models.User, models.Agent.creator_id == models.User.id)
             .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
             .options(selectinload(models.Agent.creator))
             .where(
                 and_(
                     models.Agent.visibility == AgentVisibility.PUBLIC,
                     models.Agent.deleted_at.is_(None),
-                    # models.Agent.status == AgentStatus.APPROVED
+                    models.User.is_superuser == True,
                 )
             )
             .group_by(models.Agent.id)
@@ -518,7 +519,10 @@ def get_deterministic_random_order(sort_seed: str):
 def _select_agents_with_sizes(*, include_private: bool) -> select:
     avatar_resource = models.Resource.__table__.alias("avatar_resource")
     background_resource = models.Resource.__table__.alias("background_resource")
-    conditions = [models.Agent.deleted_at.is_(None)]
+    conditions = [
+        models.Agent.deleted_at.is_(None),
+        models.User.is_superuser == True,  # 只返回超级用户创建的角色
+    ]
     if not include_private:
         # Public ones, users can create private agents
         conditions.append(models.Agent.visibility == AgentVisibility.PUBLIC)
@@ -534,6 +538,7 @@ def _select_agents_with_sizes(*, include_private: bool) -> select:
         # 2. Loads all creator data upfront: It performs one additional query to load all the creator information for all agents at once
         # 3. Makes the relationship immediately available: You can access agent.creator without triggering additional database hits
         .options(selectinload(models.Agent.creator))
+        .join(models.User, models.Agent.creator_id == models.User.id)
         .outerjoin(
             avatar_resource,
             avatar_resource.c.url == models.Agent.avatar,
@@ -608,9 +613,8 @@ async def get_recommended_agents_paginated(
     """
     获取推荐的AI角色列表（分页版本）
 
-    注意：该函数返回所有符合条件的角色，包括请求用户自己创建的角色。
-    这是预期行为，不会过滤掉用户自己创建的角色。
-    如需仅获取其他用户创建的角色，请使用其他接口或添加额外的过滤条件。
+    注意：该函数只返回超级用户（is_superuser=True）创建的公开角色，
+    普通用户创建的角色不会出现在推荐列表中。
     """
     try:
         # 验证参数
@@ -625,11 +629,18 @@ async def get_recommended_agents_paginated(
 
         include_private = is_superuser(current_user)
 
-        # 构建基础查询条件
-        base_conditions = [models.Agent.deleted_at.is_(None)]
+        # 构建基础查询条件，只返回超级用户创建的角色
+        base_conditions = [
+            models.Agent.deleted_at.is_(None),
+            models.User.is_superuser == True,
+        ]
         if not include_private:
             base_conditions.append(models.Agent.visibility == AgentVisibility.PUBLIC)
-        base_query = select(models.Agent).where(and_(*base_conditions))
+        base_query = (
+            select(models.Agent)
+            .join(models.User, models.Agent.creator_id == models.User.id)
+            .where(and_(*base_conditions))
+        )
 
         # 获取总数
         count_query = select(func.count()).select_from(base_query.subquery())
