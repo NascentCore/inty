@@ -45,6 +45,8 @@ fun BottomSheetDialog(
     cancelable: Boolean = true,
     canceledOnTouchOutside: Boolean = true,
     onDismissRequest: () -> Unit,
+    // 是否在出现时使用滑入动画，false 时直接展示（淡入）
+    slideInOnEnter: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     BackHandler(
@@ -73,12 +75,16 @@ fun BottomSheetDialog(
                         }
             )
         }
-        InnerDialog(visible = visible, content = content)
+        InnerDialog(visible = visible, slideInOnEnter = slideInOnEnter, content = content)
     }
 }
 
 @Composable
-private fun BoxScope.InnerDialog(visible: Boolean, content: @Composable () -> Unit) {
+private fun BoxScope.InnerDialog(
+    visible: Boolean,
+    slideInOnEnter: Boolean = true,
+    content: @Composable () -> Unit,
+) {
     var offsetY by remember { mutableFloatStateOf(value = 0f) }
     val offsetYAnimate by animateFloatAsState(targetValue = offsetY, label = "")
     AnimatedVisibility(
@@ -88,15 +94,22 @@ private fun BoxScope.InnerDialog(visible: Boolean, content: @Composable () -> Un
                 .offset(offset = { IntOffset(0, offsetYAnimate.roundToInt()) }),
         visible = visible,
         enter =
-            slideInVertically(
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                initialOffsetY = { it },
-            ),
+            if (slideInOnEnter) {
+                // 从下方滑入
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    initialOffsetY = { it },
+                )
+            } else {
+                // 直接展示（淡入，不移动）
+                fadeIn(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
+            },
         exit =
+            // 向下退出（类似 Compose BottomSheet）+ 淡出，避免icon残留
             slideOutVertically(
                 animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                 targetOffsetY = { it },
-            ),
+            ) + fadeOut(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)),
     ) {
         DisposableEffect(key1 = null) { onDispose { offsetY = 0f } }
         Box { content() }

@@ -40,6 +40,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,8 @@ import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.xb.navigation.Routes
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** 聊天更多面板组件 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,16 +84,37 @@ fun ChatMorePanel(
     onCall: () -> Unit,
     windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
-    if (!visible) {
-        onHeightChange(0.dp)
-        return
-    }
-
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showSheet by remember { mutableStateOf(false) }
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    
+    // 内部状态控制Dialog和BottomSheetDialog的显示
+    // 当visible变为false时，先让BottomSheetDialog执行退出动画，然后再关闭Dialog
+    var showDialog by remember { mutableStateOf(visible) }
+    var showBottomSheet by remember { mutableStateOf(visible) }
+
+    // 当visible变为false时，先触发退出动画，延迟后再关闭Dialog
+    LaunchedEffect(visible) {
+        if (!visible) {
+            // 先让BottomSheetDialog执行退出动画
+            showBottomSheet = false
+            // 等待退出动画完成（300ms）后再关闭Dialog
+            delay(350)
+            showDialog = false
+            onHeightChange(0.dp)
+        } else {
+            // visible变为true时，立即显示Dialog和BottomSheet
+            showDialog = true
+            showBottomSheet = true
+        }
+    }
+
+    if (!showDialog) {
+        return
+    }
 
     if (showResetConfirmDialog) {
         ResetConfirmDialog(
@@ -103,13 +127,35 @@ fun ChatMorePanel(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            // 点击外部关闭时，也先执行退出动画
+            scope.launch {
+                showBottomSheet = false
+                delay(350)
+                showDialog = false
+                onDismiss()
+            }
+        },
         properties =
             DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         DiaAmountLayout {
             SetDiaAmount(0f)
-            BottomSheetDialog(modifier = Modifier, visible = true, onDismissRequest = onDismiss) {
+            BottomSheetDialog(
+                modifier = Modifier,
+                visible = showBottomSheet,
+                onDismissRequest = {
+                    // 关闭时先执行退出动画
+                    scope.launch {
+                        showBottomSheet = false
+                        delay(350)
+                        showDialog = false
+                        onDismiss()
+                    }
+                },
+                // ChatMorePanel 出现时直接展示并占据位置，不使用滑入动画
+                slideInOnEnter = false,
+            ) {
                 val density = LocalDensity.current
                 // 获取键盘高度，用于匹配panel高度，避免键盘消失时输入框高度变化
                 val imeHeight = WindowInsets.ime.getBottom(density)
