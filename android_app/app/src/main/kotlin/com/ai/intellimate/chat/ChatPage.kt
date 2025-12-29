@@ -931,7 +931,10 @@ internal fun ChatPage(
                     }
                 }
             },
-            onCall = onCall,
+            onCall = {
+                showMorePanel = false
+                onCall()
+            },
             windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets(),
         )
 
