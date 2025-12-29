@@ -8,17 +8,17 @@ import ai.sxwl.android.utils.DeviceUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import com.chuckerteam.chucker.api.ChuckerInterceptor
-import java.net.InetAddress
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.net.InetAddress
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** 统一的 OkHttpClient 工厂 提供统一的网络客户端配置，包含所有必要的拦截器和配置 */
 object UnifiedOkHttpClient {
@@ -80,8 +80,11 @@ private class DeviceInfoInterceptor : Interceptor {
         builder.addHeader("osVersion", DeviceUtils.getSDKVersionName())
         builder.addHeader("osVersionCode", DeviceUtils.getSDKVersionCode().toString())
 
+        builder.addHeader("x-timezone-id", DeviceUtils.getTimeZoneId())
+        builder.addHeader("x-language", DeviceUtils.getLanguageCode())
+        builder.addHeader("x-country", DeviceUtils.getCountryCode())
+
         // 请求唯一标识（使用后端一致的小写连字符，x- 前缀）
-        // 后端 TODO 中提到 x-request-id，使用小写连字符风格
         val requestId = UUID.randomUUID().toString()
         builder.addHeader("x-request-id", requestId)
 
@@ -147,10 +150,6 @@ private class AuthInterceptor : Interceptor {
                 // Token不匹配，强制使用最新token（SDK可能使用了旧token）
                 builder.removeHeader("Authorization")
                 builder.addHeader("Authorization", "Bearer $currentToken")
-                LogUtils.w(
-                    "AuthInterceptor - Token mismatch detected, using latest token. " +
-                        "SDK token: ${sdkToken.take(8)}..., Current token: ${currentToken.take(8)}..."
-                )
             } else if (existingAuthHeader == null) {
                 // 没有Authorization header，添加最新token
                 builder.addHeader("Authorization", "Bearer $currentToken")
@@ -343,7 +342,7 @@ private class PerformanceInterceptor : Interceptor {
                     mapOf(
                         "duration_ms" to duration,
                         "error_message" to
-                            "exception: ${exception.javaClass.simpleName}, ${exception.message ?: "unknown"}",
+                                "exception: ${exception.javaClass.simpleName}, ${exception.message ?: "unknown"}",
                     ),
                 )
 

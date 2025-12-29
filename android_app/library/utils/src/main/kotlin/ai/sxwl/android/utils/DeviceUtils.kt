@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.os.Build
 import android.provider.Settings
 import java.io.File
+import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 
 /** 设备工具类 提供设备信息相关的工具方法 */
@@ -41,6 +43,7 @@ object DeviceUtils {
         return try {
             val app = Utils.getApp() ?: return ""
             val id = Settings.Secure.getString(app.contentResolver, Settings.Secure.ANDROID_ID)
+            // 9774d56d682e549c 是 Android 模拟器的默认 Android ID，不是真实设备标识，应过滤掉
             if ("9774d56d682e549c" == id) "" else id ?: ""
         } catch (e: Exception) {
             ""
@@ -73,6 +76,7 @@ object DeviceUtils {
                     ""
                 }
             }
+
             else -> {
                 @Suppress("DEPRECATION") Build.SERIAL
             }
@@ -90,13 +94,13 @@ object DeviceUtils {
     /** 判断是否为模拟器 */
     fun isEmulator(): Boolean {
         return (Build.FINGERPRINT.startsWith("generic") ||
-            Build.FINGERPRINT.startsWith("unknown") ||
-            Build.MODEL.contains("google_sdk") ||
-            Build.MODEL.contains("Emulator") ||
-            Build.MODEL.contains("Android SDK built for x86") ||
-            Build.MANUFACTURER.contains("Genymotion") ||
-            (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
-            "google_sdk" == Build.PRODUCT)
+                Build.FINGERPRINT.startsWith("unknown") ||
+                Build.MODEL.contains("google_sdk") ||
+                Build.MODEL.contains("Emulator") ||
+                Build.MODEL.contains("Android SDK built for x86") ||
+                Build.MANUFACTURER.contains("Genymotion") ||
+                (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+                "google_sdk" == Build.PRODUCT)
     }
 
     /** 获取设备屏幕宽度 */
@@ -138,4 +142,34 @@ object DeviceUtils {
             160
         }
     }
+
+
+    /** 获取设备时区ID（如 "Asia/Shanghai"） */
+    fun getTimeZoneId(): String {
+        return try {
+            TimeZone.getDefault().id
+        } catch (e: Exception) {
+            "UTC"
+        }
+    }
+
+
+    /** 获取设备当前语言代码（如 "zh", "en"） */
+    fun getLanguageCode(): String {
+        return try {
+            Locale.getDefault().language
+        } catch (e: Exception) {
+            "en"
+        }
+    }
+
+    /** 获取设备当前国家/地区代码（如 "CN", "US"） */
+    fun getCountryCode(): String {
+        return try {
+            Locale.getDefault().country
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
 }
