@@ -216,6 +216,8 @@ koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin"}
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose"}
 koin-androidx-navigation = { module = "io.insert-koin:koin-androidx-compose-navigation"}
 koin-ktor = { module = "io.insert-koin:koin-ktor"}
+koin-test-junit = { module = "io.insert-koin:koin-test-junit4"}
+koin-test-android = { module = "io.insert-koin:koin-android-test" }
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }

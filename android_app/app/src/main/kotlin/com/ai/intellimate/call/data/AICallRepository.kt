@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.flow
 
 /** AI语音通话Repository实现 只负责WebSocket连接和数据传输，不处理音频录制和播放 */
 class AICallRepository(
-    private val dataSource: AICallDataSource = AICallDataSource(KtorHttpClientFactory.getInstance())
+    private val dataSource: AICallDataSource
 ) {
     // 重连相关
     private var reconnectAttempts = 0

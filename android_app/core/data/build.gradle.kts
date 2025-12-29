@@ -91,4 +91,14 @@ dependencies {
     implementation(libs.slf4j.api)
     // 在测试环境中使用 slf4j-simple（轻量级实现）
     testImplementation(libs.slf4j.simple)
+
+    // ===== Websockets =====
+    implementation(libs.bundles.websockets)
+
+    // ===== 依赖注入 =====
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.androidx.navigation)
+    testImplementation(libs.koin.test.junit)
+    testImplementation(libs.koin.test.android)
 }

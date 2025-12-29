@@ -3,7 +3,6 @@ package com.ai.intellimate.call
 import android.Manifest
 import android.annotation.SuppressLint
 import android.media.AudioFormat
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -30,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioParams
@@ -41,9 +39,11 @@ import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * 语音通话页面 提供与AI的实时语音通讯功能
+ * 语音通话页面
+ * 提供与AI的实时语音通讯功能
  *
  * @param onBack 退出界面
  * @param agentId 角色ID
@@ -51,9 +51,12 @@ import com.google.accompanist.permissions.rememberPermissionState
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
+fun VoiceCallScreen(
+    onBack: () -> Unit,
+    agentId: String
+) {
     val context = LocalContext.current
-    val viewModel = viewModel<VoiceCallViewModel>()
+    val viewModel = koinViewModel<VoiceCallViewModel>()
     val uiState by viewModel.uiState.collectAsState()
     // 权限请求Launcher
     val audioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
@@ -63,14 +66,17 @@ fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
         val audioRecordManager = AudioRecordManager.getInstance(context)
 
         // 启动通话连接
-        LaunchedEffect(agentId) { viewModel.startCalling(agentId) }
+        LaunchedEffect(agentId) {
+            viewModel.startCalling(agentId)
+        }
 
         // 播放接收的音频数据
         LaunchedEffect(Unit) {
-            viewModel.audioResponse.collect { audioData ->
-                // 播放音频
-                audioStreamPlayer.addAudioData(audioData)
-            }
+            viewModel.audioResponse
+                .collect { audioData ->
+                    // 播放音频
+                    audioStreamPlayer.addAudioData(audioData)
+                }
         }
 
         // 管理播放器生命周期
@@ -78,12 +84,11 @@ fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
             when (uiState.connectionState) {
                 ConnectionState.CONNECTED -> {
                     // 连接建立时启动播放（24kHz PCM，单声道，16位）
-                    val playbackParams =
-                        AudioParams(
-                            sampleRate = 24000,
-                            channelConfig = AudioFormat.CHANNEL_OUT_MONO,
-                            audioFormat = AudioFormat.ENCODING_PCM_16BIT,
-                        )
+                    val playbackParams = AudioParams(
+                        sampleRate = 24000,
+                        channelConfig = AudioFormat.CHANNEL_OUT_MONO,
+                        audioFormat = AudioFormat.ENCODING_PCM_16BIT
+                    )
                     audioStreamPlayer.startPlayback(playbackParams)
                 }
                 ConnectionState.DISCONNECTED,
@@ -118,27 +123,40 @@ fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
             }
         }
 
-        VoiceCallScreen(onBack = onBack, uiState = uiState)
+        VoiceCallScreen(
+            onBack = onBack,
+            uiState = uiState
+        )
     } else {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Button(onClick = { audioPermissionState.launchPermissionRequest() }) { Text("需要录音权限") }
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Button(
+                onClick = { audioPermissionState.launchPermissionRequest()}
+            ) {
+                Text("需要录音权限")
+            }
         }
     }
 }
 
 @Composable
-private fun VoiceCallScreen(onBack: () -> Unit, uiState: VoiceCallUiState) {
+private fun VoiceCallScreen(
+    onBack: () -> Unit,
+    uiState: VoiceCallUiState
+) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
             model = uiState.agent?.background,
             contentDescription = "background",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
         )
         Column(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.weight(1f))
 
@@ -151,8 +169,9 @@ private fun VoiceCallScreen(onBack: () -> Unit, uiState: VoiceCallUiState) {
             Spacer(Modifier.weight(1f))
             Button(
                 onClick = onBack,
-                colors =
-                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
             ) {
                 Text("结束通话")
             }
@@ -161,51 +180,73 @@ private fun VoiceCallScreen(onBack: () -> Unit, uiState: VoiceCallUiState) {
     }
 }
 
-/** 连接状态文本 */
+/**
+ * 连接状态文本
+ */
 @Composable
 private fun ConnectionStatusText(
     connectionState: ConnectionState,
     recordingState: com.ai.intellimate.audio.RecordingState,
-    playbackState: com.ai.intellimate.audio.PlaybackState,
+    playbackState: com.ai.intellimate.audio.PlaybackState
 ) {
-    val statusText =
-        when {
-            connectionState == ConnectionState.CONNECTING ->
-                stringResource(R.string.voice_call_connecting)
-            connectionState == ConnectionState.CONNECTED -> {
-                when {
-                    recordingState == com.ai.intellimate.audio.RecordingState.RECORDING ->
-                        stringResource(R.string.voice_call_recording)
-                    playbackState == com.ai.intellimate.audio.PlaybackState.PLAYING ->
-                        stringResource(R.string.voice_call_playing)
-                    else -> stringResource(R.string.voice_call_connected)
-                }
+    val statusText = when {
+        connectionState == ConnectionState.CONNECTING -> stringResource(R.string.voice_call_connecting)
+        connectionState == ConnectionState.CONNECTED -> {
+            when {
+                recordingState == com.ai.intellimate.audio.RecordingState.RECORDING ->
+                    stringResource(R.string.voice_call_recording)
+                playbackState == com.ai.intellimate.audio.PlaybackState.PLAYING ->
+                    stringResource(R.string.voice_call_playing)
+                else -> stringResource(R.string.voice_call_connected)
             }
-            connectionState == ConnectionState.ERROR -> stringResource(R.string.voice_call_error)
-            else -> stringResource(R.string.voice_call_disconnected)
         }
+        connectionState == ConnectionState.ERROR -> stringResource(R.string.voice_call_error)
+        else -> stringResource(R.string.voice_call_disconnected)
+    }
 
-    Text(text = statusText, color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center)
+    Text(
+        text = statusText,
+        color = Color.White,
+        fontSize = 18.sp,
+        textAlign = TextAlign.Center
+    )
 }
 
-/** 权限请求按钮 */
+/**
+ * 权限请求按钮
+ */
 @Composable
 private fun PermissionRequestButton(onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = Modifier.size(120.dp), shape = CircleShape) {
-        Text(text = stringResource(R.string.voice_call_request_permission), fontSize = 14.sp)
+    Button(
+        onClick = onClick,
+        modifier = Modifier.size(120.dp),
+        shape = CircleShape
+    ) {
+        Text(
+            text = stringResource(R.string.voice_call_request_permission),
+            fontSize = 14.sp
+        )
     }
 }
 
-/** 通话控制按钮 */
+/**
+ * 通话控制按钮
+ */
 @Composable
 private fun CallControlButton(
     isCallActive: Boolean,
     connectionState: ConnectionState,
-    onClick: () -> Unit,
+    onClick: () -> Unit
 ) {
-    Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.size(120.dp),
+        contentAlignment = Alignment.Center
+    ) {
         if (connectionState == ConnectionState.CONNECTING) {
-            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(60.dp))
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(60.dp)
+            )
         } else {
             Button(
                 onClick = onClick,
@@ -219,7 +260,7 @@ private fun CallControlButton(
                             } else {
                                 MaterialTheme.colorScheme.primary
                             }
-                    ),
+                    )
             ) {
                 Text(
                     text =
@@ -229,9 +270,10 @@ private fun CallControlButton(
                             stringResource(R.string.voice_call_start)
                         },
                     fontSize = 16.sp,
-                    color = Color.White,
+                    color = Color.White
                 )
             }
         }
     }
 }
+

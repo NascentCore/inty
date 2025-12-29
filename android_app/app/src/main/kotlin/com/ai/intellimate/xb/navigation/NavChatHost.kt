@@ -52,19 +52,9 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             showBackButton = true,
             shouldShowBoostSheetOnOpen = showBoost == true,
             shouldAutoFocusInput = shouldAutoFocusInput ?: true,
-            onCall = { agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) } },
+            onCall = {
+                agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) }
+            }
         )
-    }
-
-    // 定义语音通话页面路由
-    composable(
-        route = Routes.Chat.VoiceCall,
-        arguments = listOf(navArgument("agentId") { type = NavType.StringType }),
-    ) { backStackEntry ->
-        val agentId = backStackEntry.arguments?.getString("agentId")
-
-        if (agentId != null) {
-            VoiceCallScreen(onBack = { navController.popBackStack() }, agentId = agentId)
-        }
     }
 }
