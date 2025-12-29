@@ -241,6 +241,8 @@ class LiveChatService:
         return t
 
     # Gemini Live API 支持的预设语音名称
+    # Gemini Live API 支持的预设语音（Chirp 3: HD voices）
+    # 来源: https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd
     GEMINI_PREBUILT_VOICES = {
         "Zephyr",
         "Puck",
@@ -248,9 +250,30 @@ class LiveChatService:
         "Kore",
         "Fenrir",
         "Aoede",
-        "Leda",
         "Orus",
-        "Perseus",
+        "Leda",
+        "Achernar",
+        "Achird",
+        "Algenib",
+        "Algieba",
+        "Alnilam",
+        "Autonoe",
+        "Callirrhoe",
+        "Despina",
+        "Enceladus",
+        "Erinome",
+        "Gacrux",
+        "Iapetus",
+        "Laomedeia",
+        "Pulcherrima",
+        "Rasalgethi",
+        "Sadachbia",
+        "Sadaltager",
+        "Schedar",
+        "Sulafat",
+        "Umbriel",
+        "Vindemiatrix",
+        "Zubenelgenubi",
     }
 
     def _build_live_config(
