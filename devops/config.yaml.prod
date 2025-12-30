@@ -79,3 +79,21 @@ cloudflare:
 logging:
   level: "INFO"
   format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{extra[request_id]}</cyan> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+
+gemini_live:
+  enabled: true
+  project_id: "inty-backend"
+  location: "us-central1"
+  model: "gemini-live-2.5-flash-preview-native-audio-09-2025"
+  send_sample_rate: 16000
+  receive_sample_rate: 24000
+  default_voice: "Zephyr"
+  session_resumption: true
+  input_transcription: true
+  output_transcription: true
+  save_voice_history: true
+  # Live Chat 用量限制
+  free_user_agent_limit: 5  # 免费用户累计可聊天的 agent 数
+  sub_user_agent_limit: 20  # 订阅用户累计可聊天的 agent 数
+  free_user_duration_per_agent_24h: 60  # 免费用户每 agent 24h 时长（秒）
+  sub_user_duration_per_agent_24h: 300  # 订阅用户每 agent 24h 时长（秒）

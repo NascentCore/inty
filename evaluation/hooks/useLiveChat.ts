@@ -4,7 +4,11 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { LiveChatService, ConnectionStatus } from "../services/liveChat";
+import {
+  LiveChatService,
+  ConnectionStatus,
+  SessionInfo,
+} from "../services/liveChat";
 
 export interface Transcript {
   role: "user" | "assistant";
@@ -18,6 +22,9 @@ export interface UseLiveChatReturn {
   isMuted: boolean;
   transcripts: Transcript[];
   error: { code: string; message: string } | null;
+  remainingDuration: number | null;
+  elapsedTime: number;
+  sessionInfo: SessionInfo | null;
 
   startCall: (agentId: string) => Promise<void>;
   endCall: () => void;
@@ -35,17 +42,53 @@ export function useLiveChat(): UseLiveChatReturn {
   const [error, setError] = useState<{ code: string; message: string } | null>(
     null,
   );
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [remainingDuration, setRemainingDuration] = useState<number | null>(
+    null,
+  );
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const serviceRef = useRef<LiveChatService | null>(null);
   const agentIdRef = useRef<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const initialRemainingRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       if (serviceRef.current) {
         serviceRef.current.disconnect();
       }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    const isInCall =
+      status === "connected" || status === "speaking" || status === "listening";
+
+    if (isInCall && initialRemainingRef.current !== null && !timerRef.current) {
+      startTimeRef.current = Date.now();
+      timerRef.current = setInterval(() => {
+        const elapsed = Math.floor(
+          (Date.now() - (startTimeRef.current || Date.now())) / 1000,
+        );
+        setElapsedTime(elapsed);
+
+        const newRemaining = Math.max(
+          0,
+          (initialRemainingRef.current || 0) - elapsed,
+        );
+        setRemainingDuration(newRemaining);
+      }, 1000);
+    } else if (!isInCall && timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+      startTimeRef.current = null;
+    }
+  }, [status]);
 
   const handleAudioReceived = useCallback((_audioData: ArrayBuffer) => {
     // Audio is automatically played by LiveChatService
@@ -76,6 +119,18 @@ export function useLiveChat(): UseLiveChatReturn {
   const handleError = useCallback((code: string, message: string) => {
     setError({ code, message });
     console.error(`Live chat error [${code}]: ${message}`);
+    // 收到错误时停止录音状态
+    setIsRecording(false);
+  }, []);
+
+  const handleSessionInfo = useCallback((info: SessionInfo) => {
+    setSessionInfo(info);
+    setRemainingDuration(info.remainingDuration);
+    initialRemainingRef.current = info.remainingDuration;
+    console.log(
+      `会话信息: 剩余 ${info.remainingDuration}s, ` +
+        `agent 限制 ${info.agentLimit}, 已聊 ${info.agentCount}`,
+    );
   }, []);
 
   const startCall = useCallback(
@@ -87,6 +142,10 @@ export function useLiveChat(): UseLiveChatReturn {
 
       setError(null);
       setTranscripts([]);
+      setSessionInfo(null);
+      setRemainingDuration(null);
+      setElapsedTime(0);
+      initialRemainingRef.current = null;
       agentIdRef.current = agentId;
 
       const service = new LiveChatService();
@@ -100,6 +159,7 @@ export function useLiveChat(): UseLiveChatReturn {
             onTranscript: handleTranscript,
             onStatusChange: handleStatusChange,
             onError: handleError,
+            onSessionInfo: handleSessionInfo,
           },
         );
 
@@ -115,13 +175,24 @@ export function useLiveChat(): UseLiveChatReturn {
         setStatus("error");
       }
     },
-    [handleAudioReceived, handleTranscript, handleStatusChange, handleError],
+    [
+      handleAudioReceived,
+      handleTranscript,
+      handleStatusChange,
+      handleError,
+      handleSessionInfo,
+    ],
   );
 
   const endCall = useCallback(() => {
     if (serviceRef.current) {
       serviceRef.current.disconnect();
       serviceRef.current = null;
+    }
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
 
     setIsRecording(false);
@@ -177,6 +248,9 @@ export function useLiveChat(): UseLiveChatReturn {
     isMuted,
     transcripts,
     error,
+    remainingDuration,
+    elapsedTime,
+    sessionInfo,
     startCall,
     endCall,
     toggleMute,

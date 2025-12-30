@@ -18,11 +18,18 @@ export interface LiveChatConfig {
   agentId: string;
 }
 
+export interface SessionInfo {
+  remainingDuration: number;
+  agentLimit: number;
+  agentCount: number;
+}
+
 export interface LiveChatCallbacks {
   onAudioReceived: (audioData: ArrayBuffer) => void;
   onTranscript: (text: string, role: "user" | "assistant") => void;
   onStatusChange: (status: ConnectionStatus, message?: string) => void;
   onError: (code: string, message: string) => void;
+  onSessionInfo?: (info: SessionInfo) => void;
 }
 
 interface WebSocketMessage {
@@ -31,9 +38,13 @@ interface WebSocketMessage {
   text?: string;
   status?: string;
   message?: string;
-  code?: string;
+  code?: number | string;
+  error_code?: string;
   sample_rate?: number;
   is_final?: boolean;
+  remaining_duration?: number;
+  agent_limit?: number;
+  agent_count?: number;
 }
 
 const SEND_SAMPLE_RATE = 16000;
@@ -158,9 +169,27 @@ export class LiveChatService {
 
         case "error":
           this.callbacks.onError(
-            message.code || "UNKNOWN",
+            message.error_code || String(message.code) || "UNKNOWN",
             message.message || "未知错误",
           );
+          // 收到错误消息后自动停止录音并断开连接
+          this.stopRecording();
+          this.status = "error";
+          this.callbacks.onStatusChange("error", message.message);
+          break;
+
+        case "session_info":
+          if (this.callbacks.onSessionInfo) {
+            this.callbacks.onSessionInfo({
+              remainingDuration: message.remaining_duration || 0,
+              agentLimit: message.agent_limit || 0,
+              agentCount: message.agent_count || 0,
+            });
+            console.log(
+              `收到会话信息: 剩余时长 ${message.remaining_duration}s, ` +
+                `agent 限制 ${message.agent_limit}, 已聊 ${message.agent_count}`,
+            );
+          }
           break;
 
         default:

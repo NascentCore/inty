@@ -62,6 +62,11 @@ gemini_live:
   trigger_tokens: 10000 # 上下文压缩触发阈值
   target_tokens: 512 # 压缩后目标 token 数
   save_voice_history: true # 默认是否保存语音对话到聊天历史
+  # 用量限制配置
+  free_user_agent_limit: 5 # 免费用户累计可聊天的 agent 数
+  sub_user_agent_limit: 20 # 订阅用户累计可聊天的 agent 数
+  free_user_duration_per_agent_24h: 60 # 免费用户每 agent 24h 时长（秒）
+  sub_user_duration_per_agent_24h: 300 # 订阅用户每 agent 24h 时长（秒）
 ```
 
 ### 认证配置
@@ -101,11 +106,51 @@ FastAPI 生成的 OpenAPI/Swagger **不会**包含 `@router.websocket(...)` 端�
 | 上行 | `audio`           | Base64 编码的 16kHz PCM 音频                      |
 | 上行 | `text`            | 可选文本输入（同时发送给 Gemini）                 |
 | 上行 | `end`             | 结束通话                                          |
+| 下行 | `session_info`    | 会话信息（剩余时长、agent 限制等）                |
 | 下行 | `audio_response`  | Base64 编码的 24kHz PCM 音频                      |
 | 下行 | `transcript`      | AI 回复的转录文本                                 |
 | 下行 | `user_transcript` | 用户语音的转录文本                                |
 | 下行 | `status`          | 会话状态（connected, speaking, listening, error） |
 | 下行 | `error`           | 错误消息                                          |
+
+#### error 消息格式
+
+错误消息用于用量超限、会话异常等场景，格式统一：
+
+```json
+{
+  "type": "error",
+  "code": 10001008,
+  "error_code": "LIVE_CHAT_DURATION_LIMIT_REACHED",
+  "message": "Live chat duration limit reached"
+}
+```
+
+| 字段         | 类型        | 说明               |
+| ------------ | ----------- | ------------------ |
+| `type`       | string      | 固定为 `"error"`   |
+| `code`       | int \| null | 业务错误码（数字） |
+| `error_code` | string      | 错误代码（字符串） |
+| `message`    | string      | 错误描述           |
+
+#### session_info 消息格式
+
+连接建立后立即发送，包含用量限制信息：
+
+```json
+{
+  "type": "session_info",
+  "remaining_duration": 295,
+  "agent_limit": 20,
+  "agent_count": 3
+}
+```
+
+| 字段                 | 类型 | 说明                        |
+| -------------------- | ---- | --------------------------- |
+| `remaining_duration` | int  | 本次会话剩余可用时长（秒）  |
+| `agent_limit`        | int  | 用户可聊天的 agent 数量上限 |
+| `agent_count`        | int  | 用户已聊过的 agent 数量     |
 
 #### 配置说明
 
@@ -177,11 +222,86 @@ GET /api/v1/live-chat/status
 | 上行 | 16kHz  | PCM (16-bit) | 单声道 |
 | 下行 | 24kHz  | PCM (16-bit) | 单声道 |
 
+## 用量限制
+
+### 限制规则
+
+Live Chat 功能实现了两类用量限制：
+
+| 限制类型          | 免费用户 | 订阅用户 | 说明                         |
+| ----------------- | -------- | -------- | ---------------------------- |
+| Agent 数量限制    | 5 个     | 20 个    | 累计可聊天的不同 agent 数    |
+| 每 Agent 24h 时长 | 60 秒    | 300 秒   | 与同一 agent 24 小时内总时长 |
+
+- **Superuser** 不受任何限制，但仍会计算用量用于前端显示
+- 用量记录存储在 `subscription_usage` 表，`usage_type = 'live_chat'`
+
+### WebSocket 关闭码
+
+当用量超限时，WebSocket 连接会被服务端关闭：
+
+| 关闭码 | 原因                    | 说明               |
+| ------ | ----------------------- | ------------------ |
+| 4001   | `Unauthorized`          | 认证失败           |
+| 4003   | `Live chat is disabled` | 功能未启用         |
+| 4010   | Agent 数量限制相关      | Agent 数量达到上限 |
+| 4011   | 时长限制相关            | 24h 时长达到上限   |
+
+#### 关闭原因（reason）格式
+
+用量超限时的 `reason` 为 JSON 字符串，格式与下行 error 消息保持一致：
+
+```json
+{
+  "type": "error",
+  "code": 10001001,
+  "error_code": "SUBSCRIPTION_REQUIRED",
+  "message": "Subscription required"
+}
+```
+
+#### 业务错误码说明
+
+根据用户订阅状态，返回不同的错误码：
+
+| 用户类型   | 限制类型   | error_code                         | code     | 说明               |
+| ---------- | ---------- | ---------------------------------- | -------- | ------------------ |
+| 未订阅用户 | Agent/时长 | `SUBSCRIPTION_REQUIRED`            | 10001001 | 提示需要订阅       |
+| 订阅用户   | Agent 数量 | `LIVE_CHAT_AGENT_LIMIT_REACHED`    | 10001007 | Agent 数量达到上限 |
+| 订阅用户   | 24h 时长   | `LIVE_CHAT_DURATION_LIMIT_REACHED` | 10001008 | 24h 时长达到上限   |
+
+此设计与其他功能（如语音生成、图片生成）的错误处理保持一致。
+
+### 前端用量显示
+
+通话界面会实时显示：
+
+- **已通话时间**：当前会话已用时长（本地计时）
+- **剩余时间**：基于后端返回的 `remaining_duration` 倒计时
+  - 剩余 ≤30 秒：黄色警告
+  - 剩余 ≤10 秒：红色闪烁
+
+### 用量记录
+
+每次通话结束时，后端会记录用量到 `subscription_usage` 表：
+
+```json
+{
+  "usage_type": "live_chat",
+  "extra_data": {
+    "agent_id": "xxx",
+    "duration_seconds": 45,
+    "ended_by_timeout": false
+  }
+}
+```
+
 ## 安全考虑
 
 - WebSocket 连接需验证 Bearer Token（复用现有认证机制）
 - 限制每用户并发语音会话数（建议：1 个）
 - 语音数据不落盘，仅转录文本可选保存
+- 用量限制防止资源滥用
 
 ## 依赖
 
@@ -192,7 +312,6 @@ GET /api/v1/live-chat/status
 
 - 添加语音活动检测（VAD）减少无效传输
 - 支持多种 AI 语音选择
-- 添加通话时长统计
 - 支持 Android/iOS 客户端
 
 ## 已知问题与解决方案：音频多轮在同一 Live Session 卡死（#1224）

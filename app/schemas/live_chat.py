@@ -34,6 +34,7 @@ class LiveChatMessageType(str, Enum):
     USER_TRANSCRIPT = "user_transcript"  # 用户语音的转录文本
     STATUS = "status"  # 会话状态更新
     ERROR = "error"  # 错误消息
+    SESSION_INFO = "session_info"  # 会话信息（含剩余时长等）
 
 
 class LiveChatConfig(BaseModel):
@@ -115,5 +116,18 @@ class LiveChatErrorMessage(BaseModel):
         default=LiveChatMessageType.ERROR,
         description="消息类型",
     )
-    code: str = Field(..., description="错误代码")
+    code: Optional[int] = Field(default=None, description="业务错误码（数字）")
+    error_code: str = Field(..., description="错误代码（字符串）")
     message: str = Field(..., description="错误描述")
+
+
+class LiveChatSessionInfoMessage(BaseModel):
+    """会话信息消息（下行）- 连接成功后发送"""
+
+    type: LiveChatMessageType = Field(
+        default=LiveChatMessageType.SESSION_INFO,
+        description="消息类型",
+    )
+    remaining_duration: int = Field(..., description="剩余可用时长（秒）")
+    agent_limit: int = Field(..., description="可聊天的 agent 数量限制")
+    agent_count: int = Field(..., description="已聊天的 agent 数量")

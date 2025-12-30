@@ -376,7 +376,8 @@ class LiveChatService:
                 old_receive_task = session.receive_task
                 session.receive_task = None
 
-            await on_status(LiveChatStatus.CONNECTING, f"正在重建连接（{reason}）...")
+            # 注意：重连期间不发送 CONNECTING 状态到前端，避免 UI 抖动
+            # 前端会继续保持 LISTENING/CONNECTED 状态，用户体验更流畅
             logger.debug(
                 f"开始重建 Gemini Live session: reason={reason}, "
                 f"next_reconnect={session.reconnect_count + 1}, has_old={old_session is not None}"
@@ -440,10 +441,9 @@ class LiveChatService:
             except Exception as e:
                 logger.debug(f"flush pending audio failed（忽略）: {e}")
 
-            await on_status(
-                LiveChatStatus.CONNECTED,
-                f"已重连（{session.reconnect_count}）",
-            )
+            # 重连成功后发送 LISTENING 状态，保持 UI 一致性
+            # 不发送 CONNECTED，避免 UI 从 "聆听中" 变成 "已连接" 再变回来
+            await on_status(LiveChatStatus.LISTENING, None)
             logger.debug(
                 f"重建 Gemini Live session 成功: reason={reason}, "
                 f"reconnect={session.reconnect_count}, flushed_audio_chunks={flushed}"
