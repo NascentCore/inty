@@ -545,7 +545,9 @@
     <string name="voice_call_connecting">Requesting…</string>
     <string name="voice_call_connected">In a call</string>
     <string name="voice_call_error">error</string>
-    <string name="voice_call_request_permission">请求权限</string>
+    <string name="voice_call_request_permission">Request Permission</string>
+    <string name="voice_call_permission_rationale">Voice call requires microphone permission to record audio. Please enable it in Settings.</string>
+    <string name="voice_call_open_settings">Open Settings</string>
     <string name="call">Call</string>
     <string name="end">end</string>
     <string name="mute">mute</string>
