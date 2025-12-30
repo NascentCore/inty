@@ -108,10 +108,10 @@
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Inty.UCrop" />
-        <activity
-            android:name=".vip.SubsManageActivity"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.Inty.Popup" />
+<!--        <activity-->
+<!--            android:name=".vip.SubsManageActivity"-->
+<!--            android:launchMode="singleTop"-->
+<!--            android:theme="@style/Theme.Inty.Popup" />-->
 
     </application>
 

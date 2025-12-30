@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 /** 订阅管理页面 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Me.SubsManagement 替代")
 class SubsManageActivity : BaseActivity() {
 
     companion object {
@@ -36,9 +37,9 @@ class SubsManageActivity : BaseActivity() {
 /** 订阅管理内容组件 */
 @Composable
 private fun SubsManageContent(onBack: () -> Unit, viewModel: SubsManageViewModel) {
-    SubscriptionManagementScreen(
-        modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor),
-        onBack = onBack,
-        viewModel = viewModel,
-    )
+//    SubscriptionManagementScreen(
+//        modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor),
+//        onBack = onBack,
+//        viewModel = viewModel,
+//    )
 }

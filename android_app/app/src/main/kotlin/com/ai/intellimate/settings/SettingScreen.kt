@@ -41,7 +41,6 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
-import com.ai.intellimate.vip.SubsManageActivity
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
 
@@ -306,12 +305,11 @@ private fun SupportAndHelpSection(
             item = SettingsItemData.CommonItemData(title = subscriptionTitle),
             isInGroup = true,
             onItemClick = {
-                if (isVipSubscribed) {
-                    SubsManageActivity.launch(context)
+                if (!isVipSubscribed) {
+//                    SubsManageActivity.launch(context)
+                    navController.navigate(Routes.Me.SubsManagement)
                 } else {
                     navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.SETTINGS_SUBSCRIPTION)
                 }
             },
         )

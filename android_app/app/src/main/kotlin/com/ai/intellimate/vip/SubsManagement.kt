@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.SubscriptionManagementContainer
 import com.ai.intellimate.ui.components.openPlayStoreSubscriptions
@@ -32,8 +34,9 @@ import com.ai.intellimate.ui.components.openPlayStoreSubscriptions
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionManagementScreen(
+    navController: NavController,
     modifier: Modifier,
-    onBack: () -> Unit,
+//    onBack: () -> Unit,
     viewModel: SubsManageViewModel,
 ) {
     val context = LocalContext.current
@@ -68,7 +71,9 @@ fun SubscriptionManagementScreen(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable { onBack() },
+                            Modifier.padding(horizontal = 12.dp).noRippleClickable {
+                                navController.popBackStack()
+                            },
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                     )
@@ -105,9 +110,10 @@ fun SubscriptionManagementScreen(
 @Composable
 private fun SubscriptionManagementScreenPreview() {
     // 这里需要模拟 ViewModel，实际使用时会在 Activity 中传入
+    val navController = rememberNavController()
     SubscriptionManagementScreen(
+        navController,
         modifier = Modifier,
-        onBack = {},
         viewModel = SubsManageViewModel(),
     )
 }
