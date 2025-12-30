@@ -102,7 +102,10 @@ class AICallRepository(private val dataSource: AICallDataSource) {
         AgentStore.getAgent(agentId)?.let { emit(Result.success(it)) }
 
         when (val result = NetServiceMgr.getAgentApi().getAgentDetail(agentId)) {
-            is HttpResult.Success -> emit(Result.success(result.data))
+            is HttpResult.Success -> {
+                AgentStore.addAgent(result.data)
+                emit(Result.success(result.data))
+            }
             is HttpResult.Failure -> {
                 NetworkErrorHandler.showNetworkAwareError(result.message)
             }
