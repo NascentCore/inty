@@ -2,8 +2,11 @@ package com.ai.intellimate.call
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.http.IntyErrorCode
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.isInEditMode
 import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.utils.ToastUtils
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -48,6 +51,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +73,10 @@ import com.ai.intellimate.audio.AudioRecordManager
 import com.ai.intellimate.audio.AudioStreamPlayer
 import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.uistate.VoiceCallUiState
+import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.ChatDialogData
+import com.ai.intellimate.ui.UnlimitChatDialog
+import com.ai.intellimate.xb.navigation.Routes
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -84,7 +92,12 @@ import org.koin.compose.viewmodel.koinViewModel
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
+fun VoiceCallScreen(
+    onBack: () -> Unit,
+    onVip: () -> Unit,
+    onVipMoreInfo: () -> Unit,
+    agentId: String
+) {
 
     VoiceCallScreen(onBack = onBack) { contentPadding ->
         // 权限请求Launcher
@@ -96,6 +109,7 @@ fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
             val uiState by viewModel.uiState.collectAsState()
             val audioStreamPlayer = AudioStreamPlayer.getInstance()
             val audioRecordManager = AudioRecordManager.getInstance(context)
+            val errorReason by viewModel.errorReason.collectAsState(null)
 
             // 启动通话连接
             LaunchedEffect(agentId) { viewModel.startCalling(agentId) }
@@ -159,8 +173,46 @@ fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
                 onEnd = onBack,
                 uiState = uiState,
                 onMuteChange = viewModel::setMuted,
-                modifier = Modifier.padding(contentPadding).fillMaxSize()
+                modifier = Modifier
+                    .padding(contentPadding)
+                    .fillMaxSize()
             )
+
+            errorReason?.run {
+                val dialogData =
+                    when (errorCode) {
+                        IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
+                            ChatDialogData(
+                                R.drawable.img_unlimit_dialog_bg,
+                                stringResource(R.string.voice_call_subscription_guide_content),
+                                stringResource(R.string.voice_call_subscription_guide_btn_text)
+                            )
+                        }
+
+                        IntyErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED, IntyErrorCode.LIVE_CHAT_AGENT_LIMIT_REACHED -> {
+                            ChatDialogData(
+                                R.drawable.img_unlimit_dialog_bg,
+                                stringResource(R.string.voice_call_limit_exceeded_content),
+                                stringResource(R.string.voice_call_limit_exceeded_btn_text)
+                            )
+                        }
+                    }
+
+
+                UnlimitChatDialog(
+                    dialogData,
+                    onCancel = onBack,
+                    onSure = {
+                        when (errorCode) {
+                            IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
+                                onVip()
+                            }
+                            else -> onBack()
+                        }
+                    },
+                    onMoreInfo = onVipMoreInfo,
+                )
+            }
         } else {
             if (!audioPermissionState.status.shouldShowRationale) {
                 LaunchedEffect(Unit) {
@@ -168,7 +220,9 @@ fun VoiceCallScreen(onBack: () -> Unit, agentId: String) {
                 }
             } else {
                 Column(
-                    modifier = Modifier.padding(contentPadding).fillMaxSize(),
+                    modifier = Modifier
+                        .padding(contentPadding)
+                        .fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -214,7 +268,8 @@ private fun VoiceCallContent(
         ) {
             uiState.agent?.run {
                 val avatarModifier =
-                    Modifier.size(120.dp)
+                    Modifier
+                        .size(120.dp)
                         .border(width = 1.dp, color = Color.White, shape = CircleShape)
                         .clip(CircleShape)
 
@@ -253,7 +308,10 @@ private fun VoiceCallContent(
 
         Row(
             modifier =
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 50.dp),
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 50.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             MenuItem(
@@ -363,7 +421,9 @@ private fun VoiceCallPreview() {
                         agent = AgentInfo(name = "July"),
                         connectionState = ConnectionState.CONNECTING,
                     ),
-                modifier = Modifier.padding(it).fillMaxSize()
+                modifier = Modifier
+                    .padding(it)
+                    .fillMaxSize()
             )
         }
     }
