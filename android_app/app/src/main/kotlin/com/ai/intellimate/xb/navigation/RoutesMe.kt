@@ -12,4 +12,7 @@ object RoutesMe {
 
     /** 编辑个人资料页面路由 */
     const val ModifyProfile = "modify_profile"
+
+    /** MultiPanelInputField 演示页面路由 */
+    const val MultiPanelInputFieldDemo = "multi_panel_input_field_demo"
 }

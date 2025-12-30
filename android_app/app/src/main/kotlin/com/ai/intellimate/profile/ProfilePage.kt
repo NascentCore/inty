@@ -1,5 +1,6 @@
 package com.ai.intellimate.profile
 
+import CheckInRepository
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -453,6 +454,10 @@ private fun ProfileHeader(
                     Modifier.size(UiConfigs.MePage.AvatarFullSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
+                        .clickable {
+                            // 点击头像跳转到 MultiPanelInputField 演示页面
+                            navController.navigate(Routes.Me.MultiPanelInputFieldDemo)
+                        }
             ) {
                 // 使用头像 URL 作为 key，确保头像更新时重新加载
                 val avatarUrl = getCdnImageUrl(userProfile.avatar, width = 512)
