@@ -160,6 +160,15 @@
 | `/api/v1/character-themes/{theme_id}/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/character_themes.py` |
 | `/api/v1/character-themes/{theme_id}/agents/reorder` | PUT | `app/api/v1/endpoints/character_themes.py` |
 
+### 实时语音通话 (Live Chat)
+
+| 路径 | 方法 | 实现文件 |
+|------|------|----------|
+| `/api/v1/live-chat/status` | GET | `app/api/v1/endpoints/live_chat.py` |
+| `/api/v1/live-chat/{agent_id}` | WebSocket | `app/api/v1/endpoints/live_chat.py` |
+
+> **注意**：WebSocket 端点不会出现在 Swagger 文档中。关于消息协议和错误码的详细说明，请参考 [`docs/FR_LIVE_VOICE_CHAT.md`](../../docs/FR_LIVE_VOICE_CHAT.md)。
+
 ### 评测 (Evaluation)
 
 | 路径 | 方法 | 实现文件 |

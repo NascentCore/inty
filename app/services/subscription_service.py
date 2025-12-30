@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import Integer, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,6 +25,7 @@ from app.models.subscription import (
 from app.models.subscription_features import SubscriptionFeatures
 from app.models.user import AuthType, User
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
+from app.schemas.response import BusinessErrorCode
 from app.schemas.subscription import (
     FeatureInfo,
     GooglePlayPurchaseRequest,
@@ -1179,6 +1180,164 @@ class SubscriptionService:
             logger.error(f"检查图片生成次数限制失败: {str(e)}")
             # 出错时默认允许，避免影响用户体验
             return True, 0, -1
+
+    async def check_live_chat_limit(
+        self, db: AsyncSession, user: schemas.User, agent_id: str
+    ) -> Tuple[bool, str, Dict[str, Any]]:
+        """
+        检查用户 Live Chat 用量限制
+
+        检查两项限制：
+        1. 累计可聊天的 agent 数量
+        2. 24 小时内与目标 agent 的通话总时长
+
+        Args:
+            db: 数据库会话
+            user: 用户对象
+            agent_id: 目标 Agent ID
+
+        Returns:
+            Tuple[bool, str, Dict]: (是否允许, 拒绝原因, 详细信息)
+            - 允许时: (True, "", {})
+            - 拒绝时: (False, "reason_code", {"detail": ...})
+        """
+        try:
+            gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
+
+            # Superuser 和 TEST 环境：不限制，但仍计算用量用于前端显示
+            is_unlimited = False
+            if (
+                global_config_loaded_from_config_yaml.app.environment
+                == Environment.TEST
+                and not global_config_loaded_from_config_yaml.app.debug
+            ):
+                logger.debug("TEST 环境下放宽 Live Chat 限额: user_id=%s", user.id)
+                is_unlimited = True
+
+            if is_superuser(user):
+                logger.debug(f"Superuser {user.id} has unlimited live chat")
+                is_unlimited = True
+
+            subscription_status = await self.get_user_subscription_status(db, user.id)
+            is_subscribed = subscription_status.is_subscribed or is_unlimited
+
+            if is_subscribed:
+                agent_limit = gemini_live_config.sub_user_agent_limit
+                duration_limit = gemini_live_config.sub_user_duration_per_agent_24h
+            else:
+                agent_limit = gemini_live_config.free_user_agent_limit
+                duration_limit = gemini_live_config.free_user_duration_per_agent_24h
+
+            # 使用 ->> 操作符提取 JSON 字段为文本（兼容 JSON 和 JSONB 类型）
+            distinct_agents_result = await db.execute(
+                select(SubscriptionUsage.extra_data.op("->>")("agent_id"))
+                .where(
+                    and_(
+                        SubscriptionUsage.user_id == user.id,
+                        SubscriptionUsage.usage_type == "live_chat",
+                    )
+                )
+                .distinct()
+            )
+            chatted_agents = [
+                row[0] for row in distinct_agents_result.fetchall() if row[0]
+            ]
+            chatted_agent_count = len(chatted_agents)
+
+            is_new_agent = agent_id not in chatted_agents
+
+            # Superuser/TEST 环境不检查 agent 数量限制
+            if not is_unlimited and is_new_agent and chatted_agent_count >= agent_limit:
+                logger.info(
+                    f"用户 {user.id} Live Chat agent 数量已达上限: "
+                    f"{chatted_agent_count}/{agent_limit}"
+                )
+                if subscription_status.is_subscribed:
+                    error_info = BusinessErrorCode.LIVE_CHAT_AGENT_LIMIT_REACHED
+                else:
+                    error_info = BusinessErrorCode.SUBSCRIPTION_REQUIRED
+                return (
+                    False,
+                    error_info["error_code"],
+                    {
+                        "used_count": chatted_agent_count,
+                        "limit": agent_limit,
+                        "is_subscribed": is_subscribed,
+                        "error_info": error_info,
+                    },
+                )
+
+            now = datetime.now(timezone.utc)
+            hours_24_ago = now - timedelta(hours=24)
+
+            # 使用 ->> 操作符提取 JSON 字段为文本（兼容 JSON 和 JSONB 类型）
+            duration_result = await db.execute(
+                select(
+                    func.coalesce(
+                        func.sum(
+                            func.cast(
+                                SubscriptionUsage.extra_data.op("->>")(
+                                    "duration_seconds"
+                                ),
+                                Integer,
+                            )
+                        ),
+                        0,
+                    )
+                ).where(
+                    and_(
+                        SubscriptionUsage.user_id == user.id,
+                        SubscriptionUsage.usage_type == "live_chat",
+                        SubscriptionUsage.extra_data.op("->>")("agent_id") == agent_id,
+                        SubscriptionUsage.usage_date >= hours_24_ago,
+                    )
+                )
+            )
+            used_duration = duration_result.scalar() or 0
+
+            # Superuser/TEST 环境不检查时长限制，但仍计算剩余时间用于显示
+            if not is_unlimited and used_duration >= duration_limit:
+                logger.info(
+                    f"用户 {user.id} 与 agent {agent_id} 的 24h Live Chat "
+                    f"时长已达上限: {used_duration}/{duration_limit}s"
+                )
+                if subscription_status.is_subscribed:
+                    error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                else:
+                    error_info = BusinessErrorCode.SUBSCRIPTION_REQUIRED
+                return (
+                    False,
+                    error_info["error_code"],
+                    {
+                        "used_duration": used_duration,
+                        "limit": duration_limit,
+                        "agent_id": agent_id,
+                        "is_subscribed": is_subscribed,
+                        "error_info": error_info,
+                    },
+                )
+
+            remaining_duration = max(0, duration_limit - used_duration)
+            logger.info(
+                f"Live Chat 限制检查 - user_id: {user.id}, agent_id: {agent_id}, "
+                f"used_duration: {used_duration}s, duration_limit: {duration_limit}s, "
+                f"remaining: {remaining_duration}s, is_subscribed: {is_subscribed}, "
+                f"is_unlimited: {is_unlimited}"
+            )
+            return (
+                True,
+                "",
+                {
+                    "remaining_duration": remaining_duration,
+                    "agent_count": chatted_agent_count,
+                    "agent_limit": agent_limit,
+                    "is_new_agent": is_new_agent,
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"检查 Live Chat 限制失败: {str(e)}")
+            return True, "", {}
 
     async def handle_subscription_notification(
         self, db: AsyncSession, notification_data: Dict[str, Any]

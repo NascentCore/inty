@@ -75,6 +75,8 @@ class WIPBusinessErrorCodeEnum(str, Enum):
     VOICE_GENERATION_LIMIT_REACHED = "VOICE_GENERATION_LIMIT_REACHED"
     GUEST_LOGIN_REQUIRED = "GUEST_LOGIN_REQUIRED"
     IMAGE_GENERATION_BLOCKED = "IMAGE_GENERATION_BLOCKED"
+    LIVE_CHAT_AGENT_LIMIT_REACHED = "LIVE_CHAT_AGENT_LIMIT_REACHED"
+    LIVE_CHAT_DURATION_LIMIT_REACHED = "LIVE_CHAT_DURATION_LIMIT_REACHED"
 
     @property
     def code(self) -> int:
@@ -86,6 +88,8 @@ class WIPBusinessErrorCodeEnum(str, Enum):
             BusinessErrorCodeEnum.VOICE_GENERATION_LIMIT_REACHED: 10001004,
             BusinessErrorCodeEnum.GUEST_LOGIN_REQUIRED: 10001005,
             BusinessErrorCodeEnum.IMAGE_GENERATION_BLOCKED: 10001006,
+            BusinessErrorCodeEnum.LIVE_CHAT_AGENT_LIMIT_REACHED: 10001007,
+            BusinessErrorCodeEnum.LIVE_CHAT_DURATION_LIMIT_REACHED: 10001008,
         }
         return error_code_map[self]
 
@@ -99,6 +103,8 @@ class WIPBusinessErrorCodeEnum(str, Enum):
             BusinessErrorCodeEnum.VOICE_GENERATION_LIMIT_REACHED: "Voice generation limit reached",
             BusinessErrorCodeEnum.GUEST_LOGIN_REQUIRED: "Guest login required - Please sign in with Google",
             BusinessErrorCodeEnum.IMAGE_GENERATION_BLOCKED: "Image generation was blocked by safety filter",
+            BusinessErrorCodeEnum.LIVE_CHAT_AGENT_LIMIT_REACHED: "Live chat agent limit reached",
+            BusinessErrorCodeEnum.LIVE_CHAT_DURATION_LIMIT_REACHED: "Live chat duration limit reached",
         }
         return error_message_map[self]
 
@@ -142,6 +148,16 @@ class BusinessErrorCode:
         "code": 10001006,
         "error_code": "IMAGE_GENERATION_BLOCKED",
         "message": "Image generation was blocked by safety filter",
+    }
+    LIVE_CHAT_AGENT_LIMIT_REACHED = {
+        "code": 10001007,
+        "error_code": "LIVE_CHAT_AGENT_LIMIT_REACHED",
+        "message": "Live chat agent limit reached",
+    }
+    LIVE_CHAT_DURATION_LIMIT_REACHED = {
+        "code": 10001008,
+        "error_code": "LIVE_CHAT_DURATION_LIMIT_REACHED",
+        "message": "Live chat duration limit reached",
     }
 
 

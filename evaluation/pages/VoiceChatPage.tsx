@@ -70,6 +70,8 @@ export const VoiceChatPage: React.FC = () => {
     isMuted,
     transcripts,
     error,
+    remainingDuration,
+    elapsedTime,
     startCall,
     endCall,
     toggleMute,
@@ -77,6 +79,19 @@ export const VoiceChatPage: React.FC = () => {
     clearTranscripts,
     clearError,
   } = useLiveChat();
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const getDurationColor = (remaining: number | null): string => {
+    if (remaining === null) return "rgba(255,255,255,0.9)";
+    if (remaining <= 10) return "#ff4d4f";
+    if (remaining <= 30) return "#faad14";
+    return "rgba(255,255,255,0.9)";
+  };
 
   useEffect(() => {
     transcriptsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -362,9 +377,66 @@ export const VoiceChatPage: React.FC = () => {
                     )}
                   </Space>
 
+                  {/* 通话时长显示 */}
+                  {isInCall && (
+                    <div style={{ marginTop: 16, marginBottom: 8 }}>
+                      <Space size="large">
+                        <div>
+                          <Text
+                            style={{
+                              color: "rgba(255,255,255,0.7)",
+                              fontSize: 12,
+                            }}
+                          >
+                            已通话
+                          </Text>
+                          <div
+                            style={{
+                              fontSize: 24,
+                              fontWeight: "bold",
+                              color: "rgba(255,255,255,0.9)",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {formatDuration(elapsedTime)}
+                          </div>
+                        </div>
+                        {remainingDuration !== null && (
+                          <div>
+                            <Text
+                              style={{
+                                color: "rgba(255,255,255,0.7)",
+                                fontSize: 12,
+                              }}
+                            >
+                              剩余时间
+                            </Text>
+                            <div
+                              style={{
+                                fontSize: 24,
+                                fontWeight: "bold",
+                                color: getDurationColor(remainingDuration),
+                                fontFamily: "monospace",
+                                animation:
+                                  remainingDuration <= 10
+                                    ? "blink 1s infinite"
+                                    : "none",
+                              }}
+                            >
+                              <ClockCircleOutlined
+                                style={{ marginRight: 4, fontSize: 18 }}
+                              />
+                              {formatDuration(remainingDuration)}
+                            </div>
+                          </div>
+                        )}
+                      </Space>
+                    </div>
+                  )}
+
                   {/* 录音状态指示 */}
                   {isRecording && !isMuted && (
-                    <div style={{ marginTop: 16 }}>
+                    <div style={{ marginTop: 8 }}>
                       <Space>
                         <span
                           style={{
@@ -497,7 +569,7 @@ export const VoiceChatPage: React.FC = () => {
         </Row>
       </Content>
 
-      {/* 录音动画样式 */}
+      {/* 动画样式 */}
       <style>{`
         @keyframes pulse {
           0% {
@@ -511,6 +583,14 @@ export const VoiceChatPage: React.FC = () => {
           100% {
             opacity: 1;
             transform: scale(1);
+          }
+        }
+        @keyframes blink {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
           }
         }
       `}</style>

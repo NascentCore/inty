@@ -7,6 +7,7 @@ CREATED_BY_AGENT
 import asyncio
 import base64
 import json
+import time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -20,10 +21,13 @@ from app.schemas.live_chat import (
     LiveChatAudioResponseMessage,
     LiveChatErrorMessage,
     LiveChatMessageType,
+    LiveChatSessionInfoMessage,
     LiveChatStatus,
     LiveChatStatusMessage,
     LiveChatTranscriptMessage,
 )
+from app.schemas.response import BusinessErrorCode
+from app.services.global_services import subscription_service
 from app.services.live_chat_service import live_chat_service
 
 router = APIRouter(prefix="/live-chat")
@@ -106,10 +110,12 @@ async def live_chat_session(
 
     流程：
     1. 验证用户认证
-    2. 获取 Agent 配置 + 对话历史
-    3. 创建 Gemini Live 会话
-    4. 双向音频流桥接
-    5. 可选：保存语音对话到聊天历史
+    2. 检查用量限制（agent 数量 + 时长）
+    3. 获取 Agent 配置 + 对话历史
+    4. 创建 Gemini Live 会话
+    5. 双向音频流桥接
+    6. 可选：保存语音对话到聊天历史
+    7. 会话结束时记录用量
 
     消息协议：
     - 上行 audio: {"type": "audio", "data": "<base64_pcm>"}
@@ -121,7 +127,18 @@ async def live_chat_session(
     - 下行 transcript: {"type": "transcript", "text": "...", "is_final": true}
     - 下行 user_transcript: {"type": "user_transcript", "text": "...", "is_final": true}
     - 下行 status: {"type": "status", "status": "...", "message": "..."}
-    - 下行 error: {"type": "error", "code": "...", "message": "..."}
+    - 下行 error: {"type": "error", "code": 10001008, "error_code": "...", "message": "..."}
+
+    WebSocket 关闭码与错误信息：
+    - 4001: 认证失败
+    - 4003: 功能未启用
+    - 4010: Agent 数量限制（reason 为 JSON 格式的业务错误）
+    - 4011: 时长限制（reason 为 JSON 格式的业务错误）
+
+    用量超限时 reason 格式：{"type": "error", "code": 10001001, "error_code": "...", "message": "..."}
+    - 未订阅用户: SUBSCRIPTION_REQUIRED (10001001)
+    - 订阅用户 Agent 限制: LIVE_CHAT_AGENT_LIMIT_REACHED (10001007)
+    - 订阅用户时长限制: LIVE_CHAT_DURATION_LIMIT_REACHED (10001008)
     """
     logger.info(f"收到 WebSocket 连接请求 - agent_id: {agent_id}")
 
@@ -136,12 +153,52 @@ async def live_chat_session(
         await websocket.close(code=4003, reason="Live chat is disabled")
         return
 
-    await websocket.accept()
-    logger.info(
-        f"WebSocket 连接已建立 - user_id: {current_user.id}, agent_id: {agent_id}"
+    is_allowed, reject_reason, limit_info = (
+        await subscription_service.check_live_chat_limit(db, current_user, agent_id)
     )
 
+    if not is_allowed:
+        error_info = limit_info.get("error_info", {})
+        error_code = error_info.get("error_code", reject_reason)
+        error_message = error_info.get("message", reject_reason)
+        logger.warning(
+            f"Live chat 限制检查未通过 - user_id: {current_user.id}, "
+            f"agent_id: {agent_id}, error_code: {error_code}, "
+            f"error_message: {error_message}, info: {limit_info}"
+        )
+        close_code = 4010 if "AGENT_LIMIT" in reject_reason else 4011
+        close_reason = json.dumps(
+            {
+                "type": "error",
+                "code": error_info.get("code"),
+                "error_code": error_code,
+                "message": error_message,
+            }
+        )
+        await websocket.close(code=close_code, reason=close_reason)
+        return
+
+    remaining_duration = limit_info.get("remaining_duration", 300)
+    agent_limit = limit_info.get("agent_limit", 0)
+    agent_count = limit_info.get("agent_count", 0)
+
+    await websocket.accept()
+    logger.info(
+        f"WebSocket 连接已建立 - user_id: {current_user.id}, agent_id: {agent_id}, "
+        f"remaining_duration: {remaining_duration}s"
+    )
+
+    session_info_msg = LiveChatSessionInfoMessage(
+        remaining_duration=remaining_duration,
+        agent_limit=agent_limit,
+        agent_count=agent_count,
+    )
+    await websocket.send_json(session_info_msg.model_dump())
+
     session = None
+    session_start_time = time.time()
+    timeout_task: Optional[asyncio.Task] = None
+    session_ended_by_timeout = False
 
     try:
         session = await live_chat_service.create_session(
@@ -154,6 +211,8 @@ async def live_chat_session(
 
         async def on_audio(data: bytes):
             """处理下行音频"""
+            if session_ended_by_timeout:
+                return
             try:
                 msg = LiveChatAudioResponseMessage(
                     data=base64.b64encode(data).decode("utf-8"),
@@ -161,10 +220,12 @@ async def live_chat_session(
                 )
                 await websocket.send_json(msg.model_dump())
             except Exception as e:
-                logger.error(f"发送音频失败: {str(e)}")
+                logger.debug(f"发送音频失败（连接可能已关闭）: {str(e)}")
 
         async def on_transcript(text: str, role: str):
             """处理转录文本"""
+            if session_ended_by_timeout:
+                return
             try:
                 msg_type = (
                     LiveChatMessageType.TRANSCRIPT
@@ -178,10 +239,12 @@ async def live_chat_session(
                 )
                 await websocket.send_json(msg.model_dump())
             except Exception as e:
-                logger.error(f"发送转录失败: {str(e)}")
+                logger.debug(f"发送转录失败（连接可能已关闭）: {str(e)}")
 
         async def on_status(status: LiveChatStatus, message: Optional[str]):
             """处理状态更新"""
+            if session_ended_by_timeout:
+                return
             try:
                 msg = LiveChatStatusMessage(
                     status=status,
@@ -189,18 +252,41 @@ async def live_chat_session(
                 )
                 await websocket.send_json(msg.model_dump())
             except Exception as e:
-                logger.error(f"发送状态失败: {str(e)}")
+                logger.debug(f"发送状态失败（连接可能已关闭）: {str(e)}")
 
-        async def on_error(code: str, message: str):
+        async def on_error(error_code: str, message: str, code: Optional[int] = None):
             """处理错误"""
             try:
                 msg = LiveChatErrorMessage(
                     code=code,
+                    error_code=error_code,
                     message=message,
                 )
                 await websocket.send_json(msg.model_dump())
             except Exception as e:
-                logger.error(f"发送错误失败: {str(e)}")
+                logger.debug(f"发送错误失败（连接可能已关闭）: {str(e)}")
+
+        async def duration_timeout_handler():
+            """时长到达限制时结束会话"""
+            nonlocal session_ended_by_timeout
+            await asyncio.sleep(remaining_duration)
+            session_ended_by_timeout = True
+            logger.info(
+                f"Live chat 时长到达限制 - user_id: {current_user.id}, "
+                f"agent_id: {agent_id}, duration: {remaining_duration}s"
+            )
+            try:
+                error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                await on_error(
+                    error_code=error_info["error_code"],
+                    message=error_info["message"],
+                    code=error_info["code"],
+                )
+                await input_queue.put(None)
+            except Exception as e:
+                logger.error(f"发送时长限制错误失败: {str(e)}")
+
+        timeout_task = asyncio.create_task(duration_timeout_handler())
 
         live_gen = live_chat_service.start_live_session(
             session=session,
@@ -294,7 +380,43 @@ async def live_chat_session(
             pass
 
     finally:
-        if session:
+        if timeout_task and not timeout_task.done():
+            timeout_task.cancel()
+            try:
+                await timeout_task
+            except asyncio.CancelledError:
+                pass
+
+        session_duration = int(time.time() - session_start_time)
+
+        if session and session_duration > 0:
+            await live_chat_service.end_session(session.session_id)
+            try:
+                usage_record = await subscription_service.record_usage(
+                    db=db,
+                    user_id=current_user.id,
+                    usage_type="live_chat",
+                    usage_count=1,
+                    extra_data={
+                        "agent_id": agent_id,
+                        "duration_seconds": session_duration,
+                        "ended_by_timeout": session_ended_by_timeout,
+                    },
+                )
+                if usage_record:
+                    logger.info(
+                        f"Live chat 用量已记录 - user_id: {current_user.id}, "
+                        f"agent_id: {agent_id}, duration: {session_duration}s, "
+                        f"record_id: {usage_record.id}"
+                    )
+                else:
+                    logger.error(
+                        f"Live chat 用量记录失败（返回 None）- user_id: {current_user.id}, "
+                        f"agent_id: {agent_id}, duration: {session_duration}s"
+                    )
+            except Exception as e:
+                logger.error(f"记录 Live chat 用量失败: {str(e)}")
+        elif session:
             await live_chat_service.end_session(session.session_id)
 
         try:
@@ -303,5 +425,6 @@ async def live_chat_session(
             pass
 
         logger.info(
-            f"Live chat 会话结束 - user_id: {current_user.id}, agent_id: {agent_id}"
+            f"Live chat 会话结束 - user_id: {current_user.id}, agent_id: {agent_id}, "
+            f"duration: {session_duration}s"
         )

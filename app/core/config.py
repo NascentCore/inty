@@ -336,6 +336,11 @@ class GeminiLiveConfig:
     trigger_tokens: int = 10000  # 上下文压缩触发阈值
     target_tokens: int = 512  # 压缩后目标 token 数
     save_voice_history: bool = True  # 是否将语音对话保存到聊天历史
+    # Live Chat 用量限制
+    free_user_agent_limit: int = 5  # 免费用户累计可聊天的 agent 数
+    sub_user_agent_limit: int = 20  # 订阅用户累计可聊天的 agent 数
+    free_user_duration_per_agent_24h: int = 60  # 免费用户每 agent 24h 时长（秒）
+    sub_user_duration_per_agent_24h: int = 300  # 订阅用户每 agent 24h 时长（秒）
 
 
 @dataclass
