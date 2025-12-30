@@ -305,7 +305,7 @@ private fun SupportAndHelpSection(
             item = SettingsItemData.CommonItemData(title = subscriptionTitle),
             isInGroup = true,
             onItemClick = {
-                if (!isVipSubscribed) {
+                if (isVipSubscribed) {
 //                    SubsManageActivity.launch(context)
                     navController.navigate(Routes.Me.SubsManagement)
                 } else {
