@@ -34,45 +34,42 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.R
-import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
 import com.ai.intellimate.ui.components.ProfileInfoScreen
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.helper.UserProfileStore
 import com.yalantis.ucrop.UCrop
-import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ModifyProfileScreen(
     navController: NavController,
-    viewModel: ModifyProfileViewModel = viewModel()
+    viewModel: ModifyProfileViewModel = viewModel(),
 ) {
     val profile = UserProfileStore.getUserProfile()
-    LaunchedEffect(profile?.id)  {
-        viewModel.init(profile)
-    }
+    LaunchedEffect(profile?.id) { viewModel.init(profile) }
 
     val context = LocalContext.current
     val cropTitle = stringResource(id = R.string.crop_image)
     val scope = rememberCoroutineScope()
 
     val activityCropResultLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                result ->
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result
+            ->
             if (result.resultCode == RESULT_OK) {
                 runCatching {
-                    result.data?.let { intentResult ->
-                        val imageUri = UCrop.getOutput(intentResult) // 图片uri
-                        imageUri?.let { imageUriReal ->
-                            // 设置头像并立即保存（调用 onSave 方法）
-                            viewModel.setAvatar(imageUriReal)
-                            viewModel.onSave()
+                        result.data?.let { intentResult ->
+                            val imageUri = UCrop.getOutput(intentResult) // 图片uri
+                            imageUri?.let { imageUriReal ->
+                                // 设置头像并立即保存（调用 onSave 方法）
+                                viewModel.setAvatar(imageUriReal)
+                                viewModel.onSave()
+                            }
                         }
                     }
-                }
                     .onFailure { e -> e.printStackTrace() }
             }
         }
@@ -81,35 +78,35 @@ internal fun ModifyProfileScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri ->
             imageUri?.let { uri ->
                 runCatching {
-                    // Check file size before cropping - limit to 10MB
-                    val fileSize = getFileSize(context, uri)
-                    // TODO: 使用 firebase remote config 配置应集中管理
-                    // https://firebase.google.com/docs/remote-config
-                    val maxSizeMB = 10
-                    val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
-                    if (fileSize > maxSizeBytes) {
-                        val maxSizeMBStr =
-                            String.Companion.format(Locale.getDefault(), "%dMB", maxSizeMB)
-                        val fileSizeMBStr =
-                            String.Companion.format(
-                                Locale.getDefault(),
-                                "%.1fMB",
-                                fileSize / (1024.0 * 1024.0),
-                            )
-                        val msg =
-                            String.format(
-                                context.getString(
-                                    R.string.user_avatar_size_too_large_with_size_format
-                                ),
-                                maxSizeMBStr,
-                                fileSizeMBStr,
-                            )
-                        scope.launch { ToastUtils.showShort(msg) }
-                        return@let
+                        // Check file size before cropping - limit to 10MB
+                        val fileSize = getFileSize(context, uri)
+                        // TODO: 使用 firebase remote config 配置应集中管理
+                        // https://firebase.google.com/docs/remote-config
+                        val maxSizeMB = 10
+                        val maxSizeBytes = maxSizeMB * 1024 * 1024 // 10MB in bytes
+                        if (fileSize > maxSizeBytes) {
+                            val maxSizeMBStr =
+                                String.Companion.format(Locale.getDefault(), "%dMB", maxSizeMB)
+                            val fileSizeMBStr =
+                                String.Companion.format(
+                                    Locale.getDefault(),
+                                    "%.1fMB",
+                                    fileSize / (1024.0 * 1024.0),
+                                )
+                            val msg =
+                                String.format(
+                                    context.getString(
+                                        R.string.user_avatar_size_too_large_with_size_format
+                                    ),
+                                    maxSizeMBStr,
+                                    fileSizeMBStr,
+                                )
+                            scope.launch { ToastUtils.showShort(msg) }
+                            return@let
+                        }
+                        val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
+                        activityCropResultLauncher.launch(intentCrop)
                     }
-                    val intentCrop = UCropHelper.getIntent(context, uri, cropTitle)
-                    activityCropResultLauncher.launch(intentCrop)
-                }
                     .onFailure { it.printStackTrace() }
             }
         }
@@ -123,26 +120,24 @@ internal fun ModifyProfileScreen(
     val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
     val userPreference by preferenceFlow.collectAsState(initial = "")
 
-//    LaunchedEffect(Unit) {
-//        viewModel.events.collect { event ->
-//            when (event) {
-//                is ViewModelEvent.UserProfileUpdated -> {
-//                    // todo
-//                }
-//                else -> {
-//                    // 其他事件暂不处理
-//                }
-//            }
-//        }
-//    }
+    //    LaunchedEffect(Unit) {
+    //        viewModel.events.collect { event ->
+    //            when (event) {
+    //                is ViewModelEvent.UserProfileUpdated -> {
+    //                    // todo
+    //                }
+    //                else -> {
+    //                    // 其他事件暂不处理
+    //                }
+    //            }
+    //        }
+    //    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         ProfileInfoScreen(
             userProfile = userProfile.value,
             preference = userPreference,
-            onBack = {
-                navController.popBackStack()
-            },
+            onBack = { navController.popBackStack() },
             onClickName = {
                 editKey = EditKey.Name
                 editValue = userProfile.value.nickname
@@ -207,28 +202,19 @@ internal fun ModifyProfileScreen(
 
         if (isSaving) {
             Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .background(
-                            Color.Black.copy(alpha = 0.55f)
-                        ),
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(32.dp),
-                )
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(32.dp))
             }
         }
     }
 }
 
-
 private fun getFileSize(context: Context, uri: Uri): Long {
     return try {
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            input.available().toLong()
-        } ?: 0L
+        context.contentResolver.openInputStream(uri)?.use { input -> input.available().toLong() }
+            ?: 0L
     } catch (e: Exception) {
         0L
     }

@@ -84,8 +84,7 @@ internal fun AgentsEmptyUI(modifier: Modifier = Modifier) {
 
         Text(
             modifier =
-                Modifier
-                    .padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
+                Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
                     .align(Alignment.CenterHorizontally),
             text = stringResource(R.string.no_agent),
             color = Color.White.copy(0.55f),
@@ -108,8 +107,7 @@ internal fun ProfileHeaderBg(modifier: Modifier = Modifier) {
         )
         Box(
             modifier =
-                Modifier
-                    .matchParentSize()
+                Modifier.matchParentSize()
                     .background(
                         brush =
                             Brush.verticalGradient(
@@ -199,8 +197,7 @@ internal fun PremiumBanner(
 
     Box(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .height(UiConfigs.MePage.VipBannerHeight)
@@ -215,8 +212,7 @@ internal fun PremiumBanner(
                 }
     ) {
         Image(
-            painter =
-                painterResource(R.drawable.img_vip_banner_bg),
+            painter = painterResource(R.drawable.img_vip_banner_bg),
             contentDescription = "",
             contentScale = ContentScale.Crop,
             modifier = Modifier.matchParentSize(),
@@ -252,8 +248,7 @@ internal fun PremiumBanner(
 
         Column(
             modifier =
-                Modifier
-                    .fillMaxHeight()
+                Modifier.fillMaxHeight()
                     .background(brush = backgroundBrush)
                     .onSizeChanged { size ->
                         boxSize = Size(size.width.toFloat(), size.height.toFloat())
@@ -313,9 +308,7 @@ internal fun PurpleStar(modifier: Modifier = Modifier) {
 
 @Composable
 internal fun GoldDot(modifier: Modifier = Modifier) {
-    Box(modifier
-        .clip(CircleShape)
-        .background(Color(0xFFFFC93F)))
+    Box(modifier.clip(CircleShape).background(Color(0xFFFFC93F)))
 }
 
 @Composable
@@ -340,20 +333,15 @@ private fun LeftParticleEffects() {
 
     Box(
         modifier =
-            Modifier
-                .fillMaxSize()
-                .onSizeChanged { size ->
-                    with(density) {
-                        containerSize = Size(size.width.toDp().value, size.height.toDp().value)
-                    }
+            Modifier.fillMaxSize().onSizeChanged { size ->
+                with(density) {
+                    containerSize = Size(size.width.toDp().value, size.height.toDp().value)
                 }
+            }
     ) {
         if (containerSize.width > 0 && containerSize.height > 0) {
             particles.forEach { particle ->
-                FloatingParticle(
-                    particle = particle,
-                    containerSize = containerSize,
-                )
+                FloatingParticle(particle = particle, containerSize = containerSize)
             }
         }
     }
@@ -381,13 +369,11 @@ private fun RightParticleEffects() {
 
     Box(
         modifier =
-            Modifier
-                .fillMaxSize()
-                .onSizeChanged { size ->
-                    with(density) {
-                        containerSize = Size(size.width.toDp().value, size.height.toDp().value)
-                    }
+            Modifier.fillMaxSize().onSizeChanged { size ->
+                with(density) {
+                    containerSize = Size(size.width.toDp().value, size.height.toDp().value)
                 }
+            }
     ) {
         if (containerSize.width > 0 && containerSize.height > 0) {
             particles.forEach { particle ->
@@ -403,63 +389,62 @@ private fun FloatingParticle(particle: ParticleConfig, containerSize: Size) {
         rememberInfiniteTransition(label = "particle_float_${particle.hashCode()}")
 
     val animateY by
-    infiniteTransition.animateFloat(
-        initialValue = particle.initialY,
-        targetValue = 1.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        particle.duration,
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "float_y",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = particle.initialY,
+            targetValue = 1.2f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            particle.duration,
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "float_y",
+        )
 
     val animateX by
-    infiniteTransition.animateFloat(
-        initialValue = -0.3f,
-        targetValue = 0.3f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        particle.duration / 2,
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "float_x",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = -0.3f,
+            targetValue = 0.3f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            particle.duration / 2,
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "float_x",
+        )
 
     val animateScale by
-    infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        (800 + Random.nextInt(400)).toInt(),
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "scale",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = 0.6f,
+            targetValue = 1.2f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            (800 + Random.nextInt(400)).toInt(),
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "scale",
+        )
 
     val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.4f
     val currentY = animateY * containerSize.height
 
     Box(
         modifier =
-            Modifier
-                .offset(x = currentX.dp, y = currentY.dp)
+            Modifier.offset(x = currentX.dp, y = currentY.dp)
                 .alpha(particle.alpha)
                 .size(particle.size * animateScale)
     ) {
@@ -473,63 +458,62 @@ private fun FloatingGoldDot(particle: ParticleConfig, containerSize: Size) {
         rememberInfiniteTransition(label = "gold_dot_float_${particle.hashCode()}")
 
     val animateY by
-    infiniteTransition.animateFloat(
-        initialValue = particle.initialY,
-        targetValue = 1.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        particle.duration,
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "float_y",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = particle.initialY,
+            targetValue = 1.2f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            particle.duration,
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "float_y",
+        )
 
     val animateX by
-    infiniteTransition.animateFloat(
-        initialValue = -0.2f,
-        targetValue = 0.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        particle.duration / 2,
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "float_x",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = -0.2f,
+            targetValue = 0.2f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            particle.duration / 2,
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "float_x",
+        )
 
     val animateScale by
-    infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation =
-                    tween(
-                        (800 + Random.nextInt(400)).toInt(),
-                        delayMillis = particle.delay,
-                        easing = LinearEasing,
-                    ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "scale",
-    )
+        infiniteTransition.animateFloat(
+            initialValue = 0.6f,
+            targetValue = 1.2f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        tween(
+                            (800 + Random.nextInt(400)).toInt(),
+                            delayMillis = particle.delay,
+                            easing = LinearEasing,
+                        ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "scale",
+        )
 
     val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.3f
     val currentY = animateY * containerSize.height
 
     Box(
         modifier =
-            Modifier
-                .offset(x = currentX.dp, y = currentY.dp)
+            Modifier.offset(x = currentX.dp, y = currentY.dp)
                 .alpha(particle.alpha)
                 .size(particle.size * animateScale)
     ) {

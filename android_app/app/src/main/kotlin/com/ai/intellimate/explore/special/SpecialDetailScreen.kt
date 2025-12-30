@@ -36,12 +36,8 @@ fun ThemedDetailScreen(
     val agents by viewModel.agents.collectAsState()
     val isChristmas by viewModel.isChristmas.collectAsState()
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(HeartColor.primaryColor)) {
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .zIndex(0f)) {
+    Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
+        Column(modifier = Modifier.fillMaxSize().zIndex(0f)) {
             HeartTopAppBar(
                 title = themeTitle,
                 onBack = onBack,

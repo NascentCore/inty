@@ -1,6 +1,5 @@
 package com.ai.intellimate.call
 
-import ai.sxwl.android.data.http.IntyErrorCode
 import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
@@ -13,12 +12,9 @@ import com.ai.intellimate.call.data.bean.CallPacket
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
-import com.ai.intellimate.xb.helper.AgentStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
@@ -94,15 +90,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
     fun startCalling(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getAgentInfo(agentId)
-                .collect { result ->
-                    result.getOrNull()?.let { agent ->
-                        _uiState.update { it.copy(agent = agent) }
-                    }
-                }
+            repository.getAgentInfo(agentId).collect { result ->
+                result.getOrNull()?.let { agent -> _uiState.update { it.copy(agent = agent) } }
+            }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            repository.call(agentId)
+            repository
+                .call(agentId)
                 .catch { error ->
                     LogUtils.e("连接语音通话失败: ${error.message}")
                     _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }

@@ -106,47 +106,45 @@ fun ChatItem(
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
     runCatching {
-        when (item.role) {
-            "assistant" -> {
-                ChatItemAI(
-                    item,
-                    isCurrentPage,
-                    chatViewModel,
-                    isLatestMessage,
-                    isGuideVisible,
-                    messageFontSizeSp,
+            when (item.role) {
+                "assistant" -> {
+                    ChatItemAI(
+                        item,
+                        isCurrentPage,
+                        chatViewModel,
+                        isLatestMessage,
+                        isGuideVisible,
+                        messageFontSizeSp,
+                    )
+                }
+
+                "user" -> {
+                    ChatItemUser(item, messageFontSizeSp)
+                }
+
+                "system" -> {
+                    ChatItemSystemTips(item, chatViewModel)
+                }
+
+                else -> {
+                    LogUtils.w("ChatItem - 未知角色: ${item.role}")
+                    ChatItemUser(item, messageFontSizeSp)
+                }
+            }
+        }
+        .onFailure { e ->
+            LogUtils.e("ChatItem - 渲染失败: ${e.message}")
+            Box(
+                modifier =
+                    Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
+            ) {
+                Text(
+                    text = "Message display failed",
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.Center),
                 )
             }
-
-            "user" -> {
-                ChatItemUser(item, messageFontSizeSp)
-            }
-
-            "system" -> {
-                ChatItemSystemTips(item, chatViewModel)
-            }
-
-            else -> {
-                LogUtils.w("ChatItem - 未知角色: ${item.role}")
-                ChatItemUser(item, messageFontSizeSp)
-            }
         }
-    }.onFailure { e ->
-        LogUtils.e("ChatItem - 渲染失败: ${e.message}")
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .background(Color.Red.copy(alpha = 0.1f))
-        ) {
-            Text(
-                text = "Message display failed",
-                color = Color.White,
-                modifier = Modifier.align(Alignment.Center),
-            )
-        }
-    }
 }
 
 @Composable
@@ -164,39 +162,39 @@ private fun ChatItemAI(
     val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            val hasGeneratedImage = item.hasGeneratedImage()
-            val generatedImageUrl = item.getGeneratedImageUrl()
-            val isImageLoading =
-                (item.content == "loading_animation" &&
+            Column(modifier = Modifier.fillMaxWidth()) {
+                val hasGeneratedImage = item.hasGeneratedImage()
+                val generatedImageUrl = item.getGeneratedImageUrl()
+                val isImageLoading =
+                    (item.content == "loading_animation" &&
                         item.localMsgId.contains("loading_image", ignoreCase = true)) ||
                         (generatedImageUrl == "loading")
-            val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
+                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
-            if (item.content.isNotEmpty() && item.content != "loading_animation") {
-                val vmAgentId = agentInfo?.id
-                val metaAgentId = item.agentId()
-                val safeAgentId = vmAgentId ?: metaAgentId ?: ""
+                if (item.content.isNotEmpty() && item.content != "loading_animation") {
+                    val vmAgentId = agentInfo?.id
+                    val metaAgentId = item.agentId()
+                    val safeAgentId = vmAgentId ?: metaAgentId ?: ""
 
-                val audioInfo =
-                    AudioInfo(
-                        url = item.audio_url ?: "",
-                        title = "Voice Message",
-                        artist = "AI Agent",
-                        messageId = item.localMsgId,
-                        agentId = safeAgentId,
-                        agentName = agentInfo?.name,
-                    )
+                    val audioInfo =
+                        AudioInfo(
+                            url = item.audio_url ?: "",
+                            title = "Voice Message",
+                            artist = "AI Agent",
+                            messageId = item.localMsgId,
+                            agentId = safeAgentId,
+                            agentName = agentInfo?.name,
+                        )
 
-                val allMessages by viewModel.msgs.collectAsState()
-                val actualChatMessages =
-                    allMessages.filter { !it.isOpening() && it.role != "system" }
-                val isOnlyOpeningMessage = actualChatMessages.isEmpty()
+                    val allMessages by viewModel.msgs.collectAsState()
+                    val actualChatMessages =
+                        allMessages.filter { !it.isOpening() && it.role != "system" }
+                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
 
-                val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
+                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
-                val shouldAutoPlay =
-                    item.isOpening() &&
+                    val shouldAutoPlay =
+                        item.isOpening() &&
                             isOnlyOpeningMessage &&
                             !hasPlayedOpening &&
                             isCurrentPage &&
@@ -206,395 +204,374 @@ private fun ChatItemAI(
                             IntySetting.isAutoPlayAudio() &&
                             !isGuideVisible // 未出现引导手势时
 
-                // 消息气泡上方的辅助内容条
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // 显示音频播放按钮
-                    if (safeAgentId.isNotEmpty()) {
-                        VoicePlayer(
-                            audioInfo = audioInfo,
-                            autoPlay = shouldAutoPlay,
-                            modifier =
-                                Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
-                            onTtsGenerated = { audioUrl ->
-                                viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
-                            },
-                            serverMessageId = item.id,
-                        )
-                    }
-                    // 显示时间戳
-                    if (timestampText != null) {
-                        Spacer(
-                            modifier =
-                                Modifier.width(
-                                    UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing
-                                )
-                        )
-                        ChatMessageTimestamp(
-                            timestampText = timestampText,
-                            fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,
-                        )
+                    // 消息气泡上方的辅助内容条
+                    Row(
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 显示音频播放按钮
+                        if (safeAgentId.isNotEmpty()) {
+                            VoicePlayer(
+                                audioInfo = audioInfo,
+                                autoPlay = shouldAutoPlay,
+                                modifier =
+                                    Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
+                                onTtsGenerated = { audioUrl ->
+                                    viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                                },
+                                serverMessageId = item.id,
+                            )
+                        }
+                        // 显示时间戳
+                        if (timestampText != null) {
+                            Spacer(
+                                modifier =
+                                    Modifier.width(
+                                        UiConfigs.ChatMessagePane.AudioPlayerToTimestampSpacing
+                                    )
+                            )
+                            ChatMessageTimestamp(
+                                timestampText = timestampText,
+                                fontSize = UiConfigs.ChatMessagePane.TimestampFontSize,
+                            )
+                        }
                     }
                 }
-            }
-            val msgShape =
-                if (item.content.isNotEmpty() && item.content != "loading_animation")
-                    RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                else RoundedCornerShape(12.dp)
+                val msgShape =
+                    if (item.content.isNotEmpty() && item.content != "loading_animation")
+                        RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
+                    else RoundedCornerShape(12.dp)
 
-            val isImageOnlyMessage =
-                item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
+                val isImageOnlyMessage =
+                    item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
 
-            var showFullScreenImage by remember { mutableStateOf(false) }
-            // 使用 generatedImageUrl 作为 key，URL 变化时自动重置状态
-            var imageLoadError by remember(generatedImageUrl) { mutableStateOf(false) }
-            var imageLoadSuccess by remember(generatedImageUrl) { mutableStateOf(false) }
+                var showFullScreenImage by remember { mutableStateOf(false) }
+                // 使用 generatedImageUrl 作为 key，URL 变化时自动重置状态
+                var imageLoadError by remember(generatedImageUrl) { mutableStateOf(false) }
+                var imageLoadSuccess by remember(generatedImageUrl) { mutableStateOf(false) }
 
-            val isNormalLoading =
-                item.content == "loading_animation" &&
+                val isNormalLoading =
+                    item.content == "loading_animation" &&
                         !hasGeneratedImage &&
                         generatedImageUrl != "loading"
 
-            val shouldHideText = isImageOnlyMessage || isNormalLoading
-            val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
-            val shouldShowMessageActions = isLatestMessage && !shouldFlowShow
+                val shouldHideText = isImageOnlyMessage || isNormalLoading
+                val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
+                val shouldShowMessageActions = isLatestMessage && !shouldFlowShow
 
-            if (isNormalLoading) {
-                Box(
-                    modifier =
-                        Modifier
-                            .background(Color.Black.copy(alpha = 0.5f), msgShape)
-                            .padding(
-                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
-                            )
-                            .widthIn(min = 1.dp)
-                ) {
-                    LoadingAnimation(agentInfo?.name)
-                }
-            } else if (!shouldHideText && item.content.isNotEmpty()) {
-                val allMessages by viewModel.msgs.collectAsState()
-                val agentId = agentInfo?.id ?: ""
-
-                // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
-                // 使用 LaunchedEffect 在查询完成的瞬间记录消息列表
-                // 使用 agentId 作为 key，确保切换会话时重置状态
-                var messagesAtQueryComplete by
-                remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
-
-                LaunchedEffect(isQueryMsgsCompleted, agentId) {
-                    if (isQueryMsgsCompleted) {
-                        if (messagesAtQueryComplete.isEmpty()) {
-                            // 查询完成的瞬间，记录当前所有消息的ID
-                            // 优先使用服务器ID，如果没有则使用localMsgId
-                            messagesAtQueryComplete = allMessages.map {
-                                it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId
-                            }.toSet()
-                        }
-                    } else {
-                        // 查询未完成时，重置状态（切换会话时会触发）
-                        messagesAtQueryComplete = emptySet()
-                    }
-                }
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    val context = LocalContext.current
+                if (isNormalLoading) {
                     Box(
                         modifier =
-                            Modifier
-                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
                                 .padding(
                                     horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                     vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                                 )
-                                .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
-                                .pointerInput(item.content) {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            debugOnlyCopyToClipboard(context, item.content)
-                                        }
-                                    )
-                                }
+                                .widthIn(min = 1.dp)
                     ) {
-                        val isFlow =
-                            isLatestMessage &&
+                        LoadingAnimation(agentInfo?.name)
+                    }
+                } else if (!shouldHideText && item.content.isNotEmpty()) {
+                    val allMessages by viewModel.msgs.collectAsState()
+                    val agentId = agentInfo?.id ?: ""
+
+                    // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
+                    // 使用 LaunchedEffect 在查询完成的瞬间记录消息列表
+                    // 使用 agentId 作为 key，确保切换会话时重置状态
+                    var messagesAtQueryComplete by
+                        remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
+
+                    LaunchedEffect(isQueryMsgsCompleted, agentId) {
+                        if (isQueryMsgsCompleted) {
+                            if (messagesAtQueryComplete.isEmpty()) {
+                                // 查询完成的瞬间，记录当前所有消息的ID
+                                // 优先使用服务器ID，如果没有则使用localMsgId
+                                messagesAtQueryComplete =
+                                    allMessages
+                                        .map {
+                                            it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId
+                                        }
+                                        .toSet()
+                            }
+                        } else {
+                            // 查询未完成时，重置状态（切换会话时会触发）
+                            messagesAtQueryComplete = emptySet()
+                        }
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        val context = LocalContext.current
+                        Box(
+                            modifier =
+                                Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                                    .padding(
+                                        horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                        vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                    )
+                                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                                    .pointerInput(item.content) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                debugOnlyCopyToClipboard(context, item.content)
+                                            }
+                                        )
+                                    }
+                        ) {
+                            val isFlow =
+                                isLatestMessage &&
                                     shouldFlowShow &&
                                     item.role == "assistant" &&
                                     item.content.isNotEmpty() &&
                                     item.content != "loading_animation"
 
-                        if (item.content.isNotEmpty()) {
-                            StyledMessageText(
-                                text = item.content,
-                                fontSize = messageFontSize,
-                                fontWeight = FontWeight.Normal,
-                                normalColor = Color.White,
-                                actionColor = Color.White.copy(0.55f),
-                                isFlow = isFlow,
-                                onDisplayComplete = {
-                                    // 标记消息已完整显示，避免再次流式显示
-                                    viewModel.newMsgFlowFinish()
-                                },
-                            )
-                        }
-
-                        if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
-                            MessageCornerActions(
-                                onImageGenerate = {
-                                    viewModel.generateImageForMessage(item.id)
-                                },
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .offset(10.dp, 10.dp),
-                            )
-                        }
-                    }
-                    Spacer(
-                        modifier = Modifier
-                            .widthIn(80.dp)
-                            .weight(1f)
-                    )
-                }
-            }
-
-            // 无生图时，操作区跟随文字 bubble；有生图时操作区挪到图片预览下方（见后续）
-            if (shouldShowMessageActions && !(hasGeneratedImage || isImageLoading)) {
-                Spacer(modifier = Modifier.height(2.dp))
-                MessageActionBar(
-                    message = item,
-                    onLike = { viewModel.likeMessage(item.localMsgId) },
-                    onDislike = { viewModel.dislikeMessage(item.localMsgId) },
-                    onRecall = { viewModel.recallMessage() },
-                )
-            }
-
-            if (hasGeneratedImage || isImageLoading) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 获取图片尺寸，loading时也会从item中获取（已设置为9:16比例）
-                val imageWidth = item.getGeneratedImageWidth() ?: 300
-                val imageHeight = item.getGeneratedImageHeight() ?: 533 // 默认9:16比例
-                val aspectRatio =
-                    if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat()
-                    else (9f / 16f)
-
-                val targetWidth = 360
-
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (isImageLoading) {
-                        ShimmerPlaceholder(
-                            modifier = Modifier
-                                .fillMaxWidth(0.35f)
-                                .aspectRatio(aspectRatio),
-                            cornerRadius = 12.dp,
-                            showLoadingDots = true,
-                        )
-                    } else if (imageLoadError) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth(0.35f)
-                                    .aspectRatio(aspectRatio)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.Black.copy(alpha = 0.3f))
-                                    .padding(16.dp)
-                                    .noRippleClickable {
-                                        viewModel.clearGeneratedImage(item.localMsgId)
+                            if (item.content.isNotEmpty()) {
+                                StyledMessageText(
+                                    text = item.content,
+                                    fontSize = messageFontSize,
+                                    fontWeight = FontWeight.Normal,
+                                    normalColor = Color.White,
+                                    actionColor = Color.White.copy(0.55f),
+                                    isFlow = isFlow,
+                                    onDisplayComplete = {
+                                        // 标记消息已完整显示，避免再次流式显示
+                                        viewModel.newMsgFlowFinish()
                                     },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_warning_voice),
-                                    contentDescription = "Image load error",
-                                    tint = Color.White.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(24.dp),
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text =
-                                        stringResource(
-                                            R.string.image_generation_failed_tap_to_delete
-                                        ),
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    fontSize = 12.sp,
+                            }
+
+                            if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
+                                MessageCornerActions(
+                                    onImageGenerate = {
+                                        viewModel.generateImageForMessage(item.id)
+                                    },
+                                    modifier =
+                                        Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),
                                 )
                             }
                         }
-                    } else if (!generatedImageUrl.isNullOrEmpty()) {
-                        // 消息生图的结果图片
-                        ConstraintLayout(modifier = Modifier) {
-                            val (img, left, right) = createRefs()
+                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                    }
+                }
 
-                            // 使用 Box 叠加 shimmer 和图片
+                // 无生图时，操作区跟随文字 bubble；有生图时操作区挪到图片预览下方（见后续）
+                if (shouldShowMessageActions && !(hasGeneratedImage || isImageLoading)) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    MessageActionBar(
+                        message = item,
+                        onLike = { viewModel.likeMessage(item.localMsgId) },
+                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onRecall = { viewModel.recallMessage() },
+                    )
+                }
+
+                if (hasGeneratedImage || isImageLoading) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 获取图片尺寸，loading时也会从item中获取（已设置为9:16比例）
+                    val imageWidth = item.getGeneratedImageWidth() ?: 300
+                    val imageHeight = item.getGeneratedImageHeight() ?: 533 // 默认9:16比例
+                    val aspectRatio =
+                        if (imageHeight > 0) imageWidth.toFloat() / imageHeight.toFloat()
+                        else (9f / 16f)
+
+                    val targetWidth = 360
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (isImageLoading) {
+                            ShimmerPlaceholder(
+                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                cornerRadius = 12.dp,
+                                showLoadingDots = true,
+                            )
+                        } else if (imageLoadError) {
                             Box(
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth(0.35f)
+                                    Modifier.fillMaxWidth(0.35f)
                                         .aspectRatio(aspectRatio)
-                                        .constrainAs(img) {}
                                         .clip(RoundedCornerShape(12.dp))
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onTap = { showFullScreenImage = true }
-                                            )
-                                        }
+                                        .background(Color.Black.copy(alpha = 0.3f))
+                                        .padding(16.dp)
+                                        .noRippleClickable {
+                                            viewModel.clearGeneratedImage(item.localMsgId)
+                                        },
+                                contentAlignment = Alignment.Center,
                             ) {
-                                // 图片加载中显示 shimmer（无 dots）
-                                if (!imageLoadSuccess) {
-                                    ShimmerPlaceholder(
-                                        modifier = Modifier.matchParentSize(),
-                                        cornerRadius = 12.dp,
-                                        showLoadingDots = false,
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_warning_voice),
+                                        contentDescription = "Image load error",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                R.string.image_generation_failed_tap_to_delete
+                                            ),
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        fontSize = 12.sp,
                                     )
                                 }
-
-                                // AsyncImage 在后台加载，加载成功后显示
-                                AsyncImage(
-                                    modifier = Modifier.matchParentSize(),
-                                    model =
-                                        ImageRequest.Builder(LocalContext.current)
-                                            .data(
-                                                getCdnImageUrl(
-                                                    generatedImageUrl,
-                                                    width = targetWidth,
-                                                    quality = 70,
-                                                )
-                                            )
-                                            .build(),
-                                    contentDescription = "Generated image",
-                                    contentScale = ContentScale.Fit,
-                                    alignment = Alignment.CenterStart,
-                                    onError = { imageLoadError = true },
-                                    onSuccess = { imageLoadSuccess = true },
-                                )
                             }
-                        }
-                    } else {
-                        // URL 为空或其他情况，显示 shimmer
-                        ShimmerPlaceholder(
-                            modifier = Modifier
-                                .fillMaxWidth(0.35f)
-                                .aspectRatio(aspectRatio),
-                            cornerRadius = 12.dp,
-                        )
-                    }
-                }
-                // 消息生图的查看大图
-                if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
-                    Dialog(
-                        onDismissRequest = { showFullScreenImage = false },
-                        properties =
-                            DialogProperties(
-                                usePlatformDefaultWidth = false,
-                                dismissOnBackPress = true,
-                                dismissOnClickOutside = true,
-                            ),
-                    ) {
-                        val agentId = agentInfo?.id ?: ""
-                        val context = LocalContext.current
-                        FullScreenImageViewer(
-                            imageUrl = generatedImageUrl,
-                            onDismiss = { showFullScreenImage = false },
-                            onAction = {
-                                if (agentId.isNotBlank() && generatedImageUrl.isNotBlank()) {
-                                    IntySetting.setChatBackgroundImage(
-                                        agentId,
-                                        generatedImageUrl,
-                                    )
-                                    ToastUtils.showShort(
-                                        R.string.agent_gallery_background_set_success
-                                    )
-                                    showFullScreenImage = false
-                                }
-                            },
-                            actionLabel =
-                                stringResource(R.string.agent_gallery_set_as_background),
-                            onReport = {
-                                if (agentId.isNotBlank()) {
-                                    ReportActivity.launch(
-                                        context,
-                                        targetType = "AGENT",
-                                        targetId = agentId,
-                                    )
-                                }
-                            },
-                        )
-                    }
-                }
-            }
+                        } else if (!generatedImageUrl.isNullOrEmpty()) {
+                            // 消息生图的结果图片
+                            ConstraintLayout(modifier = Modifier) {
+                                val (img, left, right) = createRefs()
 
-            // 生图预览下方的 👍/👎（布局与文字 bubble 一致）
-            // 只在生图完成后显示点赞/点踩按钮，生图过程中不显示
-            if (shouldShowMessageActions && hasGeneratedImage && !isImageLoading) {
-                Spacer(modifier = Modifier.height(2.dp))
-                MessageActionBar(
-                    message = item,
-                    onLike = { viewModel.likeMessage(item.localMsgId) },
-                    onDislike = { viewModel.dislikeMessage(item.localMsgId) },
-                    onRecall = { viewModel.recallMessage() },
-                )
-            }
+                                // 使用 Box 叠加 shimmer 和图片
+                                Box(
+                                    modifier =
+                                        Modifier.fillMaxWidth(0.35f)
+                                            .aspectRatio(aspectRatio)
+                                            .constrainAs(img) {}
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onTap = { showFullScreenImage = true }
+                                                )
+                                            }
+                                ) {
+                                    // 图片加载中显示 shimmer（无 dots）
+                                    if (!imageLoadSuccess) {
+                                        ShimmerPlaceholder(
+                                            modifier = Modifier.matchParentSize(),
+                                            cornerRadius = 12.dp,
+                                            showLoadingDots = false,
+                                        )
+                                    }
 
-            if (BuildConfig.DEBUG) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    DebugMessageMetadata(
-                        item = item,
-                        modifier =
-                            Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
-                    )
-                    Spacer(
-                        modifier = Modifier
-                            .widthIn(80.dp)
-                            .weight(1f)
-                    )
-                }
-            }
-        }
-    }.onFailure {
-        Row {
-            val context = LocalContext.current
-            Box(
-                modifier =
-                    Modifier
-                        .background(
-                            Color.Black.copy(alpha = 0.5f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(12.dp, 13.dp)
-                        .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
+                                    // AsyncImage 在后台加载，加载成功后显示
+                                    AsyncImage(
+                                        modifier = Modifier.matchParentSize(),
+                                        model =
+                                            ImageRequest.Builder(LocalContext.current)
+                                                .data(
+                                                    getCdnImageUrl(
+                                                        generatedImageUrl,
+                                                        width = targetWidth,
+                                                        quality = 70,
+                                                    )
+                                                )
+                                                .build(),
+                                        contentDescription = "Generated image",
+                                        contentScale = ContentScale.Fit,
+                                        alignment = Alignment.CenterStart,
+                                        onError = { imageLoadError = true },
+                                        onSuccess = { imageLoadSuccess = true },
+                                    )
                                 }
+                            }
+                        } else {
+                            // URL 为空或其他情况，显示 shimmer
+                            ShimmerPlaceholder(
+                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                cornerRadius = 12.dp,
                             )
                         }
-            ) {
-                Text(
-                    text = item.content.ifEmpty { "Message content is empty" },
-                    color = Color.White,
-                    fontSize = messageFontSize,
-                )
+                    }
+                    // 消息生图的查看大图
+                    if (showFullScreenImage && generatedImageUrl != null && !imageLoadError) {
+                        Dialog(
+                            onDismissRequest = { showFullScreenImage = false },
+                            properties =
+                                DialogProperties(
+                                    usePlatformDefaultWidth = false,
+                                    dismissOnBackPress = true,
+                                    dismissOnClickOutside = true,
+                                ),
+                        ) {
+                            val agentId = agentInfo?.id ?: ""
+                            val context = LocalContext.current
+                            FullScreenImageViewer(
+                                imageUrl = generatedImageUrl,
+                                onDismiss = { showFullScreenImage = false },
+                                onAction = {
+                                    if (agentId.isNotBlank() && generatedImageUrl.isNotBlank()) {
+                                        IntySetting.setChatBackgroundImage(
+                                            agentId,
+                                            generatedImageUrl,
+                                        )
+                                        ToastUtils.showShort(
+                                            R.string.agent_gallery_background_set_success
+                                        )
+                                        showFullScreenImage = false
+                                    }
+                                },
+                                actionLabel =
+                                    stringResource(R.string.agent_gallery_set_as_background),
+                                onReport = {
+                                    if (agentId.isNotBlank()) {
+                                        ReportActivity.launch(
+                                            context,
+                                            targetType = "AGENT",
+                                            targetId = agentId,
+                                        )
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+
+                // 生图预览下方的 👍/👎（布局与文字 bubble 一致）
+                // 只在生图完成后显示点赞/点踩按钮，生图过程中不显示
+                if (shouldShowMessageActions && hasGeneratedImage && !isImageLoading) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    MessageActionBar(
+                        message = item,
+                        onLike = { viewModel.likeMessage(item.localMsgId) },
+                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onRecall = { viewModel.recallMessage() },
+                    )
+                }
+
+                if (BuildConfig.DEBUG) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        DebugMessageMetadata(
+                            item = item,
+                            modifier =
+                                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
+                        )
+                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                    }
+                }
             }
-            Spacer(
-                modifier = Modifier
-                    .widthIn(80.dp)
-                    .weight(1f)
-            )
         }
-    }
+        .onFailure {
+            Row {
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.Black.copy(alpha = 0.5f),
+                                RoundedCornerShape(12.dp),
+                            )
+                            .padding(12.dp, 13.dp)
+                            .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    Text(
+                        text = item.content.ifEmpty { "Message content is empty" },
+                        color = Color.White,
+                        fontSize = messageFontSize,
+                    )
+                }
+                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+            }
+        }
 }
 
 /** 用户消息气泡布局，靠右对齐。 */
@@ -602,93 +579,93 @@ private fun ChatItemAI(
 private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            val context = LocalContext.current
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                val context = LocalContext.current
 
-            Box(
-                modifier =
-                    Modifier
-                        .background(
-                            Color.White.copy(alpha = 0.6f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(
-                            horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                            vertical = UiConfigs.ChatMessagePane.PaddingVertical,
-                        )
-                        .widthIn(
-                            min = 1.dp,
-                            max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                        )
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
-                                }
-                            )
-                        }
-            ) {
-                StyledMessageText(
-                    text = item.content,
-                    fontSize = messageFontSize,
-                    fontWeight = FontWeight.Normal,
-                    normalColor = Color(0xff090909),
-                    actionColor = Color(0xff090909).copy(0.6f),
-                )
-            }
-        }
-    }.also {
-        if (BuildConfig.DEBUG) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                DebugMessageMetadata(
-                    item = item,
+                Box(
                     modifier =
-                        Modifier.widthIn(
-                            min = 1.dp,
-                            max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                        ),
-                )
-            }
-        }
-    }.onFailure {
-        // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            val context = LocalContext.current
-            Box(
-                modifier =
-                    Modifier
-                        .background(
-                            Color.White.copy(alpha = 0.6f),
-                            RoundedCornerShape(12.dp),
-                        )
-                        .padding(
-                            horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                            vertical = UiConfigs.ChatMessagePane.PaddingVertical,
-                        )
-                        .widthIn(
-                            min = 1.dp,
-                            max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                        )
-                        .pointerInput(item.content) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    debugOnlyCopyToClipboard(context, item.content)
-                                }
+                        Modifier.background(
+                                Color.White.copy(alpha = 0.6f),
+                                RoundedCornerShape(12.dp),
                             )
-                        }
-            ) {
-                Text(
-                    text = item.content.ifEmpty { "Message content is empty" },
-                    color = Color(0xff090909),
-                    fontSize = messageFontSize,
-                )
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(
+                                min = 1.dp,
+                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                            )
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    StyledMessageText(
+                        text = item.content,
+                        fontSize = messageFontSize,
+                        fontWeight = FontWeight.Normal,
+                        normalColor = Color(0xff090909),
+                        actionColor = Color(0xff090909).copy(0.6f),
+                    )
+                }
             }
         }
-    }
+        .also {
+            if (BuildConfig.DEBUG) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    DebugMessageMetadata(
+                        item = item,
+                        modifier =
+                            Modifier.widthIn(
+                                min = 1.dp,
+                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                            ),
+                    )
+                }
+            }
+        }
+        .onFailure {
+            // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                val context = LocalContext.current
+                Box(
+                    modifier =
+                        Modifier.background(
+                                Color.White.copy(alpha = 0.6f),
+                                RoundedCornerShape(12.dp),
+                            )
+                            .padding(
+                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                            )
+                            .widthIn(
+                                min = 1.dp,
+                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                            )
+                            .pointerInput(item.content) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        debugOnlyCopyToClipboard(context, item.content)
+                                    }
+                                )
+                            }
+                ) {
+                    Text(
+                        text = item.content.ifEmpty { "Message content is empty" },
+                        color = Color(0xff090909),
+                        fontSize = messageFontSize,
+                    )
+                }
+            }
+        }
 }
 
 @Composable
@@ -703,9 +680,7 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
         }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -731,28 +706,28 @@ private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
 
     val metadataLines =
         remember(item) {
-            buildList {
-                val roleLabel = item.role.ifBlank { "unknown" }
-                add("role=$roleLabel")
-                item.id.takeIf { it.isNotBlank() }?.let { add("id=${it.debugEllipsize()}") }
-                add("local=${item.localMsgId}")
-                item.timestamp?.takeIf { it.isNotBlank() }?.let { add("ts=$it") }
-                item.meta_data?.let { meta ->
-                    val metaParts = mutableListOf<String>()
-                    meta.agentId?.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
-                    if (meta.isOpening) metaParts += "opening=true"
-                    meta.generatedImage?.let { image ->
-                        metaParts +=
-                            "image=${image.imageUrl.debugEllipsize()} (${image.width}x${image.height})"
+                buildList {
+                    val roleLabel = item.role.ifBlank { "unknown" }
+                    add("role=$roleLabel")
+                    item.id.takeIf { it.isNotBlank() }?.let { add("id=${it.debugEllipsize()}") }
+                    add("local=${item.localMsgId}")
+                    item.timestamp?.takeIf { it.isNotBlank() }?.let { add("ts=$it") }
+                    item.meta_data?.let { meta ->
+                        val metaParts = mutableListOf<String>()
+                        meta.agentId?.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
+                        if (meta.isOpening) metaParts += "opening=true"
+                        meta.generatedImage?.let { image ->
+                            metaParts +=
+                                "image=${image.imageUrl.debugEllipsize()} (${image.width}x${image.height})"
+                        }
+                        if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
                     }
-                    if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
+                    item.audio_url
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { add("audio=${it.debugEllipsize()}") }
+                    item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
                 }
-                item.audio_url
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { add("audio=${it.debugEllipsize()}") }
-                item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
             }
-        }
             .filter { it.isNotBlank() }
 
     if (metadataLines.isEmpty()) return
@@ -960,18 +935,17 @@ private fun LoadingAnimation(agentName: String?) {
             repeat(3) { index ->
                 val delay = index * 200
                 val dotAlpha by
-                infiniteTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1.0f,
-                    animationSpec =
-                        infiniteRepeatable(animation = tween(600, delayMillis = delay)),
-                    label = "dot_alpha_$index",
-                )
+                    infiniteTransition.animateFloat(
+                        initialValue = 0.3f,
+                        targetValue = 1.0f,
+                        animationSpec =
+                            infiniteRepeatable(animation = tween(600, delayMillis = delay)),
+                        label = "dot_alpha_$index",
+                    )
 
                 Box(
                     modifier =
-                        Modifier
-                            .size(6.dp)
+                        Modifier.size(6.dp)
                             .background(
                                 color = Color.White.copy(dotAlpha * 0.7f),
                                 shape = CircleShape,
@@ -995,8 +969,7 @@ internal fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier
-                .border(
+            Modifier.border(
                     width = .5.dp,
                     brush = Brush.horizontalGradient(colors = listOf(purpleStart, purpleEnd)),
                     shape = RoundedCornerShape(12.dp),
@@ -1032,9 +1005,7 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = pd.dp),
+            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -1055,8 +1026,7 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier
-                        .size(18.dp)
+                    Modifier.size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,
