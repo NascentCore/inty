@@ -716,12 +716,14 @@ export const AgentManagePage: React.FC = () => {
 
       setSaveLoading(true);
 
-      // 从 values 中排除 score、comment 和 prompt_select 字段，因为它们只是 UI 状态
+      // 从 values 中排除 UI 状态字段，只保留需要提交的数据
       const {
         score,
         comment,
         main_prompt_select,
         mode_prompt_select,
+        main_prompt_display,
+        mode_prompt_display,
         ...otherValues
       } = values;
 
@@ -810,12 +812,14 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
-      // 从 values 中排除 score、comment 和 prompt_select 字段，因为它们只是 UI 状态
+      // 从 values 中排除 UI 状态字段，只保留需要提交的数据
       const {
         score,
         comment,
         main_prompt_select,
         mode_prompt_select,
+        main_prompt_display,
+        mode_prompt_display,
         ...otherValues
       } = values;
 
@@ -1005,7 +1009,9 @@ export const AgentManagePage: React.FC = () => {
     setTimeout(() => {
       // 判断 main_prompt 和 mode_prompt 是预设 ID 还是自定义文本
       let mainPromptSelect: string | null = null;
+      let mainPromptDisplay: string | null = null;
       let modePromptSelect: string | null = null;
+      let modePromptDisplay: string | null = null;
 
       if (availablePrompts && agent.main_prompt) {
         // 检查是否是预设 ID
@@ -1014,14 +1020,11 @@ export const AgentManagePage: React.FC = () => {
         );
         if (isPresetId) {
           mainPromptSelect = agent.main_prompt;
-          // 查找对应的预设内容
+          // 查找对应的预设内容用于显示
           const matchedPrompt = availablePrompts.main_prompts.find(
             (p) => p.id === agent.main_prompt,
           );
-          // 将ID替换为内容，以便在文本区域中显示
-          if (matchedPrompt && matchedPrompt.content) {
-            agent.main_prompt = matchedPrompt.content;
-          }
+          mainPromptDisplay = matchedPrompt?.content || agent.main_prompt;
         } else {
           // 检查是否与某个预设内容匹配
           const matchedMainPrompt = availablePrompts.main_prompts.find(
@@ -1032,6 +1035,8 @@ export const AgentManagePage: React.FC = () => {
           } else {
             mainPromptSelect = "custom";
           }
+          // 不是预设 ID，显示存储的内容
+          mainPromptDisplay = agent.main_prompt;
         }
       }
 
@@ -1042,14 +1047,11 @@ export const AgentManagePage: React.FC = () => {
         );
         if (isPresetId) {
           modePromptSelect = agent.mode_prompt;
-          // 查找对应的预设内容
+          // 查找对应的预设内容用于显示
           const matchedPrompt = availablePrompts.mode_prompts.find(
             (p) => p.id === agent.mode_prompt,
           );
-          // 将ID替换为内容，以便在文本区域中显示
-          if (matchedPrompt && matchedPrompt.content) {
-            agent.mode_prompt = matchedPrompt.content;
-          }
+          modePromptDisplay = matchedPrompt?.content || agent.mode_prompt;
         } else {
           // 检查是否与某个预设内容匹配
           const matchedModePrompt = availablePrompts.mode_prompts.find(
@@ -1060,6 +1062,8 @@ export const AgentManagePage: React.FC = () => {
           } else {
             modePromptSelect = "custom";
           }
+          // 不是预设 ID，显示存储的内容
+          modePromptDisplay = agent.mode_prompt;
         }
       }
 
@@ -1070,9 +1074,11 @@ export const AgentManagePage: React.FC = () => {
         opening: agent.opening,
         visibility: agent.visibility,
         main_prompt: agent.main_prompt,
+        main_prompt_display: mainPromptDisplay,
         main_prompt_select: mainPromptSelect,
         personality: agent.personality,
         mode_prompt: agent.mode_prompt,
+        mode_prompt_display: modePromptDisplay,
         mode_prompt_select: modePromptSelect,
         voice_id: agent.voice_id,
         score: agent.meta_data?.score,
@@ -1434,21 +1440,24 @@ export const AgentManagePage: React.FC = () => {
                   (p) => p.id === value,
                 );
                 if (selectedPrompt) {
-                  // 选择预设时，存储内容到 main_prompt 字段
+                  // 选择预设时，main_prompt 存储 ID，main_prompt_display 显示内容
                   form.setFieldsValue({
-                    main_prompt: selectedPrompt.content || value, // 存储内容
+                    main_prompt: value, // 存储 ID
+                    main_prompt_display: selectedPrompt.content || "", // 显示内容
                     main_prompt_select: value,
                   });
                 }
               } else if (value === "custom") {
-                // 选择自定义时，清空 main_prompt，让用户输入
+                // 选择自定义时，清空两个字段
                 form.setFieldsValue({
                   main_prompt: "",
+                  main_prompt_display: "",
                   main_prompt_select: "custom",
                 });
               } else {
                 form.setFieldsValue({
                   main_prompt: null,
+                  main_prompt_display: null,
                   main_prompt_select: null,
                 });
               }
@@ -1464,8 +1473,13 @@ export const AgentManagePage: React.FC = () => {
           </Select>
         </Form.Item>
 
+        {/* main_prompt 作为隐藏字段存储实际提交值（ID 或内容） */}
+        <Form.Item name="main_prompt" hidden>
+          <input type="hidden" />
+        </Form.Item>
+
         <Form.Item
-          name="main_prompt"
+          name="main_prompt_display"
           label="主提示词"
           rules={[{ max: 50000, message: "主提示词长度不能超过50000个字符" }]}
         >
@@ -1481,19 +1495,25 @@ export const AgentManagePage: React.FC = () => {
               const value = e.target.value;
               const selectedId = form.getFieldValue("main_prompt_select");
               if (selectedId && selectedId !== "custom" && availablePrompts) {
-                // 如果用户编辑了文本，自动切换为自定义模式
+                // 用户在预设模式下编辑了文本
                 const selectedPrompt = availablePrompts.main_prompts.find(
                   (p) => p.id === selectedId,
                 );
                 if (selectedPrompt && selectedPrompt.content) {
-                  // 如果内容与预设不同，切换为自定义
-                  if (
-                    value !== selectedId &&
-                    value !== selectedPrompt.content
-                  ) {
-                    form.setFieldsValue({ main_prompt_select: "custom" });
+                  if (value !== selectedPrompt.content) {
+                    // 内容与预设不同，main_prompt 存储完整内容，切换为自定义
+                    form.setFieldsValue({
+                      main_prompt: value,
+                      main_prompt_select: "custom",
+                    });
+                  } else {
+                    // 内容与预设相同，main_prompt 保持为 ID
+                    form.setFieldsValue({ main_prompt: selectedId });
                   }
                 }
+              } else {
+                // 自定义模式，直接同步到 main_prompt
+                form.setFieldsValue({ main_prompt: value });
               }
             }}
           />
@@ -1521,21 +1541,24 @@ export const AgentManagePage: React.FC = () => {
                   (p) => p.id === value,
                 );
                 if (selectedPrompt) {
-                  // 选择预设时，存储内容到 mode_prompt 字段
+                  // 选择预设时，mode_prompt 存储 ID，mode_prompt_display 显示内容
                   form.setFieldsValue({
-                    mode_prompt: selectedPrompt.content || value, // 存储内容
+                    mode_prompt: value, // 存储 ID
+                    mode_prompt_display: selectedPrompt.content || "", // 显示内容
                     mode_prompt_select: value,
                   });
                 }
               } else if (value === "custom") {
-                // 选择自定义时，清空 mode_prompt，让用户输入
+                // 选择自定义时，清空两个字段
                 form.setFieldsValue({
                   mode_prompt: "",
+                  mode_prompt_display: "",
                   mode_prompt_select: "custom",
                 });
               } else {
                 form.setFieldsValue({
                   mode_prompt: null,
+                  mode_prompt_display: null,
                   mode_prompt_select: null,
                 });
               }
@@ -1551,8 +1574,13 @@ export const AgentManagePage: React.FC = () => {
           </Select>
         </Form.Item>
 
+        {/* mode_prompt 作为隐藏字段存储实际提交值（ID 或内容） */}
+        <Form.Item name="mode_prompt" hidden>
+          <input type="hidden" />
+        </Form.Item>
+
         <Form.Item
-          name="mode_prompt"
+          name="mode_prompt_display"
           label="聊天模式"
           rules={[{ max: 50000, message: "聊天模式长度不能超过50000个字符" }]}
         >
@@ -1568,19 +1596,25 @@ export const AgentManagePage: React.FC = () => {
               const value = e.target.value;
               const selectedId = form.getFieldValue("mode_prompt_select");
               if (selectedId && selectedId !== "custom" && availablePrompts) {
-                // 如果用户编辑了文本，自动切换为自定义模式
+                // 用户在预设模式下编辑了文本
                 const selectedPrompt = availablePrompts.mode_prompts.find(
                   (p) => p.id === selectedId,
                 );
                 if (selectedPrompt && selectedPrompt.content) {
-                  // 如果内容与预设不同，切换为自定义
-                  if (
-                    value !== selectedId &&
-                    value !== selectedPrompt.content
-                  ) {
-                    form.setFieldsValue({ mode_prompt_select: "custom" });
+                  if (value !== selectedPrompt.content) {
+                    // 内容与预设不同，mode_prompt 存储完整内容，切换为自定义
+                    form.setFieldsValue({
+                      mode_prompt: value,
+                      mode_prompt_select: "custom",
+                    });
+                  } else {
+                    // 内容与预设相同，mode_prompt 保持为 ID
+                    form.setFieldsValue({ mode_prompt: selectedId });
                   }
                 }
+              } else {
+                // 自定义模式，直接同步到 mode_prompt
+                form.setFieldsValue({ mode_prompt: value });
               }
             }}
           />
