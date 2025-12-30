@@ -1,13 +1,19 @@
 package com.ai.intellimate.call.data
 
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import com.ai.intellimate.call.data.bean.CallPacket
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.NetworkErrorHandler
+import com.ai.intellimate.xb.helper.AgentStore
+import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 
 /** AI语音通话Repository实现 只负责WebSocket连接和数据传输，不处理音频录制和播放 */
@@ -90,5 +96,18 @@ class AICallRepository(private val dataSource: AICallDataSource) {
     /** 获取连接状态 */
     fun getConnectionState(): StateFlow<ConnectionState> {
         return dataSource.connectionState
+    }
+
+    fun getAgentInfo(agentId: String): Flow<Result<AgentInfo>> = flow {
+        AgentStore.getAgent(agentId)?.let { emit(Result.success(it)) }
+
+        when (val result = NetServiceMgr.getAgentApi().getAgentDetail(agentId)) {
+            is HttpResult.Success -> emit(Result.success(result.data))
+            is HttpResult.Failure -> {
+                NetworkErrorHandler.showNetworkAwareError(result.message)
+            }
+        }
+    }.catch {
+        emit(Result.failure(it))
     }
 }
