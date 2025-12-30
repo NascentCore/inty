@@ -101,6 +101,8 @@ export class LiveChatService {
 
       this.ws.onopen = () => {
         console.log("WebSocket 连接已建立");
+        this.status = "connected";
+        callbacks.onStatusChange("connected", "已连接");
         resolve();
       };
 
@@ -117,6 +119,26 @@ export class LiveChatService {
 
       this.ws.onclose = (event) => {
         console.log("WebSocket 连接已关闭:", event.code, event.reason);
+
+        // 解析服务端返回的错误信息（用量超限等场景）
+        if (event.reason) {
+          try {
+            const errorInfo = JSON.parse(event.reason);
+            if (errorInfo.type === "error" && errorInfo.error_code) {
+              this.status = "error";
+              callbacks.onError(
+                errorInfo.error_code,
+                errorInfo.message || "连接被拒绝",
+              );
+              callbacks.onStatusChange("error", errorInfo.message);
+              this.cleanup();
+              return;
+            }
+          } catch {
+            // reason 不是 JSON 格式，继续正常处理
+          }
+        }
+
         this.status = "disconnected";
         callbacks.onStatusChange("disconnected", "连接已断开");
         this.cleanup();
@@ -176,6 +198,10 @@ export class LiveChatService {
           this.stopRecording();
           this.status = "error";
           this.callbacks.onStatusChange("error", message.message);
+          // 关闭 WebSocket 连接，确保 isConnected() 返回 false
+          if (this.ws) {
+            this.ws.close();
+          }
           break;
 
         case "session_info":

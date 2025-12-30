@@ -135,12 +135,19 @@ export function useLiveChat(): UseLiveChatReturn {
 
   const startCall = useCallback(
     async (agentId: string) => {
-      if (serviceRef.current?.isConnected()) {
-        console.warn("Already in a call");
-        return;
+      // 清理之前的连接（如果有）
+      if (serviceRef.current) {
+        if (serviceRef.current.isConnected()) {
+          console.warn("Already in a call");
+          return;
+        }
+        // 确保旧的 service 被完全清理
+        serviceRef.current.disconnect();
+        serviceRef.current = null;
       }
 
       setError(null);
+      setStatus("connecting");
       setTranscripts([]);
       setSessionInfo(null);
       setRemainingDuration(null);
