@@ -17,11 +17,11 @@ from typing_extensions import deprecated
 
 from app import models, schemas
 from app.core.agent.agent import agent_manager
-from app.core.user_privilege.superuser_check import is_superuser
 from app.core.agent.prompt_template import (
     has_template_variable,
     render_prompt_jinja2_template,
 )
+from app.core.user_privilege.superuser_check import is_superuser
 from app.external_services.gcs import (
     append_filename_suffix,
     download_from_gcs,

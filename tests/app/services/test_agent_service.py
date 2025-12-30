@@ -45,7 +45,7 @@ async def db_session():
         bind=engine, class_=AsyncSession, expire_on_commit=False
     )
 
-    # create default admin user
+    # create default admin user (superuser for recommend API tests)
     global admin_user
     async with async_session() as session:
         user_id = str(uuid.uuid4())
@@ -57,6 +57,7 @@ async def db_session():
             nickname="admin",
             email="admin@sxwl.ai",
             system_language="en",
+            is_superuser=True,
         )
         session.add(admin_user)
         await session.commit()
