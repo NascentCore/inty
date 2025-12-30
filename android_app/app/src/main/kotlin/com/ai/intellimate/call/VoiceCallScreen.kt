@@ -3,10 +3,8 @@ package com.ai.intellimate.call
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.http.IntyErrorCode
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.isInEditMode
 import ai.sxwl.android.design.theme.IntelliMateTheme
-import ai.sxwl.android.utils.ToastUtils
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -51,7 +49,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,10 +70,8 @@ import com.ai.intellimate.audio.AudioRecordManager
 import com.ai.intellimate.audio.AudioStreamPlayer
 import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.uistate.VoiceCallUiState
-import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UnlimitChatDialog
-import com.ai.intellimate.xb.navigation.Routes
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -96,7 +91,7 @@ fun VoiceCallScreen(
     onBack: () -> Unit,
     onVip: () -> Unit,
     onVipMoreInfo: () -> Unit,
-    agentId: String
+    agentId: String,
 ) {
 
     VoiceCallScreen(onBack = onBack) { contentPadding ->
@@ -147,8 +142,8 @@ fun VoiceCallScreen(
 
             LaunchedEffect(Unit) {
                 snapshotFlow {
-                    uiState.connectionState == ConnectionState.CONNECTED && !uiState.isMuted
-                }
+                        uiState.connectionState == ConnectionState.CONNECTED && !uiState.isMuted
+                    }
                     .collect {
                         if (it) {
                             audioRecordManager.startRecording { audioData ->
@@ -173,9 +168,7 @@ fun VoiceCallScreen(
                 onEnd = onBack,
                 uiState = uiState,
                 onMuteChange = viewModel::setMuted,
-                modifier = Modifier
-                    .padding(contentPadding)
-                    .fillMaxSize()
+                modifier = Modifier.padding(contentPadding).fillMaxSize(),
             )
 
             errorReason?.run {
@@ -185,19 +178,19 @@ fun VoiceCallScreen(
                             ChatDialogData(
                                 R.drawable.img_unlimit_dialog_bg,
                                 stringResource(R.string.voice_call_subscription_guide_content),
-                                stringResource(R.string.voice_call_subscription_guide_btn_text)
+                                stringResource(R.string.voice_call_subscription_guide_btn_text),
                             )
                         }
 
-                        IntyErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED, IntyErrorCode.LIVE_CHAT_AGENT_LIMIT_REACHED -> {
+                        IntyErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED,
+                        IntyErrorCode.LIVE_CHAT_AGENT_LIMIT_REACHED -> {
                             ChatDialogData(
                                 R.drawable.img_unlimit_dialog_bg,
                                 stringResource(R.string.voice_call_limit_exceeded_content),
-                                stringResource(R.string.voice_call_limit_exceeded_btn_text)
+                                stringResource(R.string.voice_call_limit_exceeded_btn_text),
                             )
                         }
                     }
-
 
                 UnlimitChatDialog(
                     dialogData,
@@ -215,30 +208,27 @@ fun VoiceCallScreen(
             }
         } else {
             if (!audioPermissionState.status.shouldShowRationale) {
-                LaunchedEffect(Unit) {
-                    audioPermissionState.launchPermissionRequest()
-                }
+                LaunchedEffect(Unit) { audioPermissionState.launchPermissionRequest() }
             } else {
                 Column(
-                    modifier = Modifier
-                        .padding(contentPadding)
-                        .fillMaxSize(),
+                    modifier = Modifier.padding(contentPadding).fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = stringResource(R.string.voice_call_permission_rationale),
                         textAlign = TextAlign.Center,
-                        color = Color.White
+                        color = Color.White,
                     )
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
                             try {
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
+                                val intent =
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
                                 context.startActivity(intent)
                             } catch (e: Exception) {
                                 // 如果打开设置失败，回退到权限请求
@@ -259,7 +249,7 @@ private fun VoiceCallContent(
     onEnd: () -> Unit,
     onMuteChange: (Boolean) -> Unit,
     uiState: VoiceCallUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
         Column(
@@ -268,8 +258,7 @@ private fun VoiceCallContent(
         ) {
             uiState.agent?.run {
                 val avatarModifier =
-                    Modifier
-                        .size(120.dp)
+                    Modifier.size(120.dp)
                         .border(width = 1.dp, color = Color.White, shape = CircleShape)
                         .clip(CircleShape)
 
@@ -308,10 +297,7 @@ private fun VoiceCallContent(
 
         Row(
             modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(bottom = 50.dp),
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 50.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             MenuItem(
@@ -329,10 +315,7 @@ private fun VoiceCallContent(
                             ),
                     ) {
                         if (uiState.isMuted) {
-                            Icon(
-                                imageVector = Icons.Rounded.MicOff,
-                                contentDescription = "muted",
-                            )
+                            Icon(imageVector = Icons.Rounded.MicOff, contentDescription = "muted")
                         } else {
                             Icon(imageVector = Icons.Rounded.Mic, contentDescription = "mute")
                         }
@@ -344,8 +327,7 @@ private fun VoiceCallContent(
             MenuItem(text = { Text(stringResource(R.string.end)) }) {
                 IconButton(
                     onClick = onEnd,
-                    colors =
-                        IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFEB4E3D)),
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFEB4E3D)),
                 ) {
                     Icon(imageVector = Icons.Rounded.Close, contentDescription = "end")
                 }
@@ -356,10 +338,7 @@ private fun VoiceCallContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VoiceCallScreen(
-    onBack: () -> Unit,
-    content: @Composable (PaddingValues) -> Unit
-) {
+private fun VoiceCallScreen(onBack: () -> Unit, content: @Composable (PaddingValues) -> Unit) {
 
     Scaffold(
         topBar = {
@@ -385,7 +364,7 @@ private fun VoiceCallScreen(
             Modifier.background(
                 brush = Brush.verticalGradient(0f to Color(0xFF6685D1), 1f to Color(0xFF926BCE))
             ),
-        content = content
+        content = content,
     )
 }
 
@@ -410,9 +389,7 @@ private fun MenuItem(
 @Composable
 private fun VoiceCallPreview() {
     IntelliMateTheme {
-        VoiceCallScreen(
-            onBack = {}
-        ) {
+        VoiceCallScreen(onBack = {}) {
             VoiceCallContent(
                 onEnd = {},
                 onMuteChange = {},
@@ -421,9 +398,7 @@ private fun VoiceCallPreview() {
                         agent = AgentInfo(name = "July"),
                         connectionState = ConnectionState.CONNECTING,
                     ),
-                modifier = Modifier
-                    .padding(it)
-                    .fillMaxSize()
+                modifier = Modifier.padding(it).fillMaxSize(),
             )
         }
     }
