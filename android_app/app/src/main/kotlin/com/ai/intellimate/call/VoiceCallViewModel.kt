@@ -83,8 +83,15 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
     fun startCalling(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            repository.getAgentInfo(agentId)
+                .collect { result ->
+                    result.getOrNull()?.let { agent ->
+                        _uiState.update { it.copy(agent = agent) }
+                    }
+                }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                _uiState.update { it.copy(agent = AgentStore.getAgent(agentId)) }
                 repository.call(agentId).collect { packet ->
                     when (packet.type) {
                         CallType.AUDIO_RESPONSE -> {
