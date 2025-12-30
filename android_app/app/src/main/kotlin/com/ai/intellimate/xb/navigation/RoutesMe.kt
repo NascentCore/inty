@@ -9,4 +9,7 @@ object RoutesMe {
 
     /** 签到页面路由 */
     const val CheckIn = "check_in"
+
+    /** 编辑个人资料页面路由 */
+    const val ModifyProfile = "modify_profile"
 }

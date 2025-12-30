@@ -45,6 +45,7 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 
 /** 个人设置页面 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Me.ModifyProfile 替代")
 class ModifyProfileActivity : BaseActivity() {
 
     companion object {

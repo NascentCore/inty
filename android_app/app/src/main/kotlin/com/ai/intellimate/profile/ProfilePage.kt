@@ -1,6 +1,5 @@
 package com.ai.intellimate.profile
 
-// import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
@@ -104,6 +103,7 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
+import com.ai.intellimate.xb.helper.UserProfileStore
 import com.ai.intellimate.xb.navigation.Routes
 
 /** "我的"页面 */
@@ -507,11 +507,13 @@ private fun ProfileHeader(
                             lastClickTimeEdit = currentTime
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
-                                val intent =
-                                    Intent(context, ModifyProfileActivity::class.java).apply {
-                                        putExtra("intent_key_agent_info", userProfile)
-                                    }
-                                editProfileLauncher.launch(intent)
+//                                val intent =
+//                                    Intent(context, ModifyProfileActivity::class.java).apply {
+//                                        putExtra("intent_key_agent_info", userProfile)
+//                                    }
+//                                editProfileLauncher.launch(intent)
+                                UserProfileStore.setUserProfile(userProfile)
+                                navController.navigate(Routes.Me.ModifyProfile)
                             }
                         }
                     },
