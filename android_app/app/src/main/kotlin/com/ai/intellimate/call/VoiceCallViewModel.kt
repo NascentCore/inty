@@ -1,5 +1,6 @@
 package com.ai.intellimate.call
 
+import ai.sxwl.android.data.http.IntyErrorCode
 import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
@@ -8,14 +9,18 @@ import com.ai.intellimate.audio.PlaybackState
 import com.ai.intellimate.audio.RecordingState
 import com.ai.intellimate.call.data.AICallRepository
 import com.ai.intellimate.call.data.ConnectionState
+import com.ai.intellimate.call.data.bean.CallPacket
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.xb.helper.AgentStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -38,6 +43,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     // UI状态
     private val _uiState = MutableStateFlow(VoiceCallUiState())
     val uiState = _uiState.asStateFlow()
+    private val _errorReason = Channel<CallPacket.Reason?>()
+    val errorReason = _errorReason.receiveAsFlow()
 
     // 接收音频数据，ui只管接收到音频数据后播放
     private val _audioResponseChannel = Channel<ByteArray>()
@@ -77,6 +84,10 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             .getConnectionState()
             .onEach { connectionState ->
                 _uiState.update { it.copy(connectionState = connectionState) }
+
+                if (connectionState == ConnectionState.CONNECTING) {
+                    _errorReason.trySend(null)
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -91,8 +102,12 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                repository.call(agentId).collect { packet ->
+            repository.call(agentId)
+                .catch { error ->
+                    LogUtils.e("连接语音通话失败: ${error.message}")
+                    _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
+                }
+                .collect { packet ->
                     when (packet.type) {
                         CallType.AUDIO_RESPONSE -> {
                             // 将packet.data从base64转化为音频数据并通过_audioResponseChannel发送
@@ -103,29 +118,25 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                                 LogUtils.e("Base64解码音频数据失败: ${e.message}")
                             }
                         }
+
                         CallType.END -> {
                             stopCalling()
                         }
+
                         CallType.ERROR -> {
                             // 处理错误消息
-                            LogUtils.e("收到错误消息: ${packet.data}")
+                            LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
+                            packet.reason?.let { _errorReason.trySend(it) }
                         }
+
                         CallType.STATUS -> {
-                            try {
-                                // val callStatus = CallStatus.valueOf(packet.data.uppercase())
-                                _uiState.update { it.copy(callState = packet.status) }
-                            } catch (e: Exception) {
-                                LogUtils.e("解析通话状态失败: ${packet.data}, ${e.message}")
-                            }
+                            _uiState.update { it.copy(callState = packet.status) }
                         }
+
                         else -> {}
                     }
                 }
-            } catch (e: Exception) {
-                LogUtils.e("连接语音通话失败: ${e.message}")
-                _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
-            }
         }
     }
 

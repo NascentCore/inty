@@ -114,6 +114,11 @@
     <string name="image_generation_free_limit_content">Daily Free Pic Limit Reached! Go Premium for more pics and exclusive features! Free pics refresh tomorrow - come back then.</string>
     <string name="image_generation_vip_limit_content">Oops! Daily Pic Limit Reached! You\'ve used all available pics for today. Don\'t worry—your limit refreshes tomorrow! Can\'t wait to see what you\'ll create next!</string>
     <string name="image_generation_error_tip">Sorry, the pic couldn\'t be created for this time.</string>
+    <!-- Voice Call Error Messages -->
+    <string name="voice_call_subscription_guide_content">Unlock unlimited voice calls! Go Premium for unlimited voice chats and exclusive features. Start your premium journey today! ❤️</string>
+    <string name="voice_call_subscription_guide_btn_text">Subscribe Now 🔥</string>
+    <string name="voice_call_limit_exceeded_content">You\'ve reached your daily voice call limit! Don\'t worry—your limit refreshes tomorrow. Come back then to continue chatting! ❤️</string>
+    <string name="voice_call_limit_exceeded_btn_text">Got it</string>
 
 
     <!-- Login and Registration -->
