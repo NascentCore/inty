@@ -4,13 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.isInPreview
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.ui.BlurBgCard
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,16 +38,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -65,14 +56,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
-import kotlin.random.Random
 
 /** 主题详情页面配置常量 包含专题详情界面和主题专区界面中使用的各种尺寸和样式配置 */
 internal object ThemedDetailConfig {
@@ -591,73 +579,12 @@ fun ThemedEventCard(
     content: @Composable () -> Unit,
 ) {
     ConstraintLayout(modifier.padding(top = 16.dp)) {
-        val (leftPine, rightPine, leftSnow, rightSnow, blurBg, snowEffect) = createRefs()
 
         BlurBgCard(
-            modifier =
-                Modifier.fillMaxWidth().constrainAs(blurBg) {
-                    top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
-                },
+            modifier = Modifier.fillMaxSize(),
             contentAlignment,
             content = { content() },
         )
-
-        if (isChristmas) {
-            Image(
-                painter = painterResource(R.drawable.img_pine_left),
-                contentDescription = null,
-                modifier =
-                    Modifier.constrainAs(leftPine) {
-                        start.linkTo(blurBg.start)
-                        top.linkTo(blurBg.top)
-                    },
-            )
-
-            Image(
-                painter = painterResource(R.drawable.img_snow_left),
-                contentDescription = null,
-                modifier =
-                    Modifier.constrainAs(leftSnow) {
-                        start.linkTo(leftPine.start)
-                        top.linkTo(leftPine.top, (-16).dp)
-                    },
-            )
-            Image(
-                painter = painterResource(R.drawable.img_pine_right),
-                contentDescription = null,
-                modifier =
-                    Modifier.constrainAs(rightPine) {
-                        end.linkTo(blurBg.end)
-                        top.linkTo(blurBg.top)
-                    },
-            )
-            Image(
-                painter = painterResource(R.drawable.img_snow_right),
-                contentDescription = null,
-                modifier =
-                    Modifier.constrainAs(rightSnow) {
-                        end.linkTo(rightPine.end)
-                        top.linkTo(rightPine.top, (-16).dp)
-                    },
-            )
-
-            // 雪花效果层，覆盖整个卡片区域
-            Box(
-                modifier =
-                    Modifier.constrainAs(snowEffect) {
-                            top.linkTo(blurBg.top)
-                            bottom.linkTo(blurBg.bottom)
-                            start.linkTo(blurBg.start)
-                            end.linkTo(blurBg.end)
-                            width = Dimension.fillToConstraints
-                            height = Dimension.fillToConstraints
-                        }
-                        .zIndex(1f)
-            ) {
-                HorizontalCardSnowFallingEffect()
-            }
-        }
     }
 }
 
@@ -720,8 +647,8 @@ private fun ExpandableText(
     collapsedMaxLines: Int = 4,
     textStyle: TextStyle = TextStyle.Default,
     buttonPosition: ExpandableTextButtonPosition = ExpandableTextButtonPosition.TextEnd,
-    iconSize: androidx.compose.ui.unit.Dp = 24.dp,
-    iconSpacing: androidx.compose.ui.unit.Dp = 4.dp,
+    iconSize: Dp = 24.dp,
+    iconSpacing: Dp = 4.dp,
     iconTint: Color = Color.White,
     useRotationAnimation: Boolean = true,
 ) {
@@ -873,195 +800,5 @@ enum class ExpandableTextButtonPosition {
     /** 按钮定位在容器的右下角 适用于：ChatItem 中的聊天消息文本 */
     BottomEnd,
 }
-
-// endregion
-
-// region 雪花效果
-
-@Composable
-private fun HorizontalCardSnowPiece(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "snow_breathing")
-    val breathingAlpha by
-        infiniteTransition.animateFloat(
-            initialValue = 0.6f,
-            targetValue = 1.0f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(2000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "breathing_alpha",
-        )
-
-    Box(
-        modifier
-            .alpha(breathingAlpha)
-            .background(
-                brush =
-                    Brush.radialGradient(
-                        colors =
-                            listOf(
-                                Color(0xE6FFFFFF),
-                                Color(0xB3FFFFFF),
-                                Color(0x80FFFFFF),
-                                Color.Transparent,
-                            )
-                    )
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_snow_piece),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(.55f),
-            contentScale = ContentScale.Fit,
-        )
-    }
-}
-
-@Composable
-private fun HorizontalCardSnowFallingEffect() {
-    val density = LocalDensity.current
-    var containerSize by remember { mutableStateOf(Size.Zero) }
-
-    val particleCount = 28
-    val particles =
-        remember(particleCount) {
-            (0 until particleCount).map { index ->
-                val size = (22f + Random.nextFloat() * 26f).dp
-                HorizontalCardParticleConfig(
-                    initialX = Random.nextFloat(),
-                    initialY = -0.15f - (index * 0.07f),
-                    size = size,
-                    alpha = (0.2f + Random.nextFloat() * 0.55f).coerceAtMost(0.8f),
-                    duration = (5500 + Random.nextInt(3500)).toInt(),
-                    delay = (index * 100) + Random.nextInt(130),
-                    swingAmplitude = (0.12f + Random.nextFloat() * 0.2f),
-                    rotationSpeed =
-                        (0.25f + Random.nextFloat() * 0.6f) * if (Random.nextBoolean()) 1f else -1f,
-                )
-            }
-        }
-
-    Box(
-        modifier =
-            Modifier.fillMaxSize().onSizeChanged { layoutSize ->
-                with(density) {
-                    containerSize =
-                        Size(layoutSize.width.toDp().value, layoutSize.height.toDp().value)
-                }
-            }
-    ) {
-        if (containerSize.width > 0 && containerSize.height > 0) {
-            particles.forEach { particle ->
-                HorizontalCardFloatingSnowParticle(
-                    particle = particle,
-                    containerSize = containerSize,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun HorizontalCardFloatingSnowParticle(
-    particle: HorizontalCardParticleConfig,
-    containerSize: Size,
-) {
-    val infiniteTransition =
-        rememberInfiniteTransition(label = "snow_particle_float_${particle.hashCode()}")
-
-    val animateY by
-        infiniteTransition.animateFloat(
-            initialValue = particle.initialY,
-            targetValue = 1.25f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation =
-                        tween(
-                            particle.duration,
-                            delayMillis = particle.delay,
-                            easing = FastOutSlowInEasing,
-                        ),
-                    repeatMode = RepeatMode.Restart,
-                ),
-            label = "float_y",
-        )
-
-    val animateX by
-        infiniteTransition.animateFloat(
-            initialValue = -particle.swingAmplitude,
-            targetValue = particle.swingAmplitude,
-            animationSpec =
-                infiniteRepeatable(
-                    animation =
-                        tween(
-                            (particle.duration * 0.75).toInt(),
-                            delayMillis = particle.delay,
-                            easing = FastOutSlowInEasing,
-                        ),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "float_x",
-        )
-
-    val animateRotation by
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f * particle.rotationSpeed,
-            animationSpec =
-                infiniteRepeatable(
-                    animation =
-                        tween(
-                            (particle.duration * 0.45).toInt(),
-                            delayMillis = particle.delay,
-                            easing = LinearEasing,
-                        ),
-                    repeatMode = RepeatMode.Restart,
-                ),
-            label = "rotation",
-        )
-
-    val animateScale by
-        infiniteTransition.animateFloat(
-            initialValue = 0.75f,
-            targetValue = 1.05f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation =
-                        tween(
-                            (1200 + Random.nextInt(700)).toInt(),
-                            delayMillis = particle.delay,
-                            easing = FastOutSlowInEasing,
-                        ),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "scale",
-        )
-
-    val currentX = particle.initialX * containerSize.width + animateX * containerSize.width * 0.35f
-    val currentY = animateY * containerSize.height
-
-    Box(
-        modifier =
-            Modifier.offset(x = currentX.dp, y = currentY.dp)
-                .alpha(particle.alpha)
-                .rotate(animateRotation)
-                .size(particle.size * animateScale)
-    ) {
-        HorizontalCardSnowPiece(modifier = Modifier.fillMaxSize())
-    }
-}
-
-private data class HorizontalCardParticleConfig(
-    val initialX: Float,
-    val initialY: Float,
-    val size: Dp,
-    val alpha: Float,
-    val duration: Int,
-    val delay: Int,
-    val swingAmplitude: Float = 0.2f,
-    val rotationSpeed: Float = 1f,
-)
 
 // endregion
