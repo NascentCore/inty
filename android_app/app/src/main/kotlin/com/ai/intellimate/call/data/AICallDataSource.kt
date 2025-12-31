@@ -57,25 +57,25 @@ class AICallDataSource(private val httpClient: HttpClient) {
         LogUtils.d("开始建立WebSocket连接: $url")
 
         return flow {
-            val session = httpClient.webSocketSession { url(url) }
+                val session = httpClient.webSocketSession { url(url) }
 
-            sessionMutex.withLock { _session = session }
+                sessionMutex.withLock { _session = session }
 
-            _connectionState.value = ConnectionState.CONNECTED
-            LogUtils.d("WebSocket连接已建立")
-            while (true) {
-                emit(session.receiveDeserialized<CallPacket>())
+                _connectionState.value = ConnectionState.CONNECTED
+                LogUtils.d("WebSocket连接已建立")
+                while (true) {
+                    emit(session.receiveDeserialized<CallPacket>())
+                }
             }
-        }.catch { error ->
-            if (error !is ClosedReceiveChannelException) throw error
-        }.onCompletion { cause ->
-            LogUtils.d("WebSocket接收流完成，原因: ${cause?.message}")
-            if (cause != null) {
-                _connectionState.value = ConnectionState.ERROR
-            } else {
-                _connectionState.value = ConnectionState.DISCONNECTED
+            .catch { error -> if (error !is ClosedReceiveChannelException) throw error }
+            .onCompletion { cause ->
+                LogUtils.d("WebSocket接收流完成，原因: ${cause?.message}")
+                if (cause != null) {
+                    _connectionState.value = ConnectionState.ERROR
+                } else {
+                    _connectionState.value = ConnectionState.DISCONNECTED
+                }
             }
-        }
     }
 
     /**

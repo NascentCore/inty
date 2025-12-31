@@ -40,18 +40,17 @@ internal fun buildReportDescriptionWithAppVersion(
     if (userDescription.contains(REPORT_DESCRIPTION_APP_VERSION_MARKER)) {
         return userDescription
     }
-    val suffix =
-        buildString {
-            append("--- ")
-            append(REPORT_DESCRIPTION_APP_VERSION_MARKER)
-            append(" ---")
-            append('\n')
-            append("App版本：")
-            append(versionName)
-            append(" (")
-            append(versionCode)
-            append(')')
-        }
+    val suffix = buildString {
+        append("--- ")
+        append(REPORT_DESCRIPTION_APP_VERSION_MARKER)
+        append(" ---")
+        append('\n')
+        append("App版本：")
+        append(versionName)
+        append(" (")
+        append(versionCode)
+        append(')')
+    }
     val separator = if (userDescription.endsWith("\n")) "\n" else "\n\n"
     return userDescription + separator + suffix
 }

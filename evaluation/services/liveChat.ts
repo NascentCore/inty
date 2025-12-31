@@ -472,9 +472,7 @@ export class LiveChatService {
       // 从当前时间开始调度
       this.nextPlayTime = this.playbackContext.currentTime;
 
-      console.log(
-        `开始预调度播放，队列中有 ${this.audioQueue.length} 个片段`,
-      );
+      console.log(`开始预调度播放，队列中有 ${this.audioQueue.length} 个片段`);
 
       // 开始调度循环
       this.scheduleNextChunk();
@@ -537,7 +535,7 @@ export class LiveChatService {
       // 提前调度下一个片段，确保无缝衔接
       const delayMs = Math.max(
         0,
-        (audioBuffer.duration * 1000) - this.SCHEDULE_AHEAD_MS,
+        audioBuffer.duration * 1000 - this.SCHEDULE_AHEAD_MS,
       );
       this.scheduleTimeoutId = setTimeout(
         () => this.scheduleNextChunk(),
@@ -546,10 +544,7 @@ export class LiveChatService {
     } catch (error) {
       console.error("调度音频片段失败:", error);
       // 出错时继续尝试下一个片段
-      this.scheduleTimeoutId = setTimeout(
-        () => this.scheduleNextChunk(),
-        10,
-      );
+      this.scheduleTimeoutId = setTimeout(() => this.scheduleNextChunk(), 10);
     }
   }
 

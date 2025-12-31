@@ -1,14 +1,10 @@
 package com.ai.intellimate.vip
 
 import ai.sxwl.android.common.base.BaseActivity
-import ai.sxwl.android.design.theme.HeartColor
 import android.content.Context
 import android.content.Intent
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 
 /** 订阅管理页面 */
 @Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Me.SubsManagement 替代")
@@ -37,9 +33,9 @@ class SubsManageActivity : BaseActivity() {
 /** 订阅管理内容组件 */
 @Composable
 private fun SubsManageContent(onBack: () -> Unit, viewModel: SubsManageViewModel) {
-//    SubscriptionManagementScreen(
-//        modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor),
-//        onBack = onBack,
-//        viewModel = viewModel,
-//    )
+    //    SubscriptionManagementScreen(
+    //        modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor),
+    //        onBack = onBack,
+    //        viewModel = viewModel,
+    //    )
 }
