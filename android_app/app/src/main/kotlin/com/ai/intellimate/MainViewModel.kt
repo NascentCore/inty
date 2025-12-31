@@ -100,6 +100,10 @@ class MainViewModel : BaseVM() {
     private var _pushAgentId = MutableStateFlow("")
     val pushAgentId: StateFlow<String> = _pushAgentId.asStateFlow()
 
+    // 首次登陆时，记录跳转注册页面时的动作
+    private val _needsRegInfo = MutableStateFlow(false)
+    val needsRegInfo: StateFlow<Boolean> = _needsRegInfo.asStateFlow()
+
     companion object {
         private const val MAX_TAB_HISTORY = 10
     }
@@ -498,5 +502,10 @@ class MainViewModel : BaseVM() {
     /** 更新 pushAgentId (离线推送通知点击) */
     fun updatePushAgentId(id: String) {
         _pushAgentId.value = id
+    }
+
+    /** 更新 needsRegInfo (首次登录跳转完善资料页面) */
+    fun updateNeedsRegInfo(value: Boolean) {
+        _needsRegInfo.value = value
     }
 }
