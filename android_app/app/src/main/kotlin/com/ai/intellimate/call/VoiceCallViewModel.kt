@@ -1,5 +1,6 @@
 package com.ai.intellimate.call
 
+import ai.sxwl.android.data.http.IntyErrorCode
 import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
