@@ -52,10 +52,10 @@ import kotlinx.coroutines.yield
 interface PanelConfig {
     /** 面板唯一标识符 */
     val id: String
-    
+
     /** 面板显示名称（可选，用于调试） */
     val name: String
-    
+
     /** 面板内容 */
     @Composable
     fun PanelContent(
@@ -67,7 +67,7 @@ interface PanelConfig {
 
 /**
  * 面板按钮配置
- * 
+ *
  * @param panelConfig 面板配置（可选，如果为null则作为普通按钮使用）
  * @param icon 按钮图标（Composable）
  * @param isVisible 是否显示此按钮
@@ -124,11 +124,11 @@ data class PanelContainerConfig(
 
 /**
  * 多面板输入框组件
- * 
+ *
  * 这是一个通用的输入框组件，支持多个功能面板（如表情包、礼物背包等）。
  * 输入框和功能面板作为一个整体，当键盘显示或功能面板显示时，输入框会自动上移。
  * 功能面板的高度会匹配键盘高度，确保切换时无跳动。
- * 
+ *
  * @param value 输入框文本值
  * @param onValueChange 文本变化回调
  * @param panelButtons 面板按钮配置列表
@@ -166,27 +166,27 @@ fun MultiPanelInputField(
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
-    
+
     // 当前显示的面板ID，null表示没有面板显示
     var currentPanelId by remember { mutableStateOf<String?>(null) }
-    
+
     // 同步外部控制的面板ID
     LaunchedEffect(externalPanelId) {
         if (externalPanelId != currentPanelId) {
             currentPanelId = externalPanelId
         }
     }
-    
+
     // 键盘高度
     val imeBottom = WindowInsets.ime.getBottom(density)
     val isKeyboardVisible = imeBottom > 0
     val keyboardHeightDp = with(density) { imeBottom.toDp() }
-    
+
     // 通知外部面板状态变化
     LaunchedEffect(currentPanelId) {
         onPanelVisibilityChange?.invoke(currentPanelId)
     }
-    
+
     // 当键盘显示时，隐藏面板；当面板显示时，隐藏键盘
     LaunchedEffect(isKeyboardVisible) {
         if (isKeyboardVisible && currentPanelId != null) {
@@ -194,7 +194,7 @@ fun MultiPanelInputField(
             currentPanelId = null
         }
     }
-    
+
     // 切换面板
     fun togglePanel(panelId: String) {
         if (currentPanelId == panelId) {
@@ -208,12 +208,12 @@ fun MultiPanelInputField(
             currentPanelId = panelId
         }
     }
-    
+
     // 关闭面板
     fun dismissPanel() {
         currentPanelId = null
     }
-    
+
     // 焦点输入框并显示键盘
     fun focusInputAndShowKeyboard() {
         focusRequester?.requestFocus()
@@ -222,7 +222,7 @@ fun MultiPanelInputField(
             keyboardController?.show()
         }
     }
-    
+
     // 输入框和面板整体容器
     Column(
         modifier = modifier
@@ -255,7 +255,7 @@ fun MultiPanelInputField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(end = 56.dp) // 为右侧按钮留出空间
-                        .onFocusChanged { 
+                        .onFocusChanged {
                             onFocusChange(it.isFocused)
                             // 当输入框获得焦点时，如果面板正在显示，关闭面板
                             if (it.isFocused && currentPanelId != null) {
@@ -295,7 +295,7 @@ fun MultiPanelInputField(
                         cursorColor = Color.White,
                     ),
                 )
-                
+
                 // 右侧按钮区域
                 Row(
                     modifier = Modifier
@@ -316,7 +316,8 @@ fun MultiPanelInputField(
                                             buttonConfig.onClick?.invoke() ?: run {
                                                 togglePanel(buttonConfig.panelConfig!!.id)
                                             }
-                                        }
+                                        },
+                                    contentAlignment = Alignment.Center,
                                 ) {
                                     buttonConfig.icon()
                                 }
@@ -332,7 +333,8 @@ fun MultiPanelInputField(
                                     .size(32.dp)
                                     .noRippleClickable {
                                         sendButton.onClick?.invoke() ?: onSendMessage()
-                                    }
+                                    },
+                                contentAlignment = Alignment.Center,
                             ) {
                                 sendButton.icon()
                             }
@@ -341,14 +343,14 @@ fun MultiPanelInputField(
                 }
             }
         }
-        
+
         // 功能面板（显示在输入框下方）
         // 直接显示，不做动画
         if (currentPanelId != null && !isKeyboardVisible) {
             val currentPanel = panelButtons
                 .firstOrNull { it.panelConfig?.id == currentPanelId }
                 ?.panelConfig
-            
+
             if (currentPanel != null) {
                 // 面板高度应该匹配键盘高度，如果没有键盘高度，使用默认高度
                 val panelHeight = if (keyboardHeightDp > 0.dp) {
@@ -357,7 +359,7 @@ fun MultiPanelInputField(
                     // 默认面板高度（通常和键盘高度相近）
                     300.dp
                 }
-                
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
