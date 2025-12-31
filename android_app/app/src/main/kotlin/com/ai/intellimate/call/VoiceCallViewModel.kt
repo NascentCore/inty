@@ -39,8 +39,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     // UI状态
     private val _uiState = MutableStateFlow(VoiceCallUiState())
     val uiState = _uiState.asStateFlow()
-    private val _errorReason = Channel<CallPacket.Reason?>()
-    val errorReason = _errorReason.receiveAsFlow()
+    private val _error = Channel<IntyErrorCode?>()
+    val error = _error.receiveAsFlow()
 
     // 接收音频数据，ui只管接收到音频数据后播放
     private val _audioResponseChannel = Channel<ByteArray>()
@@ -82,7 +82,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 _uiState.update { it.copy(connectionState = connectionState) }
 
                 if (connectionState == ConnectionState.CONNECTING) {
-                    _errorReason.trySend(null)
+                    _error.trySend(null)
                 }
             }
             .launchIn(viewModelScope)
@@ -121,7 +121,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
-                            packet.reason?.let { _errorReason.trySend(it) }
+                            packet.errorCode?.let { _error.trySend(it) }
                         }
 
                         CallType.STATUS -> {

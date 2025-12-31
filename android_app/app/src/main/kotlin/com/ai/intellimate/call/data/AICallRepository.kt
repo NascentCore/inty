@@ -10,6 +10,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +56,8 @@ class AICallRepository(private val dataSource: AICallDataSource) {
                     break
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) break
+
                 LogUtils.e("WebSocket连接失败: ${e.message}")
 
                 if (!shouldReconnect) {
