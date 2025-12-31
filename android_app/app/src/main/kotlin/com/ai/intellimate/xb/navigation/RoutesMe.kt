@@ -12,4 +12,7 @@ object RoutesMe {
 
     /** 编辑个人资料页面路由 */
     const val ModifyProfile = "modify_profile"
+
+    /** 管理订阅页面路由 */
+    const val SubsManagement = "subs_management"
 }

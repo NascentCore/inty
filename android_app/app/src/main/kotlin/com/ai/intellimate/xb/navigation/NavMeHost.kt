@@ -8,6 +8,7 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileScreen
 import com.ai.intellimate.settings.SettingScreen
 import com.ai.intellimate.settings.check.CheckInScreen
+import com.ai.intellimate.vip.SubsManagementScreen
 import com.ai.intellimate.vip.VipCenterContent
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 
@@ -27,5 +28,11 @@ fun NavGraphBuilder.meGraph(
     }
 
     // 定义编辑资料页面路由
-    composable(Routes.Me.ModifyProfile) { ModifyProfileScreen(navController) }
+    composable(Routes.Me.ModifyProfile) {
+        ModifyProfileScreen(navController)
+    }
+
+    composable(Routes.Me.SubsManagement) {
+        SubsManagementScreen( navController)
+    }
 }
