@@ -276,7 +276,16 @@ async def live_chat_session(
                 f"agent_id: {agent_id}, duration: {remaining_duration}s"
             )
             try:
-                error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                # 根据用户订阅状态返回不同的错误码
+                subscription_status = (
+                    await subscription_service.get_user_subscription_status(
+                        db, current_user.id
+                    )
+                )
+                if subscription_status.is_subscribed:
+                    error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                else:
+                    error_info = BusinessErrorCode.SUBSCRIPTION_REQUIRED
                 await on_error(
                     error_code=error_info["error_code"],
                     message=error_info["message"],
