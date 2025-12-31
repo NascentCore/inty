@@ -11,6 +11,6 @@ data class VoiceCallUiState(
     /** 通话状态 */
     val callState: CallStatus? = null,
     /** 静音 */
-    val isMuted: Boolean = true,
+    val isMuted: Boolean = false,
     val agent: AgentInfo? = null,
 )
