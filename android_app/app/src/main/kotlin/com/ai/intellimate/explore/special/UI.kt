@@ -579,12 +579,7 @@ fun ThemedEventCard(
     content: @Composable () -> Unit,
 ) {
     ConstraintLayout(modifier.padding(top = 16.dp)) {
-
-        BlurBgCard(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment,
-            content = { content() },
-        )
+        BlurBgCard(modifier = Modifier.fillMaxSize(), contentAlignment, content = { content() })
     }
 }
 

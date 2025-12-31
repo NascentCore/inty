@@ -51,7 +51,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,10 +112,17 @@ fun VoiceCallScreen(
             val uiState by viewModel.uiState.collectAsState()
             val audioStreamPlayer = AudioStreamPlayer.getInstance()
             val audioRecordManager = AudioRecordManager.getInstance(context)
-            val errorReason by viewModel.errorReason.collectAsState(null)
+            var error by remember { mutableStateOf<IntyErrorCode?>(null) }
 
             // 启动通话连接
             LaunchedEffect(agentId) { viewModel.startCalling(agentId) }
+
+            LaunchedEffect(viewModel) {
+                viewModel.error
+                    .collect {
+                        error = it
+                    }
+            }
 
             // 播放接收的音频数据
             LaunchedEffect(Unit) {
@@ -178,9 +188,9 @@ fun VoiceCallScreen(
                     .fillMaxSize()
             )
 
-            errorReason?.run {
+            error?.let {
                 val dialogData =
-                    when (errorCode) {
+                    when (it) {
                         IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
                             ChatDialogData(
                                 R.drawable.img_unlimit_dialog_bg,
@@ -201,16 +211,23 @@ fun VoiceCallScreen(
 
                 UnlimitChatDialog(
                     dialogData,
-                    onCancel = onBack,
+                    onCancel = {
+                        error = null
+                        onBack()
+                    },
                     onSure = {
-                        when (errorCode) {
+                        error = null
+                        when (it) {
                             IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
                                 onVip()
                             }
                             else -> onBack()
                         }
                     },
-                    onMoreInfo = onVipMoreInfo,
+                    onMoreInfo = {
+                        error = null
+                        onVipMoreInfo()
+                    }
                 )
             }
         } else {

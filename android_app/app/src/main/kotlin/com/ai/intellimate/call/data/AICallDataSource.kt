@@ -11,10 +11,12 @@ import io.ktor.client.plugins.websocket.sendSerialized
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.client.request.url
 import io.ktor.websocket.close
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.sync.Mutex
@@ -54,31 +56,25 @@ class AICallDataSource(private val httpClient: HttpClient) {
         _connectionState.value = ConnectionState.CONNECTING
         LogUtils.d("开始建立WebSocket连接: $url")
 
-        return try {
+        return flow {
             val session = httpClient.webSocketSession { url(url) }
 
             sessionMutex.withLock { _session = session }
 
             _connectionState.value = ConnectionState.CONNECTED
             LogUtils.d("WebSocket连接已建立")
-
-            flow {
-                    while (true) {
-                        emit(session.receiveDeserialized<CallPacket>())
-                    }
-                }
-                .onCompletion { cause ->
-                    LogUtils.d("WebSocket接收流完成，原因: ${cause?.message}")
-                    if (cause != null) {
-                        _connectionState.value = ConnectionState.ERROR
-                    } else {
-                        _connectionState.value = ConnectionState.DISCONNECTED
-                    }
-                }
-        } catch (e: Exception) {
-            LogUtils.e("建立WebSocket连接失败: ${e.message}")
-            _connectionState.value = ConnectionState.ERROR
-            throw e
+            while (true) {
+                emit(session.receiveDeserialized<CallPacket>())
+            }
+        }.catch { error ->
+            if (error !is ClosedReceiveChannelException) throw error
+        }.onCompletion { cause ->
+            LogUtils.d("WebSocket接收流完成，原因: ${cause?.message}")
+            if (cause != null) {
+                _connectionState.value = ConnectionState.ERROR
+            } else {
+                _connectionState.value = ConnectionState.DISCONNECTED
+            }
         }
     }
 

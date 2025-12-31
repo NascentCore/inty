@@ -9,5 +9,5 @@ enum class IntyErrorCode(val code: Int) {
     /** Agent数量达到上限 */
     LIVE_CHAT_AGENT_LIMIT_REACHED(10001007),
     /** 通话时长达到上限 */
-    LIVE_CHAT_DURATION_LIMIT_REACHED(10001008)
+    LIVE_CHAT_DURATION_LIMIT_REACHED(10001008),
 }

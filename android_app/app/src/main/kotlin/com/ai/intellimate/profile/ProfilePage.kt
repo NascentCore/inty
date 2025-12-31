@@ -507,11 +507,13 @@ private fun ProfileHeader(
                             lastClickTimeEdit = currentTime
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
                                 // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
-//                                val intent =
-//                                    Intent(context, ModifyProfileActivity::class.java).apply {
-//                                        putExtra("intent_key_agent_info", userProfile)
-//                                    }
-//                                editProfileLauncher.launch(intent)
+                                //                                val intent =
+                                //                                    Intent(context,
+                                // ModifyProfileActivity::class.java).apply {
+                                //
+                                // putExtra("intent_key_agent_info", userProfile)
+                                //                                    }
+                                //                                editProfileLauncher.launch(intent)
                                 UserProfileStore.setUserProfile(userProfile)
                                 navController.navigate(Routes.Me.ModifyProfile)
                             }
