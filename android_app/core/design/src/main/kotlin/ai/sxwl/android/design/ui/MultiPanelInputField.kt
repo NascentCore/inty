@@ -1,13 +1,6 @@
 package ai.sxwl.android.design.ui
 
 import ai.sxwl.android.design.noRippleClickable
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,7 +42,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 
@@ -206,24 +198,14 @@ fun MultiPanelInputField(
     // 切换面板
     fun togglePanel(panelId: String) {
         if (currentPanelId == panelId) {
-            // 关闭当前面板
+            // 关闭当前面板，不弹出键盘
             currentPanelId = null
-            // 如果输入框有焦点，显示键盘
-            focusRequester?.let {
-                scope.launch {
-                    yield()
-                    keyboardController?.show()
-                }
-            }
         } else {
-            // 打开新面板
+            // 打开新面板，直接显示，不做动画
             // 先隐藏键盘
             keyboardController?.hide()
-            // 等待键盘隐藏后再显示面板
-            scope.launch {
-                delay(100)
-                currentPanelId = panelId
-            }
+            // 直接设置面板ID，立即显示
+            currentPanelId = panelId
         }
     }
     
@@ -361,33 +343,8 @@ fun MultiPanelInputField(
         }
         
         // 功能面板（显示在输入框下方）
-        AnimatedVisibility(
-            visible = currentPanelId != null && !isKeyboardVisible,
-            enter = slideInVertically(
-                animationSpec = tween(
-                    durationMillis = panelContainerConfig.animationDuration,
-                    easing = FastOutSlowInEasing,
-                ),
-                initialOffsetY = { it },
-            ) + fadeIn(
-                animationSpec = tween(
-                    durationMillis = panelContainerConfig.animationDuration,
-                    easing = FastOutSlowInEasing,
-                )
-            ),
-            exit = slideOutVertically(
-                animationSpec = tween(
-                    durationMillis = panelContainerConfig.animationDuration,
-                    easing = FastOutSlowInEasing,
-                ),
-                targetOffsetY = { it },
-            ) + fadeOut(
-                animationSpec = tween(
-                    durationMillis = panelContainerConfig.animationDuration,
-                    easing = FastOutSlowInEasing,
-                )
-            ),
-        ) {
+        // 直接显示，不做动画
+        if (currentPanelId != null && !isKeyboardVisible) {
             val currentPanel = panelButtons
                 .firstOrNull { it.panelConfig?.id == currentPanelId }
                 ?.panelConfig

@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.demo.MultiPanelInputFieldDemoScreen
 import com.ai.intellimate.profile.ModifyProfileScreen
 import com.ai.intellimate.settings.SettingScreen
 import com.ai.intellimate.settings.check.CheckInScreen
@@ -28,4 +29,7 @@ fun NavGraphBuilder.meGraph(
 
     // 定义编辑资料页面路由
     composable(Routes.Me.ModifyProfile) { ModifyProfileScreen(navController) }
+
+    // 定义 MultiPanelInputField 演示页面路由
+    composable(Routes.Me.MultiPanelInputFieldDemo) { MultiPanelInputFieldDemoScreen(navController) }
 }

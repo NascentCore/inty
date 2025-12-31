@@ -455,7 +455,6 @@ private fun ProfileHeader(
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
                         .clickable {
-                            // 点击头像跳转到 MultiPanelInputField 演示页面
                             navController.navigate(Routes.Me.MultiPanelInputFieldDemo)
                         }
             ) {
