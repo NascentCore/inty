@@ -28,11 +28,7 @@ fun NavGraphBuilder.meGraph(
     }
 
     // 定义编辑资料页面路由
-    composable(Routes.Me.ModifyProfile) {
-        ModifyProfileScreen(navController)
-    }
+    composable(Routes.Me.ModifyProfile) { ModifyProfileScreen(navController) }
 
-    composable(Routes.Me.SubsManagement) {
-        SubsManagementScreen( navController)
-    }
+    composable(Routes.Me.SubsManagement) { SubsManagementScreen(navController) }
 }

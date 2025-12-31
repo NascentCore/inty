@@ -14,10 +14,7 @@ class ReportDescriptionWithVersionTest {
                 versionCode = 123,
             )
 
-        assertEquals(
-            "用户输入的描述\n\n--- [INTY_APP_VERSION] ---\nApp版本：1.2.3 (123)",
-            result,
-        )
+        assertEquals("用户输入的描述\n\n--- [INTY_APP_VERSION] ---\nApp版本：1.2.3 (123)", result)
     }
 
     @Test
@@ -42,10 +39,6 @@ class ReportDescriptionWithVersionTest {
                 versionCode = 1,
             )
 
-        assertEquals(
-            "desc\n\n--- [INTY_APP_VERSION] ---\nApp版本：1.0.0 (1)",
-            result,
-        )
+        assertEquals("desc\n\n--- [INTY_APP_VERSION] ---\nApp版本：1.0.0 (1)", result)
     }
 }
-

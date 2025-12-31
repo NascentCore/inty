@@ -11,7 +11,7 @@ import androidx.navigation.NavController
 @Composable
 internal fun SubsManagementScreen(
     navController: NavController,
-    viewModel: SubsManageViewModel = viewModel()
+    viewModel: SubsManageViewModel = viewModel(),
 ) {
     SubscriptionManagementScreen(
         navController,

@@ -36,7 +36,7 @@ import com.ai.intellimate.ui.components.openPlayStoreSubscriptions
 fun SubscriptionManagementScreen(
     navController: NavController,
     modifier: Modifier,
-//    onBack: () -> Unit,
+    //    onBack: () -> Unit,
     viewModel: SubsManageViewModel,
 ) {
     val context = LocalContext.current
