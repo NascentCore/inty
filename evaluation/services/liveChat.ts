@@ -66,6 +66,13 @@ export class LiveChatService {
   private isPlaying = false;
   private isSpeaking = false; // AI 是否正在说话
 
+  // 预调度播放相关 - 用于消除音频片段之间的间隙
+  private nextPlayTime: number = 0; // 下一个片段的预定播放时间
+  private isScheduling: boolean = false; // 是否正在调度播放
+  private scheduleTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly PREFILL_COUNT = 2; // 开始播放前预缓冲片段数
+  private readonly SCHEDULE_AHEAD_MS = 50; // 提前调度时间（毫秒）
+
   // 保持向后兼容
   private get audioContext(): AudioContext | null {
     return this.recordingContext;
@@ -394,6 +401,12 @@ export class LiveChatService {
   private cleanup(): void {
     this.stopRecording();
 
+    // 清理调度定时器
+    if (this.scheduleTimeoutId) {
+      clearTimeout(this.scheduleTimeoutId);
+      this.scheduleTimeoutId = null;
+    }
+
     if (this.recordingContext) {
       this.recordingContext.close();
       this.recordingContext = null;
@@ -407,44 +420,46 @@ export class LiveChatService {
     this.ws = null;
     this.audioQueue = [];
     this.isPlaying = false;
+    // 重置预调度播放状态
+    this.isScheduling = false;
+    this.nextPlayTime = 0;
   }
 
   private queueAudio(audioData: ArrayBuffer): void {
     this.audioQueue.push(audioData);
-    if (!this.isPlaying) {
-      this.playNextAudio();
+
+    // 预缓冲机制：等待足够片段后再开始播放，避免启动时卡顿
+    if (!this.isScheduling) {
+      if (this.audioQueue.length >= this.PREFILL_COUNT) {
+        this.startScheduledPlayback();
+      }
     }
   }
 
-  private async playNextAudio(): Promise<void> {
-    if (this.audioQueue.length === 0) {
-      this.isPlaying = false;
-      console.log("所有音频播放完成，恢复录音发送");
-      return;
-    }
-
-    this.isPlaying = true;
-    const audioData = this.audioQueue.shift()!;
+  /**
+   * 初始化并启动预调度播放
+   */
+  private async startScheduledPlayback(): Promise<void> {
+    if (this.isScheduling) return;
 
     try {
-      // 使用专门的播放 AudioContext（24kHz）
+      // 初始化播放 AudioContext，尝试使用 24kHz 采样率
       if (!this.playbackContext || this.playbackContext.state === "closed") {
-        this.playbackContext = new AudioContext();
-        console.log(
-          `创建播放 AudioContext，采样率: ${this.playbackContext.sampleRate}Hz`,
-        );
+        try {
+          this.playbackContext = new AudioContext({
+            sampleRate: RECEIVE_SAMPLE_RATE,
+          });
+          console.log(
+            `创建播放 AudioContext，采样率: ${this.playbackContext.sampleRate}Hz (请求 ${RECEIVE_SAMPLE_RATE}Hz)`,
+          );
+        } catch {
+          // 如果浏览器不支持指定采样率，回退到默认
+          this.playbackContext = new AudioContext();
+          console.log(
+            `创建播放 AudioContext（回退），采样率: ${this.playbackContext.sampleRate}Hz`,
+          );
+        }
       }
-
-      const pcmData = new Int16Array(audioData);
-      const floatData = new Float32Array(pcmData.length);
-
-      for (let i = 0; i < pcmData.length; i++) {
-        floatData[i] = pcmData[i] / 32768;
-      }
-
-      console.log(
-        `播放音频: ${floatData.length} 样本, AudioContext 状态: ${this.playbackContext.state}`,
-      );
 
       // 确保 AudioContext 在播放状态
       if (this.playbackContext.state === "suspended") {
@@ -452,29 +467,115 @@ export class LiveChatService {
         await this.playbackContext.resume();
       }
 
-      // 使用原始 24kHz 采样率创建 buffer
-      const audioBuffer = this.playbackContext.createBuffer(
-        1,
-        floatData.length,
-        RECEIVE_SAMPLE_RATE,
+      this.isScheduling = true;
+      this.isPlaying = true;
+      // 从当前时间开始调度
+      this.nextPlayTime = this.playbackContext.currentTime;
+
+      console.log(
+        `开始预调度播放，队列中有 ${this.audioQueue.length} 个片段`,
       );
-      audioBuffer.getChannelData(0).set(floatData);
+
+      // 开始调度循环
+      this.scheduleNextChunk();
+    } catch (error) {
+      console.error("启动预调度播放失败:", error);
+      this.isScheduling = false;
+      this.isPlaying = false;
+    }
+  }
+
+  /**
+   * 调度下一个音频片段播放
+   * 使用精确时间调度实现无缝拼接
+   */
+  private scheduleNextChunk(): void {
+    if (!this.playbackContext || this.playbackContext.state === "closed") {
+      this.isScheduling = false;
+      this.isPlaying = false;
+      return;
+    }
+
+    if (this.audioQueue.length === 0) {
+      // 队列为空，停止调度但保持 isPlaying 状态，等待新数据
+      // 使用短暂延迟重新检查队列
+      this.scheduleTimeoutId = setTimeout(() => {
+        if (this.audioQueue.length > 0) {
+          this.scheduleNextChunk();
+        } else {
+          // 超过一定时间没有新数据，结束播放
+          console.log("音频队列持续为空，停止调度播放");
+          this.isScheduling = false;
+          this.isPlaying = false;
+        }
+      }, 200);
+      return;
+    }
+
+    const audioData = this.audioQueue.shift()!;
+
+    try {
+      const audioBuffer = this.createAudioBuffer(audioData);
 
       const source = this.playbackContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(this.playbackContext.destination);
 
-      source.onended = () => {
-        console.log("音频片段播放完成，继续播放下一个");
-        this.playNextAudio();
-      };
+      // 关键：使用精确时间调度，确保无缝衔接
+      const currentTime = this.playbackContext.currentTime;
+      const startTime = Math.max(currentTime, this.nextPlayTime);
 
-      source.start();
-      console.log(`音频开始播放，队列剩余: ${this.audioQueue.length}`);
+      source.start(startTime);
+
+      // 计算下一片段的播放时间
+      this.nextPlayTime = startTime + audioBuffer.duration;
+
+      console.log(
+        `调度播放: startTime=${startTime.toFixed(3)}s, duration=${audioBuffer.duration.toFixed(3)}s, 队列剩余: ${this.audioQueue.length}`,
+      );
+
+      // 提前调度下一个片段，确保无缝衔接
+      const delayMs = Math.max(
+        0,
+        (audioBuffer.duration * 1000) - this.SCHEDULE_AHEAD_MS,
+      );
+      this.scheduleTimeoutId = setTimeout(
+        () => this.scheduleNextChunk(),
+        delayMs,
+      );
     } catch (error) {
-      console.error("播放音频失败:", error);
-      this.playNextAudio();
+      console.error("调度音频片段失败:", error);
+      // 出错时继续尝试下一个片段
+      this.scheduleTimeoutId = setTimeout(
+        () => this.scheduleNextChunk(),
+        10,
+      );
     }
+  }
+
+  /**
+   * 将 PCM 数据转换为 AudioBuffer
+   */
+  private createAudioBuffer(audioData: ArrayBuffer): AudioBuffer {
+    if (!this.playbackContext) {
+      throw new Error("PlaybackContext not initialized");
+    }
+
+    const pcmData = new Int16Array(audioData);
+    const floatData = new Float32Array(pcmData.length);
+
+    for (let i = 0; i < pcmData.length; i++) {
+      floatData[i] = pcmData[i] / 32768;
+    }
+
+    const audioBuffer = this.playbackContext.createBuffer(
+      1,
+      floatData.length,
+      RECEIVE_SAMPLE_RATE,
+    );
+    audioBuffer.getChannelData(0).set(floatData);
+
+    return audioBuffer;
   }
 
   getStatus(): ConnectionStatus {
