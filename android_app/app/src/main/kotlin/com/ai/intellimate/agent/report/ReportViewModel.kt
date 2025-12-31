@@ -11,6 +11,7 @@ import android.net.Uri
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
 import com.inty.api.models.api.v1.report.ReportCreateParams
@@ -28,6 +29,32 @@ import kotlinx.coroutines.withContext
 
 /** 举报原因项，包含 SDK 的 ReasonCode 和对应的字符串资源ID */
 data class ReportReasonItem(val reasonCode: ReportCreateParams.ReasonCode, val stringResId: Int)
+
+private const val REPORT_DESCRIPTION_APP_VERSION_MARKER = "[INTY_APP_VERSION]"
+
+internal fun buildReportDescriptionWithAppVersion(
+    userDescription: String,
+    versionName: String,
+    versionCode: Int,
+): String {
+    if (userDescription.contains(REPORT_DESCRIPTION_APP_VERSION_MARKER)) {
+        return userDescription
+    }
+    val suffix =
+        buildString {
+            append("--- ")
+            append(REPORT_DESCRIPTION_APP_VERSION_MARKER)
+            append(" ---")
+            append('\n')
+            append("App版本：")
+            append(versionName)
+            append(" (")
+            append(versionCode)
+            append(')')
+        }
+    val separator = if (userDescription.endsWith("\n")) "\n" else "\n\n"
+    return userDescription + separator + suffix
+}
 
 class ReportViewModel : BaseVM() {
 
@@ -122,7 +149,12 @@ class ReportViewModel : BaseVM() {
                         reasonCodes = selectedReasonCodes.toList(),
                         targetId = if (isFeedbackMode) null else targetID,
                         targetType = if (isFeedbackMode) null else targetType,
-                        description = trimmedDescription,
+                        description =
+                            buildReportDescriptionWithAppVersion(
+                                userDescription = trimmedDescription,
+                                versionName = BuildConfig.VERSION_NAME,
+                                versionCode = BuildConfig.VERSION_CODE,
+                            ),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                         reportType =
                             if (isFeedbackMode) {
