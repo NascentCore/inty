@@ -285,8 +285,8 @@ object UiConfigs {
 
     /** 语音通话配置 - 适用于实时语音通话的队列大小、缓冲区等设置 */
     object VoiceCall {
-        /** 播放队列最大大小（音频数据包数量） - 约3秒的音频数据（24kHz，16bit，单声道） 增大队列以提高播放流畅度，减少因网络波动导致的卡顿 */
-        const val MAX_PLAYBACK_QUEUE_SIZE = 75
+        /** 播放队列最大大小（音频数据包数量） - 约10秒的音频数据（24kHz，16bit，单声道） 增大队列以提高播放流畅度，减少因网络波动导致的卡顿 */
+        const val MAX_PLAYBACK_QUEUE_SIZE = 250
 
         /** 发送队列最大大小（音频数据包数量） - 约1秒的音频数据（16kHz，16bit，单声道） */
         const val MAX_SEND_QUEUE_SIZE = 30
