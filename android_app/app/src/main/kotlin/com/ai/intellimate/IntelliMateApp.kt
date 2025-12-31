@@ -33,7 +33,40 @@ class IntelliMateApp : Application() {
 
         // 初始化 MMKV（必须在所有使用 MMKV 的代码之前）
         // 使用 MKKV 的代码包括：IntySetting, BoostManager, BoostRepository
-        MMKV.initialize(this)
+        // 添加错误处理，避免在某些设备上找不到 native 库时崩溃
+        try {
+            MMKV.initialize(this)
+        } catch (e: UnsatisfiedLinkError) {
+            // 记录错误并上报到 Firebase
+            val errorMsg = "MMKV 初始化失败: ${e.message}, 设备架构可能不支持"
+            LogUtils.e("IntelliMateApp", errorMsg, e)
+            try {
+                ensureFirebaseInitialized()
+                FirebaseManager.setCustomKey("mmkv_init_failed", true)
+                FirebaseManager.setCustomKey("mmkv_init_error", e.message ?: "unknown")
+                FirebaseManager.recordException(e)
+            } catch (firebaseError: Exception) {
+                LogUtils.e("IntelliMateApp", "上报 Firebase 失败: ${firebaseError.message}")
+            }
+            // 如果 MMKV 初始化失败，应用无法正常使用，退出应用
+            AppUtils.exitApp()
+            return
+        } catch (e: Exception) {
+            // 处理其他可能的异常
+            val errorMsg = "MMKV 初始化异常: ${e.message}"
+            LogUtils.e("IntelliMateApp", errorMsg, e)
+            try {
+                ensureFirebaseInitialized()
+                FirebaseManager.setCustomKey("mmkv_init_failed", true)
+                FirebaseManager.setCustomKey("mmkv_init_error", e.message ?: "unknown")
+                FirebaseManager.recordException(e)
+            } catch (firebaseError: Exception) {
+                LogUtils.e("IntelliMateApp", "上报 Firebase 失败: ${firebaseError.message}")
+            }
+            // 如果 MMKV 初始化失败，应用无法正常使用，退出应用
+            AppUtils.exitApp()
+            return
+        }
 
         IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 

@@ -82,7 +82,7 @@ chucker = "4.2.0"
 leakcanary = "2.14"
 
 # 腾讯系库
-mmkv = "2.2.4"
+mmkv = "2.3.0"
 
 # 其他第三方库
 ucrop = "2.2.10"
