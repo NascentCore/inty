@@ -58,6 +58,13 @@
 | `/api/v1/ai/agents/prompts/available` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/image-generation/config` | PUT | `app/api/v1/endpoints/agents.py` |
 
+> **关于 `/recommend` 端点的行为说明**：
+>
+> - 该端点只返回**超级用户**（`is_superuser=True`）创建的角色，不会返回普通用户创建的角色
+> - **普通用户**调用时：只返回超级用户创建的**公开**（`visibility=PUBLIC`）角色
+> - **超级用户**调用时：返回所有超级用户创建的**公开和私有**角色，包括其他超级用户创建的私有角色
+> - 无论调用者身份如何，都不会返回普通用户创建的私有角色
+
 ### 聊天 (Chat)
 
 | 路径 | 方法 | 实现文件 |
@@ -224,3 +231,10 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/api/v2/ai/agents/recommend` | GET | `app/api/v2/endpoints/agents.py` |
+
+> **关于 `/recommend` 端点的行为说明**：
+>
+> - 该端点只返回**超级用户**（`is_superuser=True`）创建的角色，不会返回普通用户创建的角色
+> - **普通用户**调用时：只返回超级用户创建的**公开**（`visibility=PUBLIC`）角色
+> - **超级用户**调用时：返回所有超级用户创建的**公开和私有**角色，包括其他超级用户创建的私有角色
+> - 无论调用者身份如何，都不会返回普通用户创建的私有角色
