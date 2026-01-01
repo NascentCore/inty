@@ -372,7 +372,7 @@ fun ExploreCharacterCard(
                         null
                     }
                 }
-            
+
             if (displayText != null) {
                 Box(
                     modifier =
