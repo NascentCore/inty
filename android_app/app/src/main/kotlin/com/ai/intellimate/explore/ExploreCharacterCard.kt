@@ -356,6 +356,13 @@ fun ExploreCharacterCard(
 
         // Debug 模式下显示索引
         if (isDebugMode && index != null) {
+            val isPrivate = agentInfo.visibility.equals("private", ignoreCase = true)
+            val indexText =
+                if (isPrivate) {
+                    "#$index ${context.getString(com.ai.intellimate.R.string.private_label)}"
+                } else {
+                    "#$index"
+                }
             Box(
                 modifier =
                     Modifier.align(Alignment.TopStart)
@@ -370,7 +377,7 @@ fun ExploreCharacterCard(
                         )
             ) {
                 Text(
-                    text = "#$index",
+                    text = indexText,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
