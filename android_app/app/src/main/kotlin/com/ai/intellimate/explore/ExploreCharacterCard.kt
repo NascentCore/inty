@@ -354,27 +354,46 @@ fun ExploreCharacterCard(
             }
         }
 
-        // Debug 模式下显示索引
-        if (isDebugMode && index != null) {
-            Box(
-                modifier =
-                    Modifier.align(Alignment.TopStart)
-                        .padding(CardConfig.DebugIndexPadding)
-                        .background(
-                            color = Color.Black.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(4.dp),
-                        )
-                        .padding(
-                            horizontal = CardConfig.DebugIndexInnerPadding.first,
-                            vertical = CardConfig.DebugIndexInnerPadding.second,
-                        )
-            ) {
-                Text(
-                    text = "#$index",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                )
+        // Debug 模式下显示索引或私有标识
+        if (isDebugMode) {
+            val isPrivate = agentInfo.visibility.equals("private", ignoreCase = true)
+            val displayText =
+                when {
+                    index != null && isPrivate -> {
+                        "#$index ${context.getString(com.ai.intellimate.R.string.private_label)}"
+                    }
+                    index != null -> {
+                        "#$index"
+                    }
+                    isPrivate -> {
+                        context.getString(com.ai.intellimate.R.string.private_label)
+                    }
+                    else -> {
+                        null
+                    }
+                }
+            
+            if (displayText != null) {
+                Box(
+                    modifier =
+                        Modifier.align(Alignment.TopStart)
+                            .padding(CardConfig.DebugIndexPadding)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.7f),
+                                shape = RoundedCornerShape(4.dp),
+                            )
+                            .padding(
+                                horizontal = CardConfig.DebugIndexInnerPadding.first,
+                                vertical = CardConfig.DebugIndexInnerPadding.second,
+                            )
+                ) {
+                    Text(
+                        text = displayText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                    )
+                }
             }
         }
 

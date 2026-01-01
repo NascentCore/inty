@@ -779,6 +779,7 @@ private fun AgentSpacerLine() {
 
 @Composable
 private fun AgentInfoDebugSection(agent: AgentInfo) {
+    val context = LocalContext.current
     SelectionContainer {
         Column(
             modifier =
