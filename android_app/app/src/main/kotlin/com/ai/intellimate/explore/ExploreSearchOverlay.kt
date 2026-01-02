@@ -184,6 +184,7 @@ fun ExploreSearchOverlay(
                         contentPadding = PaddingValues(bottom = 32.dp),
                     ) {
                         items(searchResults, key = { it.id }) { agent ->
+                            // 对创建于7天内的角色显示 "new" tag
                             ExploreCharacterCard(
                                 modifier = Modifier,
                                 agentInfo = agent,

@@ -105,6 +105,14 @@ private fun normalizeTag(tag: String): String {
 
 /**
  * 判断角色是否在7天内创建
+ * 
+ * 用于决定是否在角色卡片上显示 "new" tag。
+ * 支持两种时间格式：
+ * - ISO 8601 格式（如 "2019-12-27T18:11:19.117Z"）
+ * - Unix 时间戳（秒，如 "1767241505"）
+ * 
+ * @param agent 角色信息
+ * @return 如果角色创建时间距离当前时间在7天内（包含7天），返回 true；否则返回 false
  */
 fun isCreatedWithin7Days(agent: AgentInfo): Boolean {
     if (agent.createdAt.isBlank()) {
@@ -197,6 +205,12 @@ fun ExploreCharacterCard(
     onClick: () -> Unit,
     index: Int? = null,
     shouldPlayAnimated: Boolean = false,
+    /**
+     * 是否显示 "new" tag
+     * 
+     * 当为 true 时，如果角色标签列表中还没有 "new" tag，则会在标签区域添加 "new" tag。
+     * 通常通过调用 [isCreatedWithin7Days] 函数来判断是否应该显示。
+     */
     showNewTag: Boolean = false,
 ) {
     val context = LocalContext.current
@@ -221,6 +235,7 @@ fun ExploreCharacterCard(
 
     val NEW_TAG = "new"
     // 缓存过滤后的标签，如果 showNewTag 为 true 则添加 new tag
+    // 显示逻辑：当 showNewTag 为 true 且角色标签列表中还没有 "new" tag 时，添加 "new" tag
     val filteredTags = remember(agentInfo.tags, showNewTag) {
         val baseTags = agentInfo.tags?.filterNotNull() ?: emptyList()
         if (showNewTag && !baseTags.any { normalizeTag(it) == "new" }) {

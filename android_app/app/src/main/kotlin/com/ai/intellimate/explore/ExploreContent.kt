@@ -502,6 +502,7 @@ fun ExploreContent(
                                 // index 是 lazyPagingItems 的索引（从 0 开始），firstPlayingItemIndex 也是
                                 val shouldPlay = index == firstPlayingItemIndex
 
+                                // 对创建于7天内的角色显示 "new" tag
                                 ExploreCharacterCard(
                                     modifier = Modifier.fillMaxWidth(),
                                     agentInfo = agent,
