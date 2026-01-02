@@ -362,12 +362,12 @@ def test_recommend_agents_prioritize_opposite_gender(
         db_session.commit()
 
         female_agent_id = integration_client.create_agent(
-            name=f"Opposite Gender First Female {uuid.uuid4().hex[:6]}",
+            name=f"OGF_F_{uuid.uuid4().hex[:6]}",
             gender="FEMALE",
             visibility="PUBLIC",
         )
         male_agent_id = integration_client.create_agent(
-            name=f"Opposite Gender First Male {uuid.uuid4().hex[:6]}",
+            name=f"OGF_M_{uuid.uuid4().hex[:6]}",
             gender="MALE",
             visibility="PUBLIC",
         )

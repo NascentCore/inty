@@ -662,7 +662,7 @@ async def get_recommended_agents_paginated(
             )
 
         include_private = is_superuser(current_user)
-        opposite_gender = _get_opposite_gender(current_user.gender)
+        opposite_gender = _get_opposite_gender(getattr(current_user, "gender", None))
         gender_priority_clause = _get_gender_priority_order(opposite_gender)
 
         # 构建基础查询条件，只返回超级用户创建的角色
