@@ -6,6 +6,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.TimeUtils
 import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -100,6 +101,40 @@ private fun normalizeTag(tag: String): String {
     val trimmed = tag.trim()
     if (trimmed.isEmpty()) return ""
     return trimmed.removePrefix("#").lowercase()
+}
+
+/**
+ * 判断角色是否在7天内创建
+ */
+fun isCreatedWithin7Days(agent: AgentInfo): Boolean {
+    if (agent.createdAt.isBlank()) {
+        return false
+    }
+    
+    // 尝试解析时间戳：先尝试 ISO 8601 格式，如果失败则尝试 Unix 时间戳（秒）
+    val createdAtTimestamp = TimeUtils.parseIsoTimeToTimestamp(agent.createdAt)
+        ?: run {
+            // 如果不是 ISO 8601 格式，尝试作为 Unix 时间戳（秒）解析
+            try {
+                val seconds = agent.createdAt.toLongOrNull()
+                if (seconds != null && seconds > 0) {
+                    // 将秒转换为毫秒
+                    seconds * 1000L
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    
+    if (createdAtTimestamp == null) {
+        return false
+    }
+    val now = System.currentTimeMillis()
+    val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
+    val timeDiff = now - createdAtTimestamp
+    return timeDiff <= sevenDaysInMillis && timeDiff >= 0
 }
 
 /**

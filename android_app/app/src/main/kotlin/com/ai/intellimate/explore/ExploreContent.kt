@@ -508,6 +508,7 @@ fun ExploreContent(
                                     onClick = { onClickAgent(agent) },
                                     index = index,
                                     shouldPlayAnimated = shouldPlay,
+                                    showNewTag = isCreatedWithin7Days(agent),
                                 )
                             } else {
                                 // 显示加载占位符
