@@ -333,6 +333,69 @@ def test_recommend_agents_superuser_can_see_private_agents(
             integration_client.delete_agent(public_agent_id)
 
 
+def test_recommend_agents_prioritize_opposite_gender(
+    integration_client: TestClient, db_session
+):
+    """
+    验证 /recommend 会基于用户性别把“异性”角色排在“同性”角色之前。
+
+    该测试刻意制造 created_at 冲突：先创建 FEMALE，再创建 MALE（更“新”），
+    若未实现“异性优先”，按 created_desc 会 MALE 在前；实现后应 FEMALE 在前。
+    """
+    me_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me",
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    user_id = me_resp.json()["data"]["id"]
+
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+
+    old_is_superuser = db_user.is_superuser
+    old_gender = db_user.gender
+
+    female_agent_id = None
+    male_agent_id = None
+    try:
+        db_user.is_superuser = True
+        db_user.gender = Gender.MALE
+        db_session.commit()
+
+        female_agent_id = integration_client.create_agent(
+            name=f"Opposite Gender First Female {uuid.uuid4().hex[:6]}",
+            gender="FEMALE",
+            visibility="PUBLIC",
+        )
+        male_agent_id = integration_client.create_agent(
+            name=f"Opposite Gender First Male {uuid.uuid4().hex[:6]}",
+            gender="MALE",
+            visibility="PUBLIC",
+        )
+
+        resp = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={"page": 1, "page_size": 50, "sort": "created_desc"},
+        )
+        assert resp.status_code == 200, resp.text
+        payload = resp.json()
+        assert payload.get("code") == 200, payload
+
+        ids = [item["id"] for item in payload["data"]["list"]]
+        assert female_agent_id in ids, "Female agent should appear in recommend list"
+        assert male_agent_id in ids, "Male agent should appear in recommend list"
+        assert ids.index(female_agent_id) < ids.index(
+            male_agent_id
+        ), "Opposite-gender agents should be listed before same-gender agents"
+    finally:
+        db_user.is_superuser = old_is_superuser
+        db_user.gender = old_gender
+        db_session.commit()
+        if female_agent_id:
+            integration_client.delete_agent(female_agent_id)
+        if male_agent_id:
+            integration_client.delete_agent(male_agent_id)
+
+
 def test_update_agent_adds_energy_points(
     integration_client: TestClient, db_session
 ):

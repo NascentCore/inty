@@ -9,7 +9,7 @@ from typing import Any, List, Optional
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import Integer, and_, desc, func, or_, select, text
+from sqlalchemy import Integer, and_, case, desc, func, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -505,6 +505,27 @@ async def get_recommended_agents(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+GENDER_PRIORITY_OPPOSITE = 0
+GENDER_PRIORITY_OTHER = 1
+
+
+def _get_opposite_gender(user_gender: Optional[Gender]) -> Optional[Gender]:
+    if user_gender == Gender.MALE:
+        return Gender.FEMALE
+    if user_gender == Gender.FEMALE:
+        return Gender.MALE
+    return None
+
+
+def _get_gender_priority_order(opposite_gender: Optional[Gender]):
+    if opposite_gender is None:
+        return None
+    return case(
+        (models.Agent.gender == opposite_gender, GENDER_PRIORITY_OPPOSITE),
+        else_=GENDER_PRIORITY_OTHER,
+    ).asc()
+
+
 def get_deterministic_random_order(sort_seed: str):
     """
     生成基于sort_seed的确定性随机排序表达式
@@ -569,6 +590,7 @@ async def get_balanced_score_based_agents(
     current_user_id: Optional[str] = None,  # pylint: disable=unused-argument
     *,
     include_private: bool = False,
+    opposite_gender: Optional[Gender] = None,
 ) -> List[models.Agent]:
     """
     简化的平衡权重排序：score * 2 + random(0-100)
@@ -577,20 +599,32 @@ async def get_balanced_score_based_agents(
     offset = (page - 1) * page_size
 
     # 平衡权重排序查询，同时获取头像和背景图的尺寸信息
+    gender_priority_clause = _get_gender_priority_order(opposite_gender)
+    score_order_clause = (
+        (
+            # score * 2 + random(0-100)
+            func.coalesce(
+                models.Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
+            )
+            * 2
+            + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
+        ).desc()
+    )
+
+    order_by_clauses = []
+    if gender_priority_clause is not None:
+        order_by_clauses.append(gender_priority_clause)
+    order_by_clauses.extend(
+        [
+            score_order_clause,
+            # 添加agent.id作为最后排序字段，确保排序稳定性，避免分页重复
+            models.Agent.id.asc(),
+        ]
+    )
+
     query = (
         _select_agents_with_sizes(include_private=include_private)
-        .order_by(
-            (
-                # score * 2 + random(0-100)
-                func.coalesce(
-                    models.Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
-                )
-                * 2
-                + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
-            ).desc(),
-            # 添加agent.id作为第二排序字段，确保排序稳定性，避免分页重复
-            models.Agent.id.asc(),
-        )
+        .order_by(*order_by_clauses)
         .offset(offset)
         .limit(page_size)
     )
@@ -628,6 +662,8 @@ async def get_recommended_agents_paginated(
             )
 
         include_private = is_superuser(current_user)
+        opposite_gender = _get_opposite_gender(current_user.gender)
+        gender_priority_clause = _get_gender_priority_order(opposite_gender)
 
         # 构建基础查询条件，只返回超级用户创建的角色
         base_conditions = [
@@ -657,6 +693,7 @@ async def get_recommended_agents_paginated(
                 sort_seed,
                 current_user.id,
                 include_private=include_private,
+                opposite_gender=opposite_gender,
             )
             # 保持使用原来的总数计算（基于基础查询条件）
         else:
@@ -664,7 +701,6 @@ async def get_recommended_agents_paginated(
             skip = (page - 1) * page_size
 
             # 确定排序方式
-            order_by_clauses = []
             if sort_by == AgentSortOption.CREATED_ASC:
                 order_by_clauses = [models.Agent.created_at.asc()]
             elif sort_by == AgentSortOption.RANDOM:
@@ -676,6 +712,9 @@ async def get_recommended_agents_paginated(
                 ]
             else:  # 默认为 CREATED_DESC
                 order_by_clauses = [desc(models.Agent.created_at)]
+
+            if gender_priority_clause is not None:
+                order_by_clauses.insert(0, gender_priority_clause)
 
             # 获取分页数据，同时获取头像和背景图的尺寸信息
             data_query = (
