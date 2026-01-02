@@ -1,13 +1,11 @@
 # IntelliMate Android App 代码
 
 IntelliMate Android App 全部代码位于本目录下。
-IntelliMate AI 驱动的、面向北美年轻男性的亲密体验模拟 Android app（AI-driven intimacy simulation for NA young male adults）
+
+IntelliMate：AI 驱动的、面向北美中青年（25+）男性的长期亲密陪伴
 
 ```text
-IntelliMate: Ultimate companionship, reimagined with AI
-Role-play with AI characters.
-Create your own IntelliMate, powered by carefully tuned AI agents,
-experience your own imagination.
+IntelliMate: Ultimate Companionship, enabled by AI
 ```
 
 ## Overview
