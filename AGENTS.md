@@ -1,22 +1,45 @@
-# Inty 长期 AI 陪伴
+# Inty 长期 AI 陪伴（仓库总入口 AGENTS.md）
+
+本文件适用于仓库根目录及全局协作约定；各子目录如存在自己的 `AGENTS.md`，则**以子目录文件为准并视为对本文件的补充/覆盖**。
+
+## 快速导航（优先阅读各目录 AGENTS.md）
+
+- `app/AGENTS.md`：后端服务（FastAPI）开发规范
+- `tests/AGENTS.md`：测试规范
+- `alembic/AGENTS.md`：数据库迁移规范
+- `evaluation/AGENTS.md`：运营工具（React）规范
+- `web_app/`：独立 Web App（如有规则，优先遵循其目录内规则文件）
+- `android_app/AGENTS.md`：Android App 开发规范
+- `scripts/AGENTS.md`：脚本开发规范
+- `devops/AGENTS.md`：运维与部署规范
+- `experimental/AGENTS.md`：原型与实验代码规范
+
+## 基础约定
+
+- **语言**：所有可自然语言表达的输出统一使用中文（普通话）。代码、命令、标识符不受该限制。
+- **Python 版本**：仓库 `pyproject.toml` 约束为 `>=3.12`。
+- **优先可维护性**：避免“为了省事”引入隐式行为（魔法常量、吞异常、无边界重试、隐藏的全局状态）。
+- **改完要自查**：每次修改后都应回看 diff，确保改动与意图一致、无泄漏敏感信息、无无关文件被改动。
 
 ## Alembic
 
 - 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
-- 修改数据库表 schema 应该单独进行，不要与其他改动混合，这样保证 alembic version 可以快速同步，不会因为 2 个人改 version 文件，导致出现非线性线索。
-  比如，当前 alembic head revision 为 1，如果改动 A 改动 B 同时在修改数据库，则会导致 2 个并行 version 文件都依赖 revisoin 1
+- 修改数据库表 schema 应该**单独**进行，不要与其他改动混合：保证 alembic version 可以快速同步，避免多人并行产生非线性迁移链。
+  - 例如：当前 alembic head revision 为 1，改动 A 与改动 B 同时修改 DB，则可能出现两个并行 version 文件都依赖 revision 1。
 
 ## 代码库结构
 
 - `android_app/` IntelliMate, android app code，kotlin compose jetpack
 - `app/` Inty 后端服务，Python fastapi
-  - `app/openapi.json` 来自 fastapi 生成，并使用 stainless 生成 kotlin typescript SDK（分别以 submodule 形式位于 evaluation/inty_sdk android_app/library/inty_sdk
+  - `app/openapi.json` 来自 FastAPI 生成，并使用 stainless 生成 Kotlin/TypeScript SDK（分别以 submodule 形式位于 `evaluation/inty_sdk`、`android_app/library/inty_sdk`）
 - `alembic/` Inty 后端服务数据库 schema 管理，使用 <https://github.com/sqlalchemy/alembic>
 - `evaluation/` Inty 运营工具，react 由 app/ 后端提供 web serving
+- `web_app/` 独立 Web App（React/TS）
 - `scripts/` 各类脚本，以修改数据库记录为主
 - `devops/` 运维相关代码
 - `experimental/` 原型代码
 - `docs/` 文档
+- `backend/`：后端相关文档与迁移中的说明（以目录内文档为准）
 
 ## 语言与输出
 
@@ -26,9 +49,9 @@
 ## 文档维护
 
 - 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
-- 你应该维护以下 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
+- 你应该维护的 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
 - Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
-- Always review the changes afterwards
+- 修改后务必回看 diff，确认无误再提交/交付。
 - 新建任意文件时，需在适当格式中加入 `CREATED_BY_AGENT` 标记，用于记录创建者身份。
 - 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
@@ -42,11 +65,11 @@
 
 ## Coding style
 
-- 各类语言函数体不应该超过 50 行，100 行以上的函数应该拆分为细分函数，50-100 行之间酌情处理
+- 各类语言函数体不应超过 50 行；100 行以上必须拆分为更小函数；50-100 行之间酌情处理。
 
-### Do not repeat in comments what's already obvious in the code
+### 不要在注释里重复显而易见的代码含义
 
-Do not generate comments like below.
+不要写这种“复述函数名”的注释：
 
 ```python
 # Get current setting
@@ -54,20 +77,20 @@ def get_current_setting():
   ...
 ```
 
-Instead, just let the function name or the code to speak for itself:
+应该让函数名/代码本身表达含义：
 
 ```python
 def get_current_setting():
   ...
 ```
 
-### Do not use magic number/string/values
+### 避免魔法数字/字符串/值
 
-Whenever possible define constants to name magic number/string/values to aid code readability.
+尽可能用具名常量替代魔法值，提升可读性与可维护性。
 
-### Prefer early return
+### 优先早返回（early return）
 
-Prefer:
+优先：
 
 ```python
 if false:
@@ -76,7 +99,7 @@ if false:
 ...
 ```
 
-Over
+而不是：
 
 ```python
 if true:
@@ -87,11 +110,22 @@ else:
 
 ## Python
 
-- 避免使用 `try ... except Exception` 来覆盖所有异常，而应该至拦截函数能处理的异常
+- 避免使用 `try ... except Exception` 覆盖所有异常；只捕获当前函数**能够处理**的特定异常类型。
 - 测试用例目录不应被声明为包：包含 `test_*.py` 的测试目录不要放置 `__init__.py`；但用于复用的测试辅助库目录应当作为包存在，并包含 `__init__.py`。
 - 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）
-- 严进向已有的 __init__.py 内添加新的代码
+- 严禁向已有的 `__init__.py` 内添加新逻辑代码（除非该目录规则明确要求）
 - 使用 cyclopts 来暴露 scripts 命令行界面
+
+## 测试（仓库级）
+
+- `pytest` 配置在 `pytest.ini`，默认收集 `app/` 与 `tests/` 下的 `test_*.py`。
+- 常用命令（按环境选择 `python` 或 `python3`）：
+
+```bash
+python -m pytest
+python -m pytest -m "not slow"
+python -m pytest tests/app/services/test_chat_service.py -k test_xxx
+```
 
 ## Android App
 
