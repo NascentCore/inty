@@ -162,6 +162,7 @@ fun ExploreCharacterCard(
     onClick: () -> Unit,
     index: Int? = null,
     shouldPlayAnimated: Boolean = false,
+    showNewTag: Boolean = false,
 ) {
     val context = LocalContext.current
 
@@ -183,8 +184,15 @@ fun ExploreCharacterCard(
         )
     }
 
-    // 缓存过滤后的标签
-    val filteredTags = remember(agentInfo.tags) { agentInfo.tags?.filterNotNull() ?: emptyList() }
+    // 缓存过滤后的标签，如果 showNewTag 为 true 则添加 #new tag
+    val filteredTags = remember(agentInfo.tags, showNewTag) {
+        val baseTags = agentInfo.tags?.filterNotNull() ?: emptyList()
+        if (showNewTag && !baseTags.any { normalizeTag(it) == "new" }) {
+            baseTags + "#new"
+        } else {
+            baseTags
+        }
+    }
     val isVip = remember(filteredTags) { filteredTags.any { normalizeTag(it) == "vip" } }
     val favoriteButtonTopPadding =
         remember(isVip) {
