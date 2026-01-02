@@ -425,6 +425,19 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             _isSearching.value = true
             _hasSearchExecuted.value = true
             try {
+                // 特殊处理：搜索 "#new" 时，直接从内存缓存中过滤出创建于7天内的角色
+                // 注意：parsed.query 已经是去掉 # 前缀的 "new"，因为 parseExploreSearch 会移除 # 符号
+                if (parsed.mode == ExploreSearchMode.Tag && parsed.query.equals(NEW_TAG, ignoreCase = true)) {
+                    val recommendedAgents = AgentCacheManager.getCachedAgents()
+                    val chatAgents = AgentCacheManager.getCachedChatAgents()
+                    val userCreatedAgents = AgentCacheManager.getCachedUserCreatedAgents()
+                    val allCachedAgents =
+                        mergeAgentsUniqueById(recommendedAgents + chatAgents + userCreatedAgents)
+                    val newAgents = allCachedAgents.filter { isCreatedWithin7Days(it) }
+                    _searchResults.value = newAgents
+                    return@launch
+                }
+
                 val dbResults =
                     when (parsed.mode) {
                         ExploreSearchMode.Name ->

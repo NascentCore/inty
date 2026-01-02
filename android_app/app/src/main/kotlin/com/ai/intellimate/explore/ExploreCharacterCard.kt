@@ -64,6 +64,9 @@ import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
 // 固定使用 9:16 宽高比
 private const val CARD_ASPECT_RATIO = 9f / 16f
 
+// new tag 相关常量
+const val NEW_TAG = "new"
+
 // 卡片圆角配置
 private object CardConfig {
     val CornerRadius = 7.dp
@@ -131,7 +134,7 @@ fun isCreatedWithin7Days(agent: AgentInfo): Boolean {
                 } else {
                     null
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }
@@ -142,7 +145,7 @@ fun isCreatedWithin7Days(agent: AgentInfo): Boolean {
     val now = System.currentTimeMillis()
     val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
     val timeDiff = now - createdAtTimestamp
-    return timeDiff <= sevenDaysInMillis && timeDiff >= 0
+    return timeDiff in 0..sevenDaysInMillis
 }
 
 /**
@@ -233,12 +236,11 @@ fun ExploreCharacterCard(
         )
     }
 
-    val NEW_TAG = "new"
     // 缓存过滤后的标签，如果 showNewTag 为 true 则添加 new tag
     // 显示逻辑：当 showNewTag 为 true 且角色标签列表中还没有 "new" tag 时，添加 "new" tag
     val filteredTags = remember(agentInfo.tags, showNewTag) {
         val baseTags = agentInfo.tags?.filterNotNull() ?: emptyList()
-        if (showNewTag && !baseTags.any { normalizeTag(it) == "new" }) {
+        if (showNewTag && !baseTags.any { normalizeTag(it) == NEW_TAG }) {
             baseTags + NEW_TAG
         } else {
             baseTags
