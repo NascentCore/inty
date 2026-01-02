@@ -184,11 +184,12 @@ fun ExploreCharacterCard(
         )
     }
 
-    // 缓存过滤后的标签，如果 showNewTag 为 true 则添加 #new tag
+    val NEW_TAG = "new"
+    // 缓存过滤后的标签，如果 showNewTag 为 true 则添加 new tag
     val filteredTags = remember(agentInfo.tags, showNewTag) {
         val baseTags = agentInfo.tags?.filterNotNull() ?: emptyList()
         if (showNewTag && !baseTags.any { normalizeTag(it) == "new" }) {
-            baseTags + "#new"
+            baseTags + NEW_TAG
         } else {
             baseTags
         }
