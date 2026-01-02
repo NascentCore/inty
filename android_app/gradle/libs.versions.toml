@@ -80,6 +80,7 @@ androidxTestCore = "1.6.1"
 robolectric = "4.15"
 chucker = "4.2.0"
 leakcanary = "2.14"
+mockk = "1.13.10"
 
 # 腾讯系库
 mmkv = "2.2.4"
@@ -247,6 +248,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit-ktx", version.ref 
 androidx-test-core = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "annotation" }

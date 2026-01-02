@@ -41,4 +41,7 @@ interface CharacterDao {
             "ORDER BY name LIMIT :limit"
     )
     suspend fun searchCharactersByTag(query: String, limit: Int = 100): List<CharacterEntity>
+
+    @Query("SELECT * FROM characters ORDER BY name LIMIT :limit")
+    suspend fun getAllCharacters(limit: Int = 1000): List<CharacterEntity>
 }

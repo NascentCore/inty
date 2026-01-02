@@ -7,6 +7,8 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.character.local.db.CharacterDao
 import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
+import ai.sxwl.android.data.character.local.db.getTagsWithVirtual
+import ai.sxwl.android.data.character.local.db.isNewCharacter
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -115,7 +117,18 @@ class CharacterRepository(
 
     suspend fun searchCharactersByTag(query: String, limit: Int = 100): List<AgentInfo> {
         return withContext(dispatcher) {
-            val entities = dao.searchCharactersByTag(query, limit)
+            val normalizedQuery = query.trim().lowercase()
+            val isNewTagQuery = normalizedQuery == "#new" || normalizedQuery == "new"
+            
+            val entities = if (isNewTagQuery) {
+                // 搜索虚拟 #New tag：查询所有角色，然后过滤出过去1周内创建的
+                val allEntities = dao.getAllCharacters(limit * 2)
+                allEntities.filter { it.isNewCharacter() }.take(limit)
+            } else {
+                // 普通 tag 搜索
+                dao.searchCharactersByTag(query, limit)
+            }
+            
             entities.map { it.toAgentInfo() }
         }
     }
@@ -131,6 +144,9 @@ class CharacterRepository(
 
 /** 将 CharacterEntity 转换为 AgentInfo */
 private fun CharacterEntity.toAgentInfo(): AgentInfo {
+    // 获取包含虚拟 #New tag 的完整 tags 列表
+    val tagsWithVirtual = this.getTagsWithVirtual()
+    
     return AgentInfo(
             id = this.agentId,
             name = this.name,
@@ -148,7 +164,7 @@ private fun CharacterEntity.toAgentInfo(): AgentInfo {
             voicePreview = this.voicePreview,
             createdAt = this.createdAt,
             creator = this.creator,
-            tags = this.tags?.map { it as String? },
+            tags = tagsWithVirtual.map { it as String? },
             settings = this.settings,
             visibility = this.visibility,
             prompt = this.prompt,

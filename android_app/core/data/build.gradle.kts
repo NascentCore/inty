@@ -85,6 +85,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)
+    testImplementation(libs.mockk)
 
     // ===== 日志库（不依赖 Android 环境）=====
     implementation(libs.kotlin.logging)

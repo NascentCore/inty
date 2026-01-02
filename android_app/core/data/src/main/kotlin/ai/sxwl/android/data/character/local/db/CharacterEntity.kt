@@ -4,6 +4,7 @@
 package ai.sxwl.android.data.character.local.db
 
 import ai.sxwl.android.data.api.model.CreatorInfo
+import ai.sxwl.android.utils.TimeUtils
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -38,3 +39,25 @@ data class CharacterEntity(
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
     @ColumnInfo(name = "background_images") val backgroundImages: List<String>? = null,
 )
+
+/**
+ * 判断角色是否为新角色（在过去1周内创建）
+ */
+fun CharacterEntity.isNewCharacter(): Boolean {
+    if (createdAt.isBlank()) return false
+    val createdAtTimestamp = TimeUtils.parseIsoTimeToTimestamp(createdAt) ?: return false
+    val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
+    return createdAtTimestamp >= oneWeekAgo
+}
+
+/**
+ * 获取包含虚拟 #New tag 的完整 tags 列表
+ */
+fun CharacterEntity.getTagsWithVirtual(): List<String> {
+    val baseTags = tags ?: emptyList()
+    return if (isNewCharacter()) {
+        baseTags + "#New"
+    } else {
+        baseTags
+    }
+}

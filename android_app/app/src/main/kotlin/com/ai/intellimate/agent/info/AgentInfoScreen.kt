@@ -7,6 +7,9 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.utils.ToastUtils
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
@@ -824,7 +827,7 @@ private fun AgentInfoDebugSection(agent: AgentInfo) {
                         "opening" to agent.opening,
                         "opening_audio_url" to agent.opening_audio_url,
                         "voicePreview" to agent.voicePreview,
-                        "createdAt" to agent.createdAt,
+                        "createdAt" to formatTimestampForDebug(agent.createdAt),
                         "creator" to (agent.creator?.toString() ?: "null"),
                         "tags" to (agent.tags?.joinToString { it ?: "null" } ?: "null"),
                         "settings" to (agent.settings?.toString() ?: "null"),
@@ -845,6 +848,41 @@ private fun AgentInfoDebugSection(agent: AgentInfo) {
             Spacer(Modifier.height(12.dp))
         }
     }
+}
+
+/**
+ * 格式化时间戳字符串用于调试显示
+ * 支持两种格式：
+ * 1. Unix 时间戳（秒）的字符串形式，如 "1767241505"
+ * 2. ISO 8601 格式的字符串，如 "2026-01-01T12:25:05Z"
+ *
+ * @param timestampString 时间戳字符串
+ * @return 格式化后的可读时间字符串，如果解析失败返回原始字符串
+ */
+private fun formatTimestampForDebug(timestampString: String): String {
+    if (timestampString.isBlank()) {
+        return "(empty)"
+    }
+
+    return runCatching {
+        // 尝试解析为 Unix 时间戳（秒）
+        val timestampSeconds = timestampString.toLongOrNull()
+        if (timestampSeconds != null) {
+            // 判断是否为合理的时间戳范围（1970-2100年）
+            if (timestampSeconds > 0 && timestampSeconds < 4102444800L) {
+                val instant = Instant.ofEpochSecond(timestampSeconds)
+                val localDateTime = instant.atZone(ZoneId.systemDefault())
+                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                return "${localDateTime.format(formatter)} (${timestampString})"
+            }
+        }
+
+        // 尝试解析为 ISO 8601 格式
+        val instant = Instant.parse(timestampString)
+        val localDateTime = instant.atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        return "${localDateTime.format(formatter)} (${timestampString})"
+    }.getOrNull() ?: timestampString
 }
 
 @Composable
