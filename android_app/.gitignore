@@ -22,3 +22,6 @@ app/local/
 app/debug/
 app/playdebug/
 app/release/
+
+# 编译文件目录
+.kotlin/
