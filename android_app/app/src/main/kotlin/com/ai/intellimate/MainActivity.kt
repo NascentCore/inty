@@ -400,7 +400,6 @@ class MainActivity : BaseActivity() {
         // 通过传递 NavController，MainActivity 可以控制导航，而 AppNavHost 仍然可以在
         // 没有外部 NavController 时创建自己的实例（向后兼容）
         val navController = rememberNavController()
-        val scope = rememberCoroutineScope()
         AppNavHost(
             page,
             mainViewModel,
@@ -726,9 +725,10 @@ fun SplashLoginUI(
                                 mainViewModel.updateLoginState()
                                 UnifiedStartupManager.markUserAccountReady()
 
-                                if (needsRegInfo) {
-                                    com.ai.intellimate.login.RegInfoActivity.launch(context)
-                                }
+                                mainViewModel.updateNeedsRegInfo(needsRegInfo)
+//                                if (needsRegInfo) {
+//                                    com.ai.intellimate.login.RegInfoActivity.launch(context)
+//                                }
                             }
 
                             is com.architecture.httplib.core.HttpResult.Failure -> {
@@ -944,9 +944,10 @@ private fun performEmailLogin(
                     mainViewModel.updateLoginState()
                     UnifiedStartupManager.markUserAccountReady()
 
-                    if (needsRegInfo) {
-                        com.ai.intellimate.login.RegInfoActivity.launch(context)
-                    }
+                    mainViewModel.updateNeedsRegInfo(needsRegInfo)
+//                    if (needsRegInfo) {
+//                        com.ai.intellimate.login.RegInfoActivity.launch(context)
+//                    }
                 }
 
                 is com.architecture.httplib.core.HttpResult.Failure -> {
