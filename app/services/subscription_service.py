@@ -1187,9 +1187,10 @@ class SubscriptionService:
         """
         检查用户 Live Chat 用量限制
 
-        检查两项限制：
+        检查三项限制：
         1. 累计可聊天的 agent 数量
-        2. 24 小时内与目标 agent 的通话总时长
+        2. 24 小时内与目标 agent 的通话时长
+        3. 24 小时内跨所有 agent 的总通话时长
 
         Args:
             db: 数据库会话
@@ -1224,9 +1225,11 @@ class SubscriptionService:
             if is_subscribed:
                 agent_limit = gemini_live_config.sub_user_agent_limit
                 duration_limit = gemini_live_config.sub_user_duration_per_agent_24h
+                total_duration_limit = gemini_live_config.sub_user_total_duration_24h
             else:
                 agent_limit = gemini_live_config.free_user_agent_limit
                 duration_limit = gemini_live_config.free_user_duration_per_agent_24h
+                total_duration_limit = gemini_live_config.free_user_total_duration_24h
 
             # 使用 ->> 操作符提取 JSON 字段为文本（兼容 JSON 和 JSONB 类型）
             distinct_agents_result = await db.execute(
@@ -1317,10 +1320,58 @@ class SubscriptionService:
                     },
                 )
 
-            remaining_duration = max(0, duration_limit - used_duration)
+            # 检查 24h 内跨所有 agent 的总时长
+            total_duration_result = await db.execute(
+                select(
+                    func.coalesce(
+                        func.sum(
+                            func.cast(
+                                SubscriptionUsage.extra_data.op("->>")(
+                                    "duration_seconds"
+                                ),
+                                Integer,
+                            )
+                        ),
+                        0,
+                    )
+                ).where(
+                    and_(
+                        SubscriptionUsage.user_id == user.id,
+                        SubscriptionUsage.usage_type == "live_chat",
+                        SubscriptionUsage.usage_date >= hours_24_ago,
+                    )
+                )
+            )
+            total_used_duration = total_duration_result.scalar() or 0
+
+            if not is_unlimited and total_used_duration >= total_duration_limit:
+                logger.info(
+                    f"用户 {user.id} 的 24h Live Chat 总时长已达上限: "
+                    f"{total_used_duration}/{total_duration_limit}s"
+                )
+                if subscription_status.is_subscribed:
+                    error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
+                else:
+                    error_info = BusinessErrorCode.SUBSCRIPTION_REQUIRED
+                return (
+                    False,
+                    error_info["error_code"],
+                    {
+                        "used_duration": total_used_duration,
+                        "limit": total_duration_limit,
+                        "is_subscribed": is_subscribed,
+                        "error_info": error_info,
+                    },
+                )
+
+            # 取单 agent 剩余时长和总剩余时长的最小值
+            remaining_per_agent = max(0, duration_limit - used_duration)
+            remaining_total = max(0, total_duration_limit - total_used_duration)
+            remaining_duration = min(remaining_per_agent, remaining_total)
             logger.info(
                 f"Live Chat 限制检查 - user_id: {user.id}, agent_id: {agent_id}, "
                 f"used_duration: {used_duration}s, duration_limit: {duration_limit}s, "
+                f"total_used: {total_used_duration}s, total_limit: {total_duration_limit}s, "
                 f"remaining: {remaining_duration}s, is_subscribed: {is_subscribed}, "
                 f"is_unlimited: {is_unlimited}"
             )

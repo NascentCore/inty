@@ -82,7 +82,7 @@ logging:
 
 gemini_live:
   enabled: true
-  project_id: "inty-backend"
+  project_id: "alien-paratext-461204-i9"
   location: "us-central1"
   model: "gemini-live-2.5-flash-preview-native-audio-09-2025"
   send_sample_rate: 16000
@@ -93,7 +93,6 @@ gemini_live:
   output_transcription: true
   save_voice_history: true
   # Live Chat 用量限制
-  free_user_agent_limit: 5  # 免费用户累计可聊天的 agent 数
-  sub_user_agent_limit: 20  # 订阅用户累计可聊天的 agent 数
   free_user_duration_per_agent_24h: 60  # 免费用户每 agent 24h 时长（秒）
   sub_user_duration_per_agent_24h: 300  # 订阅用户每 agent 24h 时长（秒）
+  
