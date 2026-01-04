@@ -159,6 +159,11 @@ class LiveChatService:
             if history_summary:
                 parts.append(f"## 之前的对话\n{history_summary}")
 
+        parts.append(
+            "## 输出格式\n"
+            "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
+        )
+
         return "\n\n".join(parts)
 
     def _summarize_history(self, messages: List[Any], max_turns: int = 10) -> str:
@@ -173,9 +178,18 @@ class LiveChatService:
             if isinstance(msg, HumanMessage):
                 lines.append(f"用户: {msg.content}")
             elif isinstance(msg, AIMessage):
-                lines.append(f"AI: {msg.content}")
+                clean_content = self._strip_roleplay_markup(msg.content)
+                if clean_content:
+                    lines.append(f"AI: {clean_content}")
 
         return "\n".join(lines)
+
+    def _strip_roleplay_markup(self, content: str) -> str:
+        """移除角色扮演格式标记，只保留纯对话文本"""
+        text = re.sub(r"\([^)]*\)", "", content)
+        text = text.replace('"', "").replace(""", "").replace(""", "")
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
 
     _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
     _CJK_SPACE_RE = re.compile(r"([\u4e00-\u9fff])\s+([\u4e00-\u9fff])")
