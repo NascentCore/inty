@@ -2,7 +2,6 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
-import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
@@ -15,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -71,7 +68,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -173,25 +169,25 @@ fun ChatMorePanel(
 
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = HeartColor.primaryColor)
-                        .windowInsetsPadding(windowInsets)
-                        // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
-                        // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
-                        .then(
-                            if (keyboardHeightDp > 0.dp) {
-                                Modifier.heightIn(min = keyboardHeightDp)
-                            } else {
-                                Modifier
-                            }
-                        )
-                        .onGloballyPositioned { coords ->
-                            val h = with(density) { coords.size.height.toDp() }
-                            onHeightChange(h)
-                        },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .background(color = HeartColor.primaryColor)
+                            .windowInsetsPadding(windowInsets)
+                            // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
+                            // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
+                            .then(
+                                if (keyboardHeightDp > 0.dp) {
+                                    Modifier.heightIn(min = keyboardHeightDp)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .onGloballyPositioned { coords ->
+                                val h = with(density) { coords.size.height.toDp() }
+                                onHeightChange(h)
+                            },
                     contentPadding = PaddingValues(vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     item("Chat Style") {
                         MorePanelItem(
@@ -223,12 +219,10 @@ fun ChatMorePanel(
                                 Image(
                                     painter = painterResource(R.drawable.icon_reply_chat),
                                     contentDescription = "chatStyle",
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize(),
                                 )
                             },
-                            text = {
-                                Text(stringResource(R.string.reply_style))
-                            }
+                            text = { Text(stringResource(R.string.reply_style)) },
                         )
                     }
 
@@ -246,12 +240,10 @@ fun ChatMorePanel(
                                 Image(
                                     painter = painterResource(R.drawable.icon_reset_chat),
                                     contentDescription = "reset",
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize(),
                                 )
                             },
-                            text = {
-                                Text(stringResource(R.string.str_reset))
-                            }
+                            text = { Text(stringResource(R.string.str_reset)) },
                         )
                     }
 
@@ -277,12 +269,10 @@ fun ChatMorePanel(
                                 Image(
                                     painter = painterResource(R.drawable.icon_feedback),
                                     contentDescription = "feedback",
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize(),
                                 )
                             },
-                            text = {
-                                Text(stringResource(R.string.str_feedback))
-                            }
+                            text = { Text(stringResource(R.string.str_feedback)) },
                         )
                     }
 
@@ -308,12 +298,10 @@ fun ChatMorePanel(
                                 Image(
                                     painter = painterResource(R.drawable.icon_report),
                                     contentDescription = "report",
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize(),
                                 )
                             },
-                            text = {
-                                Text(stringResource(R.string.str_report))
-                            }
+                            text = { Text(stringResource(R.string.str_report)) },
                         )
                     }
 
@@ -335,12 +323,10 @@ fun ChatMorePanel(
                                     imageVector = Icons.Rounded.Call,
                                     contentDescription = "call",
                                     colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize(),
                                 )
                             },
-                            text = {
-                                Text(stringResource(R.string.call))
-                            }
+                            text = { Text(stringResource(R.string.call)) },
                         )
                     }
                 }
@@ -389,7 +375,7 @@ private fun MorePanelItem(
     modifier: Modifier = Modifier,
     isVip: Boolean = false,
     icon: @Composable () -> Unit,
-    text: @Composable () -> Unit
+    text: @Composable () -> Unit,
 ) {
     Column(
         modifier = modifier.noRippleClickable { onClick() },
@@ -397,34 +383,22 @@ private fun MorePanelItem(
     ) {
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(36.dp)
-            ) {
-
-                icon()
-            }
+            Box(modifier = Modifier.align(Alignment.Center).size(36.dp)) { icon() }
 
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
             }
         }
         ProvideTextStyle(
-            TextStyle(
-                fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White
-            ),
-            text
+            TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White),
+            text,
         )
     }
 }
@@ -438,22 +412,17 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
     ) {
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -468,8 +437,7 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier
-                .clip(RoundedCornerShape(24.dp))
+            Modifier.clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -489,9 +457,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -503,9 +469,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),

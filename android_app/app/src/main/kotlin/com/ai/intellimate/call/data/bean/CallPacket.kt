@@ -21,14 +21,12 @@ data class CallPacket(
     @SerialName("agent_count") val agentCount: Int = 0,
 ) {
     val errorEnum: IntyErrorCode?
-        get() = runCatching {
-            errorCode?.let { IntyErrorCode.valueOf(it) } ?: IntyErrorCode.UNKNOWN
-        }.getOrNull()
+        get() =
+            runCatching { errorCode?.let { IntyErrorCode.valueOf(it) } ?: IntyErrorCode.UNKNOWN }
+                .getOrNull()
 
     val typeEnum: CallType
-        get() = runCatching {
-            CallType.valueOf(type.uppercase())
-        }.getOrDefault(CallType.UNKNOW)
+        get() = runCatching { CallType.valueOf(type.uppercase()) }.getOrDefault(CallType.UNKNOW)
 
     @Keep
     @Serializable
@@ -64,7 +62,7 @@ enum class CallType {
     @SerialName("error") ERROR,
     @SerialName("user_transcript") USER_TRANSCRIPT,
     @SerialName("transcript") TRANSCRIPT,
-    UNKNOW
+    UNKNOW,
 }
 
 /** 当前状态 */
@@ -76,5 +74,5 @@ enum class CallStatus {
     @SerialName("listening") LISTENING,
     @SerialName("error") ERROR,
     @SerialName("user_transcript") USER_TRANSCRIPT,
-    @SerialName("disconnected") DISCONNECTED
+    @SerialName("disconnected") DISCONNECTED,
 }

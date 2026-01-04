@@ -1,7 +1,5 @@
 package com.ai.intellimate.ui
 
-import ai.sxwl.android.data.http.config.NetworkConfig
-import ai.sxwl.android.data.store.IntySetting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState

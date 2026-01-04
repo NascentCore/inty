@@ -726,9 +726,10 @@ fun SplashLoginUI(
                                 UnifiedStartupManager.markUserAccountReady()
 
                                 mainViewModel.updateNeedsRegInfo(needsRegInfo)
-//                                if (needsRegInfo) {
-//                                    com.ai.intellimate.login.RegInfoActivity.launch(context)
-//                                }
+                                //                                if (needsRegInfo) {
+                                //
+                                // com.ai.intellimate.login.RegInfoActivity.launch(context)
+                                //                                }
                             }
 
                             is com.architecture.httplib.core.HttpResult.Failure -> {
@@ -945,9 +946,10 @@ private fun performEmailLogin(
                     UnifiedStartupManager.markUserAccountReady()
 
                     mainViewModel.updateNeedsRegInfo(needsRegInfo)
-//                    if (needsRegInfo) {
-//                        com.ai.intellimate.login.RegInfoActivity.launch(context)
-//                    }
+                    //                    if (needsRegInfo) {
+                    //
+                    // com.ai.intellimate.login.RegInfoActivity.launch(context)
+                    //                    }
                 }
 
                 is com.architecture.httplib.core.HttpResult.Failure -> {

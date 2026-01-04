@@ -8,11 +8,9 @@ import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import com.ai.intellimate.call.data.bean.CallPacket
 import com.ai.intellimate.call.data.bean.CallType
-import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +32,8 @@ class AICallRepository(private val dataSource: AICallDataSource) {
      * @return 接收到的CallPacket数据流
      */
     fun call(agentId: String): Flow<CallPacket> {
-        val url = "${NetworkConfig.getWebsocketAddress()}api/v1/live-chat/$agentId?token=${IntySetting.getCurToken()}"
+        val url =
+            "${NetworkConfig.getWebsocketAddress()}api/v1/live-chat/$agentId?token=${IntySetting.getCurToken()}"
         LogUtils.d("开始连接语音通话，agentId: $agentId, url: $url")
         reconnectAttempts = 0
 
@@ -42,14 +41,16 @@ class AICallRepository(private val dataSource: AICallDataSource) {
     }
 
     /** 创建可重连的Flow */
-    private fun createReconnectableFlow(url: String): Flow<CallPacket> = flow {
-        val packetFlow = dataSource.connect(url)
-        // 收集数据，如果Flow完成（正常或异常），会继续循环尝试重连
-        packetFlow.collect { packet -> emit(packet) }
-    }.retryWhen { cause, attempt ->
-        delay(attempt * reconnectDelayMs)
-        true
-    }
+    private fun createReconnectableFlow(url: String): Flow<CallPacket> =
+        flow {
+                val packetFlow = dataSource.connect(url)
+                // 收集数据，如果Flow完成（正常或异常），会继续循环尝试重连
+                packetFlow.collect { packet -> emit(packet) }
+            }
+            .retryWhen { cause, attempt ->
+                delay(attempt * reconnectDelayMs)
+                true
+            }
 
     /** 发送CallPacket数据 */
     suspend fun sendPacket(packet: CallPacket) {
