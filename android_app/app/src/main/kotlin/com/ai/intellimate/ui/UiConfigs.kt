@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui
 
+import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -273,14 +274,6 @@ object UiConfigs {
         /** 帮助中心链接 */
         const val HelpCenter =
             "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
-
-        /**
-         * 语音通话WebSocket URL 注意：此URL需要根据实际后端服务地址配置 格式：wss://domain.com/voice/ws?agentId={agentId}
-         */
-        fun getVoiceCallWebSocketUrl(agentId: String): String {
-            // TODO: 替换为实际的WebSocket服务器地址
-            return "wss://dev.inty.sxwl.ai/api/v1/live-chat/$agentId?token=${IntySetting.getCurToken()}"
-        }
     }
 
     /** 语音通话配置 - 适用于实时语音通话的队列大小、缓冲区等设置 */
