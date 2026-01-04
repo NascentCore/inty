@@ -18,6 +18,7 @@ object NetworkConfig {
         val retry: RetryConfig,
         val connection: ConnectionConfig,
         val logging: LoggingConfig,
+        val websocketAddress: String
     )
 
     /** 超时配置 */
@@ -94,6 +95,7 @@ object NetworkConfig {
     private fun getLocalConfig(): EnvironmentConfig {
         return EnvironmentConfig(
             baseUrl = "http://${Constant.USER_HOST_LOCAL}/",
+            websocketAddress = "wss://${Constant.USER_HOST_LOCAL}/",
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 10000, // 本地环境可以更短
@@ -124,6 +126,7 @@ object NetworkConfig {
     private fun getDebugConfig(): EnvironmentConfig {
         return EnvironmentConfig(
             baseUrl = "https://${Constant.USER_HOST_DEV}/",
+            websocketAddress = "wss://${Constant.USER_HOST_DEV}/",
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 15000,
@@ -146,6 +149,7 @@ object NetworkConfig {
     private fun getPlayDebugConfig(): EnvironmentConfig {
         return EnvironmentConfig(
             baseUrl = "https://${Constant.USER_HOST_DEV}/",
+            websocketAddress = "wss://${Constant.USER_HOST_DEV}/",
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 20000, // Play环境可能需要更长时间
@@ -176,6 +180,7 @@ object NetworkConfig {
     private fun getReleaseConfig(): EnvironmentConfig {
         return EnvironmentConfig(
             baseUrl = "https://${Constant.USER_HOST}/",
+            websocketAddress = "wss://${Constant.USER_HOST}/",
             timeout =
                 TimeoutConfig(
                     connectTimeoutMs = 10000, // 生产环境优化超时
@@ -201,6 +206,10 @@ object NetworkConfig {
     /** 获取基础URL 兼容原有接口 */
     fun getBaseUrl(): String {
         return getCurrentEnvironmentConfig().baseUrl
+    }
+
+    fun getWebsocketAddress(): String {
+        return getCurrentEnvironmentConfig().websocketAddress
     }
 
     /** 检查是否为调试环境 */

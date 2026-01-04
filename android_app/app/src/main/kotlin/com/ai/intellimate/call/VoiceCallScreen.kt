@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.http.IntyErrorCode
 import ai.sxwl.android.design.isInEditMode
 import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.utils.ToastUtils
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -107,7 +108,7 @@ fun VoiceCallScreen(
             val uiState by viewModel.uiState.collectAsState()
             val audioStreamPlayer = AudioStreamPlayer.getInstance()
             val audioRecordManager = AudioRecordManager.getInstance(context)
-            var error by remember { mutableStateOf<IntyErrorCode?>(null) }
+            var error by remember { mutableStateOf<Pair<IntyErrorCode, String>?>(null) }
 
             // 启动通话连接
             LaunchedEffect(agentId) { viewModel.startCalling(agentId) }
@@ -178,7 +179,7 @@ fun VoiceCallScreen(
 
             error?.let {
                 val dialogData =
-                    when (it) {
+                    when (it.first) {
                         IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
                             ChatDialogData(
                                 R.drawable.img_unlimit_dialog_bg,
@@ -195,28 +196,34 @@ fun VoiceCallScreen(
                                 stringResource(R.string.voice_call_limit_exceeded_btn_text),
                             )
                         }
+                        else -> {
+                            ToastUtils.showShort(it.second)
+                            null
+                        }
                     }
 
-                UnlimitChatDialog(
-                    dialogData,
-                    onCancel = {
-                        error = null
-                        onBack()
-                    },
-                    onSure = {
-                        error = null
-                        when (it) {
-                            IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
-                                onVip()
+                if (dialogData != null) {
+                    UnlimitChatDialog(
+                        dialogData,
+                        onCancel = {
+                            error = null
+                            onBack()
+                        },
+                        onSure = {
+                            error = null
+                            when (it.first) {
+                                IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
+                                    onVip()
+                                }
+                                else -> onBack()
                             }
-                            else -> onBack()
-                        }
-                    },
-                    onMoreInfo = {
-                        error = null
-                        onVipMoreInfo()
-                    },
-                )
+                        },
+                        onMoreInfo = {
+                            error = null
+                            onVipMoreInfo()
+                        },
+                    )
+                }
             }
         } else {
             if (!audioPermissionState.status.shouldShowRationale) {
