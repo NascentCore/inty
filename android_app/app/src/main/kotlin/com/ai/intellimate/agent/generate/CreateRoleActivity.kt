@@ -101,7 +101,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.ui.UiConfigs
@@ -747,6 +746,7 @@ fun CreateRolePage(
             val promptForGeneration = avatarPrompt.ifBlank { settings }
 
             AvatarUploadSection(
+                navController,
                 avatarUrl = avatarUrl,
                 avatarUrls = avatarUrls,
                 selectedIndex = selectedImageIndex,
@@ -1364,6 +1364,7 @@ private fun tryStartCropWithLocalImage(
 
 @Composable
 private fun AvatarUploadSection(
+    navController: NavController,
     avatarUrl: String?,
     avatarUrls: List<String> = emptyList(),
     selectedIndex: Int = 0,
@@ -1626,11 +1627,12 @@ private fun AvatarUploadSection(
                                         shape = RoundedCornerShape(16.dp),
                                     )
                                     .noRippleClickable {
-                                        ReportActivity.launch(
-                                            context,
-                                            targetType = "AGENT",
-                                            targetId = agentId,
-                                        )
+                                        navController.navigate(Routes.Me.reportPage(false, "AGENT", agentId))
+//                                        ReportActivity.launch(
+//                                            context,
+//                                            targetType = "AGENT",
+//                                            targetId = agentId,
+//                                        )
                                     }
                                     .padding(
                                         UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding

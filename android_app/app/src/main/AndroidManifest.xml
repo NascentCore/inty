@@ -87,11 +87,11 @@
 <!--            android:name=".login.RegInfoActivity"-->
 <!--            android:launchMode="singleTop"-->
 <!--            android:theme="@style/Theme.Inty.Popup" />-->
-        <activity
-            android:name=".agent.report.ReportActivity"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.Inty.Popup"
-            android:windowSoftInputMode="adjustResize" />
+<!--        <activity-->
+<!--            android:name=".agent.report.ReportActivity"-->
+<!--            android:launchMode="singleTop"-->
+<!--            android:theme="@style/Theme.Inty.Popup"-->
+<!--            android:windowSoftInputMode="adjustResize" />-->
 <!--        <activity-->
 <!--            android:name=".agent.generate.CreateRoleActivity"-->
 <!--            android:launchMode="singleTop"-->

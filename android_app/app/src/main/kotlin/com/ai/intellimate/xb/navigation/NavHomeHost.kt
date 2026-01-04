@@ -57,6 +57,7 @@ fun NavGraphBuilder.homeGraph(
         if (agentInfo != null) {
             val galleryImages = agentInfoViewModel.chatImageGallery.collectAsState()
             PhotoAlbumScreen(
+                navController,
                 agent = agentInfo,
                 galleryItems = galleryImages.value,
                 onBack = { navController.popBackStack() },

@@ -64,7 +64,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.MyModalNavigationDrawer
@@ -599,7 +598,8 @@ fun ChatSettingsDrawer(
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
-                                    ReportActivity.launchFeedback(context)
+                                    navController.navigate(Routes.Me.reportPage(true))
+//                                    ReportActivity.launchFeedback(context)
                                 }
                             },
                         )
@@ -632,7 +632,8 @@ fun ChatSettingsDrawer(
                                                 "timestamp" to System.currentTimeMillis(),
                                             ),
                                         )
-                                        ReportActivity.launch(context, agent.id, "AGENT")
+                                        navController.navigate(Routes.Me.reportPage(false, "AGENT", agent.id))
+//                                        ReportActivity.launch(context, agent.id, "AGENT")
                                     }
                                 },
                             )

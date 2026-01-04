@@ -38,7 +38,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.explore.ExplorePage
@@ -230,7 +229,7 @@ fun HomeScreen(
 
         ExpiredDialogLogic(navController, mainViewModel)
         AppVersionLogic(mainViewModel)
-        FeedbackRequestDialogLogic(mainViewModel)
+        FeedbackRequestDialogLogic(navController, mainViewModel)
     }
 }
 
@@ -330,7 +329,7 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
 }
 
 @Composable
-private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
+private fun FeedbackRequestDialogLogic(navController: NavController, mainViewModel: MainViewModel) {
     val showDialog by mainViewModel.showFeedbackRequestDialog.collectAsState()
     val context = LocalContext.current
 
@@ -339,7 +338,8 @@ private fun FeedbackRequestDialogLogic(mainViewModel: MainViewModel) {
             onCancel = { mainViewModel.hideFeedbackRequestDialog() },
             onSendSuggestions = {
                 mainViewModel.hideFeedbackRequestDialog()
-                ReportActivity.launchFeedback(context)
+                navController.navigate(Routes.Me.reportPage(true))
+//                ReportActivity.launchFeedback(context)
             },
         )
     }

@@ -35,7 +35,6 @@ import androidx.navigation.NavController
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
@@ -248,7 +247,10 @@ private fun SupportAndHelpSection(
         SettingsArrowItem(
             item = SettingsItemData.CommonItemData(title = stringResource(R.string.str_feedback)),
             isInGroup = true,
-            onItemClick = { ReportActivity.launchFeedback(context) },
+            onItemClick = {
+//                ReportActivity.launchFeedback(context)
+                navController.navigate(Routes.Me.reportPage(true))
+            },
         )
 
         IntelliMateDivider()
@@ -257,7 +259,10 @@ private fun SupportAndHelpSection(
         SettingsArrowItem(
             item = SettingsItemData.CommonItemData(title = stringResource(R.string.str_report)),
             isInGroup = true,
-            onItemClick = { ReportActivity.launch(context) },
+            onItemClick = {
+//                ReportActivity.launch(context)
+                navController.navigate(Routes.Me.reportPage(false))
+            },
         )
 
         IntelliMateDivider()
