@@ -166,16 +166,18 @@ async def live_chat_session(
             f"agent_id: {agent_id}, error_code: {error_code}, "
             f"error_message: {error_message}, info: {limit_info}"
         )
-        close_code = 4010 if "AGENT_LIMIT" in reject_reason else 4011
-        close_reason = json.dumps(
-            {
-                "type": "error",
-                "code": error_info.get("code"),
-                "error_code": error_code,
-                "message": error_message,
-            }
+
+        # 先建立连接，再发送错误消息，最后关闭
+        # 这样 Android 端才能正确接收到 error_code
+        await websocket.accept()
+
+        error_msg = LiveChatErrorMessage(
+            code=error_info.get("code"),
+            error_code=error_code,
+            message=error_message,
         )
-        await websocket.close(code=close_code, reason=close_reason)
+        await websocket.send_json(error_msg.model_dump())
+        await websocket.close()
         return
 
     remaining_duration = limit_info.get("remaining_duration", 300)
