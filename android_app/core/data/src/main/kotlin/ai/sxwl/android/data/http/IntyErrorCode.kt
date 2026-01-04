@@ -11,5 +11,5 @@ enum class IntyErrorCode(val code: Int) {
     /** 通话时长达到上限 */
     LIVE_CHAT_DURATION_LIMIT_REACHED(10001008),
     SESSION_ERROR(10000000),
-    UNKNOWN(-1)
+    UNKNOWN(-1),
 }

@@ -67,7 +67,5 @@ fun NavGraphBuilder.homeGraph(
     }
 
     /** 首次登录时完善个人信息页面 */
-    composable(Routes.Home.RegInfoPage) {
-        RegInfoPage(navController)
-    }
+    composable(Routes.Home.RegInfoPage) { RegInfoPage(navController) }
 }

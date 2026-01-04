@@ -124,7 +124,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         }
 
                         CallType.STATUS -> {
-                            //_uiState.update { it.copy(callState = packet.status) }
+                            // _uiState.update { it.copy(callState = packet.status) }
                         }
 
                         else -> {}

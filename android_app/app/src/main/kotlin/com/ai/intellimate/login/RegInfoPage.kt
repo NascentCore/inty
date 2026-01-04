@@ -14,22 +14,18 @@ import androidx.navigation.NavController
 import com.ai.intellimate.ViewModelEvent
 
 @Composable
-internal fun RegInfoPage(
-    navController: NavController,
-    viewModel: RegInfoViewModel = viewModel()
-) {
+internal fun RegInfoPage(navController: NavController, viewModel: RegInfoViewModel = viewModel()) {
     // 通知权限申请 Launcher（Android 13+）
     val notificationPermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+            isGranted ->
             if (isGranted) {
                 LogUtils.i("RegInfoActivity", "通知权限已授予")
             } else {
                 LogUtils.w("RegInfoActivity", "通知权限被拒绝")
             }
             // 无论权限是否授予，都关闭页面
-//            finish()
+            //            finish()
             navController.popBackStack()
         }
 
@@ -63,9 +59,7 @@ internal fun RegInfoPage(
     }
 
     RegInfoScreen(
-        onClose = {
-            navController.popBackStack()
-        },
+        onClose = { navController.popBackStack() },
         onSave = { gender, age -> viewModel.onSave(gender, age) },
     )
 }

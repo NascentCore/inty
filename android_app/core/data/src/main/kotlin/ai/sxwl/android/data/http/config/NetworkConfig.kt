@@ -18,7 +18,7 @@ object NetworkConfig {
         val retry: RetryConfig,
         val connection: ConnectionConfig,
         val logging: LoggingConfig,
-        val websocketAddress: String
+        val websocketAddress: String,
     )
 
     /** 超时配置 */
