@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -60,12 +61,14 @@ class AICallDataSource(private val httpClient: HttpClient) {
                 val session = httpClient.webSocketSession { url(url) }
 
                 sessionMutex.withLock { _session = session }
-
                 _connectionState.value = ConnectionState.CONNECTED
                 LogUtils.d("WebSocket连接已建立")
                 while (true) {
                     emit(session.receiveDeserialized<CallPacket>())
                 }
+            }
+            .onEach {
+                LogUtils.d("语音聊天：收到消息${it}")
             }
             .catch { error -> if (error !is ClosedReceiveChannelException) throw error }
             .onCompletion { cause ->
@@ -97,6 +100,7 @@ class AICallDataSource(private val httpClient: HttpClient) {
 
         try {
             session.sendSerialized(packet)
+            //LogUtils.d("语音聊天:发送${packet}")
         } catch (e: Exception) {
             LogUtils.e("发送CallPacket失败: ${e.message}")
             _connectionState.value = ConnectionState.ERROR

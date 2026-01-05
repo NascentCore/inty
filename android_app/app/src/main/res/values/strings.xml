@@ -548,8 +548,8 @@
     <string name="boost_leaderboard_tab_top_users">Top Users</string>
 
     <!-- Voice Call -->
-    <string name="voice_call_connecting">Requesting…</string>
-    <string name="voice_call_connected">In a call</string>
+    <string name="voice_call_connecting">Connecting…</string>
+    <string name="voice_call_connected">Connected</string>
     <string name="voice_call_error">error</string>
     <string name="voice_call_request_permission">Request Permission</string>
     <string name="voice_call_permission_rationale">Voice call requires microphone permission to record audio. Please enable it in Settings.</string>
