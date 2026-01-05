@@ -23,6 +23,12 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_text_to_image_model
+from app.external_services.fal import is_fal_model
+from app.external_services.text_to_image import (
+    TextToImageGenerationRequest,
+    TextToImageProvider,
+    generate_text_to_image,
+)
 from app.schemas.character_card import (
     CharacterCardExportRequest,
     CharacterCardImportRequest,
@@ -487,6 +493,143 @@ def process_generated_images(generated_images: List[ImagenGeneratedImage]) -> di
     return {"image_uris": generated_uris, "rai_reasons": rai_reasons}
 
 
+async def _download_and_upload_to_gcs(
+    url: str,
+    gcs_bucket: str,
+    gcs_path: str,
+    content_type: str | None = None,
+) -> tuple[str, int | None]:
+    """
+    从 URL 下载图片并上传到 GCS。
+
+    Args:
+        url: 图片的源 URL
+        gcs_bucket: GCS bucket 名称
+        gcs_path: GCS 存储路径（不含 bucket）
+        content_type: 图片的 MIME 类型，如果未指定则尝试从 URL 推断
+
+    Returns:
+        (gcs_uri, byte_size) 元组
+    """
+    import httpx
+
+    from app.external_services.gcs import upload_to_gcs
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        image_bytes = response.content
+
+    resolved_content_type = content_type
+    if not resolved_content_type:
+        if url.lower().endswith(".png"):
+            resolved_content_type = "image/png"
+        elif url.lower().endswith((".jpg", ".jpeg")):
+            resolved_content_type = "image/jpeg"
+        elif url.lower().endswith(".webp"):
+            resolved_content_type = "image/webp"
+        else:
+            resolved_content_type = "image/png"
+
+    upload_to_gcs(
+        file_data=image_bytes,
+        content_type=resolved_content_type,
+        bucket_name=gcs_bucket,
+        path=gcs_path,
+    )
+
+    gcs_uri = f"https://storage.googleapis.com/{gcs_bucket}/{gcs_path}"
+    return gcs_uri, len(image_bytes)
+
+
+async def _generate_with_fal_ai(
+    *,
+    model: str,
+    prompt: str,
+    negative_prompt: str | None,
+    num_images: int,
+    gcs_bucket: str,
+    gcs_base_path: str,
+) -> tuple[list[ImagenGeneratedImage], list[str], list[str], dict]:
+    """
+    使用 fal.ai 生成图片，下载并上传到 GCS。
+
+    Returns:
+        (generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict) 元组
+    """
+    from app.utils.image import ImageSize
+
+    fal_api_key = global_config_loaded_from_config_yaml.fal.api_key
+
+    fal_request = TextToImageGenerationRequest(
+        model=model,
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        num_images=num_images,
+        provider_args={
+            "api_key": fal_api_key,
+            "image_size": "portrait_4_3",
+            "output_format": "png",
+        },
+    )
+
+    logger.debug(f"Calling fal.ai text-to-image with model: {model}")
+    fal_result = generate_text_to_image(fal_request)
+    logger.debug(f"fal.ai returned {len(fal_result.images)} images")
+
+    generated_images: list[ImagenGeneratedImage] = []
+    gcs_urls: list[str] = []
+    gcs_url_to_img_dict: dict = {}
+
+    for i, fal_image in enumerate(fal_result.images):
+        if not fal_image.url:
+            logger.warning(f"fal.ai image {i} has no URL, skipping")
+            continue
+
+        file_ext = "png"
+        if fal_image.mime_type:
+            if "jpeg" in fal_image.mime_type or "jpg" in fal_image.mime_type:
+                file_ext = "jpg"
+            elif "webp" in fal_image.mime_type:
+                file_ext = "webp"
+
+        gcs_path = f"{gcs_base_path}/fal_{uuid.uuid4().hex}.{file_ext}"
+
+        try:
+            gcs_uri, byte_size = await _download_and_upload_to_gcs(
+                url=fal_image.url,
+                gcs_bucket=gcs_bucket,
+                gcs_path=gcs_path,
+                content_type=fal_image.mime_type,
+            )
+            logger.debug(f"Uploaded fal.ai image to GCS: {gcs_uri}")
+
+            image_size = None
+            if fal_image.width and fal_image.height:
+                image_size = ImageSize(width=fal_image.width, height=fal_image.height)
+
+            imagen_image = ImagenGeneratedImage(
+                gcs_uri=gcs_uri,
+                size=image_size,
+                byte_size=byte_size,
+                format=ImageFormat.PNG if file_ext == "png" else ImageFormat.JPEG,
+                rai_filtered_reason=None,
+                enhanced_prompt=prompt,
+            )
+            generated_images.append(imagen_image)
+            gcs_urls.append(gcs_uri)
+            gcs_url_to_img_dict[gcs_uri] = imagen_image
+
+        except Exception as e:
+            logger.error(f"Failed to download/upload fal.ai image {i}: {e}")
+            continue
+
+    if not gcs_urls:
+        raise Exception("No images were generated from fal.ai")
+
+    return generated_images, gcs_urls, [], gcs_url_to_img_dict
+
+
 @router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
@@ -544,31 +687,49 @@ async def generate_background(
         subscription = await subscription_service.get_user_current_subscription(
             db, current_user.id
         )
-        image_model = select_text_to_image_model(
+
+        # 优先使用请求指定的模型，否则根据订阅状态自动选择
+        image_model = request.model or select_text_to_image_model(
             user=current_user, is_subscribed=bool(subscription)
         )
 
-        # Generate images and get actual GCS URLs with RAI reason support
-        generated_images = text_to_image(
-            request.prompt,
-            request.negative_prompt,
-            request.enhance_prompt,
-            gender=opposite_gender,
-            aspect_ratio=AspectRatio.PORTRAIT,
-            gcs_uri_base=gcs_uri_base,
-            count=request.count,
-            model=image_model,
-        )
+        gcs_bucket = global_config_loaded_from_config_yaml.gcs.bucket
 
-        result = process_generated_images(generated_images)
-        gcs_url_to_img_dict = {}
-        for image in generated_images:
-            if not image.gcs_uri:
-                continue
-            gcs_url_to_img_dict[image.gcs_uri] = image
+        # 根据模型类型选择不同的生成流程
+        if is_fal_model(image_model):
+            # fal.ai 生图流程
+            generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict = (
+                await _generate_with_fal_ai(
+                    model=image_model,
+                    prompt=request.prompt,
+                    negative_prompt=request.negative_prompt,
+                    num_images=request.count,
+                    gcs_bucket=gcs_bucket,
+                    gcs_base_path=gcs_base_path,
+                )
+            )
+        else:
+            # Google Imagen 生图流程
+            generated_images = text_to_image(
+                request.prompt,
+                request.negative_prompt,
+                request.enhance_prompt,
+                gender=opposite_gender,
+                aspect_ratio=AspectRatio.PORTRAIT,
+                gcs_uri_base=gcs_uri_base,
+                count=request.count,
+                model=image_model,
+            )
 
-        gcs_urls = result["image_uris"]
-        rai_reasons = result["rai_reasons"]
+            result = process_generated_images(generated_images)
+            gcs_url_to_img_dict = {}
+            for image in generated_images:
+                if not image.gcs_uri:
+                    continue
+                gcs_url_to_img_dict[image.gcs_uri] = image
+
+            gcs_urls = result["image_uris"]
+            rai_reasons = result["rai_reasons"]
 
         # Convert GCS URLs to CDN URLs
         from app.services.image_transform_service import image_transform_service

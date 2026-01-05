@@ -318,6 +318,13 @@ class PushNotificationConfig:
 
 
 @dataclass
+class FalConfig:
+    """fal.ai 生图服务配置"""
+
+    api_key: str = ""  # fal.ai API key
+
+
+@dataclass
 class GeminiLiveConfig:
     """Gemini Live API 实时语音通话配置
     使用 Vertex AI 模式，复用 app.gcp_service_account_key 进行认证
@@ -362,6 +369,7 @@ class Config:
     cloudflare: CloudflareConfig
     sentry: SentryConfig
     push_notification: PushNotificationConfig
+    fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
 
 
@@ -400,6 +408,7 @@ def load_config(path: str) -> Config:
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
         sentry=SentryConfig(**data.get("sentry", {})),
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
+        fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
     )
 
