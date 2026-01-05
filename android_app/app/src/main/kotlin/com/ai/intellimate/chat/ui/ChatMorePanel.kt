@@ -262,7 +262,8 @@ fun ChatMorePanel(
                                         ),
                                     )
                                     navController.navigate(Routes.Me.reportPage(true))
-//                                    ReportActivity.launchFeedback(context)
+                                    //
+                                    // ReportActivity.launchFeedback(context)
                                 }
                             },
                             icon = {
@@ -291,8 +292,11 @@ fun ChatMorePanel(
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
-                                    navController.navigate(Routes.Me.reportPage(false, "AGENT", agentInfo?.id ?: ""))
-//                                    ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
+                                    navController.navigate(
+                                        Routes.Me.reportPage(false, "AGENT", agentInfo?.id ?: "")
+                                    )
+                                    //
+                                    // ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
                                 }
                             },
                             icon = {

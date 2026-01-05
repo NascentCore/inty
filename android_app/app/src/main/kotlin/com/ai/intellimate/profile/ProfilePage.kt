@@ -918,12 +918,14 @@ private fun MyAgentCard(
                         },
                         onClick = {
                             showMenu = false
-                            navController.navigate(Routes.Me.reportPage(false, "AGENT", agentInfo.id))
-//                            ReportActivity.launch(
-//                                context,
-//                                targetType = "AGENT",
-//                                targetId = agentInfo.id,
-//                            )
+                            navController.navigate(
+                                Routes.Me.reportPage(false, "AGENT", agentInfo.id)
+                            )
+                            //                            ReportActivity.launch(
+                            //                                context,
+                            //                                targetType = "AGENT",
+                            //                                targetId = agentInfo.id,
+                            //                            )
                         },
                     )
 

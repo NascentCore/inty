@@ -67,9 +67,7 @@ class AICallDataSource(private val httpClient: HttpClient) {
                     emit(session.receiveDeserialized<CallPacket>())
                 }
             }
-            .onEach {
-                LogUtils.d("语音聊天：收到消息${it}")
-            }
+            .onEach { LogUtils.d("语音聊天：收到消息${it}") }
             .catch { error -> if (error !is ClosedReceiveChannelException) throw error }
             .onCompletion { cause ->
                 LogUtils.d("WebSocket接收流完成，原因: ${cause?.message}")
@@ -100,7 +98,7 @@ class AICallDataSource(private val httpClient: HttpClient) {
 
         try {
             session.sendSerialized(packet)
-            //LogUtils.d("语音聊天:发送${packet}")
+            // LogUtils.d("语音聊天:发送${packet}")
         } catch (e: Exception) {
             LogUtils.e("发送CallPacket失败: ${e.message}")
             _connectionState.value = ConnectionState.ERROR

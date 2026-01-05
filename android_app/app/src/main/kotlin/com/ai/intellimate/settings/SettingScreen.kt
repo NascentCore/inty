@@ -248,7 +248,7 @@ private fun SupportAndHelpSection(
             item = SettingsItemData.CommonItemData(title = stringResource(R.string.str_feedback)),
             isInGroup = true,
             onItemClick = {
-//                ReportActivity.launchFeedback(context)
+                //                ReportActivity.launchFeedback(context)
                 navController.navigate(Routes.Me.reportPage(true))
             },
         )
@@ -260,7 +260,7 @@ private fun SupportAndHelpSection(
             item = SettingsItemData.CommonItemData(title = stringResource(R.string.str_report)),
             isInGroup = true,
             onItemClick = {
-//                ReportActivity.launch(context)
+                //                ReportActivity.launch(context)
                 navController.navigate(Routes.Me.reportPage(false))
             },
         )

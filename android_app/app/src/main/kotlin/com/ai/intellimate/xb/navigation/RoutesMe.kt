@@ -17,5 +17,7 @@ object RoutesMe {
     const val SubsManagement = "subs_management"
 
     const val ReportPage = "report_page/{isFeedback}/{targetType}/{targetId}"
-    fun reportPage(isFeedback: Boolean, targetType: String = "USER", targetId: String = "") = "report_page/${isFeedback}/${targetType}/${targetId}"
+
+    fun reportPage(isFeedback: Boolean, targetType: String = "USER", targetId: String = "") =
+        "report_page/${isFeedback}/${targetType}/${targetId}"
 }

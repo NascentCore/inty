@@ -121,7 +121,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
-                            packet.errorEnum?.let { _error.trySend(it to packet.errorCode.orEmpty()) }
+                            packet.errorEnum?.let {
+                                _error.trySend(it to packet.errorCode.orEmpty())
+                            }
                         }
 
                         CallType.STATUS -> {
@@ -162,9 +164,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     }
 
     private fun stopCalling() {
-        CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
-            repository.closeCall()
-        }
+        CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) { repository.closeCall() }
     }
 
     fun setMuted(isMuted: Boolean) {

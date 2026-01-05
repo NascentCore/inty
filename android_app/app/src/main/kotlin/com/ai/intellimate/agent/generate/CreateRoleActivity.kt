@@ -1627,12 +1627,17 @@ private fun AvatarUploadSection(
                                         shape = RoundedCornerShape(16.dp),
                                     )
                                     .noRippleClickable {
-                                        navController.navigate(Routes.Me.reportPage(false, "AGENT", agentId))
-//                                        ReportActivity.launch(
-//                                            context,
-//                                            targetType = "AGENT",
-//                                            targetId = agentId,
-//                                        )
+                                        navController.navigate(
+                                            Routes.Me.reportPage(false, "AGENT", agentId)
+                                        )
+                                        //
+                                        // ReportActivity.launch(
+                                        //                                            context,
+                                        //                                            targetType =
+                                        // "AGENT",
+                                        //                                            targetId =
+                                        // agentId,
+                                        //                                        )
                                     }
                                     .padding(
                                         UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding

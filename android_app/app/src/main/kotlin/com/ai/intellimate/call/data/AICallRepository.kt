@@ -41,13 +41,15 @@ class AICallRepository(private val dataSource: AICallDataSource) {
     }
 
     /** 创建可重连的Flow */
-    private fun createReconnectableFlow(url: String): Flow<CallPacket> = flow {
-        // 收集数据，如果Flow完成（正常或异常），会继续循环尝试重连
-        dataSource.connect(url).collect { packet -> emit(packet) }
-    }.retryWhen { cause, attempt ->
-        delay(attempt * reconnectDelayMs)
-        true
-    }
+    private fun createReconnectableFlow(url: String): Flow<CallPacket> =
+        flow {
+                // 收集数据，如果Flow完成（正常或异常），会继续循环尝试重连
+                dataSource.connect(url).collect { packet -> emit(packet) }
+            }
+            .retryWhen { cause, attempt ->
+                delay(attempt * reconnectDelayMs)
+                true
+            }
 
     /** 发送CallPacket数据 */
     suspend fun sendPacket(packet: CallPacket) {
