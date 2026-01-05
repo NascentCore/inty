@@ -12,6 +12,7 @@ import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,7 +121,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
-                            packet.errorEnum?.let { _error.trySend(it to packet.message.orEmpty()) }
+                            packet.errorEnum?.let { _error.trySend(it to packet.errorCode.orEmpty()) }
                         }
 
                         CallType.STATUS -> {
@@ -161,7 +162,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     }
 
     private fun stopCalling() {
-        viewModelScope.launch(Dispatchers.IO) { repository.closeCall() }
+        CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
+            repository.closeCall()
+        }
     }
 
     fun setMuted(isMuted: Boolean) {
