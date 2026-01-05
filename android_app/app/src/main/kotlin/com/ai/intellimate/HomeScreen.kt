@@ -339,7 +339,7 @@ private fun FeedbackRequestDialogLogic(navController: NavController, mainViewMod
             onSendSuggestions = {
                 mainViewModel.hideFeedbackRequestDialog()
                 navController.navigate(Routes.Me.reportPage(true))
-//                ReportActivity.launchFeedback(context)
+                //                ReportActivity.launchFeedback(context)
             },
         )
     }

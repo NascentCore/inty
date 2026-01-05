@@ -512,12 +512,17 @@ private fun ChatItemAI(
                                     stringResource(R.string.agent_gallery_set_as_background),
                                 onReport = {
                                     if (agentId.isNotBlank()) {
-                                        navController.navigate(Routes.Me.reportPage(false, "AGENT", agentId))
-//                                        ReportActivity.launch(
-//                                            context,
-//                                            targetType = "AGENT",
-//                                            targetId = agentId,
-//                                        )
+                                        navController.navigate(
+                                            Routes.Me.reportPage(false, "AGENT", agentId)
+                                        )
+                                        //
+                                        // ReportActivity.launch(
+                                        //                                            context,
+                                        //                                            targetType =
+                                        // "AGENT",
+                                        //                                            targetId =
+                                        // agentId,
+                                        //                                        )
                                     }
                                 },
                             )

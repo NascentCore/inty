@@ -599,7 +599,8 @@ fun ChatSettingsDrawer(
                                         ),
                                     )
                                     navController.navigate(Routes.Me.reportPage(true))
-//                                    ReportActivity.launchFeedback(context)
+                                    //
+                                    // ReportActivity.launchFeedback(context)
                                 }
                             },
                         )
@@ -632,8 +633,11 @@ fun ChatSettingsDrawer(
                                                 "timestamp" to System.currentTimeMillis(),
                                             ),
                                         )
-                                        navController.navigate(Routes.Me.reportPage(false, "AGENT", agent.id))
-//                                        ReportActivity.launch(context, agent.id, "AGENT")
+                                        navController.navigate(
+                                            Routes.Me.reportPage(false, "AGENT", agent.id)
+                                        )
+                                        //
+                                        // ReportActivity.launch(context, agent.id, "AGENT")
                                     }
                                 },
                             )
