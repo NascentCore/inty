@@ -85,3 +85,19 @@ result = generate_text_to_image(request)
 ---
 
 CREATED_BY_AGENT
+
+## 会议纪要
+
+### 一次简单同步
+
+https://applink.feishu.cn/client/message/link/open?token=AmfpyocKAMADaVtl%2FZRDTNs%3D
+
+文生图多模型对接的能力是后端的基本功能，延伸到使用场景有 2 个
+@王琢誉 内部模型测试
+面向用户：降低消息生图的延时
+这个与上面的内部模型测试相关
+可以理解为内部模型测试是长期使用方式
+降低消息生图延时是短期的试验（看降低延时是否能提升活跃度）
+是一个糙快猛的上线方式
+伴随着生图质量下降，但是可以让用户感知到订阅价值（cc @Charles Feng）
+这里还要回答到底质量下降和延迟缩短、哪个对用户的影响更大
