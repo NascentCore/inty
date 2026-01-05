@@ -40,8 +40,8 @@ cloudflare:
 
 gemini_live:
   enabled: false
-  # Live Chat 用量限制（测试环境由 TEST_ENVIRONMENT_LIMIT 放宽）
+  # Live Chat 用量限制（测试环境）
   free_user_agent_limit: 5
   sub_user_agent_limit: 20
-  free_user_duration_per_agent_24h: 60
-  sub_user_duration_per_agent_24h: 300
+  free_user_max_session_duration: 60
+  sub_user_max_session_duration: 120
