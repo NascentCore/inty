@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.inty.kotlin)
 
     implementation(libs.androidx.dataStore.preferences)
+    implementation(libs.androidx.dataStore)
     implementation(libs.mmkv)
 
     implementation(libs.androidx.room.ktx)
