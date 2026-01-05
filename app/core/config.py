@@ -346,8 +346,8 @@ class GeminiLiveConfig:
     # Live Chat 用量限制
     free_user_agent_limit: int = 10000  # 免费用户累计可聊天的 agent 数
     sub_user_agent_limit: int = 10000  # 订阅用户累计可聊天的 agent 数
-    free_user_duration_per_agent_24h: int = 60  # 免费用户每 agent 24h 时长（秒）
-    sub_user_duration_per_agent_24h: int = 300  # 订阅用户每 agent 24h 时长（秒）
+    free_user_max_session_duration: int = 60  # 免费用户单次会话最大时长（秒）
+    sub_user_max_session_duration: int = 120  # 订阅用户单次会话最大时长（秒）
     free_user_total_duration_24h: int = 300  # 免费用户 24h 总时长限制（秒）
     sub_user_total_duration_24h: int = 1800  # 订阅用户 24h 总时长限制（秒）
 
