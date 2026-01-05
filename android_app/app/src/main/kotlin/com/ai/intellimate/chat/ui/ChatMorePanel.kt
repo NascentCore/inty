@@ -69,7 +69,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.xb.navigation.Routes
@@ -262,7 +261,8 @@ fun ChatMorePanel(
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
-                                    ReportActivity.launchFeedback(context)
+                                    navController.navigate(Routes.Me.reportPage(true))
+//                                    ReportActivity.launchFeedback(context)
                                 }
                             },
                             icon = {
@@ -291,7 +291,8 @@ fun ChatMorePanel(
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
-                                    ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
+                                    navController.navigate(Routes.Me.reportPage(false, "AGENT", agentInfo?.id ?: ""))
+//                                    ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
                                 }
                             },
                             icon = {

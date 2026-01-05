@@ -94,7 +94,6 @@ import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.settings.check.getCurrentMonthInfo
@@ -247,6 +246,7 @@ internal fun ProfilePage(
                                     key = { index, agent -> "${agent.id}_$index" },
                                 ) { index, agent ->
                                     MyAgentCard(
+                                        navController,
                                         modifier =
                                             Modifier.noRippleClickable { onClickAgent(agent) },
                                         agentInfo = agent,
@@ -774,6 +774,7 @@ private fun DraftAgentCard(
 
 @Composable
 private fun MyAgentCard(
+    navController: NavController,
     modifier: Modifier,
     agentInfo: AgentInfo,
     onEditAgent: ((AgentInfo) -> Unit)? = null,
@@ -917,11 +918,12 @@ private fun MyAgentCard(
                         },
                         onClick = {
                             showMenu = false
-                            ReportActivity.launch(
-                                context,
-                                targetType = "AGENT",
-                                targetId = agentInfo.id,
-                            )
+                            navController.navigate(Routes.Me.reportPage(false, "AGENT", agentInfo.id))
+//                            ReportActivity.launch(
+//                                context,
+//                                targetType = "AGENT",
+//                                targetId = agentInfo.id,
+//                            )
                         },
                     )
 

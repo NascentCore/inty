@@ -71,11 +71,11 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.content.getSystemService
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.audio.VoicePlayer
@@ -86,6 +86,7 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
+import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
@@ -98,6 +99,7 @@ private const val DEBUG_METADATA_VALUE_MAX = 64
 
 @Composable
 fun ChatItem(
+    navController: NavController,
     item: MsgInfo,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
@@ -109,6 +111,7 @@ fun ChatItem(
             when (item.role) {
                 "assistant" -> {
                     ChatItemAI(
+                        navController,
                         item,
                         isCurrentPage,
                         chatViewModel,
@@ -149,6 +152,7 @@ fun ChatItem(
 
 @Composable
 private fun ChatItemAI(
+    navController: NavController,
     item: MsgInfo,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
@@ -508,11 +512,12 @@ private fun ChatItemAI(
                                     stringResource(R.string.agent_gallery_set_as_background),
                                 onReport = {
                                     if (agentId.isNotBlank()) {
-                                        ReportActivity.launch(
-                                            context,
-                                            targetType = "AGENT",
-                                            targetId = agentId,
-                                        )
+                                        navController.navigate(Routes.Me.reportPage(false, "AGENT", agentId))
+//                                        ReportActivity.launch(
+//                                            context,
+//                                            targetType = "AGENT",
+//                                            targetId = agentId,
+//                                        )
                                     }
                                 },
                             )
