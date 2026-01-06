@@ -2,35 +2,24 @@ name: Release - intellimate.app 网页版
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        type: environment
-        description: The environment to deploy to
-        required: true
-        default: dev
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
-    # 自动运行的情况下，inputs.environment 为空，因此需要额外设置
-    environment: ${{ inputs.environment || 'dev' }}
-
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
-
+          cache: 'yarn'
+      - id: yarn-cache-dir-path
+        run: |
+          echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+          echo "yarn cache dir: $(yarn cache dir)" >> $GITHUB_STEP_SUMMARY
       - name: Cache yarn dependencies
         uses: actions/cache@v3
         with:
@@ -41,33 +30,28 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('web_app/yarn.lock') }}-${{ hashFiles('evaluation/inty_sdk/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-
       - name: Build inty_sdk
         working-directory: evaluation/inty_sdk
         run: |
           yarn install --frozen-lockfile
           yarn build
-
-      - name: Install dependencies
+      - name: Build web app
         working-directory: web_app
         run: |
           yarn install --frozen-lockfile
           yarn build
-
       - name: Create deployment archive
         run: |
           cd web_app
           tar czf ../intellimate-app-dist.tar.gz -C dist .
-
       - name: Upload deployment archive
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          source: "intellimate-app-dist.tar.gz"
+          source: "intellimate-app-dist.tar.gz,bizops/app-ads.txt,bizops/ads.txt"
           target: "/tmp/"
-
       - name: Deploy to ${{ inputs.environment }}
         uses: appleboy/ssh-action@master
         timeout-minutes: 2
@@ -76,43 +60,19 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            sudo rm -rf /var/www/dev.intellimate.app && sudo mkdir -p /var/www/dev.intellimate.app
+            sudo rm -rf /var/www/dev.intellimate.app
+            sudo mkdir -p /var/www/dev.intellimate.app
             sudo tar xzf /tmp/intellimate-app-dist.tar.gz -C /var/www/dev.intellimate.app
+            sudo mv /tmp/app-ads.txt /var/www/dev.intellimate.app/app-ads.txt
+            sudo mv /tmp/ads.txt /var/www/dev.intellimate.app/ads.txt
             sudo chown -R www-data:www-data /var/www/dev.intellimate.app
             sudo chmod -R 755 /var/www/dev.intellimate.app
             sudo rm -f /tmp/intellimate-app-dist.tar.gz
-
-      - name: Deploy ads.txt
-        uses: appleboy/ssh-action@master
-        timeout-minutes: 1
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          script: |
-            # 来自 Adsense 账户中确认站点所有权的功能
-            # 拷贝 GOOGLE_ADSENSE_ADS_TXT 到远程服务器 /tmp/ads.txt 会产生一个目录；还是用现在的方式
-            echo "${{ secrets.GOOGLE_ADSENSE_ADS_TXT }}" | sudo tee /var/www/dev.intellimate.app/ads.txt > /dev/null
-            sudo chown www-data:www-data /var/www/dev.intellimate.app/ads.txt
-            sudo chmod 644 /var/www/dev.intellimate.app/ads.txt
-
-      - name: Deploy app-ads.txt
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          # app-ads.txt 需要上传到 intellimate Google play 商店联系方式中的网页根目录下
-          # 这个网页是 https://intellimate.app/
-          source: bizops/app-ads.txt
-          target: /var/www/dev.intellimate.app/
-
       - name: Sanity check
         run: |
           curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.INTELLI_MATE_WEB_APP_URL }}
-
       - name: Write summary
         run: |
           echo "## Build and deploy web app" >> $GITHUB_STEP_SUMMARY
           echo "GitHub ref: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "Deployed to ${{ inputs.environment }} for ${{ vars.INTELLI_MATE_WEB_APP_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to ${{ vars.INTELLI_MATE_WEB_APP_URL }}" >> $GITHUB_STEP_SUMMARY
