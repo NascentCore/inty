@@ -27,6 +27,7 @@ import {
   UserOutlined,
   MessageOutlined,
   PictureOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
@@ -62,7 +63,7 @@ interface AnalyticsDateParams {
 export const UserAnalyticsPage: React.FC = () => {
   // 用户注册日期范围状态
   const [registerDateType, setRegisterDateType] = useState<
-    "range" | "last_days"
+    "all" | "range" | "last_days"
   >("last_days");
   const [registerLastDays, setRegisterLastDays] = useState<number>(7);
   const [registerCustomRange, setRegisterCustomRange] = useState<
@@ -71,7 +72,7 @@ export const UserAnalyticsPage: React.FC = () => {
 
   // 用户活跃日期范围状态
   const [activityDateType, setActivityDateType] = useState<
-    "range" | "last_days"
+    "all" | "range" | "last_days"
   >("last_days");
   const [activityLastDays, setActivityLastDays] = useState<number>(7);
   const [activityCustomRange, setActivityCustomRange] = useState<
@@ -119,9 +120,11 @@ export const UserAnalyticsPage: React.FC = () => {
     const params: AnalyticsDateParams = {};
 
     // 注册日期范围
+    // "all" 时不传递参数，后端会使用默认的全部数据范围
     if (registerDateType === "last_days") {
       params.register_last_days = registerLastDays;
     } else if (
+      registerDateType === "range" &&
       registerCustomRange &&
       registerCustomRange[0] &&
       registerCustomRange[1]
@@ -129,19 +132,22 @@ export const UserAnalyticsPage: React.FC = () => {
       params.register_start_date = registerCustomRange[0].format("YYYY-MM-DD");
       params.register_end_date = registerCustomRange[1].format("YYYY-MM-DD");
     }
+    // registerDateType === "all" 时不传递任何注册日期参数
 
-    // 活跃日期范围（如果为空则默认与注册范围一致）
+    // 活跃日期范围
+    // "all" 时不传递参数，后端会使用默认的全部数据范围
     if (activityDateType === "last_days") {
       params.activity_last_days = activityLastDays;
     } else if (
+      activityDateType === "range" &&
       activityCustomRange &&
       activityCustomRange[0] &&
       activityCustomRange[1]
     ) {
       params.activity_start_date = activityCustomRange[0].format("YYYY-MM-DD");
       params.activity_end_date = activityCustomRange[1].format("YYYY-MM-DD");
-    } else {
-      // 活跃范围为空时，使用注册范围的值
+    } else if (activityDateType !== "all") {
+      // 活跃范围为空时（非"全部"），使用注册范围的值
       if (params.register_last_days) {
         params.activity_last_days = params.register_last_days;
       } else if (params.register_start_date && params.register_end_date) {
@@ -149,6 +155,7 @@ export const UserAnalyticsPage: React.FC = () => {
         params.activity_end_date = params.register_end_date;
       }
     }
+    // activityDateType === "all" 时不传递任何活跃日期参数
 
     return params;
   }, [
@@ -165,16 +172,7 @@ export const UserAnalyticsPage: React.FC = () => {
     setLoading(true);
     try {
       const params = getDateRangeParams();
-      // 验证注册日期范围必填
-      if (
-        !params.register_start_date &&
-        !params.register_end_date &&
-        !params.register_last_days
-      ) {
-        message.warning("请选择用户注册日期范围");
-        setLoading(false);
-        return;
-      }
+      // 注册日期范围现在支持"全部"选项，不再强制校验
 
       const [
         statsData,
@@ -496,10 +494,11 @@ export const UserAnalyticsPage: React.FC = () => {
               onChange={setRegisterDateType}
               style={{ width: 120 }}
             >
+              <Option value="all">全部</Option>
               <Option value="last_days">最近N天</Option>
               <Option value="range">自定义范围</Option>
             </Select>
-            {registerDateType === "last_days" ? (
+            {registerDateType === "last_days" && (
               <Select
                 value={registerLastDays}
                 onChange={setRegisterLastDays}
@@ -512,7 +511,8 @@ export const UserAnalyticsPage: React.FC = () => {
                 <Option value={30}>最近30天</Option>
                 <Option value={90}>最近90天</Option>
               </Select>
-            ) : (
+            )}
+            {registerDateType === "range" && (
               <RangePicker
                 value={registerCustomRange}
                 onChange={(dates) =>
@@ -531,10 +531,11 @@ export const UserAnalyticsPage: React.FC = () => {
               onChange={setActivityDateType}
               style={{ width: 120 }}
             >
+              <Option value="all">全部</Option>
               <Option value="last_days">最近N天</Option>
               <Option value="range">自定义范围</Option>
             </Select>
-            {activityDateType === "last_days" ? (
+            {activityDateType === "last_days" && (
               <Select
                 value={activityLastDays}
                 onChange={setActivityLastDays}
@@ -547,7 +548,8 @@ export const UserAnalyticsPage: React.FC = () => {
                 <Option value={30}>最近30天</Option>
                 <Option value={90}>最近90天</Option>
               </Select>
-            ) : (
+            )}
+            {activityDateType === "range" && (
               <RangePicker
                 value={activityCustomRange}
                 onChange={(dates) =>
@@ -728,6 +730,64 @@ export const UserAnalyticsPage: React.FC = () => {
               value={stats?.total_image_fallback_used ?? 0}
               prefix={<PictureOutlined />}
               valueStyle={{ color: "#faad14" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 语音通话统计（Live Chat） */}
+      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+        <Col xs={24} sm={12} md={6} lg={4}>
+          <Card>
+            <Statistic
+              title="发起语音通话人数"
+              value={stats?.total_live_chat_users ?? 0}
+              prefix={<PhoneOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6} lg={4}>
+          <Card>
+            <Statistic
+              title="语音通话次数"
+              value={stats?.total_live_chat_sessions ?? 0}
+              prefix={<PhoneOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6} lg={4}>
+          <Card>
+            <Statistic
+              title="总通话时长（秒）"
+              value={stats?.total_live_chat_duration ?? 0}
+              prefix={<PhoneOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6} lg={4}>
+          <Card>
+            <Statistic
+              title="人均通话次数"
+              value={stats?.avg_live_chat_sessions_per_user?.toFixed(2) ?? "0.00"}
+              prefix={<PhoneOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6} lg={4}>
+          <Card>
+            <Statistic
+              title="人均通话时长（秒）"
+              value={stats?.avg_live_chat_duration_per_user?.toFixed(2) ?? "0.00"}
+              prefix={<PhoneOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6} lg={4}>
+          <Card>
+            <Statistic
+              title="每次平均时长（秒）"
+              value={stats?.avg_live_chat_duration_per_session?.toFixed(2) ?? "0.00"}
+              prefix={<PhoneOutlined />}
             />
           </Card>
         </Col>

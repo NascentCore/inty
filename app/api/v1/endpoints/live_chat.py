@@ -403,21 +403,35 @@ async def live_chat_session(
         if session and session_duration > 0:
             await live_chat_service.end_session(session.session_id)
             try:
+                # 构建 extra_data，包含 Gemini Live API 返回的 token 用量统计
+                extra_data = {
+                    "agent_id": agent_id,
+                    "duration_seconds": session_duration,
+                    "ended_by_timeout": session_ended_by_timeout,
+                }
+                if session.total_token_count > 0:
+                    extra_data["total_token_count"] = session.total_token_count
+                if session.response_token_details:
+                    extra_data["response_token_details"] = (
+                        session.response_token_details
+                    )
+
                 usage_record = await subscription_service.record_usage(
                     db=db,
                     user_id=current_user.id,
                     usage_type="live_chat",
                     usage_count=1,
-                    extra_data={
-                        "agent_id": agent_id,
-                        "duration_seconds": session_duration,
-                        "ended_by_timeout": session_ended_by_timeout,
-                    },
+                    extra_data=extra_data,
                 )
                 if usage_record:
+                    token_info = (
+                        f", tokens: {session.total_token_count}"
+                        if session.total_token_count > 0
+                        else ""
+                    )
                     logger.info(
                         f"Live chat 用量已记录 - user_id: {current_user.id}, "
-                        f"agent_id: {agent_id}, duration: {session_duration}s, "
+                        f"agent_id: {agent_id}, duration: {session_duration}s{token_info}, "
                         f"record_id: {usage_record.id}"
                     )
                 else:
