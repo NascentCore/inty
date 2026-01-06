@@ -323,18 +323,20 @@ private fun SupportAndHelpSection(
 
         val playStoreUrl = playStoreUrl()
         // 版本号
+        val versionTitle = stringResource(R.string.settings_version)
+        val versionName = BuildConfig.VERSION_NAME
         SettingsArrowItem(
             item =
                 SettingsItemData.CommonItemData(
-                    title = stringResource(R.string.settings_version),
+                    title = versionTitle,
                     content =
                         if (hasAppUpdateTips) {
                             stringResource(
                                 R.string.version_update_available,
-                                BuildConfig.VERSION_NAME,
+                                versionName,
                             )
                         } else {
-                            BuildConfig.VERSION_NAME
+                            versionName
                         },
                     arrow = true,
                 ),
@@ -343,6 +345,10 @@ private fun SupportAndHelpSection(
             onItemClick = {
                 runCatching { uriHandler.openUri(playStoreUrl) }
                     .onFailure { ToastUtils.showShort(R.string.toast_google_play_unavailable) }
+            },
+            onLongClick = {
+                ClipboardUtils.copyToClipboard(context, label = versionTitle, text = versionName)
+                ToastUtils.showShort(R.string.toast_copied_to_clipboard)
             },
         )
 
