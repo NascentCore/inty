@@ -25,9 +25,7 @@ from app.schemas.response import (
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
-from app.services.push_notification_service import (
-    mark_user_push_notifications_as_read,
-)
+from app.services.push_notification_service import mark_user_push_notifications_as_read
 from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
 
@@ -352,6 +350,7 @@ async def generate_chat_image(
             user_id=current_user.id,
             message_id=request.message_id,
             history_count=request.history_count,
+            model=request.model,
         )
 
         if isinstance(result, UsageLimitExceeded):

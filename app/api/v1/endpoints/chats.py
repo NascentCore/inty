@@ -1016,6 +1016,7 @@ async def generate_chat_image(
             user_id=current_user.id,
             message_id=request.message_id,
             history_count=request.history_count,
+            model=request.model,
         )
 
         # 检查是否返回了业务限制错误

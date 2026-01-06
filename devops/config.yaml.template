@@ -40,6 +40,9 @@ agent:
   {{ agent__api_key }}
   base_url: "https://openrouter.ai/api/v1"
   enable_debug_logging: true
+  # 消息生图模型配置：免费用户可配置使用 fal 模型或 gemini，订阅用户固定使用 gemini
+  # free_user_chat_image_model: "fal-ai/z-image/turbo/image-to-image"
+  # sub_user_chat_image_model: "gemini"
 
 google_play:
   package_name: "com.ai.intellimate"

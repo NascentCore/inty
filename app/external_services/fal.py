@@ -114,6 +114,53 @@ class FalAIClient:
             self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
         )
 
+    def image_to_image(
+        self,
+        *,
+        model: str,
+        image_url: str,
+        prompt: str,
+        strength: float = 0.75,
+        num_images: int = 1,
+        extra_args: dict[str, Any] | None = None,
+        with_logs: bool = False,
+    ) -> FalTextToImageResult:
+        """
+        fal.ai image-to-image 生成。
+
+        Args:
+            model: fal 模型名，如 "fal-ai/z-image/turbo/image-to-image"
+            image_url: 参考图 URL
+            prompt: 生成提示词
+            strength: 变换强度 (0-1)，值越大变化越大
+            num_images: 生成图片数量
+            extra_args: 额外的模型参数
+            with_logs: 是否返回日志
+
+        Returns:
+            FalTextToImageResult 包含生成的图片信息
+        """
+        arguments: dict[str, Any] = {
+            "prompt": prompt,
+        }
+
+        # 根据模型类型选择正确的参数格式
+        # gpt-image-1.5/edit 使用 image_urls（数组格式）
+        # 其他模型使用 image_url（单数）
+        if "gpt-image" in model.lower():
+            arguments["image_urls"] = [image_url]
+        else:
+            arguments["image_url"] = image_url
+            arguments["strength"] = strength
+            arguments["num_images"] = num_images
+
+        if extra_args:
+            arguments.update(extra_args)
+
+        return _parse_fal_text_to_image_result(
+            self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
+        )
+
 
 def is_fal_model(model: Optional[str]) -> bool:
     if not model:

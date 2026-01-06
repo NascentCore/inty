@@ -203,6 +203,10 @@ class AgentConfig:
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
     image_generation_default_history_count: int = 10
+    # 消息生图（chat image）模型配置
+    # "gemini" 表示使用 Gemini 2.5 Flash Image，其他值为 fal.ai 模型名
+    free_user_chat_image_model: str = "gemini"
+    sub_user_chat_image_model: str = "gemini"
     # 视频生成配置
     veo3_model: str = "veo-3.0-fast-generate-preview"  # Veo3 模型名称
     # 动图配置
