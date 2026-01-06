@@ -867,7 +867,9 @@ class ImageGenerationService:
             pil_image = PIL.Image.open(io.BytesIO(image_data))
             width, height = pil_image.size
             image_format = pil_image.format or "JPEG"
-            logger.info(f"成功下载图片: {width}x{height}, 格式: {image_format}, 大小: {len(image_data)} bytes")
+            logger.info(
+                f"成功下载图片: {width}x{height}, 格式: {image_format}, 大小: {len(image_data)} bytes"
+            )
 
             # 生成GCS路径
             agent_id = agent_data.get("id")

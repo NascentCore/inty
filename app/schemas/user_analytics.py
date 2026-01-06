@@ -191,7 +191,9 @@ class UserAnalyticsStatsResponse(BaseModel):
     total_image_fallback_used: int = Field(description="使用兜底图片次数", default=0)
     # 语音通话统计（Live Chat）
     total_live_chat_users: int = Field(description="发起语音通话人数", default=0)
-    total_live_chat_sessions: int = Field(description="总语音通话 session 数", default=0)
+    total_live_chat_sessions: int = Field(
+        description="总语音通话 session 数", default=0
+    )
     total_live_chat_duration: int = Field(description="总通话时长（秒）", default=0)
     avg_live_chat_sessions_per_user: float = Field(
         description="人均语音通话次数", default=0.0

@@ -331,10 +331,7 @@ private fun SupportAndHelpSection(
                     title = versionTitle,
                     content =
                         if (hasAppUpdateTips) {
-                            stringResource(
-                                R.string.version_update_available,
-                                versionName,
-                            )
+                            stringResource(R.string.version_update_available, versionName)
                         } else {
                             versionName
                         },

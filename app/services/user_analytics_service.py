@@ -466,7 +466,9 @@ class UserAnalyticsService:
                 "total_live_chat_duration": total_duration,
                 "avg_live_chat_sessions_per_user": round(avg_sessions_per_user, 2),
                 "avg_live_chat_duration_per_user": round(avg_duration_per_user, 2),
-                "avg_live_chat_duration_per_session": round(avg_duration_per_session, 2),
+                "avg_live_chat_duration_per_session": round(
+                    avg_duration_per_session, 2
+                ),
             }
 
         # 辅助函数：查询生图统计

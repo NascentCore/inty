@@ -13,10 +13,7 @@ data class VoiceCallUiState(
     /** 静音 */
     val isMuted: Boolean = false,
     val agent: AgentInfo? = null,
-    val time: Time? = null
+    val time: Time? = null,
 ) {
-    data class Time(
-        val duration: Long = 0,
-        val remaining: Long = 0
-    )
+    data class Time(val duration: Long = 0, val remaining: Long = 0)
 }
