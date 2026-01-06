@@ -105,7 +105,7 @@ jobs:
           # app-ads.txt 需要上传到 intellimate Google play 商店联系方式中的网页根目录下
           # 这个网页是 https://intellimate.app/
           source: bizops/app-ads.txt
-          target: /var/www/dev.intellimate.app/app-ads.txt
+          target: /var/www/dev.intellimate.app/
 
       - name: Sanity check
         run: |
