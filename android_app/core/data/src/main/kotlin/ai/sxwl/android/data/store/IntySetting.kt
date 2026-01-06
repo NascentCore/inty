@@ -142,6 +142,15 @@ object IntySetting {
         return curUserSetting.decodeBool("text_streaming", true)
     }
 
+    /** 禁用 IntelliMate tips 弹窗（用户偏好设置） */
+    fun setTipsDisabled(disabled: Boolean) {
+        curUserSetting.putBoolean("tips_disabled", disabled)
+    }
+
+    fun isTipsDisabled(): Boolean {
+        return curUserSetting.decodeBool("tips_disabled", false)
+    }
+
     /** 检查用户是否手动设置过 Auto Play Animation */
     fun hasUserSetAutoPlayAnimation(): Boolean {
         return curUserSetting.decodeBool("user_set_auto_play_animation", false)

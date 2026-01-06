@@ -142,7 +142,7 @@ class MainActivity : BaseActivity() {
                         FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
                     )
                     .toInt()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
         val defaultTabName =
@@ -344,6 +344,8 @@ class MainActivity : BaseActivity() {
 
         fun tryShowRandomIntelliMateTip() {
             if (!isLoggedIn) return
+            // 检查用户是否禁用了 tips
+            if (IntySetting.isTipsDisabled()) return
             if (!IntelliMateTipsSessionGate.tryAcquireToShowInCurrentSession()) return
 
             scope.launch {
@@ -461,6 +463,10 @@ class MainActivity : BaseActivity() {
                 IntelliMateTipDialog(
                     tipText = tip,
                     onDismiss = { showIntelliMateTipDialog = false },
+                    onDisableTips = {
+                        IntySetting.setTipsDisabled(true)
+                        showIntelliMateTipDialog = false
+                    },
                 )
             }
         }

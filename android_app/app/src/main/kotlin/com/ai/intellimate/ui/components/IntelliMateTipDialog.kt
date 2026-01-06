@@ -41,6 +41,7 @@ import com.ai.intellimate.ui.UiConfigs
 fun IntelliMateTipDialog(
     tipText: String,
     onDismiss: () -> Unit,
+    onDisableTips: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -88,6 +89,24 @@ fun IntelliMateTipDialog(
             ) {
                 Text(
                     text = stringResource(R.string.intellimate_tip_got_it),
+                    fontSize = UiConfigs.Typography.ButtonLarge,
+                    color = Color.White,
+                )
+            }
+
+            Spacer(Modifier.height(UiConfigs.Spacing.Small))
+
+            Button(
+                onClick = {
+                    onDisableTips()
+                    onDismiss()
+                },
+                modifier =
+                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                        .align(Alignment.CenterHorizontally),
+            ) {
+                Text(
+                    text = stringResource(R.string.intellimate_tip_disable),
                     fontSize = UiConfigs.Typography.ButtonLarge,
                     color = Color.White,
                 )
