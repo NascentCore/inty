@@ -16,8 +16,7 @@ import kotlinx.coroutines.withContext
  *
  * 从 assets 读取 tips 列表，并提供随机挑选能力。
  *
- * 文件位置：android_app/app/src/main/assets/intellimate_tips.json
- * 设计目标：方便你后续直接往 JSON 里追加 tips，不需要改代码。
+ * 文件位置：android_app/app/src/main/assets/intellimate_tips.json 设计目标：方便你后续直接往 JSON 里追加 tips，不需要改代码。
  */
 object IntelliMateTipsRepository {
 
@@ -40,7 +39,8 @@ object IntelliMateTipsRepository {
         return withContext(Dispatchers.IO) {
             val loaded =
                 try {
-                    val json = context.assets.open(ASSET_FILE_NAME).bufferedReader().use { it.readText() }
+                    val json =
+                        context.assets.open(ASSET_FILE_NAME).bufferedReader().use { it.readText() }
                     adapter.fromJson(json)?.tips.orEmpty().filter { it.text.isNotBlank() }
                 } catch (e: IOException) {
                     LogUtils.w("IntelliMateTipsRepository", "读取 tips 失败: ${e.message}")
@@ -65,7 +65,4 @@ private data class IntelliMateTipsFile(
     val tips: List<IntelliMateTip> = emptyList(),
 )
 
-private data class IntelliMateTip(
-    val id: String? = null,
-    val text: String = "",
-)
+private data class IntelliMateTip(val id: String? = null, val text: String = "")

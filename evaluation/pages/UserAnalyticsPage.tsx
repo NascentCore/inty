@@ -768,7 +768,9 @@ export const UserAnalyticsPage: React.FC = () => {
           <Card>
             <Statistic
               title="人均通话次数"
-              value={stats?.avg_live_chat_sessions_per_user?.toFixed(2) ?? "0.00"}
+              value={
+                stats?.avg_live_chat_sessions_per_user?.toFixed(2) ?? "0.00"
+              }
               prefix={<PhoneOutlined />}
             />
           </Card>
@@ -777,7 +779,9 @@ export const UserAnalyticsPage: React.FC = () => {
           <Card>
             <Statistic
               title="人均通话时长（秒）"
-              value={stats?.avg_live_chat_duration_per_user?.toFixed(2) ?? "0.00"}
+              value={
+                stats?.avg_live_chat_duration_per_user?.toFixed(2) ?? "0.00"
+              }
               prefix={<PhoneOutlined />}
             />
           </Card>
@@ -786,7 +790,9 @@ export const UserAnalyticsPage: React.FC = () => {
           <Card>
             <Statistic
               title="每次平均时长（秒）"
-              value={stats?.avg_live_chat_duration_per_session?.toFixed(2) ?? "0.00"}
+              value={
+                stats?.avg_live_chat_duration_per_session?.toFixed(2) ?? "0.00"
+              }
               prefix={<PhoneOutlined />}
             />
           </Card>

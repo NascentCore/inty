@@ -2,7 +2,6 @@ package com.ai.intellimate.call.data.bean
 
 import ai.sxwl.android.data.http.IntyErrorCode
 import androidx.annotation.Keep
-import androidx.compose.ui.text.toUpperCase
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

@@ -12,8 +12,8 @@ import android.os.Bundle
  * 设计说明：
  * - 不能用 MainActivity 的 onPause/onStop 作为“进后台”的判断，因为 App 内部 Activity 跳转也会触发。
  * - 这里用 ActivityLifecycleCallbacks 统计 started activity 数量：
- *   - 从 0 -> 1：进入前台
- *   - 从 1 -> 0：进入后台（一个 session 结束）
+ *     - 从 0 -> 1：进入前台
+ *     - 从 1 -> 0：进入后台（一个 session 结束）
  */
 object IntelliMateTipsForegroundSessionTracker : Application.ActivityLifecycleCallbacks {
 
@@ -49,8 +49,12 @@ object IntelliMateTipsForegroundSessionTracker : Application.ActivityLifecycleCa
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+
     override fun onActivityResumed(activity: Activity) {}
+
     override fun onActivityPaused(activity: Activity) {}
+
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+
     override fun onActivityDestroyed(activity: Activity) {}
 }

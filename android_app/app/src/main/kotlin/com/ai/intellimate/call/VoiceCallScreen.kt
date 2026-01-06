@@ -80,8 +80,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
-import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Duration.Companion.seconds
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * 语音通话页面 提供与AI的实时语音通讯功能
@@ -283,7 +283,7 @@ private fun VoiceCallContent(
                         .border(width = 1.dp, color = Color.White, shape = CircleShape)
                         .clip(CircleShape)
 
-                //头像
+                // 头像
                 if (isInEditMode) {
                     Box(avatarModifier.background(color = Color.Black))
                 } else {
@@ -297,7 +297,7 @@ private fun VoiceCallContent(
 
                 Spacer(Modifier.height(16.dp))
 
-                //名字
+                // 名字
                 Text(
                     text = name,
                     color = Color.White,
@@ -309,7 +309,7 @@ private fun VoiceCallContent(
                 Spacer(Modifier.height(8.dp))
             }
 
-            //连接状态
+            // 连接状态
             uiState.connectionState.textRes?.let {
                 Text(
                     text = stringResource(it),
@@ -324,25 +324,25 @@ private fun VoiceCallContent(
                 Text(
                     text = stringResource(R.string.voice_call_duration),
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.White.copy(0.8f)
+                    color = Color.White.copy(0.8f),
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = "${duration.seconds}",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    color = Color.White,
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
                     text = stringResource(R.string.voice_call_remaining_time),
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.White.copy(0.8f)
+                    color = Color.White.copy(0.8f),
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = "${remaining.seconds}",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    color = Color.White,
                 )
             }
         }
@@ -449,7 +449,7 @@ private fun VoiceCallPreview() {
                     VoiceCallUiState(
                         agent = AgentInfo(name = "July"),
                         connectionState = ConnectionState.CONNECTING,
-                        time = VoiceCallUiState.Time(30, 100)
+                        time = VoiceCallUiState.Time(30, 100),
                     ),
                 modifier = Modifier.padding(it).fillMaxSize(),
             )

@@ -47,7 +47,8 @@ fun IntelliMateTipDialog(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier =
-                modifier.fillMaxWidth()
+                modifier
+                    .fillMaxWidth()
                     .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
                     .background(color = UiConfigs.Colors.DialogSurface)
                     .padding(UiConfigs.Padding.DialogInner)
