@@ -43,9 +43,8 @@ object IntelliMateTipsForegroundSessionTracker : Application.ActivityLifecycleCa
         synchronized(lock) {
             startedActivitiesCount = (startedActivitiesCount - 1).coerceAtLeast(0)
             // started 数量归零 => App 进入后台：session 结束
-            if (startedActivitiesCount == 0) {
-                IntelliMateTipsSessionGate.resetForNewSession()
-            }
+            // 注意：不在后台时重置 session gate，只在进入前台时重置（见 onActivityStarted）
+            // 这样可以确保在一个完整的 foreground-background-foreground 周期内只显示一次 tip
         }
     }
 
