@@ -96,6 +96,17 @@ jobs:
             sudo chown www-data:www-data /var/www/dev.intellimate.app/ads.txt
             sudo chmod 644 /var/www/dev.intellimate.app/ads.txt
 
+      - name: Deploy app-ads.txt
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          # app-ads.txt 需要上传到 intellimate Google play 商店联系方式中的网页根目录下
+          # 这个网页是 https://intellimate.app/
+          source: bizops/app-ads.txt
+          target: /var/www/dev.intellimate.app/app-ads.txt
+
       - name: Sanity check
         run: |
           curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.INTELLI_MATE_WEB_APP_URL }}
