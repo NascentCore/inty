@@ -759,6 +759,233 @@ class ImageGenerationService:
             traceback.print_exc()
             raise
 
+    async def generate_chat_image_with_fal(
+        self,
+        db: AsyncSession,
+        session_id: str,
+        message_id: int,
+        agent_data: dict,
+        message_content: str,
+        model: str,
+        user_id: Optional[str] = None,
+        history_count: Optional[int] = None,
+    ) -> Dict:
+        """
+        使用 fal.ai image-to-image 生成聊天图片并更新到消息 meta_data
+
+        Args:
+            db: 数据库会话
+            session_id: 聊天会话ID
+            message_id: 要更新的消息ID
+            agent_data: Agent数据
+            message_content: 触发生图的消息内容
+            model: fal 模型名，如 "fal-ai/z-image/turbo/image-to-image"
+            user_id: 用户ID（用于保存到resources表）
+            history_count: 要使用的历史消息数量
+
+        Returns:
+            包含图片信息的字典
+        """
+        import httpx
+
+        from app.external_services.fal import FalAIClient
+
+        try:
+            # 确定历史消息数量
+            if history_count is None:
+                history_count = (
+                    global_config_loaded_from_config_yaml.agent.image_generation_default_history_count
+                )
+
+            # 获取聊天历史
+            messages_data = chat_history_service.get_messages_paginated(
+                session_id=session_id,
+                limit=history_count,
+                offset=0,
+            )
+            chat_history = messages_data.get("messages", [])
+
+            # 获取用户信息（若有 user_id）
+            user_info = ""
+            if user_id:
+                user_info = await build_user_info_prompt_block(db, user_id)
+
+            # 构建提示词
+            prompt = self.build_image_prompt(
+                agent_data=agent_data,
+                chat_history=chat_history,
+                user_message=message_content,
+                user_info=user_info,
+            )
+
+            # 获取Agent参考图（优先使用背景图，如果不存在则使用头像）
+            reference_url = agent_data.get("background") or agent_data.get("avatar")
+            if not reference_url:
+                raise ValueError("Agent 没有背景图或头像，无法生成图片")
+
+            # 确保参考图是完整URL
+            if not reference_url.startswith("http"):
+                if reference_url.startswith("gs://"):
+                    reference_url = reference_url.replace(
+                        "gs://", "https://storage.googleapis.com/"
+                    )
+                else:
+                    raise ValueError(f"无效的参考图路径: {reference_url}")
+
+            reference_type = "背景图" if agent_data.get("background") else "头像"
+            logger.info(
+                f"开始使用 fal.ai 生成图片，session_id={session_id}, model={model}, 使用{reference_type}: {reference_url}"
+            )
+
+            # 调用 fal.ai image-to-image
+            fal_api_key = global_config_loaded_from_config_yaml.fal.api_key
+            client = FalAIClient(api_key=fal_api_key)
+
+            fal_result = client.image_to_image(
+                model=model,
+                image_url=reference_url,
+                prompt=prompt,
+                strength=0.75,
+                num_images=1,
+            )
+
+            if not fal_result.images:
+                raise ValueError("fal.ai 未返回任何图片")
+
+            fal_image = fal_result.images[0]
+            image_url = fal_image.url
+
+            logger.info(f"fal.ai 生成图片成功: {image_url}")
+
+            # 下载图片
+            async with httpx.AsyncClient(timeout=60.0) as http_client:
+                response = await http_client.get(image_url)
+                response.raise_for_status()
+                image_data = response.content
+
+            # 获取图片尺寸
+            pil_image = PIL.Image.open(io.BytesIO(image_data))
+            width, height = pil_image.size
+            image_format = pil_image.format or "JPEG"
+            logger.info(f"成功下载图片: {width}x{height}, 格式: {image_format}, 大小: {len(image_data)} bytes")
+
+            # 生成GCS路径
+            agent_id = agent_data.get("id")
+            if not agent_id:
+                raise ValueError("Agent数据缺少ID，无法生成图片路径")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            gcs_path = f"chat_images/{agent_id}/{timestamp}_{uuid.uuid4().hex[:8]}.jpg"
+
+            # 上传到GCS
+            bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+            public_url = upload_to_gcs(
+                file_data=image_data,
+                content_type="image/jpeg",
+                bucket_name=bucket_name,
+                path=gcs_path,
+            )
+            logger.info(f"图片已上传到 GCS: {public_url}")
+
+            # 转换为 gs:// URI 格式用于存储
+            gcs_uri = f"gs://{bucket_name}/{gcs_path}"
+
+            # 转换为CDN URL
+            cdn_url = image_transform_service.transform_desktop(gcs_uri)
+
+            # 更新消息的 meta_data
+            metadata_update = {
+                "generated_image": {
+                    "image_url": gcs_uri,
+                    "width": width,
+                    "height": height,
+                    "format": image_format.lower(),
+                    "prompt": prompt,
+                    "model": model,
+                    "generated_at": datetime.utcnow().isoformat(),
+                }
+            }
+
+            success = await chat_history_service.update_message_metadata(
+                db=db,
+                session_id=session_id,
+                message_id=message_id,
+                metadata_update=metadata_update,
+            )
+
+            if not success:
+                raise ValueError(f"更新消息 {message_id} 的 meta_data 失败")
+
+            # 追加到 Agent 背景图历史
+            if agent_id:
+                await agent_service.append_agent_background_image(
+                    db=db, agent_id=agent_id, image_url=gcs_uri
+                )
+
+            # 保存到resources表
+            if user_id:
+                try:
+                    image_format_enum = ImageFormat.JPEG
+                    if image_format.lower() == "png":
+                        image_format_enum = ImageFormat.PNG
+                    elif image_format.lower() == "gif":
+                        image_format_enum = ImageFormat.GIF
+                    elif image_format.lower() == "webp":
+                        image_format_enum = ImageFormat.WEBP
+
+                    image_size = ImageSize(width=width, height=height)
+
+                    await async_create_image_resource(
+                        async_db=db,
+                        user_id=user_id,
+                        url=gcs_uri,
+                        size=image_size,
+                        format=image_format_enum,
+                        byte_size=len(image_data),
+                        compressed=False,
+                        cropped=False,
+                        gcs_url=gcs_uri,
+                        generation_prompt=prompt,
+                    )
+
+                    from app import models
+
+                    update_stmt = (
+                        update(models.Resource)
+                        .where(models.Resource.url == gcs_uri)
+                        .values(agent_id=agent_id)
+                    )
+                    await db.execute(update_stmt)
+                    await db.commit()
+
+                    logger.info(f"图片已保存到resources表: {gcs_uri}")
+                except Exception as e:
+                    logger.warning(f"保存图片到resources表失败: {str(e)}")
+                    import traceback
+
+                    traceback.print_exc()
+
+            logger.info(
+                f"fal.ai 图片生成成功并更新到消息 meta_data，message_id={message_id}, cdn_url={cdn_url}"
+            )
+
+            return {
+                "message_id": message_id,
+                "image_url": cdn_url,
+                "image_metadata": {
+                    "width": width,
+                    "height": height,
+                    "format": image_format.lower(),
+                },
+                "prompt": prompt,
+            }
+
+        except Exception as e:
+            logger.error(f"使用 fal.ai 生成聊天图片失败: {str(e)}")
+            import traceback
+
+            traceback.print_exc()
+            raise
+
 
 # 创建服务实例
 image_generation_service = ImageGenerationService()

@@ -60,6 +60,9 @@ agent:
   api_key: "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"
   # inty-dev api key personal access token
   langchain_api_key: "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"
+  # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本），订阅用户使用 gemini
+  free_user_chat_image_model: "fal-ai/z-image/turbo/image-to-image"
+  sub_user_chat_image_model: "gemini"
 
 google_play:
   package_name: "com.ai.intellimate"

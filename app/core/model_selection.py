@@ -24,3 +24,16 @@ def select_text_to_image_model(*, user: object, is_subscribed: bool) -> str:
     if is_subscribed or is_superuser(user):
         return config.sub_user_text_to_image_model or config.vertex_image_model
     return config.free_user_text_to_image_model or config.vertex_image_model
+
+
+def select_chat_image_model(*, user: object, is_subscribed: bool) -> str:
+    """
+    Select chat image (message-to-image) model based on user's subscription/superuser status.
+
+    Returns:
+        "gemini" for Gemini 2.5 Flash Image, or fal model name like "fal-ai/z-image/turbo/image-to-image"
+    """
+    config = global_config_loaded_from_config_yaml.agent
+    if is_subscribed or is_superuser(user):
+        return config.sub_user_chat_image_model or "gemini"
+    return config.free_user_chat_image_model or "gemini"

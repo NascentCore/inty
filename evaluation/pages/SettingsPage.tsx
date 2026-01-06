@@ -8,9 +8,40 @@ import {
   message,
   Spin,
   Typography,
+  Select,
+  Divider,
 } from "antd";
 import { SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import { chatImageApi } from "../services/api";
+
+// 消息生图模型选项
+const CHAT_IMAGE_MODEL_OPTIONS = [
+  {
+    value: "gemini",
+    label: "Gemini 2.5 Flash Image",
+    description: "Google 高质量图像生成模型",
+  },
+  {
+    value: "fal-ai/z-image/turbo/image-to-image",
+    label: "fal-ai/z-image/turbo/image-to-image",
+    description: "Tongyi-MAI 超快速 6B 参数模型",
+  },
+  {
+    value: "fal-ai/flux/dev/image-to-image",
+    label: "FLUX Dev (fal.ai)",
+    description: "FLUX 开发版 image-to-image 模型",
+  },
+  {
+    value: "fal-ai/stable-diffusion-v3-medium/image-to-image",
+    label: "SD v3 Medium (fal.ai)",
+    description: "Stable Diffusion v3 中型模型",
+  },
+  {
+    value: "fal-ai/gpt-image-1.5/edit",
+    label: "fal-ai/gpt-image-1.5/edit",
+    description: "GPT Image 1.5 编辑模型",
+  },
+];
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -33,6 +64,8 @@ export const SettingsPage: React.FC = () => {
         form.setFieldsValue({
           prompt_template: response.prompt_template,
           default_history_count: response.default_history_count,
+          free_user_chat_image_model: response.free_user_chat_image_model,
+          sub_user_chat_image_model: response.sub_user_chat_image_model,
         });
         message.success("配置加载成功");
       }
@@ -55,6 +88,8 @@ export const SettingsPage: React.FC = () => {
         form.setFieldsValue({
           prompt_template: response.prompt_template,
           default_history_count: response.default_history_count,
+          free_user_chat_image_model: response.free_user_chat_image_model,
+          sub_user_chat_image_model: response.sub_user_chat_image_model,
         });
       }
     } catch (error: any) {
@@ -134,6 +169,60 @@ export const SettingsPage: React.FC = () => {
                 max={50}
                 style={{ width: "100%" }}
                 placeholder="例如：10"
+              />
+            </Form.Item>
+
+            <Divider orientation="left">消息生图模型配置</Divider>
+
+            <Form.Item
+              name="free_user_chat_image_model"
+              label="免费用户模型"
+              rules={[{ required: true, message: "请选择免费用户模型" }]}
+              extra={
+                <Text type="secondary">
+                  免费用户消息生图使用的模型（fal.ai 模型成本更低、速度更快）
+                </Text>
+              }
+            >
+              <Select
+                placeholder="选择免费用户模型"
+                options={CHAT_IMAGE_MODEL_OPTIONS.map((opt) => ({
+                  value: opt.value,
+                  label: (
+                    <span>
+                      {opt.label}{" "}
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        - {opt.description}
+                      </Text>
+                    </span>
+                  ),
+                }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="sub_user_chat_image_model"
+              label="订阅用户模型"
+              rules={[{ required: true, message: "请选择订阅用户模型" }]}
+              extra={
+                <Text type="secondary">
+                  订阅用户消息生图使用的模型（推荐使用 Gemini 高质量模型）
+                </Text>
+              }
+            >
+              <Select
+                placeholder="选择订阅用户模型"
+                options={CHAT_IMAGE_MODEL_OPTIONS.map((opt) => ({
+                  value: opt.value,
+                  label: (
+                    <span>
+                      {opt.label}{" "}
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        - {opt.description}
+                      </Text>
+                    </span>
+                  ),
+                }))}
               />
             </Form.Item>
 

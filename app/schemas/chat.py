@@ -380,7 +380,9 @@ class ChatImageGenerationRequest(BaseModel):
     message_id: int  # 必填：要生成图片的消息ID
     history_count: Optional[int] = None
     request_id: Optional[str] = None
-    model: Optional[str] = None  # 可选：指定生图模型（"gemini" 或 fal 模型名），覆盖配置默认值
+    model: Optional[str] = (
+        None  # 可选：指定生图模型（"gemini" 或 fal 模型名），覆盖配置默认值
+    )
 
 
 class ChatImageGenerationResponse(BaseModel):
