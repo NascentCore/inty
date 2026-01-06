@@ -562,4 +562,6 @@
     <string name="call">Call</string>
     <string name="end">end</string>
     <string name="mute">mute</string>
+    <string name="voice_call_duration">Call Duration</string>
+    <string name="voice_call_remaining_time">Remaining Time</string>
 </resources>
