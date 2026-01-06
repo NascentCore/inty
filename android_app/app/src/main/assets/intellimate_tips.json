@@ -1,0 +1,30 @@
+{
+  "CREATED_BY_AGENT": "cursor-gpt-5.2",
+  "version": 1,
+  "tips": [
+    {
+      "id": "actions_parentheses",
+      "text": "Use () to describe actions, feelings, and thoughts to make the chat more immersive."
+    },
+    {
+      "id": "remix_chat_style",
+      "text": "Try adjusting “Chat Style” in chat settings to change the tone or writing style."
+    },
+    {
+      "id": "favorite_characters",
+      "text": "Tap the heart icon on a character to save them to Favorites for quick access."
+    },
+    {
+      "id": "boost_points",
+      "text": "Earn Boost Points by chatting, generating images, listening to voices, or checking in daily."
+    },
+    {
+      "id": "voice_call_button",
+      "text": "Tap the + button to access voice call and have real-time conversations with your characters."
+    },
+    {
+      "id": "report_issues_screenshot",
+      "text": "When reporting issues, upload a screenshot to help us understand and fix the problem faster."
+    }
+  ]
+}

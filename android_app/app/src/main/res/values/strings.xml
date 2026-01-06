@@ -543,6 +543,11 @@
     <string name="holiday_celebration_secondary_cta">Not now</string>
     <string name="holiday_celebration_points_added">🥳 100 Boost Points!</string>
 
+    <!-- IntelliMate tips popup -->
+    <string name="intellimate_tip_title">Quick tip</string>
+    <string name="intellimate_tip_got_it">Got it</string>
+    <string name="intellimate_tip_disable">Disable Tips</string>
+
     <!-- Placeholder -->
     <string name="under_development">Under Development</string>
     <string name="boost_leaderboard_tab_top_users">Top Users</string>

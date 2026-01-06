@@ -49,15 +49,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.call.voiceCallModule
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.tips.IntelliMateTipsRepository
+import com.ai.intellimate.tips.IntelliMateTipsSessionGate
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
+import com.ai.intellimate.ui.components.IntelliMateTipDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.BillingErrorHandler
@@ -138,7 +142,7 @@ class MainActivity : BaseActivity() {
                         FirebaseManager.RemoteConfigKeys.HOME_PAGE_DEFAULT_TAB_INDEX
                     )
                     .toInt()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 0 // 默认值：Chat tab
             }
         val defaultTabName =
@@ -331,6 +335,31 @@ class MainActivity : BaseActivity() {
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
         val themeAgents by AgentCacheManager.themeAgentCache.collectAsState()
 
+        // IntelliMate tips 弹窗（每个 session 仅展示一次；session=前台到后台）
+        val context = LocalContext.current
+        var showIntelliMateTipDialog by remember { mutableStateOf(false) }
+        var intelliMateTipText by remember { mutableStateOf<String?>(null) }
+
+        val scope = rememberCoroutineScope()
+
+        fun tryShowRandomIntelliMateTip() {
+            if (!isLoggedIn) return
+            // 检查用户是否禁用了 tips
+            if (IntySetting.isTipsDisabled()) return
+            if (!IntelliMateTipsSessionGate.tryAcquireToShowInCurrentSession()) return
+
+            scope.launch {
+                val tip = IntelliMateTipsRepository.getRandomTipText(context)
+                if (tip.isNullOrBlank()) {
+                    IntelliMateTipsSessionGate.releaseWithoutShowing()
+                    return@launch
+                }
+                intelliMateTipText = tip
+                showIntelliMateTipDialog = true
+                IntelliMateTipsSessionGate.markShownInCurrentSession()
+            }
+        }
+
         // 设计决策：使用 LaunchedEffect(Unit) 处理应用首次启动的情况
         // 原因：确保应用启动时如果用户已登录，弹窗能够显示
         // 注意：LaunchedEffect(Unit) 只在首次组合时执行一次，不会在应用恢复时重复执行
@@ -358,6 +387,25 @@ class MainActivity : BaseActivity() {
                 hasShownInSession = false
             }
             // 场景3：用户已登录且已显示过，或日期已过期，不做任何操作
+        }
+
+        // 用户从未登录 -> 已登录时，尝试展示随机 tips（同一 session 仅一次）
+        LaunchedEffect(isLoggedIn) {
+            if (isLoggedIn) {
+                tryShowRandomIntelliMateTip()
+                return@LaunchedEffect
+            }
+            // 登出时仅隐藏弹窗，不重置 session 门控（同一前台 session 内不应重复弹）
+            showIntelliMateTipDialog = false
+            intelliMateTipText = null
+        }
+
+        // App 从后台回到前台时（Activity resume）尝试展示随机 tips（同一 session 仅一次）
+        LifecycleResumeEffect(isLoggedIn) {
+            if (isLoggedIn) {
+                tryShowRandomIntelliMateTip()
+            }
+            onPauseOrDispose {}
         }
 
         // 在首次显示时执行初始化操作
@@ -407,6 +455,21 @@ class MainActivity : BaseActivity() {
             defaultViewModelProviderFactory,
             navController,
         )
+
+        // 只在用户已登录时显示 tips 弹窗
+        if (showIntelliMateTipDialog && isLoggedIn) {
+            val tip = intelliMateTipText
+            if (!tip.isNullOrBlank()) {
+                IntelliMateTipDialog(
+                    tipText = tip,
+                    onDismiss = { showIntelliMateTipDialog = false },
+                    onDisableTips = {
+                        IntySetting.setTipsDisabled(true)
+                        showIntelliMateTipDialog = false
+                    },
+                )
+            }
+        }
 
         // 只在用户已登录时显示庆祝弹窗
         if (showHolidayCelebrationDialog && isLoggedIn && themeAgents.isNotEmpty()) {
