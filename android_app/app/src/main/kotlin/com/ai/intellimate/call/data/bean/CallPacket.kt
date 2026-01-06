@@ -2,6 +2,7 @@ package com.ai.intellimate.call.data.bean
 
 import ai.sxwl.android.data.http.IntyErrorCode
 import androidx.annotation.Keep
+import androidx.compose.ui.text.toUpperCase
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -27,6 +28,9 @@ data class CallPacket(
 
     val typeEnum: CallType
         get() = runCatching { CallType.valueOf(type.uppercase()) }.getOrDefault(CallType.UNKNOW)
+
+    val statusEnum: CallStatus?
+        get() = runCatching { status?.let { CallStatus.valueOf(it.uppercase()) } }.getOrNull()
 
     @Keep
     @Serializable

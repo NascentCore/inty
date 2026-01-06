@@ -9,20 +9,25 @@ import com.ai.intellimate.audio.PlaybackState
 import com.ai.intellimate.audio.RecordingState
 import com.ai.intellimate.call.data.AICallRepository
 import com.ai.intellimate.call.data.ConnectionState
+import com.ai.intellimate.call.data.bean.CallStatus
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 /** 语音通话状态 */
 data class VoiceCallState(
@@ -76,16 +81,34 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             }
 
         // 监听连接状态变化并同步到uiState
-        repository
-            .getConnectionState()
-            .onEach { connectionState ->
-                _uiState.update { it.copy(connectionState = connectionState) }
+        viewModelScope.launch {
+            repository
+                .getConnectionState()
+                .onEach { connectionState ->
+                    _uiState.update { it.copy(connectionState = connectionState) }
 
-                if (connectionState == ConnectionState.CONNECTING) {
-                    _error.trySend(null)
+                    if (connectionState == ConnectionState.CONNECTING) {
+                        _error.trySend(null)
+                    }
+                }.collectLatest { state ->
+                    if (state == ConnectionState.CONNECTED) {
+                        while (true) {
+                            delay(1.seconds)
+
+                            _uiState.update {
+                                it.copy(
+                                    time = it.time?.run {
+                                        VoiceCallUiState.Time(
+                                            duration = duration + 1,
+                                            remaining = (remaining - 1).coerceAtLeast(0)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
-            }
-            .launchIn(viewModelScope)
+        }
     }
 
     fun startCalling(agentId: String) {
@@ -127,7 +150,17 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         }
 
                         CallType.STATUS -> {
-                            // _uiState.update { it.copy(callState = packet.status) }
+                        }
+
+                        CallType.SESSION_INFO -> {
+                            _uiState.update {
+                                it.copy(
+                                    time = VoiceCallUiState.Time(
+                                        duration = it.time?.duration ?: 0,
+                                        remaining = packet.remainingDuration
+                                    )
+                                )
+                            }
                         }
 
                         else -> {}
