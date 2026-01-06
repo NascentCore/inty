@@ -15,7 +15,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'yarn'
+          # 不使用 cache: 'yarn'，因为 setup-node 的自动缓存只在仓库根目录查找 yarn.lock
+          # 而本项目的 yarn.lock 文件位于子目录（web_app/ 和 evaluation/inty_sdk/）
+          # 因此使用下方的手动缓存配置来处理多个子目录的依赖缓存
       - id: yarn-cache-dir-path
         run: |
           echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
@@ -52,7 +54,7 @@ jobs:
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           source: "intellimate-app-dist.tar.gz,bizops/app-ads.txt,bizops/ads.txt"
           target: "/tmp/"
-      - name: Deploy to ${{ inputs.environment }}
+      - name: Deploy to server
         uses: appleboy/ssh-action@master
         timeout-minutes: 2
         with:
