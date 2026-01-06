@@ -65,7 +65,7 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            ls -laR /tmp/
+            ls -laR /tmp/bizops
       - name: Deploy to server
         uses: appleboy/ssh-action@master
         timeout-minutes: 2
