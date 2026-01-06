@@ -1048,6 +1048,7 @@ def _parse_analytics_date_ranges(
     """解析用户分析的双日期范围参数
 
     返回: (register_start, register_end, activity_start, activity_end)
+    如果注册日期范围未提供，则默认查询全部数据（从 2020-01-01 至今）
     如果活跃日期范围未提供，则默认与注册日期范围相同
     """
     from datetime import datetime, timedelta, timezone
@@ -1066,10 +1067,9 @@ def _parse_analytics_date_ranges(
             tzinfo=timezone.utc
         ) + timedelta(days=1)
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="必须提供 register_start_date/register_end_date 或 register_last_days",
-        )
+        # 当没有提供注册日期范围时，默认查询全部数据
+        reg_start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        reg_end = now
 
     # 解析活跃日期范围（如果提供）
     act_start = None
@@ -1493,10 +1493,9 @@ async def get_users_hitting_limit(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="必须提供 activity_start_date/activity_end_date 或 activity_last_days",
-            )
+            # 当没有提供活跃日期范围时，默认查询全部数据
+            act_start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+            act_end = now
 
         service = UserAnalyticsService(db)
         data = await service.get_users_hitting_chat_limit(act_start, act_end)
@@ -1820,10 +1819,9 @@ async def get_llm_latency_trend(
                 tzinfo=timezone.utc
             ) + timedelta(days=1)
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="请提供 activity_start_date/activity_end_date 或 activity_last_days",
-            )
+            # 当没有提供活跃日期范围时，默认查询全部数据
+            act_start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+            act_end = now
 
         service = UserAnalyticsService(db)
         data = await service.get_llm_latency_trend(act_start, act_end)

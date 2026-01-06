@@ -54,6 +54,9 @@ class LiveSession:
     ai_transcription_updates: int = 0
     last_user_transcription_piece: str = ""
     last_ai_transcription_piece: str = ""
+    # Token 用量统计（由 Gemini Live API 周期性返回）
+    total_token_count: int = 0
+    response_token_details: Dict[str, int] = field(default_factory=dict)
 
 
 class LiveChatService:
@@ -651,6 +654,30 @@ class LiveChatService:
             logger.debug("开始接收 Gemini Live 响应...")
             async for response in gemini_session.receive():
                 logger.debug(f"收到 Gemini 响应: {type(response)}")
+
+                # 处理 Gemini Live API 周期性返回的 token 用量统计
+                if hasattr(response, "usage_metadata") and response.usage_metadata:
+                    usage = response.usage_metadata
+                    if hasattr(usage, "total_token_count") and usage.total_token_count:
+                        session.total_token_count = usage.total_token_count
+                        logger.debug(
+                            f"Token 用量统计 - 总计: {usage.total_token_count} tokens"
+                        )
+                    if (
+                        hasattr(usage, "response_tokens_details")
+                        and usage.response_tokens_details
+                    ):
+                        for detail in usage.response_tokens_details:
+                            if hasattr(detail, "modality") and hasattr(
+                                detail, "token_count"
+                            ):
+                                modality_str = str(detail.modality)
+                                session.response_token_details[modality_str] = (
+                                    detail.token_count
+                                )
+                                logger.debug(
+                                    f"  - {modality_str}: {detail.token_count} tokens"
+                                )
 
                 if (
                     hasattr(response, "session_resumption_update")

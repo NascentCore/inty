@@ -537,6 +537,13 @@ export interface UserAnalyticsStatsResponse {
   // 生图细分统计
   total_image_new_generation: number;
   total_image_fallback_used: number;
+  // 语音通话统计（Live Chat）
+  total_live_chat_users: number;
+  total_live_chat_sessions: number;
+  total_live_chat_duration: number;
+  avg_live_chat_sessions_per_user: number;
+  avg_live_chat_duration_per_user: number;
+  avg_live_chat_duration_per_session: number;
 }
 
 export interface UserDailyMessageItem {

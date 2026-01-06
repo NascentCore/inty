@@ -417,6 +417,58 @@ class UserAnalyticsService:
             activity_end_date,
         )
 
+        # 辅助函数：查询语音通话（Live Chat）统计
+        # 只统计指定注册日期范围内新用户在指定活跃日期范围内的通话数据
+        async def get_live_chat_stats() -> Dict[str, Any]:
+            live_chat_query = text(
+                """
+                SELECT 
+                    COUNT(DISTINCT su.user_id) as user_count,
+                    COUNT(*) as session_count,
+                    COALESCE(
+                        SUM((su.extra_data->>'duration_seconds')::int), 0
+                    ) as total_duration
+                FROM subscription_usage su
+                INNER JOIN users u ON su.user_id = u.id
+                WHERE su.usage_type = 'live_chat'
+                  AND su.usage_date >= :activity_start_date 
+                  AND su.usage_date < :activity_end_date
+                  AND u.created_at >= :register_start_date
+                  AND u.created_at < :register_end_date
+                  AND u.deleted_at IS NULL
+            """
+            )
+            live_chat_result = await self.db.execute(
+                live_chat_query,
+                {
+                    "activity_start_date": img_start,
+                    "activity_end_date": img_end,
+                    "register_start_date": register_start_date,
+                    "register_end_date": register_end_date,
+                },
+            )
+            live_chat_row = live_chat_result.fetchone()
+            user_count = live_chat_row[0] if live_chat_row else 0
+            session_count = live_chat_row[1] if live_chat_row else 0
+            total_duration = live_chat_row[2] if live_chat_row else 0
+            avg_sessions_per_user = (
+                session_count / user_count if user_count > 0 else 0.0
+            )
+            avg_duration_per_user = (
+                total_duration / user_count if user_count > 0 else 0.0
+            )
+            avg_duration_per_session = (
+                total_duration / session_count if session_count > 0 else 0.0
+            )
+            return {
+                "total_live_chat_users": user_count,
+                "total_live_chat_sessions": session_count,
+                "total_live_chat_duration": total_duration,
+                "avg_live_chat_sessions_per_user": round(avg_sessions_per_user, 2),
+                "avg_live_chat_duration_per_user": round(avg_duration_per_user, 2),
+                "avg_live_chat_duration_per_session": round(avg_duration_per_session, 2),
+            }
+
         # 辅助函数：查询生图统计
         async def get_image_gen_stats() -> Dict[str, Any]:
             image_gen_query = text(
@@ -464,6 +516,7 @@ class UserAnalyticsService:
         if not sessions_detail:
             new_user_open_rate = 0.0
             img_stats = await get_image_gen_stats()
+            live_chat_stats = await get_live_chat_stats()
             return {
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
@@ -476,6 +529,7 @@ class UserAnalyticsService:
                 "avg_rounds_per_session": 0.0,
                 "new_user_open_rate": round(new_user_open_rate, 2),
                 **img_stats,
+                **live_chat_stats,
             }
 
         # 3. 获取有用户消息的会话（排除仅浏览开场白的）
@@ -489,6 +543,7 @@ class UserAnalyticsService:
         if not active_sessions:
             new_user_open_rate = 0.0
             img_stats = await get_image_gen_stats()
+            live_chat_stats = await get_live_chat_stats()
             return {
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
@@ -501,6 +556,7 @@ class UserAnalyticsService:
                 "avg_rounds_per_session": 0.0,
                 "new_user_open_rate": round(new_user_open_rate, 2),
                 **img_stats,
+                **live_chat_stats,
             }
 
         # 4. 计算统计指标
@@ -537,6 +593,9 @@ class UserAnalyticsService:
         # 6. 查询生图统计
         img_stats = await get_image_gen_stats()
 
+        # 7. 查询语音通话统计
+        live_chat_stats = await get_live_chat_stats()
+
         return {
             "total_new_users": total_new_users,
             "total_chat_initiators": total_active_users,
@@ -549,6 +608,7 @@ class UserAnalyticsService:
             "avg_rounds_per_session": round(avg_rounds_per_session, 2),
             "new_user_open_rate": round(new_user_open_rate, 2),
             **img_stats,
+            **live_chat_stats,
         }
 
     async def get_chat_messages(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
