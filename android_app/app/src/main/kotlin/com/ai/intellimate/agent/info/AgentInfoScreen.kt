@@ -6,7 +6,6 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
-import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -817,30 +816,6 @@ private fun AgentInfoDebugSection(agent: AgentInfo) {
             AgentSpacerLine()
             val debugItems =
                 remember(agent) {
-                    // 格式化 createdAt：同时显示原始数据和人类可读字符串
-                    val createdAtDisplay = if (agent.createdAt.isNotBlank()) {
-                        val timestamp = TimeUtils.parseIsoTimeToTimestamp(agent.createdAt)
-                            ?: run {
-                                // 如果不是 ISO 8601 格式，尝试作为 Unix 时间戳（秒）解析
-                                try {
-                                    val seconds = agent.createdAt.toLongOrNull()
-                                    if (seconds != null && seconds > 0) {
-                                        seconds * 1000L
-                                    } else {
-                                        null
-                                    }
-                                } catch (_: Exception) {
-                                    null
-                                }
-                            }
-                        val humanReadable = timestamp?.let {
-                            TimeUtils.formatTimestampToString(it, "yyyy-MM-dd HH:mm:ss")
-                        } ?: "无法解析"
-                        "${agent.createdAt}\n($humanReadable)"
-                    } else {
-                        agent.createdAt
-                    }
-                    
                     listOf(
                         "id" to agent.id,
                         "name" to agent.name,
