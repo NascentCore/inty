@@ -5,6 +5,9 @@ on:
 
 jobs:
   build-and-deploy:
+    env:
+      WEB_APP_DEPLOY_DIR: /var/www/intellimate.app
+      WEB_APP_URL: https://intellimate.app
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,6 +57,15 @@ jobs:
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           source: "intellimate-app-dist.tar.gz,bizops/app-ads.txt,bizops/ads.txt"
           target: "/tmp/"
+      - name: Check uploaded files
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 2
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            ls -la /tmp/
       - name: Deploy to server
         uses: appleboy/ssh-action@master
         timeout-minutes: 2
@@ -62,19 +74,19 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            sudo rm -rf /var/www/dev.intellimate.app
-            sudo mkdir -p /var/www/dev.intellimate.app
-            sudo tar xzf /tmp/intellimate-app-dist.tar.gz -C /var/www/dev.intellimate.app
-            sudo mv /tmp/app-ads.txt /var/www/dev.intellimate.app/app-ads.txt
-            sudo mv /tmp/ads.txt /var/www/dev.intellimate.app/ads.txt
-            sudo chown -R www-data:www-data /var/www/dev.intellimate.app
-            sudo chmod -R 755 /var/www/dev.intellimate.app
+            sudo rm -rf ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo mkdir -p ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo tar xzf /tmp/intellimate-app-dist.tar.gz -C ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo mv /tmp/app-ads.txt ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo mv /tmp/ads.txt ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo chown -R www-data:www-data ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo chmod -R 755 ${{ env.WEB_APP_DEPLOY_DIR }}
             sudo rm -f /tmp/intellimate-app-dist.tar.gz
       - name: Sanity check
         run: |
-          curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.INTELLI_MATE_WEB_APP_URL }}
+          curl --verbose --fail --retry 5 --retry-delay 5 ${{ env.WEB_APP_URL }}
       - name: Write summary
         run: |
           echo "## Build and deploy web app" >> $GITHUB_STEP_SUMMARY
           echo "GitHub ref: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "Deployed to ${{ vars.INTELLI_MATE_WEB_APP_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to ${{ env.WEB_APP_URL }}" >> $GITHUB_STEP_SUMMARY
