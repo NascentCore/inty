@@ -2,7 +2,6 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
-import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
@@ -15,10 +14,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -27,9 +27,14 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,12 +52,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -61,9 +68,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.xb.navigation.Routes
@@ -161,7 +166,8 @@ fun ChatMorePanel(
                 val imeHeight = WindowInsets.ime.getBottom(density)
                 val keyboardHeightDp = with(density) { imeHeight.toDp() }
 
-                FlowRow(
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
                     modifier =
                         Modifier.fillMaxWidth()
                             .background(color = HeartColor.primaryColor)
@@ -178,89 +184,155 @@ fun ChatMorePanel(
                             .onGloballyPositioned { coords ->
                                 val h = with(density) { coords.size.height.toDp() }
                                 onHeightChange(h)
-                            }
-                            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                    maxItemsInEachRow = 4,
+                            },
+                    contentPadding = PaddingValues(vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    MorePanelItem(
-                        icon = R.drawable.icon_reply_chat,
-                        text = stringResource(R.string.reply_style),
-                        isVip = true,
-                        onClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_MORE_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "reply_style",
-                                        "agent_id" to (agentInfo?.id ?: ""),
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
-                                if (vipStatus.isSubscribed) {
-                                    showSheet = true
-                                } else {
-                                    // 去会员中心
-                                    navController.navigate(Routes.Me.VipCenter)
-                                    onDismiss() // 要关闭掉panel
+                    item("Chat Style") {
+                        MorePanelItem(
+                            isVip = true,
+                            onClick = {
+                                // 检查是否已登录
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "reply_style",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
+                                    if (vipStatus.isSubscribed) {
+                                        showSheet = true
+                                    } else {
+                                        // 去会员中心
+                                        navController.navigate(Routes.Me.VipCenter)
+                                        onDismiss() // 要关闭掉panel
+                                    }
                                 }
-                            }
-                        },
-                    )
-                    MorePanelItem(
-                        icon = R.drawable.icon_reset_chat,
-                        text = stringResource(R.string.str_reset),
-                        onClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin()) {
-                                // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
-                                // 相当于重新开始和agent初次聊天
-                                showResetConfirmDialog = true
-                            }
-                        },
-                    )
-                    MorePanelItem(
-                        icon = R.drawable.icon_feedback,
-                        text = stringResource(R.string.str_feedback),
-                        onClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_MORE_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "feedback",
-                                        "agent_id" to (agentInfo?.id ?: ""),
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
+                            },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_reply_chat),
+                                    contentDescription = "chatStyle",
+                                    modifier = Modifier.fillMaxSize(),
                                 )
-                                ReportActivity.launchFeedback(context)
-                            }
-                        },
-                    )
-                    MorePanelItem(
-                        icon = R.drawable.icon_report,
-                        text = stringResource(R.string.str_report),
-                        onClick = {
-                            // 检查是否已登录
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_MORE_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "report",
-                                        "agent_id" to (agentInfo?.id ?: ""),
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
-                            }
-                        },
-                    )
+                            },
+                            text = { Text(stringResource(R.string.reply_style)) },
+                        )
+                    }
 
-                    if (BuildConfig.BUILD_TYPE != NetworkConfig.BuildType.RELEASE.value) {
-                        MorePanelItem(icon = R.drawable.icon_call, text = "Call", onClick = onCall)
+                    item("Reset") {
+                        MorePanelItem(
+                            onClick = {
+                                // 检查是否已登录
+                                if (IntySetting.isLogin()) {
+                                    // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
+                                    // 相当于重新开始和agent初次聊天
+                                    showResetConfirmDialog = true
+                                }
+                            },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_reset_chat),
+                                    contentDescription = "reset",
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            },
+                            text = { Text(stringResource(R.string.str_reset)) },
+                        )
+                    }
+
+                    item("Feedback") {
+                        MorePanelItem(
+                            onClick = {
+                                // 检查是否已登录
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "feedback",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    navController.navigate(Routes.Me.reportPage(true))
+                                    //
+                                    // ReportActivity.launchFeedback(context)
+                                }
+                            },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_feedback),
+                                    contentDescription = "feedback",
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            },
+                            text = { Text(stringResource(R.string.str_feedback)) },
+                        )
+                    }
+
+                    item("Report") {
+                        MorePanelItem(
+                            onClick = {
+                                // 检查是否已登录
+                                if (
+                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                ) {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "report",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    navController.navigate(
+                                        Routes.Me.reportPage(false, "AGENT", agentInfo?.id ?: "")
+                                    )
+                                    //
+                                    // ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
+                                }
+                            },
+                            icon = {
+                                Image(
+                                    painter = painterResource(R.drawable.icon_report),
+                                    contentDescription = "report",
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            },
+                            text = { Text(stringResource(R.string.str_report)) },
+                        )
+                    }
+
+                    item("Call") {
+                        MorePanelItem(
+                            onClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_MORE_CALL,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "call",
+                                        "agent_id" to (agentInfo?.id ?: ""),
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                onCall()
+                            },
+                            icon = {
+                                Image(
+                                    imageVector = Icons.Rounded.Call,
+                                    contentDescription = "call",
+                                    colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            },
+                            text = { Text(stringResource(R.string.call)) },
+                        )
                     }
                 }
             }
@@ -302,6 +374,40 @@ fun ChatMorePanel(
     }
 }
 
+@Composable
+private fun MorePanelItem(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isVip: Boolean = false,
+    icon: @Composable () -> Unit,
+    text: @Composable () -> Unit,
+) {
+    Column(
+        modifier = modifier.noRippleClickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier =
+                Modifier.size(64.dp)
+                    .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
+        ) {
+            Box(modifier = Modifier.align(Alignment.Center).size(36.dp)) { icon() }
+
+            if (isVip) {
+                Image(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    painter = painterResource(R.drawable.ic_vip_badge),
+                    contentDescription = null,
+                )
+            }
+        }
+        ProvideTextStyle(
+            TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White),
+            text,
+        )
+    }
+}
+
 /** 更多面板项目组件 */
 @Composable
 private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onClick: () -> Unit) {
@@ -329,42 +435,6 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
         }
         Spacer(Modifier.height(6.dp))
         Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Normal, color = Color.White)
-    }
-}
-
-@Preview
-@Composable
-private fun PreviewPanelItem() {
-    MorePanelItem(icon = R.drawable.icon_reply_chat, "Chat Style", false, {})
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun ChatMorePanelPreview() {
-    IntelliMateTheme {
-        // 简化版Preview，仅用于预览MorePanelItem的布局效果
-        Column(
-            modifier =
-                Modifier.fillMaxWidth().background(color = HeartColor.primaryColor).padding(16.dp)
-        ) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-                maxItemsInEachRow = 4,
-            ) {
-                MorePanelItem(
-                    icon = R.drawable.icon_reply_chat,
-                    text = "回复风格",
-                    isVip = true,
-                    onClick = {},
-                )
-                MorePanelItem(icon = R.drawable.icon_reset_chat, text = "重置", onClick = {})
-                MorePanelItem(icon = R.drawable.icon_feedback, text = "反馈", onClick = {})
-                MorePanelItem(icon = R.drawable.icon_report, text = "举报", onClick = {})
-                MorePanelItem(icon = R.drawable.icon_report, text = "第5个", onClick = {})
-            }
-        }
     }
 }
 

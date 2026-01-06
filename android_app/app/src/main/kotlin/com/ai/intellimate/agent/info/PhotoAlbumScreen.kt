@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.R
@@ -56,6 +57,7 @@ import com.ai.intellimate.utils.ChatBackgroundUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PhotoAlbumScreen(
+    navController: NavController,
     agent: AgentInfo,
     galleryItems: List<AgentImageGalleryItem>,
     onBack: () -> Unit,
@@ -159,6 +161,7 @@ internal fun PhotoAlbumScreen(
     }
 
     AgentGalleryImagePreviewDialog(
+        navController,
         previewImageUrl = previewImage,
         agentId = agent.id,
         onDismiss = { previewImage = null },

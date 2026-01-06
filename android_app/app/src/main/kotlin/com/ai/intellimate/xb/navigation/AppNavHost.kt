@@ -52,6 +52,13 @@ fun AppNavHost(
         mainViewModel.updatePushAgentId("")
         navController.navigate(Routes.Chat.chatPage(pushAgentId, false))
     }
+
+    val needsRegInfo by mainViewModel.needsRegInfo.collectAsState()
+    LaunchedEffect(needsRegInfo) {
+        if (!needsRegInfo) return@LaunchedEffect
+        mainViewModel.updateNeedsRegInfo(false)
+        navController.navigate(Routes.Home.RegInfoPage)
+    }
     val agentInfoViewModel: AgentInfoViewModel = viewModel()
 
     // 配置导航宿主，定义所有可导航的页面和转场动画

@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import com.ai.intellimate.ViewModelEvent
 
 /** 注册信息完善页面，性别和年龄 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Home.RegInfo 替代")
 class RegInfoActivity : BaseActivity() {
 
     companion object {

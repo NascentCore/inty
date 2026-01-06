@@ -1187,9 +1187,10 @@ class SubscriptionService:
         """
         检查用户 Live Chat 用量限制
 
-        检查两项限制：
+        检查三项限制：
         1. 累计可聊天的 agent 数量
-        2. 24 小时内与目标 agent 的通话总时长
+        2. 24 小时内与目标 agent 的通话时长
+        3. 24 小时内跨所有 agent 的总通话时长
 
         Args:
             db: 数据库会话
@@ -1204,29 +1205,21 @@ class SubscriptionService:
         try:
             gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
 
-            # Superuser 和 TEST 环境：不限制，但仍计算用量用于前端显示
-            is_unlimited = False
-            if (
-                global_config_loaded_from_config_yaml.app.environment
-                == Environment.TEST
-                and not global_config_loaded_from_config_yaml.app.debug
-            ):
-                logger.debug("TEST 环境下放宽 Live Chat 限额: user_id=%s", user.id)
-                is_unlimited = True
-
-            if is_superuser(user):
-                logger.debug(f"Superuser {user.id} has unlimited live chat")
-                is_unlimited = True
+            is_superuser_flag = is_superuser(user)
+            if is_superuser_flag:
+                logger.debug(f"Superuser {user.id}: 不限制 24h 总时长")
 
             subscription_status = await self.get_user_subscription_status(db, user.id)
-            is_subscribed = subscription_status.is_subscribed or is_unlimited
+            is_subscribed = subscription_status.is_subscribed or is_superuser_flag
 
             if is_subscribed:
                 agent_limit = gemini_live_config.sub_user_agent_limit
-                duration_limit = gemini_live_config.sub_user_duration_per_agent_24h
+                max_session_duration = gemini_live_config.sub_user_max_session_duration
+                total_duration_limit = gemini_live_config.sub_user_total_duration_24h
             else:
                 agent_limit = gemini_live_config.free_user_agent_limit
-                duration_limit = gemini_live_config.free_user_duration_per_agent_24h
+                max_session_duration = gemini_live_config.free_user_max_session_duration
+                total_duration_limit = gemini_live_config.free_user_total_duration_24h
 
             # 使用 ->> 操作符提取 JSON 字段为文本（兼容 JSON 和 JSONB 类型）
             distinct_agents_result = await db.execute(
@@ -1246,8 +1239,12 @@ class SubscriptionService:
 
             is_new_agent = agent_id not in chatted_agents
 
-            # Superuser/TEST 环境不检查 agent 数量限制
-            if not is_unlimited and is_new_agent and chatted_agent_count >= agent_limit:
+            # Superuser 不检查 agent 数量限制
+            if (
+                not is_superuser_flag
+                and is_new_agent
+                and chatted_agent_count >= agent_limit
+            ):
                 logger.info(
                     f"用户 {user.id} Live Chat agent 数量已达上限: "
                     f"{chatted_agent_count}/{agent_limit}"
@@ -1270,8 +1267,8 @@ class SubscriptionService:
             now = datetime.now(timezone.utc)
             hours_24_ago = now - timedelta(hours=24)
 
-            # 使用 ->> 操作符提取 JSON 字段为文本（兼容 JSON 和 JSONB 类型）
-            duration_result = await db.execute(
+            # 检查 24h 内跨所有 agent 的总时长
+            total_duration_result = await db.execute(
                 select(
                     func.coalesce(
                         func.sum(
@@ -1288,18 +1285,17 @@ class SubscriptionService:
                     and_(
                         SubscriptionUsage.user_id == user.id,
                         SubscriptionUsage.usage_type == "live_chat",
-                        SubscriptionUsage.extra_data.op("->>")("agent_id") == agent_id,
                         SubscriptionUsage.usage_date >= hours_24_ago,
                     )
                 )
             )
-            used_duration = duration_result.scalar() or 0
+            total_used_duration = total_duration_result.scalar() or 0
 
-            # Superuser/TEST 环境不检查时长限制，但仍计算剩余时间用于显示
-            if not is_unlimited and used_duration >= duration_limit:
+            # Superuser 不检查 24h 总时长限制
+            if not is_superuser_flag and total_used_duration >= total_duration_limit:
                 logger.info(
-                    f"用户 {user.id} 与 agent {agent_id} 的 24h Live Chat "
-                    f"时长已达上限: {used_duration}/{duration_limit}s"
+                    f"用户 {user.id} 的 24h Live Chat 总时长已达上限: "
+                    f"{total_used_duration}/{total_duration_limit}s"
                 )
                 if subscription_status.is_subscribed:
                     error_info = BusinessErrorCode.LIVE_CHAT_DURATION_LIMIT_REACHED
@@ -1309,20 +1305,25 @@ class SubscriptionService:
                     False,
                     error_info["error_code"],
                     {
-                        "used_duration": used_duration,
-                        "limit": duration_limit,
-                        "agent_id": agent_id,
+                        "used_duration": total_used_duration,
+                        "limit": total_duration_limit,
                         "is_subscribed": is_subscribed,
                         "error_info": error_info,
                     },
                 )
 
-            remaining_duration = max(0, duration_limit - used_duration)
+            # Superuser 不限制时长
+            if is_superuser_flag:
+                remaining_duration = 86400  # 24 小时，实际不限制
+            else:
+                remaining_total = max(0, total_duration_limit - total_used_duration)
+                remaining_duration = min(max_session_duration, remaining_total)
             logger.info(
                 f"Live Chat 限制检查 - user_id: {user.id}, agent_id: {agent_id}, "
-                f"used_duration: {used_duration}s, duration_limit: {duration_limit}s, "
+                f"max_session_duration: {max_session_duration}s, "
+                f"total_used: {total_used_duration}s, total_limit: {total_duration_limit}s, "
                 f"remaining: {remaining_duration}s, is_subscribed: {is_subscribed}, "
-                f"is_unlimited: {is_unlimited}"
+                f"is_superuser: {is_superuser_flag}"
             )
             return (
                 True,

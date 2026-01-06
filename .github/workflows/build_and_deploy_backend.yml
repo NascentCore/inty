@@ -54,8 +54,8 @@ jobs:
     permissions:
       # Push to ghcr.io
       packages: write
-      # Checkout repository
-      contents: read
+      # Create tag/release (and checkout repository)
+      contents: write
 
     # 自动运行的情况下，inputs.environment 为空，因此需要额外设置
     environment: ${{ inputs.environment || 'dev' }}
@@ -213,6 +213,36 @@ jobs:
         run: |
           curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.SERVICE_PUBLIC_URL }}
 
+      - name: Create GitHub Release for prod deploy
+        if: ${{ steps.prep.outputs.environment == 'prod' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TAG="${SHORT_SHA}-prod"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub Release $TAG already exists; skipping create."
+            exit 0
+          fi
+
+          NOTES="$(printf '%s\n' \
+            'Prod 部署完成。' \
+            '' \
+            "- Tag: ${TAG}" \
+            "- Commit: ${GITHUB_SHA}" \
+            '- Environment: prod' \
+            '- Backend image digest: ${{ steps.build-docker-image.outputs.digest }}' \
+            '- Push worker image digest: ${{ steps.build-push-worker-image.outputs.digest }}' \
+            '- Service URL: ${{ vars.SERVICE_PUBLIC_URL }}' \
+            '- Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}' \
+          )"
+
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --notes "$NOTES"
+
       - name: Write summary
         run: |
           echo "## Build and deploy"
@@ -220,3 +250,6 @@ jobs:
           echo "Deployed to ${{ steps.prep.outputs.environment }} for ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
           echo "Backend image: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "Push worker image: ${{ env.INTY_PUSH_WORKER_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.prep.outputs.environment }}" = "prod" ]; then
+            echo "Release tag: ${GITHUB_SHA::7}-prod" >> $GITHUB_STEP_SUMMARY
+          fi

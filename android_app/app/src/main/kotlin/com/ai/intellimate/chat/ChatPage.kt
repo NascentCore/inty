@@ -575,6 +575,7 @@ internal fun ChatPage(
                                                             !item.isOpening()
 
                                                     ChatItem(
+                                                        navController,
                                                         item,
                                                         isCurrentPage = isCurrentPage,
                                                         chatViewModel = chatViewModel,
@@ -648,6 +649,7 @@ internal fun ChatPage(
 
                                         Spacer(Modifier.height(16.dp))
                                         ChatItem(
+                                            navController,
                                             openingMessage,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
@@ -931,7 +933,10 @@ internal fun ChatPage(
                     }
                 }
             },
-            onCall = onCall,
+            onCall = {
+                showMorePanel = false
+                onCall()
+            },
             windowInsets = if (showBackButton) WindowInsets.navigationBars else WindowInsets(),
         )
 

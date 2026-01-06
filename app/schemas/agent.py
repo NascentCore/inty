@@ -578,6 +578,14 @@ class TextToImageRequest(BaseModel):
         le=4,
         description="Number of images to generate",
     )
+    model: Optional[str] = Field(
+        None,
+        description=(
+            "Model to use for image generation. "
+            "If not specified, auto-selects based on subscription status. "
+            "Supports: google/imagen-*, fal-ai/flux-*, etc."
+        ),
+    )
     request_id: Optional[str] = None
 
     class Config:

@@ -90,13 +90,13 @@ class AgentInfoActivity : BaseActivity() {
             ) { backStackEntry ->
                 val currentAgentId = backStackEntry.arguments?.getString("agentId") ?: ""
                 agentInfo.value?.let { agent ->
-                    if (agent.id == currentAgentId) {
-                        PhotoAlbumScreen(
-                            agent = agent,
-                            galleryItems = galleryImages.value,
-                            onBack = { navController.popBackStack() },
-                        )
-                    }
+                    //                    if (agent.id == currentAgentId) {
+                    //                        PhotoAlbumScreen(
+                    //                            agent = agent,
+                    //                            galleryItems = galleryImages.value,
+                    //                            onBack = { navController.popBackStack() },
+                    //                        )
+                    //                    }
                 }
             }
         }

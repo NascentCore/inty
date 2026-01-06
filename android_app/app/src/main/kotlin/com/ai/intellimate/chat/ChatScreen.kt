@@ -13,10 +13,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.components.AgentBackground
+import com.ai.intellimate.xb.navigation.Routes
 
 /**
  * 聊天页面组件（通过导航系统显示）
@@ -86,7 +86,8 @@ internal fun ChatScreen(
                 onCancel = { chatViewModel.hideFeedbackRequestDialog() },
                 onSendSuggestions = {
                     chatViewModel.hideFeedbackRequestDialog()
-                    ReportActivity.launchFeedback(context)
+                    navController.navigate(Routes.Me.reportPage(true))
+                    //                    ReportActivity.launchFeedback(context)
                 },
             )
         }

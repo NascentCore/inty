@@ -14,6 +14,7 @@ import com.ai.intellimate.ViewModelEvent
 import kotlinx.coroutines.launch
 
 /** 举报页面 */
+@Deprecated("⚠️此Activity 跳转方式已废弃，由Routes.Me.reportPage() 替代")
 class ReportActivity : BaseActivity() {
 
     companion object {

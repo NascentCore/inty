@@ -2,8 +2,11 @@ package com.ai.intellimate.xb.navigation
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.ai.intellimate.MainViewModel
+import com.ai.intellimate.agent.report.ReportPage
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileScreen
 import com.ai.intellimate.settings.SettingScreen
@@ -31,4 +34,20 @@ fun NavGraphBuilder.meGraph(
     composable(Routes.Me.ModifyProfile) { ModifyProfileScreen(navController) }
 
     composable(Routes.Me.SubsManagement) { SubsManagementScreen(navController) }
+
+    // 定义举报相关页面
+    composable(
+        route = Routes.Me.ReportPage,
+        arguments =
+            listOf(
+                navArgument("isFeedback") { type = NavType.BoolType },
+                navArgument("targetType") { type = NavType.StringType },
+                navArgument("targetId") { type = NavType.StringType },
+            ),
+    ) { backStackEntry ->
+        val isFeedback = backStackEntry.arguments?.getBoolean("isFeedback")
+        val targetType = backStackEntry.arguments?.getString("showBoost")
+        val targetId = backStackEntry.arguments?.getString("targetId")
+        ReportPage(navController, isFeedback ?: false, targetType ?: "", targetId ?: "USER")
+    }
 }

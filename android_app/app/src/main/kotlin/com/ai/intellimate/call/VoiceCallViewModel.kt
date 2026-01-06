@@ -12,12 +12,12 @@ import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -39,7 +39,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     // UI状态
     private val _uiState = MutableStateFlow(VoiceCallUiState())
     val uiState = _uiState.asStateFlow()
-    private val _error = Channel<IntyErrorCode?>()
+    private val _error = Channel<Pair<IntyErrorCode, String>?>()
     val error = _error.receiveAsFlow()
 
     // 接收音频数据，ui只管接收到音频数据后播放
@@ -102,7 +102,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                     _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
                 }
                 .collect { packet ->
-                    when (packet.type) {
+                    when (packet.typeEnum) {
                         CallType.AUDIO_RESPONSE -> {
                             // 将packet.data从base64转化为音频数据并通过_audioResponseChannel发送
                             try {
@@ -121,11 +121,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
-                            packet.errorCode?.let { _error.trySend(it) }
+                            packet.errorEnum?.let {
+                                _error.trySend(it to packet.errorCode.orEmpty())
+                            }
                         }
 
                         CallType.STATUS -> {
-                            _uiState.update { it.copy(callState = packet.status) }
+                            // _uiState.update { it.copy(callState = packet.status) }
                         }
 
                         else -> {}
@@ -162,7 +164,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     }
 
     private fun stopCalling() {
-        viewModelScope.launch(Dispatchers.IO) { repository.closeCall() }
+        CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) { repository.closeCall() }
     }
 
     fun setMuted(isMuted: Boolean) {

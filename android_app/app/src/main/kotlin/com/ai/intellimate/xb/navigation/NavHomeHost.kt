@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import com.ai.intellimate.agent.info.AgentInfoViewModel
 import com.ai.intellimate.agent.info.AiAgentInfoScreen
 import com.ai.intellimate.agent.info.PhotoAlbumScreen
+import com.ai.intellimate.login.RegInfoPage
 import com.ai.intellimate.xb.helper.AgentStore
 
 fun NavGraphBuilder.homeGraph(
@@ -56,6 +57,7 @@ fun NavGraphBuilder.homeGraph(
         if (agentInfo != null) {
             val galleryImages = agentInfoViewModel.chatImageGallery.collectAsState()
             PhotoAlbumScreen(
+                navController,
                 agent = agentInfo,
                 galleryItems = galleryImages.value,
                 onBack = { navController.popBackStack() },
@@ -64,4 +66,7 @@ fun NavGraphBuilder.homeGraph(
             Box {}
         }
     }
+
+    /** 首次登录时完善个人信息页面 */
+    composable(Routes.Home.RegInfoPage) { RegInfoPage(navController) }
 }

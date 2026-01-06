@@ -71,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -445,6 +446,7 @@ internal fun AiAgentInfoScreen(
                         if (galleryItems.isNotEmpty()) {
                             Spacer(Modifier.height(16.dp))
                             PhotoAlbumPreviewSection(
+                                navController,
                                 modifier =
                                     Modifier.padding(
                                         horizontal = UiConfigs.Padding.ScreenHorizontal
@@ -529,6 +531,7 @@ internal fun AiAgentInfoScreen(
 /** 角色主页中生成图片的分区；用于展示聊天过程中产生图片的缩略图，并且可以点击进入详情页面 查看所有图片，位于 PhotoAlbumScreen.kt */
 @Composable
 private fun PhotoAlbumPreviewSection(
+    navController: NavController,
     modifier: Modifier = Modifier,
     images: List<AgentImageGalleryItem>,
     agentId: String,
@@ -588,6 +591,7 @@ private fun PhotoAlbumPreviewSection(
     }
 
     AgentGalleryImagePreviewDialog(
+        navController,
         previewImageUrl = previewImage,
         agentId = agentId,
         onDismiss = { previewImage = null },

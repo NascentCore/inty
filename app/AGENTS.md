@@ -3,6 +3,10 @@
 - 本文件覆盖并补充仓库根 `AGENTS.md`，仅适用于 `app/`
 - 不要编辑 `stainless.yml` `openapi.json` 这两个自动生成的配置文件
 
+## 超级用户权限
+
+- 超级用户跳过所有订阅检查，使用 is_superuser（位于 app/core/user_privilege/superuser_check.py）
+
 ## 范围与目标
 - 负责 FastAPI HTTP 服务与业务逻辑。
 - 变更必须做到可测试、可回滚、可观测。

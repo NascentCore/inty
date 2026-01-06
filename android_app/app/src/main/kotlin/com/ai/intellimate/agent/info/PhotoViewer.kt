@@ -5,10 +5,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.NavController
 import com.ai.intellimate.R
-import com.ai.intellimate.agent.report.ReportActivity
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.utils.ChatBackgroundUtils
+import com.ai.intellimate.xb.navigation.Routes
 
 /**
  * 角色相册图片全屏预览对话框
@@ -22,6 +23,7 @@ import com.ai.intellimate.utils.ChatBackgroundUtils
  */
 @Composable
 fun AgentGalleryImagePreviewDialog(
+    navController: NavController,
     previewImageUrl: String?,
     agentId: String,
     onDismiss: () -> Unit,
@@ -53,7 +55,9 @@ fun AgentGalleryImagePreviewDialog(
                 actionLabel = stringResource(R.string.agent_gallery_set_as_background),
                 onReport = {
                     if (agentId.isNotBlank()) {
-                        ReportActivity.launch(context, targetType = "AGENT", targetId = agentId)
+                        navController.navigate(Routes.Me.reportPage(false, "AGENT", agentId))
+                        //                        ReportActivity.launch(context, targetType =
+                        // "AGENT", targetId = agentId)
                     }
                 },
             )

@@ -8,11 +8,11 @@ import kotlinx.serialization.Serializable
 @Keep
 @Serializable
 data class CallPacket(
-    val type: CallType,
+    val type: String,
     val data: String = "",
-    val status: CallStatus? = null,
+    val status: String? = null,
     val message: String? = null,
-    @SerialName("error_code") val errorCode: IntyErrorCode? = null,
+    @SerialName("error_code") val errorCode: String? = null,
     @SerialName("sample_rate") val sampleRate: Int = 0,
     val text: String = "",
     @SerialName("is_final") val isFinal: Boolean = false,
@@ -20,6 +20,14 @@ data class CallPacket(
     @SerialName("agent_limit") val agentLimit: Int = 0,
     @SerialName("agent_count") val agentCount: Int = 0,
 ) {
+    val errorEnum: IntyErrorCode?
+        get() =
+            runCatching { errorCode?.let { IntyErrorCode.valueOf(it) } ?: IntyErrorCode.UNKNOWN }
+                .getOrNull()
+
+    val typeEnum: CallType
+        get() = runCatching { CallType.valueOf(type.uppercase()) }.getOrDefault(CallType.UNKNOW)
+
     @Keep
     @Serializable
     data class Reason(
@@ -54,6 +62,7 @@ enum class CallType {
     @SerialName("error") ERROR,
     @SerialName("user_transcript") USER_TRANSCRIPT,
     @SerialName("transcript") TRANSCRIPT,
+    UNKNOW,
 }
 
 /** 当前状态 */
@@ -65,4 +74,5 @@ enum class CallStatus {
     @SerialName("listening") LISTENING,
     @SerialName("error") ERROR,
     @SerialName("user_transcript") USER_TRANSCRIPT,
+    @SerialName("disconnected") DISCONNECTED,
 }

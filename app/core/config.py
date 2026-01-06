@@ -318,6 +318,13 @@ class PushNotificationConfig:
 
 
 @dataclass
+class FalConfig:
+    """fal.ai 生图服务配置"""
+
+    api_key: str = ""  # fal.ai API key
+
+
+@dataclass
 class GeminiLiveConfig:
     """Gemini Live API 实时语音通话配置
     使用 Vertex AI 模式，复用 app.gcp_service_account_key 进行认证
@@ -337,10 +344,12 @@ class GeminiLiveConfig:
     target_tokens: int = 512  # 压缩后目标 token 数
     save_voice_history: bool = True  # 是否将语音对话保存到聊天历史
     # Live Chat 用量限制
-    free_user_agent_limit: int = 5  # 免费用户累计可聊天的 agent 数
-    sub_user_agent_limit: int = 20  # 订阅用户累计可聊天的 agent 数
-    free_user_duration_per_agent_24h: int = 60  # 免费用户每 agent 24h 时长（秒）
-    sub_user_duration_per_agent_24h: int = 300  # 订阅用户每 agent 24h 时长（秒）
+    free_user_agent_limit: int = 10000  # 免费用户累计可聊天的 agent 数
+    sub_user_agent_limit: int = 10000  # 订阅用户累计可聊天的 agent 数
+    free_user_max_session_duration: int = 60  # 免费用户单次会话最大时长（秒）
+    sub_user_max_session_duration: int = 120  # 订阅用户单次会话最大时长（秒）
+    free_user_total_duration_24h: int = 300  # 免费用户 24h 总时长限制（秒）
+    sub_user_total_duration_24h: int = 1800  # 订阅用户 24h 总时长限制（秒）
 
 
 @dataclass
@@ -360,6 +369,7 @@ class Config:
     cloudflare: CloudflareConfig
     sentry: SentryConfig
     push_notification: PushNotificationConfig
+    fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
 
 
@@ -398,6 +408,7 @@ def load_config(path: str) -> Config:
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
         sentry=SentryConfig(**data.get("sentry", {})),
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
+        fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
     )
 
