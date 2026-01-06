@@ -65,7 +65,7 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            ls -la /tmp/
+            ls -laR /tmp/
       - name: Deploy to server
         uses: appleboy/ssh-action@master
         timeout-minutes: 2
@@ -77,8 +77,8 @@ jobs:
             sudo rm -rf ${{ env.WEB_APP_DEPLOY_DIR }}
             sudo mkdir -p ${{ env.WEB_APP_DEPLOY_DIR }}
             sudo tar xzf /tmp/intellimate-app-dist.tar.gz -C ${{ env.WEB_APP_DEPLOY_DIR }}
-            sudo mv /tmp/app-ads.txt ${{ env.WEB_APP_DEPLOY_DIR }}
-            sudo mv /tmp/ads.txt ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo mv /tmp/bizops/app-ads.txt ${{ env.WEB_APP_DEPLOY_DIR }}
+            sudo mv /tmp/bizops/ads.txt ${{ env.WEB_APP_DEPLOY_DIR }}
             sudo chown -R www-data:www-data ${{ env.WEB_APP_DEPLOY_DIR }}
             sudo chmod -R 755 ${{ env.WEB_APP_DEPLOY_DIR }}
             sudo rm -f /tmp/intellimate-app-dist.tar.gz
