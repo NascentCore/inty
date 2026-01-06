@@ -9,11 +9,6 @@ SUPER_USER_EMAILS = [
     # "justicezyx@gmail.com",
     # "zhiwei9001@gmail.com",
     # "xheuyyuki@gmail.com",
-    # 曾被用于 Google Play 审查员登录账户，已被用户名密码取代 test.intellimate@gmail.com
-    # 用户名密码登录信息是后台直接创建，有超级用户字段为真标记，因此不需要在此处标记。
-    # 保留以被不时之需。
-    # TODO：2026 年 1 月删除。
-    "test.heartmate@gmail.com",
     # 公司公共 IT Google Account；亚雄使用这个账户进行测试。
     "it@sxwl.ai",
     # Charles 个人 Google 账户，因测试导致被 Google 封禁，加入列表方便测试
