@@ -1337,6 +1337,7 @@ async def generate_chat_image(
     user_id: str,
     message_id: int,
     history_count: Optional[int] = None,
+    model: Optional[str] = None,
 ) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
     """
     基于聊天上下文生成图片（公共函数）
@@ -1345,9 +1346,10 @@ async def generate_chat_image(
     1. 验证Agent是否存在
     2. 获取或创建聊天会话
     3. 检查图片生成限额
-    4. 调用图片生成服务
-    5. 记录用量
-    6. 返回图片信息
+    4. 根据用户订阅状态选择模型
+    5. 调用图片生成服务
+    6. 记录用量
+    7. 返回图片信息
 
     Args:
         db: 数据库会话
@@ -1355,6 +1357,7 @@ async def generate_chat_image(
         user_id: 用户ID
         message_id: 要生成图片的消息ID
         history_count: 使用的历史消息数量
+        model: 可选，指定生图模型（"gemini" 或 fal 模型名），订阅用户强制使用 gemini
 
     Returns:
         成功时返回 `ChatImageGenerationResponse`，业务限制错误时返回 `UsageLimitExceeded` 或 `BizError`
@@ -1453,7 +1456,32 @@ async def generate_chat_image(
         )
         raise HTTPException(status_code=400, detail="只能对最后一条AI回复生成图片")
 
-    # 调用图片生成服务（使用 Gemini 2.5 Flash Image）
+    # 确定使用的模型：订阅用户强制使用 gemini，免费用户使用配置或请求指定的模型
+    from app.core.model_selection import select_chat_image_model
+
+    subscription_status = await subscription_service.get_user_subscription_status(
+        db, user.id
+    )
+    is_subscribed = subscription_status.is_subscribed
+
+    # 确定最终使用的模型
+    if is_subscribed:
+        # 订阅用户强制使用 gemini
+        selected_model = "gemini"
+    elif model:
+        # 免费用户使用请求指定的模型
+        selected_model = model
+    else:
+        # 免费用户使用配置默认模型
+        selected_model = select_chat_image_model(user=user, is_subscribed=False)
+
+    use_gemini = selected_model == "gemini"
+    logger.info(
+        f"消息生图模型选择 - 订阅用户: {is_subscribed}, 请求模型: {model}, "
+        f"最终模型: {selected_model}"
+    )
+
+    # 调用图片生成服务
     # 重复生成会直接覆盖 meta_data 中的 generated_image，无需删除旧数据
     image_generation_result = None
     failure_reason = None
@@ -1481,17 +1509,42 @@ async def generate_chat_image(
     except Exception as e:
         logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
 
+    import time
+
+    generation_start_time = time.time()
     try:
-        image_generation_result = (
-            await image_generation_service.generate_chat_image_with_gemini(
-                db=db,
-                session_id=session_id,
-                message_id=message_id,  # 传入要更新的消息ID
-                agent_data=agent_data,
-                message_content=message_content,
-                user_id=user_id,  # 传入user_id用于保存到resources表
-                history_count=history_count,
+        if use_gemini:
+            image_generation_result = (
+                await image_generation_service.generate_chat_image_with_gemini(
+                    db=db,
+                    session_id=session_id,
+                    message_id=message_id,
+                    agent_data=agent_data,
+                    message_content=message_content,
+                    user_id=user_id,
+                    history_count=history_count,
+                )
             )
+        else:
+            image_generation_result = (
+                await image_generation_service.generate_chat_image_with_fal(
+                    db=db,
+                    session_id=session_id,
+                    message_id=message_id,
+                    agent_data=agent_data,
+                    message_content=message_content,
+                    model=selected_model,
+                    user_id=user_id,
+                    history_count=history_count,
+                )
+            )
+        # 计算生成耗时
+        generation_time_ms = int((time.time() - generation_start_time) * 1000)
+        # 添加模型信息和耗时到结果
+        image_generation_result["model"] = selected_model
+        image_generation_result["generation_time_ms"] = generation_time_ms
+        logger.info(
+            f"图片生成完成 - 模型: {selected_model}, 耗时: {generation_time_ms}ms"
         )
     except ValueError as e:
         error_message = str(e)
@@ -1554,6 +1607,7 @@ async def generate_chat_image(
                         "failure_type": failure_type,
                         "session_id": session_id,
                         "message_id": message_id,
+                        "model": selected_model,
                     },
                 )
                 logger.debug(f"图片生成失败记录成功: user_id={user_id}")
@@ -1613,6 +1667,7 @@ async def generate_chat_image(
                     "failure_type": failure_type,
                     "session_id": session_id,
                     "message_id": message_id,
+                    "model": selected_model,
                 },
             )
             logger.debug(f"图片生成失败记录成功: user_id={user_id}")
@@ -1635,6 +1690,8 @@ async def generate_chat_image(
                 "success": True,
                 "session_id": session_id,
                 "message_id": message_id,
+                "model": selected_model,
+                "generation_time_ms": image_generation_result.get("generation_time_ms"),
             },
         )
         logger.debug(f"图片生成用量记录成功: user_id={user_id}")

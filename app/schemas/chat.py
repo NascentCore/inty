@@ -380,6 +380,7 @@ class ChatImageGenerationRequest(BaseModel):
     message_id: int  # 必填：要生成图片的消息ID
     history_count: Optional[int] = None
     request_id: Optional[str] = None
+    model: Optional[str] = None  # 可选：指定生图模型（"gemini" 或 fal 模型名），覆盖配置默认值
 
 
 class ChatImageGenerationResponse(BaseModel):
@@ -389,6 +390,8 @@ class ChatImageGenerationResponse(BaseModel):
     image_metadata: dict
     prompt: str
     message_id: int
+    model: Optional[str] = None  # 使用的生图模型
+    generation_time_ms: Optional[int] = None  # 模型调用耗时（毫秒）
 
 
 class MessageVoteRequest(BaseModel):
