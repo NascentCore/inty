@@ -152,6 +152,14 @@ export default defineConfig({
       crossorigin: 'anonymous',
     },
   ],
+  /**
+   * @name <head> 中额外的 link 标签
+   * @description 配置 <head> 中的 link 标签，如 favicon
+   * @doc https://umijs.org/docs/api/config#links
+   */
+  links: [
+    { rel: 'icon', href: join(PUBLIC_PATH, 'favicon.png'), type: 'image/png' },
+  ],
   //================ pro 插件配置 =================
   presets: ['umi-presets-pro'],
   /**

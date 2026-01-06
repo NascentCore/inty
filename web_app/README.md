@@ -46,6 +46,7 @@ yarn
 ### 启动开发服务器
 
 ```bash
+npm install
 npm run dev
 # 或
 npm start
