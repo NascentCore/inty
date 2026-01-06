@@ -340,11 +340,6 @@ class MainActivity : BaseActivity() {
         var showIntelliMateTipDialog by remember { mutableStateOf(false) }
         var intelliMateTipText by remember { mutableStateOf<String?>(null) }
 
-        // 设计决策：在 MainActivity 中创建 NavController 并传递给 AppNavHost
-        // 原因：需要在点击庆祝按钮后导航到随机圣诞角色的聊天页面
-        // 通过传递 NavController，MainActivity 可以控制导航，而 AppNavHost 仍然可以在
-        // 没有外部 NavController 时创建自己的实例（向后兼容）
-        val navController = rememberNavController()
         val scope = rememberCoroutineScope()
 
         fun tryShowRandomIntelliMateTip() {
