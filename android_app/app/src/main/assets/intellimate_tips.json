@@ -17,6 +17,14 @@
     {
       "id": "boost_points",
       "text": "Earn Boost Points by chatting, generating images, listening to voices, or checking in daily."
+    },
+    {
+      "id": "voice_call_button",
+      "text": "Tap the + button to access voice call and have real-time conversations with your characters."
+    },
+    {
+      "id": "report_issues_screenshot",
+      "text": "When reporting issues, upload a screenshot to help us understand and fix the problem faster."
     }
   ]
 }
