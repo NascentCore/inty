@@ -43,11 +43,22 @@ fun NavGraphBuilder.meGraph(
                 navArgument("isFeedback") { type = NavType.BoolType },
                 navArgument("targetType") { type = NavType.StringType },
                 navArgument("targetId") { type = NavType.StringType },
+                navArgument("prefill") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
             ),
     ) { backStackEntry ->
         val isFeedback = backStackEntry.arguments?.getBoolean("isFeedback")
-        val targetType = backStackEntry.arguments?.getString("showBoost")
+        val targetType = backStackEntry.arguments?.getString("targetType")
         val targetId = backStackEntry.arguments?.getString("targetId")
-        ReportPage(navController, isFeedback ?: false, targetType ?: "", targetId ?: "USER")
+        val prefill = backStackEntry.arguments?.getString("prefill")
+        ReportPage(
+            navController = navController,
+            isFeedbackModel = isFeedback ?: false,
+            targetType = targetType ?: "",
+            targetId = targetId ?: "",
+            prefillDescription = prefill ?: "",
+        )
     }
 }

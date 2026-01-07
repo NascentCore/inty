@@ -16,14 +16,23 @@ internal fun ReportPage(
     isFeedbackModel: Boolean,
     targetType: String,
     targetId: String,
+    prefillDescription: String = "",
     viewModel: ReportViewModel = viewModel(),
 ) {
-    LaunchedEffect(isFeedbackModel) {
+    LaunchedEffect(isFeedbackModel, targetType, targetId) {
         viewModel.isFeedbackMode = isFeedbackModel
         viewModel.updateReasonsForMode()
         if (!isFeedbackModel) {
             viewModel.targetID = targetId
             viewModel.targetType = targetType
+        }
+    }
+
+    LaunchedEffect(prefillDescription) {
+        if (prefillDescription.isBlank()) return@LaunchedEffect
+        // 仅在 description 为空时填充，避免覆盖用户已输入内容
+        if (viewModel.description.value.isBlank()) {
+            viewModel.setDescription(prefillDescription)
         }
     }
 

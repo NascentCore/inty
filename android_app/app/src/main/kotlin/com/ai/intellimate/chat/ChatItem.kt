@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
@@ -96,6 +97,43 @@ private fun debugOnlyCopyToClipboard(context: Context, text: String) {
 }
 
 private const val DEBUG_METADATA_VALUE_MAX = 64
+private const val FEEDBACK_PREFILL_TEXT_MAX = 140
+
+private fun String.ellipsize(maxLength: Int): String {
+    if (maxLength <= 0) return ""
+    if (length <= maxLength) return this
+    // 预留 3 字符给 "..."
+    return take(maxLength.coerceAtLeast(3) - 3) + "..."
+}
+
+/**
+ * 构建消息反馈的预填描述，便于后端定位具体消息。
+ *
+ * 约束：
+ * - 举报/反馈描述输入框最大 400 字符；这里对 message text 做截断，给用户留出填写空间。
+ */
+private fun buildChatMessageFeedbackPrefill(message: MsgInfo, vote: String): String {
+    val userId = IntySetting.getCurUserID()
+    val messageId = message.id.ifBlank { "N/A" }
+    val localMessageId = message.localMsgId.ifBlank { "N/A" }
+    val text = message.content.trim().ellipsize(FEEDBACK_PREFILL_TEXT_MAX)
+    val imageUrl = message.getGeneratedImageUrl()?.takeIf { it.isNotBlank() && it != "loading" }
+
+    return buildString {
+        append("（请在上方补充你的具体反馈）\n\n")
+        append("--- ChatMessage ---\n")
+        append("user_id: ").append(userId.ifBlank { "N/A" }).append('\n')
+        append("message_id: ").append(messageId).append('\n')
+        append("local_message_id: ").append(localMessageId).append('\n')
+        append("vote: ").append(vote).append('\n')
+        if (text.isNotBlank()) {
+            append("text: ").append(text).append('\n')
+        }
+        if (imageUrl != null) {
+            append("image_url: ").append(imageUrl).append('\n')
+        }
+    }
+}
 
 @Composable
 fun ChatItem(
@@ -362,8 +400,29 @@ private fun ChatItemAI(
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
-                        onLike = { viewModel.likeMessage(item.localMsgId) },
-                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onLike = {
+                            viewModel.likeMessage(item.localMsgId)
+                            navController.navigate(
+                                Routes.Me.reportPage(
+                                    isFeedback = true,
+                                    prefill =
+                                        buildChatMessageFeedbackPrefill(item, VoteConstants.LIKE),
+                                )
+                            )
+                        },
+                        onDislike = {
+                            viewModel.dislikeMessage(item.localMsgId)
+                            navController.navigate(
+                                Routes.Me.reportPage(
+                                    isFeedback = true,
+                                    prefill =
+                                        buildChatMessageFeedbackPrefill(
+                                            item,
+                                            VoteConstants.DISLIKE,
+                                        ),
+                                )
+                            )
+                        },
                         onRecall = { viewModel.recallMessage() },
                     )
                 }
@@ -536,8 +595,29 @@ private fun ChatItemAI(
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
-                        onLike = { viewModel.likeMessage(item.localMsgId) },
-                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onLike = {
+                            viewModel.likeMessage(item.localMsgId)
+                            navController.navigate(
+                                Routes.Me.reportPage(
+                                    isFeedback = true,
+                                    prefill =
+                                        buildChatMessageFeedbackPrefill(item, VoteConstants.LIKE),
+                                )
+                            )
+                        },
+                        onDislike = {
+                            viewModel.dislikeMessage(item.localMsgId)
+                            navController.navigate(
+                                Routes.Me.reportPage(
+                                    isFeedback = true,
+                                    prefill =
+                                        buildChatMessageFeedbackPrefill(
+                                            item,
+                                            VoteConstants.DISLIKE,
+                                        ),
+                                )
+                            )
+                        },
                         onRecall = { viewModel.recallMessage() },
                     )
                 }
