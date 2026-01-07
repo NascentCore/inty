@@ -12,11 +12,7 @@ object ShareUtils {
         return url.startsWith("http://") || url.startsWith("https://")
     }
 
-    fun shareUrl(
-        context: Context,
-        url: String,
-        chooserTitle: String? = null,
-    ) {
+    fun shareUrl(context: Context, url: String, chooserTitle: String? = null) {
         val sendIntent =
             Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"

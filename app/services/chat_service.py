@@ -1711,7 +1711,9 @@ async def generate_chat_image(
                 }
             },
         )
-        logger.debug(f"消息 meta_data 已更新，添加模型和耗时信息: message_id={message_id}")
+        logger.debug(
+            f"消息 meta_data 已更新，添加模型和耗时信息: message_id={message_id}"
+        )
     except Exception as e:
         logger.warning(f"更新消息 meta_data 失败: {str(e)}")
 

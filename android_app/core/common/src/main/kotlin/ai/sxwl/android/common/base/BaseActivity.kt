@@ -9,16 +9,13 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
-import androidx.core.graphics.toColorInt
 
 /** 简单封装的activity的基类，继承自ComponentActivity而非AppcompatActivity */
 abstract class BaseActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(scrim = Color.TRANSPARENT)
-        )
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(scrim = Color.TRANSPARENT))
 
         // 页面追踪 - 记录页面访问
         // 如果有额外的追踪参数，使用 trackPageView 直接调用；否则使用 trackActivityLifecycle

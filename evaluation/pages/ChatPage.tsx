@@ -1540,7 +1540,8 @@ export const ChatPage: React.FC = () => {
                                               )}
                                               {message.meta_data.generated_image
                                                 .model &&
-                                                message.meta_data.generated_image
+                                                message.meta_data
+                                                  .generated_image
                                                   .generation_time_ms && (
                                                   <span> | </span>
                                                 )}
