@@ -82,6 +82,9 @@ interface ChatMessage {
       is_matched?: boolean;
       similarity?: number;
       matched_from_user_id?: string;
+      // 生成耗时和模型信息
+      model?: string;
+      generation_time_ms?: number;
     };
   };
 }
@@ -1511,6 +1514,50 @@ export const ChatPage: React.FC = () => {
                                             </Tooltip>
                                           </div>
                                         )}
+                                        {/* 非匹配图片：显示生图耗时和模型 */}
+                                        {!message.meta_data.generated_image
+                                          .is_matched &&
+                                          (message.meta_data.generated_image
+                                            .model ||
+                                            message.meta_data.generated_image
+                                              .generation_time_ms) && (
+                                            <div
+                                              style={{
+                                                marginTop: "6px",
+                                                fontSize: "11px",
+                                                color: "#888",
+                                              }}
+                                            >
+                                              {message.meta_data.generated_image
+                                                .model && (
+                                                <span>
+                                                  模型:{" "}
+                                                  {
+                                                    message.meta_data
+                                                      .generated_image.model
+                                                  }
+                                                </span>
+                                              )}
+                                              {message.meta_data.generated_image
+                                                .model &&
+                                                message.meta_data.generated_image
+                                                  .generation_time_ms && (
+                                                  <span> | </span>
+                                                )}
+                                              {message.meta_data.generated_image
+                                                .generation_time_ms && (
+                                                <span>
+                                                  耗时:{" "}
+                                                  {(
+                                                    message.meta_data
+                                                      .generated_image
+                                                      .generation_time_ms / 1000
+                                                  ).toFixed(1)}
+                                                  s
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
                                       </div>
                                     )}
                                   <div
@@ -1621,6 +1668,10 @@ export const ChatPage: React.FC = () => {
                                                               imageData.is_matched,
                                                             similarity:
                                                               imageData.similarity,
+                                                            model:
+                                                              imageData.model,
+                                                            generation_time_ms:
+                                                              imageData.generation_time_ms,
                                                           },
                                                         },
                                                       };

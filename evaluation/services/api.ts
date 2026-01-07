@@ -767,6 +767,12 @@ export const userAnalyticsApi = {
     params?: AnalyticsDateParams,
   ): Promise<import("../types").LLMLatencyResponse> =>
     apiClient.get("/evaluation/user-analytics/llm-latency", params),
+
+  // 获取生图耗时趋势
+  getImageGenerationLatency: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").ImageGenerationLatencyResponse> =>
+    apiClient.get("/evaluation/user-analytics/image-generation-latency", params),
 };
 
 // =============================================================================
@@ -990,6 +996,8 @@ export const chatApi = {
           is_matched?: boolean;
           similarity?: number;
           matched_from_user_id?: string;
+          model?: string;
+          generation_time_ms?: number;
         };
       };
     }>;
@@ -1028,6 +1036,8 @@ export const chatApi = {
           is_matched?: boolean;
           similarity?: number;
           matched_from_user_id?: string;
+          model?: string;
+          generation_time_ms?: number;
         };
       };
     }>;
@@ -1195,6 +1205,8 @@ export const chatImageApi = {
     };
     prompt: string;
     message_id: number;
+    model?: string;
+    generation_time_ms?: number;
   }> => apiClient.post(`/chats/agents/${agentId}/generate-image`, data),
 
   // 获取图片生成配置

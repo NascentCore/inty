@@ -281,3 +281,18 @@ class LLMLatencyResponse(BaseModel):
     """LLM 延迟趋势响应"""
 
     data: List[LLMLatencyItem]
+
+
+class ImageGenerationLatencyItem(BaseModel):
+    """生图耗时统计项"""
+
+    hour: str = Field(description="小时时间戳 (YYYY-MM-DD HH:00)")
+    model: str = Field(description="生图模型名称")
+    avg_latency_ms: float = Field(description="平均耗时 (毫秒)")
+    count: int = Field(description="请求数量")
+
+
+class ImageGenerationLatencyResponse(BaseModel):
+    """生图耗时趋势响应"""
+
+    data: List[ImageGenerationLatencyItem]
