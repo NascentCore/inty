@@ -9,11 +9,13 @@ import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.tmp.BottomSheetDialog
 import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,8 +26,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -55,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -67,6 +72,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -76,7 +83,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** 聊天更多面板组件 */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChatMorePanel(
     navController: NavController,
@@ -131,18 +138,14 @@ fun ChatMorePanel(
         )
     }
 
-    Dialog(
+    Popup(
         onDismissRequest = {
             // 点击外部关闭时，也先执行退出动画
-            scope.launch {
-                showBottomSheet = false
-                delay(350)
-                showDialog = false
-                onDismiss()
-            }
+            onDismiss()
         },
-        properties =
-            DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        properties = PopupProperties(
+            excludeFromSystemGesture = false
+        ),
     ) {
         DiaAmountLayout {
             SetDiaAmount(0f)
@@ -170,21 +173,11 @@ fun ChatMorePanel(
                     columns = GridCells.Fixed(4),
                     modifier =
                         Modifier.fillMaxWidth()
-                            .background(color = HeartColor.primaryColor)
-                            .windowInsetsPadding(windowInsets)
-                            // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
-                            // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
-                            .then(
-                                if (keyboardHeightDp > 0.dp) {
-                                    Modifier.heightIn(min = keyboardHeightDp)
-                                } else {
-                                    Modifier
-                                }
-                            )
-                            .onGloballyPositioned { coords ->
-                                val h = with(density) { coords.size.height.toDp() }
+                            .onSizeChanged { intSize ->
+                                val h = with(density) { intSize.height.toDp() }
                                 onHeightChange(h)
-                            },
+                            }
+                            .background(color = HeartColor.primaryColor),
                     contentPadding = PaddingValues(vertical = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {

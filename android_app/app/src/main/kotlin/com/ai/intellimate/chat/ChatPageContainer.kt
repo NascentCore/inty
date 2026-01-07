@@ -15,6 +15,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -54,6 +55,7 @@ import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.datetime.format.Padding
 
 var inChatPageScrolling = false // 当前ChatPage 是否在滚动中
 var isKeyboardVisibleChatPage = false // 当前页面键盘是否可见
@@ -67,6 +69,7 @@ fun ChatPageContainer(
     chatTabViewModel: ChatTabViewModel,
     userProfile: UserProfile,
     currentPageIndex: Int = 0,
+    contentPadding: PaddingValues = PaddingValues(),
     onPageChanged: (Int) -> Unit = {},
 ) {
     // 获取Paging数据流
@@ -222,6 +225,7 @@ fun ChatPageContainer(
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,
+                    contentPadding = contentPadding,
                     shouldAutoFocusInput = isKeyboardVisibleChatPage,
                     isGuideVisible = shouldShowGuide,
                     onInputFocusChange = { focused ->
