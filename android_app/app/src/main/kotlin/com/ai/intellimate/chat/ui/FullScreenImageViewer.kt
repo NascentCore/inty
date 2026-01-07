@@ -236,13 +236,13 @@ internal fun FullScreenImageViewer(
                         imageVector = Icons.Filled.Share,
                         contentDescription =
                             stringResource(R.string.share_image_content_description),
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
                         tint = Color.White,
                     )
                     Text(
                         text = stringResource(R.string.share_button),
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -289,20 +289,24 @@ internal fun FullScreenImageViewer(
                         imageVector = Icons.Filled.Download,
                         contentDescription =
                             stringResource(R.string.download_image_content_description),
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
                         tint = Color.White,
                     )
                     Text(
                         text = stringResource(R.string.download_button),
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
 
             if (onReport != null) {
-                ReportButton(onClick = { onReport() })
+                ReportButton(
+                    onClick = { onReport() },
+                    iconSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize,
+                    textFontSize = 14.sp,
+                )
             }
         }
 

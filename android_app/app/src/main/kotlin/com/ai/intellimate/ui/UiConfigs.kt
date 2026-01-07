@@ -704,6 +704,10 @@ object UiConfigs {
 
                 /** 背景状态指示器颜色 */
                 val BackgroundIndicatorColor = ai.sxwl.android.design.theme.AppColors.Green500
+
+                /** 图片全片预览页面上方的功能按钮图标大小 */
+                val ButtonIconSize = 20.dp
+                val ButtonTextFontSize = 14.sp
             }
 
             /** 全屏相册页面配置 - 适用于角色相册全屏页面 */
