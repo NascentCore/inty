@@ -110,8 +110,6 @@ fun ChatTopBar(
     navController: NavController,
     modifier: Modifier,
     agentInfo: AgentInfo,
-    showBackButton: Boolean = false,
-    onBack: (() -> Unit)? = null,
     onClickMore: () -> Unit,
     avatarWidth: Dp = UiConfigs.ChatTopBar.AvatarSize,
     fontSize: TextUnit = 14.sp,
@@ -121,19 +119,6 @@ fun ChatTopBar(
     val scope = rememberCoroutineScope()
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        // 返回按钮
-        if (showBackButton) {
-            AsyncImage(
-                modifier =
-                    Modifier.size(UiConfigs.ChatTopBar.BackButtonIconSize).noRippleClickable {
-                        onBack?.invoke()
-                    },
-                model = R.drawable.back,
-                contentDescription = null,
-            )
-            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.BackButtonToAvatarSpacing))
-        }
-
         Row(
             modifier =
                 Modifier.background(

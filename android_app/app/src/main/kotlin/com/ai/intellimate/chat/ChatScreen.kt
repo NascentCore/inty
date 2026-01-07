@@ -74,7 +74,6 @@ internal fun ChatScreen(
             modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding(),
             chatViewModel = chatViewModel,
             showBackButton = showBackButton,
-            onBack = { navController.popBackStack() },
             shouldShowBoostSheetOnOpen = shouldShowBoostSheetOnOpen,
             shouldAutoFocusInput = shouldAutoFocusInput,
             onCall = onCall,
