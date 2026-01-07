@@ -236,7 +236,8 @@ internal fun FullScreenImageViewer(
                         imageVector = Icons.Filled.Share,
                         contentDescription =
                             stringResource(R.string.share_image_content_description),
-                        modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
+                        modifier =
+                            Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
                         tint = Color.White,
                     )
                     Text(
@@ -289,7 +290,8 @@ internal fun FullScreenImageViewer(
                         imageVector = Icons.Filled.Download,
                         contentDescription =
                             stringResource(R.string.download_image_content_description),
-                        modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
+                        modifier =
+                            Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
                         tint = Color.White,
                     )
                     Text(

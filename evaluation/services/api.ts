@@ -772,7 +772,10 @@ export const userAnalyticsApi = {
   getImageGenerationLatency: (
     params?: AnalyticsDateParams,
   ): Promise<import("../types").ImageGenerationLatencyResponse> =>
-    apiClient.get("/evaluation/user-analytics/image-generation-latency", params),
+    apiClient.get(
+      "/evaluation/user-analytics/image-generation-latency",
+      params,
+    ),
 };
 
 // =============================================================================

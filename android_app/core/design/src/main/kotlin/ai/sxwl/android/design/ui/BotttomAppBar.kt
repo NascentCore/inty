@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -69,11 +66,11 @@ fun HeartBottomAppBar(
         }
 
     NavigationBar(
-        modifier = Modifier
-            .background(HeartColor.primaryColor)
-            .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-            .padding(bottom = bottomSpace)
-            .then(navigationBarModifier),
+        modifier =
+            Modifier.background(HeartColor.primaryColor)
+                .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                .padding(bottom = bottomSpace)
+                .then(navigationBarModifier),
         containerColor = Color.Transparent,
         tonalElevation = 8.dp,
         windowInsets = WindowInsets(),

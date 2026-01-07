@@ -1645,9 +1645,7 @@ private fun AvatarUploadSection(
                                                     context.getString(R.string.share_button),
                                             )
                                         } else {
-                                            ToastUtils.showShort(
-                                                R.string.toast_no_shareable_image
-                                            )
+                                            ToastUtils.showShort(R.string.toast_no_shareable_image)
                                         }
                                     }
                                     .padding(

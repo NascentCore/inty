@@ -55,7 +55,6 @@ import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.datetime.format.Padding
 
 var inChatPageScrolling = false // 当前ChatPage 是否在滚动中
 var isKeyboardVisibleChatPage = false // 当前页面键盘是否可见

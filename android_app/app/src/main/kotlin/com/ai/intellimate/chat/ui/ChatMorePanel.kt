@@ -7,18 +7,11 @@ import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.theme.IntelliMateTheme
-import ai.sxwl.android.design.tmp.BottomSheetDialog
 import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
-import ai.sxwl.android.utils.LogUtils
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,18 +22,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,7 +47,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,9 +55,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -84,16 +66,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.xb.navigation.Routes
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** 聊天更多面板组件 */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -135,24 +113,17 @@ fun ChatMorePanel(
 
             var showContent by remember { mutableStateOf(true) }
 
-            BackHandler(
-                onBack = {showContent = false},
-            )
+            BackHandler(onBack = { showContent = false })
 
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .noRippleClickable {
-                        showContent = false
-                    },
-                contentAlignment = Alignment.BottomCenter
+                modifier = Modifier.fillMaxSize().noRippleClickable { showContent = false },
+                contentAlignment = Alignment.BottomCenter,
             ) {
                 val density = LocalDensity.current
                 val keyboardHeight by SettingStateManager.keyboardHeight.collectAsState()
 
                 BoxWithConstraints(
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(if (keyboardHeight > 0) keyboardHeight.dp else Dp.Unspecified)
                 ) {
                     val transY = remember { Animatable(maxHeight, Dp.VectorConverter) }
@@ -172,8 +143,7 @@ fun ChatMorePanel(
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
                         modifier =
-                            Modifier
-                                .fillMaxSize()
+                            Modifier.fillMaxSize()
                                 .graphicsLayer {
                                     translationY = with(density) { transY.value.toPx() }
 
@@ -189,7 +159,8 @@ fun ChatMorePanel(
                                 onClick = {
                                     // 检查是否已登录
                                     if (
-                                        IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                        IntySetting.isLogin() &&
+                                            IntySetting.getCurToken().isNotEmpty()
                                     ) {
                                         FirebaseManager.logEvent(
                                             FirebaseManager.Events.CHAT_MORE_CLICK,
@@ -246,7 +217,8 @@ fun ChatMorePanel(
                                 onClick = {
                                     // 检查是否已登录
                                     if (
-                                        IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                        IntySetting.isLogin() &&
+                                            IntySetting.getCurToken().isNotEmpty()
                                     ) {
                                         FirebaseManager.logEvent(
                                             FirebaseManager.Events.CHAT_MORE_CLICK,
@@ -277,7 +249,8 @@ fun ChatMorePanel(
                                 onClick = {
                                     // 检查是否已登录
                                     if (
-                                        IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                        IntySetting.isLogin() &&
+                                            IntySetting.getCurToken().isNotEmpty()
                                     ) {
                                         FirebaseManager.logEvent(
                                             FirebaseManager.Events.CHAT_MORE_CLICK,
@@ -288,10 +261,15 @@ fun ChatMorePanel(
                                             ),
                                         )
                                         navController.navigate(
-                                            Routes.Me.reportPage(false, "AGENT", agentInfo?.id ?: "")
+                                            Routes.Me.reportPage(
+                                                false,
+                                                "AGENT",
+                                                agentInfo?.id ?: "",
+                                            )
                                         )
                                         //
-                                        // ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
+                                        // ReportActivity.launch(context, agentInfo?.id ?: "",
+                                        // "AGENT")
                                     }
                                 },
                                 icon = {
@@ -332,7 +310,6 @@ fun ChatMorePanel(
                     }
                 }
             }
-
         }
     }
 
@@ -385,19 +362,14 @@ private fun MorePanelItem(
     ) {
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
-            Box(modifier = Modifier
-                .align(Alignment.Center)
-                .size(36.dp)) { icon() }
+            Box(modifier = Modifier.align(Alignment.Center).size(36.dp)) { icon() }
 
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -419,22 +391,17 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
     ) {
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -449,8 +416,7 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier
-                .clip(RoundedCornerShape(24.dp))
+            Modifier.clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -470,9 +436,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -484,9 +448,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),
