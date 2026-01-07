@@ -84,6 +84,14 @@ object IntySetting {
         NetServiceMgr.clearCache()
     }
 
+    fun setKeyboardHeight(height: Float) {
+        allUserSetting.putFloat("keyboardHeight", height)
+    }
+
+    fun getKeyboardHeight(): Float {
+        return allUserSetting.getFloat("keyboardHeight", 0f)
+    }
+
     /** 记录是否显示keepTalking按钮（全局设置） */
     fun setShowKeepTalking(show: Boolean) {
         curUserSetting.putBoolean("show_keep_talking", show)

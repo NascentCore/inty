@@ -13,15 +13,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imeAnimationSource
+import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -103,6 +108,7 @@ object ChatPageSource {
     const val FROM_PREVIOUS_AGENT = "from_previous_agent" // 在 HorizontalPager 中从上一个 agent 滑动而来
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ChatPage(
     navController: NavController,
@@ -796,23 +802,36 @@ internal fun ChatPage(
                     }
                 }
 
-                //控制输入框底部距离适配morePanel或键盘高度
-                if (showMorePanel) {
-                    val density = LocalDensity.current
-                    val navigationBarHeight = WindowInsets.navigationBars.getBottom(density)
-                    val navigationBarHeightDp = with(density) {navigationBarHeight.toDp()}
-                    Spacer(
-                        Modifier
-                            .height(morePanelHeight - contentPadding.calculateBottomPadding() + navigationBarHeightDp)
-                    )
-                } else {
-                    Spacer(
-                        Modifier
-                            .consumeWindowInsets(contentPadding)
-                            .imePadding()
-                    )
+                val density = LocalDensity.current
+                val imeTarget = WindowInsets.imeAnimationTarget.exclude(WindowInsets.navigationBars)
+
+                LaunchedEffect(Unit) {
+                    snapshotFlow { imeTarget.getBottom(density) }
+                        .collect {
+                            if (it > 0) {
+                                SettingStateManager.setKeyboardHeight(with(density){it.toDp().value})
+                            }
+                        }
                 }
 
+                //控制输入框底部距离适配morePanel或键盘高度
+                val bottomSpaceModifier = if (showMorePanel) {
+                    val navigationBarHeight = WindowInsets.navigationBars.getBottom(density)
+                    val navigationBarHeightDp = with(density) {navigationBarHeight.toDp()}
+
+                    if (showBackButton) {
+                        Modifier.height(morePanelHeight)
+                    } else {
+                        Modifier
+                            .height(morePanelHeight - contentPadding.calculateBottomPadding() + navigationBarHeightDp)
+                    }
+                } else {
+                    Modifier
+                        .consumeWindowInsets(contentPadding)
+                        .imePadding()
+                }
+
+                Spacer(modifier = bottomSpaceModifier)
             }
 
             val chatMessagesForButton by chatViewModel.msgs.collectAsState()
@@ -959,31 +978,32 @@ internal fun ChatPage(
                 }
         }
 
-        ChatMorePanel(
-            navController,
-            visible = showMorePanel,
-            agentInfo = agentInfo,
-            chatViewModel = chatViewModel,
-            onDismiss = { showMorePanel = false },
-            onHeightChange = { h -> morePanelHeight = h },
-            onReset = {
-                scope.launch {
-                    showMorePanel = false
+        if (showMorePanel) {
+            ChatMorePanel(
+                navController,
+                agentInfo = agentInfo,
+                chatViewModel = chatViewModel,
+                onDismiss = { showMorePanel = false },
+                onHeightChange = { h -> morePanelHeight = h },
+                onReset = {
+                    scope.launch {
+                        showMorePanel = false
 
-                    try {
-                        chatViewModel.reset()
-                        resetSuccess = true
-                    } catch (_: Throwable) {
-                        ToastUtils.showShort(R.string.reset_failed_msg)
+                        try {
+                            chatViewModel.reset()
+                            resetSuccess = true
+                        } catch (_: Throwable) {
+                            ToastUtils.showShort(R.string.reset_failed_msg)
+                        }
                     }
+                },
+                onCall = {
+                    showMorePanel = false
+                    onCall()
                 }
-            },
-            onCall = {
-                showMorePanel = false
-                onCall()
-            },
-            windowInsets = WindowInsets.navigationBars,
-        )
+            )
+        }
+
 
         ChatSettingsDrawer(
             chatViewModel = chatViewModel,
