@@ -545,7 +545,16 @@ object UiConfigs {
         val ActionButtonSpacing = 8.dp
 
         /** 操作按钮容器透明度 */
-        const val ActionButtonContainerAlpha = 0.35f
+        const val ActionButtonContainerAlpha = 0.3f
+
+        /** 右上角操作按钮容器宽度（电话/更多） */
+        val ActionButtonContainerWidth = 48.dp
+
+        /** 右上角操作按钮容器高度（电话/更多） */
+        val ActionButtonContainerHeight = 32.dp
+
+        /** 右上角操作按钮容器圆角（电话/更多） */
+        val ActionButtonContainerCornerRadius = 16.dp
 
         /** 收藏按钮激活状态颜色（粉色） */
         val FavoriteActiveTint = Color(0xFFFF5A8A)
