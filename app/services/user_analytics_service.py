@@ -1514,3 +1514,45 @@ class UserAnalyticsService:
             }
             for row in rows
         ]
+
+    async def get_image_generation_latency_trend(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+    ) -> List[Dict[str, Any]]:
+        """按小时和模型聚合生图耗时"""
+        query = text(
+            """
+            SELECT 
+                DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC') as hour,
+                extra_data->>'model' as model,
+                AVG((extra_data->>'generation_time_ms')::float) as avg_latency_ms,
+                COUNT(*) as count
+            FROM subscription_usage
+            WHERE created_at >= :start_date 
+              AND created_at < :end_date
+              AND usage_type = 'image_generation'
+              AND extra_data->>'success' = 'true'
+              AND extra_data->>'generation_time_ms' IS NOT NULL
+              AND extra_data->>'model' IS NOT NULL
+            GROUP BY DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC'), extra_data->>'model'
+            ORDER BY hour, model
+        """
+        )
+        result = await self.db.execute(
+            query,
+            {
+                "start_date": activity_start_date,
+                "end_date": activity_end_date,
+            },
+        )
+        rows = result.fetchall()
+        return [
+            {
+                "hour": row[0].strftime("%Y-%m-%d %H:00") if row[0] else None,
+                "model": row[1] or "unknown",
+                "avg_latency_ms": round(row[2], 1) if row[2] else 0.0,
+                "count": row[3] or 0,
+            }
+            for row in rows
+        ]

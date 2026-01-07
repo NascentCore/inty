@@ -607,6 +607,18 @@ export interface LLMLatencyResponse {
   data: LLMLatencyItem[];
 }
 
+// 生图耗时统计
+export interface ImageGenerationLatencyItem {
+  hour: string;
+  model: string;
+  avg_latency_ms: number;
+  count: number;
+}
+
+export interface ImageGenerationLatencyResponse {
+  data: ImageGenerationLatencyItem[];
+}
+
 // 生成图片
 export interface GeneratedImage {
   url: string;

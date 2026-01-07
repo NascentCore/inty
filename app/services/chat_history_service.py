@@ -404,9 +404,21 @@ async def update_message_metadata(
             )
             return False
 
-        # 合并现有 meta_data 和新数据
+        # 合并现有 meta_data 和新数据（对 generated_image 进行深度合并）
         existing_meta = chat_history.meta_data or {}
-        merged_meta = {**existing_meta, **metadata_update}
+        merged_meta = {**existing_meta}
+
+        for key, value in metadata_update.items():
+            if (
+                key == "generated_image"
+                and key in existing_meta
+                and isinstance(existing_meta[key], dict)
+                and isinstance(value, dict)
+            ):
+                # 深度合并 generated_image 字段
+                merged_meta[key] = {**existing_meta[key], **value}
+            else:
+                merged_meta[key] = value
 
         # 更新消息
         chat_history.meta_data = merged_meta
@@ -864,6 +876,10 @@ def get_messages_paginated(
                                 "similarity": generated_image.get("similarity"),
                                 "matched_from_user_id": generated_image.get(
                                     "matched_from_user_id"
+                                ),
+                                "model": generated_image.get("model"),
+                                "generation_time_ms": generated_image.get(
+                                    "generation_time_ms"
                                 ),
                             }
                             # 不包含 prompt 字段

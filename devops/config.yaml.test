@@ -20,6 +20,11 @@ google_oauth:
 agent:
   api_key: "<fill-in-your-openrouter-api-key>"
   langchain_api_key: "<fill-in-your-langchain_api_key>"
+  # 测试环境使用 Gemini 模型，避免调用真实 FAL API（需要 FAL_KEY）
+  free_user_text_to_image_model: "imagen-3.0-generate-002"
+  sub_user_text_to_image_model: "imagen-3.0-generate-002"
+  free_user_chat_image_model: "gemini"
+  sub_user_chat_image_model: "gemini"
 
 gcs:
   use_fake_gcs: true

@@ -20,6 +20,8 @@ interface MessageToImageIconProps {
     height: number;
     is_matched?: boolean;
     similarity?: number;
+    model?: string;
+    generation_time_ms?: number;
   }) => void;
 }
 
@@ -62,6 +64,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
         };
         prompt: string;
         message_id: number;
+        model?: string;
+        generation_time_ms?: number;
       };
 
       if (response && response.image_url) {
@@ -73,6 +77,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
             height: response.image_metadata.height,
             is_matched: response.image_metadata.is_matched,
             similarity: response.image_metadata.similarity,
+            model: response.model,
+            generation_time_ms: response.generation_time_ms,
           });
           message.success("图片生成成功！");
         } else {

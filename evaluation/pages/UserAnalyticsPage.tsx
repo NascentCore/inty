@@ -44,6 +44,7 @@ import type {
   ConversationsDetailResponse,
   UserAnalyticsStatsResponse,
   LLMLatencyItem,
+  ImageGenerationLatencyItem,
 } from "../types";
 
 const { RangePicker } = DatePicker;
@@ -104,6 +105,9 @@ export const UserAnalyticsPage: React.FC = () => {
   >([]);
   const [stats, setStats] = useState<UserAnalyticsStatsResponse | null>(null);
   const [llmLatency, setLlmLatency] = useState<LLMLatencyItem[]>([]);
+  const [imageGenLatency, setImageGenLatency] = useState<
+    ImageGenerationLatencyItem[]
+  >([]);
 
   // 对话详情查看器状态
   const [showConversationsDetail, setShowConversationsDetail] = useState(false);
@@ -183,6 +187,7 @@ export const UserAnalyticsPage: React.FC = () => {
         usersHittingLimitData,
         userSessionsDetailData,
         llmLatencyData,
+        imageGenLatencyData,
       ] = await Promise.all([
         userAnalyticsApi.getStats(params),
         userAnalyticsApi.getNewUsers(params),
@@ -192,6 +197,7 @@ export const UserAnalyticsPage: React.FC = () => {
         userAnalyticsApi.getUsersHittingLimit(params),
         userAnalyticsApi.getUserSessionsDetail(params),
         userAnalyticsApi.getLLMLatency(params),
+        userAnalyticsApi.getImageGenerationLatency(params),
       ]);
 
       setStats(statsData);
@@ -202,6 +208,7 @@ export const UserAnalyticsPage: React.FC = () => {
       setUsersHittingLimit(usersHittingLimitData);
       setUserSessionsDetail(userSessionsDetailData);
       setLlmLatency(llmLatencyData.data);
+      setImageGenLatency(imageGenLatencyData.data);
 
       message.success("数据加载成功");
     } catch (error) {
@@ -867,6 +874,62 @@ export const UserAnalyticsPage: React.FC = () => {
                   xaxis: { title: "时间", tickangle: -45 },
                   yaxis: { title: "平均延迟 (秒)" },
                   hovermode: "closest",
+                }}
+                style={{ width: "100%", height: "100%" }}
+              />
+            ) : (
+              <Empty description="暂无数据" />
+            )}
+          </Card>
+        </Col>
+
+        {/* 图表: 生图耗时趋势（按模型区分） */}
+        <Col xs={24} lg={12}>
+          <Card title="生图耗时趋势（按模型）" style={{ height: "400px" }}>
+            {imageGenLatency.length > 0 ? (
+              <Plot
+                data={(() => {
+                  // 按模型分组数据
+                  const modelGroups = imageGenLatency.reduce(
+                    (acc, item) => {
+                      if (!acc[item.model]) {
+                        acc[item.model] = [];
+                      }
+                      acc[item.model].push(item);
+                      return acc;
+                    },
+                    {} as Record<string, ImageGenerationLatencyItem[]>,
+                  );
+
+                  // 为每个模型创建一条线
+                  const colors = [
+                    "#1890ff",
+                    "#52c41a",
+                    "#faad14",
+                    "#f5222d",
+                    "#722ed1",
+                    "#13c2c2",
+                  ];
+                  return Object.entries(modelGroups).map(
+                    ([model, data], index) => ({
+                      x: data.map((d) => d.hour),
+                      y: data.map((d) => d.avg_latency_ms / 1000), // 转换为秒
+                      name: model,
+                      type: "scatter" as const,
+                      mode: "lines+markers" as const,
+                      line: { color: colors[index % colors.length] },
+                      hovertemplate: `时间: %{x}<br>平均耗时: %{y:.2f}s<br>请求数: %{customdata}<extra>${model}</extra>`,
+                      customdata: data.map((d) => d.count),
+                    }),
+                  );
+                })()}
+                layout={{
+                  title: "生图耗时趋势（按模型）",
+                  height: 300,
+                  xaxis: { title: "时间", tickangle: -45 },
+                  yaxis: { title: "平均耗时 (秒)" },
+                  hovermode: "closest",
+                  legend: { orientation: "h", y: -0.3 },
                 }}
                 style={{ width: "100%", height: "100%" }}
               />

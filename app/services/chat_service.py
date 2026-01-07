@@ -1698,6 +1698,23 @@ async def generate_chat_image(
     except Exception as e:
         logger.warning(f"记录图片生成用量失败: {str(e)}")
 
+    # 追加更新 meta_data，添加模型和耗时信息
+    try:
+        await chat_history_service.update_message_metadata(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            metadata_update={
+                "generated_image": {
+                    "model": selected_model,
+                    "generation_time_ms": generation_time_ms,
+                }
+            },
+        )
+        logger.debug(f"消息 meta_data 已更新，添加模型和耗时信息: message_id={message_id}")
+    except Exception as e:
+        logger.warning(f"更新消息 meta_data 失败: {str(e)}")
+
     response = schemas.ChatImageGenerationResponse(**image_generation_result)
 
     logger.info(
