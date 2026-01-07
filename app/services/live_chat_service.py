@@ -25,6 +25,13 @@ from app.schemas.live_chat import LiveChatConfig, LiveChatStatus
 from app.services import agent_service, chat_history_service
 from app.services.chat_service import generate_session_id, get_or_create_chat_by_agent
 
+# 语音通话默认音色映射（按性别选择 Gemini 预置音色）
+GENDER_TO_GEMINI_VOICE_MAPPING = {
+    "MALE": "Puck",
+    "FEMALE": "Zephyr",
+    "OTHER": "Kore",
+}
+
 
 @dataclass
 class LiveSession:
@@ -296,17 +303,22 @@ class LiveChatService:
     def _build_live_config(
         self,
         voice_id: Optional[str] = None,
+        agent_gender: Optional[str] = None,
         system_instruction: Optional[str] = None,
     ) -> types.LiveConnectConfig:
         """构建 Gemini Live 连接配置"""
-        # 验证 voice_id 是否是 Gemini 支持的预设语音，否则使用默认语音
+        # 验证 voice_id 是否是 Gemini 支持的预设语音，否则根据性别选择默认语音
         if voice_id and voice_id in self.GEMINI_PREBUILT_VOICES:
             voice_name = voice_id
         else:
-            voice_name = self._config.default_voice
+            # 根据性别选择默认音色，回退到配置文件默认值
+            voice_name = GENDER_TO_GEMINI_VOICE_MAPPING.get(
+                agent_gender, self._config.default_voice
+            )
             if voice_id:
                 logger.debug(
-                    f"voice_id '{voice_id}' 不是 Gemini 预设语音，使用默认语音: {voice_name}"
+                    f"voice_id '{voice_id}' 不是 Gemini 预设语音，"
+                    f"根据性别 {agent_gender} 使用默认语音: {voice_name}"
                 )
 
         live_cfg = types.LiveConnectConfig(
@@ -515,8 +527,10 @@ class LiveChatService:
             )
 
             voice_id = session.config.voice_id or agent_data.get("voice_id")
+            agent_gender = agent_data.get("gender")
             live_config = self._build_live_config(
                 voice_id=voice_id,
+                agent_gender=agent_gender,
                 system_instruction=system_instruction,
             )
 
