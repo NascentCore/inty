@@ -17,7 +17,12 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -398,6 +403,8 @@ private fun HomeContent(
                 navController,
                 mainViewModel = mainViewModel,
                 viewModelFactory = viewModelFactory,
+                modifier = Modifier,
+                contentPadding = innerPadding
             )
         }
 
@@ -435,6 +442,8 @@ private fun ChatTabContent(
     navController: NavController,
     mainViewModel: MainViewModel,
     viewModelFactory: ViewModelProvider.Factory,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val chatTabViewModel: ChatTabViewModel = viewModel()
     val userProfile = mainViewModel.userProfile.collectAsState()
@@ -448,9 +457,10 @@ private fun ChatTabContent(
 
     ChatPageContainer(
         navController,
-        modifier = Modifier,
+        modifier = modifier,
         viewModelFactory = viewModelFactory,
         chatTabViewModel = chatTabViewModel,
+        contentPadding = contentPadding,
         userProfile = userProfile.value,
         currentPageIndex = currentChatPageIndex.value,
         onPageChanged = { index -> mainViewModel.updateCurrentChatPageIndex(index) },

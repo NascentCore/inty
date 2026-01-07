@@ -3,17 +3,29 @@ package com.ai.intellimate.chat.ui
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.tmp.BottomSheetDialog
 import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.LogUtils
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,8 +36,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -47,6 +61,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +69,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -67,6 +85,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -76,18 +96,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** 聊天更多面板组件 */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChatMorePanel(
     navController: NavController,
-    visible: Boolean,
     agentInfo: AgentInfo?,
     chatViewModel: ChatViewModel,
     onDismiss: () -> Unit,
     onHeightChange: (Dp) -> Unit,
     onReset: () -> Unit,
     onCall: () -> Unit,
-    windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -95,31 +113,6 @@ fun ChatMorePanel(
     // VIP状态
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     var showResetConfirmDialog by remember { mutableStateOf(false) }
-
-    // 内部状态控制Dialog和BottomSheetDialog的显示
-    // 当visible变为false时，先让BottomSheetDialog执行退出动画，然后再关闭Dialog
-    var showDialog by remember { mutableStateOf(visible) }
-    var showBottomSheet by remember { mutableStateOf(visible) }
-
-    // 当visible变为false时，先触发退出动画，延迟后再关闭Dialog
-    LaunchedEffect(visible) {
-        if (!visible) {
-            // 先让BottomSheetDialog执行退出动画
-            showBottomSheet = false
-            // 等待退出动画完成（300ms）后再关闭Dialog
-            delay(350)
-            showDialog = false
-            onHeightChange(0.dp)
-        } else {
-            // visible变为true时，立即显示Dialog和BottomSheet
-            showDialog = true
-            showBottomSheet = true
-        }
-    }
-
-    if (!showDialog) {
-        return
-    }
 
     if (showResetConfirmDialog) {
         ResetConfirmDialog(
@@ -131,211 +124,215 @@ fun ChatMorePanel(
         )
     }
 
-    Dialog(
+    Popup(
         onDismissRequest = {
             // 点击外部关闭时，也先执行退出动画
-            scope.launch {
-                showBottomSheet = false
-                delay(350)
-                showDialog = false
-                onDismiss()
-            }
-        },
-        properties =
-            DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+            onDismiss()
+        }
     ) {
         DiaAmountLayout {
             SetDiaAmount(0f)
-            BottomSheetDialog(
-                modifier = Modifier,
-                visible = showBottomSheet,
-                onDismissRequest = {
-                    // 关闭时先执行退出动画
-                    scope.launch {
-                        showBottomSheet = false
-                        delay(350)
-                        showDialog = false
-                        onDismiss()
-                    }
-                },
-                // ChatMorePanel 出现时直接展示并占据位置，不使用滑入动画
-                slideInOnEnter = false,
+
+            var showContent by remember { mutableStateOf(true) }
+
+            BackHandler(
+                onBack = {showContent = false},
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .noRippleClickable {
+                        showContent = false
+                    },
+                contentAlignment = Alignment.BottomCenter
             ) {
                 val density = LocalDensity.current
-                // 获取键盘高度，用于匹配panel高度，避免键盘消失时输入框高度变化
-                val imeHeight = WindowInsets.ime.getBottom(density)
-                val keyboardHeightDp = with(density) { imeHeight.toDp() }
+                val keyboardHeight by SettingStateManager.keyboardHeight.collectAsState()
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .background(color = HeartColor.primaryColor)
-                            .windowInsetsPadding(windowInsets)
-                            // 如果键盘高度大于0，设置最小高度为键盘高度，确保panel高度至少与键盘一致
-                            // 使用 heightIn 而不是 height，允许内容高度大于键盘高度时自适应
-                            .then(
-                                if (keyboardHeightDp > 0.dp) {
-                                    Modifier.heightIn(min = keyboardHeightDp)
-                                } else {
-                                    Modifier
-                                }
-                            )
-                            .onGloballyPositioned { coords ->
-                                val h = with(density) { coords.size.height.toDp() }
-                                onHeightChange(h)
-                            },
-                    contentPadding = PaddingValues(vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                BoxWithConstraints(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(if (keyboardHeight > 0) keyboardHeight.dp else Dp.Unspecified)
                 ) {
-                    item("Chat Style") {
-                        MorePanelItem(
-                            isVip = true,
-                            onClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "reply_style",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
-                                    if (vipStatus.isSubscribed) {
-                                        showSheet = true
-                                    } else {
-                                        // 去会员中心
-                                        navController.navigate(Routes.Me.VipCenter)
-                                        onDismiss() // 要关闭掉panel
+                    val transY = remember { Animatable(maxHeight, Dp.VectorConverter) }
+                    /*val transY by animateDpAsState(
+                        targetValue = if (showContent) 0.dp else maxHeight,
+                        animationSpec = tween(durationMillis = 150, easing = LinearEasing)
+                    )*/
+
+                    LaunchedEffect(showContent) {
+                        transY.animateTo(if (showContent) 0.dp else maxHeight)
+
+                        if (!showContent) {
+                            onDismiss()
+                        }
+                    }
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    translationY = with(density) { transY.value.toPx() }
+
+                                    onHeightChange(maxHeight - transY.value)
+                                }
+                                .background(color = HeartColor.primaryColor),
+                        contentPadding = PaddingValues(vertical = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        item("Chat Style") {
+                            MorePanelItem(
+                                isVip = true,
+                                onClick = {
+                                    // 检查是否已登录
+                                    if (
+                                        IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                    ) {
+                                        FirebaseManager.logEvent(
+                                            FirebaseManager.Events.CHAT_MORE_CLICK,
+                                            FirebaseManager.safeEventParams(
+                                                "click_type" to "reply_style",
+                                                "agent_id" to (agentInfo?.id ?: ""),
+                                                "timestamp" to System.currentTimeMillis(),
+                                            ),
+                                        )
+                                        // 已经登录，判断是否vip，是则弹出输入框sheet，否则弹拦截弹窗
+                                        if (vipStatus.isSubscribed) {
+                                            showSheet = true
+                                        } else {
+                                            // 去会员中心
+                                            navController.navigate(Routes.Me.VipCenter)
+                                            onDismiss() // 要关闭掉panel
+                                        }
                                     }
-                                }
-                            },
-                            icon = {
-                                Image(
-                                    painter = painterResource(R.drawable.icon_reply_chat),
-                                    contentDescription = "chatStyle",
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            },
-                            text = { Text(stringResource(R.string.reply_style)) },
-                        )
-                    }
+                                },
+                                icon = {
+                                    Image(
+                                        painter = painterResource(R.drawable.icon_reply_chat),
+                                        contentDescription = "chatStyle",
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.reply_style)) },
+                            )
+                        }
 
-                    item("Reset") {
-                        MorePanelItem(
-                            onClick = {
-                                // 检查是否已登录
-                                if (IntySetting.isLogin()) {
-                                    // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
-                                    // 相当于重新开始和agent初次聊天
-                                    showResetConfirmDialog = true
-                                }
-                            },
-                            icon = {
-                                Image(
-                                    painter = painterResource(R.drawable.icon_reset_chat),
-                                    contentDescription = "reset",
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            },
-                            text = { Text(stringResource(R.string.str_reset)) },
-                        )
-                    }
+                        item("Reset") {
+                            MorePanelItem(
+                                onClick = {
+                                    // 检查是否已登录
+                                    if (IntySetting.isLogin()) {
+                                        // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
+                                        // 相当于重新开始和agent初次聊天
+                                        showResetConfirmDialog = true
+                                    }
+                                },
+                                icon = {
+                                    Image(
+                                        painter = painterResource(R.drawable.icon_reset_chat),
+                                        contentDescription = "reset",
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.str_reset)) },
+                            )
+                        }
 
-                    item("Feedback") {
-                        MorePanelItem(
-                            onClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
+                        item("Feedback") {
+                            MorePanelItem(
+                                onClick = {
+                                    // 检查是否已登录
+                                    if (
+                                        IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                    ) {
+                                        FirebaseManager.logEvent(
+                                            FirebaseManager.Events.CHAT_MORE_CLICK,
+                                            FirebaseManager.safeEventParams(
+                                                "click_type" to "feedback",
+                                                "agent_id" to (agentInfo?.id ?: ""),
+                                                "timestamp" to System.currentTimeMillis(),
+                                            ),
+                                        )
+                                        navController.navigate(Routes.Me.reportPage(true))
+                                        //
+                                        // ReportActivity.launchFeedback(context)
+                                    }
+                                },
+                                icon = {
+                                    Image(
+                                        painter = painterResource(R.drawable.icon_feedback),
+                                        contentDescription = "feedback",
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.str_feedback)) },
+                            )
+                        }
+
+                        item("Report") {
+                            MorePanelItem(
+                                onClick = {
+                                    // 检查是否已登录
+                                    if (
+                                        IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+                                    ) {
+                                        FirebaseManager.logEvent(
+                                            FirebaseManager.Events.CHAT_MORE_CLICK,
+                                            FirebaseManager.safeEventParams(
+                                                "click_type" to "report",
+                                                "agent_id" to (agentInfo?.id ?: ""),
+                                                "timestamp" to System.currentTimeMillis(),
+                                            ),
+                                        )
+                                        navController.navigate(
+                                            Routes.Me.reportPage(false, "AGENT", agentInfo?.id ?: "")
+                                        )
+                                        //
+                                        // ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
+                                    }
+                                },
+                                icon = {
+                                    Image(
+                                        painter = painterResource(R.drawable.icon_report),
+                                        contentDescription = "report",
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.str_report)) },
+                            )
+                        }
+
+                        item("Call") {
+                            MorePanelItem(
+                                onClick = {
                                     FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.Events.CHAT_MORE_CALL,
                                         FirebaseManager.safeEventParams(
-                                            "click_type" to "feedback",
+                                            "click_type" to "call",
                                             "agent_id" to (agentInfo?.id ?: ""),
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
-                                    navController.navigate(Routes.Me.reportPage(true))
-                                    //
-                                    // ReportActivity.launchFeedback(context)
-                                }
-                            },
-                            icon = {
-                                Image(
-                                    painter = painterResource(R.drawable.icon_feedback),
-                                    contentDescription = "feedback",
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            },
-                            text = { Text(stringResource(R.string.str_feedback)) },
-                        )
-                    }
-
-                    item("Report") {
-                        MorePanelItem(
-                            onClick = {
-                                // 检查是否已登录
-                                if (
-                                    IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "report",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
+                                    onCall()
+                                },
+                                icon = {
+                                    Image(
+                                        imageVector = Icons.Rounded.Call,
+                                        contentDescription = "call",
+                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
+                                        modifier = Modifier.fillMaxSize(),
                                     )
-                                    navController.navigate(
-                                        Routes.Me.reportPage(false, "AGENT", agentInfo?.id ?: "")
-                                    )
-                                    //
-                                    // ReportActivity.launch(context, agentInfo?.id ?: "", "AGENT")
-                                }
-                            },
-                            icon = {
-                                Image(
-                                    painter = painterResource(R.drawable.icon_report),
-                                    contentDescription = "report",
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            },
-                            text = { Text(stringResource(R.string.str_report)) },
-                        )
-                    }
-
-                    item("Call") {
-                        MorePanelItem(
-                            onClick = {
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_MORE_CALL,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "call",
-                                        "agent_id" to (agentInfo?.id ?: ""),
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                onCall()
-                            },
-                            icon = {
-                                Image(
-                                    imageVector = Icons.Rounded.Call,
-                                    contentDescription = "call",
-                                    colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            },
-                            text = { Text(stringResource(R.string.call)) },
-                        )
+                                },
+                                text = { Text(stringResource(R.string.call)) },
+                            )
+                        }
                     }
                 }
             }
+
         }
     }
 
@@ -388,14 +385,19 @@ private fun MorePanelItem(
     ) {
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
-            Box(modifier = Modifier.align(Alignment.Center).size(36.dp)) { icon() }
+            Box(modifier = Modifier
+                .align(Alignment.Center)
+                .size(36.dp)) { icon() }
 
             if (isVip) {
                 Image(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -417,17 +419,22 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
     ) {
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier
+                    .size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier.size(36.dp).align(Alignment.Center),
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -442,7 +449,8 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier.clip(RoundedCornerShape(24.dp))
+            Modifier
+                .clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -462,7 +470,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -474,7 +484,9 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier.height(40.dp).weight(1f),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),

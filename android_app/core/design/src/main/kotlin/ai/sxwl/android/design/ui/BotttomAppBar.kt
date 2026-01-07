@@ -10,14 +10,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
@@ -64,10 +69,14 @@ fun HeartBottomAppBar(
         }
 
     NavigationBar(
-        modifier = navigationBarModifier,
-        containerColor = HeartColor.primaryColor,
+        modifier = Modifier
+            .background(HeartColor.primaryColor)
+            .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+            .padding(bottom = bottomSpace)
+            .then(navigationBarModifier),
+        containerColor = Color.Transparent,
         tonalElevation = 8.dp,
-        windowInsets = WindowInsets(bottom = bottomSpace),
+        windowInsets = WindowInsets(),
     ) {
         tabItems.forEach { tab ->
             val isSelected = selectedTab == tab.index

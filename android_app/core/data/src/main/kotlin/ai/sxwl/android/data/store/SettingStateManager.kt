@@ -2,6 +2,7 @@ package ai.sxwl.android.data.store
 
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +32,9 @@ object SettingStateManager {
     // 显示场景动作输入按钮状态
     private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
     val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
+
+    private val _keyboardHeight = MutableStateFlow(IntySetting.getKeyboardHeight())
+    val keyboardHeight = _keyboardHeight.asStateFlow()
 
     // 聊天字体大小设置
     private val _chatFontSizeFlow =
@@ -124,6 +128,11 @@ object SettingStateManager {
             _autoPlayAudioFlow.value = IntySetting.isAutoPlayAudio()
             _autoPlayAnimationFlow.value = IntySetting.isAutoPlayAnimation()
         }
+    }
+
+    fun setKeyboardHeight(height: Float) {
+        _keyboardHeight.value = height
+        IntySetting.setKeyboardHeight(height)
     }
 
     /** 更新Keep Talking按钮显示状态 */
