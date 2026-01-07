@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.intellimate.R
@@ -30,16 +32,23 @@ import com.ai.intellimate.ui.UiConfigs
  *
  * @param onClick 点击按钮时的回调
  * @param modifier 修饰符
+ * @param iconSize 图标大小，默认为 16.dp
+ * @param textFontSize 文字字体大小，默认为 12.sp
  */
 @Composable
-fun ReportButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ReportButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 16.dp,
+    textFontSize: TextUnit = 12.sp,
+) {
     Box(
         modifier =
             modifier
                 .padding(8.dp)
                 .background(
                     color = Color.Black.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(iconSize),
                 )
                 .noRippleClickable { onClick() }
                 .padding(UiConfigs.CreateRole.VisualAppearance.FaceEditPillPadding)
@@ -51,13 +60,13 @@ fun ReportButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Filled.Flag,
                 contentDescription = stringResource(R.string.report_button_content_description),
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(iconSize),
                 tint = Color.White,
             )
             Text(
                 text = stringResource(R.string.str_report),
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = textFontSize,
                 fontWeight = FontWeight.Medium,
             )
         }

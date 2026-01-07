@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -47,6 +48,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ReportButton
 import com.ai.intellimate.utils.GalleryImageDownloadUtils
+import com.ai.intellimate.utils.ShareUtils
 import kotlinx.coroutines.launch
 
 /** 全屏图片查看器 */
@@ -211,6 +213,44 @@ internal fun FullScreenImageViewer(
             Box(
                 modifier =
                     Modifier.clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                        .noRippleClickable {
+                            if (ShareUtils.canShareAsUrl(cdnImageUrl)) {
+                                ShareUtils.shareUrl(
+                                    context = context,
+                                    url = cdnImageUrl,
+                                    chooserTitle = context.getString(R.string.share_button),
+                                )
+                            } else {
+                                ToastUtils.showShort(R.string.toast_no_shareable_image)
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription =
+                            stringResource(R.string.share_image_content_description),
+                        modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
+                        tint = Color.White,
+                    )
+                    Text(
+                        text = stringResource(R.string.share_button),
+                        color = Color.White,
+                        fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+
+            Box(
+                modifier =
+                    Modifier.clip(RoundedCornerShape(8.dp))
                         .background(
                             if (isSavingToGallery) Color.Gray.copy(alpha = 0.5f)
                             else Color.Black.copy(alpha = 0.7f),
@@ -249,20 +289,24 @@ internal fun FullScreenImageViewer(
                         imageVector = Icons.Filled.Download,
                         contentDescription =
                             stringResource(R.string.download_image_content_description),
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
                         tint = Color.White,
                     )
                     Text(
                         text = stringResource(R.string.download_button),
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
 
             if (onReport != null) {
-                ReportButton(onClick = { onReport() })
+                ReportButton(
+                    onClick = { onReport() },
+                    iconSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize,
+                    textFontSize = 14.sp,
+                )
             }
         }
 
