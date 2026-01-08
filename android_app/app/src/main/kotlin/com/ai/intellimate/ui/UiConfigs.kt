@@ -322,7 +322,7 @@ object UiConfigs {
     /** 底部导航栏配置 - 适用于底部导航栏的高度、图标大小、间距等设置 */
     object BottomBar {
         /** 底部导航栏高度 */
-        val Height = 66.dp
+        val Height = 60.dp
 
         /** 标签图标大小 */
         val TabIconSize = 23.dp
@@ -331,7 +331,7 @@ object UiConfigs {
         val TabIconLabelSpacing = (-8).dp
 
         /** 距离屏幕底部间距 */
-        val BottomSpacing = 6.dp
+        val BottomSpacing = 2.dp
     }
 
     /** 个人页面配置 - 适用于个人资料页面的头像、卡片、网格、空状态等组件的尺寸和间距设置 */

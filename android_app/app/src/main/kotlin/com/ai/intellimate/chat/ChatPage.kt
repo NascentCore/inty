@@ -780,11 +780,11 @@ internal fun ChatPage(
 
                 LaunchedEffect(Unit) {
                     snapshotFlow { imeTarget.getBottom(density) }
-                        .collect {
-                            if (it > 0) {
-                                SettingStateManager.setKeyboardHeight(
-                                    with(density) { it.toDp().value }
-                                )
+                        .collect { heightPx ->
+                            with(density) {
+                                heightPx.toDp().value.takeIf { it > 200 }?.let {
+                                    SettingStateManager.setKeyboardHeight(it)
+                                }
                             }
                         }
                 }

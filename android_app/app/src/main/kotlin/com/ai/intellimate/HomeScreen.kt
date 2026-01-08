@@ -17,7 +17,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -216,6 +218,7 @@ fun HomeScreen(
                 bottomSpace = UiConfigs.BottomBar.BottomSpacing,
             )
         },
+        contentWindowInsets = WindowInsets.navigationBars,
     ) { innerPadding ->
         HomeContent(
             navController,
