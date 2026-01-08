@@ -25,6 +25,10 @@
     {
       "id": "report_issues_screenshot",
       "text": "When reporting issues, upload a screenshot to help us understand and fix the problem faster."
+    },
+    {
+      "id": "reset_chat",
+      "text": "Tap + in the input box, then tap Reset in the drop-down menu, to reset chat."
     }
   ]
 }
