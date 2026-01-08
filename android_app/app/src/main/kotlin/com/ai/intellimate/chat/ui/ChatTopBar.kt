@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.rounded.EnergySavingsLeaf
 import androidx.compose.material3.Icon
@@ -220,7 +220,10 @@ fun ChatTopBar(
                             Color.Black.copy(
                                 alpha = UiConfigs.ChatTopBar.ActionButtonContainerAlpha
                             ),
-                        shape = RoundedCornerShape(UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius),
+                        shape =
+                            RoundedCornerShape(
+                                UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
+                            ),
                     )
                     .noRippleClickable { onClickCall() },
             contentAlignment = Alignment.Center,
@@ -246,7 +249,10 @@ fun ChatTopBar(
                             Color.Black.copy(
                                 alpha = UiConfigs.ChatTopBar.ActionButtonContainerAlpha
                             ),
-                        shape = RoundedCornerShape(UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius),
+                        shape =
+                            RoundedCornerShape(
+                                UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
+                            ),
                     ),
             contentAlignment = Alignment.Center,
         ) {

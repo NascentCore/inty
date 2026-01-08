@@ -6,7 +6,6 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.LogUtils
-import ai.sxwl.android.utils.TimeUtils
 import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -123,7 +122,7 @@ private fun normalizeTag(tag: String): String {
  * @return 如果角色创建时间距离当前时间在7天内（包含7天），返回 true；否则返回 false
  */
 fun isCreatedWithin7Days(agent: AgentInfo): Boolean {
-    return false //逻辑已经改为根据本地数据同步时间进行判断
+    return false // 逻辑已经改为根据本地数据同步时间进行判断
 }
 
 /**
@@ -512,15 +511,13 @@ fun ExploreCharacterCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (agentInfo.isNew) {
                     Image(
                         painter = painterResource(R.drawable.tag_new),
                         contentDescription = "tag new",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(48.dp, 16.dp)
+                        modifier = Modifier.size(48.dp, 16.dp),
                     )
                     Spacer(Modifier.width(4.dp))
                 }

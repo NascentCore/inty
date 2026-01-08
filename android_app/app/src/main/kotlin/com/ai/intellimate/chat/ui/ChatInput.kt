@@ -157,10 +157,7 @@ fun ChatInput(
             Row(
                 modifier =
                     Modifier.align(Alignment.BottomEnd)
-                        .padding(
-                            end = config.ButtonRightPadding,
-                            bottom = 13.dp,
-                        ),
+                        .padding(end = config.ButtonRightPadding, bottom = 13.dp),
                 horizontalArrangement = Arrangement.spacedBy(config.SceneActionButtonSpacing),
                 verticalAlignment = Alignment.Bottom,
             ) {

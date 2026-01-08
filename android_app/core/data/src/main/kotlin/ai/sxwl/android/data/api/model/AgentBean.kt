@@ -4,11 +4,11 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import android.os.Parcelable
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
-import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.RawValue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 @Parcelize
 @JsonClass(generateAdapter = true)
@@ -36,7 +36,7 @@ data class AgentInfo(
     @Json(name = "energy_points") val energyPoints: Int = 0,
     @Json(name = "follower_count") val followerCount: Int = 0,
     @Json(name = "connector_count") val connectorCount: Int = 0,
-    @Json(name = "deleted_at") val deletedAt: Long? = null
+    @Json(name = "deleted_at") val deletedAt: Long? = null,
 ) : Parcelable {
     // 本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false // 标记该agent是否被服务端已经删除
@@ -74,9 +74,10 @@ data class AgentInfo(
     }
 
     val isNew: Boolean
-        get() = createdAt.toLongOrNull()?.let {
-            System.currentTimeMillis().milliseconds - it.seconds <= 7.days
-        } ?: false
+        get() =
+            createdAt.toLongOrNull()?.let {
+                System.currentTimeMillis().milliseconds - it.seconds <= 7.days
+            } ?: false
 }
 
 @Parcelize
