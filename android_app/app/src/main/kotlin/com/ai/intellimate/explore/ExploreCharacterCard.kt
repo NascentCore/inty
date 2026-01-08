@@ -11,16 +11,20 @@ import android.graphics.drawable.AnimatedImageDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -44,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -57,6 +62,7 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import coil3.request.ImageRequest
+import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.ui.components.SmartTagsLayout
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
@@ -534,14 +540,28 @@ fun ExploreCharacterCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            if (filteredTags.isNotEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().height(CardConfig.TagHeight)) {
-                    IgnoreSystemFontScaling {
-                        SmartTagsLayout(
-                            modifier = Modifier.matchParentSize(),
-                            tags = filteredTags,
-                            isCardTag = true,
-                        )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (agentInfo.isNew) {
+                    Image(
+                        painter = painterResource(R.drawable.tag_new),
+                        contentDescription = "tag new",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(48.dp, 16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
+
+                if (filteredTags.isNotEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().height(CardConfig.TagHeight)) {
+                        IgnoreSystemFontScaling {
+                            SmartTagsLayout(
+                                modifier = Modifier.matchParentSize(),
+                                tags = filteredTags,
+                                isCardTag = true,
+                            )
+                        }
                     }
                 }
             }
