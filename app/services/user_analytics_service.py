@@ -10,10 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 
+BATCH_SIZE = 1000
+
 
 def generate_session_id(chat_id: str) -> str:
     """生成 session_id，与 app/services/chat_service.py 中的逻辑一致"""
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
+
+
+def _batch_list(items: List[Any], batch_size: int = BATCH_SIZE) -> List[List[Any]]:
+    """将列表分批"""
+    return [items[i : i + batch_size] for i in range(0, len(items), batch_size)]
 
 
 class UserAnalyticsService:
@@ -109,6 +116,65 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def _query_session_message_counts(
+        self,
+        session_ids: List[str],
+        activity_start_date: Optional[datetime] = None,
+        activity_end_date: Optional[datetime] = None,
+    ) -> Dict[str, tuple]:
+        """分批查询 session 的消息统计
+
+        返回: {session_id: (message_count, non_opening_count)}
+        """
+        if not session_ids:
+            return {}
+
+        session_to_counts: Dict[str, tuple] = {}
+
+        for batch in _batch_list(session_ids):
+            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+
+            if activity_start_date and activity_end_date:
+                history_query = text(
+                    f"""
+                    SELECT 
+                        session_id::text as session_id,
+                        COUNT(*) as message_count,
+                        COUNT(*) FILTER (
+                            WHERE meta_data->>'isOpening' != 'true' OR meta_data IS NULL
+                        ) as non_opening_count
+                    FROM chat_history
+                    WHERE session_id::text IN ({placeholders})
+                      AND created_at >= :activity_start_date
+                      AND created_at < :activity_end_date
+                    GROUP BY session_id
+                """
+                )
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+                params["activity_start_date"] = activity_start_date
+                params["activity_end_date"] = activity_end_date
+            else:
+                history_query = text(
+                    f"""
+                    SELECT 
+                        session_id::text as session_id,
+                        COUNT(*) as message_count,
+                        COUNT(*) FILTER (
+                            WHERE meta_data->>'isOpening' != 'true' OR meta_data IS NULL
+                        ) as non_opening_count
+                    FROM chat_history
+                    WHERE session_id::text IN ({placeholders})
+                    GROUP BY session_id
+                """
+                )
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+
+            result = await self.db.execute(history_query, params)
+            for row in result.fetchall():
+                session_to_counts[row[0]] = (row[1], row[2])
+
+        return session_to_counts
+
     async def get_conversation_rounds(
         self,
         register_start_date: datetime,
@@ -157,65 +223,20 @@ class UserAnalyticsService:
             logger.info("get_conversation_rounds: 没有生成有效的 session_ids")
             return []
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-
-        # 根据是否有活跃日期范围构建不同的查询
-        if activity_start_date and activity_end_date:
-            history_query = text(
-                f"""
-                SELECT 
-                    session_id::text as session_id,
-                    COUNT(*) as message_count,
-                    COUNT(*) FILTER (
-                        WHERE meta_data->>'isOpening' != 'true' OR meta_data IS NULL
-                    ) as non_opening_count
-                FROM chat_history
-                WHERE session_id::text IN ({placeholders})
-                  AND created_at >= :activity_start_date
-                  AND created_at < :activity_end_date
-                GROUP BY session_id
-            """
-            )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-            params["activity_start_date"] = activity_start_date
-            params["activity_end_date"] = activity_end_date
-        else:
-            history_query = text(
-                f"""
-                SELECT 
-                    session_id::text as session_id,
-                    COUNT(*) as message_count,
-                    COUNT(*) FILTER (
-                        WHERE meta_data->>'isOpening' != 'true' OR meta_data IS NULL
-                    ) as non_opening_count
-                FROM chat_history
-                WHERE session_id::text IN ({placeholders})
-                GROUP BY session_id
-            """
-            )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-
-        result = await self.db.execute(history_query, params)
-
-        session_to_count = {}
-        session_to_non_opening_count = {}
-        for row in result.fetchall():
-            session_id_str = row[0]
-            session_to_count[session_id_str] = row[1]
-            session_to_non_opening_count[session_id_str] = row[2]
+        session_to_counts = await self._query_session_message_counts(
+            session_ids, activity_start_date, activity_end_date
+        )
 
         data = []
         for chat_id, session_id in chat_to_session.items():
-            if session_id in session_to_count:
-                message_count_excluding_opening = session_to_non_opening_count.get(
-                    session_id, session_to_count[session_id]
-                )
-                if message_count_excluding_opening > 0:
+            if session_id in session_to_counts:
+                message_count, non_opening_count = session_to_counts[session_id]
+                if non_opening_count > 0:
                     data.append(
                         {
                             "chat_id": chat_id,
-                            "message_count": session_to_count[session_id],
-                            "message_count_excluding_opening": message_count_excluding_opening,
+                            "message_count": message_count,
+                            "message_count_excluding_opening": non_opening_count,
                         }
                     )
 
@@ -232,6 +253,73 @@ class UserAnalyticsService:
             logger.info("get_conversation_rounds: 没有找到有用户消息的会话")
 
         return data
+
+    async def _query_session_user_message_counts(
+        self,
+        session_ids: List[str],
+        activity_start_date: Optional[datetime] = None,
+        activity_end_date: Optional[datetime] = None,
+    ) -> Dict[str, int]:
+        """分批查询 session 的用户消息数（排除开场白）
+
+        返回: {session_id: user_message_count}
+        """
+        if not session_ids:
+            return {}
+
+        session_to_count: Dict[str, int] = {}
+
+        for batch in _batch_list(session_ids):
+            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+
+            if activity_start_date and activity_end_date:
+                messages_query = text(
+                    f"""
+                    SELECT
+                        ch.session_id::text as session_id,
+                        COUNT(*) FILTER (
+                            WHERE ch.message->>'type' = 'human'
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as user_message_count
+                    FROM chat_history ch
+                    WHERE ch.session_id::text IN ({placeholders})
+                      AND ch.created_at >= :activity_start_date
+                      AND ch.created_at < :activity_end_date
+                    GROUP BY ch.session_id
+                """
+                )
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+                params["activity_start_date"] = activity_start_date
+                params["activity_end_date"] = activity_end_date
+            else:
+                messages_query = text(
+                    f"""
+                    SELECT
+                        ch.session_id::text as session_id,
+                        COUNT(*) FILTER (
+                            WHERE ch.message->>'type' = 'human'
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as user_message_count
+                    FROM chat_history ch
+                    WHERE ch.session_id::text IN ({placeholders})
+                    GROUP BY ch.session_id
+                """
+                )
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+
+            result = await self.db.execute(messages_query, params)
+            for row in result.fetchall():
+                session_to_count[row[0]] = row[1]
+
+        return session_to_count
 
     async def get_user_rounds_distribution(
         self,
@@ -280,57 +368,12 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
+        session_to_user_msg_count = await self._query_session_user_message_counts(
+            session_ids, activity_start_date, activity_end_date
+        )
 
-        if activity_start_date and activity_end_date:
-            messages_query = text(
-                f"""
-                SELECT
-                    ch.session_id::text as session_id,
-                    COUNT(*) FILTER (
-                        WHERE ch.message->>'type' = 'human'
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as user_message_count
-                FROM chat_history ch
-                WHERE ch.session_id::text IN ({placeholders})
-                  AND ch.created_at >= :activity_start_date
-                  AND ch.created_at < :activity_end_date
-                GROUP BY ch.session_id
-            """
-            )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-            params["activity_start_date"] = activity_start_date
-            params["activity_end_date"] = activity_end_date
-        else:
-            messages_query = text(
-                f"""
-                SELECT
-                    ch.session_id::text as session_id,
-                    COUNT(*) FILTER (
-                        WHERE ch.message->>'type' = 'human'
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as user_message_count
-                FROM chat_history ch
-                WHERE ch.session_id::text IN ({placeholders})
-                GROUP BY ch.session_id
-            """
-            )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-
-        result = await self.db.execute(messages_query, params)
-
-        session_to_user_msg_count = {row[0]: row[1] for row in result.fetchall()}
-
-        user_to_total_rounds = {}
-        for i, (user_id, chat_id) in enumerate(chat_records):
+        user_to_total_rounds: Dict[str, int] = {}
+        for user_id, chat_id in chat_records:
             session_id = chat_to_session[chat_id]
             user_msg_count = session_to_user_msg_count.get(session_id, 0)
             if user_id not in user_to_total_rounds:
@@ -355,28 +398,7 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        query = text(
-            f"""
-            SELECT 
-                ch.session_id::text as session_id,
-                COUNT(*) FILTER (
-                    WHERE ch.audio_url IS NOT NULL 
-                    AND (
-                        ch.meta_data IS NULL 
-                        OR ch.meta_data->>'isOpening' IS NULL 
-                        OR ch.meta_data->>'isOpening' != 'true'
-                    )
-                ) as voice_message_count
-            FROM chat_history ch
-            WHERE ch.session_id::text IN ({placeholders})
-            GROUP BY ch.session_id
-        """
-        )
-        params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-        result = await self.db.execute(query, params)
-
-        session_to_voice_count = {row[0]: row[1] for row in result.fetchall()}
+        session_to_voice_count = await self._query_session_voice_counts(session_ids)
 
         data = []
         for chat_id, session_id in chat_to_session.items():
@@ -385,6 +407,45 @@ class UserAnalyticsService:
                 data.append({"chat_id": chat_id, "voice_message_count": voice_count})
 
         return data
+
+    async def _query_session_voice_counts(
+        self, session_ids: List[str]
+    ) -> Dict[str, int]:
+        """分批查询 session 的语音消息数
+
+        返回: {session_id: voice_message_count}
+        """
+        if not session_ids:
+            return {}
+
+        session_to_voice_count: Dict[str, int] = {}
+
+        for batch in _batch_list(session_ids):
+            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+            query = text(
+                f"""
+                SELECT 
+                    ch.session_id::text as session_id,
+                    COUNT(*) FILTER (
+                        WHERE ch.audio_url IS NOT NULL 
+                        AND (
+                            ch.meta_data IS NULL 
+                            OR ch.meta_data->>'isOpening' IS NULL 
+                            OR ch.meta_data->>'isOpening' != 'true'
+                        )
+                    ) as voice_message_count
+                FROM chat_history ch
+                WHERE ch.session_id::text IN ({placeholders})
+                GROUP BY ch.session_id
+            """
+            )
+            params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+            result = await self.db.execute(query, params)
+
+            for row in result.fetchall():
+                session_to_voice_count[row[0]] = row[1]
+
+        return session_to_voice_count
 
     async def get_analytics_stats(
         self,
@@ -626,39 +687,40 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        query = text(
-            f"""
-            SELECT
-                ch.session_id::text as session_id,
-                ch.message->>'type' as message_type,
-                ch.message->>'content' as content,
-                ch.created_at,
-                ch.audio_url
-            FROM chat_history ch
-            WHERE ch.session_id::text IN ({placeholders})
-            ORDER BY ch.created_at
-        """
-        )
-        params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-        result = await self.db.execute(query, params)
-        rows = result.fetchall()
-
         session_to_chat = {v: k for k, v in chat_to_session.items()}
         data = []
-        for row in rows:
-            session_id = row[0]
-            chat_id = session_to_chat.get(session_id)
-            if chat_id:
-                data.append(
-                    {
-                        "chat_id": chat_id,
-                        "message_type": row[1],
-                        "content": row[2],
-                        "created_at": row[3].isoformat() if row[3] else None,
-                        "audio_url": row[4],
-                    }
-                )
+
+        for batch in _batch_list(session_ids):
+            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+            query = text(
+                f"""
+                SELECT
+                    ch.session_id::text as session_id,
+                    ch.message->>'type' as message_type,
+                    ch.message->>'content' as content,
+                    ch.created_at,
+                    ch.audio_url
+                FROM chat_history ch
+                WHERE ch.session_id::text IN ({placeholders})
+                ORDER BY ch.created_at
+            """
+            )
+            params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+            result = await self.db.execute(query, params)
+
+            for row in result.fetchall():
+                session_id = row[0]
+                chat_id = session_to_chat.get(session_id)
+                if chat_id:
+                    data.append(
+                        {
+                            "chat_id": chat_id,
+                            "message_type": row[1],
+                            "content": row[2],
+                            "created_at": row[3].isoformat() if row[3] else None,
+                            "audio_url": row[4],
+                        }
+                    )
 
         return data
 
@@ -866,54 +928,9 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-
-        if activity_start_date and activity_end_date:
-            messages_query = text(
-                f"""
-                SELECT
-                    ch.session_id::text as session_id,
-                    COUNT(*) FILTER (
-                        WHERE ch.message->>'type' = 'human'
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as user_message_count
-                FROM chat_history ch
-                WHERE ch.session_id::text IN ({placeholders})
-                  AND ch.created_at >= :activity_start_date
-                  AND ch.created_at < :activity_end_date
-                GROUP BY ch.session_id
-            """
-            )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-            params["activity_start_date"] = activity_start_date
-            params["activity_end_date"] = activity_end_date
-        else:
-            messages_query = text(
-                f"""
-                SELECT
-                    ch.session_id::text as session_id,
-                    COUNT(*) FILTER (
-                        WHERE ch.message->>'type' = 'human'
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as user_message_count
-                FROM chat_history ch
-                WHERE ch.session_id::text IN ({placeholders})
-                GROUP BY ch.session_id
-            """
-            )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-
-        result = await self.db.execute(messages_query, params)
-
-        session_to_user_msg_count = {row[0]: row[1] for row in result.fetchall()}
+        session_to_user_msg_count = await self._query_session_user_message_counts(
+            session_ids, activity_start_date, activity_end_date
+        )
 
         agent_stats = {}
         for chat_id, session_id in chat_to_session.items():
@@ -1034,75 +1051,11 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-
-        if activity_start_date and activity_end_date:
-            messages_query = text(
-                f"""
-                SELECT
-                    ch.session_id::text as session_id,
-                    COUNT(*) FILTER (
-                        WHERE ch.message->>'type' = 'human'
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as user_message_count,
-                    COUNT(*) FILTER (
-                        WHERE ch.audio_url IS NOT NULL
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as voice_message_count
-                FROM chat_history ch
-                WHERE ch.session_id::text IN ({placeholders})
-                  AND ch.created_at >= :activity_start_date
-                  AND ch.created_at < :activity_end_date
-                GROUP BY ch.session_id
-            """
+        session_to_msg_count, session_to_voice_count = (
+            await self._query_session_detail_counts(
+                session_ids, activity_start_date, activity_end_date
             )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-            params["activity_start_date"] = activity_start_date
-            params["activity_end_date"] = activity_end_date
-        else:
-            messages_query = text(
-                f"""
-                SELECT
-                    ch.session_id::text as session_id,
-                    COUNT(*) FILTER (
-                        WHERE ch.message->>'type' = 'human'
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as user_message_count,
-                    COUNT(*) FILTER (
-                        WHERE ch.audio_url IS NOT NULL
-                        AND (
-                            ch.meta_data IS NULL
-                            OR ch.meta_data->>'isOpening' IS NULL
-                            OR ch.meta_data->>'isOpening' != 'true'
-                        )
-                    ) as voice_message_count
-                FROM chat_history ch
-                WHERE ch.session_id::text IN ({placeholders})
-                GROUP BY ch.session_id
-            """
-            )
-            params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
-
-        result = await self.db.execute(messages_query, params)
-
-        session_to_msg_count = {}
-        session_to_voice_count = {}
-        for row in result.fetchall():
-            session_id_str = row[0]
-            session_to_msg_count[session_id_str] = row[1]
-            session_to_voice_count[session_id_str] = row[2]
+        )
 
         data = []
         for row in chat_records:
@@ -1126,6 +1079,91 @@ class UserAnalyticsService:
             )
 
         return data
+
+    async def _query_session_detail_counts(
+        self,
+        session_ids: List[str],
+        activity_start_date: Optional[datetime] = None,
+        activity_end_date: Optional[datetime] = None,
+    ) -> tuple[Dict[str, int], Dict[str, int]]:
+        """分批查询 session 的用户消息数和语音消息数
+
+        返回: (session_to_msg_count, session_to_voice_count)
+        """
+        if not session_ids:
+            return {}, {}
+
+        session_to_msg_count: Dict[str, int] = {}
+        session_to_voice_count: Dict[str, int] = {}
+
+        for batch in _batch_list(session_ids):
+            placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
+
+            if activity_start_date and activity_end_date:
+                messages_query = text(
+                    f"""
+                    SELECT
+                        ch.session_id::text as session_id,
+                        COUNT(*) FILTER (
+                            WHERE ch.message->>'type' = 'human'
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as user_message_count,
+                        COUNT(*) FILTER (
+                            WHERE ch.audio_url IS NOT NULL
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as voice_message_count
+                    FROM chat_history ch
+                    WHERE ch.session_id::text IN ({placeholders})
+                      AND ch.created_at >= :activity_start_date
+                      AND ch.created_at < :activity_end_date
+                    GROUP BY ch.session_id
+                """
+                )
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+                params["activity_start_date"] = activity_start_date
+                params["activity_end_date"] = activity_end_date
+            else:
+                messages_query = text(
+                    f"""
+                    SELECT
+                        ch.session_id::text as session_id,
+                        COUNT(*) FILTER (
+                            WHERE ch.message->>'type' = 'human'
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as user_message_count,
+                        COUNT(*) FILTER (
+                            WHERE ch.audio_url IS NOT NULL
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as voice_message_count
+                    FROM chat_history ch
+                    WHERE ch.session_id::text IN ({placeholders})
+                    GROUP BY ch.session_id
+                """
+                )
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+
+            result = await self.db.execute(messages_query, params)
+            for row in result.fetchall():
+                session_to_msg_count[row[0]] = row[1]
+                session_to_voice_count[row[0]] = row[2]
+
+        return session_to_msg_count, session_to_voice_count
 
     async def find_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """通过邮箱查找用户"""
