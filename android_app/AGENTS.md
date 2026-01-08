@@ -2,6 +2,11 @@
 
 本文件覆盖并补充根 `AGENTS.md`，仅适用于 `android_app/`。
 
+## 功能
+
+- [intellimate_tips.json](app/src/main/assets/intellimate_tips.json) 可以添加用户指南让用户看到
+  <img width="300" height="736" alt="image" src="https://github.com/user-attachments/assets/06d2c224-5ab9-4abb-a072-5715ec813a35" />
+
 ## 一般指示
 
 - 颜色常亮写入 `android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，不要直接使用 Hex 值、如 `0xFAB...` 之类的 RGB 颜色值
