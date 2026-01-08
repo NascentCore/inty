@@ -69,7 +69,6 @@ fun HeartBottomAppBar(
         modifier =
             Modifier.background(HeartColor.primaryColor)
                 .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-                .padding(bottom = bottomSpace)
                 .then(navigationBarModifier),
         containerColor = Color.Transparent,
         tonalElevation = 8.dp,
@@ -87,6 +86,7 @@ fun HeartBottomAppBar(
                     )
             ) {
                 NavigationBarItem(
+                    modifier = Modifier.align(Alignment.CenterVertically),
                     selected = isSelected,
                     onClick = { onTabSelected(tab.index) },
                     icon = {
