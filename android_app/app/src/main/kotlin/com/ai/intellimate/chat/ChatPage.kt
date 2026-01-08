@@ -791,9 +791,11 @@ internal fun ChatPage(
                     snapshotFlow { imeTarget.getBottom(density) }
                         .collect { heightPx ->
                             with(density) {
-                                heightPx.toDp().value.takeIf { it > 200 }?.let {
-                                    SettingStateManager.setKeyboardHeight(it)
-                                }
+                                heightPx
+                                    .toDp()
+                                    .value
+                                    .takeIf { it > 200 }
+                                    ?.let { SettingStateManager.setKeyboardHeight(it) }
                             }
                         }
                 }

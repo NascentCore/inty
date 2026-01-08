@@ -12,8 +12,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.milliseconds
 
 class CharacterRepository(
     private val dao: CharacterDao = CharacterDatabase.getInstance().characterDao(),
@@ -58,7 +56,7 @@ class CharacterRepository(
                     followerCount = agentInfo.followerCount,
                     connectorCount = agentInfo.connectorCount,
                     deletedAt = agentInfo.deletedAt,
-                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() }
+                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
                 )
             }
 
@@ -95,7 +93,7 @@ class CharacterRepository(
                     followerCount = agentInfo.followerCount,
                     connectorCount = agentInfo.connectorCount,
                     deletedAt = agentInfo.deletedAt,
-                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() }
+                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
                 )
             dao.upsert(entity)
         }
@@ -157,7 +155,7 @@ private fun CharacterEntity.toAgentInfo(): AgentInfo {
             energyPoints = this.energyPoints,
             followerCount = this.followerCount,
             connectorCount = this.connectorCount,
-            deletedAt = this.deletedAt
+            deletedAt = this.deletedAt,
         )
         .also { info -> info.isDeleted = this.deletedAt != null }
 }

@@ -18,8 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.milliseconds
 
 /** Explore接口调用结果回调 用于将接口调用情况传递给ViewModel进行事件上报 */
 interface ExploreFetchCallback {
