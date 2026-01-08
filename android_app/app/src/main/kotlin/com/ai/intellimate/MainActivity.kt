@@ -346,6 +346,8 @@ class MainActivity : BaseActivity() {
             if (!isLoggedIn) return
             // 检查用户是否禁用了 tips
             if (IntySetting.isTipsDisabled()) return
+            // 频率控制：最多每 8 小时展示一次，降低打扰（跨 session/重启生效）
+            if (!IntySetting.canShowIntelliMateTipNow()) return
             if (!IntelliMateTipsSessionGate.tryAcquireToShowInCurrentSession()) return
 
             scope.launch {
@@ -356,6 +358,7 @@ class MainActivity : BaseActivity() {
                 }
                 intelliMateTipText = tip
                 showIntelliMateTipDialog = true
+                IntySetting.setIntelliMateTipLastShowTimeMillis(System.currentTimeMillis())
                 IntelliMateTipsSessionGate.markShownInCurrentSession()
             }
         }
