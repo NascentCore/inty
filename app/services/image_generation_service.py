@@ -396,8 +396,16 @@ class ImageGenerationService:
 
             # 获取用户信息（若有 user_id）
             user_info = ""
+            user_photo_url = None
             if user_id:
                 user_info = await build_user_info_prompt_block(db, user_id)
+                # 查询用户的自拍照片
+                from app.models.user import User
+
+                user_result = await db.execute(
+                    select(User.user_photo).where(User.id == user_id)
+                )
+                user_photo_url = user_result.scalar_one_or_none()
 
             # 构建提示词
             prompt = self.build_image_prompt(
@@ -437,13 +445,31 @@ class ImageGenerationService:
                 mime_type="image/jpeg",
             )
 
+            # 构建 parts 列表：Agent 参考图 + 用户自拍（若有）+ 提示词
+            parts = [reference_image]
+
+            # 如果用户有自拍照片，添加为额外参考图
+            if user_photo_url:
+                # 确保用户照片是完整URL
+                if not user_photo_url.startswith("http"):
+                    if user_photo_url.startswith("gs://"):
+                        user_photo_url = user_photo_url.replace(
+                            "gs://", "https://storage.googleapis.com/"
+                        )
+                if user_photo_url.startswith("http"):
+                    user_photo_part = types.Part.from_uri(
+                        file_uri=user_photo_url,
+                        mime_type="image/jpeg",
+                    )
+                    parts.append(user_photo_part)
+                    logger.info(f"添加用户自拍照片作为参考图: {user_photo_url}")
+
+            parts.append(types.Part.from_text(text=prompt))
+
             contents = [
                 types.Content(
                     role="user",
-                    parts=[
-                        reference_image,
-                        types.Part.from_text(text=prompt),
-                    ],
+                    parts=parts,
                 )
             ]
 

@@ -132,6 +132,16 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
                 )
             )
 
+        # 处理用户自拍照片URL：同样转换为GCS URL用于存储
+        if "user_photo" in update_data and update_data["user_photo"]:
+            from app.services.image_transform_service import image_transform_service
+
+            update_data["user_photo"] = (
+                image_transform_service.normalize_image_url_for_storage(
+                    update_data["user_photo"]
+                )
+            )
+
         # 过滤掉不应该被用户更新的字段
         excluded_fields = {
             "readable_id",

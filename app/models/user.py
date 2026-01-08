@@ -55,6 +55,7 @@ class User(Base):
     nickname = Column(String, index=True, comment="用户昵称，可搜索")
     avatar = Column(String, comment="用户头像URL")
     email = Column(String, comment="邮箱地址")
+    user_photo = Column(String, comment="用户自拍照片URL，用于生图参考")
 
     @validates("phone")
     def validate_phone(self, key, value):

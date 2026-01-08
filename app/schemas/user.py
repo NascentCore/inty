@@ -21,6 +21,7 @@ class UserBase(BaseModel):
     nickname: Optional[str] = None
     avatar: Optional[str] = None
     email: Optional[str] = None  # 改为普通str，避免EmailStr验证问题
+    user_photo: Optional[str] = None
     phone: Optional[str] = None
     gender: Optional[Gender] = None
     age_group: Optional[str] = None
@@ -55,6 +56,7 @@ class UserUpdate(BaseModel):
     nickname: Optional[str] = None
     avatar: Optional[str] = None
     email: Optional[str] = None  # 改为普通str
+    user_photo: Optional[str] = None
     phone: Optional[str] = None
     gender: Optional[Gender] = None
     age_group: Optional[str] = None
@@ -141,6 +143,7 @@ class UserListItem(BaseModel):
     nickname: Optional[str] = None
     avatar: Optional[str] = None
     email: Optional[str] = None
+    user_photo: Optional[str] = None
     phone: Optional[str] = None
     gender: Optional[Gender] = None
     age_group: Optional[str] = None
