@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.rounded.EnergySavingsLeaf
 import androidx.compose.material3.Icon
@@ -111,6 +112,7 @@ fun ChatTopBar(
     modifier: Modifier,
     agentInfo: AgentInfo,
     onClickMore: () -> Unit,
+    onClickCall: () -> Unit,
     avatarWidth: Dp = UiConfigs.ChatTopBar.AvatarSize,
     fontSize: TextUnit = 14.sp,
     earnedPoints: Int? = null,
@@ -209,10 +211,42 @@ fun ChatTopBar(
 
         Box(
             modifier =
-                Modifier.size(48.dp, 32.dp)
+                Modifier.size(
+                        UiConfigs.ChatTopBar.ActionButtonContainerWidth,
+                        UiConfigs.ChatTopBar.ActionButtonContainerHeight,
+                    )
                     .background(
-                        color = Color.Black.copy(.3f),
-                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                        color =
+                            Color.Black.copy(
+                                alpha = UiConfigs.ChatTopBar.ActionButtonContainerAlpha
+                            ),
+                        shape = RoundedCornerShape(UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius),
+                    )
+                    .noRippleClickable { onClickCall() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Call,
+                contentDescription = stringResource(R.string.call),
+                tint = Color.White,
+                modifier = Modifier.size(UiConfigs.ChatTopBar.MoreButtonIconSize),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ActionButtonSpacing))
+
+        Box(
+            modifier =
+                Modifier.size(
+                        UiConfigs.ChatTopBar.ActionButtonContainerWidth,
+                        UiConfigs.ChatTopBar.ActionButtonContainerHeight,
+                    )
+                    .background(
+                        color =
+                            Color.Black.copy(
+                                alpha = UiConfigs.ChatTopBar.ActionButtonContainerAlpha
+                            ),
+                        shape = RoundedCornerShape(UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius),
                     ),
             contentAlignment = Alignment.Center,
         ) {
