@@ -124,7 +124,7 @@ fun ChatMorePanel(
 
                 BoxWithConstraints(
                     Modifier.fillMaxWidth()
-                        .height(if (keyboardHeight > 0) keyboardHeight.dp else Dp.Unspecified)
+                        .height(if (keyboardHeight > 0) keyboardHeight.dp else 300.dp)
                 ) {
                     val transY = remember { Animatable(maxHeight, Dp.VectorConverter) }
                     /*val transY by animateDpAsState(
