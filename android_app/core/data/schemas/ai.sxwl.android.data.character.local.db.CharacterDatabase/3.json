@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "91d5f1fa8f473586aef75e2317605c34",
+    "identityHash": "7bb5759a8d07ae3c56e3a858fe6211ec",
     "entities": [
       {
         "tableName": "characters",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`agent_id` TEXT NOT NULL, `name` TEXT NOT NULL, `avatar` TEXT NOT NULL, `intro` TEXT NOT NULL, `readable_id` TEXT NOT NULL, `category` TEXT NOT NULL, `energy_points` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `background` TEXT NOT NULL, `background_animate` TEXT NOT NULL, `gender` TEXT NOT NULL, `is_followed` INTEGER NOT NULL, `opening` TEXT NOT NULL, `opening_audio_url` TEXT NOT NULL, `voice_preview` TEXT NOT NULL, `created_at` TEXT NOT NULL, `creator` TEXT, `tags` TEXT, `settings` TEXT, `visibility` TEXT NOT NULL, `prompt` TEXT NOT NULL, `follower_count` INTEGER NOT NULL, `connector_count` INTEGER NOT NULL, `deleted_at` INTEGER, `background_images` TEXT, `insert_time` INTEGER NOT NULL, PRIMARY KEY(`agent_id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`agent_id` TEXT NOT NULL, `name` TEXT NOT NULL, `avatar` TEXT NOT NULL, `intro` TEXT NOT NULL, `readable_id` TEXT NOT NULL, `category` TEXT NOT NULL, `energy_points` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `background` TEXT NOT NULL, `background_animate` TEXT NOT NULL, `gender` TEXT NOT NULL, `is_followed` INTEGER NOT NULL, `opening` TEXT NOT NULL, `opening_audio_url` TEXT NOT NULL, `voice_preview` TEXT NOT NULL, `created_at` TEXT NOT NULL, `creator` TEXT, `tags` TEXT, `settings` TEXT, `visibility` TEXT NOT NULL, `prompt` TEXT NOT NULL, `follower_count` INTEGER NOT NULL, `connector_count` INTEGER NOT NULL, `deleted_at` INTEGER, `background_images` TEXT, PRIMARY KEY(`agent_id`))",
         "fields": [
           {
             "fieldPath": "agentId",
@@ -152,12 +152,6 @@
             "fieldPath": "backgroundImages",
             "columnName": "background_images",
             "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "insertTime",
-            "columnName": "insert_time",
-            "affinity": "INTEGER",
-            "notNull": true
           }
         ],
         "primaryKey": {
@@ -170,7 +164,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '91d5f1fa8f473586aef75e2317605c34')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7bb5759a8d07ae3c56e3a858fe6211ec')"
     ]
   }
 }

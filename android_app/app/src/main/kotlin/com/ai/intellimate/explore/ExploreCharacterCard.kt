@@ -122,7 +122,6 @@ private fun normalizeTag(tag: String): String {
  * @param agent 角色信息
  * @return 如果角色创建时间距离当前时间在7天内（包含7天），返回 true；否则返回 false
  */
-@Deprecated("逻辑已经改为根据本地数据同步时间进行判断")
 fun isCreatedWithin7Days(agent: AgentInfo): Boolean {
     return false //逻辑已经改为根据本地数据同步时间进行判断
 }

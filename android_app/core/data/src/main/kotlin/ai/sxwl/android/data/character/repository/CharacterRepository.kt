@@ -31,12 +31,8 @@ class CharacterRepository(
     suspend fun cacheAgents(agents: List<AgentInfo>) {
         if (agents.isEmpty()) return
 
-        val time = System.currentTimeMillis()
-
         val entities =
             agents.map { agentInfo ->
-                val localAgent = dao.getCharacter(agentInfo.id)
-
                 CharacterEntity(
                     agentId = agentInfo.id,
                     name = agentInfo.name,
@@ -62,8 +58,7 @@ class CharacterRepository(
                     followerCount = agentInfo.followerCount,
                     connectorCount = agentInfo.connectorCount,
                     deletedAt = agentInfo.deletedAt,
-                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
-                    insertTime = localAgent?.insertTime ?: time
+                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() }
                 )
             }
 
@@ -100,8 +95,7 @@ class CharacterRepository(
                     followerCount = agentInfo.followerCount,
                     connectorCount = agentInfo.connectorCount,
                     deletedAt = agentInfo.deletedAt,
-                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
-                    insertTime = existing?.insertTime ?: System.currentTimeMillis()
+                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() }
                 )
             dao.upsert(entity)
         }
@@ -163,8 +157,7 @@ private fun CharacterEntity.toAgentInfo(): AgentInfo {
             energyPoints = this.energyPoints,
             followerCount = this.followerCount,
             connectorCount = this.connectorCount,
-            deletedAt = this.deletedAt,
-            isNew = insertTime >= 0 && (System.currentTimeMillis().milliseconds - insertTime.milliseconds) <= 7.days
+            deletedAt = this.deletedAt
         )
         .also { info -> info.isDeleted = this.deletedAt != null }
 }
