@@ -395,7 +395,15 @@ internal fun ChatPage(
                         fontSize = 15.sp,
                         avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
                         earnedPoints = null,
-                        onClickCall = { onCall() },
+                        onClickCall = {
+                            scope.launch {
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                } else {
+                                    onCall()
+                                }
+                            }
+                        },
                         onClickMore = {
                             scope.launch {
                                 if (agentInfo?.isDeleted == true) {
