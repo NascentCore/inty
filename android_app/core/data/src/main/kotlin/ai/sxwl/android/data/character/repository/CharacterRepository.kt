@@ -12,6 +12,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 
 class CharacterRepository(
     private val dao: CharacterDao = CharacterDatabase.getInstance().characterDao(),
@@ -162,6 +164,7 @@ private fun CharacterEntity.toAgentInfo(): AgentInfo {
             followerCount = this.followerCount,
             connectorCount = this.connectorCount,
             deletedAt = this.deletedAt,
+            isNew = insertTime >= 0 && (System.currentTimeMillis().milliseconds - insertTime.milliseconds) <= 7.days
         )
         .also { info -> info.isDeleted = this.deletedAt != null }
 }
