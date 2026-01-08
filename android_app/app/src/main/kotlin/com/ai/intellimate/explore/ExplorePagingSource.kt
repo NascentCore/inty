@@ -73,9 +73,6 @@ class ExplorePagingSource(
                                     !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                             }
 
-                        //查询room缓存判断是否为新Agent
-                        checkIsNewAgent(validCachedAgents)
-
                         if (validCachedAgents.isNotEmpty()) {
                             if (cacheProvider.shouldUpdateFromNetwork()) {
                                 loadFromNetworkAsync(page, pageSize)
@@ -140,8 +137,6 @@ class ExplorePagingSource(
                             cacheProvider.refreshRecommendedAgents()
                         }
 
-                        checkIsNewAgent(validAgents)
-
                         LoadResult.Page(
                             data = validAgents,
                             prevKey =
@@ -165,26 +160,6 @@ class ExplorePagingSource(
         return state.anchorPosition?.let { anchorPosition ->
             state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
                 ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)
-        }
-    }
-
-    private suspend fun checkIsNewAgent(agents: List<AgentInfo>) {
-        val currentTime = System.currentTimeMillis().milliseconds
-        val newDuration = 7.days
-
-        agents.forEach {
-            val localAgent = characterRepository.getCharacter(it.id)
-
-            // 如果本地没有该Agent记录，或者insertTime无效，则认为是新Agent
-            if (localAgent == null) {
-                it.isNew = true
-            } else if (localAgent.insertTime <= 0){
-                it.isNew = false
-            } else {
-                // 根据 insertTime 是否超过7天判断是否为新Agent
-                val timeDiff = currentTime - localAgent.insertTime.milliseconds
-                it.isNew = timeDiff < newDuration
-            }
         }
     }
 

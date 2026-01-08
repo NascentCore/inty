@@ -36,6 +36,5 @@ data class CharacterEntity(
     @ColumnInfo(name = "follower_count") val followerCount: Int = 0,
     @ColumnInfo(name = "connector_count") val connectorCount: Int = 0,
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
-    @ColumnInfo(name = "background_images") val backgroundImages: List<String>? = null,
-    @ColumnInfo(name = "insert_time") val insertTime: Long = -1
+    @ColumnInfo(name = "background_images") val backgroundImages: List<String>? = null
 )
