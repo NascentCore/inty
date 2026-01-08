@@ -19,6 +19,10 @@ private const val DEFAULT_CHAT_MODEL_ID = "gemini_3_flash"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
 private const val KEY_TOTAL_MESSAGE_COUNT = "total_message_count"
+private const val KEY_INTELLIMATE_TIP_LAST_SHOW_TIME = "intellimate_tip_last_show_time"
+
+// IntelliMate Tips 展示频率：最多每 8 小时一次（降低打扰）
+private const val INTELLIMATE_TIP_MIN_INTERVAL_MILLIS = 8 * 60 * 60 * 1000L
 
 object IntySetting {
 
@@ -157,6 +161,28 @@ object IntySetting {
 
     fun isTipsDisabled(): Boolean {
         return curUserSetting.decodeBool("tips_disabled", false)
+    }
+
+    /** 获取 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
+    fun getIntelliMateTipLastShowTimeMillis(): Long {
+        // 默认值为很小的值，确保首次检查一定可以展示。
+        return curUserSetting.decodeLong(KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, -1L)
+    }
+
+    /** 设置 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
+    fun setIntelliMateTipLastShowTimeMillis(timestampMillis: Long) {
+        curUserSetting.putLong(KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, timestampMillis)
+    }
+
+    /**
+     * 判断此刻是否允许展示 IntelliMate tips 弹窗。
+     *
+     * 规则：最多每 8 小时展示一次（同一用户维度）。
+     */
+    fun canShowIntelliMateTipNow(nowMillis: Long = System.currentTimeMillis()): Boolean {
+        val lastShownMillis = getIntelliMateTipLastShowTimeMillis()
+        if (lastShownMillis < 0L) return true
+        return nowMillis - lastShownMillis >= INTELLIMATE_TIP_MIN_INTERVAL_MILLIS
     }
 
     /** 检查用户是否手动设置过 Auto Play Animation */
