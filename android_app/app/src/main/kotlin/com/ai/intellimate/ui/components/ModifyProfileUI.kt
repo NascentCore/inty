@@ -83,12 +83,14 @@ private fun EditKey.toDisplayName(): String {
 fun ProfileInfoScreen(
     userProfile: UserProfile,
     preference: String = "",
+    isAppearanceUploading: Boolean = false,
     onBack: () -> Unit = {},
     onSelectAvatar: () -> Unit = {},
     onClickName: () -> Unit = {},
     onClickPronouns: () -> Unit = {},
     onClickPreference: () -> Unit = {},
     onClickPersona: () -> Unit = {},
+    onClickAppearance: () -> Unit = {},
 ) {
     Scaffold(
         modifier = Modifier.background(HeartColor.primaryColor),
@@ -121,11 +123,13 @@ fun ProfileInfoScreen(
             MyPersonaSettingsGroup(
                 userProfile = userProfile,
                 preference = preference,
+                isAppearanceUploading = isAppearanceUploading,
                 horizontalPadding = horizontalPadding,
                 onClickName = onClickName,
                 onClickPronouns = onClickPronouns,
                 onClickPreference = onClickPreference,
                 onClickPersona = onClickPersona,
+                onClickAppearance = onClickAppearance,
             )
 
             Spacer(Modifier.weight(1f))

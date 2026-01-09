@@ -314,6 +314,8 @@
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate</string>
     <string name="upload_from_gallery">Upload</string>
+    <string name="image_picker_gallery">相册</string>
+    <string name="image_picker_camera">拍照</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
     <string name="male_full">Male</string>
     <string name="female_full">Female</string>
@@ -412,6 +414,7 @@
     <string name="str_name_placeholder">Enter your name</string>
     <string name="str_pronouns">Pronouns</string>
     <string name="str_persona">Persona Description</string>
+    <string name="str_appearance">形象设置</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
     <string name="version_update_available">%s\nClick to update</string>
 

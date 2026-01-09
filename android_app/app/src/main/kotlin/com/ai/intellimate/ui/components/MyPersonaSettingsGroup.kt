@@ -5,10 +5,22 @@ import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
+import ai.sxwl.android.design.ui.SettingsLoadingItem
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.ai.intellimate.R
+import kotlinx.coroutines.launch
 
 /**
  * CREATED_BY_AGENT: GPT-5.2
@@ -26,10 +38,12 @@ fun MyPersonaSettingsGroup(
     horizontalPadding: Int = 16,
     fontLight: Boolean = false,
     contentMaxLines: Int = 1,
+    isAppearanceUploading: Boolean = false,
     onClickName: () -> Unit,
     onClickPronouns: () -> Unit,
     onClickPreference: () -> Unit,
     onClickPersona: () -> Unit,
+    onClickAppearance: (() -> Unit)? = null,
 ) {
     val personaContent =
         userProfile.description?.takeIf { it.isNotBlank() } ?: stringResource(R.string.edit_button)
@@ -89,5 +103,16 @@ fun MyPersonaSettingsGroup(
             contentMaxLines = contentMaxLines,
             onItemClick = onClickPersona,
         )
+        onClickAppearance?.let {
+            IntelliMateDivider()
+            SettingsLoadingItem(
+                isLoading = isAppearanceUploading,
+                isInGroup = true,
+                fontLight = fontLight,
+                horizontalPadding = horizontalPadding,
+                onItemClick = it,
+                text = { Text(stringResource(R.string.str_appearance)) }
+            )
+        }
     }
 }

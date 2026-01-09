@@ -20,6 +20,7 @@ object UserProfileManager {
         IntySetting.setUserProfileBoolean("is_active", userProfile.isActive)
         IntySetting.setUserProfileBoolean("is_superuser", userProfile.isSuperuser)
         IntySetting.setUserProfileData("phone", userProfile.phone ?: "")
+        IntySetting.setUserProfileData("user_photo", userProfile.userPhoto.orEmpty())
 
         // 处理 ageGroup（可能是字符串或其他类型）
         userProfile.ageGroup?.let { ageGroup ->
@@ -46,6 +47,7 @@ object UserProfileManager {
             isActive = IntySetting.getUserProfileBoolean("is_active", false),
             isSuperuser = IntySetting.getUserProfileBoolean("is_superuser", false),
             phone = IntySetting.getUserProfileData("phone")?.takeIf { it.isNotEmpty() },
+            userPhoto = IntySetting.getUserProfileData("user_photo"),
             ageGroup =
                 IntySetting.getUserProfileData("age_group")
                     ?: IntySetting.getUserProfileInt("age_group_int", 0)

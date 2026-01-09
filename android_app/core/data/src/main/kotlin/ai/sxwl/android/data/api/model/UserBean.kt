@@ -19,6 +19,7 @@ data class UserProfile(
     @param:Json(name = "age_group") val ageGroup: String? = null,
     @param:Json(name = "auth_type") val authType: String = "",
     val avatar: String? = null,
+    @param:Json(name = "user_photo") val userPhoto: String? = null,
     @param:Json(name = "created_at") val createdAt: String = "",
     // description 是早期的称为，目前其在 App 中被称作 persona
     // Persona 指的是AI 角色看到的人类用户的“角色设定”
