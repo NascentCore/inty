@@ -6,10 +6,10 @@ import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.utils.LogUtils
 import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.request
+import java.io.File
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
 
 class UserProfileDataSource {
     suspend fun updateUserProfile(userProfile: UserProfile): UserProfile? {
