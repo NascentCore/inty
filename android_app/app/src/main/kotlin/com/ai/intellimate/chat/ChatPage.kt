@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -66,6 +67,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.OpeningPlayState
@@ -79,10 +81,12 @@ import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
 import com.ai.intellimate.chat.ui.ChatTopBar
 import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
+import com.ai.intellimate.chat.ui.ImagePickItem
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
@@ -124,6 +128,7 @@ internal fun ChatPage(
     debugAgentIndex: Int? = null,
 ) {
 
+    val userProfileViewModel = viewModel<ModifyProfileViewModel>()
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
@@ -479,6 +484,7 @@ internal fun ChatPage(
                     hasMoreMessages &&
                         (isLoadingMore ||
                             (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
+                val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
 
                 // 判断是否需要播放开场白语音（移到LazyColumn外部）
                 val shouldDelayShowOpening =
@@ -553,6 +559,26 @@ internal fun ChatPage(
 
                 LazyColumn(modifier = lazyColumnModifier, state = listState, reverseLayout = true) {
                     item { Spacer(Modifier.height(16.dp)) }
+
+                    if (!imagePickMessageId.isNullOrEmpty()) {
+                        item("ImagePicker") {
+                            val isUserUploading by userProfileViewModel.isAppearanceUploading.collectAsState()
+
+                            ImagePickItem(
+                                isLoading = isUserUploading,
+                                onSkip = { chatViewModel.generateImageForMessage()},
+                                onImageSelected = {
+                                    userProfileViewModel.setUserAppearance(it) {
+                                        chatViewModel.generateImageForMessage()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .padding(vertical = 16.dp)
+                                    .size(210.5.dp, 312.5.dp)
+                            )
+                        }
+                    }
+
                     val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                     runCatching {
                             if (filteredChatMessages.isNotEmpty()) {

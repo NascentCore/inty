@@ -314,6 +314,11 @@
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate</string>
     <string name="upload_from_gallery">Upload</string>
+    <string name="image_picker_gallery">Choose a photo</string>
+    <string name="image_picker_camera">Take a selfie</string>
+    <string name="image_pick_protagonist_title">Be the protagonist in your own dialogue</string>
+    <string name="image_pick_reference_description">To make the generated image look more like you, you can upload a selfie as a reference.</string>
+    <string name="image_pick_skip">Skip</string>
     <string name="gender_unmodified_full">Gender (Unmodified after Creation) *</string>
     <string name="male_full">Male</string>
     <string name="female_full">Female</string>
@@ -412,6 +417,7 @@
     <string name="str_name_placeholder">Enter your name</string>
     <string name="str_pronouns">Pronouns</string>
     <string name="str_persona">Persona Description</string>
+    <string name="str_appearance">User Photo</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
     <string name="version_update_available">%s\nClick to update</string>
 

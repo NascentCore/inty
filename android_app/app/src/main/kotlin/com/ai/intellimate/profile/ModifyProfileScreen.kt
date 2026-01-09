@@ -31,11 +31,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.EditDialog
 import com.ai.intellimate.ui.components.EditKey
+import com.ai.intellimate.ui.components.ImagePickerBottomSheet
 import com.ai.intellimate.ui.components.ProfileInfoScreen
 import com.ai.intellimate.utils.UCropHelper
 import com.ai.intellimate.xb.helper.UserProfileStore
@@ -119,6 +121,8 @@ internal fun ModifyProfileScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
     val userPreference by preferenceFlow.collectAsState(initial = "")
+    var showImagePicker by remember { mutableStateOf(false) }
+    val isAppearanceUploading by viewModel.isAppearanceUploading.collectAsState()
 
     //    LaunchedEffect(Unit) {
     //        viewModel.events.collect { event ->
@@ -137,6 +141,7 @@ internal fun ModifyProfileScreen(
         ProfileInfoScreen(
             userProfile = userProfile.value,
             preference = userPreference,
+            isAppearanceUploading = isAppearanceUploading,
             onBack = { navController.popBackStack() },
             onClickName = {
                 editKey = EditKey.Name
@@ -155,7 +160,21 @@ internal fun ModifyProfileScreen(
                 editValue = userPreference
             },
             onSelectAvatar = { galleryLauncher.launch("image/*") },
+            onClickAppearance = {
+                showImagePicker = true
+            }
         )
+
+        if (showImagePicker) {
+            ImagePickerBottomSheet(
+                onDismiss = { showImagePicker = false},
+                onImageSelected = {
+                    showImagePicker = false
+
+                    viewModel.setUserAppearance(it)
+                }
+            )
+        }
 
         if (editKey != EditKey.None) {
             ModalBottomSheet(

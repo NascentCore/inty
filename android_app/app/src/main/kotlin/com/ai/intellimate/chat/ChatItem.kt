@@ -346,7 +346,7 @@ private fun ChatItemAI(
                             if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
                                 MessageCornerActions(
                                     onImageGenerate = {
-                                        viewModel.generateImageForMessage(item.id)
+                                        viewModel.generateImageForMessageOrPickImage(item.id)
                                     },
                                     modifier =
                                         Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),

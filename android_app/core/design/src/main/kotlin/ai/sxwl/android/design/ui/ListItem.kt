@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -35,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -307,6 +310,59 @@ fun SettingsArrowItem(
     }
 }
 
+@Composable
+fun SettingsLoadingItem(
+    isLoading: Boolean,
+    fontLight: Boolean = false, // 使用字重小一点
+    isInGroup: Boolean = false,
+    horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
+    onItemClick: () -> Unit = {},
+    text: @Composable () -> Unit
+) {
+    val modifier =
+        if (isInGroup) Modifier
+        else
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(Color(0x3378599A))
+                .border(
+                    width = .05.dp,
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(Color.Transparent, Color.White.copy(.3f), Color.Transparent)
+                        ),
+                    shape = RoundedCornerShape(8.dp),
+                )
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .then(modifier)
+                .clickable(onClick = onItemClick)
+                .padding(horizontal = horizontalPadding.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ProvideTextStyle(
+            TextStyle(
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                fontWeight = if (fontLight) FontWeight.Normal else FontWeight.Bold,
+                color = Color.White
+            ),
+            content = text
+        )
+        Spacer(Modifier.weight(1f).padding(horizontal = 8.dp))
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                color = Color.White.copy(alpha = 0.55f)
+            )
+        } else {
+            Image(painter = painterResource(R.drawable.ic_arrow_forward), contentDescription = "")
+        }
+    }
+}
+
 @Preview
 @Composable
 private fun 预览普通设置条目() {
@@ -320,6 +376,11 @@ private fun 预览普通设置条目() {
         SettingsArrowItem(
             item = SettingsItemData.CommonItemData("关于App", "v1.0.0", arrow = false),
             showRedDot = true,
+        )
+        Spacer(Modifier.height(10.dp))
+        SettingsLoadingItem(
+            isLoading = false,
+            text = { Text("用户形象")}
         )
     }
 }

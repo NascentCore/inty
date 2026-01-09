@@ -233,7 +233,7 @@ fun ChatSettingsDrawer(
                         onClickPersona = {
                             editKey = EditKey.Persona
                             editValue = userProfileState.description ?: ""
-                        },
+                        }
                     )
                 }
 
