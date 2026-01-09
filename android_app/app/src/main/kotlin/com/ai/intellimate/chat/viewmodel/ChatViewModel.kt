@@ -1124,14 +1124,11 @@ class ChatViewModel : BaseVM() {
     }
 
     fun generateImageForMessage() {
-        imagePickMessageId.value?.let {
-            generateImageForMessage(it)
-        }
+        imagePickMessageId.value?.let { generateImageForMessage(it) }
         _imagePickMessageId.value = null
     }
 
     fun generateImageForMessage(messageId: String) {
-
 
         val agentId = _agentInfo.value?.id
         val agent = _agentInfo.value

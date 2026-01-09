@@ -317,7 +317,7 @@ fun SettingsLoadingItem(
     isInGroup: Boolean = false,
     horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
     onItemClick: () -> Unit = {},
-    text: @Composable () -> Unit
+    text: @Composable () -> Unit,
 ) {
     val modifier =
         if (isInGroup) Modifier
@@ -347,15 +347,15 @@ fun SettingsLoadingItem(
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
                 fontWeight = if (fontLight) FontWeight.Normal else FontWeight.Bold,
-                color = Color.White
+                color = Color.White,
             ),
-            content = text
+            content = text,
         )
         Spacer(Modifier.weight(1f).padding(horizontal = 8.dp))
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
-                color = Color.White.copy(alpha = 0.55f)
+                color = Color.White.copy(alpha = 0.55f),
             )
         } else {
             Image(painter = painterResource(R.drawable.ic_arrow_forward), contentDescription = "")
@@ -378,10 +378,7 @@ private fun 预览普通设置条目() {
             showRedDot = true,
         )
         Spacer(Modifier.height(10.dp))
-        SettingsLoadingItem(
-            isLoading = false,
-            text = { Text("用户形象")}
-        )
+        SettingsLoadingItem(isLoading = false, text = { Text("用户形象") })
     }
 }
 

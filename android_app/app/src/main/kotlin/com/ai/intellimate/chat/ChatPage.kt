@@ -562,19 +562,19 @@ internal fun ChatPage(
 
                     if (!imagePickMessageId.isNullOrEmpty()) {
                         item("ImagePicker") {
-                            val isUserUploading by userProfileViewModel.isAppearanceUploading.collectAsState()
+                            val isUserUploading by
+                                userProfileViewModel.isAppearanceUploading.collectAsState()
 
                             ImagePickItem(
                                 isLoading = isUserUploading,
-                                onSkip = { chatViewModel.generateImageForMessage()},
+                                onSkip = { chatViewModel.generateImageForMessage() },
                                 onImageSelected = {
                                     userProfileViewModel.setUserAppearance(it) {
                                         chatViewModel.generateImageForMessage()
                                     }
                                 },
-                                modifier = Modifier
-                                    .padding(vertical = 16.dp)
-                                    .size(210.5.dp, 312.5.dp)
+                                modifier =
+                                    Modifier.padding(vertical = 16.dp).size(210.5.dp, 312.5.dp),
                             )
                         }
                     }

@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.R
@@ -160,19 +159,17 @@ internal fun ModifyProfileScreen(
                 editValue = userPreference
             },
             onSelectAvatar = { galleryLauncher.launch("image/*") },
-            onClickAppearance = {
-                showImagePicker = true
-            }
+            onClickAppearance = { showImagePicker = true },
         )
 
         if (showImagePicker) {
             ImagePickerBottomSheet(
-                onDismiss = { showImagePicker = false},
+                onDismiss = { showImagePicker = false },
                 onImageSelected = {
                     showImagePicker = false
 
                     viewModel.setUserAppearance(it)
-                }
+                },
             )
         }
 
