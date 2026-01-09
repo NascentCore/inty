@@ -76,7 +76,7 @@ data class AgentInfo(
     val isNew: Boolean
         get() =
             createdAt.toLongOrNull()?.let {
-                System.currentTimeMillis().milliseconds - it.seconds <= 7.days
+                System.currentTimeMillis().milliseconds - it.seconds <= 30.days
             } ?: false
 }
 
