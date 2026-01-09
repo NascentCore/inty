@@ -2,11 +2,17 @@ package com.ai.intellimate.utils
 
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /** 用户信息的数据管理类 */
 object UserProfileManager {
+    private val _profile = MutableStateFlow(getUserProfile())
+    val profile = _profile.asStateFlow()
 
     fun saveUserProfile(userProfile: UserProfile) {
+        _profile.value = userProfile
+
         IntySetting.setUserProfileData("id", userProfile.id)
         IntySetting.setUserProfileData("nickname", userProfile.nickname)
         IntySetting.setUserProfileData("avatar", userProfile.avatar ?: "")
@@ -62,5 +68,6 @@ object UserProfileManager {
 
     fun clearUserProfile() {
         IntySetting.clearAllUserProfileData()
+        _profile.value = UserProfile()
     }
 }

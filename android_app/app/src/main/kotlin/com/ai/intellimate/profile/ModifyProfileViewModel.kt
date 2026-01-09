@@ -262,7 +262,7 @@ class ModifyProfileViewModel : BaseVM() {
         _userProfile.value = _userProfile.value.copy(avatar = uri.toString())
     }
 
-    fun setUserAppearance(uri: Uri) {
+    fun setUserAppearance(uri: Uri, callback: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             _isAppearanceUploading.value = true
             var tempFile: File? = null
@@ -287,6 +287,7 @@ class ModifyProfileViewModel : BaseVM() {
                 withContext(Dispatchers.Main) {
                     ToastUtils.showShort(Utils.getApp().getString(R.string.saved_successfully))
                 }
+                callback()
             } catch (error: Exception) {
                 LogUtils.e("setUserAppearance error: ${error.message}", error)
                 NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")

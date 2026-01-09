@@ -77,6 +77,9 @@ class ChatViewModel : BaseVM() {
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog = _showFeedbackRequestDialog.asStateFlow()
 
+    private val _imagePickMessageId = MutableStateFlow<String?>(null)
+    val imagePickMessageId = _imagePickMessageId.asStateFlow()
+
     // 会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
     private var sessionMessageCount = 0
 
@@ -1111,7 +1114,25 @@ class ChatViewModel : BaseVM() {
         chatRepository.updateMessageGeneratedImage(agentId, messageId, null)
     }
 
+    fun generateImageForMessageOrPickImage(messageId: String) {
+        if (UserProfileManager.profile.value.userPhoto.isNullOrEmpty()) {
+            _imagePickMessageId.value = messageId
+            return
+        }
+
+        generateImageForMessage(messageId)
+    }
+
+    fun generateImageForMessage() {
+        imagePickMessageId.value?.let {
+            generateImageForMessage(it)
+        }
+        _imagePickMessageId.value = null
+    }
+
     fun generateImageForMessage(messageId: String) {
+
+
         val agentId = _agentInfo.value?.id
         val agent = _agentInfo.value
 
