@@ -15,13 +15,16 @@ import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
+import ai.sxwl.android.data.http.services.ReportService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.buildReportDescriptionWithAppVersion
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostManager
@@ -30,6 +33,7 @@ import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
+import com.inty.api.models.api.v1.report.ReportCreateParams
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -1016,8 +1020,24 @@ class ChatViewModel : BaseVM() {
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                 "timestamp" to System.currentTimeMillis(),
             )
-
         FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
+
+        // 针对 消息喜欢动作 添加Feedback采集
+        launchBackground {
+            ReportService.createReport(
+                reasonCodes = listOf(ReportCreateParams.ReasonCode.MESSAGE_LIKE),
+                targetId = agent.id,
+                targetType = "AGENT",
+                description =
+                    buildReportDescriptionWithAppVersion(
+                        userDescription = "[like]${targetMessage.content}",
+                        versionName = BuildConfig.VERSION_NAME,
+                        versionCode = BuildConfig.VERSION_CODE,
+                    ),
+                imageUrls = if (targetMessage.hasGeneratedImage()) listOf(targetMessage.getGeneratedImageUrl()!!) else listOf(),
+                reportType = ReportService.ReportType.FEEDBACK
+            )
+        }
     }
 
     /** Dislike 消息 - 通过 Repository 更新并上报 Firebase 事件 */
@@ -1068,8 +1088,24 @@ class ChatViewModel : BaseVM() {
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                 "timestamp" to System.currentTimeMillis(),
             )
-
         FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
+
+        // 针对 消息不喜欢动作 添加Feedback采集
+        launchBackground {
+            ReportService.createReport(
+                reasonCodes = listOf(ReportCreateParams.ReasonCode.MESSAGE_DISLIKE),
+                targetId = agent.id,
+                targetType = "AGENT",
+                description =
+                    buildReportDescriptionWithAppVersion(
+                        userDescription = "[dislike]${targetMessage.content}",
+                        versionName = BuildConfig.VERSION_NAME,
+                        versionCode = BuildConfig.VERSION_CODE,
+                    ),
+                imageUrls = if (targetMessage.hasGeneratedImage()) listOf(targetMessage.getGeneratedImageUrl()!!) else listOf(),
+                reportType = ReportService.ReportType.FEEDBACK
+            )
+        }
     }
 
     /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
