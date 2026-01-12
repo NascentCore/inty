@@ -344,6 +344,129 @@
             }
         },
         "/api/v1/report/": {
+            "get": {
+                "tags": [
+                    "report",
+                    "web_app"
+                ],
+                "summary": "List Reports",
+                "description": "\u67e5\u8be2 Report/Feedback \u5217\u8868\uff0c\u652f\u6301\u6309\u521b\u5efa\u65f6\u95f4\u6392\u5e8f\uff08order_by: created_at_desc \u6216 created_at_asc\uff09",
+                "operationId": "list_reports_api_v1_report__get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "target_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/TargetType"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Target Type"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/ReportStatus"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Status"
+                        }
+                    },
+                    {
+                        "name": "report_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/ReportType"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Report Type"
+                        }
+                    },
+                    {
+                        "name": "order_by",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": "created_at_desc",
+                            "title": "Order By"
+                        }
+                    },
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Skip"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReportsList"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "tags": [
                     "report",
@@ -353,15 +476,20 @@
                 "summary": "Create Report",
                 "description": "Submit report",
                 "operationId": "create_report_api_v1_report__post",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "requestBody": {
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/ReportCreate"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
@@ -384,12 +512,55 @@
                             }
                         }
                     }
-                },
+                }
+            }
+        },
+        "/api/v1/report/{report_id}": {
+            "delete": {
+                "tags": [
+                    "report",
+                    "web_app"
+                ],
+                "summary": "Delete Report",
+                "operationId": "delete_report_api_v1_report__report_id__delete",
                 "security": [
                     {
                         "Bearer": []
                     }
-                ]
+                ],
+                "parameters": [
+                    {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Report Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/v1/ai/agents/me": {
@@ -2257,7 +2428,7 @@
                     "web_app"
                 ],
                 "summary": "\u83b7\u53d6\u97f3\u8272\u5217\u8868",
-                "description": "\u83b7\u53d6 ElevenLabs \u53ef\u7528\u97f3\u8272\u5217\u8868\uff0c\u652f\u6301\u641c\u7d22\u548c\u8fc7\u6ee4\u529f\u80fd",
+                "description": "\u83b7\u53d6\u53ef\u7528\u97f3\u8272\u5217\u8868\uff08\u5305\u542b Gemini TTS \u548c ElevenLabs\uff09\uff0c\u652f\u6301\u641c\u7d22\u548c\u8fc7\u6ee4\u529f\u80fd",
                 "operationId": "list_voices_api_v1_text_to_speech_list_voices_get",
                 "parameters": [
                     {
@@ -2311,10 +2482,10 @@
                                     "type": "null"
                                 }
                             ],
-                            "description": "\u97f3\u8272\u7c7b\u578b\u8fc7\u6ee4 (\u5982: personal, community)",
+                            "description": "\u97f3\u8272\u7c7b\u578b\u8fc7\u6ee4 (\u5982: personal, preset)",
                             "title": "Voice Type"
                         },
-                        "description": "\u97f3\u8272\u7c7b\u578b\u8fc7\u6ee4 (\u5982: personal, community)"
+                        "description": "\u97f3\u8272\u7c7b\u578b\u8fc7\u6ee4 (\u5982: personal, preset)"
                     },
                     {
                         "name": "category",
@@ -2329,10 +2500,28 @@
                                     "type": "null"
                                 }
                             ],
-                            "description": "\u97f3\u8272\u5206\u7c7b\u8fc7\u6ee4 (\u5982: premade, cloned)",
+                            "description": "\u97f3\u8272\u5206\u7c7b\u8fc7\u6ee4 (\u5982: prebuilt, premade, cloned)",
                             "title": "Category"
                         },
-                        "description": "\u97f3\u8272\u5206\u7c7b\u8fc7\u6ee4 (\u5982: premade, cloned)"
+                        "description": "\u97f3\u8272\u5206\u7c7b\u8fc7\u6ee4 (\u5982: prebuilt, premade, cloned)"
+                    },
+                    {
+                        "name": "provider",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "TTS \u670d\u52a1\u63d0\u4f9b\u5546\u8fc7\u6ee4 (\"gemini\" \u6216 \"elevenlabs\"\uff0c\u4e0d\u4f20\u5219\u8fd4\u56de\u6240\u6709)",
+                            "title": "Provider"
+                        },
+                        "description": "TTS \u670d\u52a1\u63d0\u4f9b\u5546\u8fc7\u6ee4 (\"gemini\" \u6216 \"elevenlabs\"\uff0c\u4e0d\u4f20\u5219\u8fd4\u56de\u6240\u6709)"
                     }
                 ],
                 "responses": {
@@ -2497,6 +2686,32 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/live-chat/status": {
+            "get": {
+                "tags": [
+                    "live-chat",
+                    "evaluation"
+                ],
+                "summary": "Get Live Chat Status",
+                "description": "\u83b7\u53d6\u5b9e\u65f6\u8bed\u97f3\u901a\u8bdd\u670d\u52a1\u72b6\u6001\n\n\u8fd4\u56de Live Chat \u670d\u52a1\u7684\u542f\u7528\u72b6\u6001\u548c\u914d\u7f6e\u4fe1\u606f\u3002",
+                "operationId": "get_live_chat_status_api_v1_live_chat_status_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
             }
         },
         "/api/v2/chat/completions/{agent_id}": {
@@ -4602,6 +4817,18 @@
                         "title": "Energy Points",
                         "description": "\u9700\u8981\u65b0\u589e\u7684\u80fd\u91cf\u70b9\u6570\uff0c\u4f1a\u7d2f\u52a0\u5230 agent \u7684\u79ef\u5206\u5217\u4e2d"
                     },
+                    "replace_background_images": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Replace Background Images",
+                        "description": "\u662f\u5426\u66ff\u6362 background_images \u5217\u8868\u3002\u4e3a True \u65f6\u5b8c\u5168\u66ff\u6362\uff0c\u4e3a False \u6216 None \u65f6\u8ffd\u52a0"
+                    },
                     "request_id": {
                         "anyOf": [
                             {
@@ -5082,6 +5309,17 @@
                             }
                         ],
                         "title": "Request Id"
+                    },
+                    "model": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Model"
                     }
                 },
                 "type": "object",
@@ -5109,6 +5347,28 @@
                     "message_id": {
                         "type": "integer",
                         "title": "Message Id"
+                    },
+                    "model": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Model"
+                    },
+                    "generation_time_ms": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Generation Time Ms"
                     }
                 },
                 "type": "object",
@@ -6340,6 +6600,103 @@
                 "title": "ReportCreate",
                 "description": "Report API \u7aef\u70b9\u7684\u8bf7\u6c42\u6570\u636e\u7ed3\u6784\u3002"
             },
+            "ReportOut": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "title": "Target Id"
+                    },
+                    "target_type": {
+                        "type": "string",
+                        "title": "Target Type"
+                    },
+                    "reporter_id": {
+                        "type": "string",
+                        "title": "Reporter Id"
+                    },
+                    "reason_ids": {
+                        "items": {
+                            "type": "integer"
+                        },
+                        "type": "array",
+                        "title": "Reason Ids"
+                    },
+                    "reason_codes": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Reason Codes"
+                    },
+                    "image_urls": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Image Urls"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description"
+                    },
+                    "status": {
+                        "type": "string",
+                        "title": "Status"
+                    },
+                    "report_type": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Report Type"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Created At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "target_id",
+                    "target_type",
+                    "reporter_id",
+                    "reason_ids",
+                    "reason_codes",
+                    "image_urls",
+                    "description",
+                    "status",
+                    "report_type",
+                    "created_at"
+                ],
+                "title": "ReportOut"
+            },
+            "ReportStatus": {
+                "type": "string",
+                "enum": [
+                    "PENDING",
+                    "PROCESSING",
+                    "RESOLVED",
+                    "REJECTED"
+                ],
+                "title": "ReportStatus"
+            },
             "ReportType": {
                 "type": "string",
                 "enum": [
@@ -6347,6 +6704,41 @@
                     "FEEDBACK"
                 ],
                 "title": "ReportType"
+            },
+            "ReportsList": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/ReportOut"
+                        },
+                        "type": "array",
+                        "title": "Items",
+                        "default": []
+                    },
+                    "total": {
+                        "type": "integer",
+                        "title": "Total",
+                        "default": 0
+                    },
+                    "page": {
+                        "type": "integer",
+                        "title": "Page",
+                        "default": 1
+                    },
+                    "page_size": {
+                        "type": "integer",
+                        "title": "Page Size",
+                        "default": 10
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "title": "Total Pages",
+                        "default": 0
+                    }
+                },
+                "type": "object",
+                "title": "ReportsList",
+                "description": "Specific model for a paginated list of report items."
             },
             "Settings": {
                 "properties": {
@@ -6927,6 +7319,18 @@
                         "description": "Number of images to generate",
                         "default": 1
                     },
+                    "model": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Model",
+                        "description": "Model to use for image generation. If not specified, auto-selects based on subscription status. Supports: google/imagen-*, fal-ai/flux-*, etc."
+                    },
                     "request_id": {
                         "anyOf": [
                             {
@@ -7110,6 +7514,17 @@
                             }
                         ],
                         "title": "Email"
+                    },
+                    "user_photo": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "User Photo"
                     },
                     "phone": {
                         "anyOf": [
@@ -7493,6 +7908,17 @@
                             }
                         ],
                         "title": "Email"
+                    },
+                    "user_photo": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "User Photo"
                     },
                     "phone": {
                         "anyOf": [
