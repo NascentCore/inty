@@ -1025,7 +1025,7 @@ class ChatViewModel : BaseVM() {
         // 针对 消息喜欢动作 添加Feedback采集
         launchBackground {
             ReportService.createReport(
-                reasonCodes = listOf(ReportCreateParams.ReasonCode.MESSAGE_LIKE),
+                reasonCodes = listOf(ReportCreateParams.ReasonCode.OTHER),
                 targetId = agent.id,
                 targetType = "AGENT",
                 description =
@@ -1093,7 +1093,7 @@ class ChatViewModel : BaseVM() {
         // 针对 消息不喜欢动作 添加Feedback采集
         launchBackground {
             ReportService.createReport(
-                reasonCodes = listOf(ReportCreateParams.ReasonCode.MESSAGE_DISLIKE),
+                reasonCodes = listOf(ReportCreateParams.ReasonCode.OTHER),
                 targetId = agent.id,
                 targetType = "AGENT",
                 description =
