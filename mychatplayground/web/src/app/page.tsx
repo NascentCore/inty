@@ -27,6 +27,7 @@ const LS_SNIPPETS = "mychatplayground.blockSnippets.v1";
 const LS_PROMPT_PREVIEW_MODE = "mychatplayground.promptPreview.mode";
 const LS_PROMPT_BUILD_MODE = "mychatplayground.promptBuildMode";
 const LS_PROJECT_STATE = "mychatplayground.projectState.v1";
+const LS_USER_AI_PROMPT = "mychatplayground.userAiPrompt";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
@@ -302,6 +303,13 @@ export default function Home() {
   const [showDiff, setShowDiff] = useState(false);
   const [diffTarget, setDiffTarget] = useState<PromptVersion | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 用户AI相关状态
+  const [userAiPrompt, setUserAiPrompt] = useLocalStorageState<string>(
+    LS_USER_AI_PROMPT,
+    "你现在扮演一个用户，正在与AI角色对话。请根据对话上下文，站在用户的角度生成一条自然、合理的回复。只输出用户的回复内容，不要添加任何解释或前缀。"
+  );
+  const [userAiSending, setUserAiSending] = useState(false);
 
   const selectedModel = useMemo(
     () => models.find((m) => m.id === modelId) ?? null,
@@ -814,6 +822,105 @@ export default function Home() {
       return;
     }
     throw new Error("不支持的导入格式（schema 不匹配）");
+  };
+
+  /**
+   * 用户AI：让AI模拟用户视角生成一条消息
+   */
+  const generateUserAiMessage = async () => {
+    if (!apiKey.trim()) {
+      setChatError("请先填写 OpenRouter API Key");
+      return;
+    }
+    if (!modelId) {
+      setChatError("请先选择模型");
+      return;
+    }
+    if (!userAiPrompt.trim()) {
+      setChatError("请先填写用户AI提示词");
+      return;
+    }
+
+    setUserAiSending(true);
+    setChatError(null);
+
+    try {
+      // 构建用户AI的消息上下文
+      const contextMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
+      
+      // 用户AI的系统提示词
+      contextMessages.push({
+        role: "system",
+        content: userAiPrompt.trim(),
+      });
+
+      // 添加角色设定的简要信息（让用户AI了解对话背景）
+      const charName = varsParsed.ok ? (varsParsed.value.char || "AI角色") : "AI角色";
+      const userName = varsParsed.ok ? (varsParsed.value.user || "用户") : "用户";
+      
+      // 添加场景介绍（如果有）
+      if (introText) {
+        contextMessages.push({
+          role: "system",
+          content: `【场景背景】\n${introText}`,
+        });
+      }
+
+      // 添加对话历史（调换角色视角：原来的 user 变成 assistant，原来的 assistant 变成 user）
+      // 因为用户AI需要站在用户的角度，所以它看到的"对方"是 AI角色
+      if (firstMessageText) {
+        contextMessages.push({
+          role: "user",
+          content: `[${charName}]: ${firstMessageText}`,
+        });
+      }
+
+      for (const msg of chatHistory) {
+        if (msg.role === "user") {
+          // 原来用户说的话，对于用户AI来说是"自己之前说的"
+          contextMessages.push({
+            role: "assistant",
+            content: `[${userName}]: ${msg.content}`,
+          });
+        } else {
+          // 原来AI角色说的话，对于用户AI来说是"对方说的"
+          contextMessages.push({
+            role: "user",
+            content: `[${charName}]: ${msg.content}`,
+          });
+        }
+      }
+
+      // 请求用户AI生成回复
+      const resp = await createOpenRouterChatCompletion({
+        apiKey: apiKey.trim(),
+        request: {
+          model: modelId,
+          messages: contextMessages,
+          temperature: settings.temperature,
+          max_tokens: settings.max_tokens,
+        },
+        siteUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        appName: "mychatplayground",
+      });
+
+      const generatedContent = resp.choices?.[0]?.message?.content;
+      const userMessage = typeof generatedContent === "string" 
+        ? generatedContent.trim().replace(/^\[.*?\]:\s*/, "") // 移除可能的前缀如 "[用户]: "
+        : "";
+
+      if (userMessage) {
+        // 将生成的消息作为用户输入发送
+        await sendMessage(userMessage);
+      } else {
+        setChatError("用户AI未能生成有效回复");
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setChatError(`用户AI生成失败：${msg}`);
+    } finally {
+      setUserAiSending(false);
+    }
   };
 
   const sendMessage = async (overrideInput?: string) => {
@@ -1509,6 +1616,25 @@ export default function Home() {
                 ) : null}
               </label>
 
+              {/* 用户AI提示词 */}
+              <div className="space-y-2 rounded-md border border-indigo-200 bg-indigo-50/50 p-3">
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-indigo-900">用户AI 提示词</div>
+                  <div className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-700">
+                    模拟用户发言
+                  </div>
+                </div>
+                <div className="text-xs text-indigo-700/80">
+                  点击聊天框的「AI发送」按钮时，会用这个提示词让AI站在用户视角生成一条消息。
+                </div>
+                <textarea
+                  className="min-h-20 w-full resize-y rounded-md border border-indigo-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                  placeholder="描述用户AI应该如何模拟用户发言..."
+                  value={userAiPrompt}
+                  onChange={(e) => setUserAiPrompt(e.target.value)}
+                />
+              </div>
+
               <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700">
                 估算上下文：约 {estimatedContextUsage.estTokens} tokens
                 {estimatedContextUsage.contextLength
@@ -1840,10 +1966,19 @@ export default function Home() {
                             type="button"
                             className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             onClick={() => void sendMessage("(Continued)")}
-                            disabled={sending}
+                            disabled={sending || userAiSending}
                             title="发送 (Continued) 让 AI 继续"
                           >
                             (Continued)
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-full border border-indigo-300 bg-indigo-50 px-3 py-1 text-xs text-indigo-700 hover:bg-indigo-100 hover:border-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            onClick={() => void generateUserAiMessage()}
+                            disabled={sending || userAiSending}
+                            title="让AI模拟用户发送一条消息"
+                          >
+                            {userAiSending ? "用户AI思考中…" : "🤖 AI发送"}
                           </button>
                         </div>
                         <div className="relative rounded-2xl bg-gradient-to-r from-red-100 via-white to-emerald-100 p-[1px] shadow-sm">
@@ -1868,10 +2003,10 @@ export default function Home() {
                               type="button"
                               className="h-10 shrink-0 rounded-xl bg-gradient-to-b from-zinc-900 to-zinc-800 px-4 text-sm font-medium text-white shadow-sm hover:from-zinc-800 hover:to-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                               onClick={() => void sendMessage()}
-                              disabled={sending || !userInput.trim()}
+                              disabled={sending || userAiSending || !userInput.trim()}
                               title="发送"
                             >
-                              {sending ? "发送中…" : "发送"}
+                              {sending ? "发送中…" : userAiSending ? "用户AI…" : "发送"}
                             </button>
                           </div>
 
