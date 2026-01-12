@@ -573,4 +573,5 @@
     <string name="mute">mute</string>
     <string name="voice_call_duration">Call Duration</string>
     <string name="voice_call_remaining_time">Remaining Time</string>
+    <string name="chat_save_user_photo_success">Saved. You can update it on the Me page.</string>
 </resources>
