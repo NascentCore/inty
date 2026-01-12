@@ -8,10 +8,16 @@ const LS_NANO_BANANA_INSTRUCTION = "mychatplayground.nanoBanana.instruction";
 const LS_NANO_BANANA_VARIABLES = "mychatplayground.nanoBanana.variables";
 
 // fal.ai 模型配置
-const FAL_MODEL = {
+const FAL_MODEL_TEXT = {
   id: "fal-ai/nano-banana",
-  name: "Nano Banana",
-  description: "fal.ai 上的 Nano Banana 模型，可直接理解消息并生成图片",
+  name: "Nano Banana (文本生图)",
+  description: "纯文本生成图片，不支持参考图",
+};
+
+const FAL_MODEL_EDIT = {
+  id: "fal-ai/nano-banana/edit",
+  name: "Nano Banana (编辑模式)",
+  description: "支持多张参考图的图像编辑/生成",
 };
 
 // 变量类型
@@ -36,14 +42,18 @@ const DEFAULT_INSTRUCTION = `【聊天记录】
 
 请根据以上信息，生成一张符合场景氛围的角色图片。`;
 
-// fal.ai 图片尺寸选项（预设名称格式）
+// fal.ai 图片尺寸选项（使用 aspect_ratio 比例格式）
 const FAL_IMAGE_SIZES = [
-  { value: "square_hd", label: "方形 HD (1024x1024)" },
-  { value: "square", label: "方形 (512x512)" },
-  { value: "portrait_4_3", label: "竖向 4:3 (768x1024)" },
-  { value: "portrait_16_9", label: "竖向 16:9 (576x1024)" },
-  { value: "landscape_4_3", label: "横向 4:3 (1024x768)" },
-  { value: "landscape_16_9", label: "横向 16:9 (1024x576)" },
+  { value: "1:1", label: "1:1 方形" },
+  { value: "4:5", label: "4:5 竖向（Instagram）" },
+  { value: "3:4", label: "3:4 竖向" },
+  { value: "2:3", label: "2:3 竖向" },
+  { value: "9:16", label: "9:16 竖向（手机全屏）" },
+  { value: "5:4", label: "5:4 横向" },
+  { value: "4:3", label: "4:3 横向" },
+  { value: "3:2", label: "3:2 横向" },
+  { value: "16:9", label: "16:9 横向（宽屏）" },
+  { value: "21:9", label: "21:9 超宽屏" },
 ] as const;
 
 type FalImageSize = typeof FAL_IMAGE_SIZES[number]["value"];
@@ -68,8 +78,8 @@ export default function NanoBananaPage() {
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
   const [tempVarName, setTempVarName] = useState("");
 
-  // 图片尺寸
-  const [falImageSize, setFalImageSize] = useState<FalImageSize>("portrait_4_3");
+  // 图片尺寸（默认竖向 3:4）
+  const [falImageSize, setFalImageSize] = useState<FalImageSize>("3:4");
 
   // 参考图 1：AI 角色的形象
   const [referenceImage1, setReferenceImage1] = useState<string | null>(null);
@@ -211,12 +221,7 @@ export default function NanoBananaPage() {
         Authorization: `Key ${falApiKey.trim()}`,
       };
 
-      const body: Record<string, unknown> = {
-        prompt: prompt,
-        image_size: falImageSize,
-      };
-
-      // 如果有参考图，组合成数组发送
+      // 收集参考图 URL
       const imageUrls: string[] = [];
       if (referenceImage1) {
         imageUrls.push(referenceImage1);
@@ -224,19 +229,25 @@ export default function NanoBananaPage() {
       if (referenceImage2) {
         imageUrls.push(referenceImage2);
       }
-      
-      if (imageUrls.length > 0) {
-        // 如果只有一张图，直接用 image_url；多张图用数组
-        if (imageUrls.length === 1) {
-          body.image_url = imageUrls[0];
-        } else {
-          body.image_url = imageUrls[0]; // 主参考图（AI角色）
-          // 部分模型支持多图，可以在 prompt 中说明
-        }
-        body.strength = 0.75;
+
+      // 根据是否有参考图选择不同的端点和参数
+      const hasReferenceImages = imageUrls.length > 0;
+      const endpoint = hasReferenceImages ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id;
+
+      const body: Record<string, unknown> = {
+        prompt: prompt,
+        aspect_ratio: falImageSize, // 使用 aspect_ratio 而不是 image_size
+        num_images: 1,
+      };
+
+      // 如果有参考图，使用编辑模式的参数
+      if (hasReferenceImages) {
+        body.image_urls = imageUrls; // 编辑模式使用 image_urls 数组
       }
 
-      const response = await fetch(`https://fal.run/${FAL_MODEL.id}`, {
+      console.log("fal.ai API 请求:", { endpoint, body });
+
+      const response = await fetch(`https://fal.run/${endpoint}`, {
         method: "POST",
         headers,
         body: JSON.stringify(body),
@@ -352,22 +363,37 @@ export default function NanoBananaPage() {
             </div>
           </div>
 
-          {/* 模型信息 */}
-          <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 p-3">
+          {/* 模型信息 - 根据是否有参考图显示不同模式 */}
+          <div className={`mb-4 rounded-xl border p-3 ${
+            (referenceImage1 || referenceImage2) 
+              ? "border-purple-200 bg-purple-50" 
+              : "border-orange-200 bg-orange-50"
+          }`}>
             <div className="flex items-center gap-2">
               <span className="text-lg">🍌</span>
               <div>
-                <div className="text-sm font-medium text-orange-900">
-                  {FAL_MODEL.name}
+                <div className={`text-sm font-medium ${
+                  (referenceImage1 || referenceImage2) ? "text-purple-900" : "text-orange-900"
+                }`}>
+                  {(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.name : FAL_MODEL_TEXT.name}
                 </div>
-                <div className="text-xs text-orange-700">
-                  {FAL_MODEL.description}
+                <div className={`text-xs ${
+                  (referenceImage1 || referenceImage2) ? "text-purple-700" : "text-orange-700"
+                }`}>
+                  {(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.description : FAL_MODEL_TEXT.description}
                 </div>
-                <div className="mt-1 font-mono text-[10px] text-orange-600">
-                  {FAL_MODEL.id}
+                <div className={`mt-1 font-mono text-[10px] ${
+                  (referenceImage1 || referenceImage2) ? "text-purple-600" : "text-orange-600"
+                }`}>
+                  {(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id}
                 </div>
               </div>
             </div>
+            {(referenceImage1 || referenceImage2) && (
+              <div className="mt-2 rounded-lg bg-purple-100 px-2 py-1 text-[10px] text-purple-700">
+                ✓ 已上传参考图，将使用编辑模式（支持多图）
+              </div>
+            )}
           </div>
 
           {/* 变量管理区域 */}
@@ -730,14 +756,21 @@ export default function NanoBananaPage() {
                 <button
                   type="button"
                   className="text-[10px] text-gray-400 hover:text-gray-600"
-                  onClick={() => copyToClipboard(JSON.stringify({
-                    endpoint: `https://fal.run/${FAL_MODEL.id}`,
-                    model: FAL_MODEL.id,
-                    image_size: falImageSize,
-                    reference_image_1_ai_character: !!referenceImage1,
-                    reference_image_2_user: !!referenceImage2,
-                    prompt: replaceVariablesInInstruction(instruction),
-                  }, null, 2))}
+                  onClick={() => {
+                    const hasRefs = !!(referenceImage1 || referenceImage2);
+                    const endpoint = hasRefs ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id;
+                    const imageUrls: string[] = [];
+                    if (referenceImage1) imageUrls.push("[参考图1:AI角色]");
+                    if (referenceImage2) imageUrls.push("[参考图2:用户]");
+                    copyToClipboard(JSON.stringify({
+                      endpoint: `https://fal.run/${endpoint}`,
+                      model: endpoint,
+                      aspect_ratio: falImageSize,
+                      num_images: 1,
+                      ...(hasRefs ? { image_urls: imageUrls } : {}),
+                      prompt: replaceVariablesInInstruction(instruction),
+                    }, null, 2));
+                  }}
                 >
                   复制 JSON
                 </button>
@@ -748,19 +781,23 @@ export default function NanoBananaPage() {
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-medium text-blue-700">🔗 端点：</span>
                   <code className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[10px] text-blue-800">
-                    https://fal.run/{FAL_MODEL.id}
+                    https://fal.run/{(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id}
                   </code>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-medium text-blue-700">🍌 模型：</span>
-                  <code className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[10px] text-blue-800">
-                    {FAL_MODEL.id}
+                  <span className="font-medium text-blue-700">🍌 模式：</span>
+                  <code className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                    (referenceImage1 || referenceImage2) 
+                      ? "bg-purple-100 text-purple-800" 
+                      : "bg-blue-100 text-blue-800"
+                  }`}>
+                    {(referenceImage1 || referenceImage2) ? "编辑模式 (支持多图)" : "文本生图模式"}
                   </code>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-medium text-blue-700">📐 尺寸：</span>
+                  <span className="font-medium text-blue-700">📐 比例：</span>
                   <code className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[10px] text-blue-800">
-                    {falImageSize}
+                    aspect_ratio: &quot;{falImageSize}&quot;
                   </code>
                   <span className="text-[10px] text-blue-600">
                     ({FAL_IMAGE_SIZES.find(s => s.value === falImageSize)?.label})
@@ -785,12 +822,12 @@ export default function NanoBananaPage() {
                   }`}>
                     {referenceImage2 ? "✓ 已上传" : "未上传"}
                   </span>
-                  {(referenceImage1 || referenceImage2) && (
-                    <span className="text-[10px] text-blue-600">
-                      (strength: 0.75)
-                    </span>
-                  )}
                 </div>
+                {(referenceImage1 || referenceImage2) && (
+                  <div className="mt-1 rounded bg-purple-100 px-2 py-1 text-[10px] text-purple-700">
+                    📎 image_urls: [{referenceImage1 ? "参考图1" : ""}{referenceImage1 && referenceImage2 ? ", " : ""}{referenceImage2 ? "参考图2" : ""}]
+                  </div>
+                )}
               </div>
 
               {/* Prompt 内容 */}
