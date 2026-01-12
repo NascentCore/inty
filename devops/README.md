@@ -119,7 +119,7 @@
 
 - **镜像名称**：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
 - **容器名称**：`inty-push-worker-{environment}`（如 `inty-push-worker-dev`、`inty-push-worker-prod`）
-- **Dockerfile**：`Dockerfile.push-worker`
+- **Dockerfile**：`docker/Dockerfile.push-worker`
 - **启动脚本**：`start_push_worker.sh`
 - **配置文件**：使用与后端服务相同的配置文件路径 `devops/config.yaml.{environment}`
 - **挂载卷**：与后端服务相同的密钥文件
@@ -156,7 +156,7 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 
 ### 相关文件
 
-- Dockerfile: `Dockerfile.push-worker`
+- Dockerfile: `docker/Dockerfile.push-worker`
 - 启动脚本: `start_push_worker.sh`
 - Workflow: `.github/workflows/build_and_deploy_push_worker.yml`
 - 服务代码: `app/services/push_worker.py`

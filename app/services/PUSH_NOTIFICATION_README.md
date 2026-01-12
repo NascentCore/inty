@@ -46,7 +46,7 @@ python -m app.services.push_worker
 ```bash
 docker build \
   --build-arg CONFIG_FILE=devops/config.yaml.dev \
-  -f Dockerfile.push-worker \
+  -f docker/Dockerfile.push-worker \
   -t inty-push-worker:latest .
 ```
 
