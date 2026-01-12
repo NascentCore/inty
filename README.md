@@ -76,6 +76,7 @@ cp devops/config.yaml.test config.yaml
 更多详细信息请参考各子目录的 README 文件：
 
 - 后端开发：参见 [backend/README.md](backend/README.md)
+- [mychatplayground](mychatplayground/README.md): 用于测试提示词和聊天效果的 web 工具
 
 ### 相关链接
 
