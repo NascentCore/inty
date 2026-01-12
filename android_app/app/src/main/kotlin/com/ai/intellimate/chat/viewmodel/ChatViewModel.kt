@@ -125,6 +125,7 @@ class ChatViewModel : BaseVM() {
 
     fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
 
+        _imagePickMessageId.value = null
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
 
@@ -304,6 +305,7 @@ class ChatViewModel : BaseVM() {
         messagesJob =
             viewModelScope.launch(Dispatchers.IO) {
                 chatRepository.getMessagesFlow(agentId).collect { list ->
+                    _imagePickMessageId.value = null
                     _msgs.value = list
 
                     val latestAiMsg = list.find { msg -> msg.role == "assistant" }
@@ -423,6 +425,7 @@ class ChatViewModel : BaseVM() {
         val agent = _agentInfo.value ?: return
         inputData.value = ""
         _isWaitingForReply.value = true
+        _imagePickMessageId.value = null
 
         // 记录端到端时间的起始点（用户点击发送按钮的时间）
         val endToEndStartTime = System.currentTimeMillis()
@@ -1505,6 +1508,7 @@ class ChatViewModel : BaseVM() {
         _isLoadingMore.value = false
         _hasMoreMessages.value = true
         _isQueryMsgsCompleted.value = false
+        _imagePickMessageId.value = null
         OpeningPlayState.clearAgentPlayed(agentId)
 
         // 3. 重新绑定消息流（因为 clearChatData 会清理内存缓存）

@@ -36,6 +36,9 @@ object UserService {
             if (!userProfile.ageGroup.isNullOrEmpty()) {
                 builder.ageGroup(userProfile.ageGroup)
             }
+            if (!userProfile.userPhoto.isNullOrEmpty()) {
+                builder.userPhoto(userProfile.userPhoto)
+            }
             val genderObj =
                 userProfile.gender?.let {
                     when (it) {
