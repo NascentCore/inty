@@ -57,7 +57,7 @@ agent:
   langchain_api_key: "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"
   force_default_prompts: false
   # 消息生图模型配置：prod 环境免费用户使用 fal 模型（降低成本），订阅用户使用 gemini
-  free_user_chat_image_model: "fal-ai/z-image/turbo/image-to-image"
+  free_user_chat_image_model: "gemini"
   sub_user_chat_image_model: "gemini"
 
 google_play:
