@@ -15,19 +15,17 @@ on:
       - "pytest.ini"
       - "start.sh"
       - "app/**/*.py"
+      - "requirements.txt"
+      - "scripts/"
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
-      - "scripts/"
-      - "requirements.txt"
       - "tests/requirements.txt"
-      - "Dockerfile"
       # Alembic files
       - "alembic/**/*"
       - "alembic.ini"
-      # 这是本地开发用配置文件
-      - "devops/config.yaml.local"
       # 这个是测试用配置文件
       - "devops/config.yaml.test"
+      # 工作流文件
       - ".github/workflows/ci_backend.yaml"
 
 concurrency:
