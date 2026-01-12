@@ -24,8 +24,8 @@ on:
       - "evaluation/index.html"
       - "evaluation/build.sh"
       # 容器
-      - "Dockerfile"
-      - "Dockerfile.push-worker"
+      - "docker/Dockerfile"
+      - "docker/Dockerfile.push-worker"
       - "start_push_worker.sh"
       # 工作流文件
       - ".github/workflows/build_and_deploy_backend.yml"
@@ -89,6 +89,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ./docker/Dockerfile
           push: true
           tags: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}
           # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
@@ -101,7 +102,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.push-worker
+          file: ./docker/Dockerfile.push-worker
           push: true
           tags: ${{ env.INTY_PUSH_WORKER_IMAGE }}:${{ steps.prep.outputs.image_tag }}
           # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api
