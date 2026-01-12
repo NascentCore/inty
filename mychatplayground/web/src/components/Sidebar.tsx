@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: "/image-prompt", label: "✨ 角色背景图测试", description: "AI 生图提示词生成" },
   { href: "/conversation-analysis", label: "📊 用户聊天消息分析", description: "上传对话文件进行分析" },
   { href: "/message-to-image", label: "🎭 消息生图测试", description: "聊天消息转生图测试" },
+  { href: "/nano-banana", label: "🍌 Nano Banana", description: "一步到位消息生图" },
 ];
 
 export function Sidebar() {
