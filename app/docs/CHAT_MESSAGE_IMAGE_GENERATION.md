@@ -110,27 +110,25 @@
 
 - **模板变量**:
 
-  - `{agent_background}`: 角色背景设定
-  - `{agent_personality}`: 角色性格
   - `{chat_history}`: 格式化的聊天历史
-  - `{user_message}`: 用户消息内容
   - `{user_info}`: 用户信息块（`##User Information` 格式，包含 Name/Gender/Age/Description）
 
 - **提示词模板**（默认）:
 
 ```text
-保持图片中角色的外观完全一致（发型、脸型、服装风格、身材特征等），
-但根据以下场景调整姿势、表情和背景：
+你的目标是需要根据用户与AI角色的对话，生成对话内容对应的画面。
 
-角色性格：{agent_personality}
-角色背景设定：{agent_background}
+### 参考图说明
+- 参考图 1：AI 角色的形象（发型、五官、身材等外观特征）
+- 参考图 2（如有）：用户本人的形象
 
-最近的对话：
-{chat_history}
+1、请根据"最近的对话: {chat_history}"确认画面此时所处的空间场所应该如何？AI角色此刻的动作、姿势、服装是什么？
+2、请根据"用户信息: {user_info}"及上述最近的对话，确认画面中是否需要出现用户，及用户与AI角色的动作关系。
 
-用户要求：{user_message}
-
-请生成一张符合上述场景的图片，确保角色外观与参考图保持高度一致。
+请确保：
+- 角色或用户的外观与参考图保持高度一致（发型、面部特征、身材比例等）。
+- 人物形象完整自然，动作自然协调，细节到位（如手势、视线、身体距离等）。
+- 画面中无文字、对白或身体畸形。
 ```
 
 提示词模板在 `app/core/agent/prompts.py` 的 `IMAGE_GENERATION_PROMPT_TEMPLATE` 中维护，必要时可通过评测面板 API `/api/v1/ai/agents/image-generation/config` 在运行时动态覆盖。
