@@ -30,7 +30,7 @@ fun IntyUser.toUserProfile(): UserProfile {
         totalAgentsFollows = this.totalPublicAgentsFollows()?.toInt() ?: 0,
         followerCount = this.followersCount()?.toInt() ?: 0,
         connectorCount = this.connectorCount()?.toInt() ?: 0,
-        userPhoto = this.userPhoto()
+        userPhoto = this.userPhoto(),
     )
 }
 

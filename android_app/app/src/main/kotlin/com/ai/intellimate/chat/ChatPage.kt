@@ -322,19 +322,17 @@ internal fun ChatPage(
 
     Box(
         modifier =
-            modifier
-                .padding(contentPadding)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
-                            suppressFocusCallback.value = true
-                            focusManager.clearFocus()
-                            if (isCurrentPage) {
-                                onInputFocusChange(false)
-                            }
+            modifier.padding(contentPadding).pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        suppressFocusCallback.value = true
+                        focusManager.clearFocus()
+                        if (isCurrentPage) {
+                            onInputFocusChange(false)
                         }
-                    )
-                }
+                    }
+                )
+            }
     ) {
         // 只在非 ChatActivity 场景显示背景图（ChatActivity 中背景图已在外层显示）
         if (!showBackButton) {
@@ -353,9 +351,7 @@ internal fun ChatPage(
         LifecycleResumeEffect(keyboard) { onPauseOrDispose { keyboard?.hide() } }
 
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             snackbarHost = {
@@ -393,17 +389,13 @@ internal fun ChatPage(
                     }
             }
 
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)) {
+            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
                     ChatTopBar(
                         navController,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 18.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                         agentInfo = info,
                         fontSize = 15.sp,
                         avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
@@ -557,13 +549,10 @@ internal fun ChatPage(
                 val lazyColumnModifier =
                     if (chatListFullScreen) {
                         // 全屏模式：使用 weight(1f) 保持现有布局
-                        Modifier
-                            .weight(1f)
-                            .padding(horizontal = 16.dp)
+                        Modifier.weight(1f).padding(horizontal = 16.dp)
                     } else {
                         // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
-                        Modifier
-                            .weight(1f - UiConfigs.ChatPage.chatListBlankZone)
+                        Modifier.weight(1f - UiConfigs.ChatPage.chatListBlankZone)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     }
@@ -586,9 +575,7 @@ internal fun ChatPage(
                                     }
                                 },
                                 modifier =
-                                    Modifier
-                                        .padding(vertical = 16.dp)
-                                        .size(210.5.dp, 312.5.dp),
+                                    Modifier.padding(vertical = 16.dp).size(210.5.dp, 312.5.dp),
                             )
                         }
                     }
@@ -643,8 +630,7 @@ internal fun ChatPage(
                                                 // 渲染失败时显示错误占位符
                                                 Box(
                                                     modifier =
-                                                        Modifier
-                                                            .fillMaxWidth()
+                                                        Modifier.fillMaxWidth()
                                                             .height(60.dp)
                                                             .background(
                                                                 Color.Red.copy(alpha = 0.1f)
@@ -666,8 +652,7 @@ internal fun ChatPage(
                             item {
                                 Box(
                                     modifier =
-                                        Modifier
-                                            .fillMaxWidth()
+                                        Modifier.fillMaxWidth()
                                             .height(100.dp)
                                             .background(Color.Red.copy(alpha = 0.1f))
                                 ) {
@@ -728,17 +713,13 @@ internal fun ChatPage(
                     if (showLoadMoreUi) {
                         item {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp),
+                                modifier = Modifier.fillMaxWidth().height(60.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isLoadingMore) {
                                     CircularProgressIndicator(
                                         color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .width(24.dp)
-                                            .height(24.dp),
+                                        modifier = Modifier.width(24.dp).height(24.dp),
                                     )
                                 } else {
                                     Text(
@@ -783,8 +764,7 @@ internal fun ChatPage(
                 if (agentInfo?.isDeleted == true) {
                     Box(
                         modifier =
-                            Modifier
-                                .fillMaxWidth()
+                            Modifier.fillMaxWidth()
                                 .height(48.dp)
                                 .padding(horizontal = 16.dp)
                                 .clip(RoundedCornerShape(24.dp))
@@ -862,9 +842,7 @@ internal fun ChatPage(
                             )
                         }
                     } else {
-                        Modifier
-                            .consumeWindowInsets(contentPadding)
-                            .imePadding()
+                        Modifier.consumeWindowInsets(contentPadding).imePadding()
                     }
 
                 Spacer(modifier = bottomSpaceModifier)
@@ -949,8 +927,7 @@ internal fun ChatPage(
             // 功能：点击后平滑滚动到最旧消息位置（LazyColumn reverseLayout，最旧消息对应最大索引）
             BackToTop(
                 modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
+                    Modifier.align(Alignment.BottomCenter)
                         .padding(
                             bottom = scrollToStartButtonBottomOffset,
                             end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
@@ -971,8 +948,7 @@ internal fun ChatPage(
             // 当有新消息时，始终显示此按钮，即使回到第一条消息也不隐藏
             ScrollToBottomButton(
                 modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
+                    Modifier.align(Alignment.BottomCenter)
                         .padding(
                             bottom = scrollToBottomButtonBottomOffset,
                             end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
@@ -991,8 +967,7 @@ internal fun ChatPage(
             // 当用户滚动到历史记录时，此按钮会自动隐藏，避免与滚动到底部按钮重叠
             KeepTalkingFloatingButton(
                 modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
+                    Modifier.align(Alignment.BottomEnd)
                         .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
@@ -1054,8 +1029,7 @@ internal fun ChatPage(
                 totalPoints = boostState.chatMessagePoints,
                 enabled = isCurrentPage,
                 modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
+                    Modifier.align(Alignment.TopCenter)
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp),
             )
         }

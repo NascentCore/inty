@@ -296,12 +296,13 @@ class ModifyProfileViewModel : BaseVM() {
 
                     withContext(Dispatchers.Main) {
                         if (callback == null) {
-                            ToastUtils.showShort(Utils.getApp().getString(R.string.saved_successfully))
+                            ToastUtils.showShort(
+                                Utils.getApp().getString(R.string.saved_successfully)
+                            )
                         } else {
                             callback.invoke()
                         }
                     }
-
                 } catch (error: Exception) {
                     LogUtils.e("setUserAppearance error: ${error.message}", error)
                     NetworkErrorHandler.showNetworkAwareError("Failed to update user profile")
