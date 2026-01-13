@@ -42,11 +42,11 @@ class ModifyProfileViewModel : BaseVM() {
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
-    private val _userProfile = MutableStateFlow(UserProfile())
+    private val _userProfile = MutableStateFlow(UserProfileManager.profile.value)
     val userProfile = _userProfile.asStateFlow()
 
     // 保存原始用户信息，用于判断字段是否变化
-    private var originalUserProfile: UserProfile? = null
+    private var originalUserProfile: UserProfile? = UserProfileManager.profile.value
 
     private val _avatarChanged = MutableStateFlow(false)
 
@@ -68,13 +68,6 @@ class ModifyProfileViewModel : BaseVM() {
     }
 
     fun init(userProfile: UserProfile?) {
-        viewModelScope.launch {
-            userProfile?.let {
-                _userProfile.emit(it)
-                // 保存原始值用于判断是否变化
-                originalUserProfile = it
-            }
-        }
     }
 
     fun changeUserProfile(editKey: EditKey, editValue: String) {

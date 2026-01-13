@@ -251,15 +251,15 @@ fun IntelliMateTheme(
     dynamicColor: Boolean = true,
     content: @Composable() () -> Unit,
 ) {
-    val colorScheme =
-        when {
+    val colorScheme = lightScheme
+        /*when {
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 val context = LocalContext.current
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
             darkTheme -> darkScheme
             else -> lightScheme
-        }
+        }*/
 
     MaterialTheme(colorScheme = colorScheme, typography = HeartTypography, content = content)
 }

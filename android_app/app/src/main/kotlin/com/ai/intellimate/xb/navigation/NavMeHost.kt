@@ -9,6 +9,7 @@ import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.agent.report.ReportPage
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileScreen
+import com.ai.intellimate.profile.uploadSelfieScreen
 import com.ai.intellimate.settings.SettingScreen
 import com.ai.intellimate.settings.check.CheckInScreen
 import com.ai.intellimate.vip.SubsManagementScreen
@@ -50,4 +51,8 @@ fun NavGraphBuilder.meGraph(
         val targetId = backStackEntry.arguments?.getString("targetId")
         ReportPage(navController, isFeedback ?: false, targetType ?: "", targetId ?: "USER")
     }
+
+    uploadSelfieScreen(
+        onBack = { navController.navigateUp() }
+    )
 }
