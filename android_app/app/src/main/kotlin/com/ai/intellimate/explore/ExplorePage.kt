@@ -112,13 +112,11 @@ fun ExplorePage(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
-                    SearchButton(onClick = { showSearchOverlay = true })
+                    SearchButton { showSearchOverlay = true }
                     Spacer(Modifier.width(UiConfigs.TopIconsRow.Spacing))
-                    BoostShortcutButton(
-                        onClick = {
-                            navController.navigate(Routes.Explore.BoostLeaderboard)
-                        }
-                    )
+                    BoostShortcutButton {
+                        navController.navigate(Routes.Explore.BoostLeaderboard)
+                    }
                 },
             )
 

@@ -16,7 +16,7 @@ object UiConfigs {
         val Size = 24.dp
 
         /** 顶部图标行图标间距 */
-        val Spacing = 8.dp
+        val Spacing = 10.dp
     }
     /** 内边距配置 - 适用于屏幕、对话框、输入框等组件的内边距设置 */
     object Padding {
