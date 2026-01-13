@@ -27,7 +27,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -115,7 +115,7 @@ fun ExploreSearchOverlay(
                     singleLine = true,
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Filled.Search,
+                            painter = painterResource(R.drawable.search_24px),
                             contentDescription = null,
                             tint = Color.White.copy(alpha = 0.9f),
                         )

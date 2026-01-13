@@ -6,6 +6,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,16 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.rounded.Rocket
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -115,22 +110,11 @@ fun ExplorePage(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
-                    IconButton(onClick = { showSearchOverlay = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = stringResource(R.string.explore_search_icon_desc),
-                            tint = Color.White,
-                        )
+                    BoostShortcutButton {
+                        navController.navigate(Routes.Explore.BoostLeaderboard)
                     }
-                    Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
-                        BoostShortcutButton(
-                            onClick = {
-                                navController.navigate(Routes.Explore.BoostLeaderboard)
-                                //
-                                // BoostLeaderboardActivity.launch(context)
-                            }
-                        )
-                    }
+                    Spacer(Modifier.width(UiConfigs.TopIconsRow.Spacing))
+                    SearchButton { showSearchOverlay = true }
                 },
             )
 
@@ -217,25 +201,35 @@ fun ExplorePage(
 }
 
 @Composable
-private fun BoostShortcutButton(onClick: () -> Unit) {
-    val label = stringResource(R.string.explore_boost_shortcut)
-    Button(
-        onClick = onClick,
-        shape = RoundedCornerShape(100.dp),
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF9C5BFF),
-                contentColor = Color.White,
-            ),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+private fun SearchButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(UiConfigs.TopIconsRow.Size)
+            .noRippleClickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.Rounded.Rocket,
-            contentDescription = stringResource(R.string.explore_boost_shortcut_cd),
-            modifier = Modifier.height(18.dp),
+            painter = painterResource(R.drawable.search_24px),
+            contentDescription = stringResource(R.string.explore_search_icon_desc),
+            modifier = Modifier.size(UiConfigs.TopIconsRow.Size),
             tint = Color.White,
         )
-        Spacer(Modifier.width(6.dp))
-        Text(text = label, color = Color.White, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun BoostShortcutButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(UiConfigs.TopIconsRow.Size)
+            .noRippleClickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.rocket_launch_24px),
+            contentDescription = stringResource(R.string.explore_boost_shortcut_cd),
+            modifier = Modifier.size(UiConfigs.TopIconsRow.Size),
+            tint = Color.White,
+        )
     }
 }

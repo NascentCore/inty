@@ -11,6 +11,14 @@ import com.ai.intellimate.settings.RemixButtonVisibilityManager
 
 /** 聚合 UI 层常用尺寸、颜色、比例等配置，避免在组件中直接写裸数字。 */
 object UiConfigs {
+    object TopIconsRow {
+        /** 顶部图标行图标大小 */
+        val Size = 24.dp
+
+        /** 顶部图标行图标间距 */
+        val Spacing = 10.dp
+    }
+
     /** 内边距配置 - 适用于屏幕、对话框、输入框等组件的内边距设置 */
     object Padding {
         /** 屏幕水平方向内边距 */
@@ -583,7 +591,7 @@ object UiConfigs {
             /** 聊天输入框底部空白边距 - 输入框与键盘或更多面板之间的间距 */
             val BottomSpacerHeight = 6.dp
 
-            /** 聊天输入框估算高度 - 用于计算keeptalking 悬浮按钮位置 */
+            /** 聊天输入框估算高度 - 用于计算 keep talking 悬浮按钮位置 */
             val EstimatedHeight = 120.dp
 
             /** 聊天输入框水平方向内边距 - 输入框左右两侧的内边距 */
