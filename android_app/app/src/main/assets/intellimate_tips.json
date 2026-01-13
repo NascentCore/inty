@@ -27,6 +27,10 @@
       "text": "When reporting issues, upload a screenshot to help us understand and fix the problem faster."
     },
     {
+      "id": "chat_with_intellimate_for_support",
+      "text": "Need help? Chat with IntelliMate to report issues, share feedback, request features, or get tips on using the app."
+    },
+    {
       "id": "reset_chat",
       "text": "Tap + in the input box, then tap Reset in the drop-down menu, to reset chat."
     }
