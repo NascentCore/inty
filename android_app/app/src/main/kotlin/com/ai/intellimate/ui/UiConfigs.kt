@@ -11,6 +11,13 @@ import com.ai.intellimate.settings.RemixButtonVisibilityManager
 
 /** 聚合 UI 层常用尺寸、颜色、比例等配置，避免在组件中直接写裸数字。 */
 object UiConfigs {
+    object TopIconsRow {
+        /** 顶部图标行图标大小 */
+        val Size = 24.dp
+
+        /** 顶部图标行图标间距 */
+        val Spacing = 8.dp
+    }
     /** 内边距配置 - 适用于屏幕、对话框、输入框等组件的内边距设置 */
     object Padding {
         /** 屏幕水平方向内边距 */
