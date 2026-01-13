@@ -631,7 +631,7 @@ object UiConfigs {
             val ChristMasTreeSize = 48.dp
             val CherrySize = 40.dp
             val SnowDecorationSize = 80.dp
-            val ChritsmasDecorationSize = 60.dp
+            val ChristmasDecorationSize = 60.dp
         }
 
         @Composable
