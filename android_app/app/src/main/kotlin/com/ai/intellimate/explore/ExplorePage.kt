@@ -112,19 +112,7 @@ fun ExplorePage(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
-                    Box(
-                        modifier = Modifier
-                            .size(UiConfigs.TopIconsRow.Size)
-                            .noRippleClickable(onClick = { showSearchOverlay = true }),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = stringResource(R.string.explore_search_icon_desc),
-                            modifier = Modifier.size(UiConfigs.TopIconsRow.Size),
-                            tint = Color.White,
-                        )
-                    }
+                    SearchButton(onClick = { showSearchOverlay = true })
                     Spacer(Modifier.width(UiConfigs.TopIconsRow.Spacing))
                     BoostShortcutButton(
                         onClick = {
@@ -213,6 +201,23 @@ fun ExplorePage(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun SearchButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(UiConfigs.TopIconsRow.Size)
+            .noRippleClickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Search,
+            contentDescription = stringResource(R.string.explore_search_icon_desc),
+            modifier = Modifier.size(UiConfigs.TopIconsRow.Size),
+            tint = Color.White,
+        )
     }
 }
 
