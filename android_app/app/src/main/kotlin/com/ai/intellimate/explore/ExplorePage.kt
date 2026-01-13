@@ -3,10 +3,10 @@ package com.ai.intellimate.explore
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.design.noRippleClickable
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,12 +14,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -39,7 +37,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -110,9 +107,7 @@ fun ExplorePage(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 actions = {
-                    BoostShortcutButton {
-                        navController.navigate(Routes.Explore.BoostLeaderboard)
-                    }
+                    BoostShortcutButton { navController.navigate(Routes.Explore.BoostLeaderboard) }
                     Spacer(Modifier.width(UiConfigs.TopIconsRow.Spacing))
                     SearchButton { showSearchOverlay = true }
                 },
@@ -203,9 +198,7 @@ fun ExplorePage(
 @Composable
 private fun SearchButton(onClick: () -> Unit) {
     Box(
-        modifier = Modifier
-            .size(UiConfigs.TopIconsRow.Size)
-            .noRippleClickable(onClick = onClick),
+        modifier = Modifier.size(UiConfigs.TopIconsRow.Size).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -220,9 +213,7 @@ private fun SearchButton(onClick: () -> Unit) {
 @Composable
 private fun BoostShortcutButton(onClick: () -> Unit) {
     Box(
-        modifier = Modifier
-            .size(UiConfigs.TopIconsRow.Size)
-            .noRippleClickable(onClick = onClick),
+        modifier = Modifier.size(UiConfigs.TopIconsRow.Size).noRippleClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

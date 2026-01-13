@@ -159,9 +159,7 @@ internal fun ModifyProfileScreen(
                 editValue = userPreference
             },
             onSelectAvatar = { galleryLauncher.launch("image/*") },
-            onClickAppearance = {
-                navController.toUploadSelfie()
-            },
+            onClickAppearance = { navController.toUploadSelfie() },
         )
 
         if (showImagePicker) {

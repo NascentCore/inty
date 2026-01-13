@@ -52,7 +52,5 @@ fun NavGraphBuilder.meGraph(
         ReportPage(navController, isFeedback ?: false, targetType ?: "", targetId ?: "USER")
     }
 
-    uploadSelfieScreen(
-        onBack = { navController.navigateUp() }
-    )
+    uploadSelfieScreen(onBack = { navController.navigateUp() })
 }
