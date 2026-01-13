@@ -67,8 +67,7 @@ class ModifyProfileViewModel : BaseVM() {
         viewModelScope.launch { _events.emit(event) }
     }
 
-    fun init(userProfile: UserProfile?) {
-    }
+    fun init(userProfile: UserProfile?) {}
 
     fun changeUserProfile(editKey: EditKey, editValue: String) {
         val sanitizedValue = sanitizeEditValue(editKey, editValue)

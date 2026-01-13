@@ -1,7 +1,6 @@
 package com.ai.intellimate.profile
 
 import ai.sxwl.android.data.api.getCdnImageUrl
-import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.utils.LogUtils
@@ -12,7 +11,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,32 +47,23 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
-import kotlinx.serialization.Serializable
 import java.io.File
+import kotlinx.serialization.Serializable
 
-@Serializable
-private data object UploadSelfie
+@Serializable private data object UploadSelfie
 
 fun NavController.toUploadSelfie() {
     navigate(UploadSelfie)
 }
 
-fun NavGraphBuilder.uploadSelfieScreen(
-    onBack: () -> Unit
-) {
-    composable<UploadSelfie> {
-        UploadSelfieScreen(onBack = onBack)
-    }
+fun NavGraphBuilder.uploadSelfieScreen(onBack: () -> Unit) {
+    composable<UploadSelfie> { UploadSelfieScreen(onBack = onBack) }
 }
 
 @Composable
-fun UploadSelfieScreen(
-    onBack: () -> Unit,
-    viewModel: ModifyProfileViewModel = viewModel()
-) {
+fun UploadSelfieScreen(onBack: () -> Unit, viewModel: ModifyProfileViewModel = viewModel()) {
     val context = LocalContext.current
     val userProfile by viewModel.userProfile.collectAsState()
     val isAppearanceUploading by viewModel.isAppearanceUploading.collectAsState()
@@ -85,9 +73,7 @@ fun UploadSelfieScreen(
     // 相册选择器
     val galleryLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            uri?.let {
-                viewModel.setUserAppearance(it)
-            }
+            uri?.let { viewModel.setUserAppearance(it) }
         }
 
     // 相机拍照
@@ -112,23 +98,16 @@ fun UploadSelfieScreen(
         onTakeSelfie = {
             try {
                 val file =
-                    File.createTempFile(
-                        "${System.currentTimeMillis()}",
-                        ".jpg",
-                        context.cacheDir,
-                    )
+                    File.createTempFile("${System.currentTimeMillis()}", ".jpg", context.cacheDir)
                 tempTakePic =
-                    FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.provider",
-                        file,
-                    ).also { cameraLauncher.launch(it) }
+                    FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                        .also { cameraLauncher.launch(it) }
             } catch (error: Throwable) {
                 LogUtils.e(error.localizedMessage)
                 ToastUtils.showShort(error.localizedMessage.orEmpty())
             }
         },
-        onBack = onBack
+        onBack = onBack,
     )
 }
 
@@ -139,7 +118,7 @@ fun UploadSelfieScreen(
     onChoosePhoto: () -> Unit,
     onTakeSelfie: () -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
         topBar = {
@@ -151,28 +130,23 @@ fun UploadSelfieScreen(
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
+        modifier = modifier,
     ) { contentPadding ->
-
         Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-                .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 1. 显示已上传的照片（如果有）
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .clip(RoundedCornerShape(16.dp))
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(16.dp))) {
                 AsyncImage(
                     model = image,
                     contentDescription = stringResource(R.string.str_appearance),
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Fit,
                 )
             }
             Spacer(modifier = Modifier.height(UiConfigs.Spacing.XLarge))
@@ -182,21 +156,18 @@ fun UploadSelfieScreen(
                 text = stringResource(R.string.image_pick_protagonist_title),
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Spacer(modifier = Modifier.height(UiConfigs.Spacing.Medium))
             Text(
                 text = stringResource(R.string.image_pick_reference_description),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )
             Spacer(modifier = Modifier.height(UiConfigs.Spacing.XLarge))
 
-            AnimatedContent(
-                targetState = isLoading,
-                contentAlignment = Alignment.Center
-            ) {
+            AnimatedContent(targetState = isLoading, contentAlignment = Alignment.Center) {
                 if (it) {
                     CircularProgressIndicator()
                 } else {
@@ -205,31 +176,33 @@ fun UploadSelfieScreen(
                         Button(
                             onClick = onChoosePhoto,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton)
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                            shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton),
                         ) {
                             Text(
                                 text = stringResource(R.string.image_picker_gallery),
                                 fontSize = UiConfigs.Typography.Button,
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.labelLarge,
                             )
                         }
                         Spacer(modifier = Modifier.height(UiConfigs.Spacing.Medium))
                         Button(
                             onClick = onTakeSelfie,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton)
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = Color.White,
+                                ),
+                            shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton),
                         ) {
                             Text(
                                 text = stringResource(R.string.image_picker_camera),
                                 fontSize = UiConfigs.Typography.Button,
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.labelLarge,
                             )
                         }
                     }
@@ -248,7 +221,7 @@ private fun UploadSelfieScreenPreview() {
             isLoading = false,
             onChoosePhoto = {},
             onTakeSelfie = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }
