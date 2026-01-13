@@ -14,13 +14,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.rounded.Rocket
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -122,15 +119,13 @@ fun ExplorePage(
                             tint = Color.White,
                         )
                     }
-                    Box(modifier = Modifier.padding(end = UiConfigs.Padding.ScreenHorizontal)) {
-                        BoostShortcutButton(
-                            onClick = {
-                                navController.navigate(Routes.Explore.BoostLeaderboard)
-                                //
-                                // BoostLeaderboardActivity.launch(context)
-                            }
-                        )
-                    }
+                    BoostShortcutButton(
+                        onClick = {
+                            navController.navigate(Routes.Explore.BoostLeaderboard)
+                            //
+                            // BoostLeaderboardActivity.launch(context)
+                        }
+                    )
                 },
             )
 
@@ -218,24 +213,11 @@ fun ExplorePage(
 
 @Composable
 private fun BoostShortcutButton(onClick: () -> Unit) {
-    val label = stringResource(R.string.explore_boost_shortcut)
-    Button(
-        onClick = onClick,
-        shape = RoundedCornerShape(100.dp),
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF9C5BFF),
-                contentColor = Color.White,
-            ),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-    ) {
+    IconButton(onClick = onClick) {
         Icon(
-            imageVector = Icons.Rounded.Rocket,
+            painter = painterResource(R.drawable.rocket_launch_24px),
             contentDescription = stringResource(R.string.explore_boost_shortcut_cd),
-            modifier = Modifier.height(18.dp),
             tint = Color.White,
         )
-        Spacer(Modifier.width(6.dp))
-        Text(text = label, color = Color.White, fontWeight = FontWeight.SemiBold)
     }
 }
