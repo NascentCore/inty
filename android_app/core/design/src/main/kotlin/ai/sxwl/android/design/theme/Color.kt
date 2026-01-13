@@ -3,7 +3,7 @@ package ai.sxwl.android.design.theme
 import androidx.compose.ui.graphics.Color
 
 // region 动态生成的主题色 https://material-foundation.github.io/material-theme-builder/
-val primaryLight = Color(0xFF8E12C8)
+val primaryLight = Color(0xFF9C27B0)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFAA3BE3)
 val onPrimaryContainerLight = Color(0xFFFFF9FB)
@@ -19,8 +19,8 @@ val errorLight = Color(0xFFBA1A1A)
 val onErrorLight = Color(0xFFFFFFFF)
 val errorContainerLight = Color(0xFFFFDAD6)
 val onErrorContainerLight = Color(0xFF93000A)
-val backgroundLight = Color(0xFFFFF7FC)
-val onBackgroundLight = Color(0xFF201923)
+val backgroundLight = Color(0xFF1C1523)
+val onBackgroundLight = Color(0xFFFFFFFF)
 val surfaceLight = Color(0xFFFFF7FC)
 val onSurfaceLight = Color(0xFF201923)
 val surfaceVariantLight = Color(0xFFEFDDF2)
