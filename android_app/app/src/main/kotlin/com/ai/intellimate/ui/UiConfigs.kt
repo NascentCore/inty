@@ -591,7 +591,7 @@ object UiConfigs {
             /** 聊天输入框底部空白边距 - 输入框与键盘或更多面板之间的间距 */
             val BottomSpacerHeight = 6.dp
 
-            /** 聊天输入框估算高度 - 用于计算keeptalking 悬浮按钮位置 */
+            /** 聊天输入框估算高度 - 用于计算 keep talking 悬浮按钮位置 */
             val EstimatedHeight = 120.dp
 
             /** 聊天输入框水平方向内边距 - 输入框左右两侧的内边距 */

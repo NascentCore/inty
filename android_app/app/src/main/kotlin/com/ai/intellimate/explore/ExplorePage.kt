@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -211,7 +209,7 @@ private fun SearchButton(onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.Filled.Search,
+            painter = painterResource(R.drawable.search_24px),
             contentDescription = stringResource(R.string.explore_search_icon_desc),
             modifier = Modifier.size(UiConfigs.TopIconsRow.Size),
             tint = Color.White,
