@@ -301,11 +301,23 @@ private fun AvatarStyleCard(
         when (template) {
             AvatarImageStyleTemplate.REAL_FEEL -> R.string.avatar_style_real_feel
             AvatarImageStyleTemplate.CARTOON -> R.string.avatar_style_cartoon
+            AvatarImageStyleTemplate.ANIME -> R.string.avatar_style_anime
+            AvatarImageStyleTemplate.CINEMATIC -> R.string.avatar_style_cinematic
+            AvatarImageStyleTemplate.THREE_D -> R.string.avatar_style_3d
+            AvatarImageStyleTemplate.PIXEL_ART -> R.string.avatar_style_pixel_art
+            AvatarImageStyleTemplate.SKETCH -> R.string.avatar_style_sketch
+            AvatarImageStyleTemplate.CYBERPUNK -> R.string.avatar_style_cyberpunk
         }
     val descRes =
         when (template) {
             AvatarImageStyleTemplate.REAL_FEEL -> R.string.avatar_style_real_feel_desc
             AvatarImageStyleTemplate.CARTOON -> R.string.avatar_style_cartoon_desc
+            AvatarImageStyleTemplate.ANIME -> R.string.avatar_style_anime_desc
+            AvatarImageStyleTemplate.CINEMATIC -> R.string.avatar_style_cinematic_desc
+            AvatarImageStyleTemplate.THREE_D -> R.string.avatar_style_3d_desc
+            AvatarImageStyleTemplate.PIXEL_ART -> R.string.avatar_style_pixel_art_desc
+            AvatarImageStyleTemplate.SKETCH -> R.string.avatar_style_sketch_desc
+            AvatarImageStyleTemplate.CYBERPUNK -> R.string.avatar_style_cyberpunk_desc
         }
 
     val borderColor =

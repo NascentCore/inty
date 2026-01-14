@@ -159,8 +159,20 @@
     <string name="avatar_style_section_title">Style</string>
     <string name="avatar_style_real_feel">Real feel</string>
     <string name="avatar_style_cartoon">Cartoon</string>
+    <string name="avatar_style_anime">Anime</string>
+    <string name="avatar_style_cinematic">Cinematic</string>
+    <string name="avatar_style_3d">3D</string>
+    <string name="avatar_style_pixel_art">Pixel art</string>
+    <string name="avatar_style_sketch">Sketch</string>
+    <string name="avatar_style_cyberpunk">Cyberpunk</string>
     <string name="avatar_style_real_feel_desc">Photorealistic, natural lighting</string>
     <string name="avatar_style_cartoon_desc">Illustrated, clean lines</string>
+    <string name="avatar_style_anime_desc">Japanese animation, vivid colors</string>
+    <string name="avatar_style_cinematic_desc">Film look, dramatic lighting</string>
+    <string name="avatar_style_3d_desc">3D render, soft studio light</string>
+    <string name="avatar_style_pixel_art_desc">Retro pixels, limited palette</string>
+    <string name="avatar_style_sketch_desc">Pencil lines, monochrome</string>
+    <string name="avatar_style_cyberpunk_desc">Neon futuristic, high contrast</string>
 
     <!-- Character Creation -->
     <string name="face_edit">Crop</string>
