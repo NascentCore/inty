@@ -1,9 +1,9 @@
 name: Release - 内测轨道 GPlay 商店构建上传
 
 on:
-  push:
-    tags:
-      - "v*"
+  # push:
+  #   tags:
+  #     - "v*"
 
   workflow_dispatch:
 
@@ -16,6 +16,11 @@ jobs:
     # 此为 GitHub 托管的 8 核大机器，能够在 5 分钟内完成构建。
     runs-on: android-builder
     timeout-minutes: 60
+
+    permissions:
+      # Create tag
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,14 +74,37 @@ jobs:
           status: completed
           changesNotSentForReview: false
 
+      - name: Create and push tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          TAG_NAME="${SHORT_SHA}-android"
+          
+          echo "Creating tag: $TAG_NAME for commit: $SHORT_SHA"
+          
+          # 检查 tag 是否已存在
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists; skipping creation."
+            exit 0
+          fi
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG_NAME"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin "$TAG_NAME"
+          
+          echo "Successfully created and pushed tag: $TAG_NAME"
+
       - name: Publish upload summary
         run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          TAG_NAME="${SHORT_SHA}-android"
           ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           {
             echo "## 上传产物摘要"
             echo
             echo "- 提交短 SHA: \`$SHORT_SHA\`"
+            echo "- Tag: \`$TAG_NAME\`"
             echo "- AAB 路径: \`android_app/app/build/outputs/bundle/release/app-release.aab\`"
             echo "- GitHub Artifacts 下载: [查看并下载 AAB]($ARTIFACT_URL)"
           } >> "$GITHUB_STEP_SUMMARY"
