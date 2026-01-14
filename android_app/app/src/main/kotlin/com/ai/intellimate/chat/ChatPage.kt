@@ -557,7 +557,13 @@ internal fun ChatPage(
                             .padding(horizontal = 16.dp)
                     }
 
-                LazyColumn(modifier = lazyColumnModifier, state = listState, reverseLayout = true, contentPadding = PaddingValues(top = UiConfigs.ChatPage.chatPageLazyColumnGapTop)) {
+                LazyColumn(
+                    modifier = lazyColumnModifier,
+                    state = listState,
+                    reverseLayout = true,
+                    contentPadding =
+                        PaddingValues(top = UiConfigs.ChatPage.chatPageLazyColumnGapTop),
+                ) {
                     item { Spacer(Modifier.height(16.dp)) }
 
                     if (!imagePickMessageId.isNullOrEmpty()) {
