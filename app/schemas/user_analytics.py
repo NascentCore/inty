@@ -298,3 +298,38 @@ class ImageGenerationLatencyResponse(BaseModel):
     """生图耗时趋势响应"""
 
     data: List[ImageGenerationLatencyItem]
+
+
+class LiveChatLatencyItem(BaseModel):
+    """Live Chat 延迟统计项"""
+
+    hour: str = Field(description="小时时间戳 (YYYY-MM-DD HH:00)")
+    avg_connect_latency: Optional[float] = Field(
+        default=None, description="平均连接延迟 (毫秒)"
+    )
+    avg_first_byte_latency: Optional[float] = Field(
+        default=None, description="平均首字节延迟 (毫秒)"
+    )
+    avg_turn_latency: Optional[float] = Field(
+        default=None, description="平均轮次延迟 (毫秒)"
+    )
+    count: int = Field(description="会话数量")
+
+
+class LiveChatLatencyResponse(BaseModel):
+    """Live Chat 延迟趋势响应"""
+
+    data: List[LiveChatLatencyItem]
+
+
+class LiveChatBasicStatsResponse(BaseModel):
+    """Live Chat 基础统计响应"""
+
+    total_users: int = Field(description="发起语音通话人数", default=0)
+    total_sessions: int = Field(description="总语音通话 session 数", default=0)
+    total_duration: int = Field(description="总通话时长（秒）", default=0)
+    avg_sessions_per_user: float = Field(description="人均语音通话次数", default=0.0)
+    avg_duration_per_user: float = Field(description="人均通话时长（秒）", default=0.0)
+    avg_duration_per_session: float = Field(
+        description="每 session 平均时长（秒）", default=0.0
+    )

@@ -19,6 +19,7 @@ import {
   PictureOutlined,
   ExclamationCircleOutlined,
   PhoneOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -32,6 +33,7 @@ import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
 import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
+import { PerformanceAnalyticsPage } from "./pages/PerformanceAnalyticsPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -51,7 +53,8 @@ type PageKey =
   | "user-daily-messages"
   | "character-themes"
   | "generated-images"
-  | "report-feedback";
+  | "report-feedback"
+  | "performance-analytics";
 
 interface NavigationItem {
   key: PageKey;
@@ -199,6 +202,12 @@ const AppContent: React.FC = () => {
       description: "查看用户注册和聊天行为数据",
     },
     {
+      key: "performance-analytics",
+      icon: <DashboardOutlined />,
+      label: "性能监控",
+      description: "查看 LLM、生图和 Live Chat 延迟趋势",
+    },
+    {
       key: "user-daily-messages",
       icon: <MessageOutlined />,
       label: "用户每日消息",
@@ -239,6 +248,8 @@ const AppContent: React.FC = () => {
         return "系统设置";
       case "user-analytics":
         return "用户数据分析";
+      case "performance-analytics":
+        return "性能监控";
       case "user-daily-messages":
         return "用户每日消息";
       case "generated-images":
@@ -275,6 +286,8 @@ const AppContent: React.FC = () => {
         return <SettingsPage />;
       case "user-analytics":
         return <UserAnalyticsPage />;
+      case "performance-analytics":
+        return <PerformanceAnalyticsPage />;
       case "user-daily-messages":
         return <UserDailyMessagesPage />;
       case "generated-images":

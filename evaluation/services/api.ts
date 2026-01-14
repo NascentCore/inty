@@ -776,6 +776,18 @@ export const userAnalyticsApi = {
       "/evaluation/user-analytics/image-generation-latency",
       params,
     ),
+
+  // 获取 Live Chat 延迟趋势
+  getLiveChatLatency: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").LiveChatLatencyResponse> =>
+    apiClient.get("/evaluation/user-analytics/live-chat-latency", params),
+
+  // 获取 Live Chat 基础统计
+  getLiveChatStats: (
+    params?: AnalyticsDateParams,
+  ): Promise<import("../types").LiveChatBasicStatsResponse> =>
+    apiClient.get("/evaluation/user-analytics/live-chat-stats", params),
 };
 
 // =============================================================================
