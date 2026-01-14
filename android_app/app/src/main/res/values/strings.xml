@@ -269,6 +269,10 @@
     <string name="chat_ai_typing_placeholder">%1$s is typing</string>
     <string name="chat_ai_typing_default_name">Your IntelliMate</string>
 
+    <!-- VIP character access control -->
+    <string name="vip_character_chat_locked_content">This is a VIP character. Go Premium to chat with VIP characters and unlock exclusive features!</string>
+    <string name="vip_character_chat_locked_cta">Subscribe to Chat VIP 🔥</string>
+
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>
     <string name="no_subscription_plans">No subscription plans</string>
