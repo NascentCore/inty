@@ -222,6 +222,8 @@ class UserDailyMessagesResponse(BaseModel):
     nickname: Optional[str]
     auth_type: str
     created_at: Optional[str]
+    gender: Optional[str] = Field(None, description="性别：MALE/FEMALE/OTHER")
+    age_group: Optional[str] = Field(None, description="年龄段")
     daily_messages: List[UserDailyMessageItem]
 
 

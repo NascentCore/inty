@@ -504,8 +504,48 @@ export const UserDailyMessagesPage: React.FC = () => {
                 </div>
               </Col>
             </Row>
-            {userInfo.created_at && (
-              <Row gutter={16} style={{ marginTop: 16 }}>
+            <Row gutter={16} style={{ marginTop: 16 }}>
+              <Col span={6}>
+                <div>
+                  <div
+                    style={{ marginBottom: 4, color: "rgba(0, 0, 0, 0.45)" }}
+                  >
+                    性别
+                  </div>
+                  {userInfo.gender ? (
+                    <Tag
+                      color={
+                        userInfo.gender === "MALE"
+                          ? "blue"
+                          : userInfo.gender === "FEMALE"
+                            ? "pink"
+                            : "default"
+                      }
+                    >
+                      {userInfo.gender === "MALE"
+                        ? "男"
+                        : userInfo.gender === "FEMALE"
+                          ? "女"
+                          : "其他"}
+                    </Tag>
+                  ) : (
+                    <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>未设置</span>
+                  )}
+                </div>
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title="年龄段"
+                  value={userInfo.age_group || "未设置"}
+                  valueStyle={{
+                    fontSize: "14px",
+                    color: userInfo.age_group
+                      ? "inherit"
+                      : "rgba(0, 0, 0, 0.25)",
+                  }}
+                />
+              </Col>
+              {userInfo.created_at && (
                 <Col span={12}>
                   <Statistic
                     title="注册时间 (UTC)"
@@ -514,8 +554,8 @@ export const UserDailyMessagesPage: React.FC = () => {
                     valueStyle={{ fontSize: "14px" }}
                   />
                 </Col>
-              </Row>
-            )}
+              )}
+            </Row>
           </Card>
 
           {/* 当日统计卡片 */}

@@ -558,6 +558,8 @@ export interface UserDailyMessagesResponse {
   nickname: string | null;
   auth_type: string;
   created_at: string | null;
+  gender: string | null;
+  age_group: string | null;
   daily_messages: UserDailyMessageItem[];
 }
 

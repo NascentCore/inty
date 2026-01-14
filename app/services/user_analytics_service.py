@@ -1169,7 +1169,7 @@ class UserAnalyticsService:
         """通过邮箱查找用户"""
         query = text(
             """
-            SELECT id, email, nickname, auth_type, created_at
+            SELECT id, email, nickname, auth_type, created_at, gender, age_group
             FROM users
             WHERE email = :email AND deleted_at IS NULL
             LIMIT 1
@@ -1184,6 +1184,8 @@ class UserAnalyticsService:
                 "nickname": row[2],
                 "auth_type": row[3],
                 "created_at": row[4].isoformat() if row[4] else None,
+                "gender": row[5],
+                "age_group": row[6],
             }
         return None
 
@@ -1191,7 +1193,7 @@ class UserAnalyticsService:
         """通过用户 ID 查找用户"""
         query = text(
             """
-            SELECT id, email, nickname, auth_type, created_at
+            SELECT id, email, nickname, auth_type, created_at, gender, age_group
             FROM users
             WHERE id = :user_id AND deleted_at IS NULL
             LIMIT 1
@@ -1206,6 +1208,8 @@ class UserAnalyticsService:
                 "nickname": row[2],
                 "auth_type": row[3],
                 "created_at": row[4].isoformat() if row[4] else None,
+                "gender": row[5],
+                "age_group": row[6],
             }
         return None
 

@@ -1953,6 +1953,8 @@ async def get_user_daily_messages(
             "nickname": user_info.get("nickname"),
             "auth_type": user_info["auth_type"],
             "created_at": user_info.get("created_at"),
+            "gender": user_info.get("gender"),
+            "age_group": user_info.get("age_group"),
             "daily_messages": daily_messages,
         }
 
