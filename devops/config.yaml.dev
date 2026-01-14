@@ -69,6 +69,8 @@ google_play:
   webhook_secret: ""
   enable_version_check: true
   min_supported_version: 10
+  popup_reminder_version_code_gap: 200
+  settings_reminder_version_code_gap: 200
   release_track: internal
   fallback_tracks: [internal]
 
