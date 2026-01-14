@@ -40,6 +40,36 @@ enum class AvatarImageStyleTemplate(
         promptSuffix =
             "single, solo, adult, cartoon style, clean lines, (perfect body), stunningly beautiful, soft natural lighting, high detail, focus on expression, dynamic composition, dynamic pose, depth of field",
     ),
+    ANIME(
+        key = "anime",
+        promptSuffix =
+            "single, adult, anime style, detailed eyes, clean shading, vibrant colors, soft lighting, high detail, focus on expression",
+    ),
+    CINEMATIC(
+        key = "cinematic",
+        promptSuffix =
+            "single, adult, cinematic portrait, 35mm lens, shallow depth of field, film grain, dramatic lighting, high detail, focus on expression",
+    ),
+    THREE_D(
+        key = "3d",
+        promptSuffix =
+            "single, adult, 3d render, studio lighting, global illumination, subsurface scattering, high detail, focus on expression",
+    ),
+    PIXEL_ART(
+        key = "pixel_art",
+        promptSuffix =
+            "single, adult, pixel art, retro game sprite, crisp pixels, limited palette, high contrast, simple background",
+    ),
+    SKETCH(
+        key = "sketch",
+        promptSuffix =
+            "single, adult, pencil sketch, line art, cross-hatching, paper texture, monochrome, high detail, focus on expression",
+    ),
+    CYBERPUNK(
+        key = "cyberpunk",
+        promptSuffix =
+            "single, adult, cyberpunk, neon lights, futuristic, high contrast, holographic glow, rain ambience, cinematic lighting, high detail",
+    ),
 }
 
 class AvatarGenerateViewModel : BaseVM() {
