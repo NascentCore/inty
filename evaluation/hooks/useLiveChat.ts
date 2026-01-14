@@ -8,6 +8,7 @@ import {
   LiveChatService,
   ConnectionStatus,
   SessionInfo,
+  LatencyMetrics,
 } from "../services/liveChat";
 
 export interface Transcript {
@@ -25,6 +26,7 @@ export interface UseLiveChatReturn {
   remainingDuration: number | null;
   elapsedTime: number;
   sessionInfo: SessionInfo | null;
+  latencyMetrics: LatencyMetrics;
 
   startCall: (agentId: string) => Promise<void>;
   endCall: () => void;
@@ -47,6 +49,7 @@ export function useLiveChat(): UseLiveChatReturn {
     null,
   );
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [latencyMetrics, setLatencyMetrics] = useState<LatencyMetrics>({});
 
   const serviceRef = useRef<LiveChatService | null>(null);
   const agentIdRef = useRef<string | null>(null);
@@ -133,6 +136,13 @@ export function useLiveChat(): UseLiveChatReturn {
     );
   }, []);
 
+  const handleLatencyUpdate = useCallback((metrics: LatencyMetrics) => {
+    setLatencyMetrics((prev) => ({
+      ...prev,
+      ...metrics,
+    }));
+  }, []);
+
   const startCall = useCallback(
     async (agentId: string) => {
       // 清理之前的连接（如果有）
@@ -152,6 +162,7 @@ export function useLiveChat(): UseLiveChatReturn {
       setSessionInfo(null);
       setRemainingDuration(null);
       setElapsedTime(0);
+      setLatencyMetrics({});
       initialRemainingRef.current = null;
       agentIdRef.current = agentId;
 
@@ -167,6 +178,7 @@ export function useLiveChat(): UseLiveChatReturn {
             onStatusChange: handleStatusChange,
             onError: handleError,
             onSessionInfo: handleSessionInfo,
+            onLatencyUpdate: handleLatencyUpdate,
           },
         );
 
@@ -188,6 +200,7 @@ export function useLiveChat(): UseLiveChatReturn {
       handleStatusChange,
       handleError,
       handleSessionInfo,
+      handleLatencyUpdate,
     ],
   );
 
@@ -258,6 +271,7 @@ export function useLiveChat(): UseLiveChatReturn {
     remainingDuration,
     elapsedTime,
     sessionInfo,
+    latencyMetrics,
     startCall,
     endCall,
     toggleMute,

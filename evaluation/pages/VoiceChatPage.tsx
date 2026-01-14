@@ -30,6 +30,7 @@ import {
   ClockCircleOutlined,
   WifiOutlined,
   LoadingOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
 import { useLiveChat, Transcript } from "../hooks/useLiveChat";
@@ -72,6 +73,7 @@ export const VoiceChatPage: React.FC = () => {
     error,
     remainingDuration,
     elapsedTime,
+    latencyMetrics,
     startCall,
     endCall,
     toggleMute,
@@ -454,6 +456,58 @@ export const VoiceChatPage: React.FC = () => {
                       </Space>
                     </div>
                   )}
+
+                  {/* 延迟指标展示 */}
+                  {(latencyMetrics.connectLatencyMs !== undefined ||
+                    latencyMetrics.firstByteLatencyMs !== undefined ||
+                    latencyMetrics.turnLatenciesMs !== undefined) && (
+                      <div
+                        style={{
+                          marginTop: 16,
+                          padding: "12px 16px",
+                          background: "rgba(255,255,255,0.15)",
+                          borderRadius: 8,
+                          display: "inline-block",
+                        }}
+                      >
+                        <Space size="middle" wrap>
+                          <Text
+                            style={{
+                              color: "rgba(255,255,255,0.9)",
+                              fontWeight: 500,
+                            }}
+                          >
+                            <DashboardOutlined style={{ marginRight: 4 }} />
+                            延迟指标
+                          </Text>
+                          {latencyMetrics.connectLatencyMs !== undefined && (
+                            <Tag color="blue">
+                              连接: {latencyMetrics.connectLatencyMs}ms
+                            </Tag>
+                          )}
+                          {latencyMetrics.firstByteLatencyMs !== undefined && (
+                            <Tag color="green">
+                              首响应: {latencyMetrics.firstByteLatencyMs}ms
+                            </Tag>
+                          )}
+                          {latencyMetrics.avgTurnLatencyMs !== undefined && (
+                            <Tag color="purple">
+                              平均轮次: {latencyMetrics.avgTurnLatencyMs}ms
+                            </Tag>
+                          )}
+                          {latencyMetrics.turnLatenciesMs &&
+                            latencyMetrics.turnLatenciesMs.length > 0 && (
+                              <Tag color="orange">
+                                轮次:{" "}
+                                {latencyMetrics.turnLatenciesMs
+                                  .slice(-3)
+                                  .join(" / ")}
+                                ms
+                              </Tag>
+                            )}
+                        </Space>
+                      </div>
+                    )}
                 </div>
 
                 {/* 转录文本显示区域 */}

@@ -20,6 +20,7 @@ from app.api.tags import INTY_EVAL_TAG
 from app.schemas.live_chat import (
     LiveChatAudioResponseMessage,
     LiveChatErrorMessage,
+    LiveChatLatencyMessage,
     LiveChatMessageType,
     LiveChatSessionInfoMessage,
     LiveChatStatus,
@@ -268,6 +269,16 @@ async def live_chat_session(
             except Exception as e:
                 logger.debug(f"发送错误失败（连接可能已关闭）: {str(e)}")
 
+        async def on_latency(latency_data: dict):
+            """处理延迟指标更新"""
+            if session_ended_by_timeout:
+                return
+            try:
+                msg = LiveChatLatencyMessage(**latency_data)
+                await websocket.send_json(msg.model_dump(exclude_none=True))
+            except Exception as e:
+                logger.debug(f"发送延迟指标失败（连接可能已关闭）: {str(e)}")
+
         async def duration_timeout_handler():
             """时长到达限制时结束会话"""
             nonlocal session_ended_by_timeout
@@ -306,6 +317,7 @@ async def live_chat_session(
             on_transcript=on_transcript,
             on_status=on_status,
             on_error=on_error,
+            on_latency=on_latency,
         )
 
         async def send_audio_loop():
@@ -415,6 +427,9 @@ async def live_chat_session(
                     extra_data["response_token_details"] = (
                         session.response_token_details
                     )
+                latency_metrics = session.get_latency_metrics()
+                if latency_metrics:
+                    extra_data["latency_metrics"] = latency_metrics
 
                 usage_record = await subscription_service.record_usage(
                     db=db,

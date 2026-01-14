@@ -9,6 +9,7 @@ import asyncio
 import base64
 import os
 import re
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
@@ -64,6 +65,31 @@ class LiveSession:
     # Token 用量统计（由 Gemini Live API 周期性返回）
     total_token_count: int = 0
     response_token_details: Dict[str, int] = field(default_factory=dict)
+    # 延迟追踪字段
+    connect_start_time: Optional[float] = None
+    connect_end_time: Optional[float] = None
+    first_audio_sent_time: Optional[float] = None
+    first_audio_received_time: Optional[float] = None
+    turn_latencies: List[float] = field(default_factory=list)
+    current_turn_start_time: Optional[float] = None
+
+    def get_latency_metrics(self) -> dict:
+        """计算并返回延迟指标"""
+        metrics: Dict[str, Any] = {}
+        if self.connect_start_time and self.connect_end_time:
+            metrics["connect_latency_ms"] = int(
+                (self.connect_end_time - self.connect_start_time) * 1000
+            )
+        if self.first_audio_sent_time and self.first_audio_received_time:
+            metrics["first_byte_latency_ms"] = int(
+                (self.first_audio_received_time - self.first_audio_sent_time) * 1000
+            )
+        if self.turn_latencies:
+            metrics["turn_latencies_ms"] = [int(t * 1000) for t in self.turn_latencies]
+            metrics["avg_turn_latency_ms"] = int(
+                sum(self.turn_latencies) / len(self.turn_latencies) * 1000
+            )
+        return metrics
 
 
 class LiveChatService:
@@ -389,7 +415,8 @@ class LiveChatService:
         on_transcript: Callable[[str, str], Any],
         on_status: Callable[[LiveChatStatus, Optional[str]], Any],
         on_error: Callable[[str, str], Any],
-        reason: str,
+        on_latency: Optional[Callable[[dict], Any]] = None,
+        reason: str = "",
     ):
         """
         重要：根据运行证据（google-genai==1.55.0 + gemini-live-2.5-flash-preview-native-audio-09-2025）
@@ -449,6 +476,7 @@ class LiveChatService:
                         on_transcript=on_transcript,
                         on_status=on_status,
                         on_error=on_error,
+                        on_latency=on_latency,
                     )
                 )
 
@@ -490,6 +518,7 @@ class LiveChatService:
         on_transcript: Callable[[str, str], Any],
         on_status: Callable[[LiveChatStatus, Optional[str]], Any],
         on_error: Callable[[str, str], Any],
+        on_latency: Optional[Callable[[dict], Any]] = None,
     ) -> AsyncGenerator[None, bytes]:
         """
         启动实时语音通话会话
@@ -506,6 +535,7 @@ class LiveChatService:
             on_transcript: 转录回调 (text: str, role: 'user' | 'assistant')，可以是 async 函数
             on_status: 状态回调 (status: LiveChatStatus, message: Optional[str])，可以是 async 函数
             on_error: 错误回调 (code: str, message: str)，可以是 async 函数
+            on_latency: 延迟指标回调 (latency_data: dict)，可以是 async 函数
 
         Yields:
             None - 通过 send() 发送上行音频数据
@@ -537,14 +567,22 @@ class LiveChatService:
             client = self._get_client()
 
             await on_status(LiveChatStatus.CONNECTING, "正在连接到 Gemini Live...")
+            session.connect_start_time = time.time()
             gemini_cm, gemini_session = await self._open_gemini_session(
                 client=client,
                 live_config=live_config,
             )
+            session.connect_end_time = time.time()
             session.gemini_cm = gemini_cm
             session.gemini_session = gemini_session
             session.status = LiveChatStatus.CONNECTED
             await on_status(LiveChatStatus.CONNECTED, "已连接")
+
+            if on_latency and session.connect_start_time and session.connect_end_time:
+                connect_latency_ms = int(
+                    (session.connect_end_time - session.connect_start_time) * 1000
+                )
+                await on_latency({"connect_latency_ms": connect_latency_ms})
 
             session.receive_task = asyncio.create_task(
                 self._receive_loop(
@@ -557,6 +595,7 @@ class LiveChatService:
                     on_transcript=on_transcript,
                     on_status=on_status,
                     on_error=on_error,
+                    on_latency=on_latency,
                 )
             )
 
@@ -614,6 +653,10 @@ class LiveChatService:
                         continue
 
                     audio_count += 1
+                    if audio_count == 1 and session.first_audio_sent_time is None:
+                        session.first_audio_sent_time = time.time()
+                    if session.current_turn_start_time is None:
+                        session.current_turn_start_time = time.time()
                     turn_num = getattr(session, "_turn_num", 0)
                     if audio_count <= 5 or audio_count % 50 == 0:
                         logger.debug(
@@ -662,6 +705,7 @@ class LiveChatService:
         on_transcript: Callable[[str, str], Any],
         on_status: Callable[[LiveChatStatus, Optional[str]], Any],
         on_error: Callable[[str, str], Any],
+        on_latency: Optional[Callable[[dict], Any]] = None,
     ):
         """接收 Gemini Live 响应的循环"""
         try:
@@ -755,6 +799,27 @@ class LiveChatService:
                         and server_content.model_turn
                     ):
                         if session.status != LiveChatStatus.SPEAKING:
+                            if session.current_turn_start_time is not None:
+                                turn_latency = (
+                                    time.time() - session.current_turn_start_time
+                                )
+                                session.turn_latencies.append(turn_latency)
+                                session.current_turn_start_time = None
+                                if on_latency:
+                                    turn_latencies_ms = [
+                                        int(t * 1000) for t in session.turn_latencies
+                                    ]
+                                    avg_turn_latency_ms = int(
+                                        sum(session.turn_latencies)
+                                        / len(session.turn_latencies)
+                                        * 1000
+                                    )
+                                    await on_latency(
+                                        {
+                                            "turn_latencies_ms": turn_latencies_ms,
+                                            "avg_turn_latency_ms": avg_turn_latency_ms,
+                                        }
+                                    )
                             session.status = LiveChatStatus.SPEAKING
                             logger.debug("发送 SPEAKING 状态到前端")
                             await on_status(LiveChatStatus.SPEAKING, None)
@@ -764,6 +829,21 @@ class LiveChatService:
 
                         for part in server_content.model_turn.parts:
                             if hasattr(part, "inline_data") and part.inline_data:
+                                if session.first_audio_received_time is None:
+                                    session.first_audio_received_time = time.time()
+                                    if on_latency and session.first_audio_sent_time:
+                                        first_byte_latency_ms = int(
+                                            (
+                                                session.first_audio_received_time
+                                                - session.first_audio_sent_time
+                                            )
+                                            * 1000
+                                        )
+                                        await on_latency(
+                                            {
+                                                "first_byte_latency_ms": first_byte_latency_ms
+                                            }
+                                        )
                                 logger.debug(
                                     f"收到音频数据: {len(part.inline_data.data)} bytes"
                                 )
@@ -839,7 +919,7 @@ class LiveChatService:
                             session.ai_transcript_buffer = ""
 
                         # 运行证据：同一 session 的音频多轮可能在 turn_complete 后卡死。
-                        # 这里直接触发“重建 Gemini Live session”的绕过方案（等价于脚本中的“每轮重连”）。
+                        # 这里直接触发"重建 Gemini Live session"的绕过方案（等价于脚本中的"每轮重连"）。
                         asyncio.create_task(
                             self._reconnect_gemini_session(
                                 session=session,
@@ -850,6 +930,7 @@ class LiveChatService:
                                 on_transcript=on_transcript,
                                 on_status=on_status,
                                 on_error=on_error,
+                                on_latency=on_latency,
                                 reason="turn_complete",
                             )
                         )

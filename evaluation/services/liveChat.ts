@@ -24,12 +24,20 @@ export interface SessionInfo {
   agentCount: number;
 }
 
+export interface LatencyMetrics {
+  connectLatencyMs?: number;
+  firstByteLatencyMs?: number;
+  turnLatenciesMs?: number[];
+  avgTurnLatencyMs?: number;
+}
+
 export interface LiveChatCallbacks {
   onAudioReceived: (audioData: ArrayBuffer) => void;
   onTranscript: (text: string, role: "user" | "assistant") => void;
   onStatusChange: (status: ConnectionStatus, message?: string) => void;
   onError: (code: string, message: string) => void;
   onSessionInfo?: (info: SessionInfo) => void;
+  onLatencyUpdate?: (metrics: LatencyMetrics) => void;
 }
 
 interface WebSocketMessage {
@@ -45,6 +53,10 @@ interface WebSocketMessage {
   remaining_duration?: number;
   agent_limit?: number;
   agent_count?: number;
+  connect_latency_ms?: number;
+  first_byte_latency_ms?: number;
+  turn_latencies_ms?: number[];
+  avg_turn_latency_ms?: number;
 }
 
 const SEND_SAMPLE_RATE = 16000;
@@ -222,6 +234,26 @@ export class LiveChatService {
               `收到会话信息: 剩余时长 ${message.remaining_duration}s, ` +
                 `agent 限制 ${message.agent_limit}, 已聊 ${message.agent_count}`,
             );
+          }
+          break;
+
+        case "latency_update":
+          if (this.callbacks.onLatencyUpdate) {
+            const metrics: Record<string, number | number[] | undefined> = {};
+            if (message.connect_latency_ms != null) {
+              metrics.connectLatencyMs = message.connect_latency_ms;
+            }
+            if (message.first_byte_latency_ms != null) {
+              metrics.firstByteLatencyMs = message.first_byte_latency_ms;
+            }
+            if (message.turn_latencies_ms != null) {
+              metrics.turnLatenciesMs = message.turn_latencies_ms;
+            }
+            if (message.avg_turn_latency_ms != null) {
+              metrics.avgTurnLatencyMs = message.avg_turn_latency_ms;
+            }
+            this.callbacks.onLatencyUpdate(metrics);
+            console.log(`收到延迟指标更新:`, metrics);
           }
           break;
 
