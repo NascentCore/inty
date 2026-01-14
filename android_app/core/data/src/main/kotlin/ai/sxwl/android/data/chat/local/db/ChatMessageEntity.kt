@@ -27,6 +27,7 @@ data class ChatMessageEntity(
     val userVote: String?,
     val userFeedback: String?,
     val isOpening: Boolean,
+    val isVoice: Boolean = false, // 是否为语音聊天消息
     val metaAgentId: String?,
     val generatedImageUrl: String?,
     val generatedImageWidth: Int?,
@@ -57,6 +58,11 @@ internal fun MsgInfo.toEntity(
         when {
             hasMetaPayload -> meta_data?.isOpening ?: false
             else -> existing?.isOpening ?: false
+        }
+    val resolvedIsVoice =
+        when {
+            hasMetaPayload -> meta_data?.isVoice ?: false
+            else -> existing?.isVoice ?: false
         }
     val resolvedGeneratedImageUrl =
         when {
@@ -97,6 +103,7 @@ internal fun MsgInfo.toEntity(
         userVote = user_vote ?: existing?.userVote,
         userFeedback = userFeedback?.name ?: existing?.userFeedback,
         isOpening = resolvedIsOpening,
+        isVoice = resolvedIsVoice,
         metaAgentId = resolvedMetaAgentId,
         generatedImageUrl = resolvedGeneratedImageUrl,
         generatedImageWidth = resolvedGeneratedImageWidth,
@@ -118,12 +125,13 @@ internal fun ChatMessageEntity.toModel(): MsgInfo {
         }
 
     val meta =
-        if (metaAgentId == null && !isOpening && generatedImage == null) {
+        if (metaAgentId == null && !isOpening && !isVoice && generatedImage == null) {
             null
         } else {
             MsgInfo.MsgMetaData(
                 agentId = metaAgentId,
                 isOpening = isOpening,
+                isVoice = isVoice,
                 generatedImage = generatedImage,
             )
         }
