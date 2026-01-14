@@ -4,7 +4,7 @@ CREATED_BY_AGENT
 """
 
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,7 @@ class LiveChatMessageType(str, Enum):
     STATUS = "status"  # 会话状态更新
     ERROR = "error"  # 错误消息
     SESSION_INFO = "session_info"  # 会话信息（含剩余时长等）
+    LATENCY_UPDATE = "latency_update"  # 延迟指标更新
 
 
 class LiveChatConfig(BaseModel):
@@ -131,3 +132,24 @@ class LiveChatSessionInfoMessage(BaseModel):
     remaining_duration: int = Field(..., description="剩余可用时长（秒）")
     agent_limit: int = Field(..., description="可聊天的 agent 数量限制")
     agent_count: int = Field(..., description="已聊天的 agent 数量")
+
+
+class LiveChatLatencyMessage(BaseModel):
+    """延迟指标消息（下行）- 实时推送延迟数据"""
+
+    type: LiveChatMessageType = Field(
+        default=LiveChatMessageType.LATENCY_UPDATE,
+        description="消息类型",
+    )
+    connect_latency_ms: Optional[int] = Field(
+        default=None, description="连接延迟（毫秒）"
+    )
+    first_byte_latency_ms: Optional[int] = Field(
+        default=None, description="首字节延迟（毫秒）"
+    )
+    turn_latencies_ms: Optional[List[int]] = Field(
+        default=None, description="轮次延迟列表（毫秒）"
+    )
+    avg_turn_latency_ms: Optional[int] = Field(
+        default=None, description="平均轮次延迟（毫秒）"
+    )
