@@ -579,6 +579,9 @@ object UiConfigs {
         /** 消息列表非全屏模式下，上部分空白区占比 */
         const val chatListBlankZone = 1f / 3f
 
+        /** 消息列表顶部留白距离 */
+        val chatPageLazyColumnGapTop = 360.dp
+
         object KeepTalkingButton {
             /** Keep Talking 悬浮按钮宽度（用于扩大点击热区） */
             val width = 50.dp
