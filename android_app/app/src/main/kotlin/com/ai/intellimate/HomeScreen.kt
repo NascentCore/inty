@@ -9,6 +9,7 @@ import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartBottomAppBar
 import ai.sxwl.android.design.ui.HeartBottomTabItem
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.ToastUtils
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -52,6 +53,7 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.ExpiredVipDialog
 import com.ai.intellimate.ui.FeedbackRequestDialog
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
@@ -505,6 +507,11 @@ private fun ExploreTabContent(
     val exploreViewModel: ExploreViewModel = viewModel()
     val exploreResetSignal by mainViewModel.exploreResetSignal.collectAsState()
 
+    // Explore 卡片点击 VIP 角色的拦截弹窗：
+    // - 仅当角色带 VIP tag 且当前用户未订阅时弹出
+    // - 用户可跳转到订阅中心完成订阅
+    var showVipAgentPaywall by remember { mutableStateOf(false) }
+
     // 初始化 ExploreTab 数据
     LaunchedEffect(Unit) {
         exploreViewModel.initializePagingData()
@@ -512,15 +519,52 @@ private fun ExploreTabContent(
         exploreViewModel.startListeningUserAccountReady()
     }
 
+    if (showVipAgentPaywall) {
+        val dialogData =
+            ChatDialogData(
+                R.drawable.img_unlimit_dialog_bg,
+                stringResource(R.string.vip_agent_subscription_required_content),
+                stringResource(R.string.vip_agent_subscription_required_btn_text),
+            )
+
+        UnlimitChatDialog(
+            dialogData = dialogData,
+            onCancel = { showVipAgentPaywall = false },
+            onSure = {
+                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                    navController.navigate(Routes.Me.VipCenter)
+                } else {
+                    ToastUtils.showShort(R.string.toast_login_required)
+                }
+                showVipAgentPaywall = false
+            },
+            onMoreInfo = {
+                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                    navController.navigate(Routes.Me.VipCenter)
+                } else {
+                    ToastUtils.showShort(R.string.toast_login_required)
+                }
+                showVipAgentPaywall = false
+            },
+        )
+    }
+
     ExplorePage(
         navController,
         modifier = Modifier,
         innerPadding = innerPadding,
         onClickAgent = { agent ->
+            val isVipAgent =
+                agent.tags?.asSequence()?.filterNotNull()?.any { it.trim().equals("vip", true) } ==
+                    true
+
+            if (isVipAgent && !VipStatusHelper.isUserVip()) {
+                showVipAgentPaywall = true
+                return@ExplorePage
+            }
+
             AgentStore.addAgent(agent)
-            navController.navigate(
-                Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false)
-            )
+            navController.navigate(Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false))
         },
         viewModel = exploreViewModel,
         externalResetSignal = exploreResetSignal,

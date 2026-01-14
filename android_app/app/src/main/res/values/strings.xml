@@ -120,6 +120,10 @@
     <string name="voice_call_limit_exceeded_content">You\'ve reached your daily voice call limit! Don\'t worry—your limit refreshes tomorrow. Come back then to continue chatting! ❤️</string>
     <string name="voice_call_limit_exceeded_btn_text">Got it</string>
 
+    <!-- VIP character chat gating (Explore -> Chat) -->
+    <string name="vip_agent_subscription_required_content">This is a VIP character. Subscribe to IntelliMate Premium to start chatting and unlock exclusive features. ❤️</string>
+    <string name="vip_agent_subscription_required_btn_text">Subscribe Now 🔥</string>
+
 
     <!-- Login and Registration -->
     <string name="welcome_to_intellimate">Welcome to IntelliMate</string>
@@ -289,6 +293,7 @@
     <string name="toast_age_screen_required_select_age">Please select your age group</string>
     <string name="toast_reginfo_required_select_gender">Please select your gender</string>
     <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
+    <string name="toast_login_required">Please log in to continue</string>
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
     <string name="toast_copied_to_clipboard">Copied to clipboard</string>
