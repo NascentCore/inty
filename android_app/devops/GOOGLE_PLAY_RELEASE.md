@@ -1,5 +1,10 @@
 # Google Play Release（发布）
 
+## 发布流程
+
+1. 每日内测轨道自动发布[构建发布 Android App](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
+2. 对于最终实际上线的版本，创建 -android 后缀的 release
+
 ## 重要事项
 
 - [Google Play internal app sharing](https://play.google.com/console/internal-app-sharing)
