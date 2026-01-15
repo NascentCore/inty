@@ -6,6 +6,7 @@ import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.ui.HeartRedDot
+import ai.sxwl.android.utils.TimeUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -176,8 +177,32 @@ private fun MessageTabContent(
                 ConversationList(
                     uiState = uiState,
                     viewModel = viewModel,
+                    conversations = uiState.conversations,
                     onClickConversationItem = onClickConversationItem,
                     onLoadMore = onLoadMore,
+                )
+            }
+            MessageSecondaryTab.Intimate -> {
+                val counts = uiState.intimateMessageCounts
+                val intimateConversations =
+                    remember(uiState.conversations, counts, uiState.refreshKey) {
+                        uiState.conversations
+                            .sortedWith(
+                                compareByDescending<ConversationItem> { counts[it.agentId] ?: 0 }
+                                    .thenByDescending { conversation ->
+                                        TimeUtils.parseIsoTimeToTimestamp(conversation.lastMessageTime)
+                                            ?: 0L
+                                    }
+                            )
+                    }
+                ConversationList(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    conversations = intimateConversations,
+                    onClickConversationItem = onClickConversationItem,
+                    onLoadMore = onLoadMore,
+                    messageCounts = counts,
+                    showMessageCount = true,
                 )
             }
             MessageSecondaryTab.Favorites -> {
@@ -194,6 +219,7 @@ private fun MessageTabContent(
 
 internal enum class MessageSecondaryTab {
     Conversations,
+    Intimate,
     Favorites,
 }
 
@@ -201,8 +227,11 @@ internal enum class MessageSecondaryTab {
 private fun ConversationList(
     uiState: MessagesUiState,
     viewModel: MessagesViewModel,
+    conversations: List<ConversationItem>,
     onClickConversationItem: (ConversationItem) -> Unit,
     onLoadMore: () -> Unit,
+    messageCounts: Map<String, Int> = emptyMap(),
+    showMessageCount: Boolean = false,
 ) {
     val listState = rememberLazyListState()
     val shouldLoadMore by remember {
@@ -251,10 +280,10 @@ private fun ConversationList(
                 }
             }
 
-            if (uiState.conversations.isNotEmpty()) {
+            if (conversations.isNotEmpty()) {
                 runCatching {
                         itemsIndexed(
-                            items = uiState.conversations,
+                            items = conversations,
                             key = { index, conversion ->
                                 "${conversion.agentId}_${conversion.isPinned}_${uiState.refreshKey}_${index}"
                             },
@@ -318,6 +347,9 @@ private fun ConversationList(
                                     modifier = Modifier.fillMaxWidth(),
                                     conversation = conversion,
                                     showPushIndicator = showPushIndicator,
+                                    messageCount =
+                                        if (showMessageCount) messageCounts[conversion.agentId]
+                                        else null,
                                 )
                             }
                         }
@@ -329,7 +361,7 @@ private fun ConversationList(
 
         if (showMenuForConversationId != null) {
             val conversation =
-                uiState.conversations.find { it.agentId == showMenuForConversationId }
+                conversations.find { it.agentId == showMenuForConversationId }
             conversation?.let { conv ->
                 val isIntelliMate = conv.agentId in uiState.intelliMateAgentIds
                 val menuY = itemPositions[conv.agentId]?.let { it.dp } ?: 0.dp
@@ -359,7 +391,7 @@ private fun ConversationList(
             }
         }
 
-        if (uiState.conversations.isEmpty() && !uiState.isLoading && !uiState.isRefreshing) {
+        if (conversations.isEmpty() && !uiState.isLoading && !uiState.isRefreshing) {
             EmptyDataState(
                 subtitle = stringResource(R.string.empty_conversations),
                 modifier = Modifier.fillMaxSize(),
@@ -378,6 +410,7 @@ private fun MessagesTabSwitcher(
         listOf(
             MessageSecondaryTab.Conversations to
                 stringResource(R.string.messages_tab_conversations),
+            MessageSecondaryTab.Intimate to stringResource(R.string.messages_tab_intimate),
             MessageSecondaryTab.Favorites to stringResource(R.string.messages_tab_favorites),
         )
     val selectedIndex = tabs.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
@@ -518,6 +551,7 @@ private fun ChatHistoryItem(
     conversation: ConversationItem,
     placeholderID: Int = R.drawable.img_default_avatar,
     showPushIndicator: Boolean = false,
+    messageCount: Int? = null,
 ) {
     // 每次重组时重新读取 isPinned 值，确保获取最新状态
     val isPinned = conversation.isPinned
@@ -587,6 +621,15 @@ private fun ChatHistoryItem(
 
         // 右侧信息
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            messageCount?.let {
+                Text(
+                    text = it.toString(),
+                    fontSize = 12.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(2.dp))
+            }
             Text(text = conversation.getShowTime(), fontSize = 12.sp, color = Color(0x8CFFFFFF))
         }
         Spacer(Modifier.width(13.dp))

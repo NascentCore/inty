@@ -8,6 +8,11 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
+data class AgentMessageCount(
+    val agentId: String,
+    val messageCount: Int,
+)
+
 @Dao
 interface ChatMessageDao {
 
@@ -76,6 +81,14 @@ interface ChatMessageDao {
 
     @Query("SELECT * FROM chat_messages WHERE agentId = :agentId")
     suspend fun getAllMessages(agentId: String): List<ChatMessageEntity>
+
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId")
+    suspend fun getMessageCount(agentId: String): Int
+
+    @Query(
+        "SELECT agentId AS agentId, COUNT(*) AS messageCount FROM chat_messages WHERE agentId IN (:agentIds) GROUP BY agentId"
+    )
+    suspend fun getMessageCounts(agentIds: List<String>): List<AgentMessageCount>
 
     @Query(
         "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND generatedImageUrl IS NOT NULL AND generatedImageUrl != '' AND generatedImageUrl != 'loading' ORDER BY sortKey DESC, createdAt DESC"
