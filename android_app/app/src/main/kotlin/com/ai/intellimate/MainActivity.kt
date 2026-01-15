@@ -58,6 +58,7 @@ import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.tips.IntelliMateTipsRepository
 import com.ai.intellimate.tips.IntelliMateTipsSessionGate
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
+import com.ai.intellimate.ui.components.CarouselBackground
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
@@ -861,25 +862,17 @@ fun SplashLoginUI(
     when (loginScreenState) {
         LoginScreenState.MAIN -> {
             Box(modifier) {
-                Image(
-                    modifier = Modifier.fillMaxSize(),
-                    painter = painterResource(R.drawable.app_bg),
-                    contentScale = ContentScale.Crop,
-                    alignment = Alignment.TopCenter,
-                    contentDescription = "",
+                CarouselBackground(
+                    imageResIds = listOf(
+                        R.drawable.sample_0,
+                        R.drawable.sample_1,
+                        R.drawable.sample_2
+                    )
                 )
                 Column(
                     modifier = Modifier.align(Alignment.BottomCenter),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Image(
-                        modifier = Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)),
-                        painter = painterResource(R.drawable.icon_splash_icon),
-                        contentDescription = "",
-                        contentScale = ContentScale.Crop,
-                    )
-                    Spacer(modifier = Modifier.height(120.dp))
-
                     // Google 登录按钮
                     GoogleLoginButton(
                         isLoading = isLoading,
