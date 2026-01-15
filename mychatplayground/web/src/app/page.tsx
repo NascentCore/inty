@@ -249,6 +249,102 @@ function countTextStats(text: string): string {
   return "0";
 }
 
+/**
+ * 解析导出的对话记录 txt 文件
+ * 格式示例：
+ * [2025-12-29 23:16:28 (UTC)] 🤖 AI
+ * 消息内容...
+ * ---
+ * [2025-12-29 23:17:03 (UTC)] 👤 用户
+ * 消息内容...
+ */
+function parseConversationLog(content: string): { messages: ChatMsg[]; info: string } {
+  const lines = content.split("\n");
+  const messages: ChatMsg[] = [];
+  
+  // 用于匹配消息头的正则表达式
+  // 格式: [时间戳 (UTC)] 🤖 AI 或 [时间戳 (UTC)] 👤 用户
+  const aiHeaderRegex = /^\[[\d\-\s:]+\s*\(UTC\)\]\s*🤖\s*AI\s*$/;
+  const userHeaderRegex = /^\[[\d\-\s:]+\s*\(UTC\)\]\s*👤\s*用户\s*$/;
+  
+  let currentRole: "user" | "assistant" | null = null;
+  let currentContent: string[] = [];
+  let skippedCount = 0;
+  
+  const saveCurrentMessage = () => {
+    if (currentRole && currentContent.length > 0) {
+      // 过滤掉语音消息等特殊内容
+      const filteredLines = currentContent.filter(line => {
+        const trimmed = line.trim();
+        // 跳过语音消息标记和 URL
+        if (trimmed === "[语音消息]") return false;
+        if (trimmed.startsWith("语音URL:")) return false;
+        return true;
+      });
+      
+      const text = filteredLines.join("\n").trim();
+      if (text) {
+        messages.push({ role: currentRole, content: text });
+      }
+    }
+    currentRole = null;
+    currentContent = [];
+  };
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const trimmedLine = line.trim();
+    
+    // 检查是否是分隔符
+    if (trimmedLine === "---") {
+      saveCurrentMessage();
+      continue;
+    }
+    
+    // 检查是否是 AI 消息头
+    if (aiHeaderRegex.test(trimmedLine)) {
+      saveCurrentMessage();
+      currentRole = "assistant";
+      continue;
+    }
+    
+    // 检查是否是用户消息头
+    if (userHeaderRegex.test(trimmedLine)) {
+      saveCurrentMessage();
+      currentRole = "user";
+      continue;
+    }
+    
+    // 跳过文件头信息
+    if (trimmedLine.startsWith("会话导出记录") ||
+        trimmedLine.startsWith("角色名称:") ||
+        trimmedLine.startsWith("会话ID:") ||
+        trimmedLine.startsWith("创建时间:") ||
+        trimmedLine.startsWith("更新时间:") ||
+        trimmedLine.startsWith("消息总数:") ||
+        trimmedLine.startsWith("对话记录") ||
+        trimmedLine === "=" .repeat(20) ||
+        trimmedLine.match(/^=+$/)) {
+      continue;
+    }
+    
+    // 如果当前有角色，则添加到内容中
+    if (currentRole) {
+      // 保留空行（但不在开头）
+      if (currentContent.length > 0 || trimmedLine) {
+        currentContent.push(line);
+      }
+    }
+  }
+  
+  // 保存最后一条消息
+  saveCurrentMessage();
+  
+  const info = `成功导入 ${messages.length} 条消息（用户: ${messages.filter(m => m.role === "user").length}, AI: ${messages.filter(m => m.role === "assistant").length}）`;
+  
+  return { messages, info };
+}
+
 export default function Home() {
   const [apiKey, setApiKey] = useLocalStorageState<string>(LS_API_KEY, "");
   const [modelId, setModelId] = useLocalStorageState<string>(LS_MODEL_ID, "");
@@ -303,6 +399,7 @@ export default function Home() {
   const [showDiff, setShowDiff] = useState(false);
   const [diffTarget, setDiffTarget] = useState<PromptVersion | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const importConversationInputRef = useRef<HTMLInputElement | null>(null);
 
   // 用户AI相关状态
   const [userAiPrompt, setUserAiPrompt] = useLocalStorageState<string>(
@@ -640,6 +737,40 @@ export default function Home() {
     }
   };
 
+  const deleteMessage = (index: number) => {
+    const msg = chatHistory[index];
+    if (!msg) return;
+    
+    const next = chatHistory.filter((_, i) => i !== index);
+    setChatHistory(next);
+    
+    // 清除该消息的翻译（如果有）
+    if (translations[index]) {
+      const newTranslations = { ...translations };
+      delete newTranslations[index];
+      // 调整后续索引的翻译
+      const adjusted: Record<number, string> = {};
+      for (const [key, value] of Object.entries(newTranslations)) {
+        const numKey = Number(key);
+        if (numKey > index) {
+          adjusted[numKey - 1] = value;
+        } else {
+          adjusted[numKey] = value;
+        }
+      }
+      setTranslations(adjusted);
+    }
+    
+    // 若当前在编辑被删的消息，退出编辑态
+    if (editingMsg?.kind === "history" && editingMsg.index === index) {
+      setEditingMsg(null);
+    }
+    // 调整编辑索引（如果在删除位置之后）
+    if (editingMsg?.kind === "history" && editingMsg.index > index) {
+      setEditingMsg({ ...editingMsg, index: editingMsg.index - 1 });
+    }
+  };
+
   const addSnippet = (text: string) => {
     const t = text.trim();
     if (!t) return;
@@ -822,6 +953,32 @@ export default function Home() {
       return;
     }
     throw new Error("不支持的导入格式（schema 不匹配）");
+  };
+
+  const triggerImportConversation = () => {
+    importConversationInputRef.current?.click();
+  };
+
+  const importConversationLog = async (file: File) => {
+    const text = await file.text();
+    const { messages, info } = parseConversationLog(text);
+    
+    if (messages.length === 0) {
+      throw new Error("未能从文件中解析出任何对话消息");
+    }
+    
+    // 将导入的消息追加到现有聊天历史（或替换，取决于用户选择）
+    const shouldReplace = window.confirm(
+      `${info}\n\n是否替换现有聊天记录？\n- 确定：替换现有记录\n- 取消：追加到现有记录`
+    );
+    
+    if (shouldReplace) {
+      setChatHistory(messages);
+    } else {
+      setChatHistory([...chatHistory, ...messages]);
+    }
+    
+    window.alert(info);
   };
 
   /**
@@ -1271,7 +1428,35 @@ export default function Home() {
                     }
                   }}
                 />
-        </div>
+                <button
+                  type="button"
+                  className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 hover:bg-amber-100"
+                  onClick={triggerImportConversation}
+                  title="导入对话记录 txt 文件（支持会话导出格式）"
+                >
+                  导入对话记录
+                </button>
+                <input
+                  ref={importConversationInputRef}
+                  type="file"
+                  accept=".txt"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    try {
+                      await importConversationLog(f);
+                    } catch (err) {
+                      const msg =
+                        err instanceof Error ? err.message : String(err);
+                      window.alert(`导入对话记录失败：${msg}`);
+                    } finally {
+                      // allow re-import same file
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </div>
 
               <div className="flex items-end gap-2 overflow-x-auto">
                 <label className="shrink-0 space-y-0.5">
@@ -1879,6 +2064,15 @@ export default function Home() {
                                       title="编辑这条消息（会影响后续上下文）"
                                     >
                                       编辑
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[11px] text-red-600 hover:bg-red-50 hover:border-red-200 disabled:opacity-50"
+                                      onClick={() => deleteMessage(idx)}
+                                      disabled={sending}
+                                      title="删除这条消息"
+                                    >
+                                      删除
                                     </button>
                                   </div>
                                 </div>

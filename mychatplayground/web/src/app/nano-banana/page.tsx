@@ -3,22 +3,18 @@
 import { useRef, useState, useCallback, ChangeEvent } from "react";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 
-const LS_FAL_API_KEY = "mychatplayground.fal.apiKey";
 const LS_NANO_BANANA_INSTRUCTION = "mychatplayground.nanoBanana.instruction";
 const LS_NANO_BANANA_VARIABLES = "mychatplayground.nanoBanana.variables";
 
-// fal.ai 模型配置
-const FAL_MODEL_TEXT = {
-  id: "fal-ai/nano-banana",
-  name: "Nano Banana (文本生图)",
-  description: "纯文本生成图片，不支持参考图",
+// Gemini 模型配置
+const GEMINI_MODEL = {
+  id: "gemini-2.0-flash-exp",
+  name: "Gemini 2.0 Flash (图像生成)",
+  description: "Google Gemini 原生图像生成，支持参考图",
 };
 
-const FAL_MODEL_EDIT = {
-  id: "fal-ai/nano-banana/edit",
-  name: "Nano Banana (编辑模式)",
-  description: "支持多张参考图的图像编辑/生成",
-};
+// Python 后端 API 地址
+const BACKEND_API_URL = "http://localhost:5001";
 
 // 变量类型
 type Variable = {
@@ -42,26 +38,8 @@ const DEFAULT_INSTRUCTION = `【聊天记录】
 
 请根据以上信息，生成一张符合场景氛围的角色图片。`;
 
-// fal.ai 图片尺寸选项（使用 aspect_ratio 比例格式）
-const FAL_IMAGE_SIZES = [
-  { value: "1:1", label: "1:1 方形" },
-  { value: "4:5", label: "4:5 竖向（Instagram）" },
-  { value: "3:4", label: "3:4 竖向" },
-  { value: "2:3", label: "2:3 竖向" },
-  { value: "9:16", label: "9:16 竖向（手机全屏）" },
-  { value: "5:4", label: "5:4 横向" },
-  { value: "4:3", label: "4:3 横向" },
-  { value: "3:2", label: "3:2 横向" },
-  { value: "16:9", label: "16:9 横向（宽屏）" },
-  { value: "21:9", label: "21:9 超宽屏" },
-] as const;
-
-type FalImageSize = typeof FAL_IMAGE_SIZES[number]["value"];
 
 export default function NanoBananaPage() {
-  // API Key
-  const [falApiKey, setFalApiKey] = useLocalStorageState<string>(LS_FAL_API_KEY, "");
-  
   // 指令管理：保存版本 vs 当前编辑
   const [savedInstruction, setSavedInstruction] = useLocalStorageState<string>(
     LS_NANO_BANANA_INSTRUCTION,
@@ -78,9 +56,6 @@ export default function NanoBananaPage() {
   const [editingVarId, setEditingVarId] = useState<string | null>(null);
   const [tempVarName, setTempVarName] = useState("");
 
-  // 图片尺寸（默认竖向 3:4）
-  const [falImageSize, setFalImageSize] = useState<FalImageSize>("3:4");
-
   // 参考图 1：AI 角色的形象
   const [referenceImage1, setReferenceImage1] = useState<string | null>(null);
   const [referenceImage1Name, setReferenceImage1Name] = useState<string>("");
@@ -96,6 +71,9 @@ export default function NanoBananaPage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageGenerationTime, setImageGenerationTime] = useState<number | null>(null);
+  
+  // 调试信息：发送给模型的完整请求
+  const [debugRequest, setDebugRequest] = useState<Array<{type: string; content: string}> | null>(null);
 
   // 图片预览弹窗
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -194,12 +172,8 @@ export default function NanoBananaPage() {
   // 检查是否有变量内容
   const hasVariableContent = variables.some((v) => v.value.trim());
 
-  // 生成图片（调用 fal.ai Nano Banana）
+  // 生成图片（调用 Gemini Python 后端）
   const generateImage = useCallback(async () => {
-    if (!falApiKey.trim()) {
-      setImageError("请先填写 fal.ai API Key");
-      return;
-    }
     if (!hasVariableContent && !instruction.trim()) {
       setImageError("请填写变量内容或指令");
       return;
@@ -210,72 +184,61 @@ export default function NanoBananaPage() {
     setGeneratedImageUrl(null);
     setImageError(null);
     setImageGenerationTime(null);
+    setDebugRequest(null);
 
     try {
       // 构建完整的 prompt：将变量替换到指令中
       const prompt = replaceVariablesInInstruction(instruction);
 
-      // 调用 fal.ai API
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        Authorization: `Key ${falApiKey.trim()}`,
-      };
-
-      // 收集参考图 URL
-      const imageUrls: string[] = [];
+      // 收集参考图 (base64)
+      const referenceImages: string[] = [];
       if (referenceImage1) {
-        imageUrls.push(referenceImage1);
+        referenceImages.push(referenceImage1);
       }
       if (referenceImage2) {
-        imageUrls.push(referenceImage2);
+        referenceImages.push(referenceImage2);
       }
 
-      // 根据是否有参考图选择不同的端点和参数
-      const hasReferenceImages = imageUrls.length > 0;
-      const endpoint = hasReferenceImages ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id;
-
-      const body: Record<string, unknown> = {
+      const body = {
         prompt: prompt,
-        aspect_ratio: falImageSize, // 使用 aspect_ratio 而不是 image_size
-        num_images: 1,
+        reference_images: referenceImages,
       };
 
-      // 如果有参考图，使用编辑模式的参数
-      if (hasReferenceImages) {
-        body.image_urls = imageUrls; // 编辑模式使用 image_urls 数组
-      }
+      console.log("Gemini API 请求:", { ...body, reference_images: referenceImages.map(() => "[base64 image]") });
 
-      console.log("fal.ai API 请求:", { endpoint, body });
-
-      const response = await fetch(`https://fal.run/${endpoint}`, {
+      const response = await fetch(`${BACKEND_API_URL}/api/generate-image`, {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`fal.ai API error: ${response.status} ${text}`);
+        throw new Error(data.error || `API error: ${response.status}`);
       }
 
-      const data = await response.json();
-      const imageUrl = data?.images?.[0]?.url;
-
-      if (!imageUrl) {
-        throw new Error("No image URL in fal.ai response");
+      if (!data.image) {
+        throw new Error(data.error || "No image in response");
       }
 
       const endTime = Date.now();
       setImageGenerationTime(endTime - startTime);
-      setGeneratedImageUrl(imageUrl);
+      setGeneratedImageUrl(data.image);
+      // 保存调试信息
+      if (data.debug_request) {
+        setDebugRequest(data.debug_request);
+      }
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       
       // 检测内容政策违规错误
-      if (errorMsg.includes("content_policy_violation") || errorMsg.includes("422")) {
+      if (errorMsg.includes("SAFETY") || errorMsg.includes("blocked")) {
         setImageError(
           "⚠️ 内容政策违规\n\n" +
-          "fal.ai 检测到 prompt 中包含敏感内容（如成人/暴力内容），已拦截此请求。\n\n" +
+          "Gemini 检测到 prompt 中包含敏感内容，已拦截此请求。\n\n" +
           "解决方案：\n" +
           "• 修改对话内容，移除敏感描述\n" +
           "• 使用更温和的场景描述\n\n" +
@@ -287,7 +250,7 @@ export default function NanoBananaPage() {
     } finally {
       setImageLoading(false);
     }
-  }, [falApiKey, instruction, falImageSize, referenceImage1, referenceImage2, hasVariableContent, replaceVariablesInInstruction]);
+  }, [instruction, referenceImage1, referenceImage2, hasVariableContent, replaceVariablesInInstruction]);
 
   // 复制到剪贴板
   const copyToClipboard = async (text: string) => {
@@ -336,62 +299,25 @@ export default function NanoBananaPage() {
             </p>
           </div>
 
-          {/* fal.ai API Key */}
-          <div className="mb-4">
-            <label className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-700">
-              <span>🔑</span>
-              fal.ai API Key
-            </label>
-            <input
-              type="password"
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none placeholder:text-gray-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-              placeholder="输入 fal.ai API Key..."
-              value={falApiKey}
-              onChange={(e) => setFalApiKey(e.target.value)}
-            />
-            <div className="mt-1 text-[10px] text-gray-400">
-              在{" "}
-              <a
-                href="https://fal.ai/dashboard/keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-orange-600 hover:underline"
-              >
-                fal.ai/dashboard/keys
-              </a>{" "}
-              获取
-            </div>
-          </div>
-
-          {/* 模型信息 - 根据是否有参考图显示不同模式 */}
-          <div className={`mb-4 rounded-xl border p-3 ${
-            (referenceImage1 || referenceImage2) 
-              ? "border-purple-200 bg-purple-50" 
-              : "border-orange-200 bg-orange-50"
-          }`}>
+          {/* 模型信息 - Gemini */}
+          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🍌</span>
+              <span className="text-lg">✨</span>
               <div>
-                <div className={`text-sm font-medium ${
-                  (referenceImage1 || referenceImage2) ? "text-purple-900" : "text-orange-900"
-                }`}>
-                  {(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.name : FAL_MODEL_TEXT.name}
+                <div className="text-sm font-medium text-blue-900">
+                  {GEMINI_MODEL.name}
                 </div>
-                <div className={`text-xs ${
-                  (referenceImage1 || referenceImage2) ? "text-purple-700" : "text-orange-700"
-                }`}>
-                  {(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.description : FAL_MODEL_TEXT.description}
+                <div className="text-xs text-blue-700">
+                  {GEMINI_MODEL.description}
                 </div>
-                <div className={`mt-1 font-mono text-[10px] ${
-                  (referenceImage1 || referenceImage2) ? "text-purple-600" : "text-orange-600"
-                }`}>
-                  {(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id}
+                <div className="mt-1 font-mono text-[10px] text-blue-600">
+                  {GEMINI_MODEL.id}
                 </div>
               </div>
             </div>
             {(referenceImage1 || referenceImage2) && (
-              <div className="mt-2 rounded-lg bg-purple-100 px-2 py-1 text-[10px] text-purple-700">
-                ✓ 已上传参考图，将使用编辑模式（支持多图）
+              <div className="mt-2 rounded-lg bg-blue-100 px-2 py-1 text-[10px] text-blue-700">
+                ✓ 已上传参考图，Gemini 将参考这些图片生成
               </div>
             )}
           </div>
@@ -687,34 +613,12 @@ export default function NanoBananaPage() {
             </div>
           </div>
 
-          {/* 图片尺寸选择 */}
-          <div className="mb-4">
-            <label className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-700">
-              <span>📐</span>
-              图片尺寸
-            </label>
-            <select
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-              value={falImageSize}
-              onChange={(e) => setFalImageSize(e.target.value as FalImageSize)}
-            >
-              {FAL_IMAGE_SIZES.map((size) => (
-                <option key={size.value} value={size.value}>
-                  {size.label}
-                </option>
-              ))}
-            </select>
-            <div className="mt-1 text-[10px] text-gray-400">
-              括号内为实际像素尺寸
-            </div>
-          </div>
-
           {/* 生成图片按钮 */}
           <button
             type="button"
-            className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-500/30 transition-all hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-500/40 disabled:opacity-50 disabled:shadow-none"
+            className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition-all hover:from-blue-600 hover:to-indigo-600 hover:shadow-blue-500/40 disabled:opacity-50 disabled:shadow-none"
             onClick={generateImage}
-            disabled={imageLoading || !falApiKey.trim()}
+            disabled={imageLoading}
           >
             {imageLoading ? (
               <span className="flex items-center justify-center gap-2">
@@ -725,7 +629,7 @@ export default function NanoBananaPage() {
                 生成中...
               </span>
             ) : (
-              "🍌 一键生成图片"
+              "✨ 一键生成图片"
             )}
           </button>
         </section>
@@ -741,7 +645,7 @@ export default function NanoBananaPage() {
               <button
                 type="button"
                 className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-50"
-                onClick={() => downloadImage(generatedImageUrl, `nano-banana-${Date.now()}.png`)}
+                onClick={() => downloadImage(generatedImageUrl, `gemini-${Date.now()}.png`)}
               >
                 下载
               </button>
@@ -757,17 +661,14 @@ export default function NanoBananaPage() {
                   type="button"
                   className="text-[10px] text-gray-400 hover:text-gray-600"
                   onClick={() => {
-                    const hasRefs = !!(referenceImage1 || referenceImage2);
-                    const endpoint = hasRefs ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id;
-                    const imageUrls: string[] = [];
-                    if (referenceImage1) imageUrls.push("[参考图1:AI角色]");
-                    if (referenceImage2) imageUrls.push("[参考图2:用户]");
+                    const refImages: string[] = [];
+                    if (referenceImage1) refImages.push("[参考图1:AI角色]");
+                    if (referenceImage2) refImages.push("[参考图2:用户]");
                     copyToClipboard(JSON.stringify({
-                      endpoint: `https://fal.run/${endpoint}`,
-                      model: endpoint,
-                      aspect_ratio: falImageSize,
-                      num_images: 1,
-                      ...(hasRefs ? { image_urls: imageUrls } : {}),
+                      endpoint: `${BACKEND_API_URL}/api/generate-image`,
+                      model: GEMINI_MODEL.id,
+                      image_size: "1024x1024 (固定)",
+                      reference_images: refImages,
                       prompt: replaceVariablesInInstruction(instruction),
                     }, null, 2));
                   }}
@@ -781,26 +682,22 @@ export default function NanoBananaPage() {
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-medium text-blue-700">🔗 端点：</span>
                   <code className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[10px] text-blue-800">
-                    https://fal.run/{(referenceImage1 || referenceImage2) ? FAL_MODEL_EDIT.id : FAL_MODEL_TEXT.id}
+                    {BACKEND_API_URL}/api/generate-image
                   </code>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-medium text-blue-700">🍌 模式：</span>
-                  <code className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
-                    (referenceImage1 || referenceImage2) 
-                      ? "bg-purple-100 text-purple-800" 
-                      : "bg-blue-100 text-blue-800"
-                  }`}>
-                    {(referenceImage1 || referenceImage2) ? "编辑模式 (支持多图)" : "文本生图模式"}
-                  </code>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-medium text-blue-700">📐 比例：</span>
+                  <span className="font-medium text-blue-700">✨ 模型：</span>
                   <code className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[10px] text-blue-800">
-                    aspect_ratio: &quot;{falImageSize}&quot;
+                    {GEMINI_MODEL.id}
+                  </code>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-medium text-blue-700">📐 尺寸：</span>
+                  <code className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[10px] text-blue-800">
+                    1024×1024
                   </code>
                   <span className="text-[10px] text-blue-600">
-                    ({FAL_IMAGE_SIZES.find(s => s.value === falImageSize)?.label})
+                    (固定尺寸)
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
@@ -824,8 +721,8 @@ export default function NanoBananaPage() {
                   </span>
                 </div>
                 {(referenceImage1 || referenceImage2) && (
-                  <div className="mt-1 rounded bg-purple-100 px-2 py-1 text-[10px] text-purple-700">
-                    📎 image_urls: [{referenceImage1 ? "参考图1" : ""}{referenceImage1 && referenceImage2 ? ", " : ""}{referenceImage2 ? "参考图2" : ""}]
+                  <div className="mt-1 rounded bg-blue-100 px-2 py-1 text-[10px] text-blue-700">
+                    📎 reference_images: [{referenceImage1 ? "参考图1" : ""}{referenceImage1 && referenceImage2 ? ", " : ""}{referenceImage2 ? "参考图2" : ""}]
                   </div>
                 )}
               </div>
@@ -834,6 +731,40 @@ export default function NanoBananaPage() {
               <div className="text-xs font-medium text-gray-500 mb-1">📝 Prompt 内容：</div>
               <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-2 text-xs text-gray-700">
                 {replaceVariablesInInstruction(instruction)}
+              </div>
+            </div>
+          )}
+
+          {/* 🔍 发送给模型的完整请求（调试信息） */}
+          {debugRequest && debugRequest.length > 0 && (
+            <div className="mb-4 rounded-xl border-2 border-purple-300 bg-purple-50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-xs font-medium text-purple-700">🔍 发送给模型的完整请求（调试视图）</div>
+                <span className="rounded bg-purple-200 px-2 py-0.5 text-[10px] text-purple-700">
+                  共 {debugRequest.length} 个部分
+                </span>
+              </div>
+              <div className="space-y-2">
+                {debugRequest.map((part, index) => (
+                  <div key={index} className={`rounded-lg p-2 ${
+                    part.type === "image" 
+                      ? "bg-green-100 border border-green-300" 
+                      : "bg-white border border-purple-200"
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        part.type === "image"
+                          ? "bg-green-200 text-green-800"
+                          : "bg-purple-200 text-purple-800"
+                      }`}>
+                        {part.type === "image" ? "🖼️ 图片" : "📝 文本"} #{index + 1}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap text-xs text-gray-700 max-h-[200px] overflow-y-auto">
+                      {part.content}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -851,8 +782,8 @@ export default function NanoBananaPage() {
                     </svg>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">🍌 Nano Banana 正在生成...</div>
-                <div className="text-xs text-gray-400">预计 10-30 秒</div>
+                <div className="text-sm text-gray-500">✨ Gemini 正在生成图片...</div>
+                <div className="text-xs text-gray-400">预计 10-60 秒</div>
               </div>
             ) : imageError ? (
               imageError.includes("内容政策违规") ? (
@@ -965,7 +896,7 @@ export default function NanoBananaPage() {
                   <button
                     type="button"
                     className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-50"
-                    onClick={() => downloadImage(generatedImageUrl, `nano-banana-${Date.now()}.png`)}
+                    onClick={() => downloadImage(generatedImageUrl, `gemini-${Date.now()}.png`)}
                   >
                     💾 下载
                   </button>
@@ -973,7 +904,7 @@ export default function NanoBananaPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center text-gray-400">
-                <div className="mb-3 text-6xl opacity-30">🍌</div>
+                <div className="mb-3 text-6xl opacity-30">✨</div>
                 <div className="text-sm">等待生成图片...</div>
                 <div className="mt-1 text-xs">填写内容后点击「一键生成图片」</div>
               </div>
