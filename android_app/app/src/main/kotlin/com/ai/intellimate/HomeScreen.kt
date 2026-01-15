@@ -231,7 +231,6 @@ fun HomeScreen(
         )
 
         ExpiredDialogLogic(navController, mainViewModel)
-        AppVersionLogic(mainViewModel)
         FeedbackRequestDialogLogic(navController, mainViewModel)
     }
 }
@@ -429,6 +428,7 @@ private fun HomeContent(
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
                 appUpdateTips = appUpdateTips,
+                mainViewModel = mainViewModel,
             )
         }
     }
@@ -534,6 +534,7 @@ private fun ProfileTabContent(
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
     appUpdateTips: Boolean,
+    mainViewModel: MainViewModel,
 ) {
     val context = LocalContext.current
     val profileViewModel: ProfileViewModel = viewModel()
@@ -675,6 +676,9 @@ private fun ProfileTabContent(
         onLoadMore = { profileViewModel.loadMoreUserCreatedAgents() },
         profileViewModel = profileViewModel, // 传递 ViewModel 以便 ProfilePage 内部处理刷新
     )
+
+    // 升级弹窗逻辑：在打开me页面时显示
+    AppVersionLogic(mainViewModel)
 }
 
 // 默认tab的图标配置
