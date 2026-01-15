@@ -129,21 +129,32 @@ fun IntySmallTextField(
                 singleLine = singleLine,
                 value = textFieldValue,
                 onValueChange = { newValue ->
-                    var nextText = newValue.text
-                    var nextSelection = newValue.selection
+                    // 1. 检查长度限制
+                    val isOverLength = maxLength > 0 && newValue.text.length > maxLength
 
-                    // 限制最大字符数（含粘贴场景）
-                    if (maxLength > 0 && nextText.length > maxLength) {
-                        // 仅在首次超过时提示
+                    val finalValue = if (isOverLength) {
+                        // 仅在首次超过时提示（建议加防抖，避免连续粘贴产生的多次 Toast）
                         scope.launch { ToastUtils.showShort(R.string.str_message_is_too_long) }
-                        nextText = nextText.take(maxLength)
-                        val sel = nextSelection.start.coerceAtMost(maxLength)
-                        nextSelection = TextRange(sel)
+
+                        // 截断文字，同时必须保留 composition 和 selection 的合法性
+                        val truncatedText = newValue.text.take(maxLength)
+                        newValue.copy(
+                            text = truncatedText,
+                            selection = TextRange(newValue.selection.start.coerceAtMost(maxLength)),
+                            composition = newValue.composition?.let {
+                                TextRange(it.start.coerceAtMost(maxLength), it.end.coerceAtMost(maxLength))
+                            }
+                        )
+                    } else {
+                        newValue
                     }
 
-                    textFieldValue = TextFieldValue(text = nextText, selection = nextSelection)
-                    onValueChange(nextText)
-                    onSelectionChanged?.invoke(nextSelection.start)
+                    // 2. 关键：直接使用 newValue 的整体或 copy，不要手动 new 丢掉 composition
+                    textFieldValue = finalValue
+
+                    // 3. 外部回调
+                    onValueChange(finalValue.text)
+                    onSelectionChanged?.invoke(finalValue.selection.start)
                 },
                 keyboardOptions = keyboardOptions,
                 keyboardActions = newActions,
