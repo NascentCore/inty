@@ -625,7 +625,7 @@ export interface ImageGenerationLatencyResponse {
 export interface LiveChatLatencyItem {
   hour: string;
   avg_connect_latency: number | null;
-  avg_first_byte_latency: number | null;
+  avg_first_response_after_silence: number | null;
   avg_turn_latency: number | null;
   count: number;
 }

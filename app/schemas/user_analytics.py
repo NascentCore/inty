@@ -307,8 +307,8 @@ class LiveChatLatencyItem(BaseModel):
     avg_connect_latency: Optional[float] = Field(
         default=None, description="平均连接延迟 (毫秒)"
     )
-    avg_first_byte_latency: Optional[float] = Field(
-        default=None, description="平均首字节延迟 (毫秒)"
+    avg_first_response_after_silence: Optional[float] = Field(
+        default=None, description="平均静默后首响应延迟 (毫秒)"
     )
     avg_turn_latency: Optional[float] = Field(
         default=None, description="平均轮次延迟 (毫秒)"

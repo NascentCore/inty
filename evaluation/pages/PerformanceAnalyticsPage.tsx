@@ -172,7 +172,7 @@ export const PerformanceAnalyticsPage: React.FC = () => {
         <Row gutter={[16, 16]}>
           {/* LLM 延迟趋势图表 */}
           <Col xs={24} lg={12}>
-            <Card title="LLM 延迟趋势（按小时）" style={{ height: "400px" }}>
+            <Card title="LLM 延迟趋势（按小时）" style={{ height: "450px" }}>
               {llmLatency.length > 0 ? (
                 <Plot
                   data={[
@@ -191,7 +191,13 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                   layout={{
                     title: "LLM 延迟趋势",
                     height: 300,
-                    xaxis: { title: "时间", tickangle: -45 },
+                    margin: { t: 60, b: 80, l: 50, r: 20 },
+                    xaxis: { 
+                      title: "时间", 
+                      tickangle: -45,
+                      nticks: 10,
+                      tickformat: "%m-%d %H:%M"
+                    },
                     yaxis: { title: "平均延迟 (秒)" },
                     hovermode: "closest",
                   }}
@@ -205,7 +211,7 @@ export const PerformanceAnalyticsPage: React.FC = () => {
 
           {/* 生图延迟趋势图表 */}
           <Col xs={24} lg={12}>
-            <Card title="生图耗时趋势（按模型）" style={{ height: "400px" }}>
+            <Card title="生图耗时趋势（按模型）" style={{ height: "480px" }}>
               {imageGenLatency.length > 0 ? (
                 <Plot
                   data={(() => {
@@ -246,10 +252,16 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                   layout={{
                     title: "生图耗时趋势（按模型）",
                     height: 300,
-                    xaxis: { title: "时间", tickangle: -45 },
+                    margin: { t: 80, b: 80, l: 50, r: 20 },
+                    xaxis: { 
+                      title: "时间", 
+                      tickangle: -45,
+                      nticks: 10,
+                      tickformat: "%m-%d %H:%M"
+                    },
                     yaxis: { title: "平均耗时 (秒)" },
                     hovermode: "closest",
-                    legend: { orientation: "h", y: -0.3 },
+                    legend: { orientation: "h", y: 1.15, xanchor: "center", x: 0.5 },
                   }}
                   style={{ width: "100%", height: "100%" }}
                 />
@@ -261,7 +273,7 @@ export const PerformanceAnalyticsPage: React.FC = () => {
 
           {/* Live Chat 延迟趋势图表 */}
           <Col xs={24} lg={24}>
-            <Card title="Live Chat 延迟趋势（按小时）" style={{ height: "400px" }}>
+            <Card title="Live Chat 延迟趋势（按小时）" style={{ height: "480px" }}>
               {liveChatLatency.length > 0 ? (
                 <Plot
                   data={[
@@ -281,15 +293,15 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                     {
                       x: liveChatLatency.map((d) => d.hour),
                       y: liveChatLatency.map(
-                        (d) => d.avg_first_byte_latency || null,
+                        (d) => d.avg_first_response_after_silence || null,
                       ),
-                      name: "首字节延迟",
+                      name: "静默后首响应",
                       type: "scatter",
                       mode: "lines+markers",
                       line: { color: "#52c41a" },
                       connectgaps: false,
                       hovertemplate:
-                        "时间: %{x}<br>首字节延迟: %{y:.1f}ms<extra></extra>",
+                        "时间: %{x}<br>静默后首响应: %{y:.1f}ms<extra></extra>",
                     },
                     {
                       x: liveChatLatency.map((d) => d.hour),
@@ -308,10 +320,16 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                   layout={{
                     title: "Live Chat 延迟趋势",
                     height: 300,
-                    xaxis: { title: "时间", tickangle: -45 },
+                    margin: { t: 80, b: 80, l: 50, r: 20 },
+                    xaxis: { 
+                      title: "时间", 
+                      tickangle: -45,
+                      nticks: 10,
+                      tickformat: "%m-%d %H:%M"
+                    },
                     yaxis: { title: "延迟 (毫秒)" },
                     hovermode: "closest",
-                    legend: { orientation: "h", y: -0.2 },
+                    legend: { orientation: "h", y: 1.15, xanchor: "center", x: 0.5 },
                   }}
                   style={{ width: "100%", height: "100%" }}
                 />

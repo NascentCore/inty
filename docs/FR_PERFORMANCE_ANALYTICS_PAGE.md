@@ -15,10 +15,11 @@ CREATED_BY_AGENT
 **文件**: `app/schemas/user_analytics.py`
 
 新增以下数据模型：
+
 - `LiveChatLatencyItem`: Live Chat 延迟统计项
   - `hour`: 小时时间戳
   - `avg_connect_latency`: 平均连接延迟（毫秒）
-  - `avg_first_byte_latency`: 平均首字节延迟（毫秒）
+  - `avg_first_response_after_silence`: 平均静默后首响应延迟（毫秒）
   - `avg_turn_latency`: 平均轮次延迟（毫秒）
   - `count`: 会话数量
 - `LiveChatLatencyResponse`: Live Chat 延迟趋势响应
@@ -35,6 +36,7 @@ CREATED_BY_AGENT
 **文件**: `app/services/user_analytics_service.py`
 
 新增以下方法：
+
 - `get_live_chat_latency_trend(activity_start_date, activity_end_date)`: 按小时聚合 Live Chat 延迟数据
   - 从 `subscription_usage` 表中查询
   - 从 `extra_data->'latency_metrics'` JSON 字段提取延迟数据
@@ -48,14 +50,15 @@ CREATED_BY_AGENT
 **文件**: `app/api/v1/endpoints/evaluation.py`
 
 新增以下端点：
+
 - `GET /evaluation/user-analytics/live-chat-latency`
   - 参数：`activity_start_date`, `activity_end_date`, `activity_last_days`
   - 返回：Live Chat 延迟趋势数据
-  - 默认查询最近7天
+  - 默认查询最近 7 天
 - `GET /evaluation/user-analytics/live-chat-stats`
   - 参数：`activity_start_date`, `activity_end_date`, `activity_last_days`
   - 返回：Live Chat 基础统计数据
-  - 默认查询最近7天
+  - 默认查询最近 7 天
 
 ### 2. 前端开发
 
@@ -64,6 +67,7 @@ CREATED_BY_AGENT
 **文件**: `evaluation/types.ts`
 
 新增以下类型：
+
 - `LiveChatLatencyItem`
 - `LiveChatLatencyResponse`
 - `LiveChatBasicStatsResponse`
@@ -73,6 +77,7 @@ CREATED_BY_AGENT
 **文件**: `evaluation/services/api.ts`
 
 在 `userAnalyticsApi` 对象中新增：
+
 - `getLiveChatLatency(params)`: 获取 Live Chat 延迟趋势
 - `getLiveChatStats(params)`: 获取 Live Chat 基础统计
 
@@ -81,8 +86,9 @@ CREATED_BY_AGENT
 **文件**: `evaluation/pages/PerformanceAnalyticsPage.tsx`
 
 新建页面组件，包含：
-- **日期筛选器**：最近7天、最近30天、最近90天、全部
-- **统计卡片区**：展示 Live Chat 基础统计（4个卡片）
+
+- **日期筛选器**：最近 7 天、最近 30 天、最近 90 天、全部
+- **统计卡片区**：展示 Live Chat 基础统计（4 个卡片）
   - 语音通话用户数
   - 总会话数
   - 总通话时长
@@ -99,6 +105,7 @@ CREATED_BY_AGENT
 **文件**: `evaluation/pages/UserAnalyticsPage.tsx`
 
 移除以下内容：
+
 - LLM 延迟趋势图表
 - 生图延迟趋势图表
 - 相关状态变量和 API 调用
@@ -122,7 +129,7 @@ Live Chat 的延迟数据存储在 `subscription_usage` 表的 `extra_data` JSON
 {
   "latency_metrics": {
     "connect_latency_ms": 123,
-    "first_byte_latency_ms": 456,
+    "first_response_after_silence_ms": 456,
     "avg_turn_latency_ms": 789
   }
 }
@@ -172,11 +179,13 @@ Live Chat 的延迟数据存储在 `subscription_usage` 表的 `extra_data` JSON
 ## 相关文件清单
 
 ### 后端文件
+
 - `app/schemas/user_analytics.py`
 - `app/services/user_analytics_service.py`
 - `app/api/v1/endpoints/evaluation.py`
 
 ### 前端文件
+
 - `evaluation/types.ts`
 - `evaluation/services/api.ts`
 - `evaluation/pages/PerformanceAnalyticsPage.tsx` (新建)

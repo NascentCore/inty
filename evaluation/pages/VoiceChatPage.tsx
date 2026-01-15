@@ -459,7 +459,7 @@ export const VoiceChatPage: React.FC = () => {
 
                   {/* 延迟指标展示 */}
                   {(latencyMetrics.connectLatencyMs !== undefined ||
-                    latencyMetrics.firstByteLatencyMs !== undefined ||
+                    latencyMetrics.firstResponseAfterSilenceMs !== undefined ||
                     latencyMetrics.turnLatenciesMs !== undefined) && (
                     <div
                       style={{
@@ -485,9 +485,11 @@ export const VoiceChatPage: React.FC = () => {
                             连接: {latencyMetrics.connectLatencyMs}ms
                           </Tag>
                         )}
-                        {latencyMetrics.firstByteLatencyMs !== undefined && (
+                          {latencyMetrics.firstResponseAfterSilenceMs !==
+                            undefined && (
                           <Tag color="green">
-                            首响应: {latencyMetrics.firstByteLatencyMs}ms
+                              静默后首响应:{" "}
+                              {latencyMetrics.firstResponseAfterSilenceMs}ms
                           </Tag>
                         )}
                         {latencyMetrics.avgTurnLatencyMs !== undefined && (

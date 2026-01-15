@@ -144,8 +144,8 @@ class LiveChatLatencyMessage(BaseModel):
     connect_latency_ms: Optional[int] = Field(
         default=None, description="连接延迟（毫秒）"
     )
-    first_byte_latency_ms: Optional[int] = Field(
-        default=None, description="首字节延迟（毫秒）"
+    first_response_after_silence_ms: Optional[int] = Field(
+        default=None, description="用户停止说话后首响应延迟（毫秒）"
     )
     turn_latencies_ms: Optional[List[int]] = Field(
         default=None, description="轮次延迟列表（毫秒）"
