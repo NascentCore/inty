@@ -26,7 +26,7 @@ export interface SessionInfo {
 
 export interface LatencyMetrics {
   connectLatencyMs?: number;
-  firstByteLatencyMs?: number;
+  firstResponseAfterSilenceMs?: number;
   turnLatenciesMs?: number[];
   avgTurnLatencyMs?: number;
 }
@@ -54,7 +54,7 @@ interface WebSocketMessage {
   agent_limit?: number;
   agent_count?: number;
   connect_latency_ms?: number;
-  first_byte_latency_ms?: number;
+  first_response_after_silence_ms?: number;
   turn_latencies_ms?: number[];
   avg_turn_latency_ms?: number;
 }
@@ -243,8 +243,9 @@ export class LiveChatService {
             if (message.connect_latency_ms != null) {
               metrics.connectLatencyMs = message.connect_latency_ms;
             }
-            if (message.first_byte_latency_ms != null) {
-              metrics.firstByteLatencyMs = message.first_byte_latency_ms;
+            if (message.first_response_after_silence_ms != null) {
+              metrics.firstResponseAfterSilenceMs =
+                message.first_response_after_silence_ms;
             }
             if (message.turn_latencies_ms != null) {
               metrics.turnLatenciesMs = message.turn_latencies_ms;

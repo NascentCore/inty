@@ -1610,7 +1610,7 @@ class UserAnalyticsService:
             SELECT 
                 DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC') as hour,
                 AVG((extra_data->'latency_metrics'->>'connect_latency_ms')::float) as avg_connect_latency,
-                AVG((extra_data->'latency_metrics'->>'first_byte_latency_ms')::float) as avg_first_byte_latency,
+                AVG((extra_data->'latency_metrics'->>'first_response_after_silence_ms')::float) as avg_first_response_after_silence,
                 AVG((extra_data->'latency_metrics'->>'avg_turn_latency_ms')::float) as avg_turn_latency,
                 COUNT(*) as count
             FROM subscription_usage
@@ -1634,7 +1634,9 @@ class UserAnalyticsService:
             {
                 "hour": row[0].strftime("%Y-%m-%d %H:00") if row[0] else None,
                 "avg_connect_latency": round(row[1], 1) if row[1] else None,
-                "avg_first_byte_latency": round(row[2], 1) if row[2] else None,
+                "avg_first_response_after_silence": (
+                    round(row[2], 1) if row[2] else None
+                ),
                 "avg_turn_latency": round(row[3], 1) if row[3] else None,
                 "count": row[4] or 0,
             }
@@ -1667,11 +1669,11 @@ class UserAnalyticsService:
             },
         )
         row = result.fetchone()
-        
+
         user_count = row[0] if row else 0
         session_count = row[1] if row else 0
         total_duration = row[2] if row else 0
-        
+
         avg_sessions_per_user = (
             round(session_count / user_count, 2) if user_count > 0 else 0.0
         )
@@ -1681,7 +1683,7 @@ class UserAnalyticsService:
         avg_duration_per_session = (
             round(total_duration / session_count, 2) if session_count > 0 else 0.0
         )
-        
+
         return {
             "total_users": user_count,
             "total_sessions": session_count,

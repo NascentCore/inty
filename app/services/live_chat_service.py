@@ -68,10 +68,10 @@ class LiveSession:
     # 延迟追踪字段
     connect_start_time: Optional[float] = None
     connect_end_time: Optional[float] = None
-    first_audio_sent_time: Optional[float] = None
-    first_audio_received_time: Optional[float] = None
+    last_audio_sent_time: Optional[float] = None
     turn_latencies: List[float] = field(default_factory=list)
     current_turn_start_time: Optional[float] = None
+    last_response_after_silence_ms: Optional[int] = None
 
     def get_latency_metrics(self) -> dict:
         """计算并返回延迟指标"""
@@ -80,9 +80,9 @@ class LiveSession:
             metrics["connect_latency_ms"] = int(
                 (self.connect_end_time - self.connect_start_time) * 1000
             )
-        if self.first_audio_sent_time and self.first_audio_received_time:
-            metrics["first_byte_latency_ms"] = int(
-                (self.first_audio_received_time - self.first_audio_sent_time) * 1000
+        if self.last_response_after_silence_ms is not None:
+            metrics["first_response_after_silence_ms"] = (
+                self.last_response_after_silence_ms
             )
         if self.turn_latencies:
             metrics["turn_latencies_ms"] = [int(t * 1000) for t in self.turn_latencies]
@@ -653,8 +653,7 @@ class LiveChatService:
                         continue
 
                     audio_count += 1
-                    if audio_count == 1 and session.first_audio_sent_time is None:
-                        session.first_audio_sent_time = time.time()
+                    session.last_audio_sent_time = time.time()
                     if session.current_turn_start_time is None:
                         session.current_turn_start_time = time.time()
                     turn_num = getattr(session, "_turn_num", 0)
@@ -799,6 +798,14 @@ class LiveChatService:
                         and server_content.model_turn
                     ):
                         if session.status != LiveChatStatus.SPEAKING:
+                            response_after_silence_ms: Optional[int] = None
+                            if session.last_audio_sent_time is not None:
+                                response_after_silence_ms = int(
+                                    (time.time() - session.last_audio_sent_time) * 1000
+                                )
+                                session.last_response_after_silence_ms = (
+                                    response_after_silence_ms
+                                )
                             if session.current_turn_start_time is not None:
                                 turn_latency = (
                                     time.time() - session.current_turn_start_time
@@ -814,12 +821,15 @@ class LiveChatService:
                                         / len(session.turn_latencies)
                                         * 1000
                                     )
-                                    await on_latency(
-                                        {
-                                            "turn_latencies_ms": turn_latencies_ms,
-                                            "avg_turn_latency_ms": avg_turn_latency_ms,
-                                        }
-                                    )
+                                    payload: Dict[str, Any] = {
+                                        "turn_latencies_ms": turn_latencies_ms,
+                                        "avg_turn_latency_ms": avg_turn_latency_ms,
+                                    }
+                                    if response_after_silence_ms is not None:
+                                        payload["first_response_after_silence_ms"] = (
+                                            response_after_silence_ms
+                                        )
+                                    await on_latency(payload)
                             session.status = LiveChatStatus.SPEAKING
                             logger.debug("发送 SPEAKING 状态到前端")
                             await on_status(LiveChatStatus.SPEAKING, None)
@@ -829,21 +839,6 @@ class LiveChatService:
 
                         for part in server_content.model_turn.parts:
                             if hasattr(part, "inline_data") and part.inline_data:
-                                if session.first_audio_received_time is None:
-                                    session.first_audio_received_time = time.time()
-                                    if on_latency and session.first_audio_sent_time:
-                                        first_byte_latency_ms = int(
-                                            (
-                                                session.first_audio_received_time
-                                                - session.first_audio_sent_time
-                                            )
-                                            * 1000
-                                        )
-                                        await on_latency(
-                                            {
-                                                "first_byte_latency_ms": first_byte_latency_ms
-                                            }
-                                        )
                                 logger.debug(
                                     f"收到音频数据: {len(part.inline_data.data)} bytes"
                                 )
