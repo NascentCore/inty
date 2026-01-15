@@ -62,6 +62,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import ai.sxwl.android.data.api.getCdnImageUrl
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import kotlin.math.max
@@ -98,13 +101,33 @@ internal fun AgentsEmptyUI(modifier: Modifier = Modifier) {
 
 @Preview
 @Composable
-internal fun ProfileHeaderBg(modifier: Modifier = Modifier) {
+internal fun ProfileHeaderBg(
+    modifier: Modifier = Modifier,
+    userPhoto: String? = null,
+) {
+    val context = LocalContext.current
+    val hasUserPhoto = !userPhoto.isNullOrBlank()
+    
     Box(modifier) {
-        AsyncImage(
-            modifier = Modifier.fillMaxWidth(),
-            model = R.drawable.img_profile_header_bg,
-            contentDescription = null,
-        )
+        if (hasUserPhoto) {
+            // 有用户照片时，显示用户照片作为背景
+            val photoUrl = getCdnImageUrl(userPhoto, width = 1024)
+            AsyncImage(
+                modifier = Modifier.fillMaxWidth(),
+                model = ImageRequest.Builder(context).data(photoUrl).build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(R.drawable.img_profile_header_bg),
+                error = painterResource(R.drawable.img_profile_header_bg),
+            )
+        } else {
+            // 没有用户照片时，保持现状（显示默认背景图）
+            AsyncImage(
+                modifier = Modifier.fillMaxWidth(),
+                model = R.drawable.img_profile_header_bg,
+                contentDescription = null,
+            )
+        }
         Box(
             modifier =
                 Modifier.matchParentSize()
