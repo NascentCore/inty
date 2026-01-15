@@ -1897,6 +1897,124 @@ async def get_image_generation_latency_trend(
 
 
 @router.get(
+    "/user-analytics/live-chat-latency",
+    response_model=schemas.user_analytics.LiveChatLatencyResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_live_chat_latency_trend(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
+) -> Any:
+    """获取 Live Chat 延迟趋势（按小时聚合）"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        now = datetime.now(timezone.utc)
+
+        # 解析活跃日期范围
+        if activity_last_days:
+            act_end = now
+            act_start = now - timedelta(days=activity_last_days)
+        elif activity_start_date and activity_end_date:
+            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            ) + timedelta(days=1)
+        else:
+            # 默认查询最近7天
+            act_end = now
+            act_start = now - timedelta(days=7)
+
+        service = UserAnalyticsService(db)
+        data = await service.get_live_chat_latency_trend(act_start, act_end)
+        return {"data": data}
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取 Live Chat 延迟趋势失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取 Live Chat 延迟趋势失败")
+
+
+@router.get(
+    "/user-analytics/live-chat-stats",
+    response_model=schemas.user_analytics.LiveChatBasicStatsResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_live_chat_basic_stats(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
+) -> Any:
+    """获取 Live Chat 基础统计"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        now = datetime.now(timezone.utc)
+
+        # 解析活跃日期范围
+        if activity_last_days:
+            act_end = now
+            act_start = now - timedelta(days=activity_last_days)
+        elif activity_start_date and activity_end_date:
+            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            ) + timedelta(days=1)
+        else:
+            # 默认查询最近7天
+            act_end = now
+            act_start = now - timedelta(days=7)
+
+        service = UserAnalyticsService(db)
+        stats = await service.get_live_chat_basic_stats(act_start, act_end)
+        return stats
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取 Live Chat 基础统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取 Live Chat 基础统计失败")
+
+
+@router.get(
     "/user-analytics/user-daily-messages",
     response_model=schemas.user_analytics.UserDailyMessagesResponse,
     tags=[INTY_EVAL_TAG],

@@ -621,6 +621,29 @@ export interface ImageGenerationLatencyResponse {
   data: ImageGenerationLatencyItem[];
 }
 
+// Live Chat 延迟统计
+export interface LiveChatLatencyItem {
+  hour: string;
+  avg_connect_latency: number | null;
+  avg_first_byte_latency: number | null;
+  avg_turn_latency: number | null;
+  count: number;
+}
+
+export interface LiveChatLatencyResponse {
+  data: LiveChatLatencyItem[];
+}
+
+// Live Chat 基础统计
+export interface LiveChatBasicStatsResponse {
+  total_users: number;
+  total_sessions: number;
+  total_duration: number;
+  avg_sessions_per_user: number;
+  avg_duration_per_user: number;
+  avg_duration_per_session: number;
+}
+
 // 生成图片
 export interface GeneratedImage {
   url: string;
