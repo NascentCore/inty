@@ -183,6 +183,7 @@ private fun MessageTabContent(
                 )
             }
             MessageSecondaryTab.Intimate -> {
+                // TODO: 该“亲密度排名”完全依赖本地 Room 数据库（本地聊天消息条数统计）进行排序；若本地 Room 数据不完整（如清理缓存/换机/未全量同步等），这里展示的排名与数量将不准确。
                 val counts = uiState.intimateMessageCounts
                 val intimateConversations =
                     remember(uiState.conversations, counts, uiState.refreshKey) {
