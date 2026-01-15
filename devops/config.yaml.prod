@@ -66,7 +66,7 @@ google_play:
   enable_version_check: true
   min_supported_version: 100
   popup_reminder_version_code_gap: 200
-  settings_reminder_version_code_gap: 200
+  settings_reminder_version_code_gap: 1
 
 elevenlabs:
   api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
