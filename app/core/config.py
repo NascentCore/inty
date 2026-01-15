@@ -253,8 +253,10 @@ class GooglePlayConfig:
     fallback_tracks: List[str] = None  # 备用轨道列表
     # DEPRECATED: 不检查 version name，只检查 version code，这样使用简单的线性递增逻辑，很容易理解。
     max_minor_version_gap: int = 10  # Minor版本号最大差距，超过则强制更新
-    # TODO: 简化代码，使用这个当前版本来进行版本检查
-    current_version_code: int = 2949  # 当前 Google Play 生产环境的版本代码
+    # 当前生产环境版本代码（覆盖值）：
+    # - 设置为正数时，版本检查直接使用此值，不调用 Google Play API（避免 edits.insert 配额消耗）
+    # - 设置为 0 或未配置时，通过 Google Play API 动态获取版本信息
+    current_version_code: int = 0  # 当前 Google Play 生产环境的版本代码（0 表示从 API 获取）
     # 版本代码差距阈值配置；线性递增的多个阈值，超过某个阈值意味着之前超越的阈值的动作都会在 app 端执行。
     # 比如，触发 popup_reminder_version_code_gap 动作，意味着 settings reminder 与 popup reminder 都会在 app 端执行。
     force_update_version_code_gap: int = 200  # 版本代码差距超过此值则强制更新

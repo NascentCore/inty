@@ -400,6 +400,21 @@ class GooglePlayService:
         Returns:
             Dict: 包含最新版本信息的字典
         """
+        # 如果配置了覆盖版本代码，直接使用配置值，跳过 Google Play API 调用
+        if self.config.current_version_code > 0:
+            logger.debug(
+                f"使用配置的版本代码: {self.config.current_version_code}（跳过 Google Play API）"
+            )
+            return {
+                "version_code": self.config.current_version_code,
+                "version_name": str(self.config.current_version_code),
+                "status": "completed",
+                "release_notes": None,
+                "user_fraction": None,
+                "country_targeting": None,
+                "track": "config_override",
+            }
+
         try:
             # 获取应用的编辑信息
             edit_request = self.service.edits().insert(
