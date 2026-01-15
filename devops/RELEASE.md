@@ -1,6 +1,6 @@
 # 发布流程
 
-* 例行的 Android app 测试版本发布到内测轨道，不再使用 internal app sharing
+- 例行的 Android app 测试版本发布到内测轨道，不再使用 internal app sharing
 
 ## 流程概览
 
@@ -12,7 +12,8 @@
 ## Backend 发布流程
 
 1. `-backend` 后缀添加到版本号上，版本号依次递增，每次 backend android 发布都要增加 fix 或者 minor 版本号；
-2. [Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
+2. 修改配置文件 config.yaml.{prod,dev}中 current_version_code，与 google play 最新包 version code 保持一致
+3. [Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
    选择对应的 tag，环境选择 prod
    <img width="800" height="1210" alt="image" src="https://github.com/user-attachments/assets/3e0fe7de-abf5-4eb8-b81d-ae9f31fa6399" />
 
