@@ -32,6 +32,9 @@ def google_play_config():
     return GooglePlayConfig(
         package_name="com.ai.intellimate",
         enable_version_check=True,
+        # 生产环境会通过配置文件设置 current_version_code（用于跳过 Google Play API）；
+        # 但单元测试默认应覆盖为 0，以便走 FakeAndroidPublisher 的 mocked 路径。
+        current_version_code=0,
         min_supported_version=1,
         release_track="production",
         fallback_tracks=["production", "internal"],
@@ -440,6 +443,7 @@ class TestCheckVersionRequirement:
         config = GooglePlayConfig(
             package_name=google_play_config.package_name,
             enable_version_check=False,
+            current_version_code=0,
         )
         service = GooglePlayService(
             android_publisher_service=fake_service, config=config
@@ -456,6 +460,7 @@ class TestCheckVersionRequirement:
         config = GooglePlayConfig(
             package_name=google_play_config.package_name,
             enable_version_check=True,
+            current_version_code=0,
             min_supported_version=1,
         )
         service = GooglePlayService(
@@ -491,6 +496,7 @@ class TestCheckVersionRequirement:
         config = GooglePlayConfig(
             package_name=google_play_config.package_name,
             enable_version_check=True,
+            current_version_code=0,
             min_supported_version=1,
         )
         service = GooglePlayService(
@@ -527,6 +533,7 @@ class TestCheckVersionRequirement:
         config = GooglePlayConfig(
             package_name=google_play_config.package_name,
             enable_version_check=True,
+            current_version_code=0,
         )
         service = GooglePlayService(
             android_publisher_service=fake_service, config=config
@@ -549,6 +556,7 @@ class TestCheckVersionRequirement:
         config = GooglePlayConfig(
             package_name=google_play_config.package_name,
             enable_version_check=True,
+            current_version_code=0,
             min_supported_version=1,
         )
         service = GooglePlayService(
@@ -580,6 +588,26 @@ class TestCheckVersionRequirement:
 
 class TestGetAppVersionInfo:
     """测试 get_app_version_info 方法"""
+
+    def test_get_version_info_uses_config_override(
+        self, fake_service, google_play_config
+    ):
+        """测试配置 current_version_code 时会跳过 Google Play API 并返回覆盖值"""
+        override_code = 2949
+        config = GooglePlayConfig(
+            package_name=google_play_config.package_name,
+            enable_version_check=True,
+            current_version_code=override_code,
+            release_track="production",
+            fallback_tracks=["production", "internal"],
+        )
+        service = GooglePlayService(android_publisher_service=fake_service, config=config)
+
+        version_info = service.get_app_version_info()
+
+        assert "error" not in version_info
+        assert version_info["version_code"] == override_code
+        assert version_info["track"] == "config_override"
 
     def test_get_version_info_success_primary_track(
         self, google_play_service, fake_service, google_play_config
