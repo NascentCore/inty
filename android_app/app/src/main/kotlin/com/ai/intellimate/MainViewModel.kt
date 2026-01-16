@@ -424,6 +424,7 @@ class MainViewModel : BaseVM() {
             ) {
                 is ApiResult.Success -> {
                     val rsp = result.data
+                    LogUtils.d("版本升级信息:$rsp")
                     when (rsp.reminder_action) {
                         VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS,
                         VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER -> {
