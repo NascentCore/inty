@@ -38,7 +38,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -65,6 +64,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import ai.sxwl.android.data.api.getCdnImageUrl
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.Alignment
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import kotlin.math.max
@@ -113,10 +114,11 @@ internal fun ProfileHeaderBg(
             // 有用户照片时，显示用户照片作为背景
             val photoUrl = getCdnImageUrl(userPhoto, width = 1024)
             AsyncImage(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().aspectRatio(660f/572f),
                 model = ImageRequest.Builder(context).data(photoUrl).build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
                 placeholder = painterResource(R.drawable.img_profile_header_bg),
                 error = painterResource(R.drawable.img_profile_header_bg),
             )
