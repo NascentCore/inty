@@ -86,6 +86,8 @@ import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.chat.VoiceChatHistoryCollapsed
+import com.ai.intellimate.chat.VoiceChatHistoryExpandedHeader
 import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -100,6 +102,91 @@ private const val LOAD_MORE_NEAR_TOP_THRESHOLD = 3
 private const val LOAD_MORE_MIN_EXTRA_ITEMS = 5
 
 var KEY_BOARD_HEIGHT_MAX = 1
+
+/** 消息项类型：普通消息或语音消息组 */
+sealed class ChatMessageItem {
+    data class NormalMessage(val message: MsgInfo) : ChatMessageItem()
+    data class VoiceMessageGroup(val messages: List<MsgInfo>, val groupId: String) : ChatMessageItem()
+}
+
+/**
+ * 将消息列表分组，连续的语音消息会被分组
+ * 包括用户和AI的消息：如果AI消息是语音消息，前一条用户消息也会被包含在语音组中
+ * @param messages 原始消息列表（倒序，最新的在前）
+ * @return 分组后的消息项列表（保持倒序）
+ */
+private fun groupVoiceMessages(messages: List<MsgInfo>): List<ChatMessageItem> {
+    if (messages.isEmpty()) return emptyList()
+    
+    val result = mutableListOf<ChatMessageItem>()
+    var currentVoiceGroup = mutableListOf<MsgInfo>()
+    var groupIndex = 0
+    var i = 0
+
+    while (i < messages.size) {
+        val message = messages[i]
+        
+        // 检查是否是AI的语音消息
+        if (message.role == "assistant" && message.isVoiceMessage()) {
+            // 如果下一条消息（更早的消息）是用户消息，将其也加入语音组
+            if (i + 1 < messages.size && messages[i + 1].role == "user") {
+                // 在倒序列表中，先添加的是最新的消息对，后添加的是更早的消息对
+                // 所以需要先添加用户消息，再添加AI语音消息（保持倒序）
+                currentVoiceGroup.add(messages[i + 1]) // 用户消息
+                currentVoiceGroup.add(message) // AI语音消息
+                i += 2 // 跳过这两条消息
+                
+                // 继续检查是否还有连续的语音对话（下一条AI消息是否也是语音消息）
+                while (i < messages.size && 
+                       messages[i].role == "assistant" && 
+                       messages[i].isVoiceMessage() &&
+                       i + 1 < messages.size && 
+                       messages[i + 1].role == "user") {
+                    // 继续添加连续的语音对话（更早的消息对）
+                    currentVoiceGroup.add(messages[i + 1]) // 用户消息
+                    currentVoiceGroup.add(messages[i]) // AI语音消息
+                    i += 2
+                }
+            } else {
+                // 没有下一条用户消息，只添加AI语音消息
+                currentVoiceGroup.add(message)
+                i++
+            }
+        } else {
+            // 不是AI语音消息，先处理之前的语音组（如果有）
+            if (currentVoiceGroup.isNotEmpty()) {
+                // 反转语音组，使其按时间顺序（更早的消息在前，更新的消息在后）
+                // 在倒序列表中，currentVoiceGroup 的顺序是：[用户3, AI3, 用户2, AI2]
+                // 反转后应该是：[用户2, AI2, 用户3, AI3]（按时间顺序）
+                currentVoiceGroup.reverse()
+                result.add(
+                    ChatMessageItem.VoiceMessageGroup(
+                        messages = currentVoiceGroup.toList(),
+                        groupId = "voice_group_$groupIndex",
+                    ),
+                )
+                currentVoiceGroup.clear()
+                groupIndex++
+            }
+            // 添加普通消息
+            result.add(ChatMessageItem.NormalMessage(message))
+            i++
+        }
+    }
+
+    // 处理最后剩余的语音组
+    if (currentVoiceGroup.isNotEmpty()) {
+        currentVoiceGroup.reverse()
+        result.add(
+            ChatMessageItem.VoiceMessageGroup(
+                messages = currentVoiceGroup.toList(),
+                groupId = "voice_group_$groupIndex",
+            ),
+        )
+    }
+
+    return result
+}
 
 /** ChatPage 页面来源常量 - 用于统计曝光事件 */
 object ChatPageSource {
@@ -467,6 +554,10 @@ internal fun ChatPage(
                 val chatMessages by chatViewModel.msgs.collectAsState()
                 val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
                 val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
+                
+                // 使用 remember 管理每个语音消息组的展开状态（在 Composable 作用域中）
+                // 当 agentId 变化时重置展开状态
+                val expandedGroups = remember(agentInfo?.id) { mutableStateOf<Set<String>>(emptySet()) }
 
                 val layoutInfo = listState.layoutInfo
                 val visibleItemsForUi = layoutInfo.visibleItemsInfo
@@ -587,89 +678,114 @@ internal fun ChatPage(
                     }
 
                     val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-                    runCatching {
-                            if (filteredChatMessages.isNotEmpty()) {
-                                val messagesCopy = filteredChatMessages.toList()
-                                val items =
-                                    messagesCopy.filter {
-                                        !(it.role == "user" && it.content == "continue")
-                                    }
-                                if (items.isNotEmpty()) {
-                                    itemsIndexed(
-                                        items,
-                                        key = { index, info ->
-                                            info.localMsgId.ifEmpty {
-                                                "${index}_${info.role}_${info.content.hashCode()}_${index}"
+                    // 直接在 Composable 作用域中处理，不使用 runCatching
+                    if (filteredChatMessages.isNotEmpty()) {
+                        val messagesCopy = filteredChatMessages.toList()
+                        val items =
+                            messagesCopy.filter {
+                                !(it.role == "user" && it.content == "continue")
+                            }
+                        if (items.isNotEmpty()) {
+                            // 将消息分组，连续的语音消息会被分组
+                            val groupedItems = groupVoiceMessages(items)
+                            
+                            itemsIndexed(
+                                        groupedItems,
+                                        key = { index, item ->
+                                            when (item) {
+                                                is ChatMessageItem.NormalMessage -> {
+                                                    item.message.localMsgId.ifEmpty {
+                                                        "${index}_${item.message.role}_${item.message.content.hashCode()}_${index}"
+                                                    }
+                                                }
+                                                is ChatMessageItem.VoiceMessageGroup -> {
+                                                    item.groupId
+                                                }
                                             }
                                         },
                                     ) { index, item ->
-                                        runCatching {
-                                                if (index < items.size) {
-                                                    val hasGeneratedImage = item.hasGeneratedImage()
-                                                    val isImageMessage =
-                                                        item.content.isEmpty() && hasGeneratedImage
+                                        // 直接在 Composable 作用域中处理，不使用 runCatching
+                                        when (item) {
+                                                    is ChatMessageItem.NormalMessage -> {
+                                                        if (index < groupedItems.size) {
+                                                            val message = item.message
+                                                            val hasGeneratedImage = message.hasGeneratedImage()
+                                                            val isImageMessage =
+                                                                message.content.isEmpty() && hasGeneratedImage
                                                     // latest 消息用于控制 ChatItem 内部的操作区（如
                                                     // 👍/👎、生图入口等）
                                                     // 这里需要包含“纯图片消息”（content 为空但有
                                                     // generated image），否则图片预览下方无法显示
                                                     // 👍/👎
-                                                    val isLatestAssistantMessageForActions =
-                                                        index == 0 &&
-                                                            item.role == "assistant" &&
-                                                            item.content != "loading_animation" &&
-                                                            !item.isOpening()
+                                                            val isLatestAssistantMessageForActions =
+                                                                index == 0 &&
+                                                                    message.role == "assistant" &&
+                                                                    message.content != "loading_animation" &&
+                                                                    !message.isOpening()
 
-                                                    ChatItem(
-                                                        navController,
-                                                        item,
+                                                            ChatItem(
+                                                                navController,
+                                                                message,
                                                         isCurrentPage = isCurrentPage,
                                                         chatViewModel = chatViewModel,
                                                         isLatestMessage =
                                                             isLatestAssistantMessageForActions,
                                                         isGuideVisible = isGuideVisible,
                                                         messageFontSizeSp = chatFontSizeSp,
-                                                    )
-                                                }
-                                                Spacer(Modifier.height(16.dp))
-                                            }
-                                            .onFailure { e ->
-                                                // 渲染失败时显示错误占位符
-                                                Box(
-                                                    modifier =
-                                                        Modifier.fillMaxWidth()
-                                                            .height(60.dp)
-                                                            .background(
-                                                                Color.Red.copy(alpha = 0.1f)
                                                             )
-                                                ) {
-                                                    Text(
-                                                        text = "Message loading failed",
-                                                        color = Color.White,
-                                                        modifier = Modifier.align(Alignment.Center),
-                                                    )
+                                                        }
+                                                    }
+                                                    is ChatMessageItem.VoiceMessageGroup -> {
+                                                        val isExpanded = expandedGroups.value.contains(item.groupId)
+                                                        
+                                                        if (isExpanded) {
+                                                            // 展开状态：先显示所有消息，最后显示折叠提示（在倒序列表中，最后添加的会显示在最上方）
+                                                            item.messages.forEachIndexed { msgIndex, message ->
+                                                                val hasGeneratedImage = message.hasGeneratedImage()
+                                                                val isImageMessage =
+                                                                    message.content.isEmpty() && hasGeneratedImage
+                                                                val isLatestAssistantMessageForActions =
+                                                                    index == 0 &&
+                                                                        msgIndex == 0 &&
+                                                                        message.role == "assistant" &&
+                                                                        message.content != "loading_animation" &&
+                                                                        !message.isOpening()
+
+                                                                ChatItem(
+                                                                    navController,
+                                                                    message,
+                                                                    isCurrentPage = isCurrentPage,
+                                                                    chatViewModel = chatViewModel,
+                                                                    isLatestMessage =
+                                                                        isLatestAssistantMessageForActions,
+                                                                    isGuideVisible = isGuideVisible,
+                                                                    messageFontSizeSp = chatFontSizeSp,
+                                                                )
+                                                                Spacer(Modifier.height(16.dp))
+                                                            }
+                                                            
+                                                            // 折叠提示放在最后，在倒序列表中会显示在最上方
+                                                            Spacer(Modifier.height(8.dp))
+                                                            VoiceChatHistoryExpandedHeader(
+                                                                onClick = {
+                                                                    expandedGroups.value -= item.groupId
+                                                                },
+                                                            )
+                                                        } else {
+                                                            // 折叠状态：显示折叠提示
+                                                            VoiceChatHistoryCollapsed(
+                                                                messages = item.messages,
+                                                                onClick = {
+                                                                    expandedGroups.value += item.groupId
+                                                                },
+                                                            )
+                                                        }
+                                                    }
                                                 }
-                                                Spacer(Modifier.height(16.dp))
-                                            }
-                                    }
-                                }
+                                        Spacer(Modifier.height(16.dp))
                             }
                         }
-                        .onFailure { e ->
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                            .height(100.dp)
-                                            .background(Color.Red.copy(alpha = 0.1f))
-                                ) {
-                                    Text(
-                                        text = "Chat history loading failed, please retry",
-                                        color = Color.White,
-                                        modifier = Modifier.align(Alignment.Center),
-                                    )
-                                }
-                            }
-                        }
+                    }
 
                     val showIntroOpeningTop =
                         isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())

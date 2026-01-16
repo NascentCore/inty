@@ -107,9 +107,15 @@ data class MsgInfo(
         return meta_data?.generatedImage?.height
     }
 
+    /** 判断是否为语音聊天消息 */
+    fun isVoiceMessage(): Boolean {
+        return meta_data?.isVoice == true
+    }
+
     @JsonClass(generateAdapter = true)
     data class MsgMetaData(
         val agentId: String? = null,
+        @Json(name = "is_voice") val isVoice: Boolean = false,
         val isOpening: Boolean = false,
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
     ) {
