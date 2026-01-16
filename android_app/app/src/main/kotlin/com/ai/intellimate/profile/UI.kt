@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import ai.sxwl.android.data.api.getCdnImageUrl
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawWithContent
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import kotlin.math.max
@@ -114,13 +115,24 @@ internal fun ProfileHeaderBg(
             // 有用户照片时，显示用户照片作为背景
             val photoUrl = getCdnImageUrl(userPhoto, width = 1024)
             AsyncImage(
-                modifier = Modifier.fillMaxWidth().aspectRatio(660f/572f),
+                modifier = Modifier
+                    .fillMaxSize(),
                 model = ImageRequest.Builder(context).data(photoUrl).build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.TopCenter,
                 placeholder = painterResource(R.drawable.img_profile_header_bg),
                 error = painterResource(R.drawable.img_profile_header_bg),
+            )
+
+            Spacer(modifier = Modifier
+                .matchParentSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        0f to HeartColor.primaryColor.copy(.0f),
+                        .25f to HeartColor.primaryColor
+                    )
+                )
             )
         } else {
             // 没有用户照片时，保持现状（显示默认背景图）
@@ -129,22 +141,24 @@ internal fun ProfileHeaderBg(
                 model = R.drawable.img_profile_header_bg,
                 contentDescription = null,
             )
+
+            Box(
+                modifier =
+                    Modifier.matchParentSize()
+                        .background(
+                            brush =
+                                Brush.verticalGradient(
+                                    colors =
+                                        listOf(
+                                            HeartColor.primaryColor.copy(.0f),
+                                            HeartColor.primaryColor.copy(.7f),
+                                            HeartColor.primaryColor.copy(.9f),
+                                        )
+                                )
+                        )
+            )
         }
-        Box(
-            modifier =
-                Modifier.matchParentSize()
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        HeartColor.primaryColor.copy(.0f),
-                                        HeartColor.primaryColor.copy(.7f),
-                                        HeartColor.primaryColor.copy(.9f),
-                                    )
-                            )
-                    )
-        )
+
     }
 }
 
