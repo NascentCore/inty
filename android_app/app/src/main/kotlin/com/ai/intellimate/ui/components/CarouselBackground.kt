@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,17 +43,23 @@ import kotlin.time.Duration.Companion.milliseconds
 fun CarouselBackground(
     imageResIds: List<Int>,
     modifier: Modifier = Modifier,
+    onPageChange: (Int) -> Unit = {},
     transitionDuration: Int = 1000,
     displayDuration: Int = 3000
 ) {
     Box(modifier = modifier) {
+        val pageChangeCall by rememberUpdatedState(onPageChange)
+
         if (imageResIds.isNotEmpty()) {
             var imageRes by remember { mutableIntStateOf(imageResIds[0]) }
 
             LaunchedEffect(imageResIds) {
                 generateSequence(0) { it + 1}
                     .forEach {
-                        imageRes = imageResIds[it % imageResIds.size]
+                        val index = it % imageResIds.size
+                        imageRes = imageResIds[index]
+
+                        pageChangeCall(index)
                         delay(displayDuration.milliseconds)
                     }
             }

@@ -591,4 +591,13 @@
     <string name="voice_call_duration">Call Duration</string>
     <string name="voice_call_remaining_time">Remaining Time</string>
     <string name="chat_save_user_photo_success">Saved. You can update it on the Me page.</string>
+
+    <!-- Login -->
+    <string name="login_welcome">Thousands of AI characters await your match.</string>
+    <string-array name="login_banner_text">
+        <item>A friend to spill to</item>
+        <item>A relationship to explore</item>
+        <item>A night to spend</item>
+        <item>On your terms always</item>
+    </string-array>
 </resources>
