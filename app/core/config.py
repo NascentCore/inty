@@ -259,8 +259,8 @@ class GooglePlayConfig:
     current_version_code: int = 0  # 当前 Google Play 生产环境的版本代码（0 表示从 API 获取）
     # 版本代码差距阈值配置；线性递增的多个阈值，超过某个阈值意味着之前超越的阈值的动作都会在 app 端执行。
     # 比如，触发 popup_reminder_version_code_gap 动作，意味着 settings reminder 与 popup reminder 都会在 app 端执行。
-    force_update_version_code_gap: int = 200  # 版本代码差距超过此值则强制更新
-    popup_reminder_version_code_gap: int = 1  # 版本代码差距在此值以上则显示弹窗提醒
+    force_update_version_code_gap: int = 1000  # 版本代码差距超过此值则强制更新
+    popup_reminder_version_code_gap: int = 200  # 版本代码差距在此值以上则显示弹窗提醒
     settings_reminder_version_code_gap: int = 1  # 版本代码差距在此值以上则显示设置提醒
 
 
