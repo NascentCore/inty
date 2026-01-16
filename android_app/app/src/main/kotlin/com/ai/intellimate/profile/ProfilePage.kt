@@ -177,10 +177,7 @@ internal fun ProfilePage(
 
     Box(modifier = modifier) {
         // 背景图区域
-        ProfileHeaderBg(
-            modifier = Modifier.fillMaxWidth(),
-            userPhoto = userProfile.userPhoto,
-        )
+        ProfileHeaderBg(modifier = Modifier.fillMaxWidth(), userPhoto = userProfile.userPhoto)
         Column(modifier = Modifier.fillMaxWidth()) {
             // Header 区域 - 固定显示（不随列表滚动折叠）
             ProfileHeader(

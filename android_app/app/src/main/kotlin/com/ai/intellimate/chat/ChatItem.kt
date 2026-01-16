@@ -1065,24 +1065,23 @@ private fun formatTimestamp(rawTimestamp: String?): String? {
     return TimeUtils.convertUtcToLocalFull(rawTimestamp).takeIf { it.isNotBlank() }
 }
 
-/**
- * 计算语音消息组的时长（秒）
- * 通过最后一条AI语音消息的时间戳减去第一条用户消息的时间戳计算
- */
+/** 计算语音消息组的时长（秒） 通过最后一条AI语音消息的时间戳减去第一条用户消息的时间戳计算 */
 private fun calculateVoiceChatDuration(messages: List<MsgInfo>): Long {
     if (messages.isEmpty()) return 0L
-    
+
     // 找到第一条用户消息的时间戳
     val firstUserMessage = messages.firstOrNull { it.role == "user" }
-    val firstUserTimestamp = firstUserMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
-    
+    val firstUserTimestamp =
+        firstUserMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
+
     // 找到最后一条AI语音消息的时间戳
     val lastAiVoiceMessage = messages.lastOrNull { it.role == "assistant" && it.isVoiceMessage() }
-    val lastAiVoiceTimestamp = lastAiVoiceMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
-    
+    val lastAiVoiceTimestamp =
+        lastAiVoiceMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
+
     // 如果缺少任一时间戳，返回0
     if (firstUserTimestamp == null || lastAiVoiceTimestamp == null) return 0L
-    
+
     // 计算时长（秒）：最后一条AI语音消息 - 第一条用户消息
     val durationSeconds = (lastAiVoiceTimestamp - firstUserTimestamp) / 1000
     return durationSeconds.coerceAtLeast(0)
@@ -1090,16 +1089,17 @@ private fun calculateVoiceChatDuration(messages: List<MsgInfo>): Long {
 
 /**
  * 格式化时长为可读字符串
+ *
  * @param durationSeconds 时长（秒）
  * @return 格式化后的时长字符串，如 "5分30秒" 或 "1小时5分"
  */
 private fun formatDuration(durationSeconds: Long): String {
     if (durationSeconds <= 0) return "0秒"
-    
+
     val hours = durationSeconds / 3600
     val minutes = (durationSeconds % 3600) / 60
     val seconds = durationSeconds % 60
-    
+
     return when {
         hours > 0 -> {
             if (minutes > 0) {
@@ -1120,8 +1120,7 @@ private fun formatDuration(durationSeconds: Long): String {
 }
 
 /**
- * 语音聊天历史记录折叠组件
- * 用于显示折叠的语音聊天记录，点击可展开查看完整记录
+ * 语音聊天历史记录折叠组件 用于显示折叠的语音聊天记录，点击可展开查看完整记录
  *
  * @param messages 语音消息列表，用于计算时长
  * @param onClick 点击展开的回调
@@ -1134,56 +1133,48 @@ fun VoiceChatHistoryCollapsed(
 ) {
     val durationSeconds = remember(messages) { calculateVoiceChatDuration(messages) }
     val durationText = remember(durationSeconds) { formatDuration(durationSeconds) }
-    
+
     Box(
         modifier =
-            modifier.fillMaxWidth()
-                .noRippleClickable(onClick = onClick)
-                .padding(vertical = 8.dp),
+            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = stringResource(R.string.voice_chat_history_collapsed, durationText),
             color = Color.White,
             fontSize = 12.sp,
-            modifier = Modifier.background(
-                color = Color.Black.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(3.dp)
-            ).padding(
-                horizontal = 3.dp
-            )
+            modifier =
+                Modifier.background(
+                        color = Color.Black.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(3.dp),
+                    )
+                    .padding(horizontal = 3.dp),
         )
     }
 }
 
 /**
- * 语音聊天历史记录展开状态的折叠提示组件
- * 用于在展开的语音聊天记录起始位置显示，点击可重新折叠
+ * 语音聊天历史记录展开状态的折叠提示组件 用于在展开的语音聊天记录起始位置显示，点击可重新折叠
  *
  * @param onClick 点击折叠的回调
  */
 @Composable
-fun VoiceChatHistoryExpandedHeader(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun VoiceChatHistoryExpandedHeader(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier =
-            modifier.fillMaxWidth()
-                .noRippleClickable(onClick = onClick)
-                .padding(vertical = 8.dp),
+            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = stringResource(R.string.voice_chat_history_expanded),
             color = Color.White,
             fontSize = 12.sp,
-            modifier = Modifier.background(
-                color = Color.Black.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(3.dp)
-            ).padding(
-                horizontal = 3.dp
-            )
+            modifier =
+                Modifier.background(
+                        color = Color.Black.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(3.dp),
+                    )
+                    .padding(horizontal = 3.dp),
         )
     }
 }

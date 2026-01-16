@@ -1,5 +1,6 @@
 package com.ai.intellimate.profile
 
+import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
@@ -38,6 +39,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -47,6 +49,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -62,11 +65,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import androidx.compose.ui.platform.LocalContext
-import ai.sxwl.android.data.api.getCdnImageUrl
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.drawWithContent
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 import kotlin.math.max
@@ -103,20 +101,16 @@ internal fun AgentsEmptyUI(modifier: Modifier = Modifier) {
 
 @Preview
 @Composable
-internal fun ProfileHeaderBg(
-    modifier: Modifier = Modifier,
-    userPhoto: String? = null,
-) {
+internal fun ProfileHeaderBg(modifier: Modifier = Modifier, userPhoto: String? = null) {
     val context = LocalContext.current
     val hasUserPhoto = !userPhoto.isNullOrBlank()
-    
+
     Box(modifier) {
         if (hasUserPhoto) {
             // 有用户照片时，显示用户照片作为背景
             val photoUrl = getCdnImageUrl(userPhoto, width = 1024)
             AsyncImage(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 model = ImageRequest.Builder(context).data(photoUrl).build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
@@ -125,14 +119,16 @@ internal fun ProfileHeaderBg(
                 error = painterResource(R.drawable.img_profile_header_bg),
             )
 
-            Spacer(modifier = Modifier
-                .matchParentSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        0f to HeartColor.primaryColor.copy(.0f),
-                        .25f to HeartColor.primaryColor
-                    )
-                )
+            Spacer(
+                modifier =
+                    Modifier.matchParentSize()
+                        .background(
+                            brush =
+                                Brush.verticalGradient(
+                                    0f to HeartColor.primaryColor.copy(.0f),
+                                    .25f to HeartColor.primaryColor,
+                                )
+                        )
             )
         } else {
             // 没有用户照片时，保持现状（显示默认背景图）
@@ -158,7 +154,6 @@ internal fun ProfileHeaderBg(
                         )
             )
         }
-
     }
 }
 

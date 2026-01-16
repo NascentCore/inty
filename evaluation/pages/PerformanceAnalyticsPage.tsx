@@ -41,9 +41,9 @@ export const PerformanceAnalyticsPage: React.FC = () => {
   const [imageGenLatency, setImageGenLatency] = useState<
     ImageGenerationLatencyItem[]
   >([]);
-  const [liveChatLatency, setLiveChatLatency] = useState<
-    LiveChatLatencyItem[]
-  >([]);
+  const [liveChatLatency, setLiveChatLatency] = useState<LiveChatLatencyItem[]>(
+    [],
+  );
   const [liveChatStats, setLiveChatStats] =
     useState<LiveChatBasicStatsResponse | null>(null);
 
@@ -192,11 +192,11 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                     title: "LLM 延迟趋势",
                     height: 300,
                     margin: { t: 60, b: 80, l: 50, r: 20 },
-                    xaxis: { 
-                      title: "时间", 
+                    xaxis: {
+                      title: "时间",
                       tickangle: -45,
                       nticks: 10,
-                      tickformat: "%m-%d %H:%M"
+                      tickformat: "%m-%d %H:%M",
                     },
                     yaxis: { title: "平均延迟 (秒)" },
                     hovermode: "closest",
@@ -253,15 +253,20 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                     title: "生图耗时趋势（按模型）",
                     height: 300,
                     margin: { t: 80, b: 80, l: 50, r: 20 },
-                    xaxis: { 
-                      title: "时间", 
+                    xaxis: {
+                      title: "时间",
                       tickangle: -45,
                       nticks: 10,
-                      tickformat: "%m-%d %H:%M"
+                      tickformat: "%m-%d %H:%M",
                     },
                     yaxis: { title: "平均耗时 (秒)" },
                     hovermode: "closest",
-                    legend: { orientation: "h", y: 1.15, xanchor: "center", x: 0.5 },
+                    legend: {
+                      orientation: "h",
+                      y: 1.15,
+                      xanchor: "center",
+                      x: 0.5,
+                    },
                   }}
                   style={{ width: "100%", height: "100%" }}
                 />
@@ -273,7 +278,10 @@ export const PerformanceAnalyticsPage: React.FC = () => {
 
           {/* Live Chat 延迟趋势图表 */}
           <Col xs={24} lg={24}>
-            <Card title="Live Chat 延迟趋势（按小时）" style={{ height: "480px" }}>
+            <Card
+              title="Live Chat 延迟趋势（按小时）"
+              style={{ height: "480px" }}
+            >
               {liveChatLatency.length > 0 ? (
                 <Plot
                   data={[
@@ -305,9 +313,7 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                     },
                     {
                       x: liveChatLatency.map((d) => d.hour),
-                      y: liveChatLatency.map(
-                        (d) => d.avg_turn_latency || null,
-                      ),
+                      y: liveChatLatency.map((d) => d.avg_turn_latency || null),
                       name: "平均轮次延迟",
                       type: "scatter",
                       mode: "lines+markers",
@@ -321,15 +327,20 @@ export const PerformanceAnalyticsPage: React.FC = () => {
                     title: "Live Chat 延迟趋势",
                     height: 300,
                     margin: { t: 80, b: 80, l: 50, r: 20 },
-                    xaxis: { 
-                      title: "时间", 
+                    xaxis: {
+                      title: "时间",
                       tickangle: -45,
                       nticks: 10,
-                      tickformat: "%m-%d %H:%M"
+                      tickformat: "%m-%d %H:%M",
                     },
                     yaxis: { title: "延迟 (毫秒)" },
                     hovermode: "closest",
-                    legend: { orientation: "h", y: 1.15, xanchor: "center", x: 0.5 },
+                    legend: {
+                      orientation: "h",
+                      y: 1.15,
+                      xanchor: "center",
+                      x: 0.5,
+                    },
                   }}
                   style={{ width: "100%", height: "100%" }}
                 />
