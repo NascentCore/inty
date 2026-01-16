@@ -17,10 +17,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import com.ai.intellimate.R
-import com.ai.intellimate.ui.ChatDialogData
-import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.FeedbackRequestDialog
+import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.xb.navigation.Routes
 
@@ -67,12 +67,7 @@ internal fun ChatScreen(
 
     fun isVipTag(tag: String?): Boolean {
         val normalized =
-            tag
-                ?.trim()
-                ?.removePrefix("#")
-                ?.lowercase()
-                ?.takeIf { it.isNotBlank() }
-                ?: return false
+            tag?.trim()?.removePrefix("#")?.lowercase()?.takeIf { it.isNotBlank() } ?: return false
         return normalized == "vip"
     }
 

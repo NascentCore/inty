@@ -8,10 +8,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
-data class AgentMessageCount(
-    val agentId: String,
-    val messageCount: Int,
-)
+data class AgentMessageCount(val agentId: String, val messageCount: Int)
 
 @Dao
 interface ChatMessageDao {

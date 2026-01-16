@@ -1,5 +1,6 @@
 package com.ai.intellimate.ui.components
 
+import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.design.noRippleClickable
@@ -42,7 +43,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import ai.sxwl.android.data.api.getCdnImageUrl
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -96,7 +96,7 @@ fun ProfileInfoScreen(
 ) {
     val context = LocalContext.current
     val hasUserPhoto = !userProfile.userPhoto.isNullOrBlank()
-    
+
     Scaffold(
         modifier = Modifier.background(HeartColor.primaryColor),
         containerColor = HeartColor.primaryColor,
@@ -123,62 +123,66 @@ fun ProfileInfoScreen(
                     placeholder = painterResource(R.drawable.img_profile_header_bg),
                     error = painterResource(R.drawable.img_profile_header_bg),
                 )
-                
+
                 // 渐变遮罩，确保内容可读性
                 Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    HeartColor.primaryColor.copy(alpha = 0.0f),
-                                    HeartColor.primaryColor.copy(alpha = 0.3f),
-                                    HeartColor.primaryColor.copy(alpha = 0.6f),
-                                    HeartColor.primaryColor.copy(alpha = 0.9f),
-                                )
+                    modifier =
+                        Modifier.matchParentSize()
+                            .background(
+                                brush =
+                                    Brush.verticalGradient(
+                                        colors =
+                                            listOf(
+                                                HeartColor.primaryColor.copy(alpha = 0.0f),
+                                                HeartColor.primaryColor.copy(alpha = 0.3f),
+                                                HeartColor.primaryColor.copy(alpha = 0.6f),
+                                                HeartColor.primaryColor.copy(alpha = 0.9f),
+                                            )
+                                    )
                             )
-                        )
                 )
             } else {
                 // 没有用户照片时，保持现状（显示纯色背景）
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(HeartColor.primaryColor)
-                )
+                Box(modifier = Modifier.matchParentSize().background(HeartColor.primaryColor))
             }
-            
+
             Column(
                 modifier = Modifier.padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            // 头像区域
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                AvatarSection(avatar = userProfile.avatar ?: "", onSelectAvatar = onSelectAvatar)
-            }
+                // 头像区域
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    AvatarSection(
+                        avatar = userProfile.avatar ?: "",
+                        onSelectAvatar = onSelectAvatar,
+                    )
+                }
 
-            Spacer(Modifier.height(46.dp))
+                Spacer(Modifier.height(46.dp))
 
-            val horizontalPadding = 16
+                val horizontalPadding = 16
 
-            // 设置项区域
-            MyPersonaSettingsGroup(
-                userProfile = userProfile,
-                preference = preference,
-                isAppearanceUploading = isAppearanceUploading,
-                horizontalPadding = horizontalPadding,
-                onClickName = onClickName,
-                onClickPronouns = onClickPronouns,
-                onClickPreference = onClickPreference,
-                onClickPersona = onClickPersona,
-                onClickAppearance = onClickAppearance,
-            )
+                // 设置项区域
+                MyPersonaSettingsGroup(
+                    userProfile = userProfile,
+                    preference = preference,
+                    isAppearanceUploading = isAppearanceUploading,
+                    horizontalPadding = horizontalPadding,
+                    onClickName = onClickName,
+                    onClickPronouns = onClickPronouns,
+                    onClickPreference = onClickPreference,
+                    onClickPersona = onClickPersona,
+                    onClickAppearance = onClickAppearance,
+                )
 
-            Spacer(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
 
-            Spacer(Modifier.height(60.dp))
+                Spacer(Modifier.height(60.dp))
             }
         }
     }

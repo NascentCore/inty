@@ -16,8 +16,8 @@ object ChatMessageCountStore {
         if (distinctIds.isEmpty()) return emptyMap()
 
         val dao = IntyChatDatabase.getInstance().chatMessageDao()
-        val countsByAgentId = dao.getMessageCounts(distinctIds).associate { it.agentId to it.messageCount }
+        val countsByAgentId =
+            dao.getMessageCounts(distinctIds).associate { it.agentId to it.messageCount }
         return distinctIds.associateWith { countsByAgentId[it] ?: 0 }
     }
 }
-

@@ -132,22 +132,28 @@ fun IntySmallTextField(
                     // 1. 检查长度限制
                     val isOverLength = maxLength > 0 && newValue.text.length > maxLength
 
-                    val finalValue = if (isOverLength) {
-                        // 仅在首次超过时提示（建议加防抖，避免连续粘贴产生的多次 Toast）
-                        scope.launch { ToastUtils.showShort(R.string.str_message_is_too_long) }
+                    val finalValue =
+                        if (isOverLength) {
+                            // 仅在首次超过时提示（建议加防抖，避免连续粘贴产生的多次 Toast）
+                            scope.launch { ToastUtils.showShort(R.string.str_message_is_too_long) }
 
-                        // 截断文字，同时必须保留 composition 和 selection 的合法性
-                        val truncatedText = newValue.text.take(maxLength)
-                        newValue.copy(
-                            text = truncatedText,
-                            selection = TextRange(newValue.selection.start.coerceAtMost(maxLength)),
-                            composition = newValue.composition?.let {
-                                TextRange(it.start.coerceAtMost(maxLength), it.end.coerceAtMost(maxLength))
-                            }
-                        )
-                    } else {
-                        newValue
-                    }
+                            // 截断文字，同时必须保留 composition 和 selection 的合法性
+                            val truncatedText = newValue.text.take(maxLength)
+                            newValue.copy(
+                                text = truncatedText,
+                                selection =
+                                    TextRange(newValue.selection.start.coerceAtMost(maxLength)),
+                                composition =
+                                    newValue.composition?.let {
+                                        TextRange(
+                                            it.start.coerceAtMost(maxLength),
+                                            it.end.coerceAtMost(maxLength),
+                                        )
+                                    },
+                            )
+                        } else {
+                            newValue
+                        }
 
                     // 2. 关键：直接使用 newValue 的整体或 copy，不要手动 new 丢掉 composition
                     textFieldValue = finalValue
