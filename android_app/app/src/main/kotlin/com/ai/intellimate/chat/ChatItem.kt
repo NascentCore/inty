@@ -87,8 +87,8 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
 import com.ai.intellimate.xb.navigation.Routes
-import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.delay
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService<ClipboardManager>()
