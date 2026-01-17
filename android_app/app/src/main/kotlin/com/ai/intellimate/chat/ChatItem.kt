@@ -88,6 +88,7 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService<ClipboardManager>()
@@ -1091,32 +1092,10 @@ private fun calculateVoiceChatDuration(messages: List<MsgInfo>): Long {
  * 格式化时长为可读字符串
  *
  * @param durationSeconds 时长（秒）
- * @return 格式化后的时长字符串，如 "5分30秒" 或 "1小时5分"
+ * @return
  */
 private fun formatDuration(durationSeconds: Long): String {
-    if (durationSeconds <= 0) return "0秒"
-
-    val hours = durationSeconds / 3600
-    val minutes = (durationSeconds % 3600) / 60
-    val seconds = durationSeconds % 60
-
-    return when {
-        hours > 0 -> {
-            if (minutes > 0) {
-                "${hours}小时${minutes}分"
-            } else {
-                "${hours}小时"
-            }
-        }
-        minutes > 0 -> {
-            if (seconds > 0) {
-                "${minutes}分${seconds}秒"
-            } else {
-                "${minutes}分"
-            }
-        }
-        else -> "${seconds}秒"
-    }
+    return durationSeconds.seconds.toString()
 }
 
 /**
