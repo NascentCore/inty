@@ -1,6 +1,8 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from pathlib import Path
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
 
@@ -52,6 +54,32 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - During this week, characters have mild Christmas awareness. Whenever the ongoing conversation contains any cue that can be interpreted as seasonal, atmospheric, or time-related, like context-related, atmosphere-related, sensory-related, time-related, or mood-related, {{char}} may gently link the moment to the Christmas period. 
 - {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
+
+INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
+INTELLIMATE_AGENT_NAME = "IntelliMate"
+INTELLIMATE_USER_MANUAL_PLACEHOLDER = "{{ intellimate_user_manual }}"
+INTELLIMATE_USER_MANUAL_PROMPT_TEMPLATE = (
+    "##IntelliMate User Manual\n" + INTELLIMATE_USER_MANUAL_PLACEHOLDER
+)
+# agent.py 位于 app/core/agent，向上 3 层到仓库根目录
+REPO_ROOT = Path(__file__).resolve().parents[3]
+INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
+
+
+@lru_cache(maxsize=1)
+def _load_intellimate_user_manual() -> str:
+    try:
+        return INTELLIMATE_USER_MANUAL_PATH.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        logger.warning(
+            f"IntelliMate user manual not found: {INTELLIMATE_USER_MANUAL_PATH}"
+        )
+        return ""
+    except OSError as exc:
+        logger.warning(
+            f"Failed to read IntelliMate user manual: {INTELLIMATE_USER_MANUAL_PATH} ({exc})"
+        )
+        return ""
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -286,6 +314,19 @@ class Agent:
         if presence_penalty is not None:
             chat_params["presence_penalty"] = presence_penalty
 
+    def _is_intellimate_official(self) -> bool:
+        return (
+            self.agent_id == INTELLIMATE_AGENT_ID or self.name == INTELLIMATE_AGENT_NAME
+        )
+
+    def _get_prompt_extra_context(self) -> dict[str, str]:
+        if not self._is_intellimate_official():
+            return {}
+        manual = _load_intellimate_user_manual()
+        if not manual:
+            return {}
+        return {"intellimate_user_manual": manual}
+
     def _get_effective_main_prompt(self) -> str:
         # 如果配置为强制使用默认提示词，则直接返回默认值
         if global_config_loaded_from_config_yaml.agent.force_default_prompts:
@@ -327,6 +368,7 @@ class Agent:
     ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
         user_name = self._extract_user_name_from_profile(user_profile)
+        extra_context = self._get_prompt_extra_context()
 
         system_messages = []
 
@@ -340,11 +382,16 @@ class Agent:
 
         main_prompt = self._get_effective_main_prompt()
         rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=main_prompt, char=self.name, user=user_name
+            tmpl=main_prompt,
+            char=self.name,
+            user=user_name,
+            extra_context=extra_context,
         )
         system_messages.append(SystemMessage(content=rendered_main_prompt))
 
-        character_messages = self._build_character_context(user_name=user_name)
+        character_messages = self._build_character_context(
+            user_name=user_name, extra_context=extra_context
+        )
         system_messages.extend(character_messages)
 
         if chat_settings and chat_settings.premium_mode:
@@ -354,7 +401,10 @@ class Agent:
             logger.debug(f"Using normal mode prompt")
             mode_prompt = self._get_effective_mode_prompt()
         rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=mode_prompt, char=self.name, user=user_name
+            tmpl=mode_prompt,
+            char=self.name,
+            user=user_name,
+            extra_context=extra_context,
         )
         system_messages.append(SystemMessage(content=rendered_mode_prompt))
 
@@ -366,7 +416,10 @@ class Agent:
 
         if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
+                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT,
+                char=self.name,
+                user=user_name,
+                extra_context=extra_context,
             )
             system_messages.append(SystemMessage(content=rendered_prompt))
 
@@ -377,7 +430,11 @@ class Agent:
 
         return system_messages
 
-    def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
+    def _build_character_context(
+        self,
+        user_name: str | None = None,
+        extra_context: dict[str, str] | None = None,
+    ) -> List[SystemMessage]:
         """
         构建角色卡上下文信息，每个字段作为独立的system message，支持模板渲染
         """
@@ -385,25 +442,56 @@ class Agent:
 
         if self.personality:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=self.personality, char=self.name, user=user_name
+                tmpl=self.personality,
+                char=self.name,
+                user=user_name,
+                extra_context=extra_context,
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
         if self.scenario:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=self.scenario, char=self.name, user=user_name
+                tmpl=self.scenario,
+                char=self.name,
+                user=user_name,
+                extra_context=extra_context,
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
         if self.message_example:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=self.message_example, char=self.name, user=user_name
+                tmpl=self.message_example,
+                char=self.name,
+                user=user_name,
+                extra_context=extra_context,
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
+        if extra_context and extra_context.get("intellimate_user_manual"):
+            existing_prompts = [
+                self.personality,
+                self.scenario,
+                self.message_example,
+            ]
+            has_manual_placeholder = any(
+                prompt and INTELLIMATE_USER_MANUAL_PLACEHOLDER in prompt
+                for prompt in existing_prompts
+            )
+            if not has_manual_placeholder:
+                rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                    tmpl=INTELLIMATE_USER_MANUAL_PROMPT_TEMPLATE,
+                    char=self.name,
+                    user=user_name,
+                    extra_context=extra_context,
+                )
+                context_messages.append(SystemMessage(content=rendered_prompt))
+
         if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, char=self.name, user=user_name
+                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT,
+                char=self.name,
+                user=user_name,
+                extra_context=extra_context,
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
