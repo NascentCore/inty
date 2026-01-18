@@ -30,6 +30,10 @@
   - Expresso 测试【TBA】
   - Firebase test lab【TBA】
 
+### 发布后更新后端服务中的版本检查 version code
+
+- [config.py](app/core/config.py) 内 `GooglePlayConfig.current_version_code` 修改为上述已经发布的 app version code
+
 ### 发布前最终检查
 
 - `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
