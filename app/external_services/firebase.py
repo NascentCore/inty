@@ -4,7 +4,6 @@ from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-
 debug = global_config_loaded_from_config_yaml.app.debug
 
 

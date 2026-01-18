@@ -12,7 +12,6 @@ from googleapiclient.discovery import Resource, build
 
 from loguru import logger
 
-
 ANDROID_PUBLISHER_SCOPE = "https://www.googleapis.com/auth/androidpublisher"
 ANDROID_PUBLISHER_SERVICE_NAME = "androidpublisher"
 ANDROID_PUBLISHER_SERVICE_VERSION = "v3"

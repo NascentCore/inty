@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
-
 KEEPALIVE_SECONDS: float = 15.0
 DEFAULT_EVENT_NAME: str = "message"
 

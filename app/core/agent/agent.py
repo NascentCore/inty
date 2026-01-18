@@ -483,13 +483,11 @@ class Agent:
 
             with sync_engine.connect() as conn:
                 # 查询用户基本信息
-                query = text(
-                    """
+                query = text("""
                     SELECT nickname, gender, age_group, description, system_language 
                     FROM users 
                     WHERE id = :user_id
-                """
-                )
+                """)
                 result = conn.execute(query, {"user_id": user_id})
                 row = result.fetchone()
 

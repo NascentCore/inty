@@ -10,7 +10,6 @@ import base64
 import io
 from PIL import Image
 
-
 # Constants for predictable structure and to avoid magic strings
 CHAT_COMPLETION_OBJECT = "chat.completion"
 DEFAULT_FINISH_REASON = "stop"

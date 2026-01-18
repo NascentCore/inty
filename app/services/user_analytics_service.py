@@ -35,8 +35,7 @@ class UserAnalyticsService:
         register_end_date: datetime,
     ) -> List[Dict[str, Any]]:
         """查询用户注册统计（按注册日期范围）"""
-        query = text(
-            """
+        query = text("""
             SELECT 
                 DATE(created_at AT TIME ZONE 'UTC') as date,
                 auth_type,
@@ -47,8 +46,7 @@ class UserAnalyticsService:
               AND deleted_at IS NULL
             GROUP BY DATE(created_at AT TIME ZONE 'UTC'), auth_type
             ORDER BY date, auth_type
-        """
-        )
+        """)
         result = await self.db.execute(
             query,
             {
@@ -74,8 +72,7 @@ class UserAnalyticsService:
         register_end_date: datetime,
     ) -> List[Dict[str, Any]]:
         """查询用户聊天活动（原始数据，按注册日期范围筛选用户）"""
-        query = text(
-            """
+        query = text("""
             SELECT 
                 u.id as user_id,
                 u.auth_type,
@@ -92,8 +89,7 @@ class UserAnalyticsService:
               AND u.created_at < :register_end_date
               AND u.deleted_at IS NULL
             ORDER BY u.id, c.created_at
-        """
-        )
+        """)
         result = await self.db.execute(
             query,
             {
@@ -135,8 +131,7 @@ class UserAnalyticsService:
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
-                history_query = text(
-                    f"""
+                history_query = text(f"""
                     SELECT 
                         session_id::text as session_id,
                         COUNT(*) as message_count,
@@ -148,14 +143,12 @@ class UserAnalyticsService:
                       AND created_at >= :activity_start_date
                       AND created_at < :activity_end_date
                     GROUP BY session_id
-                """
-                )
+                """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
                 params["activity_start_date"] = activity_start_date
                 params["activity_end_date"] = activity_end_date
             else:
-                history_query = text(
-                    f"""
+                history_query = text(f"""
                     SELECT 
                         session_id::text as session_id,
                         COUNT(*) as message_count,
@@ -165,8 +158,7 @@ class UserAnalyticsService:
                     FROM chat_history
                     WHERE session_id::text IN ({placeholders})
                     GROUP BY session_id
-                """
-                )
+                """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
 
             result = await self.db.execute(history_query, params)
@@ -188,8 +180,7 @@ class UserAnalyticsService:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
         """
-        chats_query = text(
-            """
+        chats_query = text("""
             SELECT c.id
             FROM chats c
             INNER JOIN users u ON c.user_id = u.id
@@ -197,8 +188,7 @@ class UserAnalyticsService:
               AND u.created_at < :register_end_date
               AND u.deleted_at IS NULL
               AND c.is_active = true
-        """
-        )
+        """)
         result = await self.db.execute(
             chats_query,
             {
@@ -273,8 +263,7 @@ class UserAnalyticsService:
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
-                messages_query = text(
-                    f"""
+                messages_query = text(f"""
                     SELECT
                         ch.session_id::text as session_id,
                         COUNT(*) FILTER (
@@ -290,14 +279,12 @@ class UserAnalyticsService:
                       AND ch.created_at >= :activity_start_date
                       AND ch.created_at < :activity_end_date
                     GROUP BY ch.session_id
-                """
-                )
+                """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
                 params["activity_start_date"] = activity_start_date
                 params["activity_end_date"] = activity_end_date
             else:
-                messages_query = text(
-                    f"""
+                messages_query = text(f"""
                     SELECT
                         ch.session_id::text as session_id,
                         COUNT(*) FILTER (
@@ -311,8 +298,7 @@ class UserAnalyticsService:
                     FROM chat_history ch
                     WHERE ch.session_id::text IN ({placeholders})
                     GROUP BY ch.session_id
-                """
-                )
+                """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
 
             result = await self.db.execute(messages_query, params)
@@ -334,8 +320,7 @@ class UserAnalyticsService:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
         """
-        chats_query = text(
-            """
+        chats_query = text("""
             SELECT
                 c.user_id,
                 c.id as chat_id
@@ -345,8 +330,7 @@ class UserAnalyticsService:
               AND u.created_at < :register_end_date
               AND u.deleted_at IS NULL
               AND c.is_active = true
-        """
-        )
+        """)
         result = await self.db.execute(
             chats_query,
             {
@@ -422,8 +406,7 @@ class UserAnalyticsService:
 
         for batch in _batch_list(session_ids):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
-            query = text(
-                f"""
+            query = text(f"""
                 SELECT 
                     ch.session_id::text as session_id,
                     COUNT(*) FILTER (
@@ -437,8 +420,7 @@ class UserAnalyticsService:
                 FROM chat_history ch
                 WHERE ch.session_id::text IN ({placeholders})
                 GROUP BY ch.session_id
-            """
-            )
+            """)
             params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
             result = await self.db.execute(query, params)
 
@@ -481,8 +463,7 @@ class UserAnalyticsService:
         # 辅助函数：查询语音通话（Live Chat）统计
         # 只统计指定注册日期范围内新用户在指定活跃日期范围内的通话数据
         async def get_live_chat_stats() -> Dict[str, Any]:
-            live_chat_query = text(
-                """
+            live_chat_query = text("""
                 SELECT 
                     COUNT(DISTINCT su.user_id) as user_count,
                     COUNT(*) as session_count,
@@ -497,8 +478,7 @@ class UserAnalyticsService:
                   AND u.created_at >= :register_start_date
                   AND u.created_at < :register_end_date
                   AND u.deleted_at IS NULL
-            """
-            )
+            """)
             live_chat_result = await self.db.execute(
                 live_chat_query,
                 {
@@ -534,8 +514,7 @@ class UserAnalyticsService:
 
         # 辅助函数：查询生图统计
         async def get_image_gen_stats() -> Dict[str, Any]:
-            image_gen_query = text(
-                """
+            image_gen_query = text("""
                 SELECT 
                     COUNT(*) as total_requests,
                     COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
@@ -553,8 +532,7 @@ class UserAnalyticsService:
                 WHERE usage_type = 'image_generation'
                   AND usage_date >= :start_date 
                   AND usage_date < :end_date
-            """
-            )
+            """)
             image_gen_result = await self.db.execute(
                 image_gen_query, {"start_date": img_start, "end_date": img_end}
             )
@@ -692,8 +670,7 @@ class UserAnalyticsService:
 
         for batch in _batch_list(session_ids):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
-            query = text(
-                f"""
+            query = text(f"""
                 SELECT
                     ch.session_id::text as session_id,
                     ch.message->>'type' as message_type,
@@ -703,8 +680,7 @@ class UserAnalyticsService:
                 FROM chat_history ch
                 WHERE ch.session_id::text IN ({placeholders})
                 ORDER BY ch.created_at
-            """
-            )
+            """)
             params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
             result = await self.db.execute(query, params)
 
@@ -752,15 +728,13 @@ class UserAnalyticsService:
         end_date_minus_one_day_str = end_date_minus_one_day.date().isoformat()
 
         # 先检查 subscription_usage 表中是否有数据
-        check_query = text(
-            """
+        check_query = text("""
             SELECT COUNT(*) as count
             FROM subscription_usage
             WHERE usage_type = 'chat'
               AND usage_date >= :query_start_date
               AND usage_date < :activity_end_date
-        """
-        )
+        """)
         check_result = await self.db.execute(
             check_query,
             {
@@ -778,8 +752,7 @@ class UserAnalyticsService:
             return []
 
         # 构建 SQL 查询，将日期字符串和整数限制直接嵌入（已验证是安全的）
-        query = text(
-            f"""
+        query = text(f"""
             WITH date_series AS (
                 SELECT generate_series(
                     '{start_date_str}'::date,
@@ -828,8 +801,7 @@ class UserAnalyticsService:
             FROM user_usage
             WHERE chat_count_24h >= limit_value
             ORDER BY check_date, user_id
-        """
-        )
+        """)
         try:
             result = await self.db.execute(
                 query,
@@ -879,8 +851,7 @@ class UserAnalyticsService:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
         """
-        chats_query = text(
-            """
+        chats_query = text("""
             SELECT
                 c.id as chat_id,
                 c.agent_id,
@@ -893,8 +864,7 @@ class UserAnalyticsService:
               AND u.created_at < :register_end_date
               AND u.deleted_at IS NULL
               AND c.is_active = true
-        """
-        )
+        """)
         result = await self.db.execute(
             chats_query,
             {
@@ -1011,8 +981,7 @@ class UserAnalyticsService:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
         """
-        chats_query = text(
-            """
+        chats_query = text("""
             SELECT
                 u.id as user_id,
                 u.auth_type,
@@ -1028,8 +997,7 @@ class UserAnalyticsService:
               AND u.created_at < :register_end_date
               AND u.deleted_at IS NULL
             ORDER BY u.id, c.created_at
-        """
-        )
+        """)
         result = await self.db.execute(
             chats_query,
             {
@@ -1100,8 +1068,7 @@ class UserAnalyticsService:
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
-                messages_query = text(
-                    f"""
+                messages_query = text(f"""
                     SELECT
                         ch.session_id::text as session_id,
                         COUNT(*) FILTER (
@@ -1125,14 +1092,12 @@ class UserAnalyticsService:
                       AND ch.created_at >= :activity_start_date
                       AND ch.created_at < :activity_end_date
                     GROUP BY ch.session_id
-                """
-                )
+                """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
                 params["activity_start_date"] = activity_start_date
                 params["activity_end_date"] = activity_end_date
             else:
-                messages_query = text(
-                    f"""
+                messages_query = text(f"""
                     SELECT
                         ch.session_id::text as session_id,
                         COUNT(*) FILTER (
@@ -1154,8 +1119,7 @@ class UserAnalyticsService:
                     FROM chat_history ch
                     WHERE ch.session_id::text IN ({placeholders})
                     GROUP BY ch.session_id
-                """
-                )
+                """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
 
             result = await self.db.execute(messages_query, params)
@@ -1167,14 +1131,12 @@ class UserAnalyticsService:
 
     async def find_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """通过邮箱查找用户"""
-        query = text(
-            """
+        query = text("""
             SELECT id, email, nickname, auth_type, created_at, gender, age_group
             FROM users
             WHERE email = :email AND deleted_at IS NULL
             LIMIT 1
-        """
-        )
+        """)
         result = await self.db.execute(query, {"email": email})
         row = result.fetchone()
         if row:
@@ -1191,14 +1153,12 @@ class UserAnalyticsService:
 
     async def find_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """通过用户 ID 查找用户"""
-        query = text(
-            """
+        query = text("""
             SELECT id, email, nickname, auth_type, created_at, gender, age_group
             FROM users
             WHERE id = :user_id AND deleted_at IS NULL
             LIMIT 1
-        """
-        )
+        """)
         result = await self.db.execute(query, {"user_id": user_id})
         row = result.fetchone()
         if row:
@@ -1215,13 +1175,11 @@ class UserAnalyticsService:
 
     async def get_user_chat_ids(self, user_id: str) -> List[str]:
         """获取用户的所有 chat_id"""
-        query = text(
-            """
+        query = text("""
             SELECT id
             FROM chats
             WHERE user_id = :user_id AND is_active = true
-        """
-        )
+        """)
         result = await self.db.execute(query, {"user_id": user_id})
         return [row[0] for row in result.fetchall()]
 
@@ -1297,8 +1255,7 @@ class UserAnalyticsService:
         session_ids = [generate_session_id(chat_id) for chat_id in chat_ids]
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        query = text(
-            f"""
+        query = text(f"""
             SELECT 
                 COUNT(DISTINCT ch.session_id) as session_count,
                 COUNT(*) FILTER (
@@ -1309,8 +1266,7 @@ class UserAnalyticsService:
             WHERE ch.session_id::text IN ({placeholders})
               AND ch.created_at >= :today_start
               AND ch.created_at < :today_end
-        """
-        )
+        """)
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         params["today_start"] = today_start
         params["today_end"] = today_end
@@ -1325,8 +1281,7 @@ class UserAnalyticsService:
 
     async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
         """获取用户的所有会话列表"""
-        query = text(
-            """
+        query = text("""
             SELECT 
                 c.id as chat_id,
                 a.name as agent_name,
@@ -1336,8 +1291,7 @@ class UserAnalyticsService:
             INNER JOIN agents a ON c.agent_id = a.id AND a.deleted_at IS NULL
             WHERE c.user_id = :user_id AND c.is_active = true
             ORDER BY c.created_at DESC
-        """
-        )
+        """)
         result = await self.db.execute(query, {"user_id": user_id})
         chat_records = result.fetchall()
 
@@ -1351,8 +1305,7 @@ class UserAnalyticsService:
         session_ids = list(chat_to_session.values())
 
         placeholders = ",".join([f":session_id_{i}" for i in range(len(session_ids))])
-        messages_query = text(
-            f"""
+        messages_query = text(f"""
             SELECT
                 ch.session_id::text as session_id,
                 COUNT(*) FILTER (
@@ -1375,8 +1328,7 @@ class UserAnalyticsService:
             FROM chat_history ch
             WHERE ch.session_id::text IN ({placeholders})
             GROUP BY ch.session_id
-        """
-        )
+        """)
         params = {f"session_id_{i}": sid for i, sid in enumerate(session_ids)}
         result = await self.db.execute(messages_query, params)
 
@@ -1420,20 +1372,17 @@ class UserAnalyticsService:
         session_id = generate_session_id(chat_id)
 
         # 先获取总数
-        count_query = text(
-            """
+        count_query = text("""
             SELECT COUNT(*)
             FROM chat_history
             WHERE session_id::text = :session_id
-        """
-        )
+        """)
         count_result = await self.db.execute(count_query, {"session_id": session_id})
         total = count_result.scalar() or 0
 
         # 获取分页数据
         offset = (page - 1) * size
-        query = text(
-            """
+        query = text("""
             SELECT
                 id,
                 message->>'type' as message_type,
@@ -1449,8 +1398,7 @@ class UserAnalyticsService:
             WHERE session_id::text = :session_id
             ORDER BY created_at ASC
             LIMIT :limit OFFSET :offset
-        """
-        )
+        """)
         result = await self.db.execute(
             query,
             {"session_id": session_id, "limit": size, "offset": offset},
@@ -1525,8 +1473,7 @@ class UserAnalyticsService:
         activity_end_date: datetime,
     ) -> List[Dict[str, Any]]:
         """按小时聚合 LLM 调用延迟"""
-        query = text(
-            """
+        query = text("""
             SELECT 
                 DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC') as hour,
                 AVG((meta_data->>'llm_invoke_time')::float) as avg_latency,
@@ -1538,8 +1485,7 @@ class UserAnalyticsService:
               AND deleted_at IS NULL
             GROUP BY DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC')
             ORDER BY hour
-        """
-        )
+        """)
         result = await self.db.execute(
             query,
             {
@@ -1563,8 +1509,7 @@ class UserAnalyticsService:
         activity_end_date: datetime,
     ) -> List[Dict[str, Any]]:
         """按小时和模型聚合生图耗时"""
-        query = text(
-            """
+        query = text("""
             SELECT 
                 DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC') as hour,
                 extra_data->>'model' as model,
@@ -1579,8 +1524,7 @@ class UserAnalyticsService:
               AND extra_data->>'model' IS NOT NULL
             GROUP BY DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC'), extra_data->>'model'
             ORDER BY hour, model
-        """
-        )
+        """)
         result = await self.db.execute(
             query,
             {
@@ -1605,8 +1549,7 @@ class UserAnalyticsService:
         activity_end_date: datetime,
     ) -> List[Dict[str, Any]]:
         """按小时聚合 Live Chat 延迟数据"""
-        query = text(
-            """
+        query = text("""
             SELECT 
                 DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC') as hour,
                 AVG((extra_data->'latency_metrics'->>'connect_latency_ms')::float) as avg_connect_latency,
@@ -1620,8 +1563,7 @@ class UserAnalyticsService:
               AND extra_data->'latency_metrics' IS NOT NULL
             GROUP BY DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC')
             ORDER BY hour
-        """
-        )
+        """)
         result = await self.db.execute(
             query,
             {
@@ -1649,8 +1591,7 @@ class UserAnalyticsService:
         activity_end_date: datetime,
     ) -> Dict[str, Any]:
         """获取 Live Chat 基础统计"""
-        query = text(
-            """
+        query = text("""
             SELECT 
                 COUNT(DISTINCT user_id) as user_count,
                 COUNT(*) as session_count,
@@ -1659,8 +1600,7 @@ class UserAnalyticsService:
             WHERE created_at >= :start_date 
               AND created_at < :end_date
               AND usage_type = 'live_chat'
-        """
-        )
+        """)
         result = await self.db.execute(
             query,
             {

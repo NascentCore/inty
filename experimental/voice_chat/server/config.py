@@ -5,7 +5,6 @@ from typing import Optional
 
 import yaml
 
-
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "config.yaml"
 
 
