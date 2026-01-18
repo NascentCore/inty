@@ -64,13 +64,57 @@
 - GitHub deployment environment: prod
 - Cloud logging on prod container: [streaming logs](https://cloudlogging.app.goo.gl/o8QRPguGe78soGUY9)
   - 基于 [docker gcplogs 驱动](https://github.com/GoogleCloudPlatform/community/blob/master/archived/docker-gcplogs-driver/index.md)
-  - [Docker run 命令行参数](https://github.com/NascentCore/inty-backend/blob/9fa17750b82d5eeaf5519d486cd20e04dff4370c/.github/workflows/build_and_deploy.yml#L73)
-  - [日志标签设置](https://github.com/NascentCore/inty-backend/blob/9fa17750b82d5eeaf5519d486cd20e04dff4370c/.github/workflows/build_and_deploy.yml#L80)，日志标签示例：<img width="600" alt="image" src="https://github.com/user-attachments/assets/f0414fe4-053e-4ce2-b8d4-4fb39049a929"/>
+  - Docker run 命令行参数与日志标签设置：见 `.github/workflows/build_and_deploy_backend.yml`
 - [GCP inty-prod endpoint check](https://console.cloud.google.com/monitoring/synthetic-monitoring?project=alien-paratext-461204-i9)
 - API endpoint: <https://app.inty.cc>
   - Monitoring: <https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f>
 - CloudFlare: `it@sxwl.ai`
   - 图片裁切、图片缩放、图片压缩（不改变文件格式 80% 质量缩小到 1/4）
+
+### 配置文件如何进入 Docker 镜像，以及运行时如何“选中”
+
+后端服务与推送服务的配置读取逻辑**不依赖环境变量去“选择不同配置文件”**；它们都会在进程启动时（更准确地说：`app/core/config.py` 被 import 时）从当前工作目录读取固定路径的 `config.yaml`。
+
+- **关键约束**：容器里必须存在 `config.yaml`，否则服务会直接启动失败。
+- **当前生产/开发部署方式（推荐）**：在 **构建镜像阶段**把目标环境配置文件 bake 进镜像，统一落到镜像内的 `config.yaml`；运行时只需要 `docker run` 启动对应镜像即可。
+
+#### 构建期注入（当前采用）
+
+配置源文件位于 `devops/`：
+
+- **开发环境**：`devops/config.yaml.dev`
+- **生产环境**：`devops/config.yaml.prod`
+- **CI 测试**：`devops/config.yaml.test`（仅用于 CI；本地/线上部署不应使用）
+
+在 GitHub Actions 部署工作流中，通过 `CONFIG_FILE` build-arg 选择并注入配置：
+
+- **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
+- **Backend Dockerfile**：`docker/Dockerfile`
+- **Push worker Dockerfile**：`docker/Dockerfile.push-worker`
+
+工作流会按环境（`dev`/`prod`）计算出：
+
+- **build-arg**：`CONFIG_FILE=devops/config.yaml.${environment}`
+
+Dockerfile 会把该文件复制到镜像根目录并命名为 `config.yaml`（Dockerfile 的 `WORKDIR /` 确保服务启动时能读到它）。
+
+这意味着：
+
+- **“选中哪个环境配置”发生在 build 阶段**（构建镜像时已经确定）
+- **运行时不会再根据 env 做二次选择**（`docker run` 只负责启动对应镜像）
+
+#### 运行期挂载（可选，但需要自己保证一致性）
+
+如果你希望同一份镜像在不同环境复用，也可以在运行时把宿主机上的配置挂载到容器内的 `config.yaml` 路径：
+
+```bash
+sudo docker run --detach \
+  --name inty-backend-dev \
+  --volume /opt/inty-dev/config.yaml:/config.yaml:ro \
+  ghcr.io/nascentcore/inty-backend/inty-server:<tag>
+```
+
+注意：当前仓库的默认部署工作流采用的是“构建期注入”，因此 workflow 的 `docker run` 命令行**没有挂载 `config.yaml`**；如果你切换到运行期挂载方案，需要同步调整部署脚本/工作流以免启动失败。
 
 ### Inty-dev
 
