@@ -17,3 +17,13 @@ def test_render_prompt_jinja2_template_empty_template():
         "User",
     )
     assert rendered_prompt == ""
+
+
+def test_render_prompt_jinja2_template_extra_context():
+    rendered_prompt = prompt_template.render_prompt_jinja2_template(
+        "Manual: {{ intellimate_user_manual }}",
+        "Agent",
+        "User",
+        extra_context={"intellimate_user_manual": "MANUAL"},
+    )
+    assert rendered_prompt == "Manual: MANUAL"
