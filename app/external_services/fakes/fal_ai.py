@@ -10,7 +10,6 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-
 DEFAULT_CONTENT_TYPE = "image/png"
 DEFAULT_WIDTH = 64
 DEFAULT_HEIGHT = 64

@@ -144,7 +144,9 @@ async def fix_agent_readable_ids(dry_run: bool = False):
             # 验证修复结果
             remaining = await get_agents_with_null_readable_id(db)
             if remaining:
-                logger.warning(f"⚠️  仍有 {len(remaining)} 个 agent 的 readable_id 为空")
+                logger.warning(
+                    f"⚠️  仍有 {len(remaining)} 个 agent 的 readable_id 为空"
+                )
             else:
                 logger.info("✅ 所有 agent 的 readable_id 已成功填充")
 

@@ -120,8 +120,7 @@ class MultiStageCharacterGenerator:
     def _stage_identity(
         self, request: CharacterGenerationRequest
     ) -> Tuple[CharacterIdentityCard, Dict[str, Any]]:
-        prompt = dedent(
-            f"""
+        prompt = dedent(f"""
             Design an original role-play character identity from the brief "{request.brief_description}".
             Consider genre "{request.genre}" and tone "{request.tone}".
             Respond with strict JSON only:
@@ -134,8 +133,7 @@ class MultiStageCharacterGenerator:
                 "session_goal": "what the character wants out of a chat session",
                 "key_traits": ["trait1", "trait2", "trait3"]
             }}
-            """
-        )
+            """)
 
         data = self._invoke_json(prompt)
         identity = CharacterIdentityCard(
@@ -160,8 +158,7 @@ class MultiStageCharacterGenerator:
     def _stage_intro(
         self, request: CharacterGenerationRequest, identity: CharacterIdentityCard
     ) -> Tuple[CharacterIntroPack, Dict[str, Any]]:
-        prompt = dedent(
-            f"""
+        prompt = dedent(f"""
             We already defined this identity: {identity.model_dump_json()}.
             Create public-facing copy for onboarding a role-play partner.
             JSON schema:
@@ -172,8 +169,7 @@ class MultiStageCharacterGenerator:
                 "boundaries": ["soft safety limits for scenes"],
                 "conversation_openers": ["friendly starter lines"]
             }}
-            """
-        )
+            """)
 
         data = self._invoke_json(prompt)
         intro = CharacterIntroPack(
@@ -319,8 +315,7 @@ class MultiStageCharacterGenerator:
         request: CharacterGenerationRequest,
         desired: int,
     ) -> str:
-        return dedent(
-            f"""
+        return dedent(f"""
             We have identity {identity.model_dump_json()} and intro {intro.model_dump_json()}.
             Build {desired} distinct role-play prompts that keep tone "{request.tone}".
             JSON:
@@ -336,8 +331,7 @@ class MultiStageCharacterGenerator:
                     }}
                 ]
             }}
-            """
-        )
+            """)
 
     def _asset_prompt_request(
         self,
@@ -347,8 +341,7 @@ class MultiStageCharacterGenerator:
         roleplay_prompts: List[RoleplayPrompt],
     ) -> str:
         scene_titles = [prompt.title for prompt in roleplay_prompts[:3]]
-        return dedent(
-            f"""
+        return dedent(f"""
             Craft visual and audio production notes for identity {identity.model_dump_json()}.
             Use genre "{request.genre}" and tone "{request.tone}".
             Anchor visuals to these scene titles: {scene_titles}.
@@ -374,8 +367,7 @@ class MultiStageCharacterGenerator:
                 }}
             }}
             Ensure at least {requested_images} image prompts.
-            """
-        )
+            """)
 
     def _hydrate_roleplay_prompts(
         self,

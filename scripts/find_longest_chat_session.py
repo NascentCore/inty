@@ -65,8 +65,7 @@ class SummaryStats:
 
 async def get_all_chats(db: AsyncSession) -> List[dict]:
     """获取所有会话记录"""
-    query = text(
-        """
+    query = text("""
         SELECT 
             c.id as chat_id,
             c.user_id,
@@ -78,8 +77,7 @@ async def get_all_chats(db: AsyncSession) -> List[dict]:
         LEFT JOIN agents a ON c.agent_id = a.id
         LEFT JOIN users u ON c.user_id = u.id
         ORDER BY c.created_at DESC
-    """
-    )
+    """)
     result = await db.execute(query)
     rows = result.fetchall()
 
@@ -125,8 +123,7 @@ async def get_message_counts_by_sessions(
         placeholders = ",".join([f":sid_{i}" for i in range(len(batch_ids))])
         params = {f"sid_{i}": sid for i, sid in enumerate(batch_ids)}
 
-        query = text(
-            f"""
+        query = text(f"""
             SELECT 
                 session_id::text as session_id,
                 COUNT(*) FILTER (
@@ -137,8 +134,7 @@ async def get_message_counts_by_sessions(
             FROM chat_history
             WHERE session_id::text IN ({placeholders})
             GROUP BY session_id
-        """
-        )
+        """)
 
         result = await db.execute(query, params)
         rows = result.fetchall()
