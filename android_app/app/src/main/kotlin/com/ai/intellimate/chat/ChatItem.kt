@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -21,6 +22,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -34,6 +36,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,6 +72,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -107,6 +114,7 @@ fun ChatItem(
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
+    aiBubbleWidthRatio: Float = UiConfigs.ChatMessagePane.AI_WIDTH_RATIO,
 ) {
     runCatching {
             when (item.role) {
@@ -119,6 +127,7 @@ fun ChatItem(
                         isLatestMessage,
                         isGuideVisible,
                         messageFontSizeSp,
+                        aiBubbleWidthRatio,
                     )
                 }
 
@@ -160,11 +169,15 @@ private fun ChatItemAI(
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float,
+    aiBubbleWidthRatio: Float,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
     val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
     val messageFontSize = messageFontSizeSp.sp
     val agentInfo by viewModel.agentInfo.collectAsState()
+    val bubbleCornerRadius = UiConfigs.ChatMessagePane.BubbleCornerRadius
+    val shouldShowTrailingSpacer =
+        aiBubbleWidthRatio < UiConfigs.ChatMessagePane.VoiceHistory.InnerAiBubbleWidthRatio
 
     runCatching {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -244,8 +257,12 @@ private fun ChatItemAI(
                 }
                 val msgShape =
                     if (item.content.isNotEmpty() && item.content != "loading_animation")
-                        RoundedCornerShape(topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                    else RoundedCornerShape(12.dp)
+                        RoundedCornerShape(
+                            topEnd = bubbleCornerRadius,
+                            bottomStart = bubbleCornerRadius,
+                            bottomEnd = bubbleCornerRadius,
+                        )
+                    else RoundedCornerShape(bubbleCornerRadius)
 
                 val isImageOnlyMessage =
                     item.content.isEmpty() && hasGeneratedImage && generatedImageUrl != "loading"
@@ -313,7 +330,7 @@ private fun ChatItemAI(
                                         horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                         vertical = UiConfigs.ChatMessagePane.PaddingVertical,
                                     )
-                                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                                    .fillMaxWidth(aiBubbleWidthRatio)
                                     .pointerInput(item.content) {
                                         detectTapGestures(
                                             onLongPress = {
@@ -354,7 +371,9 @@ private fun ChatItemAI(
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        if (shouldShowTrailingSpacer) {
+                            Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        }
                     }
                 }
 
@@ -548,9 +567,11 @@ private fun ChatItemAI(
                         DebugMessageMetadata(
                             item = item,
                             modifier =
-                                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
+                                Modifier.fillMaxWidth(aiBubbleWidthRatio),
                         )
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        if (shouldShowTrailingSpacer) {
+                            Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        }
                     }
                 }
             }
@@ -562,10 +583,10 @@ private fun ChatItemAI(
                     modifier =
                         Modifier.background(
                                 Color.Black.copy(alpha = 0.5f),
-                                RoundedCornerShape(12.dp),
+                                RoundedCornerShape(bubbleCornerRadius),
                             )
                             .padding(12.dp, 13.dp)
-                            .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                            .fillMaxWidth(aiBubbleWidthRatio)
                             .pointerInput(item.content) {
                                 detectTapGestures(
                                     onLongPress = {
@@ -580,7 +601,9 @@ private fun ChatItemAI(
                         fontSize = messageFontSize,
                     )
                 }
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                if (shouldShowTrailingSpacer) {
+                    Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                }
             }
         }
 }
@@ -589,6 +612,7 @@ private fun ChatItemAI(
 @Composable
 private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
     val messageFontSize = messageFontSizeSp.sp
+    val bubbleCornerRadius = UiConfigs.ChatMessagePane.BubbleCornerRadius
     runCatching {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -601,7 +625,7 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                     modifier =
                         Modifier.background(
                                 Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
+                                RoundedCornerShape(bubbleCornerRadius),
                             )
                             .padding(
                                 horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
@@ -651,7 +675,7 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
                     modifier =
                         Modifier.background(
                                 Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
+                                RoundedCornerShape(bubbleCornerRadius),
                             )
                             .padding(
                                 horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
@@ -1099,61 +1123,304 @@ private fun formatDuration(durationSeconds: Long): String {
 }
 
 /**
- * 语音聊天历史记录折叠组件 用于显示折叠的语音聊天记录，点击可展开查看完整记录
+ * 语音通话历史折叠气泡：用于消息列表中显示可展开的语音通话摘要提示。
  *
- * @param messages 语音消息列表，用于计算时长
+ * 预期视觉效果：
+ * - 外观与常规 AI 消息气泡一致（同宽同底色），增加图标与多行提示提升识别度。
+ *
+ * @param messages 语音消息列表，用于展示时长与消息数量
  * @param onClick 点击展开的回调
+ * @param bubbleWidthRatio 气泡宽度比例（默认与 AI 消息一致）
  */
 @Composable
 fun VoiceChatHistoryCollapsed(
     messages: List<MsgInfo>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    bubbleWidthRatio: Float = UiConfigs.ChatMessagePane.VoiceHistory.BubbleWidthRatio,
+) {
+    VoiceChatHistoryBubble(
+        messages = messages,
+        isExpanded = false,
+        onClick = onClick,
+        bubbleWidthRatio = bubbleWidthRatio,
+        modifier = modifier,
+    )
+}
+
+/**
+ * 语音通话历史展开容器：显示“语音通话”提示头部，并将语音消息气泡内嵌在外层气泡中。
+ *
+ * 预期视觉效果：
+ * - 外层气泡与常规 AI 消息气泡同宽同底色，带轻微描边以提示“语音通话历史”分组。
+ * - 内层消息保持常规消息气泡样式，通过内嵌展示与普通消息区分。
+ *
+ * @param messages 语音消息列表，用于展示时长与消息数量
+ * @param onClick 点击折叠的回调
+ * @param bubbleWidthRatio 外层气泡宽度比例（默认与 AI 消息一致）
+ * @param content 语音消息内容，建议使用 ChatItem 并传入 group 内的宽度配置
+ */
+@Composable
+fun VoiceChatHistoryExpandedGroup(
+    messages: List<MsgInfo>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    bubbleWidthRatio: Float = UiConfigs.ChatMessagePane.VoiceHistory.BubbleWidthRatio,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    VoiceChatHistoryBubble(
+        messages = messages,
+        isExpanded = true,
+        onClick = onClick,
+        bubbleWidthRatio = bubbleWidthRatio,
+        modifier = modifier,
+        content = content,
+    )
+}
+
+/**
+ * 语音通话历史基础气泡容器：负责外层气泡背景/描边/头部提示，并可承载内嵌消息内容。
+ *
+ * 预期视觉效果：
+ * - 外层气泡与常规 AI 消息同宽同底色，边框轻微提示分组边界。
+ * - 若提供 content，语音消息以常规气泡样式内嵌展示。
+ *
+ * @param messages 语音消息列表，用于展示时长与消息数量
+ * @param isExpanded 当前是否为展开态，用于切换提示文案与箭头方向
+ * @param onClick 点击气泡后的交互回调
+ * @param bubbleWidthRatio 外层气泡宽度比例
+ * @param content 可选的内嵌消息内容
+ */
+@Composable
+private fun VoiceChatHistoryBubble(
+    messages: List<MsgInfo>,
+    isExpanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    bubbleWidthRatio: Float = UiConfigs.ChatMessagePane.VoiceHistory.BubbleWidthRatio,
+    content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val durationSeconds = remember(messages) { calculateVoiceChatDuration(messages) }
     val durationText = remember(durationSeconds) { formatDuration(durationSeconds) }
-
-    Box(
-        modifier =
-            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.voice_chat_history_collapsed, durationText),
-            color = Color.White,
-            fontSize = 12.sp,
-            modifier =
-                Modifier.background(
-                        color = Color.Black.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(3.dp),
-                    )
-                    .padding(horizontal = 3.dp),
+    val messageCount = remember(messages) { messages.size }
+    val titleText = stringResource(R.string.voice_chat_history_title)
+    val summaryText =
+        stringResource(R.string.voice_chat_history_summary, durationText, messageCount)
+    val hintText =
+        stringResource(
+            if (isExpanded) R.string.voice_chat_history_expanded
+            else R.string.voice_chat_history_collapsed
         )
+    val bubbleCornerRadius = UiConfigs.ChatMessagePane.VoiceHistory.BubbleCornerRadius
+    val bubbleShape =
+        RoundedCornerShape(
+            topEnd = bubbleCornerRadius,
+            bottomStart = bubbleCornerRadius,
+            bottomEnd = bubbleCornerRadius,
+        )
+
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth(bubbleWidthRatio)
+                    .background(
+                        color =
+                            Color.Black.copy(
+                                alpha = UiConfigs.ChatMessagePane.VoiceHistory.BubbleBackgroundAlpha
+                            ),
+                        shape = bubbleShape,
+                    )
+                    .border(
+                        width = UiConfigs.ChatMessagePane.VoiceHistory.BubbleBorderWidth,
+                        color =
+                            Color.White.copy(
+                                alpha = UiConfigs.ChatMessagePane.VoiceHistory.BubbleBorderAlpha
+                            ),
+                        shape = bubbleShape,
+                    )
+                    .padding(
+                        horizontal = UiConfigs.ChatMessagePane.VoiceHistory.BubblePaddingHorizontal,
+                        vertical = UiConfigs.ChatMessagePane.VoiceHistory.BubblePaddingVertical,
+                    )
+        ) {
+            VoiceChatHistoryHeader(
+                title = titleText,
+                summary = summaryText,
+                hint = hintText,
+                isExpanded = isExpanded,
+                modifier = Modifier.noRippleClickable(onClick = onClick),
+            )
+
+            if (content != null) {
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            UiConfigs.ChatMessagePane.VoiceHistory.HeaderToMessagesSpacing
+                        )
+                )
+                Column(
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            UiConfigs.ChatMessagePane.VoiceHistory.InnerMessageSpacing
+                        ),
+                    content = content,
+                )
+            }
+        }
     }
 }
 
 /**
- * 语音聊天历史记录展开状态的折叠提示组件 用于在展开的语音聊天记录起始位置显示，点击可重新折叠
+ * 语音通话历史提示头部：展示标题、概要信息与展开/收起状态提示。
  *
- * @param onClick 点击折叠的回调
+ * 预期视觉效果：左侧通话图标 + 多行文本提示 + 右侧状态箭头。
  */
 @Composable
-fun VoiceChatHistoryExpandedHeader(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier =
-            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
+private fun VoiceChatHistoryHeader(
+    title: String,
+    summary: String,
+    hint: String,
+    isExpanded: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement =
+            Arrangement.spacedBy(UiConfigs.ChatMessagePane.VoiceHistory.HeaderIconSpacing),
     ) {
-        Text(
-            text = stringResource(R.string.voice_chat_history_expanded),
-            color = Color.White,
-            fontSize = 12.sp,
-            modifier =
-                Modifier.background(
-                        color = Color.Black.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(3.dp),
-                    )
-                    .padding(horizontal = 3.dp),
+        Icon(
+            imageVector = Icons.Rounded.Call,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = UiConfigs.Alpha.SecondaryText),
+            modifier = Modifier.size(UiConfigs.ChatMessagePane.VoiceHistory.HeaderIconSize),
         )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement =
+                Arrangement.spacedBy(UiConfigs.ChatMessagePane.VoiceHistory.HeaderTextSpacing),
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = UiConfigs.ChatMessagePane.VoiceHistory.TitleFontSize,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = summary,
+                color = Color.White.copy(alpha = UiConfigs.Alpha.SecondaryText),
+                fontSize = UiConfigs.ChatMessagePane.VoiceHistory.SummaryFontSize,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = hint,
+                color = Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
+                fontSize = UiConfigs.ChatMessagePane.VoiceHistory.HintFontSize,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(
+            imageVector =
+                if (isExpanded) Icons.Rounded.KeyboardArrowUp
+                else Icons.Rounded.KeyboardArrowDown,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = UiConfigs.Alpha.SecondaryText),
+            modifier = Modifier.size(UiConfigs.ChatMessagePane.VoiceHistory.HeaderArrowSize),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun VoiceChatHistoryPreview() {
+    val previewMessages =
+        listOf(
+            MsgInfo(
+                role = "user",
+                content = "Can you hear me?",
+                timestamp = "2026-01-18T10:16:00+00:00",
+            ),
+            MsgInfo(
+                role = "assistant",
+                content = "Yes, I'm here.",
+                timestamp = "2026-01-18T10:16:30+00:00",
+                meta_data = MsgInfo.MsgMetaData(isVoice = true),
+            ),
+            MsgInfo(
+                role = "user",
+                content = "Let's keep going.",
+                timestamp = "2026-01-18T10:17:00+00:00",
+            ),
+            MsgInfo(
+                role = "assistant",
+                content = "I'm listening.",
+                timestamp = "2026-01-18T10:17:20+00:00",
+                meta_data = MsgInfo.MsgMetaData(isVoice = true),
+            ),
+        )
+
+    IntelliMateTheme {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(UiConfigs.Colors.DialogSurface)
+                    .padding(UiConfigs.Padding.ScreenHorizontal),
+            verticalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.Medium),
+        ) {
+            VoiceChatHistoryCollapsed(messages = previewMessages, onClick = {})
+            VoiceChatHistoryExpandedGroup(messages = previewMessages, onClick = {}) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth(
+                                    UiConfigs.ChatMessagePane.VoiceHistory
+                                        .InnerAiBubbleWidthRatio
+                                )
+                                .background(
+                                    Color.Black.copy(
+                                        alpha =
+                                            UiConfigs.ChatMessagePane.VoiceHistory
+                                                .BubbleBackgroundAlpha
+                                    ),
+                                    RoundedCornerShape(UiConfigs.ChatMessagePane.BubbleCornerRadius),
+                                )
+                                .padding(
+                                    horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                    vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_settings_font_size_preview_sample),
+                            color = Color.White,
+                            fontSize = UiConfigs.Typography.Body,
+                        )
+                    }
+                }
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    Box(
+                        modifier =
+                            Modifier.widthIn(max = UiConfigs.ChatMessagePane.UserMessageMaxWidth)
+                                .background(
+                                    Color.White.copy(alpha = 0.6f),
+                                    RoundedCornerShape(UiConfigs.ChatMessagePane.BubbleCornerRadius),
+                                )
+                                .padding(
+                                    horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                    vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_settings_font_size_preview_label),
+                            color = Color.Black,
+                            fontSize = UiConfigs.Typography.Body,
+                        )
+                    }
+                }
+            }
+        }
     }
 }

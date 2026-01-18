@@ -474,6 +474,9 @@ object UiConfigs {
         /** 聊天消息面板垂直内边距 */
         val PaddingVertical = 13.dp
 
+        /** 聊天气泡通用圆角 */
+        val BubbleCornerRadius = 12.dp
+
         /** AI 消息宽度比例（相对于父容器） */
         const val AI_WIDTH_RATIO = 0.9f
 
@@ -497,6 +500,60 @@ object UiConfigs {
 
         /** 消息操作按钮之间的间距 */
         val ActionButtonSpacing = 12.dp
+
+        /** 语音通话历史折叠/展开的气泡配置 */
+        object VoiceHistory {
+            /** 外层气泡宽度比例（与 AI 消息保持一致） */
+            val BubbleWidthRatio = AI_WIDTH_RATIO
+
+            /** 内层 AI 消息气泡宽度比例（填满外层气泡） */
+            const val InnerAiBubbleWidthRatio = 1f
+
+            /** 外层气泡圆角 */
+            val BubbleCornerRadius = ChatMessagePane.BubbleCornerRadius
+
+            /** 外层气泡描边宽度 */
+            val BubbleBorderWidth = 1.dp
+
+            /** 外层气泡背景透明度 */
+            const val BubbleBackgroundAlpha = 0.5f
+
+            /** 外层气泡描边透明度 */
+            const val BubbleBorderAlpha = 0.18f
+
+            /** 外层气泡内容水平内边距 */
+            val BubblePaddingHorizontal = ChatMessagePane.PaddingHorizontal
+
+            /** 外层气泡内容垂直内边距 */
+            val BubblePaddingVertical = ChatMessagePane.PaddingVertical
+
+            /** 语音历史头部图标大小 */
+            val HeaderIconSize = 18.dp
+
+            /** 语音历史箭头图标大小 */
+            val HeaderArrowSize = 20.dp
+
+            /** 头部图标与文字间距 */
+            val HeaderIconSpacing = UiConfigs.Spacing.Small
+
+            /** 标题与说明文字之间的间距 */
+            val HeaderTextSpacing = UiConfigs.Spacing.Tiny
+
+            /** 头部区域与消息列表的间距 */
+            val HeaderToMessagesSpacing = UiConfigs.Spacing.Small
+
+            /** 组内消息之间的间距 */
+            val InnerMessageSpacing = UiConfigs.Spacing.Small
+
+            /** 标题字号 */
+            val TitleFontSize = UiConfigs.Typography.Body
+
+            /** 概要字号 */
+            val SummaryFontSize = UiConfigs.Typography.Caption
+
+            /** 操作提示字号 */
+            val HintFontSize = UiConfigs.Typography.Caption
+        }
     }
 
     /** 聊天顶部栏配置 - 适用于聊天页面顶部栏的尺寸、间距、字体等设置 */

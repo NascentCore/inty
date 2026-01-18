@@ -740,36 +740,34 @@ internal fun ChatPage(
                                         val isExpanded = expandedGroups.value.contains(item.groupId)
 
                                         if (isExpanded) {
-                                            // 展开状态：先显示所有消息，最后显示折叠提示（在倒序列表中，最后添加的会显示在最上方）
-                                            item.messages.forEachIndexed { msgIndex, message ->
-                                                val hasGeneratedImage = message.hasGeneratedImage()
-                                                val isImageMessage =
-                                                    message.content.isEmpty() && hasGeneratedImage
-                                                val isLatestAssistantMessageForActions =
-                                                    index == 0 &&
-                                                        msgIndex == 0 &&
-                                                        message.role == "assistant" &&
-                                                        message.content != "loading_animation" &&
-                                                        !message.isOpening()
+                                            VoiceChatHistoryExpandedGroup(
+                                                messages = item.messages,
+                                                onClick = { expandedGroups.value -= item.groupId },
+                                            ) {
+                                                item.messages.forEachIndexed { msgIndex, message ->
+                                                    val isLatestAssistantMessageForActions =
+                                                        index == 0 &&
+                                                            msgIndex == 0 &&
+                                                            message.role == "assistant" &&
+                                                            message.content !=
+                                                                "loading_animation" &&
+                                                            !message.isOpening()
 
-                                                ChatItem(
-                                                    navController,
-                                                    message,
-                                                    isCurrentPage = isCurrentPage,
-                                                    chatViewModel = chatViewModel,
-                                                    isLatestMessage =
-                                                        isLatestAssistantMessageForActions,
-                                                    isGuideVisible = isGuideVisible,
-                                                    messageFontSizeSp = chatFontSizeSp,
-                                                )
-                                                Spacer(Modifier.height(16.dp))
+                                                    ChatItem(
+                                                        navController,
+                                                        message,
+                                                        isCurrentPage = isCurrentPage,
+                                                        chatViewModel = chatViewModel,
+                                                        isLatestMessage =
+                                                            isLatestAssistantMessageForActions,
+                                                        isGuideVisible = isGuideVisible,
+                                                        messageFontSizeSp = chatFontSizeSp,
+                                                        aiBubbleWidthRatio =
+                                                            UiConfigs.ChatMessagePane.VoiceHistory
+                                                                .InnerAiBubbleWidthRatio,
+                                                    )
+                                                }
                                             }
-
-                                            // 折叠提示放在最后，在倒序列表中会显示在最上方
-                                            Spacer(Modifier.height(8.dp))
-                                            VoiceChatHistoryExpandedHeader(
-                                                onClick = { expandedGroups.value -= item.groupId }
-                                            )
                                         } else {
                                             // 折叠状态：显示折叠提示
                                             VoiceChatHistoryCollapsed(

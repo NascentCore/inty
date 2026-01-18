@@ -437,8 +437,10 @@
     <string name="str_appearance">Upload Selfie</string>
     <string name="str_message_is_too_long">message is too long. Please send it in parts.</string>
     <string name="version_update_available">%s\nClick to update</string>
-    <string name="voice_chat_history_collapsed">Voice chat (%s)</string>
-    <string name="voice_chat_history_expanded">Collapse voice chat history</string>
+    <string name="voice_chat_history_title">Voice chat history</string>
+    <string name="voice_chat_history_summary">Duration %1$s · %2$d messages</string>
+    <string name="voice_chat_history_collapsed">Tap to view</string>
+    <string name="voice_chat_history_expanded">Tap to collapse</string>
 
     <!-- Toast Messages - Additional -->
     <string name="toast_avatar_cropped_uploaded">Avatar cropped and uploaded</string>
