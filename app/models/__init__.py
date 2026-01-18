@@ -14,6 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 from app.models.agent import Agent as Agent
+from app.models.agent_chat_stats import AgentChatStats as AgentChatStats
 from app.models.associations import agent_followers as agent_followers
 from app.models.chat import Chat as Chat
 from app.models.chat_history import ChatHistory as ChatHistory

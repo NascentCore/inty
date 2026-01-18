@@ -2,6 +2,27 @@
 
 This directory contains utility scripts for the Inty backend.
 
+## collect_agent_chat_stats.py
+
+Collects daily agent chat stats and upserts them into `agent_chat_stats`.
+If the target date is Sunday (UTC), it also writes the weekly period
+in the format `YYYY-MM-DD-YYYY-MM-DD` (Monday-Sunday).
+
+### Usage
+
+```bash
+python scripts/collect_agent_chat_stats.py --config devops/config.yaml.prod --date 2026-01-17 --apply --confirm
+python scripts/collect_agent_chat_stats.py --db-url "postgresql://user:pass@host:5432/db" --date 2026-01-17
+```
+
+### Options
+
+- `--date`: UTC date in `YYYY-MM-DD` (default: yesterday UTC)
+- `--config`: Config YAML path (default: `config.yaml`)
+- `--db-url`: Database URL override (sync driver)
+- `--apply`: Write results (default: dry-run)
+- `--confirm`: Confirm writes when `--apply` is set
+
 ## compress_agent_avatar_image.py
 
 Compresses PNG avatar images to JPEG format and updates the database records.

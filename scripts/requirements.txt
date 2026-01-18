@@ -3,3 +3,7 @@ cyclopts
 openai
 matplotlib
 pydub
+PyYAML
+SQLAlchemy
+loguru
+psycopg
