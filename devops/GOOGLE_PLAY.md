@@ -2,8 +2,8 @@
 
 为审查员创建超级用户来测试 app 新版本，目前 Email 密码组合为：
 
-- test.intellimate@gmail.com
-- test.intellimate.666!
+- intellimate@gmail.com
+- intellimate
 
 ```bash
 docker exec -it inty-backend-dev bash
