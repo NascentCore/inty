@@ -7,7 +7,7 @@
 - GOOGLE_API_KEY: Gemini API 密钥
 - DIFY_API_KEY: Dify API 密钥
 
-需要数据库配置文件 config.yaml（位于 scripts/ 目录）
+数据库配置文件默认使用 scripts/sync_agents_dev_to_prod/config.yaml.example
 """
 import asyncio
 import json
@@ -16,6 +16,7 @@ import os
 import sys
 from pathlib import Path
 
+import cyclopts
 import requests
 import yaml
 from google import genai
@@ -25,6 +26,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.agent import Agent
 
+app = cyclopts.App()
+
 # 配置日志
 logging.basicConfig(
     level=logging.DEBUG,
@@ -33,13 +36,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_config(config_path: str = "config.yaml") -> dict:
-    """加载配置文件"""
+def load_config(config_path: str) -> dict:
+    """加载配置文件
+
+    Args:
+        config_path: 配置文件路径，相对于脚本所在目录
+
+    Returns:
+        配置字典
+    """
     config_file = Path(__file__).parent / config_path
     if not config_file.exists():
         logger.error(f"配置文件不存在: {config_file}")
         sys.exit(1)
 
+    logger.info(f"使用配置文件: {config_file}")
     with open(config_file, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
@@ -179,8 +190,15 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
         return False
 
 
-async def main() -> int:
-    """主函数：查询数据库、生成角色并批量创建"""
+@app.default
+async def main(
+    config: str = "sync_agents_dev_to_prod/config.yaml.example",
+) -> int:
+    """主函数：查询数据库、生成角色并批量创建
+
+    Args:
+        config: 配置文件路径，相对于 scripts/ 目录（默认: sync_agents_dev_to_prod/config.yaml.example）
+    """
     google_api_key = os.environ.get("GOOGLE_API_KEY")
     dify_api_key = os.environ.get("DIFY_API_KEY")
 
@@ -192,8 +210,8 @@ async def main() -> int:
         return 1
 
     # 加载数据库配置
-    config = load_config()
-    db_config = config.get("prod_database") or config.get("database")
+    config_data = load_config(config)
+    db_config = config_data.get("dev_database") or config_data.get("database")
     if not db_config:
         logger.error("配置文件中未找到 prod_database 或 database 配置")
         return 1
@@ -240,4 +258,4 @@ async def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(app())
