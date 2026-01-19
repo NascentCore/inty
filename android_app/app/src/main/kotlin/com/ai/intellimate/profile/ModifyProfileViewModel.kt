@@ -171,7 +171,7 @@ class ModifyProfileViewModel : BaseVM() {
      */
     fun onSave() {
         launchBackground {
-//            _isSaving.value = true
+            //            _isSaving.value = true
             try {
                 val original = originalUserProfile ?: UserProfile()
                 val current = _userProfile.value
@@ -213,20 +213,20 @@ class ModifyProfileViewModel : BaseVM() {
 
                     when (result) {
                         is HttpResult.Success -> {
-//                            _userProfile.value =
-//                                current.copy(
-//                                    // No cropping, just use the provided url.
-//                                    avatar = result.data.url
-//                                )
+                            //                            _userProfile.value =
+                            //                                current.copy(
+                            //                                    // No cropping, just use the
+                            // provided url.
+                            //                                    avatar = result.data.url
+                            //                                )
                             // 头像上传完毕提示
-//                            viewModelScope.launch(Dispatchers.Main) {
-//                                ToastUtils.showShort(R.string.avatar_upload_success)
-//                            }
+                            //                            viewModelScope.launch(Dispatchers.Main) {
+                            //
+                            // ToastUtils.showShort(R.string.avatar_upload_success)
+                            //                            }
                         }
                         is HttpResult.Failure -> {
-                            _userProfile.value = current.copy(
-                                avatar =  original.avatar
-                            )
+                            _userProfile.value = current.copy(avatar = original.avatar)
                             NetworkErrorHandler.showNetworkAwareError(result.message)
                             return@launchBackground
                         }
@@ -239,9 +239,10 @@ class ModifyProfileViewModel : BaseVM() {
                     if (updatedProfile != null) {
                         // Show success toast for profile update
                         viewModelScope.launch(Dispatchers.Main) {
-//                            ToastUtils.showShort(
-//                                Utils.getApp().getString(R.string.saved_successfully)
-//                            )
+                            //                            ToastUtils.showShort(
+                            //
+                            // Utils.getApp().getString(R.string.saved_successfully)
+                            //                            )
                             UserProfileManager.saveUserProfile(updatedProfile)
                         }
                         // 更新原始值
@@ -256,7 +257,7 @@ class ModifyProfileViewModel : BaseVM() {
                     }
                 }
             } finally {
-//                _isSaving.value = false
+                //                _isSaving.value = false
             }
         }
     }

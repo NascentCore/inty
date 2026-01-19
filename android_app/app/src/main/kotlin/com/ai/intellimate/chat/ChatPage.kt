@@ -76,7 +76,6 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
-import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
@@ -652,11 +651,11 @@ internal fun ChatPage(
                             .padding(horizontal = 16.dp)
                     }
 
-                BoxWithConstraints(
-                    modifier = lazyColumnModifier
-                ) {
+                BoxWithConstraints(modifier = lazyColumnModifier) {
                     val density = LocalDensity.current
-                    val chatViewHeight = remember { with(density){(maxHeight - 32.dp).roundToPx()} }
+                    val chatViewHeight = remember {
+                        with(density) { (maxHeight - 32.dp).roundToPx() }
+                    }
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -670,7 +669,7 @@ internal fun ChatPage(
                         if (!imagePickMessageId.isNullOrEmpty()) {
                             item("ImagePicker") {
                                 val isUserUploading by
-                                userProfileViewModel.isAppearanceUploading.collectAsState()
+                                    userProfileViewModel.isAppearanceUploading.collectAsState()
 
                                 ImagePickItem(
                                     isLoading = isUserUploading,
@@ -678,7 +677,9 @@ internal fun ChatPage(
                                     onImageSelected = {
                                         userProfileViewModel.setUserAppearance(it) {
                                             chatViewModel.generateImageForMessage()
-                                            ToastUtils.showShort(R.string.chat_save_user_photo_success)
+                                            ToastUtils.showShort(
+                                                R.string.chat_save_user_photo_success
+                                            )
                                         }
                                     },
                                     modifier =
@@ -694,7 +695,9 @@ internal fun ChatPage(
                         if (filteredChatMessages.isNotEmpty()) {
                             val messagesCopy = filteredChatMessages.toList()
                             val items =
-                                messagesCopy.filter { !(it.role == "user" && it.content == "continue") }
+                                messagesCopy.filter {
+                                    !(it.role == "user" && it.content == "continue")
+                                }
                             if (items.isNotEmpty()) {
                                 // 将消息分组，连续的语音消息会被分组
                                 val groupedItems = groupVoiceMessages(items)
@@ -729,9 +732,9 @@ internal fun ChatPage(
                                                 // 👍/👎
                                                 val isLatestAssistantMessageForActions =
                                                     index == 0 &&
-                                                            message.role == "assistant" &&
-                                                            message.content != "loading_animation" &&
-                                                            !message.isOpening()
+                                                        message.role == "assistant" &&
+                                                        message.content != "loading_animation" &&
+                                                        !message.isOpening()
 
                                                 ChatItem(
                                                     navController,
@@ -746,7 +749,8 @@ internal fun ChatPage(
                                             }
                                         }
                                         is ChatMessageItem.VoiceMessageGroup -> {
-                                            val isExpanded = expandedGroups.value.contains(item.groupId)
+                                            val isExpanded =
+                                                expandedGroups.value.contains(item.groupId)
 
                                             if (isExpanded) {
                                                 // 展开状态：将所有消息放在一个大气泡容器中
@@ -756,16 +760,29 @@ internal fun ChatPage(
                                                 VoiceChatHistoryExpandedContainer(
                                                     messages = item.messages,
                                                     onCollapse = {
-                                                        listState.requestScrollToItem(index + if (showIntroOpeningTop) 2 else 0 + if (showLoadMoreUi) 1 else 0, -chatViewHeight)
+                                                        listState.requestScrollToItem(
+                                                            index +
+                                                                if (showIntroOpeningTop) 2
+                                                                else
+                                                                    0 +
+                                                                        if (showLoadMoreUi) 1
+                                                                        else 0,
+                                                            -chatViewHeight,
+                                                        )
                                                         expandedGroups.value -= item.groupId
                                                     },
                                                 ) {
-                                                    chronologicalMessages.forEachIndexed { msgIndex, message ->
-                                                        val hasGeneratedImage = message.hasGeneratedImage()
+                                                    chronologicalMessages.forEachIndexed {
+                                                        msgIndex,
+                                                        message ->
+                                                        val hasGeneratedImage =
+                                                            message.hasGeneratedImage()
                                                         val isImageMessage =
-                                                            message.content.isEmpty() && hasGeneratedImage
+                                                            message.content.isEmpty() &&
+                                                                hasGeneratedImage
                                                         // 展开状态下不显示操作按钮
-                                                        val isLatestAssistantMessageForActions = false
+                                                        val isLatestAssistantMessageForActions =
+                                                            false
 
                                                         ChatItem(
                                                             navController,
@@ -778,7 +795,10 @@ internal fun ChatPage(
                                                             messageFontSizeSp = chatFontSizeSp,
                                                         )
                                                         // 消息之间添加间距，最后一条不添加
-                                                        if (msgIndex < chronologicalMessages.size - 1) {
+                                                        if (
+                                                            msgIndex <
+                                                                chronologicalMessages.size - 1
+                                                        ) {
                                                             Spacer(Modifier.height(12.dp))
                                                         }
                                                     }
@@ -788,7 +808,15 @@ internal fun ChatPage(
                                                 VoiceChatHistoryCollapsed(
                                                     messages = item.messages,
                                                     onClick = {
-                                                        listState.requestScrollToItem(index + if (showIntroOpeningTop) 2 else 0 + if (showLoadMoreUi) 1 else 0, -chatViewHeight)
+                                                        listState.requestScrollToItem(
+                                                            index +
+                                                                if (showIntroOpeningTop) 2
+                                                                else
+                                                                    0 +
+                                                                        if (showLoadMoreUi) 1
+                                                                        else 0,
+                                                            -chatViewHeight,
+                                                        )
                                                         expandedGroups.value += item.groupId
                                                     },
                                                 )
@@ -857,7 +885,9 @@ internal fun ChatPage(
                                         Text(
                                             text = "Pull to load more",
                                             color =
-                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                                MaterialTheme.colorScheme.onSurface.copy(
+                                                    alpha = 0.6f
+                                                ),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                     }
@@ -866,7 +896,6 @@ internal fun ChatPage(
                         }
                     }
                 }
-
 
                 LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
                     snapshotFlow {

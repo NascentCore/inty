@@ -1125,7 +1125,6 @@ class ChatViewModel : BaseVM() {
             } else {
                 generateImageForMessage(messageId)
             }
-
         }
     }
 
