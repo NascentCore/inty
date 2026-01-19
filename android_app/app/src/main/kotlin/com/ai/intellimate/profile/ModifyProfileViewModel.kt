@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -42,11 +43,11 @@ class ModifyProfileViewModel : BaseVM() {
     private val _events = MutableSharedFlow<ViewModelEvent>()
     val events: SharedFlow<ViewModelEvent> = _events.asSharedFlow()
 
-    private val _userProfile = MutableStateFlow(UserProfileManager.profile.value)
+    private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile = _userProfile.asStateFlow()
 
     // 保存原始用户信息，用于判断字段是否变化
-    private var originalUserProfile: UserProfile? = UserProfileManager.profile.value
+    private var originalUserProfile: UserProfile? = null
 
     private val _avatarChanged = MutableStateFlow(false)
 
@@ -54,6 +55,15 @@ class ModifyProfileViewModel : BaseVM() {
     val isSaving = _isSaving.asStateFlow()
     private val _isAppearanceUploading = MutableStateFlow(false)
     val isAppearanceUploading = _isAppearanceUploading.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val profile = UserProfileManager.profile.first()
+
+            _userProfile.value = profile
+            originalUserProfile = profile
+        }
+    }
 
     private fun sanitizeEditValue(editKey: EditKey, editValue: String): String {
         return when (editKey) {

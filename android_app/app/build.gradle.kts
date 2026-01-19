@@ -102,6 +102,7 @@ dependencies {
     // 为角色应援/Boost 功能提供本地数据存储
     // TODO：考虑将其移动到 core/data 模块中，因为其是本地数据存储，不属于 app 模块。
     implementation(libs.mmkv)
+    implementation(libs.androidx.dataStore)
 
     // ===== 项目模块 =====
     implementation(projects.core.common)

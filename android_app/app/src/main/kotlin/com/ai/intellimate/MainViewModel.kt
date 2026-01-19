@@ -377,7 +377,10 @@ class MainViewModel : BaseVM() {
         IntySetting.setToken("")
         // 清除用户ID，通过 changeUser("") 来清空当前用户，这样 isLogin() 会返回 false
         IntySetting.changeUser("")
-        UserProfileManager.clearUserProfile()
+
+        viewModelScope.launch {
+            UserProfileManager.clearUserProfile()
+        }
 
         // 更新登录状态，触发UI更新
         // 注意：hideSettings() 已经在上方调用，所以这里更新状态后，UI会直接从 SettingContent 切换到 SplashLoginUI

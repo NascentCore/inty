@@ -36,6 +36,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1118,12 +1119,14 @@ class ChatViewModel : BaseVM() {
     }
 
     fun generateImageForMessageOrPickImage(messageId: String) {
-        if (UserProfileManager.profile.value.userPhoto.isNullOrEmpty()) {
-            _imagePickMessageId.value = messageId
-            return
-        }
+        viewModelScope.launch {
+            if (UserProfileManager.profile.first().userPhoto.isNullOrEmpty()) {
+                _imagePickMessageId.value = messageId
+            } else {
+                generateImageForMessage(messageId)
+            }
 
-        generateImageForMessage(messageId)
+        }
     }
 
     fun generateImageForMessage() {

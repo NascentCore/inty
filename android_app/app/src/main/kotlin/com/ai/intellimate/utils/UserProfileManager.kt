@@ -2,16 +2,18 @@ package com.ai.intellimate.utils
 
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.store.IntySetting
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import ai.sxwl.android.data.store.jsonDataStore
+import ai.sxwl.android.utils.Utils
+import android.content.Context
+
+val Context.userProfile by jsonDataStore("user_pfofile.json", UserProfile())
 
 /** 用户信息的数据管理类 */
 object UserProfileManager {
-    private val _profile = MutableStateFlow(getUserProfile())
-    val profile = _profile.asStateFlow()
+    val profile = Utils.getApp().userProfile.data
 
-    fun saveUserProfile(userProfile: UserProfile) {
-        _profile.value = userProfile
+    suspend fun saveUserProfile(userProfile: UserProfile) {
+        Utils.getApp().userProfile.updateData { userProfile }
 
         IntySetting.setUserProfileData("id", userProfile.id)
         IntySetting.setUserProfileData("nickname", userProfile.nickname)
@@ -66,8 +68,8 @@ object UserProfileManager {
         return IntySetting.hasUserProfileData("id")
     }
 
-    fun clearUserProfile() {
+    suspend fun clearUserProfile() {
         IntySetting.clearAllUserProfileData()
-        _profile.value = UserProfile()
+        Utils.getApp().userProfile.updateData { UserProfile() }
     }
 }
