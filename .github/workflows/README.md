@@ -17,3 +17,20 @@
 <img width="300" height="582" alt="image" src="https://github.com/user-attachments/assets/21feb497-7c80-4601-b292-8134317c3c6e" />
 
 Dev & prod sharing the same VM on GCP.
+
+## Dify 定时聊天调用
+
+运行 [dify_chat_cron.yaml](https://github.com/NascentCore/inty-app/actions/workflows/dify_chat_cron.yaml) 定时调用 Dify API。
+
+### 配置要求
+
+- 需要在 GitHub Repository Secrets 中配置 `DIFY_API_KEY`
+- 默认每日 UTC 00:00 自动执行
+- 支持手动触发（通过 Actions 页面的 "Run workflow" 按钮）
+
+### 验证方式
+
+1. 进入 [Actions 页面](https://github.com/NascentCore/inty-app/actions)
+2. 点击 "Dify 定时聊天调用" workflow
+3. 点击 "Run workflow" 手动触发
+4. 查看执行日志，确认 API 调用成功（状态码 200）
