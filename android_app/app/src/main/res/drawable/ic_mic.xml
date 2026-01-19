@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <!-- Material Design mic icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M480,560q-50,0 -85,-35t-35,-85v-240q0,-50 35,-85t85,-35q50,0 85,35t35,85v240q0,50 -35,85t-85,35ZM440,840v-126q-109,-14 -179.5,-96T190,420h80q0,88 61,149t149,61q88,0 149,-61t61,-149h80q0,116 -70.5,198T520,714v126h-80ZM480,480q17,0 28.5,-11.5T520,440v-240q0,-17 -11.5,-28.5T480,160q-17,0 -28.5,11.5T440,200v240q0,17 11.5,28.5T480,480Z"/>
+</vector>

@@ -15,6 +15,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -34,6 +35,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -108,47 +113,32 @@ fun ChatItem(
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
-    runCatching {
-            when (item.role) {
-                "assistant" -> {
-                    ChatItemAI(
-                        navController,
-                        item,
-                        isCurrentPage,
-                        chatViewModel,
-                        isLatestMessage,
-                        isGuideVisible,
-                        messageFontSizeSp,
-                    )
-                }
-
-                "user" -> {
-                    ChatItemUser(item, messageFontSizeSp)
-                }
-
-                "system" -> {
-                    ChatItemSystemTips(item, chatViewModel)
-                }
-
-                else -> {
-                    LogUtils.w("ChatItem - 未知角色: ${item.role}")
-                    ChatItemUser(item, messageFontSizeSp)
-                }
-            }
+    when (item.role) {
+        "assistant" -> {
+            ChatItemAI(
+                navController,
+                item,
+                isCurrentPage,
+                chatViewModel,
+                isLatestMessage,
+                isGuideVisible,
+                messageFontSizeSp,
+            )
         }
-        .onFailure { e ->
-            LogUtils.e("ChatItem - 渲染失败: ${e.message}")
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth().height(60.dp).background(Color.Red.copy(alpha = 0.1f))
-            ) {
-                Text(
-                    text = "Message display failed",
-                    color = Color.White,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            }
+
+        "user" -> {
+            ChatItemUser(item, messageFontSizeSp)
         }
+
+        "system" -> {
+            ChatItemSystemTips(item, chatViewModel)
+        }
+
+        else -> {
+            LogUtils.w("ChatItem - 未知角色: ${item.role}")
+            ChatItemUser(item, messageFontSizeSp)
+        }
+    }
 }
 
 @Composable
@@ -1099,9 +1089,17 @@ private fun formatDuration(durationSeconds: Long): String {
 }
 
 /**
- * 语音聊天历史记录折叠组件 用于显示折叠的语音聊天记录，点击可展开查看完整记录
+ * 语音聊天历史记录折叠组件
+ * 显示折叠的语音聊天记录卡片，包含标题、时长、消息数量和点击提示
  *
- * @param messages 语音消息列表，用于计算时长
+ * 视觉效果：
+ * ┌─────────────────────────────────┐
+ * │  Voice chat history             │
+ * │  🎙 Duration 27s · 6 messages   │
+ * │  Tap to view                    │
+ * └─────────────────────────────────┘
+ *
+ * @param messages 语音消息列表，用于计算时长和消息数量
  * @param onClick 点击展开的回调
  */
 @Composable
@@ -1112,48 +1110,168 @@ fun VoiceChatHistoryCollapsed(
 ) {
     val durationSeconds = remember(messages) { calculateVoiceChatDuration(messages) }
     val durationText = remember(durationSeconds) { formatDuration(durationSeconds) }
+    val messageCount = messages.size
 
     Box(
         modifier =
-            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
+            modifier
+                .fillMaxWidth()
+                .noRippleClickable(onClick = onClick)
+                .padding(vertical = 8.dp),
     ) {
-        Text(
-            text = stringResource(R.string.voice_chat_history_collapsed, durationText),
-            color = Color.White,
-            fontSize = 12.sp,
-            modifier =
-                Modifier.background(
-                        color = Color.Black.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(3.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                .background(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                // 标题
+                Text(
+                    text = stringResource(R.string.voice_chat_history_title),
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                // 时长和消息数量
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_mic),
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp),
                     )
-                    .padding(horizontal = 3.dp),
-        )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.voice_chat_history_duration_messages, durationText, messageCount),
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                // 点击提示
+                Text(
+                    text = stringResource(R.string.voice_chat_history_tap_to_view),
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 11.sp,
+                )
+            }
+
+
+            Image(
+                imageVector = Icons.Rounded.KeyboardArrowDown,
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
 /**
- * 语音聊天历史记录展开状态的折叠提示组件 用于在展开的语音聊天记录起始位置显示，点击可重新折叠
+ * 语音聊天历史记录展开后的大气泡容器
+ * 将展开的语音消息内容包裹在一个半透明背景的大气泡中
+ * 顶部显示与折叠状态相同样式的卡片，但提示文字改为"Tap to collapse"
+ * 内部的每条消息仍使用原有的普通消息气泡样式
  *
- * @param onClick 点击折叠的回调
+ * @param messages 语音消息列表，用于显示时长和消息数量
+ * @param onCollapse 点击折叠的回调
+ * @param content 气泡内部内容（语音消息列表的 Composable）
  */
 @Composable
-fun VoiceChatHistoryExpandedHeader(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
+fun VoiceChatHistoryExpandedContainer(
+    messages: List<MsgInfo>,
+    onCollapse: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val containerShape = RoundedCornerShape(16.dp)
+    val durationSeconds = remember(messages) { calculateVoiceChatDuration(messages) }
+    val durationText = remember(durationSeconds) { formatDuration(durationSeconds) }
+    val messageCount = messages.size
+
+    Column(
         modifier =
-            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
+            modifier
+                .fillMaxWidth()
+                .background(Color.Black.copy(alpha = 0.5f), containerShape)
+                .padding(12.dp),
     ) {
-        Text(
-            text = stringResource(R.string.voice_chat_history_expanded),
-            color = Color.White,
-            fontSize = 12.sp,
+        // 顶部折叠提示卡片（与折叠状态相同样式，但提示文字不同）
+        Box(
             modifier =
-                Modifier.background(
-                        color = Color.Black.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(3.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .noRippleClickable(onClick = onCollapse)
+                    .padding(bottom = 8.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = Color.Black.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(12.dp),
                     )
-                    .padding(horizontal = 3.dp),
-        )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start,
+                ) {
+                    // 标题
+                    Text(
+                        text = stringResource(R.string.voice_chat_history_title),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // 时长和消息数量
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_mic),
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.voice_chat_history_duration_messages, durationText, messageCount),
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // 点击提示（展开状态显示"Tap to collapse"）
+                    Text(
+                        text = stringResource(R.string.voice_chat_history_tap_to_collapse),
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 11.sp,
+                    )
+                }
+
+                // 向上箭头图标（表示可折叠）
+                Image(
+                    imageVector = Icons.Rounded.KeyboardArrowUp,
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        // 消息内容
+        content()
     }
 }
