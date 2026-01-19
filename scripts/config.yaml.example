@@ -1,0 +1,11 @@
+# CREATED_BY_AGENT
+# Dify 定时聊天调用脚本配置文件示例
+# 复制此文件为 config.yaml 并修改相应配置
+
+# Prod环境数据库配置
+prod_database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: your_password_here
+  db: inty

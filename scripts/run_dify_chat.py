@@ -7,7 +7,7 @@
 - GOOGLE_API_KEY: Gemini API 密钥
 - DIFY_API_KEY: Dify API 密钥
 
-需要数据库配置文件 config.yaml（位于仓库根目录）
+需要数据库配置文件 config.yaml（位于 scripts/ 目录）
 """
 import asyncio
 import json
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 def load_config(config_path: str = "config.yaml") -> dict:
     """加载配置文件"""
-    config_file = Path(config_path)
+    config_file = Path(__file__).parent / config_path
     if not config_file.exists():
         logger.error(f"配置文件不存在: {config_file}")
         sys.exit(1)
