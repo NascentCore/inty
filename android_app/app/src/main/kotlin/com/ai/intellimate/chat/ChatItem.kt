@@ -1089,15 +1089,10 @@ private fun formatDuration(durationSeconds: Long): String {
 }
 
 /**
- * 语音聊天历史记录折叠组件
- * 显示折叠的语音聊天记录卡片，包含标题、时长、消息数量和点击提示
+ * 语音聊天历史记录折叠组件 显示折叠的语音聊天记录卡片，包含标题、时长、消息数量和点击提示
  *
- * 视觉效果：
- * ┌─────────────────────────────────┐
- * │  Voice chat history             │
- * │  🎙 Duration 27s · 6 messages   │
- * │  Tap to view                    │
- * └─────────────────────────────────┘
+ * 视觉效果： ┌─────────────────────────────────┐ │ Voice chat history │ │ 🎙 Duration 27s · 6 messages │
+ * │ Tap to view │ └─────────────────────────────────┘
  *
  * @param messages 语音消息列表，用于计算时长和消息数量
  * @param onClick 点击展开的回调
@@ -1114,27 +1109,19 @@ fun VoiceChatHistoryCollapsed(
 
     Box(
         modifier =
-            modifier
-                .fillMaxWidth()
-                .noRippleClickable(onClick = onClick)
-                .padding(vertical = 8.dp),
+            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
-                .background(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f),
-                horizontalAlignment = Alignment.Start,
-            ) {
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                 // 标题
                 Text(
                     text = stringResource(R.string.voice_chat_history_title),
@@ -1153,7 +1140,12 @@ fun VoiceChatHistoryCollapsed(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = stringResource(R.string.voice_chat_history_duration_messages, durationText, messageCount),
+                        text =
+                            stringResource(
+                                R.string.voice_chat_history_duration_messages,
+                                durationText,
+                                messageCount,
+                            ),
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                     )
@@ -1167,21 +1159,18 @@ fun VoiceChatHistoryCollapsed(
                 )
             }
 
-
             Image(
                 imageVector = Icons.Rounded.KeyboardArrowDown,
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
         }
     }
 }
 
 /**
- * 语音聊天历史记录展开后的大气泡容器
- * 将展开的语音消息内容包裹在一个半透明背景的大气泡中
- * 顶部显示与折叠状态相同样式的卡片，但提示文字改为"Tap to collapse"
+ * 语音聊天历史记录展开后的大气泡容器 将展开的语音消息内容包裹在一个半透明背景的大气泡中 顶部显示与折叠状态相同样式的卡片，但提示文字改为"Tap to collapse"
  * 内部的每条消息仍使用原有的普通消息气泡样式
  *
  * @param messages 语音消息列表，用于显示时长和消息数量
@@ -1205,30 +1194,26 @@ fun VoiceChatHistoryExpandedContainer(
             modifier
                 .fillMaxWidth()
                 .background(Color.Black.copy(alpha = 0.5f), containerShape)
-                .padding(12.dp),
+                .padding(12.dp)
     ) {
         // 顶部折叠提示卡片（与折叠状态相同样式，但提示文字不同）
         Box(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .noRippleClickable(onClick = onCollapse)
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 8.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = Color.Black.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .background(
+                            color = Color.Black.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(12.dp),
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.Start,
-                ) {
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                     // 标题
                     Text(
                         text = stringResource(R.string.voice_chat_history_title),
@@ -1247,7 +1232,12 @@ fun VoiceChatHistoryExpandedContainer(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = stringResource(R.string.voice_chat_history_duration_messages, durationText, messageCount),
+                            text =
+                                stringResource(
+                                    R.string.voice_chat_history_duration_messages,
+                                    durationText,
+                                    messageCount,
+                                ),
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 12.sp,
                         )
@@ -1266,7 +1256,7 @@ fun VoiceChatHistoryExpandedContainer(
                     imageVector = Icons.Rounded.KeyboardArrowUp,
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
