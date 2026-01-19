@@ -11,9 +11,13 @@ export interface Agent extends BaseAgent {
   meta_data?: AgentMetaData;
   background_animated?: string; // webp 动图 URL
   description?: string; // 描述字段
+  source?: AgentSource; // 角色来源
 }
 
 export type { AgentVisibility };
+
+// 角色来源类型
+export type AgentSource = "USER_CREATED" | "AUTO_GENERATED";
 
 // 头像截取坐标信息类型
 export interface AvatarCropData {
@@ -48,6 +52,7 @@ export interface AgentCreateRequest {
   intro?: string;
   opening?: string;
   visibility: "PUBLIC" | "PRIVATE";
+  source?: AgentSource; // 角色来源
   main_prompt?: string;
   personality?: string;
   mode_prompt?: string;

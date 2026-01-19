@@ -84,6 +84,7 @@ export const AgentManagePage: React.FC = () => {
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [backgroundAnimatedFilter, setBackgroundAnimatedFilter] =
     useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
 
   // 分页
   const [pagination, setPagination] = useState({
@@ -370,6 +371,13 @@ export const AgentManagePage: React.FC = () => {
       });
     }
 
+    // 来源筛选
+    if (sourceFilter !== "all") {
+      filteredAgents = filteredAgents.filter(
+        (agent) => agent.source === sourceFilter,
+      );
+    }
+
     setLocalAgents(filteredAgents);
     setPagination((prev) => ({
       ...prev,
@@ -382,6 +390,7 @@ export const AgentManagePage: React.FC = () => {
     genderFilter,
     tagFilter,
     backgroundAnimatedFilter,
+    sourceFilter,
   ]);
 
   useEffect(() => {
@@ -1227,6 +1236,13 @@ export const AgentManagePage: React.FC = () => {
           </Radio.Group>
         </Form.Item>
 
+        <Form.Item name="source" label="来源" initialValue="USER_CREATED">
+          <Radio.Group>
+            <Radio value="USER_CREATED">用户创建</Radio>
+            <Radio value="AUTO_GENERATED">自动生成</Radio>
+          </Radio.Group>
+        </Form.Item>
+
         <Form.Item
           name="intro"
           label="角色简介"
@@ -1695,6 +1711,16 @@ export const AgentManagePage: React.FC = () => {
                 <Option value="yes">有动图</Option>
                 <Option value="no">无动图</Option>
               </Select>
+              <Select
+                placeholder="筛选来源"
+                style={{ width: 120 }}
+                value={sourceFilter}
+                onChange={(value) => setSourceFilter(value)}
+              >
+                <Option value="all">全部</Option>
+                <Option value="USER_CREATED">用户创建</Option>
+                <Option value="AUTO_GENERATED">自动生成</Option>
+              </Select>
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() => loadAgents(true)}
@@ -1867,6 +1893,9 @@ export const AgentManagePage: React.FC = () => {
                                     ? "女"
                                     : "其他"}
                               </Tag>
+                              {agent.source === "AUTO_GENERATED" && (
+                                <Tag color="purple">自动生成</Tag>
+                              )}
                               {agent.meta_data?.score && (
                                 <div
                                   style={{

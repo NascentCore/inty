@@ -8,7 +8,7 @@ from app.core.agent.prompt_template import (
     has_template_variable,
     render_prompt_jinja2_template,
 )
-from app.models.agent import AgentStatus, AgentVisibility
+from app.models.agent import AgentSource, AgentStatus, AgentVisibility
 from app.schemas.response import APIResponse, PaginationData
 from app.schemas.user import User
 from app.utils.image import ImageSize
@@ -146,6 +146,10 @@ class AgentBase(BaseModel):
     opening: Optional[str] = None
     opening_audio_url: Optional[str] = None
     visibility: AgentVisibility = AgentVisibility.PUBLIC
+    source: Optional[AgentSource] = Field(
+        default=AgentSource.USER_CREATED,
+        description="角色来源：USER_CREATED（用户创建）或 AUTO_GENERATED（自动生成）",
+    )
     photos: Optional[List[str]] = None
     category: Optional[str] = None
 

@@ -24,6 +24,13 @@ class AgentVisibility(StrEnum):
     PRIVATE = "PRIVATE"
 
 
+class AgentSource(StrEnum):
+    """AI 角色来源"""
+
+    USER_CREATED = "USER_CREATED"  # 用户创建
+    AUTO_GENERATED = "AUTO_GENERATED"  # 自动生成（如 Dify 脚本）
+
+
 class Agent(Base):
     """AI 角色，Agent 的提法是早期的用词，改动比较麻烦，就沿用了。"""
 
@@ -48,6 +55,12 @@ class Agent(Base):
     photos = Column(JSON)
     category = Column(String)
     status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
+    source = Column(
+        Enum(AgentSource, name="agentsource"),
+        nullable=True,
+        default=AgentSource.USER_CREATED,
+        comment="角色来源：用户创建或自动生成",
+    )
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)

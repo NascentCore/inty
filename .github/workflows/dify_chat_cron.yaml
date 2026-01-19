@@ -1,5 +1,5 @@
 # CREATED_BY_AGENT
-name: Dify 定时聊天调用
+name: Dify character generation cron
 
 on:
   schedule:

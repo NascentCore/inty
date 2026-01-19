@@ -160,9 +160,9 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
 
     query = f"{character['description']}, name is {character['name']}"
     payload = {
-        "inputs": {
-            "visibility": "PUBLIC",
-        },
+        # "inputs": {
+        #     "visibility": "PUBLIC",
+        # },
         "query": query,
         "response_mode": "blocking",
         "user": "github-action",
