@@ -143,33 +143,33 @@ internal fun RegInfoScreen(
                 )
                 AgeItem(
                     itemModifier,
-                    text = stringResource(R.string.age_18_20),
-                    isSelected = (selectAge == "18-20"),
-                    onSelected = { selectAge = "18-20" },
+                    text = "18-25",
+                    isSelected = (selectAge == "18-25"),
+                    onSelected = { selectAge = "18-25" },
                 )
                 AgeItem(
                     itemModifier,
-                    text = stringResource(R.string.age_21_23),
-                    isSelected = (selectAge == "21-23"),
-                    onSelected = { selectAge = "21-23" },
+                    text = "26-35",
+                    isSelected = (selectAge == "26-35"),
+                    onSelected = { selectAge = "26-35" },
                 )
                 AgeItem(
                     itemModifier,
-                    text = stringResource(R.string.age_24_29),
-                    isSelected = (selectAge == "24-29"),
-                    onSelected = { selectAge = "24-29" },
+                    text = "36-45",
+                    isSelected = (selectAge == "36-45"),
+                    onSelected = { selectAge = "36-45" },
                 )
                 AgeItem(
                     itemModifier,
-                    text = stringResource(R.string.age_30_36),
-                    isSelected = (selectAge == "30-36"),
-                    onSelected = { selectAge = "30-36" },
+                    text = "46-55",
+                    isSelected = (selectAge == "46-55"),
+                    onSelected = { selectAge = "46-55" },
                 )
                 AgeItem(
                     itemModifier,
-                    text = stringResource(R.string.age_above_36),
-                    isSelected = (selectAge == "Above 36"),
-                    onSelected = { selectAge = "Above 36" },
+                    text = "55+",
+                    isSelected = (selectAge == "Above 55"),
+                    onSelected = { selectAge = "Above 55" },
                 )
             }
 
