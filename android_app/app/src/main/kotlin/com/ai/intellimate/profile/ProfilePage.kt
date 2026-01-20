@@ -12,7 +12,6 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.VibeModeColors
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -131,7 +130,6 @@ internal fun ProfilePage(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
-
         }
 
     // 使用 PageTrackingHelper 进行页面跟踪

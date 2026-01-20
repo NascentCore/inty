@@ -37,10 +37,9 @@ class ProfileViewModel : BaseVM() {
         refreshAgentDrafts()
 
         viewModelScope.launch {
-            UserProfileManager.profile
-                .collect { userProfile ->
-                    _uiState.update { it.copy(userProfile = userProfile) }
-                }
+            UserProfileManager.profile.collect { userProfile ->
+                _uiState.update { it.copy(userProfile = userProfile) }
+            }
         }
     }
 

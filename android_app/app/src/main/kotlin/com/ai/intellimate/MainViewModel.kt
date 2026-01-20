@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
-import com.ai.intellimate.utils.IntyUserProfileSDK
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
 import com.inty.api.models.api.v1.version.VersionCheckResponse
@@ -56,11 +55,8 @@ class MainViewModel : BaseVM() {
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
 
-    val userProfile = UserProfileManager.profile.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        UserProfile()
-    )
+    val userProfile =
+        UserProfileManager.profile.stateIn(viewModelScope, SharingStarted.Eagerly, UserProfile())
 
     // 登录状态StateFlow，用于UI响应登录状态变化
     private val _isLoggedIn =
@@ -356,7 +352,6 @@ class MainViewModel : BaseVM() {
             // 清除用户ID，通过 changeUser("") 来清空当前用户，这样 isLogin() 会返回 false
             IntySetting.changeUser("")
             UserProfileManager.clearUserProfile()
-
 
             // ✅ 修复：清理 Room 数据库，避免数据残留
             try {
