@@ -237,6 +237,14 @@ object AppColors {
     val EmailLoginButtonText = Color(0x99FFFFFF)
     /** Explore 角色卡片 VIP 角标：高饱和强对比底色，用于强化视觉提醒 */
     val VipHighlighterStrong = Color(0xFFFFD54F)
+    /** 消息页订阅横幅渐变起始色 */
+    val PremiumBannerGradientStart = Color(0xFF6D4CFF)
+    /** 消息页订阅横幅渐变结束色 */
+    val PremiumBannerGradientEnd = Color(0xFF5C2FD0)
+    /** 消息页订阅横幅 CTA 背景色 */
+    val PremiumBannerCtaBackground = Color(0xFFFFE44F)
+    /** 消息页订阅横幅 CTA 前景色（文字/图标） */
+    val PremiumBannerCtaForeground = Color(0xFF1C1523)
     /** Material Design Green 500 - 用于表示成功状态、激活状态或选中状态的绿色指示器 */
     val Green500 = Color(0xFF4CAF50)
 }

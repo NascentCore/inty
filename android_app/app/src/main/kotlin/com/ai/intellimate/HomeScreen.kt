@@ -490,6 +490,7 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
             navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
         onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
+        onOpenSubscription = { navController.navigate(Routes.Me.VipCenter) },
         pageTrackingContext = "MainActivity",
     )
 }
