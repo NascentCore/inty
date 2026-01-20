@@ -56,8 +56,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -270,14 +270,8 @@ private fun MessagesSubscriptionBanner(
                     vertical = UiConfigs.MessagesPage.PremiumBanner.ContentVerticalPadding,
                 )
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center,
-            ) {
+        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(
                     text = titleText,
                     fontSize = UiConfigs.MessagesPage.PremiumBanner.TitleFontSize,
@@ -292,8 +286,8 @@ private fun MessagesSubscriptionBanner(
             Row(
                 modifier =
                     Modifier.clip(
-                        RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CtaCornerRadius)
-                    )
+                            RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CtaCornerRadius)
+                        )
                         .background(AppColors.PremiumBannerCtaBackground)
                         .padding(
                             horizontal = UiConfigs.MessagesPage.PremiumBanner.CtaHorizontalPadding,

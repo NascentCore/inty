@@ -4,7 +4,6 @@ import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.store.IntySetting

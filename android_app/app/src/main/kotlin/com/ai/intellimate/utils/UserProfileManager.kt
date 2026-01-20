@@ -1,7 +1,6 @@
 package com.ai.intellimate.utils
 
 import ai.sxwl.android.data.api.model.UserProfile
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.jsonDataStore
 import ai.sxwl.android.utils.Utils
 import android.content.Context
@@ -78,7 +77,7 @@ object UserProfileManager {
     }*/
 
     suspend fun clearUserProfile() {
-        //IntySetting.clearAllUserProfileData()
+        // IntySetting.clearAllUserProfileData()
         Utils.getApp().userProfile.updateData { UserProfile() }
     }
 }

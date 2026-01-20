@@ -62,10 +62,7 @@ class ModifyProfileViewModel : BaseVM() {
 
             originalUserProfile = profile
 
-            UserProfileManager.profile
-                .collect {
-                    _userProfile.value = it
-                }
+            UserProfileManager.profile.collect { _userProfile.value = it }
         }
     }
 

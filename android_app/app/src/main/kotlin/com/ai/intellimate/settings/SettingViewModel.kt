@@ -70,10 +70,9 @@ class SettingViewModel : BaseVM() {
         }
 
         viewModelScope.launch {
-            UserProfileManager.profile
-                .collect { userProfile ->
-                    _state.update { it.copy(userEmail = userProfile.email.orEmpty()) }
-                }
+            UserProfileManager.profile.collect { userProfile ->
+                _state.update { it.copy(userEmail = userProfile.email.orEmpty()) }
+            }
         }
     }
 

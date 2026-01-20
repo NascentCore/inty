@@ -28,7 +28,6 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
-import com.ai.intellimate.utils.userProfile
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CancellationException
@@ -97,11 +96,8 @@ class ChatViewModel : BaseVM() {
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
     val isWaitingForReply = _isWaitingForReply.asStateFlow()
 
-    val userProfile = UserProfileManager.profile.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        UserProfile()
-    )
+    val userProfile =
+        UserProfileManager.profile.stateIn(viewModelScope, SharingStarted.Eagerly, UserProfile())
 
     private val _characterEnergy = MutableStateFlow(0)
     val characterEnergy = _characterEnergy.asStateFlow()
