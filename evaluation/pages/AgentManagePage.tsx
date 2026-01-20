@@ -134,11 +134,25 @@ export const AgentManagePage: React.FC = () => {
     setAgentCopy(newAgentCopy);
   };
 
-  // 修改头像弹窗状态
+  // 修改头像弹窗状态（列表中的修改头像按钮）
   const [avatarCropModalVisible, setAvatarCropModalVisible] = useState(false);
   const [avatarCropImageSrc, setAvatarCropImageSrc] = useState<string>("");
   const [currentAgentForAvatar, setCurrentAgentForAvatar] =
     useState<Agent | null>(null);
+
+  // 创建模式头像截取弹窗状态
+  const [createAvatarCropModalVisible, setCreateAvatarCropModalVisible] =
+    useState(false);
+  const [createAvatarCropImageSrc, setCreateAvatarCropImageSrc] =
+    useState<string>("");
+  const [createAvatarCropData, setCreateAvatarCropData] =
+    useState<AvatarCropData | null>(null);
+
+  // 编辑模式头像截取弹窗状态
+  const [editAvatarCropModalVisible, setEditAvatarCropModalVisible] =
+    useState(false);
+  const [editAvatarCropImageSrc, setEditAvatarCropImageSrc] =
+    useState<string>("");
 
   // 模型相关状态
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
@@ -399,7 +413,7 @@ export const AgentManagePage: React.FC = () => {
     loadAvailablePrompts(); // 加载 prompt 列表
   }, [loadAgents, loadModels, loadAvailablePrompts]);
 
-  // 处理头像上传（创建模式，不截取）
+  // 处理头像上传（创建模式，打开截取弹窗）
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
@@ -410,14 +424,15 @@ export const AgentManagePage: React.FC = () => {
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setAvatarPreview(result);
+      const imageUrl = e.target?.result as string;
+      setCreateAvatarCropImageSrc(imageUrl);
+      setCreateAvatarCropModalVisible(true);
     };
     reader.readAsDataURL(file);
     return false;
   };
 
-  // 处理编辑头像上传（编辑模式，直接上传）
+  // 处理编辑头像上传（编辑模式，打开截取弹窗）
   const handleEditAvatarChange: UploadProps["beforeUpload"] = (file) => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
@@ -429,19 +444,8 @@ export const AgentManagePage: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageUrl = e.target?.result as string;
-
-      // 更新 agent_copy：清空 avatar 和 avatar_crop，设置 background 为新图片
-      if (agentCopy) {
-        setAgentCopy({
-          ...agentCopy,
-          avatar: undefined, // 清空 avatar
-          background: imageUrl, // 设置 background 为新图片
-          extensions: {
-            ...agentCopy.extensions,
-            avatar_crop: undefined, // 清空 avatar_crop
-          },
-        });
-      }
+      setEditAvatarCropImageSrc(imageUrl);
+      setEditAvatarCropModalVisible(true);
     };
     reader.readAsDataURL(file);
     return false;
@@ -504,6 +508,45 @@ export const AgentManagePage: React.FC = () => {
     setAvatarCropModalVisible(false);
     setAvatarCropImageSrc("");
     setCurrentAgentForAvatar(null);
+  };
+
+  // 处理创建模式头像截取确认
+  const handleCreateAvatarCropConfirm = (cropData: AvatarCropData) => {
+    setCreateAvatarCropData(cropData);
+    setAvatarPreview(createAvatarCropImageSrc);
+    setCreateAvatarCropModalVisible(false);
+    setCreateAvatarCropImageSrc("");
+  };
+
+  // 处理创建模式头像截取取消
+  const handleCreateAvatarCropCancel = () => {
+    setCreateAvatarCropModalVisible(false);
+    setCreateAvatarCropImageSrc("");
+    setAvatarFile(null);
+  };
+
+  // 处理编辑模式头像截取确认
+  const handleEditAvatarCropConfirm = (cropData: AvatarCropData) => {
+    if (agentCopy) {
+      setAgentCopy({
+        ...agentCopy,
+        avatar: undefined,
+        background: editAvatarCropImageSrc,
+        extensions: {
+          ...agentCopy.extensions,
+          avatar_crop: cropData,
+        },
+      });
+    }
+    setEditAvatarCropModalVisible(false);
+    setEditAvatarCropImageSrc("");
+  };
+
+  // 处理编辑模式头像截取取消
+  const handleEditAvatarCropCancel = () => {
+    setEditAvatarCropModalVisible(false);
+    setEditAvatarCropImageSrc("");
+    setEditAvatarFile(null);
   };
 
   // 打开生成背景动图模态框时检查比例
@@ -777,6 +820,14 @@ export const AgentManagePage: React.FC = () => {
         }
       }
 
+      // 如果有截取数据，添加到 extensions 中
+      if (createAvatarCropData) {
+        agentData.extensions = {
+          ...agentData.extensions,
+          avatar_crop: createAvatarCropData,
+        };
+      }
+
       // 处理背景视频文件
       if (backgroundAnimatedFile) {
         // 上传视频文件
@@ -800,6 +851,7 @@ export const AgentManagePage: React.FC = () => {
         createForm.resetFields();
         setAvatarFile(null);
         setAvatarPreview("");
+        setCreateAvatarCropData(null);
         // 不需要调用 loadAgents()，因为 createAgentFromHook 已经优化更新了本地状态
       } else {
         // 创建失败，保持弹窗打开让用户重试
@@ -869,6 +921,14 @@ export const AgentManagePage: React.FC = () => {
       // 处理头像文件
       if (editAvatarFile) {
         updateData.avatar = editAvatarFile;
+      }
+
+      // 如果 agentCopy 有 extensions.avatar_crop，添加到更新数据中
+      if (agentCopy?.extensions?.avatar_crop) {
+        updateData.extensions = {
+          ...updateData.extensions,
+          avatar_crop: agentCopy.extensions.avatar_crop,
+        };
       }
 
       // 处理背景视频文件
@@ -1181,7 +1241,7 @@ export const AgentManagePage: React.FC = () => {
             </div>
           </Upload>
           <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
-            头像将在后端从上传的形象图片截取
+            点击上传后可手动截取头像区域
           </div>
         </Form.Item>
 
@@ -2159,7 +2219,7 @@ export const AgentManagePage: React.FC = () => {
         </Space>
       </Modal>
 
-      {/* 修改头像截取模态框 */}
+      {/* 修改头像截取模态框（列表中的修改头像按钮） */}
       <ImageCropModal
         visible={avatarCropModalVisible}
         imageSrc={avatarCropImageSrc}
@@ -2171,6 +2231,24 @@ export const AgentManagePage: React.FC = () => {
             | AvatarCropData
             | undefined
         }
+      />
+
+      {/* 创建模式头像截取模态框 */}
+      <ImageCropModal
+        visible={createAvatarCropModalVisible}
+        imageSrc={createAvatarCropImageSrc}
+        onCancel={handleCreateAvatarCropCancel}
+        onConfirm={handleCreateAvatarCropConfirm}
+        title="截取头像"
+      />
+
+      {/* 编辑模式头像截取模态框 */}
+      <ImageCropModal
+        visible={editAvatarCropModalVisible}
+        imageSrc={editAvatarCropImageSrc}
+        onCancel={handleEditAvatarCropCancel}
+        onConfirm={handleEditAvatarCropConfirm}
+        title="截取头像"
       />
 
       {/* 背景图裁剪模态框 */}
