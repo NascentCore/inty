@@ -91,7 +91,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
 import com.ai.intellimate.boost.BoostConfig
@@ -559,14 +558,12 @@ private fun ProfileHeader(
             )
         }
 
-        if (BuildConfig.DEBUG) {
-            Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
-            VibeModeBanner(
-                modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-                isSubscribed = isSubscribed,
-                onRequestSubscribe = { showSubscribeDialog = true },
-            )
-        }
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        VibeModeBanner(
+            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            isSubscribed = isSubscribed,
+            onRequestSubscribe = { showSubscribeDialog = true },
+        )
 
         if (appUpdateTips) {
             Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
