@@ -6,6 +6,23 @@ on:
     # 每日 UTC 00:00 执行
     - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      target_count:
+        description: "目标创建角色数量 (1-10)"
+        required: false
+        default: "3"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
+          - "6"
+          - "7"
+          - "8"
+          - "9"
+          - "10"
 
 jobs:
   call_dify:
@@ -31,4 +48,4 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           PYTHONPATH: .
         run: |
-          python scripts/run_dify_chat.py --config sync_agents_dev_to_prod/config.yaml.example
+          python scripts/run_dify_chat.py --config sync_agents_dev_to_prod/config.yaml.example --target-count ${{ inputs.target_count || '3' }}

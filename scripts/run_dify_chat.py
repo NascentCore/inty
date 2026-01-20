@@ -195,12 +195,17 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
 @app.default
 async def main(
     config: str = "sync_agents_dev_to_prod/config.yaml.example",
+    target_count: int = 3,
 ) -> int:
     """主函数：查询数据库、生成角色并批量创建
 
     Args:
         config: 配置文件路径，相对于 scripts/ 目录（默认: sync_agents_dev_to_prod/config.yaml.example）
+        target_count: 目标创建角色数量（默认: 3，最大: 10）
     """
+    if target_count < 1 or target_count > 10:
+        logger.error("target_count 必须在 1-10 之间")
+        return 1
     google_api_key = os.environ.get("GOOGLE_API_KEY")
     dify_api_key = os.environ.get("DIFY_API_KEY")
 
@@ -230,9 +235,8 @@ async def main(
             # 生成 10 个角色
             characters = generate_characters(google_api_key, existing_names)
 
-            # 循环调用 Dify，成功 5 个即停止
+            # 循环调用 Dify，达到目标数量即停止
             success_count = 0
-            target_count = 1
 
             for char in characters:
                 if call_dify(dify_api_key, char):
