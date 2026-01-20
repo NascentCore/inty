@@ -63,6 +63,7 @@ export interface AgentCreateRequest {
   voice_id?: string;
   llm_config?: LLMConfig;
   meta_data?: AgentMetaData;
+  extensions?: { [key: string]: unknown }; // 扩展字段，如 avatar_crop
   tags?: string[];
 }
 
