@@ -596,7 +596,6 @@ private fun ProfileTabContent(
     LaunchedEffect(Unit) {
         if (!hasInitialized) {
             hasInitialized = true
-            profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
             profileViewModel.refreshAgentDrafts()

@@ -131,10 +131,7 @@ internal fun ProfilePage(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            // 从 ModifyProfileActivity 返回后，刷新用户信息
-            if (result.resultCode == Activity.RESULT_OK) {
-                profileViewModel?.updateUserInfoLocal()
-            }
+
         }
 
     // 使用 PageTrackingHelper 进行页面跟踪
@@ -144,14 +141,6 @@ internal fun ProfilePage(
             "MainActivity",
             mapOf("agent_count" to agents.size, "is_loading" to isLoading),
         )
-    }
-
-    // 监听页面恢复，自动刷新用户信息（从 ModifyProfileActivity 返回时会触发）
-    if (profileViewModel != null) {
-        LifecycleResumeEffect(profileViewModel) {
-            profileViewModel.updateUserInfoLocal()
-            onPauseOrDispose {}
-        }
     }
 
     // LazyGrid state

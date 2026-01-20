@@ -60,8 +60,12 @@ class ModifyProfileViewModel : BaseVM() {
         viewModelScope.launch {
             val profile = UserProfileManager.profile.first()
 
-            _userProfile.value = profile
             originalUserProfile = profile
+
+            UserProfileManager.profile
+                .collect {
+                    _userProfile.value = it
+                }
         }
     }
 

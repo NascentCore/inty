@@ -142,17 +142,7 @@ fun ChatSettingsDrawer(
     val horizontalPadding = 16
     val preferenceFlow = remember(context) { PersonaPreferenceStore.preferenceFlow(context) }
     val userPreference by preferenceFlow.collectAsState(initial = "")
-
-    // 在组件初始化时立即更新用户信息,未添加这部分触发更新userInfo的时候，会因为在chatViewModel中虽然更新了userProfile
-    // 但是userProfileState并没有正确触发数据流的更新，引起UI层数据不能正确显示真实数据的问题。
-    LaunchedEffect(chatViewModel) { chatViewModel.updateUserInfo() }
-
     val userProfileState by chatViewModel.userProfile.collectAsState()
-
-    LifecycleResumeEffect(chatViewModel) {
-        chatViewModel.updateUserInfo()
-        onPauseOrDispose {}
-    }
 
     // 本地编辑状态（与 MySettingActivity 一致）
     var editKey by rememberSaveable { mutableStateOf(EditKey.None) }
@@ -167,20 +157,6 @@ fun ChatSettingsDrawer(
     val modifyProfileViewModel: ModifyProfileViewModel = viewModel()
 
     LaunchedEffect(userProfileState) { modifyProfileViewModel.init(userProfileState) }
-
-    // 监听用户信息更新事件，及时刷新UI
-    LaunchedEffect(modifyProfileViewModel) {
-        modifyProfileViewModel.events.collect { event ->
-            when (event) {
-                com.ai.intellimate.ViewModelEvent.UserProfileUpdated -> {
-                    // 用户信息更新后，立即刷新ChatViewModel中的用户信息
-                    chatViewModel.updateUserInfo()
-                }
-
-                else -> {}
-            }
-        }
-    }
 
     // 移除TheRouter拦截器，使用其他方式处理用户信息更新
 

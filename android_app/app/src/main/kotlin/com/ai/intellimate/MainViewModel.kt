@@ -29,9 +29,11 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -54,9 +56,11 @@ class MainViewModel : BaseVM() {
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
 
-    // 使用flow数据流的形式，感知用户数据
-    private val _userProfile = MutableStateFlow(UserProfile())
-    val userProfile = _userProfile.asStateFlow()
+    val userProfile = UserProfileManager.profile.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        UserProfile()
+    )
 
     // 登录状态StateFlow，用于UI响应登录状态变化
     private val _isLoggedIn =
@@ -109,7 +113,6 @@ class MainViewModel : BaseVM() {
     }
 
     init {
-        loadStartupData()
         updateLoginState()
         subscribePushEvents()
 
@@ -183,15 +186,6 @@ class MainViewModel : BaseVM() {
     /** 更新登录状态 */
     fun updateLoginState() {
         _isLoggedIn.value = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-    }
-
-    /** 加载启动数据（快速展示） 从统一启动管理器获取预加载的数据 */
-    private fun loadStartupData() {
-        // 从统一启动管理器获取用户信息
-        val startupUserProfile = UnifiedStartupManager.getCurrentUserProfile()
-        if (startupUserProfile != null) {
-            _userProfile.value = startupUserProfile
-        }
     }
 
     fun loadBusinessData() {
@@ -276,22 +270,6 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    /** 接口请求获取用户信息 */
-    fun getUserProfile() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val userProfile = IntyUserProfileSDK.getUserProfile()
-                if (userProfile != null) {
-                    _userProfile.value = userProfile
-                    // 更新本地缓存
-                    UserProfileManager.saveUserProfile(userProfile)
-                }
-            } catch (e: Exception) {
-                LogUtils.e("getUserProfile exception: ${e.message}")
-            }
-        }
-    }
-
     // 感知接口获取到的用户订阅状态
     val vipStatusFlow = BillingRepository.vipStatusFlow
     val vipPlanFlow = BillingRepository.plansFlow
@@ -348,7 +326,7 @@ class MainViewModel : BaseVM() {
     /** 用户登出方法 */
     fun logout() {
         // 获取当前用户信息用于事件上报
-        val currentUserProfile = _userProfile.value
+        val currentUserProfile = userProfile.value
 
         // 上报用户登出事件
         FirebaseManager.logEvent(
@@ -363,7 +341,6 @@ class MainViewModel : BaseVM() {
 
         // 清理内存数据
         followingAgents.clear()
-        _userProfile.value = UserProfile()
         tabHistory.clear()
 
         // 清理统一启动管理器的数据
