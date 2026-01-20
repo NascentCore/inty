@@ -946,6 +946,13 @@ export const AgentManagePage: React.FC = () => {
       // 如果 agent_copy 中有 background_animated，使用它（可能是直接设置的 URL）
       if (agentCopy?.background_animated) {
         updateData.background_animated = agentCopy.background_animated;
+      } else if (
+        currentAgent?.background_animated &&
+        !agentCopy?.background_animated &&
+        !backgroundAnimatedFile
+      ) {
+        // 处理背景动图删除：原来有动图 + 现在没有了 + 没有新上传的文件 = 用户要删除动图
+        updateData.background_animated = "";
       }
 
       // 使用 useAgents hook 的 updateAgent 进行优化更新
