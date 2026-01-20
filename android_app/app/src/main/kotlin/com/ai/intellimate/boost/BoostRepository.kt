@@ -46,16 +46,44 @@ class BoostRepository(
     }
 
     /** 更新状态流（在每次写入后调用） */
-    private suspend fun updateStateFlows() {
-        val snapshot = BoostStorage.getBoostState()
+    private fun updateStateFlows() {
+        val snapshot = getCurrentSnapshot()
         _state.value = snapshot.toDomain()
         _leaderboard.value = buildLeaderboard(snapshot)
+    }
+
+    private fun getCurrentSnapshot(nowMillis: Long = System.currentTimeMillis()): BoostStateSnapshot {
+        val current = BoostStorage.getBoostState()
+        val normalized = normalizeDailyRewardState(current, nowMillis)
+        if (normalized != current) {
+            BoostStorage.saveBoostState(normalized)
+        }
+        return normalized
+    }
+
+    private fun normalizeDailyRewardState(
+        snapshot: BoostStateSnapshot,
+        nowMillis: Long,
+    ): BoostStateSnapshot {
+        if (snapshot.lastDailyRewardAtMillis <= 0L) {
+            return if (!snapshot.hasClaimedDailyReward) snapshot
+            else snapshot.copy(hasClaimedDailyReward = false)
+        }
+        val elapsed = nowMillis - snapshot.lastDailyRewardAtMillis
+        val hasClaimed = elapsed < BoostConfig.DAILY_SIGN_IN_INTERVAL_MILLIS
+        if (hasClaimed == snapshot.hasClaimedDailyReward) return snapshot
+        return snapshot.copy(hasClaimedDailyReward = hasClaimed)
+    }
+
+    private fun isDailyRewardAvailable(snapshot: BoostStateSnapshot, nowMillis: Long): Boolean {
+        if (snapshot.lastDailyRewardAtMillis <= 0L) return true
+        return nowMillis - snapshot.lastDailyRewardAtMillis >= BoostConfig.DAILY_SIGN_IN_INTERVAL_MILLIS
     }
 
     suspend fun addPoints(points: Int, source: PointSource) {
         if (points <= 0) return
         withContext(scope.coroutineContext) {
-            val current = BoostStorage.getBoostState()
+            val current = getCurrentSnapshot()
             val gain =
                 when (source) {
                     PointSource.SignIn,
@@ -82,15 +110,17 @@ class BoostRepository(
 
     suspend fun claimDailyReward(): Int {
         return withContext(scope.coroutineContext) {
-            val current = BoostStorage.getBoostState()
-            if (current.hasClaimedDailyReward) {
+            val nowMillis = System.currentTimeMillis()
+            val current = getCurrentSnapshot(nowMillis)
+            if (!isDailyRewardAvailable(current, nowMillis)) {
                 throw BoostException(BoostError.DailyRewardAlreadyClaimed)
             }
             val claimed = BoostConfig.DAILY_SIGN_IN_REWARD
             val updated =
                 current.copy(
-                    availablePoints = current.availablePoints + BoostConfig.DAILY_SIGN_IN_REWARD,
+                    availablePoints = current.availablePoints + claimed,
                     hasClaimedDailyReward = true,
+                    lastDailyRewardAtMillis = nowMillis,
                 )
             BoostStorage.saveBoostState(updated)
             updateStateFlows()
@@ -187,17 +217,16 @@ class BoostRepository(
         withContext(scope.coroutineContext) {
             val today = LocalDate.now(ZoneId.systemDefault()).toString()
             runCatching {
-                    val current = BoostStorage.getBoostState()
+                    val current = getCurrentSnapshot()
                     if (current.lastResetDate != today) {
                         val updated =
                             current.copy(
                                 dailyEnergyEarned = 0,
-                                hasClaimedDailyReward = false,
                                 lastResetDate = today,
                             )
                         BoostStorage.saveBoostState(updated)
-                        updateStateFlows()
                     }
+                    updateStateFlows()
                 }
                 .onFailure { LogUtils.e("BoostRepository", "Daily reset failed: ${it.message}") }
         }

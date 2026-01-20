@@ -20,6 +20,9 @@ object BoostConfig {
     /** 订阅会员每月奖励。 */
     const val MONTHLY_VIP_REWARD = 500
 
+    /** 每日登录奖励冷却时间（24小时）。 */
+    const val DAILY_SIGN_IN_INTERVAL_MILLIS = 24 * 60 * 60 * 1000L
+
     /** 文本 → token 的平均估算比例（字符数 / AVG_CHARS_PER_TOKEN）。 */
     const val AVG_CHARS_PER_TOKEN = 4.0
 

@@ -532,6 +532,8 @@
     <string name="boost_daily_reward_cta">Claim daily Boost Points (+200)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
+    <string name="boost_daily_login_reward_title">Daily login reward</string>
+    <string name="boost_daily_login_reward_subtitle">+%1$d Boost Points</string>
     <string name="boost_leaderboard_title">Top IntelliMates</string>
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>

@@ -387,6 +387,39 @@ object UiConfigs {
         }
     }
 
+    /** 每日登录奖励横幅配置 - 适用于居中庆祝横幅的尺寸、间距与动画 */
+    object DailyLoginRewardBanner {
+        /** 横幅最大宽度 */
+        val MaxWidth = 320.dp
+
+        /** 横幅内容水平内边距 */
+        val HorizontalPadding = Padding.DialogContentHorizontal
+
+        /** 横幅内容垂直内边距 */
+        val VerticalPadding = Padding.DialogContentVertical
+
+        /** 图标大小 */
+        val IconSize = 36.dp
+
+        /** 图标与文字之间的间距 */
+        val IconTextSpacing = Spacing.Medium
+
+        /** 标题与副标题之间的间距 */
+        val TextSpacing = Spacing.Tiny
+
+        /** 横幅圆角半径 */
+        val CornerRadius = Shape.DialogLarge
+
+        /** 横幅阴影高度 */
+        val Elevation = 8.dp
+
+        /** 自动消失时长（毫秒） */
+        const val AutoDismissMillis = 2400L
+
+        /** 动画时长（毫秒） */
+        const val AnimationMillis = 220
+    }
+
     /** 个人页面配置 - 适用于个人资料页面的头像、卡片、网格、空状态等组件的尺寸和间距设置 */
     object MePage {
         /** 顶部图标行配置 - 适用于个人页面顶部图标行的图标大小、间距和内边距设置 */

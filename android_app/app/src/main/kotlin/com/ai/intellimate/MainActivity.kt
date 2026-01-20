@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -61,12 +62,18 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.ai.intellimate.boost.BoostError
+import com.ai.intellimate.boost.BoostEvent
+import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.PointSource
+import com.ai.intellimate.boost.ui.DailyLoginRewardBanner
 import com.ai.intellimate.call.voiceCallModule
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.tips.IntelliMateTipsRepository
 import com.ai.intellimate.tips.IntelliMateTipsSessionGate
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.CarouselBackground
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
@@ -352,6 +359,8 @@ class MainActivity : BaseActivity() {
         var intelliMateTipText by remember { mutableStateOf<String?>(null) }
 
         val scope = rememberCoroutineScope()
+        var showDailyLoginRewardBanner by remember { mutableStateOf(false) }
+        var dailyLoginRewardPoints by remember { mutableIntStateOf(0) }
 
         fun tryShowRandomIntelliMateTip() {
             if (!isLoggedIn) return
@@ -371,6 +380,35 @@ class MainActivity : BaseActivity() {
                 showIntelliMateTipDialog = true
                 IntySetting.setIntelliMateTipLastShowTimeMillis(System.currentTimeMillis())
                 IntelliMateTipsSessionGate.markShownInCurrentSession()
+            }
+        }
+
+        suspend fun tryClaimDailyLoginReward() {
+            if (!isLoggedIn) return
+            try {
+                BoostManager.claimDailyReward()
+            } catch (e: BoostException) {
+                if (e.error != BoostError.DailyRewardAlreadyClaimed) {
+                    LogUtils.w("MainActivity", "Daily login reward failed: ${e.error}")
+                }
+            } catch (e: Exception) {
+                LogUtils.e("MainActivity", "Daily login reward failed: ${e.message}")
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            BoostManager.events.collect { event ->
+                if (event is BoostEvent.PointsEarned && event.source == PointSource.SignIn) {
+                    dailyLoginRewardPoints = event.points
+                    showDailyLoginRewardBanner = true
+                }
+            }
+        }
+
+        LaunchedEffect(isLoggedIn) {
+            if (!isLoggedIn) {
+                showDailyLoginRewardBanner = false
+                dailyLoginRewardPoints = 0
             }
         }
 
@@ -418,6 +456,7 @@ class MainActivity : BaseActivity() {
         LifecycleResumeEffect(isLoggedIn) {
             if (isLoggedIn) {
                 tryShowRandomIntelliMateTip()
+                scope.launch { tryClaimDailyLoginReward() }
             }
             onPauseOrDispose {}
         }
@@ -462,13 +501,23 @@ class MainActivity : BaseActivity() {
         // 通过传递 NavController，MainActivity 可以控制导航，而 AppNavHost 仍然可以在
         // 没有外部 NavController 时创建自己的实例（向后兼容）
         val navController = rememberNavController()
-        AppNavHost(
-            page,
-            mainViewModel,
-            chatViewModel,
-            defaultViewModelProviderFactory,
-            navController,
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            AppNavHost(
+                page,
+                mainViewModel,
+                chatViewModel,
+                defaultViewModelProviderFactory,
+                navController,
+            )
+            DailyLoginRewardBanner(
+                points = dailyLoginRewardPoints,
+                isVisible = showDailyLoginRewardBanner && isLoggedIn,
+                onDismiss = { showDailyLoginRewardBanner = false },
+                modifier =
+                    Modifier.align(Alignment.Center)
+                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            )
+        }
 
         // 只在用户已登录时显示 tips 弹窗
         if (showIntelliMateTipDialog && isLoggedIn) {

@@ -12,6 +12,7 @@ data class BoostStateSnapshot(
     val chatMessagePoints: Int = 0,
     val dailyEnergyEarned: Int = 0,
     val hasClaimedDailyReward: Boolean = false,
+    val lastDailyRewardAtMillis: Long = 0,
     val lastResetDate: String = "",
     val boostsByAgent: Map<String, AgentBoostInfoSnapshot> = emptyMap(),
     /** 上次领取每日登录奖励的日期，格式为 "yyyy-MM-dd"，用于判断当日是否已领取。 */
@@ -37,6 +38,7 @@ data class BoostState(
     val chatMessagePoints: Int = 0,
     val dailyEnergyEarned: Int = 0,
     val hasClaimedDailyReward: Boolean = false,
+    val lastDailyRewardAtMillis: Long = 0,
     /** 当日是否已领取每日登录奖励。 */
     val hasClaimedDailyLoginReward: Boolean = false,
     val boostsByAgent: Map<String, AgentBoostInfo> = emptyMap(),
@@ -111,6 +113,7 @@ internal fun BoostStateSnapshot.toDomain(): BoostState {
         chatMessagePoints = chatMessagePoints,
         dailyEnergyEarned = dailyEnergyEarned,
         hasClaimedDailyReward = hasClaimedDailyReward,
+        lastDailyRewardAtMillis = lastDailyRewardAtMillis,
         hasClaimedDailyLoginReward = lastClaimedDailyLoginReward == today,
         boostsByAgent = boostsByAgent.mapValues { it.value.toDomain() },
         lastResetDate = lastResetDate,
