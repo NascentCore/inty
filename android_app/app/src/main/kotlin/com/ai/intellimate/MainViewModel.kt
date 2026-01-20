@@ -29,9 +29,11 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -54,9 +56,11 @@ class MainViewModel : BaseVM() {
     private val _currentChatPageIndex = MutableStateFlow(0)
     val currentChatPageIndex = _currentChatPageIndex.asStateFlow()
 
-    // 使用flow数据流的形式，感知用户数据
-    private val _userProfile = MutableStateFlow(UserProfile())
-    val userProfile = _userProfile.asStateFlow()
+    val userProfile = UserProfileManager.profile.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        UserProfile()
+    )
 
     // 登录状态StateFlow，用于UI响应登录状态变化
     private val _isLoggedIn =
@@ -109,7 +113,6 @@ class MainViewModel : BaseVM() {
     }
 
     init {
-        loadStartupData()
         updateLoginState()
         subscribePushEvents()
 
@@ -183,15 +186,6 @@ class MainViewModel : BaseVM() {
     /** 更新登录状态 */
     fun updateLoginState() {
         _isLoggedIn.value = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-    }
-
-    /** 加载启动数据（快速展示） 从统一启动管理器获取预加载的数据 */
-    private fun loadStartupData() {
-        // 从统一启动管理器获取用户信息
-        val startupUserProfile = UnifiedStartupManager.getCurrentUserProfile()
-        if (startupUserProfile != null) {
-            _userProfile.value = startupUserProfile
-        }
     }
 
     fun loadBusinessData() {
@@ -276,22 +270,6 @@ class MainViewModel : BaseVM() {
         }
     }
 
-    /** 接口请求获取用户信息 */
-    fun getUserProfile() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val userProfile = IntyUserProfileSDK.getUserProfile()
-                if (userProfile != null) {
-                    _userProfile.value = userProfile
-                    // 更新本地缓存
-                    UserProfileManager.saveUserProfile(userProfile)
-                }
-            } catch (e: Exception) {
-                LogUtils.e("getUserProfile exception: ${e.message}")
-            }
-        }
-    }
-
     // 感知接口获取到的用户订阅状态
     val vipStatusFlow = BillingRepository.vipStatusFlow
     val vipPlanFlow = BillingRepository.plansFlow
@@ -347,62 +325,59 @@ class MainViewModel : BaseVM() {
 
     /** 用户登出方法 */
     fun logout() {
-        // 获取当前用户信息用于事件上报
-        val currentUserProfile = _userProfile.value
+        viewModelScope.launch {
+            // 获取当前用户信息用于事件上报
+            val currentUserProfile = userProfile.value
 
-        // 上报用户登出事件
-        FirebaseManager.logEvent(
-            FirebaseManager.Events.USER_LOGOUT,
-            FirebaseManager.safeEventParams(
-                "user_id" to currentUserProfile.id,
-                "user_name" to currentUserProfile.nickname,
-                "logout_method" to "manual",
-                "timestamp" to System.currentTimeMillis(),
-            ),
-        )
+            // 上报用户登出事件
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.USER_LOGOUT,
+                FirebaseManager.safeEventParams(
+                    "user_id" to currentUserProfile.id,
+                    "user_name" to currentUserProfile.nickname,
+                    "logout_method" to "manual",
+                    "timestamp" to System.currentTimeMillis(),
+                ),
+            )
 
-        // 清理内存数据
-        followingAgents.clear()
-        _userProfile.value = UserProfile()
-        tabHistory.clear()
+            // 清理内存数据
+            followingAgents.clear()
+            tabHistory.clear()
 
-        // 清理统一启动管理器的数据
-        UnifiedStartupManager.clearAllData()
+            // 清理统一启动管理器的数据
+            UnifiedStartupManager.clearAllData()
 
-        // 先隐藏设置界面，避免UI闪动
-        // 这样在状态切换时，UI会直接从 SettingContent 切换到 SplashLoginUI，而不是先显示 SettingContent
-        hideSettings()
+            // 先隐藏设置界面，避免UI闪动
+            // 这样在状态切换时，UI会直接从 SettingContent 切换到 SplashLoginUI，而不是先显示 SettingContent
+            hideSettings()
 
-        // 清理本地存储
-        IntySetting.setToken("")
-        // 清除用户ID，通过 changeUser("") 来清空当前用户，这样 isLogin() 会返回 false
-        IntySetting.changeUser("")
+            // 清理本地存储
+            IntySetting.setToken("")
+            // 清除用户ID，通过 changeUser("") 来清空当前用户，这样 isLogin() 会返回 false
+            IntySetting.changeUser("")
+            UserProfileManager.clearUserProfile()
 
-        viewModelScope.launch { UserProfileManager.clearUserProfile() }
 
-        // 更新登录状态，触发UI更新
-        // 注意：hideSettings() 已经在上方调用，所以这里更新状态后，UI会直接从 SettingContent 切换到 SplashLoginUI
-        updateLoginState()
-
-        // ✅ 修复：清理 Room 数据库，避免数据残留
-        viewModelScope.launch(Dispatchers.IO) {
+            // ✅ 修复：清理 Room 数据库，避免数据残留
             try {
                 ai.sxwl.android.data.di.DataModule.getChatRepository().clearAllChatData()
                 LogUtils.i("MainViewModel.logout: cleared all chat data")
             } catch (e: Exception) {
                 LogUtils.e("MainViewModel.logout: failed to clear chat data: ${e.message}")
             }
-        }
 
-        // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
-        // 参考:
-        // https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
-        viewModelScope.launch {
+            // 清除凭证状态 - 通知所有凭证提供者清除存储的凭证会话
+            // 参考:
+            // https://developer.android.com/identity/sign-in/credential-manager-siwg#handle-sign-out
             try {
                 clearCredentialState(Utils.getApp())
             } catch (e: Exception) {
                 LogUtils.e("Failed to clear credential state during logout: ${e.message}")
             }
+
+            // 更新登录状态，触发UI更新
+            // 注意：hideSettings() 已经在上方调用，所以这里更新状态后，UI会直接从 SettingContent 切换到 SplashLoginUI
+            updateLoginState()
         }
     }
 

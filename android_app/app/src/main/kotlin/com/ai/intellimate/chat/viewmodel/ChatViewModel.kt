@@ -28,6 +28,7 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
+import com.ai.intellimate.utils.userProfile
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CancellationException
@@ -35,8 +36,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -94,8 +97,11 @@ class ChatViewModel : BaseVM() {
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
     val isWaitingForReply = _isWaitingForReply.asStateFlow()
 
-    private val _userProfile = MutableStateFlow<UserProfile>(UserProfile())
-    val userProfile = _userProfile.asStateFlow()
+    val userProfile = UserProfileManager.profile.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        UserProfile()
+    )
 
     private val _characterEnergy = MutableStateFlow(0)
     val characterEnergy = _characterEnergy.asStateFlow()
@@ -1453,7 +1459,6 @@ class ChatViewModel : BaseVM() {
     fun clearAllData() {
         _msgs.update { emptyList() }
         _agentInfo.value = null
-        _userProfile.value = UserProfile()
         inputData.update { "" }
         inputSelection.value = 0
         _isWaitingForReply.value = false
@@ -1470,17 +1475,6 @@ class ChatViewModel : BaseVM() {
 
         // 清理消息查询完成状态
         _isQueryMsgsCompleted.value = false
-    }
-
-    fun setUserProfile(userProfile: UserProfile) {
-        _userProfile.value = userProfile
-    }
-
-    // 本地userInfo的更新，而非接口
-    fun updateUserInfo() {
-        if (UserProfileManager.hasUserProfile()) {
-            _userProfile.value = UserProfileManager.getUserProfile()
-        }
     }
 
     suspend fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {

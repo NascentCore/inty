@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -27,7 +28,7 @@ class RegInfoViewModel : BaseVM() {
 
     fun onSave(gender: GENDER, age: String) {
         launchBackground {
-            val info = UserProfileManager.getUserProfile()
+            val info = UserProfileManager.profile.first()
             // 调用接口，需要让服务端存储游客的性别和年龄数据
             val updatedProfile = info.copy(gender = gender.value, ageGroup = age)
 

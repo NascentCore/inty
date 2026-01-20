@@ -35,6 +35,13 @@ class ProfileViewModel : BaseVM() {
     init {
         loadUserProfile()
         refreshAgentDrafts()
+
+        viewModelScope.launch {
+            UserProfileManager.profile
+                .collect { userProfile ->
+                    _uiState.update { it.copy(userProfile = userProfile) }
+                }
+        }
     }
 
     /** 加载用户信息 */
@@ -43,20 +50,15 @@ class ProfileViewModel : BaseVM() {
             try {
                 val userProfile = IntyUserProfileSDK.getUserProfile()
                 if (userProfile != null) {
-                    _uiState.update { it.copy(userProfile = userProfile) }
                     UserProfileManager.saveUserProfile(userProfile)
                     LogUtils.i("ProfileViewModel - Updated user profile from server: $userProfile")
                 } else {
                     LogUtils.e(
                         "ProfileViewModel - getUserProfile failure: Failed to get user profile"
                     )
-                    // 使用本地缓存的用户信息
-                    _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }
                 }
             } catch (e: Exception) {
                 LogUtils.e("ProfileViewModel - getUserProfile exception: ${e.message}")
-                // 使用本地缓存的用户信息
-                _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }
             }
         }
     }
@@ -78,11 +80,6 @@ class ProfileViewModel : BaseVM() {
             CreateRoleDraftStorage.deleteDraft(draftId)
             refreshAgentDrafts()
         }
-    }
-
-    /** 更新用户信息（从本地） */
-    fun updateUserInfoLocal() {
-        _uiState.update { it.copy(userProfile = UserProfileManager.getUserProfile()) }
     }
 
     /** 获取用户创建的 Agents 列表（从网络加载） */

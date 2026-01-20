@@ -5,17 +5,23 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.jsonDataStore
 import ai.sxwl.android.utils.Utils
 import android.content.Context
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
-val Context.userProfile by jsonDataStore("user_pfofile.json", UserProfile())
+val Context.userProfile by jsonDataStore("user_profile.json", UserProfile())
 
 /** 用户信息的数据管理类 */
 object UserProfileManager {
     val profile = Utils.getApp().userProfile.data
 
+    suspend fun updateUserProfile(update: (UserProfile) -> UserProfile) {
+        Utils.getApp().userProfile.updateData(update)
+    }
+
     suspend fun saveUserProfile(userProfile: UserProfile) {
         Utils.getApp().userProfile.updateData { userProfile }
 
-        IntySetting.setUserProfileData("id", userProfile.id)
+        /*IntySetting.setUserProfileData("id", userProfile.id)
         IntySetting.setUserProfileData("nickname", userProfile.nickname)
         IntySetting.setUserProfileData("avatar", userProfile.avatar ?: "")
         IntySetting.setUserProfileData("description", userProfile.description ?: "")
@@ -37,10 +43,10 @@ object UserProfileManager {
                 is Int -> IntySetting.setUserProfileInt("age_group_int", ageGroup)
                 else -> IntySetting.setUserProfileData("age_group", ageGroup.toString())
             }
-        }
+        }*/
     }
 
-    fun getUserProfile(): UserProfile {
+    /*fun getUserProfile(): UserProfile {
         return UserProfile(
             id = IntySetting.getUserProfileData("id") ?: "",
             nickname = IntySetting.getUserProfileData("nickname") ?: "",
@@ -62,14 +68,17 @@ object UserProfileManager {
                         .takeIf { it > 0 }
                         .toString(),
         )
-    }
+    }*/
 
-    fun hasUserProfile(): Boolean {
+    val hasUserProfile: Flow<Boolean>
+        get() = profile.map { it.id.isNotEmpty() }
+
+    /*fun hasUserProfile(): Boolean {
         return IntySetting.hasUserProfileData("id")
-    }
+    }*/
 
     suspend fun clearUserProfile() {
-        IntySetting.clearAllUserProfileData()
+        //IntySetting.clearAllUserProfileData()
         Utils.getApp().userProfile.updateData { UserProfile() }
     }
 }

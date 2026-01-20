@@ -210,7 +210,6 @@ fun ChatPageContainer(
 
             LaunchedEffect(key1 = agent.id, key2 = agent.isFollowed) {
                 chatViewModel.setAgentInfo(agent)
-                chatViewModel.setUserProfile(userProfile)
             }
 
             val isPageCurrent = currentPage == pageState.currentPage

@@ -60,8 +60,12 @@ class ModifyProfileViewModel : BaseVM() {
         viewModelScope.launch {
             val profile = UserProfileManager.profile.first()
 
-            _userProfile.value = profile
             originalUserProfile = profile
+
+            UserProfileManager.profile
+                .collect {
+                    _userProfile.value = it
+                }
         }
     }
 
@@ -213,17 +217,15 @@ class ModifyProfileViewModel : BaseVM() {
 
                     when (result) {
                         is HttpResult.Success -> {
-                            //                            _userProfile.value =
-                            //                                current.copy(
-                            //                                    // No cropping, just use the
-                            // provided url.
-                            //                                    avatar = result.data.url
-                            //                                )
+                            _userProfile.value =
+                                current.copy(
+                                    // No cropping, just use the provided url.
+                                    avatar = result.data.url
+                                )
                             // 头像上传完毕提示
-                            //                            viewModelScope.launch(Dispatchers.Main) {
-                            //
-                            // ToastUtils.showShort(R.string.avatar_upload_success)
-                            //                            }
+                            viewModelScope.launch(Dispatchers.Main) {
+                                ToastUtils.showShort(R.string.avatar_upload_success)
+                            }
                         }
                         is HttpResult.Failure -> {
                             _userProfile.value = current.copy(avatar = original.avatar)
