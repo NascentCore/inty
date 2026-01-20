@@ -342,6 +342,51 @@ object UiConfigs {
         val BottomSpacing = 2.dp
     }
 
+    /** 消息页面配置 - 适用于 Messages 页面顶部订阅横幅的尺寸与排版 */
+    object MessagesPage {
+        /** 订阅横幅配置 */
+        object PremiumBanner {
+            /** 横幅高度 */
+            val Height = 110.dp
+
+            /** 横幅圆角半径 */
+            val CornerRadius = 20.dp
+
+            /** 横幅内容水平内边距 */
+            val ContentHorizontalPadding = 16.dp
+
+            /** 横幅内容垂直内边距 */
+            val ContentVerticalPadding = 14.dp
+
+            /** 标题字体大小 */
+            val TitleFontSize = 16.sp
+
+            /** 标题行高 */
+            val TitleLineHeight = 22.sp
+
+            /** CTA 按钮圆角半径 */
+            val CtaCornerRadius = 18.dp
+
+            /** CTA 按钮水平内边距 */
+            val CtaHorizontalPadding = 14.dp
+
+            /** CTA 按钮垂直内边距 */
+            val CtaVerticalPadding = 6.dp
+
+            /** CTA 图标大小 */
+            val CtaIconSize = 16.dp
+
+            /** CTA 图标与文字间距 */
+            val CtaIconTextSpacing = 6.dp
+
+            /** CTA 文字大小 */
+            val CtaTextSize = 14.sp
+
+            /** CTA 行高 */
+            val CtaLineHeight = 18.sp
+        }
+    }
+
     /** 个人页面配置 - 适用于个人资料页面的头像、卡片、网格、空状态等组件的尺寸和间距设置 */
     object MePage {
         /** 顶部图标行配置 - 适用于个人页面顶部图标行的图标大小、间距和内边距设置 */

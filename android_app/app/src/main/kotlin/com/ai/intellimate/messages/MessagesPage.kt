@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
+import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.design.ui.HeartRedDot
 import ai.sxwl.android.utils.TimeUtils
 import androidx.compose.foundation.Image
@@ -31,6 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -55,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -68,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.EmptyDataState
 
 /** 主页面第二个tab，会话列表页面，包含关注和聊天列表 */
@@ -78,6 +82,7 @@ fun MessagesPage(
     onClickConversationItem: (ConversationItem) -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit = {},
     onNavigateToExplore: () -> Unit = {},
+    onOpenSubscription: () -> Unit = {},
     pageTrackingContext: String = "MessagesPage",
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -107,6 +112,7 @@ fun MessagesPage(
             onLoadMore = { viewModel.loadMoreConversations() },
             onClickFavoriteAgent = onClickFavoriteAgent,
             onNavigateToExplore = onNavigateToExplore,
+            onOpenSubscription = onOpenSubscription,
         )
     }
 }
@@ -120,6 +126,7 @@ private fun Content(
     onLoadMore: () -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit,
     onNavigateToExplore: () -> Unit,
+    onOpenSubscription: () -> Unit,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize().background(Color.Transparent),
@@ -148,6 +155,7 @@ private fun Content(
                 onLoadMore = onLoadMore,
                 onClickFavoriteAgent = onClickFavoriteAgent,
                 onNavigateToExplore = onNavigateToExplore,
+                onOpenSubscription = onOpenSubscription,
             )
         }
     }
@@ -162,10 +170,19 @@ private fun MessageTabContent(
     onLoadMore: () -> Unit,
     onClickFavoriteAgent: (AgentInfo) -> Unit,
     onNavigateToExplore: () -> Unit,
+    onOpenSubscription: () -> Unit,
 ) {
     val selectedTab by viewModel.selectedTab.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
+        MessagesSubscriptionBanner(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            titleText = stringResource(R.string.messages_premium_banner_title),
+            ctaText = stringResource(R.string.messages_premium_banner_cta),
+            onClick = onOpenSubscription,
+        )
+        Spacer(Modifier.height(UiConfigs.Spacing.Medium))
         MessagesTabSwitcher(
             selectedTab = selectedTab,
             onTabSelected = { viewModel.setSelectedTab(it) },
@@ -212,6 +229,93 @@ private fun MessageTabContent(
                     isLoading = uiState.isLoadingFavorites,
                     onClickAgent = onClickFavoriteAgent,
                     onNavigateToExplore = onNavigateToExplore,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 消息页顶部订阅引导横幅：用于 Messages tab 顶部展示，提示升级订阅。
+ *
+ * 预期视觉效果：紫色横向渐变卡片，左侧两行文案，右侧明亮 CTA 按钮并带奖杯图标。
+ *
+ * 可配置项：modifier 控制外部布局；titleText/ctaText 控制文案；onClick 处理点击跳转。
+ */
+@Composable
+private fun MessagesSubscriptionBanner(
+    modifier: Modifier = Modifier,
+    titleText: String,
+    ctaText: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            modifier
+                .height(UiConfigs.MessagesPage.PremiumBanner.Height)
+                .clip(RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CornerRadius))
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    AppColors.PremiumBannerGradientStart,
+                                    AppColors.PremiumBannerGradientEnd,
+                                )
+                        )
+                )
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = UiConfigs.MessagesPage.PremiumBanner.ContentHorizontalPadding,
+                    vertical = UiConfigs.MessagesPage.PremiumBanner.ContentVerticalPadding,
+                )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = titleText,
+                    fontSize = UiConfigs.MessagesPage.PremiumBanner.TitleFontSize,
+                    lineHeight = UiConfigs.MessagesPage.PremiumBanner.TitleLineHeight,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(UiConfigs.Spacing.Medium))
+            Row(
+                modifier =
+                    Modifier.clip(
+                        RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CtaCornerRadius)
+                    )
+                        .background(AppColors.PremiumBannerCtaBackground)
+                        .padding(
+                            horizontal = UiConfigs.MessagesPage.PremiumBanner.CtaHorizontalPadding,
+                            vertical = UiConfigs.MessagesPage.PremiumBanner.CtaVerticalPadding,
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.EmojiEvents,
+                    contentDescription = null,
+                    tint = AppColors.PremiumBannerCtaForeground,
+                    modifier = Modifier.size(UiConfigs.MessagesPage.PremiumBanner.CtaIconSize),
+                )
+                Spacer(Modifier.width(UiConfigs.MessagesPage.PremiumBanner.CtaIconTextSpacing))
+                Text(
+                    text = ctaText,
+                    fontSize = UiConfigs.MessagesPage.PremiumBanner.CtaTextSize,
+                    lineHeight = UiConfigs.MessagesPage.PremiumBanner.CtaLineHeight,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.PremiumBannerCtaForeground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
