@@ -3,7 +3,10 @@
  */
 package com.ai.intellimate.boost
 
+import kotlinx.serialization.Serializable
+
 /** MMKV 中的原始快照，用于序列化存储。 */
+@Serializable
 data class BoostStateSnapshot(
     val availablePoints: Int = 0,
     val chatMessagePoints: Int = 0,
@@ -11,9 +14,14 @@ data class BoostStateSnapshot(
     val hasClaimedDailyReward: Boolean = false,
     val lastResetDate: String = "",
     val boostsByAgent: Map<String, AgentBoostInfoSnapshot> = emptyMap(),
+    /** 上次领取每日登录奖励的日期，格式为 "yyyy-MM-dd"，用于判断当日是否已领取。 */
+    val lastClaimedDailyLoginReward: String = "",
+    /** 上次领取月度奖励的月份，格式为 "yyyy-MM"，用于判断当月是否已领取。 */
+    val lastClaimedMonthReward: String = "",
 )
 
 /** 单个角色在 MMKV 中的快照。 */
+@Serializable
 data class AgentBoostInfoSnapshot(
     val agentId: String = "",
     val agentName: String = "",
@@ -29,8 +37,12 @@ data class BoostState(
     val chatMessagePoints: Int = 0,
     val dailyEnergyEarned: Int = 0,
     val hasClaimedDailyReward: Boolean = false,
+    /** 当日是否已领取每日登录奖励。 */
+    val hasClaimedDailyLoginReward: Boolean = false,
     val boostsByAgent: Map<String, AgentBoostInfo> = emptyMap(),
     val lastResetDate: String = "",
+    /** 当月是否已领取月度奖励。 */
+    val hasClaimedMonthReward: Boolean = false,
 )
 
 /** 面向 UI 的单个角色 Boost 信息。 */
@@ -67,6 +79,10 @@ sealed class PointSource(val analyticsName: String) {
 
     object SignIn : PointSource("sign_in")
 
+    object DailyLogin : PointSource("daily_login")
+
+    object MonthlyVip : PointSource("monthly_vip")
+
     object Manual : PointSource("manual")
 }
 
@@ -75,6 +91,8 @@ sealed class BoostError {
     data object NotEnoughPoints : BoostError()
 
     data object DailyRewardAlreadyClaimed : BoostError()
+
+    data object MonthRewardAlreadyClaimed : BoostError()
 
     data object InvalidAmount : BoostError()
 
@@ -86,13 +104,17 @@ data class BoostResult(val info: AgentBoostInfo, val pointsSpent: Int)
 class BoostException(val error: BoostError) : IllegalStateException(error.toString())
 
 internal fun BoostStateSnapshot.toDomain(): BoostState {
+    val today = java.time.LocalDate.now().toString()
+    val currentMonth = java.time.YearMonth.now().toString()
     return BoostState(
         availablePoints = availablePoints,
         chatMessagePoints = chatMessagePoints,
         dailyEnergyEarned = dailyEnergyEarned,
         hasClaimedDailyReward = hasClaimedDailyReward,
+        hasClaimedDailyLoginReward = lastClaimedDailyLoginReward == today,
         boostsByAgent = boostsByAgent.mapValues { it.value.toDomain() },
         lastResetDate = lastResetDate,
+        hasClaimedMonthReward = lastClaimedMonthReward == currentMonth,
     )
 }
 
