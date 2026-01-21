@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -34,17 +35,18 @@ class BoostRepository(
     val leaderboardFlow: StateFlow<List<BoostLeaderboardEntry>> = _leaderboard.asStateFlow()
 
     init {
-        // 加载初始状态
-        val initialSnapshot = BoostStorage.getBoostState()
-        _state.value = initialSnapshot.toDomain()
-        _leaderboard.value = buildLeaderboard(initialSnapshot)
-
         // 执行每日重置检查
-        scope.launch { runDailyResetIfNeeded() }
+        scope.launch {
+            // 加载初始状态
+            val initialSnapshot = BoostStorage.getBoostState()
+            _state.value = initialSnapshot.toDomain()
+            _leaderboard.value = buildLeaderboard(initialSnapshot)
+            runDailyResetIfNeeded()
+        }
     }
 
     /** 更新状态流（在每次写入后调用） */
-    private fun updateStateFlows() {
+    private suspend fun updateStateFlows() {
         val snapshot = BoostStorage.getBoostState()
         _state.value = snapshot.toDomain()
         _leaderboard.value = buildLeaderboard(snapshot)
@@ -96,6 +98,33 @@ class BoostRepository(
         }
     }
 
+    /**
+     * 领取订阅会员月度奖励。
+     *
+     * @return 领取的积分数量
+     * @throws BoostException 如果当月已领取则抛出 [BoostError.MonthRewardAlreadyClaimed]
+     */
+    suspend fun claimMonthReward(): Int {
+        return withContext(scope.coroutineContext) {
+
+            var claimed = 0
+
+            BoostStorage.update { current ->
+                val currentMonth = YearMonth.now().toString()
+                if (current.lastClaimedMonthReward != currentMonth) {
+                    claimed = BoostConfig.MONTHLY_VIP_REWARD
+                }
+
+                current.copy(
+                    availablePoints = current.availablePoints + claimed,
+                    lastClaimedMonthReward = currentMonth,
+                )
+            }
+            updateStateFlows()
+            claimed
+        }
+    }
+
     suspend fun boostAgent(agentInfo: AgentInfo, points: Int): AgentBoostInfo {
         if (points <= 0 || points % BoostConfig.BOOST_STEP_POINTS != 0) {
             throw BoostException(BoostError.InvalidAmount)
@@ -126,6 +155,32 @@ class BoostRepository(
             BoostStorage.saveBoostState(updated)
             updateStateFlows()
             merged.toDomain()
+        }
+    }
+
+    /**
+     * 领取每日登录奖励（无需签到，自动发放）。
+     *
+     * @param isVip 是否为订阅用户，决定奖励数量
+     * @return 领取的积分数量，如果当日已领取则返回 0
+     */
+    suspend fun claimDailyLoginReward(isVip: Boolean): Int {
+        return withContext(scope.coroutineContext) {
+            var claimed = 0
+            val today = LocalDate.now(ZoneId.systemDefault()).toString()
+            BoostStorage.update { current ->
+                if (current.lastClaimedDailyLoginReward != today) {
+                    claimed =
+                        if (isVip) BoostConfig.DAILY_LOGIN_REWARD_VIP
+                        else BoostConfig.DAILY_LOGIN_REWARD_FREE
+                }
+                current.copy(
+                    availablePoints = current.availablePoints + claimed,
+                    lastClaimedDailyLoginReward = today,
+                )
+            }
+            updateStateFlows()
+            claimed
         }
     }
 

@@ -18,6 +18,7 @@ import ai.sxwl.android.utils.Utils
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.audio.AudioManager
+import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
@@ -182,6 +183,11 @@ class MainViewModel : BaseVM() {
     /** 更新登录状态 */
     fun updateLoginState() {
         _isLoggedIn.value = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+
+        viewModelScope.launch {
+            //领取积分
+            BoostManager.checkClaimReward()
+        }
     }
 
     fun loadBusinessData() {

@@ -11,6 +11,15 @@ object BoostConfig {
     /** 每日签到基础奖励。 */
     const val DAILY_SIGN_IN_REWARD = 200
 
+    /** 每日登录奖励（免费用户）。 */
+    const val DAILY_LOGIN_REWARD_FREE = 10
+
+    /** 每日登录奖励（订阅用户）。 */
+    const val DAILY_LOGIN_REWARD_VIP = 20
+
+    /** 订阅会员每月奖励。 */
+    const val MONTHLY_VIP_REWARD = 500
+
     /** 文本 → token 的平均估算比例（字符数 / AVG_CHARS_PER_TOKEN）。 */
     const val AVG_CHARS_PER_TOKEN = 4.0
 
