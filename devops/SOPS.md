@@ -3,9 +3,10 @@
 ## 创建新的 api key 给特定用户 id
 
 ```bash
+# 每次运行都会生成新的 api key
 # 生产环境，360 指有效的天数
 python3 scripts/generate_prod_token.py --env prod  user-01JWZ34Y4D1C92GD86A5R6EWYJ  360
-# dev环境
+# dev环境，360 指有效的天数
 python3 scripts/generate_prod_token.py --env dev  user-01JWZ34Y4D1C92GD86A5R6EWYJ 360 
 ```
 
