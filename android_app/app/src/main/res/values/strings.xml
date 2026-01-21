@@ -600,6 +600,7 @@
 
     <!-- Login -->
     <string name="login_welcome">Thousands of AI characters await your match.</string>
+    <string name="upload_selfie_tips">Simply upload a clear, front-facing photo; avoid obscuring or blurring it.</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A relationship to explore</item>
