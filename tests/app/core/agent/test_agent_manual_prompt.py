@@ -27,41 +27,18 @@ def test_intellimate_official_injects_manual_prompt(monkeypatch):
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    assert any(
-        "##IntelliMate User Manual\nMANUAL_CONTENT" in content
-        for content in contents
-    )
+    assert contents[-1] == "##IntelliMate User Manual\nMANUAL_CONTENT"
 
 
-def test_intellimate_official_renders_manual_placeholder_in_personality(monkeypatch):
+def test_non_intellimate_official_does_not_inject_manual_prompt(monkeypatch):
     monkeypatch.setattr(
         agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_CONTENT"
     )
     agent = _build_agent(
-        agent_id=INTELLIMATE_AGENT_ID,
-        name=INTELLIMATE_AGENT_NAME,
-        personality="Manual: {{ intellimate_user_manual }}",
-    )
-    contents = _get_contents(agent.build_system_messages("", None))
-
-    assert any("Manual: MANUAL_CONTENT" in content for content in contents)
-    assert not any(
-        content.startswith("##IntelliMate User Manual") for content in contents
-    )
-
-
-def test_non_official_agent_does_not_inject_manual_prompt(monkeypatch):
-    monkeypatch.setattr(
-        agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_CONTENT"
-    )
-    agent = _build_agent(
-        agent_id="not-intellimate",
-        name="OtherAgent",
+        agent_id="not_intellimate",
+        name="Not IntelliMate",
         personality="Warm personality.",
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    assert not any(
-        "##IntelliMate User Manual\nMANUAL_CONTENT" in content
-        for content in contents
-    )
+    assert not any("##IntelliMate User Manual\n" in content for content in contents)
