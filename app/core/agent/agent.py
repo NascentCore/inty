@@ -359,9 +359,7 @@ class Agent:
 
         main_prompt = self._get_effective_main_prompt()
         rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=main_prompt,
-            char=self.name,
-            user=user_name,
+            tmpl=main_prompt, char=self.name, user=user_name
         )
         system_messages.append(SystemMessage(content=rendered_main_prompt))
 
@@ -375,9 +373,7 @@ class Agent:
             logger.debug(f"Using normal mode prompt")
             mode_prompt = self._get_effective_mode_prompt()
         rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=mode_prompt,
-            char=self.name,
-            user=user_name,
+            tmpl=mode_prompt, char=self.name, user=user_name
         )
         system_messages.append(SystemMessage(content=rendered_mode_prompt))
 
@@ -389,9 +385,7 @@ class Agent:
 
         if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT,
-                char=self.name,
-                user=user_name,
+                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
             )
             system_messages.append(SystemMessage(content=rendered_prompt))
 
@@ -411,10 +405,7 @@ class Agent:
 
         return system_messages
 
-    def _build_character_context(
-        self,
-        user_name: str | None = None,
-    ) -> List[SystemMessage]:
+    def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
         构建角色卡上下文信息，每个字段作为独立的system message，支持模板渲染
         """
@@ -422,33 +413,25 @@ class Agent:
 
         if self.personality:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=self.personality,
-                char=self.name,
-                user=user_name,
+                tmpl=self.personality, char=self.name, user=user_name
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
         if self.scenario:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=self.scenario,
-                char=self.name,
-                user=user_name,
+                tmpl=self.scenario, char=self.name, user=user_name
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
         if self.message_example:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=self.message_example,
-                char=self.name,
-                user=user_name,
+                tmpl=self.message_example, char=self.name, user=user_name
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
         if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT,
-                char=self.name,
-                user=user_name,
+                tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, char=self.name, user=user_name
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
