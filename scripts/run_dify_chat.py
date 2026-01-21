@@ -174,7 +174,7 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
     logger.debug(f"query: {query}")
 
     try:
-        response = requests.post(endpoint, headers=headers, json=payload, timeout=60)
+        response = requests.post(endpoint, headers=headers, json=payload, timeout=180)
         logger.debug(f"响应状态码: {response.status_code}")
         logger.debug(f"响应内容: {response.text[:500]}")
 
