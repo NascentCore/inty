@@ -1,5 +1,14 @@
 # DevOps 日常操作
 
+## 创建新的 api key 给特定用户 id
+
+```bash
+# 生产环境，360 指有效的天数
+python3 scripts/generate_prod_token.py --env prod  user-01JWZ34Y4D1C92GD86A5R6EWYJ  360
+# dev环境
+python3 scripts/generate_prod_token.py --env dev  user-01JWZ34Y4D1C92GD86A5R6EWYJ 360 
+```
+
 ## 增加数据连接数
 
 现象是服务端错误日志“asyncpg.exceptions.TooManyConnectionsError: remaining connection slots are reserved for roles with privileges of the "pg_use_reserved_connections" role”，google cloud postgres 数据库实例连接数已满，同一实例下的多个库共用数据库连接数，需要修改实例的连接数配置，编辑实例，修改 max_connnection flag,等待实例重启完成，然后重启后端。
