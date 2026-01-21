@@ -1,0 +1,20 @@
+# CREATED_BY_AGENT
+# 图像生成模型评测工具依赖
+
+# Google GenAI SDK (Vertex AI)
+google-genai>=0.4.0
+
+# OpenAI SDK (OpenRouter 兼容)
+openai>=1.0.0
+
+# HTTP 客户端
+httpx>=0.25.0
+
+# CLI 框架
+cyclopts>=2.0.0
+
+# 终端美化输出
+rich>=13.0.0
+
+# 图片处理
+pillow>=10.0.0
