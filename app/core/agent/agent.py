@@ -67,7 +67,12 @@ INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
 @lru_cache(maxsize=1)
 def _load_intellimate_user_manual() -> str:
     # 如果失败，则希望立即失败，这属于编码中的逻辑错误，不应该隐藏掉。
-    return INTELLIMATE_USER_MANUAL_PATH.read_text(encoding="utf-8").strip()
+    # docs/INTELLIMATE.md 约定：拷贝时，以 ">" 开头的文本行会被删除掉。
+    raw = INTELLIMATE_USER_MANUAL_PATH.read_text(encoding="utf-8")
+    filtered_lines = [
+        line for line in raw.splitlines() if not line.lstrip().startswith(">")
+    ]
+    return "\n".join(filtered_lines).strip()
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
