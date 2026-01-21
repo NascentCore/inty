@@ -45,7 +45,11 @@ class OpenRouterModel(ImageModel):
 
             # 尝试直接作为 base64 解码
             try:
-                if len(content) > 100 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=' for c in content[:100]):
+                if len(content) > 100 and all(
+                    c
+                    in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+                    for c in content[:100]
+                ):
                     return base64.b64decode(content)
             except Exception:
                 pass
@@ -94,18 +98,22 @@ class OpenRouterModel(ImageModel):
             # 添加参考图片
             if reference_images:
                 for img_data in reference_images:
-                    content_parts.append({
-                        "type": "image_url",
-                        "image_url": {
-                            "url": self._encode_image_to_base64(img_data),
-                        },
-                    })
+                    content_parts.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": self._encode_image_to_base64(img_data),
+                            },
+                        }
+                    )
 
             # 添加文本提示
-            content_parts.append({
-                "type": "text",
-                "text": prompt,
-            })
+            content_parts.append(
+                {
+                    "type": "text",
+                    "text": prompt,
+                }
+            )
 
             # 使用 httpx 直接调用 API 以获取完整响应
             headers = {
@@ -142,10 +150,12 @@ class OpenRouterModel(ImageModel):
 
             # 提取响应内容
             if not result.get("choices"):
-                raise ValueError(f"API 未返回任何结果: {json.dumps(result, ensure_ascii=False)[:300]}")
+                raise ValueError(
+                    f"API 未返回任何结果: {json.dumps(result, ensure_ascii=False)[:300]}"
+                )
 
             message = result["choices"][0].get("message", {})
-            
+
             # 首先尝试从 message.images 字段获取图片（OpenRouter 图像生成模型的响应格式）
             image_data: Optional[bytes] = None
             images = message.get("images", [])
@@ -158,7 +168,7 @@ class OpenRouterModel(ImageModel):
                             if match:
                                 image_data = base64.b64decode(match.group(1))
                                 break
-            
+
             # 如果 images 字段没有，尝试从 content 获取
             if not image_data:
                 content = message.get("content")
@@ -166,7 +176,9 @@ class OpenRouterModel(ImageModel):
                     image_data = self._extract_image_from_content(content)
 
             if not image_data:
-                raise ValueError(f"无法从响应中提取图片数据，响应结构: {json.dumps(message, ensure_ascii=False)[:500]}")
+                raise ValueError(
+                    f"无法从响应中提取图片数据，响应结构: {json.dumps(message, ensure_ascii=False)[:500]}"
+                )
 
             total_time = (time.perf_counter() - start_time) * 1000
 

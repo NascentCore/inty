@@ -74,9 +74,7 @@ class BenchmarkConfig:
     gcp_location: str = "us-central1"
 
     # 路径配置
-    base_dir: Path = field(
-        default_factory=lambda: Path(__file__).parent
-    )
+    base_dir: Path = field(default_factory=lambda: Path(__file__).parent)
 
     @property
     def test_images_dir(self) -> Path:

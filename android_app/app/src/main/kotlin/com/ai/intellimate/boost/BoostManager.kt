@@ -87,20 +87,18 @@ object BoostManager {
         }
     }
 
-    /**
-     * 检查积分奖励领取
-     */
+    /** 检查积分奖励领取 */
     suspend fun checkClaimReward() {
         claimMonthReward()
         claimDailyRewardLogin()
     }
-    
+
     /**
      * 领取订阅会员月度奖励（每月 500 points）。
      *
      * @return 领取的积分数量
-     * @throws BoostException 如果未初始化则抛出 [BoostError.NotInitialized]，
-     *         如果当月已领取则抛出 [BoostError.MonthRewardAlreadyClaimed]
+     * @throws BoostException 如果未初始化则抛出 [BoostError.NotInitialized]， 如果当月已领取则抛出
+     *   [BoostError.MonthRewardAlreadyClaimed]
      */
     private suspend fun claimMonthReward(): Int {
         val repo = repository ?: throw BoostException(BoostError.NotInitialized)

@@ -133,7 +133,11 @@ def print_results_table(
         status = "[green]✓[/green]" if result.success else "[red]✗[/red]"
         time_str = f"{result.total_time_ms:,.0f}"
         size_str = f"{result.image_size_kb:.1f}" if result.success else "-"
-        error_str = result.error_message[:27] + "..." if result.error_message and len(result.error_message) > 30 else (result.error_message or "")
+        error_str = (
+            result.error_message[:27] + "..."
+            if result.error_message and len(result.error_message) > 30
+            else (result.error_message or "")
+        )
 
         table.add_row(model_name, time_str, size_str, status, error_str)
 
@@ -217,13 +221,29 @@ def _generate_markdown_report(results: list[dict], results_dir: Path) -> str:
     # 按平均耗时排序
     sorted_models = sorted(
         model_stats.items(),
-        key=lambda x: (sum(x[1]["total_time"]) / len(x[1]["total_time"])) if x[1]["total_time"] else float("inf")
+        key=lambda x: (
+            (sum(x[1]["total_time"]) / len(x[1]["total_time"]))
+            if x[1]["total_time"]
+            else float("inf")
+        ),
     )
 
     for model_name, stats in sorted_models:
-        avg_time = sum(stats["total_time"]) / len(stats["total_time"]) if stats["total_time"] else 0
-        success_rate = stats["success_count"] / stats["total_count"] * 100 if stats["total_count"] else 0
-        avg_size = sum(stats["image_sizes"]) / len(stats["image_sizes"]) if stats["image_sizes"] else 0
+        avg_time = (
+            sum(stats["total_time"]) / len(stats["total_time"])
+            if stats["total_time"]
+            else 0
+        )
+        success_rate = (
+            stats["success_count"] / stats["total_count"] * 100
+            if stats["total_count"]
+            else 0
+        )
+        avg_size = (
+            sum(stats["image_sizes"]) / len(stats["image_sizes"])
+            if stats["image_sizes"]
+            else 0
+        )
 
         time_str = f"{avg_time/1000:.1f}s" if avg_time else "-"
         rate_str = f"{success_rate:.0f}%"
@@ -364,8 +384,12 @@ def list_scenarios() -> None:
 def run(
     all_models: Annotated[bool, cyclopts.Parameter(name=["--all", "-a"])] = False,
     model: Annotated[Optional[str], cyclopts.Parameter(name=["--model", "-m"])] = None,
-    scenario: Annotated[Optional[str], cyclopts.Parameter(name=["--scenario", "-s"])] = None,
-    variant_index: Annotated[Optional[int], cyclopts.Parameter(name=["--variant", "-v"])] = None,
+    scenario: Annotated[
+        Optional[str], cyclopts.Parameter(name=["--scenario", "-s"])
+    ] = None,
+    variant_index: Annotated[
+        Optional[int], cyclopts.Parameter(name=["--variant", "-v"])
+    ] = None,
     save_images: Annotated[bool, cyclopts.Parameter(name="--save")] = True,
 ) -> None:
     """
@@ -416,13 +440,15 @@ def run(
         scenarios_to_test = get_all_scenarios()
 
     # 运行评测
-    asyncio.run(_run_benchmarks(
-        config=config,
-        models_to_test=models_to_test,
-        scenarios_to_test=scenarios_to_test,
-        variant_index=variant_index,
-        save_images=save_images,
-    ))
+    asyncio.run(
+        _run_benchmarks(
+            config=config,
+            models_to_test=models_to_test,
+            scenarios_to_test=scenarios_to_test,
+            variant_index=variant_index,
+            save_images=save_images,
+        )
+    )
 
 
 async def _run_benchmarks(
@@ -466,7 +492,9 @@ async def _run_benchmarks(
                 continue
 
         for variant in variants:
-            console.print(f"\n[magenta]变体: {variant.name}[/magenta] - {variant.description}")
+            console.print(
+                f"\n[magenta]变体: {variant.name}[/magenta] - {variant.description}"
+            )
 
             scenario_results: list[tuple[str, str, str, ImageGenerationResult]] = []
 
@@ -492,25 +520,33 @@ async def _run_benchmarks(
                             variant_name=variant.name,
                         )
                         if img_path:
-                            console.print(f"  [green]图片已保存: {img_path.name}[/green]")
+                            console.print(
+                                f"  [green]图片已保存: {img_path.name}[/green]"
+                            )
 
-                    scenario_results.append((
-                        model_config.display_name,
-                        scenario.type.value,
-                        variant.name,
-                        result,
-                    ))
+                    scenario_results.append(
+                        (
+                            model_config.display_name,
+                            scenario.type.value,
+                            variant.name,
+                            result,
+                        )
+                    )
 
                     # 记录结果
-                    all_results.append({
-                        "model": model_config.name,
-                        "scenario": scenario.type.value,
-                        "variant": variant.name,
-                        **result.to_dict(),
-                    })
+                    all_results.append(
+                        {
+                            "model": model_config.name,
+                            "scenario": scenario.type.value,
+                            "variant": variant.name,
+                            **result.to_dict(),
+                        }
+                    )
 
                     if result.success:
-                        console.print(f"  [green]成功[/green] - {result.total_time_ms:.0f}ms, {result.image_size_kb:.1f}KB")
+                        console.print(
+                            f"  [green]成功[/green] - {result.total_time_ms:.0f}ms, {result.image_size_kb:.1f}KB"
+                        )
                     else:
                         console.print(f"  [red]失败[/red] - {result.error_message}")
 
