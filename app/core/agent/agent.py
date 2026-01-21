@@ -1,6 +1,8 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from pathlib import Path
 from threading import Lock, RLock
 from typing import Any, Dict, List, Optional
 
@@ -52,6 +54,25 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - During this week, characters have mild Christmas awareness. Whenever the ongoing conversation contains any cue that can be interpreted as seasonal, atmospheric, or time-related, like context-related, atmosphere-related, sensory-related, time-related, or mood-related, {{char}} may gently link the moment to the Christmas period. 
 - {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
+
+# 这与 android app 中使用的 agent ID 和 name 一致。
+INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
+INTELLIMATE_AGENT_NAME = "IntelliMate"
+INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX = "##IntelliMate User Manual\n"
+# agent.py 位于 app/core/agent，向上 3 层到仓库根目录
+REPO_ROOT = Path(__file__).resolve().parents[3]
+INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
+
+
+@lru_cache(maxsize=1)
+def _load_intellimate_user_manual() -> str:
+    # 如果失败，则希望立即失败，这属于编码中的逻辑错误，不应该隐藏掉。
+    # docs/INTELLIMATE.md 约定：拷贝时，以 ">" 开头的文本行会被删除掉。
+    raw = INTELLIMATE_USER_MANUAL_PATH.read_text(encoding="utf-8")
+    filtered_lines = [
+        line for line in raw.splitlines() if not line.lstrip().startswith(">")
+    ]
+    return "\n".join(filtered_lines).strip()
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -286,6 +307,9 @@ class Agent:
         if presence_penalty is not None:
             chat_params["presence_penalty"] = presence_penalty
 
+    def _is_intellimate_official(self) -> bool:
+        return self.agent_id == INTELLIMATE_AGENT_ID
+
     def _get_effective_main_prompt(self) -> str:
         # 如果配置为强制使用默认提示词，则直接返回默认值
         if global_config_loaded_from_config_yaml.agent.force_default_prompts:
@@ -373,6 +397,15 @@ class Agent:
         if self.intro:
             system_messages.append(
                 SystemMessage(content="##Introduction\n" + self.intro)
+            )
+
+        if self._is_intellimate_official():
+            user_manual = _load_intellimate_user_manual()
+            system_messages.append(
+                SystemMessage(
+                    content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX
+                    + user_manual
+                )
             )
 
         return system_messages
