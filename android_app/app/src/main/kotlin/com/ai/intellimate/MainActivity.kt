@@ -13,6 +13,7 @@ import ai.sxwl.android.data.di.networkModule
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Intent
@@ -1022,15 +1023,11 @@ private fun performEmailLogin(
                         userProfile.id,
                     )
 
-                    // 上报用户登录事件
-                    FirebaseManager.logEvent(
-                        FirebaseManager.Events.LOGIN,
-                        FirebaseManager.safeEventParams(
-                            "user_id" to userProfile.id,
-                            "user_name" to (userProfile.nickname),
-                            "login_method" to "email",
-                            "timestamp" to System.currentTimeMillis(),
-                        ),
+                    FirebaseManager.Events.LOGIN.logEvent(
+                        "user_id" to userProfile.id,
+                        "user_name" to (userProfile.nickname),
+                        "login_method" to "email",
+                        "timestamp" to System.currentTimeMillis()
                     )
 
                     // 登录成功后，主动获取并上报 FCM Token
