@@ -12,8 +12,8 @@ import kotlinx.serialization.serializer
 /**
  * 创建基于 JSON 序列化的 DataStore 委托属性。
  *
- * 该扩展函数简化了 Jetpack DataStore 的创建过程，自动处理 JSON 序列化/反序列化。
- * 使用 Kotlin Serialization 进行数据转换，支持任意可序列化的数据类型。
+ * 该扩展函数简化了 Jetpack DataStore 的创建过程，自动处理 JSON 序列化/反序列化。 使用 Kotlin Serialization
+ * 进行数据转换，支持任意可序列化的数据类型。
  *
  * 使用示例:
  * ```kotlin

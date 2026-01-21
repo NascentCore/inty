@@ -151,6 +151,7 @@ class VertexAIModel(ImageModel):
                     raw_data = part.inline_data.data
                     if isinstance(raw_data, str):
                         import base64
+
                         image_data = base64.b64decode(raw_data)
                     elif isinstance(raw_data, bytes):
                         image_data = raw_data

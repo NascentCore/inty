@@ -10,10 +10,7 @@ import android.content.Context
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
-private val Context.boostState by jsonDataStore(
-    "boost_state",
-    BoostStateSnapshot()
-)
+private val Context.boostState by jsonDataStore("boost_state", BoostStateSnapshot())
 
 /** Boost 状态本地存储管理类。 */
 internal object BoostStorage {

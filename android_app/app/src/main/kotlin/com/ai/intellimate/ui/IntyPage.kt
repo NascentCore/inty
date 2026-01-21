@@ -7,8 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 /**
  * 页面级 Composable 基础框架组件。
  *
- * 封装页面通用逻辑，目前主要用于自动化页面浏览埋点。
- * 所有需要埋点的页面应使用此组件包裹，确保埋点数据的一致性和完整性。
+ * 封装页面通用逻辑，目前主要用于自动化页面浏览埋点。 所有需要埋点的页面应使用此组件包裹，确保埋点数据的一致性和完整性。
  *
  * 功能特性:
  * - 页面进入时自动上报 page_view 事件
@@ -37,13 +36,13 @@ import androidx.compose.runtime.LaunchedEffect
 fun IntyPage(
     pageName: String,
     params: Map<String, Any> = mapOf(),
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     LaunchedEffect(Unit) {
         PageTrackingHelper.trackPageView(
             pageName = pageName,
             pageClass = "MainActivity",
-            additionalParams = params
+            additionalParams = params,
         )
     }
 

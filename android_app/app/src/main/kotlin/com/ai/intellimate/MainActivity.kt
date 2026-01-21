@@ -1027,7 +1027,7 @@ private fun performEmailLogin(
                         "user_id" to userProfile.id,
                         "user_name" to (userProfile.nickname),
                         "login_method" to "email",
-                        "timestamp" to System.currentTimeMillis()
+                        "timestamp" to System.currentTimeMillis(),
                     )
 
                     // 登录成功后，主动获取并上报 FCM Token

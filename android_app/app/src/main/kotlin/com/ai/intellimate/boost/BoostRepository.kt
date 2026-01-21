@@ -106,7 +106,6 @@ class BoostRepository(
      */
     suspend fun claimMonthReward(): Int {
         return withContext(scope.coroutineContext) {
-
             var claimed = 0
 
             BoostStorage.update { current ->

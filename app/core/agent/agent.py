@@ -403,8 +403,7 @@ class Agent:
             user_manual = _load_intellimate_user_manual()
             system_messages.append(
                 SystemMessage(
-                    content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX
-                    + user_manual
+                    content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + user_manual
                 )
             )
 
