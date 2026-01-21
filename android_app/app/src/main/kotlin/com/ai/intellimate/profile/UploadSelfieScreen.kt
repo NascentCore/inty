@@ -141,7 +141,10 @@ fun UploadSelfieScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 1. 显示已上传的照片（如果有）
-            Box(modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(16.dp))) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .clip(RoundedCornerShape(16.dp))) {
                 AsyncImage(
                     model = image,
                     contentDescription = stringResource(R.string.str_appearance),
@@ -165,8 +168,14 @@ fun UploadSelfieScreen(
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = stringResource(R.string.upload_selfie_tips),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
             Spacer(modifier = Modifier.height(UiConfigs.Spacing.XLarge))
-
             AnimatedContent(targetState = isLoading, contentAlignment = Alignment.Center) {
                 if (it) {
                     CircularProgressIndicator()
