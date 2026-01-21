@@ -164,6 +164,7 @@ IMAGE_GENERATION_PROMPT_TEMPLATE = """
 ### Step 1: 场景推理
 根据以下信息进行思考：
 - 最近的对话: {chat_history}
+- 用户请求: {user_message}
 - 用户信息: {user_info}
 
 请先思考：
@@ -174,7 +175,7 @@ IMAGE_GENERATION_PROMPT_TEMPLATE = """
 5. 场景是否涉及两个人物（角色与用户）？
 
 ### Step 2: 场景生成
-请根据参考图1确认角色的发型、五官和身材特征；
+请根据角色性格: {agent_personality}，角色背景设定: {agent_background}，确认角色的发型、五官和身材特征；
 再结合step1中思考的结果生成符合场景氛围的图片。
 
 请确保：
