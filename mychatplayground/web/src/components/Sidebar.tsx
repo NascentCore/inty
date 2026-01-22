@@ -8,6 +8,11 @@ const NAV_ITEMS = [
   { href: "/conversation-analysis", label: "📊 用户聊天消息分析", description: "上传对话文件进行分析" },
   { href: "/message-to-image", label: "🎭 消息生图测试", description: "聊天消息转生图测试" },
   { href: "/nano-banana", label: "🍌 Nano Banana", description: "一步到位消息生图" },
+  {
+    href: "/prompt-block-test",
+    label: "🧪 提示词板块测试",
+    description: "A/B 对比验证提示词板块效果",
+  },
 ];
 
 export function Sidebar() {
