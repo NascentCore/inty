@@ -21,10 +21,12 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
@@ -37,11 +39,16 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
@@ -57,6 +64,9 @@ class ChatViewModel : BaseVM() {
     private val recallMessageUseCase = DataModule.recallMessageUseCase
     private val generateImageUseCase = DataModule.generateImageUseCase
     private val voteMessageUseCase = DataModule.voteMessageUseCase
+
+    private val _uiState = MutableStateFlow(ChatUIState())
+    val uiState = _uiState.asStateFlow()
 
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
     val agentInfo = _agentInfo.asStateFlow()
@@ -125,6 +135,8 @@ class ChatViewModel : BaseVM() {
     private var characterEnergyJob: Job? = null
     private var boundAgentId: String? = null
     private var lastSyncedEnergyPoints = 0
+
+    private var vipAgentUnlockJob: Job? = null
 
     fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
 
@@ -279,6 +291,46 @@ class ChatViewModel : BaseVM() {
 
         // 查询聊天设置
         getChatSetting()
+
+        if (BuildConfig.DEBUG) {
+            checkVipAgentUnlock(agentInfo)
+        }
+    }
+
+    //临时变量，后面存储到agent数据表中
+    private val _lastUnlockByCredits = MutableStateFlow("")
+
+    private fun checkVipAgentUnlock(agent: AgentInfo) {
+        vipAgentUnlockJob?.cancel()
+        _lastUnlockByCredits.value = ""
+
+        if (agent.tags?.any { it?.lowercase()?.contains("vip") == true } == true) {
+            //vip, history, credits
+            vipAgentUnlockJob = viewModelScope.launch {
+                combine(
+                    VipStatusHelper.vipStatus,
+                    isQueryMsgsCompleted,
+                    chatRepository.getMessagesFlow(agent.id).map { it.isNotEmpty() },
+                    _lastUnlockByCredits
+                ) { vipStatus, isQueryCompleted, hasHistory, lastUnlockByCredits ->
+                    when {
+                        vipStatus.isSubscribed || lastUnlockByCredits == LocalDate.now().toString() -> {
+                            ChatUIState.VipAgentLockType.NONE
+                        }
+                        hasHistory || !isQueryCompleted -> ChatUIState.VipAgentLockType.INPUT
+                        else -> ChatUIState.VipAgentLockType.DIALOG
+                    }
+                }.collect { type ->
+                    _uiState.update {
+                        it.copy(vipAgentLockType = type)
+                    }
+                }
+            }
+        }
+    }
+
+    fun chatUnlockByCredits() {
+        _lastUnlockByCredits.value = LocalDate.now().toString()
     }
 
     /** 检查错误消息是否包含取消相关的关键字 用于避免在用户退出 Activity 后显示错误 Toast */

@@ -85,6 +85,8 @@ import com.ai.intellimate.chat.ui.ImagePickItem
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
+import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
+import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
@@ -408,6 +410,18 @@ internal fun ChatPage(
 
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
+    val uiState by chatViewModel.uiState.collectAsState()
+
+    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG) {
+        agentInfo?.let {
+            VipAgentUnlockDialog(
+                agent = it,
+                unlockByCredits = chatViewModel::chatUnlockByCredits,
+                unlockBySub = { navController.navigate(Routes.Me.VipCenter) },
+                onDismissRequest = { navController.navigateUp()}
+            )
+        }
+    }
 
     Box(
         modifier =

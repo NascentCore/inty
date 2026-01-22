@@ -3,6 +3,8 @@ package ai.sxwl.android.data.billing
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * VIP状态检查工具类 统一管理VIP状态检查和购买逻辑
@@ -14,6 +16,9 @@ import android.app.Activity
  * - 错误处理
  */
 object VipStatusHelper {
+
+    val vipStatus: StateFlow<VipStatus>
+        get() = BillingRepository.vipStatusFlow
 
     /** 检查用户是否为VIP */
     fun isUserVip(): Boolean {

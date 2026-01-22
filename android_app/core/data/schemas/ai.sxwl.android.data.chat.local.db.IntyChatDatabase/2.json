@@ -1,0 +1,202 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "38134e7d4781a174a8502fc225bbf1ac",
+    "entities": [
+      {
+        "tableName": "chat_messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localId` TEXT NOT NULL, `agentId` TEXT NOT NULL, `remoteId` TEXT, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `userFeedback` TEXT, `isOpening` INTEGER NOT NULL, `isVoice` INTEGER NOT NULL, `metaAgentId` TEXT, `generatedImageUrl` TEXT, `generatedImageWidth` INTEGER, `generatedImageHeight` INTEGER, `sortKey` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`localId`))",
+        "fields": [
+          {
+            "fieldPath": "localId",
+            "columnName": "localId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "agentId",
+            "columnName": "agentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remoteId",
+            "columnName": "remoteId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "audioUrl",
+            "columnName": "audioUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "userVote",
+            "columnName": "userVote",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "userFeedback",
+            "columnName": "userFeedback",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isOpening",
+            "columnName": "isOpening",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isVoice",
+            "columnName": "isVoice",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "metaAgentId",
+            "columnName": "metaAgentId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "generatedImageUrl",
+            "columnName": "generatedImageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "generatedImageWidth",
+            "columnName": "generatedImageWidth",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "generatedImageHeight",
+            "columnName": "generatedImageHeight",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sortKey",
+            "columnName": "sortKey",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "localId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_chat_messages_agentId",
+            "unique": false,
+            "columnNames": [
+              "agentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_agentId` ON `${TABLE_NAME}` (`agentId`)"
+          },
+          {
+            "name": "index_chat_messages_remoteId",
+            "unique": false,
+            "columnNames": [
+              "remoteId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_remoteId` ON `${TABLE_NAME}` (`remoteId`)"
+          },
+          {
+            "name": "index_chat_messages_agentId_sortKey",
+            "unique": false,
+            "columnNames": [
+              "agentId",
+              "sortKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_agentId_sortKey` ON `${TABLE_NAME}` (`agentId`, `sortKey`)"
+          }
+        ]
+      },
+      {
+        "tableName": "chat_sync_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`agentId` TEXT NOT NULL, `offset` INTEGER NOT NULL, `hasMore` INTEGER NOT NULL, `isInitialLoaded` INTEGER NOT NULL, `lastSyncedAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`agentId`))",
+        "fields": [
+          {
+            "fieldPath": "agentId",
+            "columnName": "agentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "offset",
+            "columnName": "offset",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasMore",
+            "columnName": "hasMore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isInitialLoaded",
+            "columnName": "isInitialLoaded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSyncedAt",
+            "columnName": "lastSyncedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "agentId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '38134e7d4781a174a8502fc225bbf1ac')"
+    ]
+  }
+}
