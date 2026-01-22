@@ -2,7 +2,6 @@
 
 from typing import Final
 
-
 ANDROID_APP_TAG: Final[str] = "android_app"
 WEB_APP_TAG: Final[str] = "web_app"
 EVALUATION_APP_TAG: Final[str] = "evaluation"

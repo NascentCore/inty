@@ -1,7 +1,6 @@
 package com.ai.intellimate.ui.components
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,18 +14,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.delay
 
 /**
  * 轮播背景组件
@@ -42,17 +39,23 @@ import kotlin.time.Duration.Companion.milliseconds
 fun CarouselBackground(
     imageResIds: List<Int>,
     modifier: Modifier = Modifier,
+    onPageChange: (Int) -> Unit = {},
     transitionDuration: Int = 1000,
-    displayDuration: Int = 3000
+    displayDuration: Int = 3000,
 ) {
     Box(modifier = modifier) {
+        val pageChangeCall by rememberUpdatedState(onPageChange)
+
         if (imageResIds.isNotEmpty()) {
             var imageRes by remember { mutableIntStateOf(imageResIds[0]) }
 
             LaunchedEffect(imageResIds) {
-                generateSequence(0) { it + 1}
+                generateSequence(0) { it + 1 }
                     .forEach {
-                        imageRes = imageResIds[it % imageResIds.size]
+                        val index = it % imageResIds.size
+                        imageRes = imageResIds[index]
+
+                        pageChangeCall(index)
                         delay(displayDuration.milliseconds)
                     }
             }
@@ -63,26 +66,27 @@ fun CarouselBackground(
                     fadeIn(tween(transitionDuration))
                         .togetherWith(fadeOut(tween(transitionDuration, transitionDuration)))
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 Image(
                     painter = painterResource(it),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
 
         Spacer(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        0.4f to Color(0x00300C4F),
-                        .75f to Color(0xFF300C4F)
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                0.4f to Color(0x00300C4F),
+                                .75f to Color(0xFF300C4F),
+                            )
                     )
-                )
         )
     }
 }

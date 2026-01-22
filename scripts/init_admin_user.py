@@ -3,6 +3,7 @@
 Script to initialize an admin user in the database.
 This script creates a superuser with admin privileges.
 """
+
 import random
 import sys
 from pathlib import Path

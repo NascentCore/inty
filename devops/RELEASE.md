@@ -2,20 +2,68 @@
 
 - 例行的 Android app 测试版本发布到内测轨道，不再使用 internal app sharing
 
+## 版本号与打标（Tagging）
+
+- **release tag 格式**：`v<major>.<minor>.<fix>-<组件>`
+  - 组件后缀用于区分发布产物：`-backend`、`-android`、`-web`
+  - 数字版本号所有组件共享：例如如果后端发布了 `v1.3.1-backend`，下一个 Android 发布名称通常为 `v1.3.2-android`
+- **dev branch 格式**：`<release-tag>-dev`（例如 `v1.0.3-dev`）
+  - dev branch tag 一般做 `<fix>` + 1，例如 `v1.0.2-dev` 对应下一个 release tag 为 `v1.0.3-xxx`
+- **常用命令**：
+
+```bash
+git tag -d $GIT_TAG && git push origin --delete $GIT_TAG
+git tag $GIT_TAG && git push --tags
+```
+
+## 发布前准备（通用）
+
+- 确保审查员账户可以登录
+- 商业化测试
+  - `https://intellimate.app/` 可以访问
+  - `https://app.checklyhq.com/accounts/1896e6d6-1599-414f-998e-3dabcc58fd7f`
+  - 检查 [Terms of Use](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/terms-of-service)
+  - 检查 [Privacy Policy](https://app.termly.io/dashboard/website/0619077d-bb29-4da6-af36-9a465bf36f08/privacy-policy)
+- 生产环境部署之前跑一次压力测试，了解其性能指标是否有明显问题
+- 确认测试 Google 账户可用
+  - `test.heartmate@gmail.com` 填入 Google Play Console 的 Testing Instructions
+
 ## 流程概览
 
 1. 从 tag 启动相应 GitHub Actions 工作流创建新的发布产物（后端服务的 docker 容器镜像、web app 在服务器上的静态文件等等）
-2. 版本号命名规则：`v1.<minor>.<fix>-<组件>`
-   - 使用后缀区分发布的组件：-backend、-android、-web
-   - 数字版本号所有组件共享，也就是如果后端发布了 v1.3.1-backend，下一个 android 发布名称为 v1.3.2-android
+2. 版本号命名规则：见「版本号与打标（Tagging）」
 
 ## Backend 发布流程
 
 1. `-backend` 后缀添加到版本号上，版本号依次递增，每次 backend android 发布都要增加 fix 或者 minor 版本号；
-2. 修改配置文件 config.yaml.{prod,dev}中 current_version_code，与 google play 最新包 version code 保持一致
+2. 修改配置文件 `devops/config.yaml.{prod,dev}` 中 `google_play.current_version_code`，与 Google Play 最新包 version code 保持一致
 3. [Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
    选择对应的 tag，环境选择 prod
    <img width="800" height="1210" alt="image" src="https://github.com/user-attachments/assets/3e0fe7de-abf5-4eb8-b81d-ae9f31fa6399" />
+4. 部署完成后（可选）在目标机器确认容器镜像版本：
+   - `docker inspect --format '{{.Config.Image}}' inty-backend-prod`
+
+## 推送服务（Push Worker）发布/部署
+
+推送服务与后端服务在同一个工作流中部署（同样通过 docker image 发布）。
+
+- **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
+- **镜像名称**：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
+- **容器名称**：`inty-push-worker-{environment}`（如 `inty-push-worker-dev`、`inty-push-worker-prod`）
+- **Dockerfile**：`docker/Dockerfile.push-worker`
+- **启动脚本**：`start_push_worker.sh`
+- **配置文件**：使用与后端服务一致的 `devops/config.yaml.{environment}`（构建期注入进镜像，见下文「配置文件如何进入 Docker 镜像」）
+- **挂载卷**：
+  - `/opt/inty-{environment}/inty-backend-key.json`
+  - `/opt/inty-{environment}/inty-firebase-key.json`
+- **日志**：使用 GCP Cloud Logging 驱动，标签为 `application=inty-push-worker`、`environment={environment}`
+
+验证部署：
+
+```bash
+sudo docker ps | grep inty-push-worker
+sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
+```
 
 ## Android app 发布流程
 
@@ -23,7 +71,7 @@
    <img width="900" height="400" alt="image" src="https://github.com/user-attachments/assets/186335c0-fc96-4520-b8da-d89f0f892a23" />
 2. 在本地 git checkout 出对应的 tag，构建 release aab（使用 release build type）并确认其 versionName
    <img width="480" height="208" alt="image" src="https://github.com/user-attachments/assets/433d8afe-911f-4494-8e0f-39a666653afc" />
-3. 上传内测轨道
+3. 上传内测轨道（AAB）
    <img width="800" height="1614" alt="image" src="https://github.com/user-attachments/assets/07cc93c6-a573-40d8-98f2-f716fce5826a" />
    编写有价值的更新说明
 4. 从 Google Play 商店下载内测版本测试
@@ -33,8 +81,71 @@
 7. 审核通过后，正式发布
 8. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
 
+## 发布后：更新后端版本检查 current_version_code
+
+发布完成后，需要把后端用于版本检查的 `current_version_code` 更新到最新 app version code：
+
+- 修改 `devops/config.yaml.{prod,dev}` 中 `google_play.current_version_code`
+- （了解用法/默认值参考）`../app/core/config.py` 的 `GooglePlayConfig.current_version_code`
+
+## 发布前最终检查（建议）
+
+- `docker inspect --format '{{.Config.Image}}' inty-backend-prod` 确认生产环境服务器 docker 镜像版本
+- My->Settings->About 确认 App 版本
+- 打开 [Firebase Crashlystics](https://console.firebase.google.com/project/alien-paratext-461204-i9/releasemonitoring/app/android:com.ai.intellimate) 确认内测版本崩溃率为 0
+
+## 发布（Google Play production）
+
+- 填写各项表单
+- 将送审版本发布到 [Google Play production track](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/tracks/production?tab=releaseDashboard)
+
 ## Web app 发布流程
 
 1. 打开 [build_and_deploy_web_app](https://github.com/NascentCore/inty/blob/main/.github/workflows/build_and_deploy_web_app.yml)
 2. 选择 tag 及 prod 环境
    <img width="800" height="756" alt="image" src="https://github.com/user-attachments/assets/066e530b-3d1d-402e-a72f-97169178e606" />
+
+## 配置文件如何进入 Docker 镜像，以及运行时如何“选中”
+
+后端服务与推送服务的配置读取逻辑**不依赖环境变量去“选择不同配置文件”**；它们都会在进程启动时（更准确地说：`app/core/config.py` 被 import 时）从当前工作目录读取固定路径的 `config.yaml`。
+
+- **关键约束**：容器里必须存在 `config.yaml`，否则服务会直接启动失败。
+- **当前生产/开发部署方式（推荐）**：在 **构建镜像阶段**把目标环境配置文件 bake 进镜像，统一落到镜像内的 `config.yaml`；运行时只需要 `docker run` 启动对应镜像即可。
+
+### 构建期注入（当前采用）
+
+配置源文件位于 `devops/`：
+
+- **开发环境**：`devops/config.yaml.dev`
+- **生产环境**：`devops/config.yaml.prod`
+- **CI 测试**：`devops/config.yaml.test`（仅用于 CI；本地/线上部署不应使用）
+
+在 GitHub Actions 部署工作流中，通过 `CONFIG_FILE` build-arg 选择并注入配置：
+
+- **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
+- **Backend Dockerfile**：`docker/Dockerfile`
+- **Push worker Dockerfile**：`docker/Dockerfile.push-worker`
+
+工作流会按环境（`dev`/`prod`）计算出：
+
+- **build-arg**：`CONFIG_FILE=devops/config.yaml.${environment}`
+
+Dockerfile 会把该文件复制到镜像根目录并命名为 `config.yaml`（Dockerfile 的 `WORKDIR /` 确保服务启动时能读到它）。
+
+这意味着：
+
+- **“选中哪个环境配置”发生在 build 阶段**（构建镜像时已经确定）
+- **运行时不会再根据 env 做二次选择**（`docker run` 只负责启动对应镜像）
+
+### 运行期挂载（可选，但需要自己保证一致性）
+
+如果你希望同一份镜像在不同环境复用，也可以在运行时把宿主机上的配置挂载到容器内的 `config.yaml` 路径：
+
+```bash
+sudo docker run --detach \
+  --name inty-backend-dev \
+  --volume /opt/inty-dev/config.yaml:/config.yaml:ro \
+  ghcr.io/nascentcore/inty-backend/inty-server:<tag>
+```
+
+注意：当前仓库的默认部署工作流采用的是“构建期注入”，因此 workflow 的 `docker run` 命令行**没有挂载 `config.yaml`**；如果你切换到运行期挂载方案，需要同步调整部署脚本/工作流以免启动失败。

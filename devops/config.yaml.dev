@@ -69,8 +69,6 @@ google_play:
   webhook_secret: ""
   enable_version_check: true
   min_supported_version: 10
-  popup_reminder_version_code_gap: 200
-  settings_reminder_version_code_gap: 200
   release_track: internal
   fallback_tracks: [internal]
   # 当前生产环境版本代码（设置为正数时直接使用，不调用 Google Play API，避免配额消耗）

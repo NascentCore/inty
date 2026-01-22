@@ -9,8 +9,8 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
-import ai.sxwl.android.data.chat.ChatMessageCountStore
 import ai.sxwl.android.data.character.repository.CharacterRepository
+import ai.sxwl.android.data.chat.ChatMessageCountStore
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.utils.LogUtils
@@ -357,9 +357,7 @@ class MessagesViewModel : BaseVM() {
 
             val completed =
                 runCatching { ChatMessageCountStore.getMessageCounts(agentIds) }
-                    .onFailure { e ->
-                        LogUtils.w("MessagesViewModel - 读取本地消息条数失败: ${e.message}")
-                    }
+                    .onFailure { e -> LogUtils.w("MessagesViewModel - 读取本地消息条数失败: ${e.message}") }
                     .getOrNull()
                     .orEmpty()
             _uiState.update { it.copy(intimateMessageCounts = completed) }

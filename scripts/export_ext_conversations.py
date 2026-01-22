@@ -83,8 +83,7 @@ async def find_messages_with_ext(
     # (^|\s|[[:punct:]]) - 开头、空白字符或标点
     # ext - 精确匹配 ext
     # ($|\s|[[:punct:]]) - 结尾、空白字符或标点
-    query = text(
-        f"""
+    query = text(f"""
         SELECT 
             id,
             session_id::text,
@@ -96,8 +95,7 @@ async def find_messages_with_ext(
           AND deleted_at IS NULL
         ORDER BY created_at DESC
         {limit_clause}
-    """
-    )
+    """)
 
     result = await db.execute(query)
     rows = result.fetchall()
@@ -122,8 +120,7 @@ async def get_context_messages(
     # 将 session_id 转换为 UUID 对象
     session_uuid = uuid.UUID(session_id)
 
-    query = text(
-        """
+    query = text("""
         WITH target_msg AS (
             SELECT created_at as target_time
             FROM chat_history
@@ -161,8 +158,7 @@ async def get_context_messages(
             SELECT * FROM after_msgs
         ) combined
         ORDER BY created_at ASC
-    """
-    )
+    """)
 
     result = await db.execute(
         query,
@@ -210,8 +206,7 @@ async def get_session_metadata(
     if not session_ids:
         return {}
 
-    query = text(
-        """
+    query = text("""
         SELECT 
             c.id as chat_id,
             c.user_id,
@@ -219,8 +214,7 @@ async def get_session_metadata(
             a.name as agent_name
         FROM chats c
         LEFT JOIN agents a ON c.agent_id = a.id
-    """
-    )
+    """)
 
     result = await db.execute(query)
     rows = result.fetchall()

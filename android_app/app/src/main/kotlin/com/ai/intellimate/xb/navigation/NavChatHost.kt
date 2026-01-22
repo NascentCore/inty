@@ -41,7 +41,6 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
                     chatViewModel.clearAllData()
                     chatViewModel.setAgentID(agentId)
                 }
-                chatViewModel.updateUserInfo()
             }
         }
 

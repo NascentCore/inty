@@ -3,3 +3,9 @@ cyclopts
 openai
 matplotlib
 pydub
+requests
+google-genai
+asyncpg
+sqlalchemy
+pyyaml
+loguru

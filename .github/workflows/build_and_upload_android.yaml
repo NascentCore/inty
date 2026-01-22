@@ -76,7 +76,7 @@ jobs:
 
       - name: Create and push tag
         run: |
-          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          SHORT_SHA=$(git rev-parse --short HEAD)
           TAG_NAME="${SHORT_SHA}-android"
           
           echo "Creating tag: $TAG_NAME for commit: $SHORT_SHA"
@@ -97,7 +97,7 @@ jobs:
 
       - name: Publish upload summary
         run: |
-          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          SHORT_SHA=$(git rev-parse --short HEAD)
           TAG_NAME="${SHORT_SHA}-android"
           ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           {

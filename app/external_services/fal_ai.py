@@ -14,7 +14,6 @@ from typing import Any, Optional
 
 import fal_client
 
-
 FAL_API_KEY_ENV_VAR = "FAL_KEY"
 
 

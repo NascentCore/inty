@@ -4,11 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator
 
-from app.core.agent.prompt_template import (
-    has_template_variable,
-    render_prompt_jinja2_template,
-)
-from app.models.agent import AgentStatus, AgentVisibility
+from app.models.agent import AgentSource, AgentStatus, AgentVisibility
 from app.schemas.response import APIResponse, PaginationData
 from app.schemas.user import User
 from app.utils.image import ImageSize
@@ -146,6 +142,10 @@ class AgentBase(BaseModel):
     opening: Optional[str] = None
     opening_audio_url: Optional[str] = None
     visibility: AgentVisibility = AgentVisibility.PUBLIC
+    source: Optional[AgentSource] = Field(
+        default=AgentSource.USER_CREATED,
+        description="角色来源：USER_CREATED（用户创建）或 AUTO_GENERATED（自动生成）",
+    )
     photos: Optional[List[str]] = None
     category: Optional[str] = None
 
@@ -327,30 +327,6 @@ class Agent(AgentInDB):
     avatar_size: Optional[ImageSize] = None
     # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
     background_size: Optional[ImageSize] = None
-    # 当前与该 agent 对话的用户名字，用于替换 opening 和 intro 中的 {{ user }} 变量。
-    # 如未制定，则使用默认的代词 "you"。
-    user: Optional[str] = "you"
-
-    # TODO: 考虑如何使用 intro 从而避免重复使用手动变量替换
-    @field_serializer("intro")
-    def serialize_intro(self, intro: Optional[str]) -> Optional[str]:
-        """
-        对intro字段进行变量替换，将 {{ char }} 替换为 agent.name
-        """
-        if intro and has_template_variable(intro):
-            return render_prompt_jinja2_template(intro, char=self.name, user=self.user)
-        return intro
-
-    @field_serializer("opening")
-    def serialize_opening(self, opening: Optional[str]) -> Optional[str]:
-        """
-        对opening字段进行变量替换，将 {{ char }} 替换为 agent.name，{{ user }} 替换为 "you"
-        """
-        if opening and has_template_variable(opening):
-            return render_prompt_jinja2_template(
-                opening, char=self.name, user=self.user
-            )
-        return opening
 
     @field_serializer("llm_config")
     def serialize_llm_config(

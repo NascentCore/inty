@@ -4,6 +4,7 @@ import android.os.Parcelable
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import kotlinx.parcelize.Parcelize
+import kotlinx.serialization.Serializable
 
 /**
  * { "readable_id": "string", "nickname": "string", "avatar": "string", "email": "string", "phone":
@@ -15,6 +16,7 @@ import kotlinx.parcelize.Parcelize
  */
 @JsonClass(generateAdapter = true)
 @Parcelize
+@Serializable
 data class UserProfile(
     @param:Json(name = "age_group") val ageGroup: String? = null,
     @param:Json(name = "auth_type") val authType: String = "",

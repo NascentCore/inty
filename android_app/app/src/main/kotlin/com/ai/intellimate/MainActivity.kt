@@ -13,6 +13,7 @@ import ai.sxwl.android.data.di.networkModule
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Intent
@@ -20,18 +21,26 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
-import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,12 +49,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -64,6 +73,7 @@ import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.IntelliMateTipDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
+import com.ai.intellimate.ui.components.PolicyText
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
@@ -862,27 +872,52 @@ fun SplashLoginUI(
     when (loginScreenState) {
         LoginScreenState.MAIN -> {
             Box(modifier) {
+                val bannerText = stringArrayResource(R.array.login_banner_text)
+                var bannerIndex by remember { mutableIntStateOf(0) }
+
                 CarouselBackground(
-                    imageResIds = listOf(
-                        R.drawable.sample_0,
-                        R.drawable.sample_1,
-                        R.drawable.sample_2
-                    )
+                    imageResIds =
+                        listOf(
+                            R.drawable.login_banner_0,
+                            R.drawable.login_banner_1,
+                            R.drawable.login_banner_2,
+                            R.drawable.login_banner_3,
+                        ),
+                    onPageChange = { bannerIndex = it },
                 )
                 Column(
                     modifier = Modifier.align(Alignment.BottomCenter),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    AnimatedContent(
+                        targetState = bannerText[bannerIndex],
+                        transitionSpec = {
+                            fadeIn(tween(1500, 300)).togetherWith(fadeOut(tween(300)))
+                        },
+                    ) { text ->
+                        Text(
+                            text = text,
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        )
+                    }
+
+                    Spacer(Modifier.height(32.dp))
+                    Text(
+                        text = stringResource(R.string.login_welcome),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    Spacer(Modifier.height(32.dp))
                     // Google 登录按钮
                     GoogleLoginButton(
                         isLoading = isLoading,
                         onLoginClick = { performGoogleSignIn() },
                     )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // 隐私政策文本
-                    com.ai.intellimate.ui.components.PolicyText()
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -900,7 +935,17 @@ fun SplashLoginUI(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(80.dp))
+                    Box(
+                        contentAlignment = Alignment.BottomCenter,
+                        modifier =
+                            Modifier.height(150.dp)
+                                .windowInsetsPadding(WindowInsets.navigationBars)
+                                .padding(bottom = 16.dp),
+                    ) {
+
+                        // 隐私政策文本
+                        PolicyText()
+                    }
                 }
             }
         }
@@ -978,15 +1023,11 @@ private fun performEmailLogin(
                         userProfile.id,
                     )
 
-                    // 上报用户登录事件
-                    FirebaseManager.logEvent(
-                        FirebaseManager.Events.LOGIN,
-                        FirebaseManager.safeEventParams(
-                            "user_id" to userProfile.id,
-                            "user_name" to (userProfile.nickname),
-                            "login_method" to "email",
-                            "timestamp" to System.currentTimeMillis(),
-                        ),
+                    FirebaseManager.Events.LOGIN.logEvent(
+                        "user_id" to userProfile.id,
+                        "user_name" to (userProfile.nickname),
+                        "login_method" to "email",
+                        "timestamp" to System.currentTimeMillis(),
                     )
 
                     // 登录成功后，主动获取并上报 FCM Token

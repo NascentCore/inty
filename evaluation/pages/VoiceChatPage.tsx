@@ -485,11 +485,11 @@ export const VoiceChatPage: React.FC = () => {
                             连接: {latencyMetrics.connectLatencyMs}ms
                           </Tag>
                         )}
-                          {latencyMetrics.firstResponseAfterSilenceMs !==
-                            undefined && (
+                        {latencyMetrics.firstResponseAfterSilenceMs !==
+                          undefined && (
                           <Tag color="green">
-                              静默后首响应:{" "}
-                              {latencyMetrics.firstResponseAfterSilenceMs}ms
+                            静默后首响应:{" "}
+                            {latencyMetrics.firstResponseAfterSilenceMs}ms
                           </Tag>
                         )}
                         {latencyMetrics.avgTurnLatencyMs !== undefined && (

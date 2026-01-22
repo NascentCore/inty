@@ -165,8 +165,14 @@ fun UploadSelfieScreen(
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = stringResource(R.string.upload_selfie_tips),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            )
             Spacer(modifier = Modifier.height(UiConfigs.Spacing.XLarge))
-
             AnimatedContent(targetState = isLoading, contentAlignment = Alignment.Center) {
                 if (it) {
                     CircularProgressIndicator()

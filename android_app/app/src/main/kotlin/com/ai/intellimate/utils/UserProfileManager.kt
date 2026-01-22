@@ -1,19 +1,26 @@
 package com.ai.intellimate.utils
 
 import ai.sxwl.android.data.api.model.UserProfile
-import ai.sxwl.android.data.store.IntySetting
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import ai.sxwl.android.data.store.jsonDataStore
+import ai.sxwl.android.utils.Utils
+import android.content.Context
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+val Context.userProfile by jsonDataStore("user_profile.json", UserProfile())
 
 /** 用户信息的数据管理类 */
 object UserProfileManager {
-    private val _profile = MutableStateFlow(getUserProfile())
-    val profile = _profile.asStateFlow()
+    val profile = Utils.getApp().userProfile.data
 
-    fun saveUserProfile(userProfile: UserProfile) {
-        _profile.value = userProfile
+    suspend fun updateUserProfile(update: (UserProfile) -> UserProfile) {
+        Utils.getApp().userProfile.updateData(update)
+    }
 
-        IntySetting.setUserProfileData("id", userProfile.id)
+    suspend fun saveUserProfile(userProfile: UserProfile) {
+        Utils.getApp().userProfile.updateData { userProfile }
+
+        /*IntySetting.setUserProfileData("id", userProfile.id)
         IntySetting.setUserProfileData("nickname", userProfile.nickname)
         IntySetting.setUserProfileData("avatar", userProfile.avatar ?: "")
         IntySetting.setUserProfileData("description", userProfile.description ?: "")
@@ -35,10 +42,10 @@ object UserProfileManager {
                 is Int -> IntySetting.setUserProfileInt("age_group_int", ageGroup)
                 else -> IntySetting.setUserProfileData("age_group", ageGroup.toString())
             }
-        }
+        }*/
     }
 
-    fun getUserProfile(): UserProfile {
+    /*fun getUserProfile(): UserProfile {
         return UserProfile(
             id = IntySetting.getUserProfileData("id") ?: "",
             nickname = IntySetting.getUserProfileData("nickname") ?: "",
@@ -60,14 +67,17 @@ object UserProfileManager {
                         .takeIf { it > 0 }
                         .toString(),
         )
-    }
+    }*/
 
-    fun hasUserProfile(): Boolean {
+    val hasUserProfile: Flow<Boolean>
+        get() = profile.map { it.id.isNotEmpty() }
+
+    /*fun hasUserProfile(): Boolean {
         return IntySetting.hasUserProfileData("id")
-    }
+    }*/
 
-    fun clearUserProfile() {
-        IntySetting.clearAllUserProfileData()
-        _profile.value = UserProfile()
+    suspend fun clearUserProfile() {
+        // IntySetting.clearAllUserProfileData()
+        Utils.getApp().userProfile.updateData { UserProfile() }
     }
 }

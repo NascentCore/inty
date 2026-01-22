@@ -12,7 +12,6 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.VibeModeColors
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -91,7 +90,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
 import com.ai.intellimate.boost.BoostConfig
@@ -132,10 +130,6 @@ internal fun ProfilePage(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            // 从 ModifyProfileActivity 返回后，刷新用户信息
-            if (result.resultCode == Activity.RESULT_OK) {
-                profileViewModel?.updateUserInfoLocal()
-            }
         }
 
     // 使用 PageTrackingHelper 进行页面跟踪
@@ -145,14 +139,6 @@ internal fun ProfilePage(
             "MainActivity",
             mapOf("agent_count" to agents.size, "is_loading" to isLoading),
         )
-    }
-
-    // 监听页面恢复，自动刷新用户信息（从 ModifyProfileActivity 返回时会触发）
-    if (profileViewModel != null) {
-        LifecycleResumeEffect(profileViewModel) {
-            profileViewModel.updateUserInfoLocal()
-            onPauseOrDispose {}
-        }
     }
 
     // LazyGrid state
@@ -177,10 +163,7 @@ internal fun ProfilePage(
 
     Box(modifier = modifier) {
         // 背景图区域
-        ProfileHeaderBg(
-            modifier = Modifier.fillMaxWidth(),
-            userPhoto = userProfile.userPhoto,
-        )
+        ProfileHeaderBg(modifier = Modifier.fillMaxWidth(), userPhoto = userProfile.userPhoto)
         Column(modifier = Modifier.fillMaxWidth()) {
             // Header 区域 - 固定显示（不随列表滚动折叠）
             ProfileHeader(
@@ -562,14 +545,12 @@ private fun ProfileHeader(
             )
         }
 
-        if (BuildConfig.DEBUG) {
-            Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
-            VibeModeBanner(
-                modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-                isSubscribed = isSubscribed,
-                onRequestSubscribe = { showSubscribeDialog = true },
-            )
-        }
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        VibeModeBanner(
+            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            isSubscribed = isSubscribed,
+            onRequestSubscribe = { showSubscribeDialog = true },
+        )
 
         if (appUpdateTips) {
             Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))

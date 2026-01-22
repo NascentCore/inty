@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -173,7 +176,8 @@ internal fun EnterEmailScreen(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(horizontal = 24.dp)
-                    .padding(top = 60.dp, bottom = 40.dp),
+                    .padding(top = 60.dp, bottom = 40.dp)
+                    .windowInsetsPadding(WindowInsets.navigationBars),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 返回按钮
@@ -291,7 +295,8 @@ internal fun LoginWithEmailScreen(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(horizontal = 24.dp)
-                    .padding(top = 60.dp, bottom = 40.dp),
+                    .padding(top = 60.dp, bottom = 40.dp)
+                    .windowInsetsPadding(WindowInsets.navigationBars),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // 返回按钮

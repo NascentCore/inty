@@ -4,6 +4,7 @@
 package com.ai.intellimate.boost
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
@@ -84,6 +85,53 @@ object BoostManager {
             repo.addPoints(points, PointSource.Audio(agentId))
             logPointsEvent(PointSource.Audio(agentId), points, agentName)
         }
+    }
+
+    /** 检查积分奖励领取 */
+    suspend fun checkClaimReward() {
+        claimMonthReward()
+        claimDailyRewardLogin()
+    }
+
+    /**
+     * 领取订阅会员月度奖励（每月 500 points）。
+     *
+     * @return 领取的积分数量
+     * @throws BoostException 如果未初始化则抛出 [BoostError.NotInitialized]， 如果当月已领取则抛出
+     *   [BoostError.MonthRewardAlreadyClaimed]
+     */
+    private suspend fun claimMonthReward(): Int {
+        val repo = repository ?: throw BoostException(BoostError.NotInitialized)
+        val claimed = if (VipStatusHelper.isUserVip()) repo.claimMonthReward() else 0
+        if (claimed > 0) {
+            _events.emit(BoostEvent.PointsEarned(PointSource.MonthlyVip, claimed))
+            logFirebaseEvent("boost_month_reward_claimed", mapOf("points" to claimed))
+        }
+        return claimed
+    }
+
+    /**
+     * 领取每日登录奖励（无需签到，自动发放）。
+     *
+     * 奖励规则：
+     * - 免费用户：+10 points
+     * - 订阅用户：+20 points
+     *
+     * @return 领取的积分数量，如果当日已领取则返回 0
+     * @throws BoostException 如果未初始化则抛出 [BoostError.NotInitialized]
+     */
+    private suspend fun claimDailyRewardLogin(): Int {
+        val repo = repository ?: throw BoostException(BoostError.NotInitialized)
+        val isVip = VipStatusHelper.isUserVip()
+        val claimed = repo.claimDailyLoginReward(isVip)
+        if (claimed > 0) {
+            _events.emit(BoostEvent.PointsEarned(PointSource.DailyLogin, claimed))
+            logFirebaseEvent(
+                "boost_daily_login_reward_claimed",
+                mapOf("points" to claimed, "is_vip" to isVip),
+            )
+        }
+        return claimed
     }
 
     suspend fun claimDailyReward(): Int {

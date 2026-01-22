@@ -260,8 +260,7 @@ object FirebaseManager {
     fun logEvent(eventName: String, parameters: Map<String, Any> = emptyMap()) {
         // 调试模式下输出详细日志
         if (AppUtils.isAppDebug()) {
-            LogUtils.d("FirebaseManager", "尝试记录事件: $eventName, 参数数量: ${parameters.size}")
-            LogUtils.d("FirebaseManager", "参数详情: $parameters")
+            LogUtils.d("尝试记录事件: $eventName, 参数数量: ${parameters.size}", "参数详情: $parameters")
         }
 
         if (!shouldLogEvent(eventName)) {

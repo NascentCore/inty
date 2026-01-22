@@ -9,7 +9,6 @@ from pydantic import Field
 from vertexai.preview.vision_models import ImageGenerationModel
 import vertexai
 
-
 # See https://developers.googleblog.com/en/experiment-with-gemini-20-flash-native-image-generation/
 # https://ai.google.dev/gemini-api/docs/image-generation claims 'gemini-2.0-flash-preview-image-generation'
 # which is wrong.

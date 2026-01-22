@@ -176,8 +176,7 @@ async def get_generated_images_to_migrate(
     Returns:
         包含 chat_history 记录信息的列表
     """
-    query = text(
-        """
+    query = text("""
         SELECT 
             ch.id,
             ch.session_id::text,
@@ -189,8 +188,7 @@ async def get_generated_images_to_migrate(
           AND ch.deleted_at IS NULL
         ORDER BY ch.id
         LIMIT :limit OFFSET :offset
-        """
-    )
+        """)
 
     result = await db.execute(query, {"limit": batch_size, "offset": offset})
     return result.fetchall()

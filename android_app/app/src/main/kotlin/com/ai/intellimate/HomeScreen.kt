@@ -490,6 +490,7 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
             navController.navigate(Routes.Chat.chatPage(agent.id, false))
         },
         onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
+        onOpenSubscription = { navController.navigate(Routes.Me.VipCenter) },
         pageTrackingContext = "MainActivity",
     )
 }
@@ -595,7 +596,6 @@ private fun ProfileTabContent(
     LaunchedEffect(Unit) {
         if (!hasInitialized) {
             hasInitialized = true
-            profileViewModel.updateUserInfoLocal()
             // 优先从缓存加载，避免闪现
             profileViewModel.loadUserCreatedAgentsFromCache()
             profileViewModel.refreshAgentDrafts()

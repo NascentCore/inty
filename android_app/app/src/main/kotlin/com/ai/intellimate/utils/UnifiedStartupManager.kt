@@ -4,7 +4,6 @@ import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.store.IntySetting
@@ -38,10 +37,6 @@ object UnifiedStartupManager {
     // 用户账户状态 - 用于确保PagingSource在有效token下发起请求
     private val _userAccountReady = MutableStateFlow(false)
     val userAccountReady: StateFlow<Boolean> = _userAccountReady.asStateFlow()
-
-    // 预加载数据
-    private val _userProfile = MutableStateFlow<UserProfile?>(null)
-    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
     private val _recommendedAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
     val recommendedAgents: StateFlow<List<AgentInfo>> = _recommendedAgents.asStateFlow()
@@ -195,16 +190,6 @@ object UnifiedStartupManager {
     private suspend fun loadCacheData() {
         _currentPhase.value = StartupPhase.LoadingCache
 
-        // 并行加载缓存数据
-        val userProfileDeferred =
-            startupScope.async {
-                if (UserProfileManager.hasUserProfile()) {
-                    UserProfileManager.getUserProfile()
-                } else {
-                    null
-                }
-            }
-
         val agentsDeferred = startupScope.async { AgentCacheManager.getCachedAgents() }
 
         val chatAgentsDeferred = startupScope.async { AgentCacheManager.getCachedChatAgents() }
@@ -213,7 +198,6 @@ object UnifiedStartupManager {
             startupScope.async { AgentCacheManager.getCachedCharacterThemes() }
 
         // 等待缓存数据加载完成
-        _userProfile.value = userProfileDeferred.await()
         _recommendedAgents.value = agentsDeferred.await()
         _chatAgents.value = chatAgentsDeferred.await()
         // 主题专区缓存已加载，ExploreViewModel 可以从缓存中读取
@@ -227,12 +211,6 @@ object UnifiedStartupManager {
     /** 加载缓存数据（非阻塞版本，用于关键数据加载） */
     private suspend fun loadCacheDataNonBlocking() {
         try {
-
-            // 快速加载缓存数据，不等待
-            if (UserProfileManager.hasUserProfile()) {
-                _userProfile.value = UserProfileManager.getUserProfile()
-            }
-
             val cachedAgents = AgentCacheManager.getCachedAgents()
             _recommendedAgents.value = cachedAgents
 
@@ -296,7 +274,6 @@ object UnifiedStartupManager {
             val userProfile = IntyUserProfileSDK.getUserProfile()
             if (userProfile != null) {
                 UserProfileManager.saveUserProfile(userProfile)
-                _userProfile.value = userProfile
 
                 // 设置Firebase用户信息
                 val userId = IntySetting.getCurUserID()
@@ -486,11 +463,6 @@ object UnifiedStartupManager {
         }
     }
 
-    /** 获取当前用户信息 */
-    fun getCurrentUserProfile(): UserProfile? {
-        return _userProfile.value
-    }
-
     /** 获取当前推荐agents */
     fun getCurrentRecommendedAgents(): List<AgentInfo> {
         return _recommendedAgents.value
@@ -509,13 +481,6 @@ object UnifiedStartupManager {
     /** 检查用户账户是否已就绪（包括游客账户） */
     fun isUserAccountReady(): Boolean {
         return _userAccountReady.value
-    }
-
-    /** 检查是否有缓存数据 */
-    fun hasCacheData(): Boolean {
-        return _recommendedAgents.value.isNotEmpty() ||
-            _chatAgents.value.isNotEmpty() ||
-            _userProfile.value != null
     }
 
     /** 手动刷新推荐agents */
@@ -553,7 +518,6 @@ object UnifiedStartupManager {
     /** 清理所有启动数据（用于用户登出等场景） */
     fun clearAllData() {
         _userAccountReady.value = false
-        _userProfile.value = null
         _recommendedAgents.value = emptyList()
         _chatAgents.value = emptyList()
         _startupProgress.value = 0f

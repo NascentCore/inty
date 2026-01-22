@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
@@ -43,7 +44,6 @@ class SettingViewModel : BaseVM() {
         MutableStateFlow(
             SettingState(
                 userId = IntySetting.getCurUserID(),
-                userEmail = UserProfileManager.getUserProfile().email.orEmpty(),
                 hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
                 vipStatus = BillingRepository.vipStatusFlow.value,
             )
@@ -68,16 +68,22 @@ class SettingViewModel : BaseVM() {
                 _state.value = _state.value.copy(dialogState = dialogState)
             }
         }
+
+        viewModelScope.launch {
+            UserProfileManager.profile.collect { userProfile ->
+                _state.update { it.copy(userEmail = userProfile.email.orEmpty()) }
+            }
+        }
     }
 
     /** 刷新用户ID和更新提示状态（用于响应非响应式数据源的变化） */
     fun refreshUserData() {
-        _state.value =
-            _state.value.copy(
+        _state.update {
+            it.copy(
                 userId = IntySetting.getCurUserID(),
-                userEmail = UserProfileManager.getUserProfile().email.orEmpty(),
                 hasAppUpdateTips = IntySetting.hasAppUpdateTips(),
             )
+        }
     }
 
     /** 显示删除账号对话框 */
