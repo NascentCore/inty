@@ -274,6 +274,8 @@
     <!-- VIP character access control -->
     <string name="vip_character_chat_locked_content">This is a VIP character. Go Premium to chat with VIP characters and unlock exclusive features!</string>
     <string name="vip_character_chat_locked_cta">Subscribe to Chat VIP 🔥</string>
+    <string name="unlock_with_credits">Unlock with Credits</string>
+    <string name="close">Close</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>
