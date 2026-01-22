@@ -17,13 +17,13 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import cyclopts
-from rich.console import Console
-from rich.table import Table
-
 from config import MODELS, BenchmarkConfig, ModelConfig, get_config
 from models.base import ImageGenerationResult, ImageModel
+from models.dashscope import QwenImageEditModel
 from models.openrouter import FluxModel, SeedreamModel
 from models.vertexai import GeminiFlashImageModel, NanoBananaProModel
+from rich.console import Console
+from rich.table import Table
 from scenarios import (
     ALL_SCENARIOS,
     Scenario,
@@ -67,6 +67,10 @@ def create_model(model_config: ModelConfig, config: BenchmarkConfig) -> ImageMod
             project_id=config.gcp_project_id,
             location=config.gcp_location,
         )
+    elif model_config.name == "qwen-image-edit":
+        if not config.dashscope_api_key:
+            raise ValueError("需要设置 DASHSCOPE_API_KEY 环境变量")
+        return QwenImageEditModel(api_key=config.dashscope_api_key)
     else:
         raise ValueError(f"未知模型: {model_config.name}")
 
