@@ -418,7 +418,7 @@ internal fun ChatPage(
                 agent = it,
                 unlockByCredits = chatViewModel::chatUnlockByCredits,
                 unlockBySub = { navController.navigate(Routes.Me.VipCenter) },
-                onDismissRequest = { navController.navigateUp()}
+                onDismissRequest = { navController.navigateUp() },
             )
         }
     }
