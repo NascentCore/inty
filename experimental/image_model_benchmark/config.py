@@ -12,6 +12,7 @@ from pathlib import Path
 class ModelProvider(StrEnum):
     OPENROUTER = "openrouter"
     VERTEXAI = "vertexai"
+    DASHSCOPE = "dashscope"
 
 
 @dataclass
@@ -54,6 +55,13 @@ MODELS: dict[str, ModelConfig] = {
         display_name="Flux.2 Pro",
         notes="OpenRouter 图像生成",
     ),
+    "qwen-image-edit": ModelConfig(
+        name="qwen-image-edit",
+        model_id="qwen-image-edit-max",
+        provider=ModelProvider.DASHSCOPE,
+        display_name="Qwen Image Edit Max",
+        notes="阿里云百炼图像编辑模型",
+    ),
 }
 
 
@@ -72,6 +80,9 @@ class BenchmarkConfig:
         default_factory=lambda: os.environ.get("GOOGLE_CLOUD_PROJECT", "")
     )
     gcp_location: str = "us-central1"
+    dashscope_api_key: str = field(
+        default_factory=lambda: os.environ.get("DASHSCOPE_API_KEY", "")
+    )
 
     # 路径配置
     base_dir: Path = field(default_factory=lambda: Path(__file__).parent)
@@ -99,6 +110,9 @@ class BenchmarkConfig:
             errors.append("GOOGLE_APPLICATION_CREDENTIALS 环境变量未设置")
         elif not Path(self.gcp_credentials_path).exists():
             errors.append(f"GCP 凭证文件不存在: {self.gcp_credentials_path}")
+
+        if not self.dashscope_api_key:
+            errors.append("DASHSCOPE_API_KEY 环境变量未设置")
 
         return errors
 
