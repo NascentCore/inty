@@ -32,6 +32,7 @@ import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
+import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,16 +40,13 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
@@ -297,7 +295,7 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    //临时变量，后面存储到agent数据表中
+    // 临时变量，后面存储到agent数据表中
     private val _lastUnlockByCredits = MutableStateFlow("")
 
     private fun checkVipAgentUnlock(agent: AgentInfo) {
@@ -305,27 +303,27 @@ class ChatViewModel : BaseVM() {
         _lastUnlockByCredits.value = ""
 
         if (agent.tags?.any { it?.lowercase()?.contains("vip") == true } == true) {
-            //vip, history, credits
-            vipAgentUnlockJob = viewModelScope.launch {
-                combine(
-                    VipStatusHelper.vipStatus,
-                    isQueryMsgsCompleted,
-                    chatRepository.getMessagesFlow(agent.id).map { it.isNotEmpty() },
-                    _lastUnlockByCredits
-                ) { vipStatus, isQueryCompleted, hasHistory, lastUnlockByCredits ->
-                    when {
-                        vipStatus.isSubscribed || lastUnlockByCredits == LocalDate.now().toString() -> {
-                            ChatUIState.VipAgentLockType.NONE
+            // vip, history, credits
+            vipAgentUnlockJob =
+                viewModelScope.launch {
+                    combine(
+                            VipStatusHelper.vipStatus,
+                            isQueryMsgsCompleted,
+                            chatRepository.getMessagesFlow(agent.id).map { it.isNotEmpty() },
+                            _lastUnlockByCredits,
+                        ) { vipStatus, isQueryCompleted, hasHistory, lastUnlockByCredits ->
+                            when {
+                                vipStatus.isSubscribed ||
+                                    lastUnlockByCredits == LocalDate.now().toString() -> {
+                                    ChatUIState.VipAgentLockType.NONE
+                                }
+                                hasHistory || !isQueryCompleted ->
+                                    ChatUIState.VipAgentLockType.INPUT
+                                else -> ChatUIState.VipAgentLockType.DIALOG
+                            }
                         }
-                        hasHistory || !isQueryCompleted -> ChatUIState.VipAgentLockType.INPUT
-                        else -> ChatUIState.VipAgentLockType.DIALOG
-                    }
-                }.collect { type ->
-                    _uiState.update {
-                        it.copy(vipAgentLockType = type)
-                    }
+                        .collect { type -> _uiState.update { it.copy(vipAgentLockType = type) } }
                 }
-            }
         }
     }
 

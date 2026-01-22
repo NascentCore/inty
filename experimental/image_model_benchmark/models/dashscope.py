@@ -64,9 +64,7 @@ class DashScopeModel(ImageModel):
             # 添加参考图片
             if reference_images:
                 for img_data in reference_images:
-                    content.append(
-                        {"image": self._encode_image_to_data_url(img_data)}
-                    )
+                    content.append({"image": self._encode_image_to_data_url(img_data)})
 
             # 添加文本提示
             content.append({"text": prompt})
@@ -115,9 +113,7 @@ class DashScopeModel(ImageModel):
             choices = output.get("choices", [])
 
             if not choices:
-                raise ValueError(
-                    f"API 未返回任何结果: {result}"
-                )
+                raise ValueError(f"API 未返回任何结果: {result}")
 
             # 提取图片 URL
             message = choices[0].get("message", {})
@@ -130,9 +126,7 @@ class DashScopeModel(ImageModel):
                     break
 
             if not image_url:
-                raise ValueError(
-                    f"响应中没有找到图片 URL: {message}"
-                )
+                raise ValueError(f"响应中没有找到图片 URL: {message}")
 
             # 下载图片
             image_data = await self._download_image(image_url)

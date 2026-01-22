@@ -41,7 +41,6 @@ import coil3.request.crossfade
 import coil3.size.Size
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
-import com.inty.api.models.api.v1.ai.agents.Agent
 
 /**
  * VIP 角色解锁对话框
@@ -70,7 +69,7 @@ fun VipAgentUnlockDialog(
     unlockByCredits: () -> Unit,
     unlockBySub: () -> Unit,
     onDismissRequest: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -100,10 +99,9 @@ fun VipAgentUnlockDialog(
                     remember(configuration.screenWidthDp) {
                         with(density) { configuration.screenWidthDp.dp.toPx().toInt() }
                     }
-                val containerHeightPx =
-                    remember {
-                        with(density) { UiConfigs.Size.ChatDialogMinHeight.toPx().toInt() }
-                    }
+                val containerHeightPx = remember {
+                    with(density) { UiConfigs.Size.ChatDialogMinHeight.toPx().toInt() }
+                }
 
                 val imageRequest =
                     remember(backgroundUrl) {
@@ -177,8 +175,7 @@ fun VipAgentUnlockDialog(
                     color = UiConfigs.Colors.VipSecondaryText,
                     textAlign = TextAlign.Center,
                     modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = UiConfigs.Padding.TextBlock),
+                        Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.TextBlock),
                 )
 
                 Spacer(Modifier.height(UiConfigs.Spacing.XLarge))
@@ -186,7 +183,7 @@ fun VipAgentUnlockDialog(
                 // 订阅按钮
                 HeartPrimaryButton(
                     btnText = stringResource(R.string.vip_character_chat_locked_cta),
-                    onClick = unlockBySub
+                    onClick = unlockBySub,
                 )
 
                 Spacer(Modifier.height(UiConfigs.Spacing.Medium))
@@ -194,18 +191,15 @@ fun VipAgentUnlockDialog(
                 // 积分解锁按钮
                 HeartSecondaryButton(
                     btnText = stringResource(R.string.unlock_with_credits),
-                    onClick = unlockByCredits
+                    onClick = unlockByCredits,
                 )
             }
 
             // 关闭按钮
-            IconButton(
-                onClick = onDismissRequest,
-                modifier = Modifier.align(Alignment.TopEnd)
-            ) {
+            IconButton(onClick = onDismissRequest, modifier = Modifier.align(Alignment.TopEnd)) {
                 Image(
                     painter = painterResource(R.drawable.close),
-                    contentDescription = stringResource(R.string.close)
+                    contentDescription = stringResource(R.string.close),
                 )
             }
         }
@@ -224,7 +218,7 @@ fun VipAgentUnlockDialog(
 private fun HeartSecondaryButton(
     btnText: String,
     enable: Boolean = true,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
 ) {
     Box(
         modifier =
@@ -234,7 +228,7 @@ private fun HeartSecondaryButton(
                 .alpha(if (enable) 1f else UiConfigs.Alpha.DisabledButton)
                 .background(
                     color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton)
+                    shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton),
                 )
                 .clickable(enabled = enable, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -259,11 +253,7 @@ private fun HeartSecondaryButton(
  * - 点击时有反馈效果
  */
 @Composable
-private fun HeartPrimaryButton(
-    btnText: String,
-    enable: Boolean = true,
-    onClick: () -> Unit = {}
-) {
+private fun HeartPrimaryButton(btnText: String, enable: Boolean = true, onClick: () -> Unit = {}) {
     Box(
         modifier =
             Modifier.fillMaxWidth(UiConfigs.Fractions.PrimaryButtonWidth)
