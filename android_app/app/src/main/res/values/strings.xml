@@ -517,6 +517,7 @@
     <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
     <string name="energy_points_thousands_title">Added 1000 Boost Points! Total %1$d Boost Points!</string>
     <string name="energy_points_thousands_subtitle">Legendary trophy unlocked!</string>
+    <string name="energy_points_add_title">Added %1$d Boost Points! Total %2$d Boost Points!</string>
     <string name="energy_points_counter">%1$d pts</string>
     <string name="boost_points_label">Boost Points</string>
     <string name="boost_points_value">%1$d pts</string>
