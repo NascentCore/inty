@@ -25,6 +25,7 @@ import {
   Avatar,
   Badge,
   Divider,
+  Popover,
 } from "antd";
 import {
   PictureOutlined,
@@ -33,6 +34,7 @@ import {
   UserOutlined,
   ClockCircleOutlined,
   ExpandOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import { agentApi, generatedImagesApi } from "../services/api";
 import type { Agent, GeneratedImage } from "../types";
@@ -113,6 +115,8 @@ const GeneratedImagesPage: React.FC = () => {
       {
         user_id: string;
         user_nickname: string | null;
+        user_email: string | null;
+        user_photo: string | null;
         images: GeneratedImage[];
       }
     > = {};
@@ -122,6 +126,8 @@ const GeneratedImagesPage: React.FC = () => {
         groups[userId] = {
           user_id: userId,
           user_nickname: image.user_nickname,
+          user_email: image.user_email,
+          user_photo: image.user_photo,
           images: [],
         };
       }
@@ -312,6 +318,46 @@ const GeneratedImagesPage: React.FC = () => {
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           ({group.user_id.slice(0, 16)}...)
                         </Text>
+                        <Popover
+                          title="用户详情"
+                          trigger="click"
+                          content={
+                            <div style={{ maxWidth: 300 }}>
+                              <p>
+                                <strong>用户名：</strong>
+                                {group.user_nickname || "未设置"}
+                              </p>
+                              <p>
+                                <strong>邮箱：</strong>
+                                {group.user_email || "未设置"}
+                              </p>
+                              <p>
+                                <strong>用户ID：</strong>
+                                <Text copyable style={{ fontSize: 12 }}>
+                                  {group.user_id}
+                                </Text>
+                              </p>
+                              {group.user_photo && (
+                                <div>
+                                  <strong>自拍照片：</strong>
+                                  <div style={{ marginTop: 8 }}>
+                                    <Image
+                                      src={group.user_photo}
+                                      alt="用户自拍"
+                                      style={{ maxWidth: 200, maxHeight: 200 }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          }
+                        >
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<InfoCircleOutlined />}
+                          />
+                        </Popover>
                         <Tag color="blue">{group.images.length} 张</Tag>
                       </Space>
                     </Divider>
@@ -431,6 +477,20 @@ const GeneratedImagesPage: React.FC = () => {
               >
                 {previewImage.generation_prompt}
               </Paragraph>
+              {previewImage.reference_image_url && (
+                <>
+                  <Title level={5} style={{ marginBottom: 12, marginTop: 16 }}>
+                    参考图
+                  </Title>
+                  <div style={{ marginBottom: 12 }}>
+                    <Image
+                      src={previewImage.reference_image_url}
+                      alt="参考图"
+                      style={{ maxHeight: 200, objectFit: "contain" }}
+                    />
+                  </div>
+                </>
+              )}
               <Space split={<span style={{ color: "#d9d9d9" }}>|</span>}>
                 {previewImage.width && previewImage.height && (
                   <Text type="secondary">
