@@ -10,14 +10,13 @@ import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
+import java.time.LocalDate
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 
 class CharacterRepository(
     private val dao: CharacterDao = CharacterDatabase.getInstance().characterDao(),
@@ -43,16 +42,15 @@ class CharacterRepository(
     }
 
     suspend fun refreshAgent(agentId: String): HttpResult<AgentInfo> {
-        return runCatching {
-            NetServiceMgr.getChatApi().getAgentInfo(agentId)
-        }.onSuccess {
-            val existing = dao.getCharacter(agentId)
-            if (it is HttpResult.Success) {
-                dao.upsert(it.data.toCharacterEntity(existing))
+        return runCatching { NetServiceMgr.getChatApi().getAgentInfo(agentId) }
+            .onSuccess {
+                val existing = dao.getCharacter(agentId)
+                if (it is HttpResult.Success) {
+                    dao.upsert(it.data.toCharacterEntity(existing))
+                }
             }
-        }.onFailure { error ->
-            LogUtils.e("setAgentID exception: ${error.message}")
-        }.getOrThrow()
+            .onFailure { error -> LogUtils.e("setAgentID exception: ${error.message}") }
+            .getOrThrow()
     }
 
     suspend fun cacheAgents(agents: List<AgentInfo>) {
@@ -165,32 +163,33 @@ private fun AgentInfo.toCharacterEntity(existing: CharacterEntity?): CharacterEn
         followerCount = followerCount,
         connectorCount = connectorCount,
         deletedAt = deletedAt,
-        backgroundImages = backgroundImages.takeIf { it.isNotEmpty() }
-    ) ?: CharacterEntity(
-        agentId = id,
-        name = name,
-        avatar = avatar,
-        intro = intro,
-        readableId = readableId,
-        energyPoints = energyPoints,
-        category = category,
-        updatedAt = System.currentTimeMillis(),
-        background = background,
-        backgroundAnimatedUrl = backgroundAnimatedUrl,
-        gender = gender,
-        isFollowed = isFollowed,
-        opening = opening,
-        openingAudioUrl = opening_audio_url,
-        voicePreview = voicePreview,
-        createdAt = createdAt,
-        creator = creator,
-        tags = tags?.filterNotNull(),
-        settings = settings,
-        visibility = visibility,
-        prompt = prompt,
-        followerCount = followerCount,
-        connectorCount = connectorCount,
-        deletedAt = deletedAt,
-        backgroundImages = backgroundImages.takeIf { it.isNotEmpty() }
+        backgroundImages = backgroundImages.takeIf { it.isNotEmpty() },
     )
+        ?: CharacterEntity(
+            agentId = id,
+            name = name,
+            avatar = avatar,
+            intro = intro,
+            readableId = readableId,
+            energyPoints = energyPoints,
+            category = category,
+            updatedAt = System.currentTimeMillis(),
+            background = background,
+            backgroundAnimatedUrl = backgroundAnimatedUrl,
+            gender = gender,
+            isFollowed = isFollowed,
+            opening = opening,
+            openingAudioUrl = opening_audio_url,
+            voicePreview = voicePreview,
+            createdAt = createdAt,
+            creator = creator,
+            tags = tags?.filterNotNull(),
+            settings = settings,
+            visibility = visibility,
+            prompt = prompt,
+            followerCount = followerCount,
+            connectorCount = connectorCount,
+            deletedAt = deletedAt,
+            backgroundImages = backgroundImages.takeIf { it.isNotEmpty() },
+        )
 }

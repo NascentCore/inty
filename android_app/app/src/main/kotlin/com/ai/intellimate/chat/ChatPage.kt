@@ -963,20 +963,18 @@ internal fun ChatPage(
                     if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT) {
                         Button(
                             onClick = chatViewModel::chatUnlockByCredits,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .fillMaxWidth()
-                                .height(50.dp)
+                            modifier =
+                                Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(50.dp),
                         ) {
                             Text("Unlock by credits")
                         }
                     } else {
                         CompositionLocalProvider(
                             LocalDensity provides
-                                    Density(
-                                        density = LocalDensity.current.density,
-                                        fontScale = 1f, // 核心：禁用字体缩放
-                                    )
+                                Density(
+                                    density = LocalDensity.current.density,
+                                    fontScale = 1f, // 核心：禁用字体缩放
+                                )
                         ) {
                             ChatInput(
                                 chatViewModel = chatViewModel,
