@@ -33,6 +33,7 @@ import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
+import com.inty.api.models.api.v1.chats.Chat
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +43,9 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -155,38 +158,25 @@ class ChatViewModel : BaseVM() {
     private var boundAgentId: String? = null
     private var lastSyncedEnergyPoints = 0
 
-    private var vipAgentUnlockJob: Job? = null
+    init {
+        if (BuildConfig.DEBUG) {
+            checkVipAgentUnlock()
 
-    fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false, shouldRefresh: Boolean = false) {
+            viewModelScope.launch {
+                _agentId.filterNotNull()
+                    .collect {
+                        withContext(Dispatchers.IO) {
+                            characterRepository.refreshAgent(it)
+                        }
+                    }
+            }
+        }
+    }
+
+    fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
 
         _agentId.value = agentInfo?.id
         _imagePickMessageId.value = null
-
-        if (BuildConfig.DEBUG) {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    if (shouldRefresh) {
-                        agentInfo?.id?.let {
-                            val result = characterRepository.refreshAgent(it)
-
-                            if (result is HttpResult.Success) {
-                                result.data
-                            } else {
-                                agentInfo
-                            }
-                        }
-                    } else {
-                        agentInfo
-                    }?.let {
-                        checkVipAgentUnlock(it)
-                    }
-                } catch (error: Exception) {
-                    NetworkErrorHandler.handleNetworkException(error)
-                }
-            }
-
-
-        }
 
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
@@ -340,31 +330,36 @@ class ChatViewModel : BaseVM() {
         getChatSetting()
     }
 
-    private fun checkVipAgentUnlock(agent: AgentInfo?) {
-        vipAgentUnlockJob?.cancel()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun checkVipAgentUnlock() {
 
-        if (agent?.tags?.any { it?.lowercase()?.contains("vip") == true } == true) {
-            // vip, history, credits
-            vipAgentUnlockJob =
-                viewModelScope.launch {
-                    combine(
-                            VipStatusHelper.vipStatus,
-                            isQueryMsgsCompleted,
-                            chatRepository.getMessagesFlow(agent.id).map { it.isNotEmpty() },
-                            agentFlow.map { it?.lastUnlockByCredits },
-                        ) { vipStatus, isQueryCompleted, hasHistory, lastUnlockByCredits ->
-                            when {
-                                vipStatus.isSubscribed ||
-                                    lastUnlockByCredits == LocalDate.now().toString() -> {
-                                    ChatUIState.VipAgentLockType.NONE
-                                }
-                                hasHistory || !isQueryCompleted ->
-                                    ChatUIState.VipAgentLockType.INPUT
-                                else -> ChatUIState.VipAgentLockType.DIALOG
-                            }
-                        }
-                        .collect { type -> _uiState.update { it.copy(vipAgentLockType = type) } }
+        viewModelScope.launch {
+            combine(
+                VipStatusHelper.vipStatus,
+                isQueryMsgsCompleted,
+                _agentId.flatMapLatest { id ->
+                    if (id.isNullOrBlank()) {
+                        flowOf(false)
+                    } else {
+                        chatRepository.getMessagesFlow(id).map { it.isNotEmpty() }
+                    }
+                },
+                agentFlow,
+            ) { vipStatus, isQueryCompleted, hasHistory, agent ->
+                when {
+                    agent?.tags?.any { it.lowercase().contains("vip") } != true ||
+                    vipStatus.isSubscribed ||
+                            agent.lastUnlockByCredits == LocalDate.now().toString() -> {
+
+                        ChatUIState.VipAgentLockType.NONE
+                    }
+                    hasHistory || !isQueryCompleted ->
+                        ChatUIState.VipAgentLockType.INPUT
+                    else -> ChatUIState.VipAgentLockType.DIALOG
                 }
+            }.collect { type ->
+                _uiState.update { it.copy(vipAgentLockType = type) }
+            }
         }
     }
 
