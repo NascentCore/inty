@@ -2287,16 +2287,22 @@ async def get_agent_generated_images(
         result = await db.execute(query)
         resources = result.scalars().all()
 
-        # 收集所有 user_id 并查询用户昵称
+        # 收集所有 user_id 并查询用户信息
         from app.models.user import User
 
         user_ids = list(set(r.user_id for r in resources if r.user_id))
-        user_nicknames = {}
+        user_info_map: dict[str, dict] = {}
         if user_ids:
-            user_query = select(User.id, User.nickname).where(User.id.in_(user_ids))
+            user_query = select(
+                User.id, User.nickname, User.email, User.user_photo
+            ).where(User.id.in_(user_ids))
             user_result = await db.execute(user_query)
             for row in user_result.all():
-                user_nicknames[row.id] = row.nickname
+                user_info_map[row.id] = {
+                    "nickname": row.nickname,
+                    "email": row.email,
+                    "user_photo": row.user_photo,
+                }
 
         # 构建返回数据
         images = []
@@ -2310,19 +2316,24 @@ async def get_agent_generated_images(
 
             size = metadata.get("size", {})
             cdn_url = image_transform_service.transform_desktop(resource.url)
+            reference_image_url = metadata.get("reference_image_url")
 
+            user_info = user_info_map.get(resource.user_id, {})
             images.append(
                 {
                     "url": cdn_url,
                     "gcs_url": resource.url,
                     "generation_prompt": generation_prompt,
+                    "reference_image_url": reference_image_url,
                     "width": size.get("width"),
                     "height": size.get("height"),
                     "created_at": (
                         resource.created_at.isoformat() if resource.created_at else None
                     ),
                     "user_id": resource.user_id,
-                    "user_nickname": user_nicknames.get(resource.user_id),
+                    "user_nickname": user_info.get("nickname"),
+                    "user_email": user_info.get("email"),
+                    "user_photo": user_info.get("user_photo"),
                 }
             )
 
