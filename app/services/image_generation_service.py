@@ -740,6 +740,7 @@ class ImageGenerationService:
                         cropped=False,
                         gcs_url=gcs_uri,
                         generation_prompt=prompt,
+                        reference_image_url=reference_url,
                     )
 
                     # 设置agent_id（async_create_image_resource没有agent_id参数）
@@ -973,6 +974,7 @@ class ImageGenerationService:
                         cropped=False,
                         gcs_url=gcs_uri,
                         generation_prompt=prompt,
+                        reference_image_url=reference_url,
                     )
 
                     from app import models
