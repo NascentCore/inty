@@ -33,7 +33,6 @@ import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
-import com.inty.api.models.api.v1.chats.Chat
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +42,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -76,22 +74,20 @@ class ChatViewModel : BaseVM() {
     private val _agentId = MutableStateFlow<String?>(null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val agentFlow = _agentId.flatMapLatest {
-        if (it.isNullOrBlank()) {
-            flowOf(null)
-        } else {
-            characterRepository.getCharacterFlow(it)
-        }
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        null
-    )
+    val agentFlow =
+        _agentId
+            .flatMapLatest {
+                if (it.isNullOrBlank()) {
+                    flowOf(null)
+                } else {
+                    characterRepository.getCharacterFlow(it)
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     @Deprecated("应该直接在room中更新数据，但需要考虑旧有逻辑的数据同步")
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
-    @Deprecated("使用agentFlow从本地数据库查询")
-    val agentInfo = _agentInfo.asStateFlow()
+    @Deprecated("使用agentFlow从本地数据库查询") val agentInfo = _agentInfo.asStateFlow()
 
     // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
     private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
@@ -163,12 +159,9 @@ class ChatViewModel : BaseVM() {
             checkVipAgentUnlock()
 
             viewModelScope.launch {
-                _agentId.filterNotNull()
-                    .collect {
-                        withContext(Dispatchers.IO) {
-                            characterRepository.refreshAgent(it)
-                        }
-                    }
+                _agentId.filterNotNull().collect {
+                    withContext(Dispatchers.IO) { characterRepository.refreshAgent(it) }
+                }
             }
         }
     }
@@ -335,31 +328,29 @@ class ChatViewModel : BaseVM() {
 
         viewModelScope.launch {
             combine(
-                VipStatusHelper.vipStatus,
-                isQueryMsgsCompleted,
-                _agentId.flatMapLatest { id ->
-                    if (id.isNullOrBlank()) {
-                        flowOf(false)
-                    } else {
-                        chatRepository.getMessagesFlow(id).map { it.isNotEmpty() }
-                    }
-                },
-                agentFlow,
-            ) { vipStatus, isQueryCompleted, hasHistory, agent ->
-                when {
-                    agent?.tags?.any { it.lowercase().contains("vip") } != true ||
-                    vipStatus.isSubscribed ||
+                    VipStatusHelper.vipStatus,
+                    isQueryMsgsCompleted,
+                    _agentId.flatMapLatest { id ->
+                        if (id.isNullOrBlank()) {
+                            flowOf(false)
+                        } else {
+                            chatRepository.getMessagesFlow(id).map { it.isNotEmpty() }
+                        }
+                    },
+                    agentFlow,
+                ) { vipStatus, isQueryCompleted, hasHistory, agent ->
+                    when {
+                        agent?.tags?.any { it.lowercase().contains("vip") } != true ||
+                            vipStatus.isSubscribed ||
                             agent.lastUnlockByCredits == LocalDate.now().toString() -> {
 
-                        ChatUIState.VipAgentLockType.NONE
+                            ChatUIState.VipAgentLockType.NONE
+                        }
+                        hasHistory || !isQueryCompleted -> ChatUIState.VipAgentLockType.INPUT
+                        else -> ChatUIState.VipAgentLockType.DIALOG
                     }
-                    hasHistory || !isQueryCompleted ->
-                        ChatUIState.VipAgentLockType.INPUT
-                    else -> ChatUIState.VipAgentLockType.DIALOG
                 }
-            }.collect { type ->
-                _uiState.update { it.copy(vipAgentLockType = type) }
-            }
+                .collect { type -> _uiState.update { it.copy(vipAgentLockType = type) } }
         }
     }
 

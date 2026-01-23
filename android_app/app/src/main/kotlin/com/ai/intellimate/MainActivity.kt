@@ -542,18 +542,17 @@ class MainActivity : BaseActivity() {
 
         var creditsPointChanged by remember { mutableStateOf(0 to 0) }
 
-        LaunchedEffect(Unit) {
-            BoostManager.pointChanged
-                .collect {
-                    creditsPointChanged = it
-                }
-        }
+        LaunchedEffect(Unit) { BoostManager.pointChanged.collect { creditsPointChanged = it } }
 
         if (creditsPointChanged.first > 0) {
-            EnergyCelebrationBanner(
-                onDismissRequest = { creditsPointChanged = 0 to 0}
-            ) {
-                Text(stringResource(R.string.energy_points_add_title, creditsPointChanged.first, creditsPointChanged.second))
+            EnergyCelebrationBanner(onDismissRequest = { creditsPointChanged = 0 to 0 }) {
+                Text(
+                    stringResource(
+                        R.string.energy_points_add_title,
+                        creditsPointChanged.first,
+                        creditsPointChanged.second,
+                    )
+                )
             }
         }
     }
