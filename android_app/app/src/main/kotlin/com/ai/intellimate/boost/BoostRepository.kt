@@ -46,13 +46,13 @@ class BoostRepository(
     }
 
     /** 更新状态流（在每次写入后调用） */
-    private fun updateStateFlows() {
+    private suspend fun updateStateFlows() {
         val snapshot = getCurrentSnapshot()
         _state.value = snapshot.toDomain()
         _leaderboard.value = buildLeaderboard(snapshot)
     }
 
-    private fun getCurrentSnapshot(nowMillis: Long = System.currentTimeMillis()): BoostStateSnapshot {
+    private suspend fun getCurrentSnapshot(nowMillis: Long = System.currentTimeMillis()): BoostStateSnapshot {
         val current = BoostStorage.getBoostState()
         val normalized = normalizeDailyRewardState(current, nowMillis)
         if (normalized != current) {
