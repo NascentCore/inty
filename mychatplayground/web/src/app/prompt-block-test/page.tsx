@@ -14,6 +14,8 @@ const LS_MODEL_ID = "mychatplayground.promptBlockTest.modelId";
 const LS_PROMPT_BLOCKS = "mychatplayground.promptBlockTest.promptBlocks";
 const LS_TEST_MESSAGES = "mychatplayground.promptBlockTest.testMessages";
 const LS_TEST_MODE = "mychatplayground.promptBlockTest.testMode";
+const LS_ANALYSIS_MODEL_ID = "mychatplayground.promptBlockTest.analysisModelId";
+const LS_ANALYSIS_PROMPT = "mychatplayground.promptBlockTest.analysisPrompt";
 
 type PromptBlock = {
   id: string;
@@ -89,6 +91,19 @@ const TYPE_OPTIONS: Array<{ value: PromptBlock["type"]; label: string }> = [
   { value: "user", label: "Human" },
 ];
 
+const DEFAULT_ANALYSIS_PROMPT = `你是“提示词板块测试”的分析员。请基于输入内容进行A/B对比分析，并严格按以下结构输出：
+1. 测试背景回顾（点明A组不含变量板块、B组包含变量板块，以及测试模式）
+2. 逐题差异分析（逐题对照，必须引用原文；标注A/B原文片段；重点分析文本本身的差异对对话体验的影响，例如语气/亲密度/一致性/角色稳定性/指令遵循/推进力度）
+3. 总结：核心差异点（聚焦于对话体验与可控性，不要只停留在形式差异）
+4. 分析结论（是否达到变量板块预期效果，有无副作用/风险）
+
+重点检查“动作/台词结构”的合规性，但不是唯一重点：
+- 括号 (...) 中是AI角色在推进剧情的动作/场景，可同时描写双方动作
+- 引号 "..." 中只能是AI角色说出的话，不能包含他人动作或叙述
+如发现混用/违规，请单独列出并引用原文。
+
+要求：仅依据输入文本，不做臆测；如信息缺失或结果不完整，明确说明。输出使用简体中文。`;
+
 const getId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -156,6 +171,58 @@ function downloadText(filename: string, text: string, mime = "text/plain") {
   URL.revokeObjectURL(url);
 }
 
+function buildAnalysisSource(args: {
+  modelId: string;
+  testMode: "single" | "multi";
+  promptBlocks: PromptBlock[];
+  testMessages: TestMessage[];
+  sessions: { A: TestSession; B: TestSession };
+}): string {
+  const { modelId, testMode, promptBlocks, testMessages, sessions } = args;
+  const lines: string[] = [];
+  lines.push("# 提示词板块测试分析输入");
+  lines.push("");
+  lines.push(`- 生成时间：${new Date().toLocaleString()}`);
+  lines.push(`- 测试模型：${modelId || "（未选择）"}`);
+  lines.push(
+    `- 测试模式：${testMode === "single" ? "单轮独立测试" : "多轮脚本测试"}`
+  );
+  lines.push("- 变量板块规则：A组不含“变量板块”，B组包含“变量板块”");
+  lines.push("");
+  lines.push("## 提示词板块");
+  promptBlocks.forEach((b, idx) => {
+    lines.push(`- ${idx + 1}. [${b.type}]${b.isVariable ? " ⭐变量" : ""} ${b.content}`);
+  });
+  lines.push("");
+  lines.push("## 测试消息");
+  testMessages.forEach((m, idx) => {
+    lines.push(`- ${idx + 1}. ${m.content}`);
+  });
+  lines.push("");
+
+  (["A", "B"] as const).forEach((group) => {
+    const session = sessions[group];
+    const label = group === "A" ? "不含变量板块" : "含变量板块";
+    lines.push(`## ${group} 组结果（${label}）`);
+    lines.push(`- 状态：${session.status}`);
+    lines.push(`- 结果条数：${session.results.length}`);
+    lines.push("");
+
+    session.results.forEach((r, idx) => {
+      let aiText = "未开始";
+      if (r.status === "success") aiText = r.aiReply || "（空回复）";
+      if (r.status === "loading") aiText = "请求中...";
+      if (r.status === "error") aiText = `失败（${r.error || "未知错误"}）`;
+      lines.push(`### 问题 ${idx + 1}`);
+      lines.push(`- 用户：${r.userMessage}`);
+      lines.push(`- AI(${r.status})：${aiText}`);
+      lines.push("");
+    });
+  });
+
+  return lines.join("\n");
+}
+
 export default function PromptBlockTestPage() {
   const [apiKey] = useLocalStorageState<string>(LS_API_KEY, "");
   const [modelId, setModelId] = useLocalStorageState<string>(LS_MODEL_ID, "");
@@ -170,6 +237,14 @@ export default function PromptBlockTestPage() {
   const [testMode, setTestMode] = useLocalStorageState<"single" | "multi">(
     LS_TEST_MODE,
     "single"
+  );
+  const [analysisModelId, setAnalysisModelId] = useLocalStorageState<string>(
+    LS_ANALYSIS_MODEL_ID,
+    ""
+  );
+  const [analysisPrompt, setAnalysisPrompt] = useLocalStorageState<string>(
+    LS_ANALYSIS_PROMPT,
+    DEFAULT_ANALYSIS_PROMPT
   );
 
   const [models, setModels] = useState<OpenRouterModel[]>([]);
@@ -199,6 +274,9 @@ export default function PromptBlockTestPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
+  const [analysisResult, setAnalysisResult] = useState("");
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const lastRunRef = useRef<{
     blocks: PromptBlock[];
     testMessages: TestMessage[];
@@ -248,12 +326,15 @@ export default function PromptBlockTestPage() {
       if (!modelId && data.length > 0) {
         setModelId(data[0]!.id);
       }
+      if (!analysisModelId && data.length > 0) {
+        setAnalysisModelId(data[0]!.id);
+      }
     } catch (e) {
       setModelsError(e instanceof Error ? e.message : String(e));
     } finally {
       setModelsLoading(false);
     }
-  }, [apiKey, modelId, setModelId]);
+  }, [apiKey, modelId, analysisModelId, setModelId, setAnalysisModelId]);
 
   useEffect(() => {
     const prev = prevApiKeyRef.current;
@@ -582,6 +663,10 @@ export default function PromptBlockTestPage() {
       exportedAt: Date.now(),
       modelId,
       testMode,
+      groupMeta: {
+        A: { includesVariableBlock: false },
+        B: { includesVariableBlock: true },
+      },
       promptBlocks: sortedBlocks,
       testMessages: sortedTestMessages,
       sessions,
@@ -616,6 +701,9 @@ export default function PromptBlockTestPage() {
     (["A", "B"] as const).forEach((group) => {
       const session = sessions[group];
       lines.push(`## ${group} 组结果`);
+      lines.push(
+        `- 变量板块：${group === "A" ? "不包含" : "包含"}`
+      );
       lines.push(`- 状态：${session.status}`);
       lines.push(`- 结果条数：${session.results.length}`);
       lines.push("");
@@ -643,6 +731,68 @@ export default function PromptBlockTestPage() {
 
   const hasRunning =
     sessions.A.status === "running" || sessions.B.status === "running";
+
+  const runAnalysis = async () => {
+    setAnalysisError(null);
+    if (!apiKey.trim()) {
+      setAnalysisError("请先在主页填写 OpenRouter API Key");
+      return;
+    }
+    if (!analysisModelId) {
+      setAnalysisError("请先选择分析模型");
+      return;
+    }
+    if (hasRunning) {
+      setAnalysisError("测试进行中，请等待完成");
+      return;
+    }
+    if (sessions.A.results.length === 0 || sessions.B.results.length === 0) {
+      setAnalysisError("请先完成 A/B 测试后再分析");
+      return;
+    }
+
+    const analysisSource = buildAnalysisSource({
+      modelId,
+      testMode,
+      promptBlocks: sortedBlocks,
+      testMessages: sortedTestMessages,
+      sessions,
+    });
+
+    setAnalysisLoading(true);
+    setAnalysisResult("");
+    try {
+      const resp = await createOpenRouterChatCompletion({
+        apiKey: apiKey.trim(),
+        request: {
+          model: analysisModelId,
+          messages: [
+            { role: "system", content: analysisPrompt },
+            { role: "user", content: analysisSource },
+          ],
+          temperature: 0.2,
+          max_tokens: 3000,
+        },
+        siteUrl:
+          typeof window !== "undefined" ? window.location.origin : undefined,
+        appName: "mychatplayground-prompt-block-test-analysis",
+      });
+      const content = resp.choices?.[0]?.message?.content || "";
+      setAnalysisResult(content.trim());
+    } catch (e) {
+      setAnalysisError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const copyAnalysisResult = async () => {
+    try {
+      await navigator.clipboard.writeText(analysisResult);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <div className="h-full w-full bg-zinc-50 text-zinc-900">
@@ -1112,8 +1262,101 @@ export default function PromptBlockTestPage() {
             );
           })}
         </section>
+
+        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm font-semibold">测试结果分析</div>
+            {analysisResult && (
+              <button
+                type="button"
+                className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs hover:bg-zinc-50"
+                onClick={copyAnalysisResult}
+              >
+                复制结果
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs text-zinc-600">
+                  分析模型
+                </label>
+                <select
+                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+                  value={analysisModelId}
+                  onChange={(e) => setAnalysisModelId(e.target.value)}
+                  disabled={models.length === 0}
+                >
+                  {models.length === 0 ? (
+                    <option value="">（未加载模型列表）</option>
+                  ) : null}
+                  {models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-zinc-600">
+                  分析提示词
+                </label>
+                <textarea
+                  className="h-44 w-full resize-y rounded-md border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+                  value={analysisPrompt}
+                  onChange={(e) => setAnalysisPrompt(e.target.value)}
+                  placeholder="输入分析指令..."
+                />
+                <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500">
+                  <span>输入内容基于提示词板块测试的 A/B 结果</span>
+                  <button
+                    type="button"
+                    className="text-xs text-indigo-600 hover:text-indigo-700"
+                    onClick={() => setAnalysisPrompt(DEFAULT_ANALYSIS_PROMPT)}
+                  >
+                    恢复默认
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                onClick={runAnalysis}
+                disabled={analysisLoading || !analysisModelId || hasRunning}
+              >
+                {analysisLoading ? "分析中..." : "生成分析"}
+              </button>
+
+              {analysisError && (
+                <div className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {analysisError}
+                </div>
+              )}
+            </div>
+
+            <div className="min-h-48 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              {analysisLoading ? (
+                <div className="text-sm text-zinc-500">正在分析中...</div>
+              ) : analysisResult ? (
+                <div className="whitespace-pre-wrap text-sm text-zinc-800">
+                  {analysisResult}
+                </div>
+              ) : (
+                <div className="text-sm text-zinc-400">
+                  生成分析后会显示在这里
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
+
+
 
