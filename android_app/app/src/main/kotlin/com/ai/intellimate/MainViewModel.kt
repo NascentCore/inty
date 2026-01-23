@@ -185,8 +185,13 @@ class MainViewModel : BaseVM() {
         _isLoggedIn.value = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
 
         viewModelScope.launch {
-            // 领取积分
-            BoostManager.checkClaimReward()
+            isLoggedIn
+                .collect {
+                    if (it) {
+                        // 领取积分
+                        BoostManager.checkClaimReward()
+                    }
+                }
         }
     }
 
