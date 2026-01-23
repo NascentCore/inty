@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
@@ -959,32 +960,44 @@ internal fun ChatPage(
                             morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
                         else bottomPadding
 
-                    CompositionLocalProvider(
-                        LocalDensity provides
-                            Density(
-                                density = LocalDensity.current.density,
-                                fontScale = 1f, // 核心：禁用字体缩放
+                    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT) {
+                        Button(
+                            onClick = chatViewModel::chatUnlockByCredits,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                                .height(50.dp)
+                        ) {
+                            Text("Unlock by credits")
+                        }
+                    } else {
+                        CompositionLocalProvider(
+                            LocalDensity provides
+                                    Density(
+                                        density = LocalDensity.current.density,
+                                        fontScale = 1f, // 核心：禁用字体缩放
+                                    )
+                        ) {
+                            ChatInput(
+                                chatViewModel = chatViewModel,
+                                onSendMessage = { chatViewModel.sendMsg() },
+                                onToggleMorePanel = {
+                                    showMorePanel = !showMorePanel
+                                    focusManager.clearFocus()
+                                },
+                                showMorePanel = showMorePanel,
+                                bottomPadding = UiConfigs.ChatPage.ChatInput.BottomSpacerHeight,
+                                focusRequester = inputFocusRequester,
+                                onFocusChange = { focused ->
+                                    if (!isCurrentPage) return@ChatInput
+                                    if (suppressFocusCallback.value) {
+                                        suppressFocusCallback.value = false
+                                        return@ChatInput
+                                    }
+                                    onInputFocusChange(focused)
+                                },
                             )
-                    ) {
-                        ChatInput(
-                            chatViewModel = chatViewModel,
-                            onSendMessage = { chatViewModel.sendMsg() },
-                            onToggleMorePanel = {
-                                showMorePanel = !showMorePanel
-                                focusManager.clearFocus()
-                            },
-                            showMorePanel = showMorePanel,
-                            bottomPadding = UiConfigs.ChatPage.ChatInput.BottomSpacerHeight,
-                            focusRequester = inputFocusRequester,
-                            onFocusChange = { focused ->
-                                if (!isCurrentPage) return@ChatInput
-                                if (suppressFocusCallback.value) {
-                                    suppressFocusCallback.value = false
-                                    return@ChatInput
-                                }
-                                onInputFocusChange(focused)
-                            },
-                        )
+                        }
                     }
                 }
 

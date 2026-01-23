@@ -87,6 +87,16 @@ object BoostManager {
         }
     }
 
+    /**
+     * 使用积分解锁vip角色
+     *
+     * @return 积分不足时返回false
+     */
+    suspend fun unlockVipAgent(): Boolean {
+        val repo = repository ?: throw BoostException(BoostError.NotInitialized)
+        return repo.deductPoints(BoostConfig.UNLOCK_VIP_AGENT_COST)
+    }
+
     /** 检查积分奖励领取 */
     suspend fun checkClaimReward() {
         claimMonthReward()

@@ -36,7 +36,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             if (agentId != null) {
                 if (agent != null) {
                     if (isDeleted) agent.isDeleted = true
-                    chatViewModel.setAgentInfo(agent, true)
+                    chatViewModel.setAgentInfo(agent, true, shouldRefresh = true)
                 } else {
                     chatViewModel.clearAllData()
                     chatViewModel.setAgentID(agentId)

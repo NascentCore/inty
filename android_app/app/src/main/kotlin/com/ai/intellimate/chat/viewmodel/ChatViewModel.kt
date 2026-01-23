@@ -18,6 +18,7 @@ import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
@@ -35,6 +36,7 @@ import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +44,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -66,7 +70,24 @@ class ChatViewModel : BaseVM() {
     private val _uiState = MutableStateFlow(ChatUIState())
     val uiState = _uiState.asStateFlow()
 
+    private val _agentId = MutableStateFlow<String?>(null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val agentFlow = _agentId.flatMapLatest {
+        if (it.isNullOrBlank()) {
+            flowOf(null)
+        } else {
+            characterRepository.getCharacterFlow(it)
+        }
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        null
+    )
+
+    @Deprecated("应该直接在room中更新数据，但需要考虑旧有逻辑的数据同步")
     private val _agentInfo = MutableStateFlow<AgentInfo?>(null)
+    @Deprecated("使用agentFlow从本地数据库查询")
     val agentInfo = _agentInfo.asStateFlow()
 
     // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
@@ -136,9 +157,37 @@ class ChatViewModel : BaseVM() {
 
     private var vipAgentUnlockJob: Job? = null
 
-    fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
+    fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false, shouldRefresh: Boolean = false) {
 
+        _agentId.value = agentInfo?.id
         _imagePickMessageId.value = null
+
+        if (BuildConfig.DEBUG) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    if (shouldRefresh) {
+                        agentInfo?.id?.let {
+                            val result = characterRepository.refreshAgent(it)
+
+                            if (result is HttpResult.Success) {
+                                result.data
+                            } else {
+                                agentInfo
+                            }
+                        }
+                    } else {
+                        agentInfo
+                    }?.let {
+                        checkVipAgentUnlock(it)
+                    }
+                } catch (error: Exception) {
+                    NetworkErrorHandler.handleNetworkException(error)
+                }
+            }
+
+
+        }
+
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
 
@@ -289,20 +338,12 @@ class ChatViewModel : BaseVM() {
 
         // 查询聊天设置
         getChatSetting()
-
-        if (BuildConfig.DEBUG) {
-            checkVipAgentUnlock(agentInfo)
-        }
     }
 
-    // 临时变量，后面存储到agent数据表中
-    private val _lastUnlockByCredits = MutableStateFlow("")
-
-    private fun checkVipAgentUnlock(agent: AgentInfo) {
+    private fun checkVipAgentUnlock(agent: AgentInfo?) {
         vipAgentUnlockJob?.cancel()
-        _lastUnlockByCredits.value = ""
 
-        if (agent.tags?.any { it?.lowercase()?.contains("vip") == true } == true) {
+        if (agent?.tags?.any { it?.lowercase()?.contains("vip") == true } == true) {
             // vip, history, credits
             vipAgentUnlockJob =
                 viewModelScope.launch {
@@ -310,7 +351,7 @@ class ChatViewModel : BaseVM() {
                             VipStatusHelper.vipStatus,
                             isQueryMsgsCompleted,
                             chatRepository.getMessagesFlow(agent.id).map { it.isNotEmpty() },
-                            _lastUnlockByCredits,
+                            agentFlow.map { it?.lastUnlockByCredits },
                         ) { vipStatus, isQueryCompleted, hasHistory, lastUnlockByCredits ->
                             when {
                                 vipStatus.isSubscribed ||
@@ -328,7 +369,15 @@ class ChatViewModel : BaseVM() {
     }
 
     fun chatUnlockByCredits() {
-        _lastUnlockByCredits.value = LocalDate.now().toString()
+        viewModelScope.launch {
+            _agentId.value?.let {
+                if (BoostManager.unlockVipAgent()) {
+                    characterRepository.unlockAgentByCredits(it)
+                } else {
+                    ToastUtils.showShort("Credits not enough!")
+                }
+            }
+        }
     }
 
     /** 检查错误消息是否包含取消相关的关键字 用于避免在用户退出 Activity 后显示错误 Toast */
@@ -1483,8 +1532,8 @@ class ChatViewModel : BaseVM() {
     fun setAgentID(agentId: String, forceSync: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = NetServiceMgr.getChatApi().getAgentInfo(agentId)
-                when (result) {
+                _agentId.value = agentId
+                when (val result = characterRepository.refreshAgent(agentId)) {
                     is HttpResult.Success -> {
                         AgentStore.addAgent(result.data)
                         setAgentInfo(result.data, forceSync = forceSync)

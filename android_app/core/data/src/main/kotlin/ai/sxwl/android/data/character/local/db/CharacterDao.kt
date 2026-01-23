@@ -30,6 +30,9 @@ interface CharacterDao {
     )
     suspend fun updateEnergy(agentId: String, energyPoints: Int, updatedAt: Long)
 
+    @Query("UPDATE characters SET last_unlock_by_credits = :date WHERE agent_id = :agentId")
+    suspend fun unlockAgentByCredits(agentId: String, date: String)
+
     @Query(
         "SELECT * FROM characters WHERE name LIKE '%' || :query || '%' COLLATE NOCASE ORDER BY name LIMIT :limit"
     )
