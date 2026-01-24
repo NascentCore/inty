@@ -60,6 +60,7 @@ class ImageResourceMetadata(BaseModel):
     uncropped_image_url: Optional[str] = None
     gcs_url: Optional[str] = None
     generation_prompt: Optional[str] = None
+    reference_image_url: Optional[str] = None  # 生成图片时使用的参考图
 
     class Config:
         from_attributes = True

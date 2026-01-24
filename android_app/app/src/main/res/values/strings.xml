@@ -274,6 +274,8 @@
     <!-- VIP character access control -->
     <string name="vip_character_chat_locked_content">This is a VIP character. Go Premium to chat with VIP characters and unlock exclusive features!</string>
     <string name="vip_character_chat_locked_cta">Subscribe to Chat VIP 🔥</string>
+    <string name="unlock_with_credits">Unlock with Credits</string>
+    <string name="close">Close</string>
 
     <!-- VIP Components -->
     <string name="discount_save">OFF</string>
@@ -515,6 +517,7 @@
     <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
     <string name="energy_points_thousands_title">Added 1000 Boost Points! Total %1$d Boost Points!</string>
     <string name="energy_points_thousands_subtitle">Legendary trophy unlocked!</string>
+    <string name="energy_points_add_title">Added %1$d Boost Points! Total %2$d Boost Points!</string>
     <string name="energy_points_counter">%1$d pts</string>
     <string name="boost_points_label">Boost Points</string>
     <string name="boost_points_value">%1$d pts</string>

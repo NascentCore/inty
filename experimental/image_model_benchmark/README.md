@@ -12,6 +12,7 @@
 | Gemini 2.5 Flash Image | Vertex AI | `gemini-2.5-flash-image` |
 | Nano Banana Pro | Vertex AI | `gemini-3-pro-image-preview` |
 | Flux.2 Pro | OpenRouter | `black-forest-labs/flux.2-pro` |
+| Qwen Image Edit Max | DashScope | `qwen-image-edit-max` |
 
 ## 测试场景
 
@@ -53,6 +54,9 @@ export OPENROUTER_API_KEY="your-openrouter-api-key"
 # GCP 凭证 (用于 Gemini 和 Nano Banana)
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
 export GOOGLE_CLOUD_PROJECT="your-project-id"  # 可选，会从凭证文件读取
+
+# 阿里云 DashScope API Key (用于 Qwen Image Edit)
+export DASHSCOPE_API_KEY="your-dashscope-api-key"
 ```
 
 ### 3. 准备测试图片
@@ -96,6 +100,7 @@ python benchmark.py run --model seedream
 python benchmark.py run --model gemini-flash
 python benchmark.py run --model nano-banana
 python benchmark.py run --model flux
+python benchmark.py run --model qwen-image-edit
 
 # 运行指定场景
 python benchmark.py run --all --scenario edit_appearance

@@ -13,6 +13,7 @@ import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,6 +38,8 @@ object BoostManager {
         get() = repository?.leaderboardFlow ?: defaultLeaderboard
 
     val events: SharedFlow<BoostEvent> = _events.asSharedFlow()
+
+    val pointChanged = BoostStorage.pointChanged
 
     fun initialize(context: Context) {
         if (repository != null) return
@@ -87,10 +90,21 @@ object BoostManager {
         }
     }
 
+    /**
+     * 使用积分解锁vip角色
+     *
+     * @return 积分不足时返回false
+     */
+    suspend fun unlockVipAgent(): Boolean {
+        val repo = repository ?: throw BoostException(BoostError.NotInitialized)
+        return repo.deductPoints(BoostConfig.UNLOCK_VIP_AGENT_COST)
+    }
+
     /** 检查积分奖励领取 */
     suspend fun checkClaimReward() {
-        claimMonthReward()
         claimDailyRewardLogin()
+        delay(5000)
+        claimMonthReward()
     }
 
     /**

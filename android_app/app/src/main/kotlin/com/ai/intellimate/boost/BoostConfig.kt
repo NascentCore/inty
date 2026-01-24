@@ -44,6 +44,9 @@ object BoostConfig {
     /** 排行榜展示数量上限。 */
     const val LEADERBOARD_LIMIT = 100
 
+    /** 解锁 VIP 角色所需积分。 */
+    const val UNLOCK_VIP_AGENT_COST = 10
+
     /** MMKV 存储键名（已废弃，保留用于兼容性）。 */
     @Deprecated("使用 BoostStorage 内部常量", ReplaceWith("")) const val STORAGE_FILE_NAME = "boost_state"
 }

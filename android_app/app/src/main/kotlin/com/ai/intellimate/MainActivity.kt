@@ -69,6 +69,7 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.PointSource
 import com.ai.intellimate.boost.ui.DailyLoginRewardBanner
 import com.ai.intellimate.call.voiceCallModule
+import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.tips.IntelliMateTipsRepository
 import com.ai.intellimate.tips.IntelliMateTipsSessionGate
@@ -586,6 +587,22 @@ class MainActivity : BaseActivity() {
                     }
                 },
             )
+        }
+
+        var creditsPointChanged by remember { mutableStateOf(0 to 0) }
+
+        LaunchedEffect(Unit) { BoostManager.pointChanged.collect { creditsPointChanged = it } }
+
+        if (creditsPointChanged.first > 0) {
+            EnergyCelebrationBanner(onDismissRequest = { creditsPointChanged = 0 to 0 }) {
+                Text(
+                    stringResource(
+                        R.string.energy_points_add_title,
+                        creditsPointChanged.first,
+                        creditsPointChanged.second,
+                    )
+                )
+            }
         }
     }
 

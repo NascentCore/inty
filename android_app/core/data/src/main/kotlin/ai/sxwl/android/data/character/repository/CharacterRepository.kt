@@ -3,14 +3,19 @@
  */
 package ai.sxwl.android.data.character.repository
 
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.character.local.db.CharacterDao
 import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
+import ai.sxwl.android.utils.LogUtils
+import com.architecture.httplib.core.HttpResult
+import java.time.LocalDate
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
 
 class CharacterRepository(
@@ -26,38 +31,36 @@ class CharacterRepository(
         return withContext(dispatcher) { dao.getCharacter(agentId) }
     }
 
+    suspend fun unlockAgentByCredits(agentId: String) {
+        withContext(Dispatchers.IO) {
+            dao.unlockAgentByCredits(agentId, LocalDate.now().toString())
+        }
+    }
+
+    fun getCharacterFlow(agentId: String): Flow<CharacterEntity?> {
+        return dao.observeCharacter(agentId).filterNotNull()
+    }
+
+    suspend fun refreshAgent(agentId: String): HttpResult<AgentInfo> {
+        return runCatching { NetServiceMgr.getChatApi().getAgentInfo(agentId) }
+            .onSuccess {
+                val existing = dao.getCharacter(agentId)
+                if (it is HttpResult.Success) {
+                    dao.upsert(it.data.toCharacterEntity(existing))
+                }
+            }
+            .onFailure { error -> LogUtils.e("setAgentID exception: ${error.message}") }
+            .getOrThrow()
+    }
+
     suspend fun cacheAgents(agents: List<AgentInfo>) {
         if (agents.isEmpty()) return
 
         val entities =
             agents.map { agentInfo ->
-                CharacterEntity(
-                    agentId = agentInfo.id,
-                    name = agentInfo.name,
-                    avatar = agentInfo.avatar,
-                    intro = agentInfo.intro,
-                    readableId = agentInfo.readableId,
-                    category = agentInfo.category,
-                    energyPoints = agentInfo.energyPoints,
-                    updatedAt = System.currentTimeMillis(),
-                    background = agentInfo.background,
-                    backgroundAnimatedUrl = agentInfo.backgroundAnimatedUrl,
-                    gender = agentInfo.gender,
-                    isFollowed = agentInfo.isFollowed,
-                    opening = agentInfo.opening,
-                    openingAudioUrl = agentInfo.opening_audio_url,
-                    voicePreview = agentInfo.voicePreview,
-                    createdAt = agentInfo.createdAt,
-                    creator = agentInfo.creator,
-                    tags = agentInfo.tags?.filterNotNull(),
-                    settings = agentInfo.settings,
-                    visibility = agentInfo.visibility,
-                    prompt = agentInfo.prompt,
-                    followerCount = agentInfo.followerCount,
-                    connectorCount = agentInfo.connectorCount,
-                    deletedAt = agentInfo.deletedAt,
-                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
-                )
+                val existing = dao.getCharacter(agentInfo.id)
+
+                agentInfo.toCharacterEntity(existing?.copy(energyPoints = agentInfo.energyPoints))
             }
 
         dao.upsertAll(entities)
@@ -67,34 +70,8 @@ class CharacterRepository(
         withContext(dispatcher) {
             val existing = dao.getCharacter(agentInfo.id)
             val sanitizedPoints = max(existing?.energyPoints ?: 0, energyPoints)
-            val entity =
-                CharacterEntity(
-                    agentId = agentInfo.id,
-                    name = agentInfo.name,
-                    avatar = agentInfo.avatar,
-                    intro = agentInfo.intro,
-                    readableId = agentInfo.readableId,
-                    category = agentInfo.category,
-                    energyPoints = sanitizedPoints,
-                    updatedAt = System.currentTimeMillis(),
-                    background = agentInfo.background,
-                    backgroundAnimatedUrl = agentInfo.backgroundAnimatedUrl,
-                    gender = agentInfo.gender,
-                    isFollowed = agentInfo.isFollowed,
-                    opening = agentInfo.opening,
-                    openingAudioUrl = agentInfo.opening_audio_url,
-                    voicePreview = agentInfo.voicePreview,
-                    createdAt = agentInfo.createdAt,
-                    creator = agentInfo.creator,
-                    tags = agentInfo.tags?.filterNotNull(),
-                    settings = agentInfo.settings,
-                    visibility = agentInfo.visibility,
-                    prompt = agentInfo.prompt,
-                    followerCount = agentInfo.followerCount,
-                    connectorCount = agentInfo.connectorCount,
-                    deletedAt = agentInfo.deletedAt,
-                    backgroundImages = agentInfo.backgroundImages.takeIf { it.isNotEmpty() },
-                )
+            val entity = agentInfo.toCharacterEntity(existing?.copy(energyPoints = sanitizedPoints))
+
             dao.upsert(entity)
         }
     }
@@ -158,4 +135,61 @@ private fun CharacterEntity.toAgentInfo(): AgentInfo {
             deletedAt = this.deletedAt,
         )
         .also { info -> info.isDeleted = this.deletedAt != null }
+}
+
+private fun AgentInfo.toCharacterEntity(existing: CharacterEntity?): CharacterEntity {
+
+    return existing?.copy(
+        agentId = id,
+        name = name,
+        avatar = avatar,
+        intro = intro,
+        readableId = readableId,
+        category = category,
+        updatedAt = System.currentTimeMillis(),
+        background = background,
+        backgroundAnimatedUrl = backgroundAnimatedUrl,
+        gender = gender,
+        isFollowed = isFollowed,
+        opening = opening,
+        openingAudioUrl = opening_audio_url,
+        voicePreview = voicePreview,
+        createdAt = createdAt,
+        creator = creator,
+        tags = tags?.filterNotNull(),
+        settings = settings,
+        visibility = visibility,
+        prompt = prompt,
+        followerCount = followerCount,
+        connectorCount = connectorCount,
+        deletedAt = deletedAt,
+        backgroundImages = backgroundImages.takeIf { it.isNotEmpty() },
+    )
+        ?: CharacterEntity(
+            agentId = id,
+            name = name,
+            avatar = avatar,
+            intro = intro,
+            readableId = readableId,
+            energyPoints = energyPoints,
+            category = category,
+            updatedAt = System.currentTimeMillis(),
+            background = background,
+            backgroundAnimatedUrl = backgroundAnimatedUrl,
+            gender = gender,
+            isFollowed = isFollowed,
+            opening = opening,
+            openingAudioUrl = opening_audio_url,
+            voicePreview = voicePreview,
+            createdAt = createdAt,
+            creator = creator,
+            tags = tags?.filterNotNull(),
+            settings = settings,
+            visibility = visibility,
+            prompt = prompt,
+            followerCount = followerCount,
+            connectorCount = connectorCount,
+            deletedAt = deletedAt,
+            backgroundImages = backgroundImages.takeIf { it.isNotEmpty() },
+        )
 }

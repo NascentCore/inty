@@ -15,6 +15,7 @@ IntelliMate: Ultimate Companionship, enabled by AI
   ![image](https://github.com/user-attachments/assets/cbd3f10f-f028-4103-a5f6-c997ba8b9eb9)
 - cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
 - [adb shell monkey](https://developer.android.com/studio/test/other-testing-tools/monkey)
+- [app_con.png](./app_icon.png) 是 intellimate app 图标，图标背景色为 `2F0C4F`
 
 ## 新人速览：产品核心概念
 

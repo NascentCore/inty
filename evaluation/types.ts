@@ -655,11 +655,14 @@ export interface GeneratedImage {
   url: string;
   gcs_url: string;
   generation_prompt: string;
+  reference_image_url: string | null;
   width: number | null;
   height: number | null;
   created_at: string | null;
   user_id: string | null;
   user_nickname: string | null;
+  user_email: string | null;
+  user_photo: string | null;
 }
 
 export interface GeneratedImagesResponse {

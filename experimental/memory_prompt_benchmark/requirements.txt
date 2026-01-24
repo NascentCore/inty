@@ -1,0 +1,8 @@
+# CREATED_BY_AGENT
+# 记忆提示词评测工具依赖
+
+cyclopts>=3.0.0
+openai>=1.0.0
+psycopg2-binary>=2.9.0
+pyyaml>=6.0.0
+rich>=13.0.0

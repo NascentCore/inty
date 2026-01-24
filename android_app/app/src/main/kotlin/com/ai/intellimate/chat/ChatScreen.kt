@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ChatDialogData
@@ -98,7 +99,7 @@ internal fun ChatScreen(
         )
 
         // VIP 角色聊天权限拦截：非订阅用户不允许进入 VIP 角色聊天
-        if (showVipCharacterLockedDialog) {
+        if (showVipCharacterLockedDialog && !BuildConfig.DEBUG) {
             val dialogData =
                 ChatDialogData(
                     R.drawable.img_unlimit_dialog_bg,

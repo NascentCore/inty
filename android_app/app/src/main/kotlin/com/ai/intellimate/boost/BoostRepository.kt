@@ -188,6 +188,27 @@ class BoostRepository(
     }
 
     /**
+     * 扣除积分
+     *
+     * @param points 要扣除的积分数量
+     * @return 如果积分足够并成功扣除则返回 true，否则返回 false
+     */
+    suspend fun deductPoints(points: Int): Boolean {
+        if (points <= 0) return false
+        return withContext(scope.coroutineContext) {
+            val current = BoostStorage.getBoostState()
+            if (current.availablePoints < points) {
+                false
+            } else {
+                val updated = current.copy(availablePoints = current.availablePoints - points)
+                BoostStorage.saveBoostState(updated)
+                updateStateFlows()
+                true
+            }
+        }
+    }
+
+    /**
      * 领取每日登录奖励（无需签到，自动发放）。
      *
      * @param isVip 是否为订阅用户，决定奖励数量
