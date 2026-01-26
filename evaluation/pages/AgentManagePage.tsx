@@ -2018,7 +2018,7 @@ export const AgentManagePage: React.FC = () => {
                               )}
                               {agent.tags && agent.tags.length > 0 && (
                                 <>
-                                  {agent.tags.slice(0, 2).map((tag, index) => (
+                                  {agent.tags.map((tag, index) => (
                                     <Tag
                                       key={index}
                                       color="geekblue"
@@ -2027,14 +2027,6 @@ export const AgentManagePage: React.FC = () => {
                                       {tag}
                                     </Tag>
                                   ))}
-                                  {agent.tags.length > 2 && (
-                                    <Tag
-                                      color="default"
-                                      style={{ fontSize: "11px" }}
-                                    >
-                                      +{agent.tags.length - 2}
-                                    </Tag>
-                                  )}
                                 </>
                               )}
                             </div>
