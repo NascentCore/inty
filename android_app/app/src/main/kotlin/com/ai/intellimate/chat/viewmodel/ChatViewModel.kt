@@ -155,7 +155,7 @@ class ChatViewModel : BaseVM() {
     private var lastSyncedEnergyPoints = 0
 
     init {
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.BUILD_TYPE != "release") {
             checkVipAgentUnlock()
 
             viewModelScope.launch {

@@ -99,7 +99,7 @@ internal fun ChatScreen(
         )
 
         // VIP 角色聊天权限拦截：非订阅用户不允许进入 VIP 角色聊天
-        if (showVipCharacterLockedDialog && !BuildConfig.DEBUG) {
+        if (showVipCharacterLockedDialog && BuildConfig.BUILD_TYPE == "release") {
             val dialogData =
                 ChatDialogData(
                     R.drawable.img_unlimit_dialog_bg,
