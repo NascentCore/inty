@@ -525,6 +525,7 @@ class MainActivity : BaseActivity() {
                                 randomAgent.id,
                                 false,
                                 shouldAutoFocusInput = false,
+                                fromPage = "holiday_celebration"
                             )
                         )
                         LogUtils.d(

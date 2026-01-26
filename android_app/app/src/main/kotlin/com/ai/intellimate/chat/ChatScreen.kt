@@ -50,6 +50,7 @@ internal fun ChatScreen(
     shouldAutoFocusInput: Boolean = true,
     onCall: () -> Unit = {},
     shouldShowBoostSheetOnOpen: Boolean = false,
+    fromPage: String? = null
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val chatMessages by chatViewModel.msgs.collectAsState()
@@ -96,6 +97,7 @@ internal fun ChatScreen(
             shouldShowBoostSheetOnOpen = shouldShowBoostSheetOnOpen,
             shouldAutoFocusInput = shouldAutoFocusInput,
             onCall = onCall,
+            fromPage = fromPage
         )
 
         // VIP 角色聊天权限拦截：非订阅用户不允许进入 VIP 角色聊天

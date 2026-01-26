@@ -50,7 +50,12 @@ fun AppNavHost(
     LaunchedEffect(pushAgentId) {
         if (pushAgentId.isEmpty()) return@LaunchedEffect
         mainViewModel.updatePushAgentId("")
-        navController.navigate(Routes.Chat.chatPage(pushAgentId, false))
+        navController.navigate(
+            Routes.Chat.chatPage(
+                pushAgentId,
+                false,
+                fromPage = "push"
+            ))
     }
 
     val needsRegInfo by mainViewModel.needsRegInfo.collectAsState()
