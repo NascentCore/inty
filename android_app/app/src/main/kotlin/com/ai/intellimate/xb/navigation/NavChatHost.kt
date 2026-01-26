@@ -25,6 +25,11 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
                     type = NavType.BoolType
                     defaultValue = false
                 },
+                navArgument("fromPage") {
+                    type = NavType.StringType
+                    defaultValue = null
+                    nullable = true
+                }
             ),
     ) { backStackEntry ->
         val agentId = backStackEntry.arguments?.getString("agentId")
@@ -51,6 +56,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             shouldShowBoostSheetOnOpen = showBoost == true,
             shouldAutoFocusInput = shouldAutoFocusInput ?: true,
             onCall = { agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) } },
+            fromPage = backStackEntry.arguments?.getString("fromPage")
         )
     }
 }

@@ -99,7 +99,7 @@ fun ExploreContent(
     modifier: Modifier = Modifier,
     agentsFlow: Flow<PagingData<AgentInfo>>?,
     innerPadding: PaddingValues,
-    onClickAgent: (AgentInfo) -> Unit,
+    onClickAgent: (AgentInfo, String) -> Unit,
     isRefreshing: Boolean = false,
     onRetry: (() -> Unit)? = null,
     viewModel: ExploreViewModel = viewModel(),
@@ -457,7 +457,9 @@ fun ExploreContent(
                                             description = theme.description,
                                             agents = theme.agents,
                                             isChristmas = theme.isChristmas,
-                                            onAgentClick = onClickAgent,
+                                            onAgentClick = {
+                                                onClickAgent(it, "theme")
+                                            },
                                             onTitleClick = {
                                                 // 跳转到主题详情页面
                                                 navController?.let { nav ->
@@ -506,7 +508,7 @@ fun ExploreContent(
                                 ExploreCharacterCard(
                                     modifier = Modifier.fillMaxWidth(),
                                     agentInfo = agent,
-                                    onClick = { onClickAgent(agent) },
+                                    onClick = { onClickAgent(agent, "normal") },
                                     index = index,
                                     shouldPlayAnimated = shouldPlay,
                                     showNewTag = isCreatedWithin7Days(agent),

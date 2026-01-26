@@ -218,6 +218,7 @@ internal fun ChatPage(
     isGuideVisible: Boolean = false,
     shouldShowBoostSheetOnOpen: Boolean = false,
     debugAgentIndex: Int? = null,
+    fromPage: String? = null
 ) {
 
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
@@ -313,6 +314,7 @@ internal fun ChatPage(
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.CHAT_PAGE_VIEW,
                     FirebaseManager.safeEventParams(
+                        "from_page" to (fromPage ?: "unknown"),
                         "page_source" to pageSource,
                         "agent_id" to (agentInfo?.id ?: "unknown"),
                         "agent_name" to (agentInfo?.name ?: "unknown"),

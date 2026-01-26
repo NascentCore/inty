@@ -60,7 +60,7 @@ fun ExplorePage(
     navController: NavController,
     modifier: Modifier = Modifier,
     innerPadding: PaddingValues,
-    onClickAgent: (AgentInfo) -> Unit,
+    onClickAgent: (AgentInfo, String) -> Unit,
     viewModel: ExploreViewModel = viewModel(),
     /** 外部重置信号（来自底部导航栏双击），当值变化时触发滚动到顶部并刷新 */
     externalResetSignal: Int = 0,
@@ -197,7 +197,7 @@ fun ExplorePage(
                 onClickAgent = { agent ->
                     //                    showSearchOverlay = false
                     //                    viewModel.resetSearchState()
-                    onClickAgent(agent)
+                    onClickAgent(agent, "search")
                 },
             )
         }

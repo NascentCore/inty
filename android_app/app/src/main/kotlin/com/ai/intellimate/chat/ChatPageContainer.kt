@@ -220,6 +220,7 @@ fun ChatPageContainer(
             Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 ChatPage(
                     navController,
+                    fromPage = "home_tab",
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,

@@ -117,7 +117,12 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
         remember(context) {
             { entry: BoostLeaderboardEntry, showSheet: Boolean ->
                 navController.navigate(
-                    Routes.Chat.chatPage(entry.agentId, showSheet, shouldAutoFocusInput = false)
+                    Routes.Chat.chatPage(
+                        entry.agentId,
+                        showSheet,
+                        shouldAutoFocusInput = false,
+                        fromPage = "boost_leader_board"
+                    )
                 )
                 //                ChatActivity.launch(
                 //                    context,
