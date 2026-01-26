@@ -9,6 +9,11 @@ echo "🎯 构建 evaluation 并同步至 app/static/evaluation"
 
 echo "📦 构建 inty_sdk..."
 pushd "${SCRIPT_DIR}/inty_sdk" >/dev/null
+
+# 先创建 dist 目录，避免 evaluation/package.json 中的 file:./inty_sdk/dist 引用失败
+# 这在 CI 环境中很重要，因为 yarn 可能会检查整个工作区的依赖
+mkdir -p dist
+
 # tsc-multi 通过 tarball 安装，避免 yarn 解析问题
 yarn add -D tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz
 yarn install
