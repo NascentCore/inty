@@ -85,6 +85,7 @@ export const AgentManagePage: React.FC = () => {
   const [backgroundAnimatedFilter, setBackgroundAnimatedFilter] =
     useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [creatorFilter, setCreatorFilter] = useState<string>("admin");
 
   // 分页
   const [pagination, setPagination] = useState({
@@ -392,6 +393,19 @@ export const AgentManagePage: React.FC = () => {
       );
     }
 
+    // 创建者类型筛选
+    if (creatorFilter !== "all") {
+      filteredAgents = filteredAgents.filter((agent) => {
+        const isSuperuser = agent.creator?.is_superuser ?? false;
+        if (creatorFilter === "admin") {
+          return isSuperuser;
+        } else if (creatorFilter === "non-admin") {
+          return !isSuperuser;
+        }
+        return true;
+      });
+    }
+
     setLocalAgents(filteredAgents);
     setPagination((prev) => ({
       ...prev,
@@ -405,6 +419,7 @@ export const AgentManagePage: React.FC = () => {
     tagFilter,
     backgroundAnimatedFilter,
     sourceFilter,
+    creatorFilter,
   ]);
 
   useEffect(() => {
@@ -1788,6 +1803,16 @@ export const AgentManagePage: React.FC = () => {
                 <Option value="USER_CREATED">用户创建</Option>
                 <Option value="AUTO_GENERATED">自动生成</Option>
               </Select>
+              <Select
+                placeholder="筛选创建者"
+                style={{ width: 140 }}
+                value={creatorFilter}
+                onChange={(value) => setCreatorFilter(value)}
+              >
+                <Option value="admin">管理员创建</Option>
+                <Option value="non-admin">非管理员创建</Option>
+                <Option value="all">全部</Option>
+              </Select>
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() => loadAgents(true)}
@@ -1936,6 +1961,19 @@ export const AgentManagePage: React.FC = () => {
                             >
                               {agent.intro}
                             </p>
+                            {agent.creator &&
+                              !agent.creator.is_superuser &&
+                              agent.creator.email && (
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: "11px",
+                                    color: "#999",
+                                  }}
+                                >
+                                  创建者: {agent.creator.email}
+                                </div>
+                              )}
                             <div
                               style={{
                                 marginTop: 8,

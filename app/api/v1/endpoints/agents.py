@@ -23,6 +23,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_text_to_image_model
+from app.core.user_privilege.superuser_check import is_superuser
 from app.external_services.fal import is_fal_model
 from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
@@ -84,6 +85,26 @@ async def list_agents(
         skip=skip,
         limit=limit,
     )
+    return schemas.APIResponse.success(data=agents)
+
+
+@router.get(
+    "/admin/list",
+    response_model=schemas.APIResponse[List[schemas.Agent]],
+    summary="Admin list all AI characters (for evaluation console)",
+    description="Superuser-only endpoint to list all AI characters, including those created by non-superusers.",
+    tags=[INTY_EVAL_TAG],
+)
+async def admin_list_all_agents(
+    db: AsyncSession = Depends(deps.get_async_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(1000, ge=1, le=1000),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    if not is_superuser(current_user):
+        raise HTTPException(status_code=403, detail="只有超级用户才能访问此接口")
+
+    agents = await agent_service.get_all_agents_for_admin(db, skip=skip, limit=limit)
     return schemas.APIResponse.success(data=agents)
 
 

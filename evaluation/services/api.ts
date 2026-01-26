@@ -377,6 +377,12 @@ export const agentApi = {
     limit?: number;
   }): Promise<Agent[]> => apiClient.get("/ai/agents/me", params),
 
+  // 管理员获取全量智能体列表（包含非管理员创建的角色）
+  listAll: (params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<Agent[]> => apiClient.get("/ai/agents/admin/list", params),
+
   // 获取推荐智能体 - 使用现有API
   getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),
 
