@@ -66,6 +66,7 @@ class CharacterRepository(
         dao.upsertAll(entities)
     }
 
+    @Deprecated("不完整的AgentInfo会删除数据库中已有记录")
     suspend fun syncCharacterSnapshot(agentInfo: AgentInfo, energyPoints: Int) {
         withContext(dispatcher) {
             val existing = dao.getCharacter(agentInfo.id)
@@ -77,8 +78,9 @@ class CharacterRepository(
     }
 
     suspend fun updateEnergy(agentId: String, energyPoints: Int) {
-        val sanitizedPoints = max(0, energyPoints)
         withContext(dispatcher) {
+            val existing = dao.getCharacter(agentId)
+            val sanitizedPoints = max(existing?.energyPoints ?: 0, energyPoints)
             dao.updateEnergy(agentId, sanitizedPoints, System.currentTimeMillis())
         }
     }
