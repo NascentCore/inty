@@ -545,13 +545,13 @@ class MainActivity : BaseActivity() {
         LaunchedEffect(Unit) {
             BoostManager.pointChanged.collect {
                 LogUtils.d("积分变化=${it.first}")
-                if (it.first > 0) {
+                if (it.first >= 10) {
                     creditsPointChanged = it
                 }
             }
         }
 
-        if (creditsPointChanged.first > 0) {
+        if (creditsPointChanged.first >= 10) {
             EnergyCelebrationBanner(onDismissRequest = { creditsPointChanged = 0 to 0 }) {
                 Text(
                     stringResource(

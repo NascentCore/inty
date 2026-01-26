@@ -365,7 +365,7 @@
     <string name="profile_premium_banner_subtitle_unlock">Unlock all privileges now</string>
     <string name="profile_premium_banner_button_activate">Activate now</string>
     <string name="profile_daily_rewards_title">Daily Check-in</string>
-    <string name="profile_daily_rewards_subtitle">Get %1$d Boost Points</string>
+    <string name="profile_daily_rewards_subtitle">Get %1$d Credits</string>
     <string name="check_in_day_together">💗 Day %1$d Together</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
@@ -508,20 +508,20 @@
     <string name="billing_error_fallback_product_details">Failed to load product details</string>
     <string name="billing_error_fallback_google_play_service">Google Play services error</string>
 
-    <!-- Boost / Leaderboard -->
-    <string name="energy_points_first_title">You earned your FIRST Boost Point!</string>
-    <string name="energy_points_first_subtitle">Keep chatting to earn more Boost Points.</string>
-    <string name="energy_points_tens_title">Added 10 Boost Points! Total %1$d Boost Points!</string>
+    <!-- Credits / Leaderboard -->
+    <string name="energy_points_first_title">You earned your FIRST Credit!</string>
+    <string name="energy_points_first_subtitle">Keep chatting to earn more Credits.</string>
+    <string name="energy_points_tens_title">Added 10 Credits! Total %1$d Credits!</string>
     <string name="energy_points_tens_subtitle">Milestone unlocked - keep the streak going.</string>
-    <string name="energy_points_hundreds_title">Added 100 Boost Points! Total %1$d Boost Points!</string>
+    <string name="energy_points_hundreds_title">Added 100 Credits! Total %1$d Credits!</string>
     <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
-    <string name="energy_points_thousands_title">Added 1000 Boost Points! Total %1$d Boost Points!</string>
+    <string name="energy_points_thousands_title">Added 1000 Credits! Total %1$d Credits!</string>
     <string name="energy_points_thousands_subtitle">Legendary trophy unlocked!</string>
-    <string name="energy_points_add_title">Added %1$d Boost Points! Total %2$d Boost Points!</string>
+    <string name="energy_points_add_title">Added %1$d Credits! Total %2$d Credits!</string>
     <string name="energy_points_counter">%1$d pts</string>
-    <string name="boost_points_label">Boost Points</string>
+    <string name="boost_points_label">Credits</string>
     <string name="boost_points_value">%1$d pts</string>
-    <string name="boost_points_action">Boost</string>
+    <string name="boost_points_action">Credits</string>
     <string name="boost_points_action_disabled">Learn</string>
     <string name="boost_sheet_title">Boost this character</string>
     <string name="boost_points_available">Available: %1$d pts</string>
@@ -532,51 +532,51 @@
     <string name="boost_points_need_at_least">You need at least %1$d pts</string>
     <string name="boost_sheet_confirm">Boost now</string>
     <string name="boost_sheet_cancel">Maybe later</string>
-    <string name="boost_daily_reward_cta">Claim daily Boost Points (+200)</string>
+    <string name="boost_daily_reward_cta">Claim daily Credits (+200)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
     <string name="boost_leaderboard_title">Top IntelliMates</string>
     <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
     <string name="boost_leaderboard_back_cd">Back to Explore</string>
-    <string name="boost_leaderboard_energy_points_value">Boost Points: %1$d</string>
+    <string name="boost_leaderboard_energy_points_value">Credits: %1$d</string>
     <string name="boost_trend_up">Rising</string>
     <string name="boost_trend_down">Cooling</string>
     <string name="boost_trend_flat">Steady</string>
     <string name="boost_tab_recommend">Featured</string>
-    <string name="boost_tab_leaderboard">Boost</string>
+    <string name="boost_tab_leaderboard">Credits</string>
     <string name="boost_system_message">You invested %1$d pts in %2$s. Total boosts: %3$d.</string>
     <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
-    <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
-    <string name="boost_toast_success">Boost sent to %1$s!</string>
-    <string name="boost_toast_success_points">%1$d Boost Points sent to %2$s!</string>
+    <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn credits.</string>
+    <string name="boost_toast_success">Credits sent to %1$s!</string>
+    <string name="boost_toast_success_points">%1$d Credits sent to %2$s!</string>
     <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
-    <string name="boost_points_help_title">Boost Points</string>
-    <string name="boost_points_help_subtitle">Boost Points are an important resource in the app.You can use them to boost any character you like and help them rank higher.</string>
+    <string name="boost_points_help_title">Credits</string>
+    <string name="boost_points_help_subtitle">Credits are an important resource in the app.You can use them to boost any character you like and help them rank higher.</string>
     <string name="boost_points_help_progress">%1$d / %2$d pts to boost</string>
     <string name="boost_points_help_how_to_earn_title">How to earn?</string>
-    <string name="boost_points_help_how_to_earn_body">You can earn Boost Points by: Chatting with characters, Generating images, Listening to voices, Checking in daily.</string>
+    <string name="boost_points_help_how_to_earn_body">You can earn Credits by: Chatting with characters, Generating images, Listening to voices, Checking in daily.</string>
     <string name="boost_points_help_cta_check_in">Daily check-in</string>
     <string name="boost_points_help_cta_leaderboard">View Top 10</string>
     <string name="boost_points_help_close">Got it</string>
-    <string name="boost_character_energy_points">Character Boost Points: %1$d</string>
+    <string name="boost_character_energy_points">Character Credits: %1$d</string>
     <string name="boost_character_energy_points_hint">This score ranks IntelliMates on the leaderboard.</string>
     <string name="explore_boost_shortcut">Top IntelliMates</string>
-    <string name="explore_boost_shortcut_cd">Open boost leaderboard</string>
+    <string name="explore_boost_shortcut_cd">Open credits leaderboard</string>
     <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
     <string name="reset">Reset</string>
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
     <string name="reset_suc_msg">A new conversation has started.</string>
     <string name="chat_setting_text_streaming">Text streaming</string>
-    <string name="my_boost_points">My Boost Points: %1$d</string>
+    <string name="my_boost_points">My Credits: %1$d</string>
 
     <!-- Holiday celebration popup -->
     <string name="holiday_celebration_title">Merry Christmas &amp; Happy New Year!</string>
     <string name="holiday_celebration_subtitle">Wishing you warmth, magic, and a brand new year full of good surprises.</string>
     <string name="holiday_celebration_primary_cta">🎉 Let\'s Celebrate 💝</string>
     <string name="holiday_celebration_secondary_cta">Not now</string>
-    <string name="holiday_celebration_points_added">🥳 100 Boost Points!</string>
+    <string name="holiday_celebration_points_added">🥳 100 Credits!</string>
 
     <!-- IntelliMate tips popup -->
     <string name="intellimate_tip_title">Quick tip</string>

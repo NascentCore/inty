@@ -93,7 +93,7 @@ fun CheckInScreen(navController: NavController) {
         Column(modifier = Modifier.fillMaxWidth()) {
             CheckInNavigation(onClose = { navController.popBackStack() })
 
-            // Boost Points 横幅
+            // Credits 横幅
             Spacer(modifier = Modifier.height(16.dp))
             Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
