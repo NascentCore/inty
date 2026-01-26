@@ -228,7 +228,7 @@ class ChatViewModel : BaseVM() {
             // 重新启动能量点数观察，确保数据实时更新
             observeCharacterEnergy(agentInfo.id)
             viewModelScope.launch(Dispatchers.IO) {
-                characterRepository.syncCharacterSnapshot(agentInfo, lastSyncedEnergyPoints)
+                characterRepository.updateEnergy(agentInfo.id, lastSyncedEnergyPoints)
             }
             // 总是触发后台同步，确保用户看到最新消息
             viewModelScope.launch(Dispatchers.IO) {
@@ -263,7 +263,7 @@ class ChatViewModel : BaseVM() {
         _characterEnergy.value = 0
         observeCharacterEnergy(agentInfo.id)
         viewModelScope.launch(Dispatchers.IO) {
-            characterRepository.syncCharacterSnapshot(agentInfo, lastSyncedEnergyPoints)
+            characterRepository.updateEnergy(agentInfo.id, lastSyncedEnergyPoints)
         }
         lastQueryAgentId = agentInfo.id
         isQueryingMsgs = false
@@ -446,7 +446,7 @@ class ChatViewModel : BaseVM() {
         if (energyPoints <= lastSyncedEnergyPoints) return
         lastSyncedEnergyPoints = energyPoints
         viewModelScope.launch(Dispatchers.IO) {
-            characterRepository.syncCharacterSnapshot(agent, energyPoints)
+            characterRepository.updateEnergy(agent.id, energyPoints)
         }
     }
 

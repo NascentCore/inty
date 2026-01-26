@@ -542,9 +542,16 @@ class MainActivity : BaseActivity() {
 
         var creditsPointChanged by remember { mutableStateOf(0 to 0) }
 
-        LaunchedEffect(Unit) { BoostManager.pointChanged.collect { creditsPointChanged = it } }
+        LaunchedEffect(Unit) {
+            BoostManager.pointChanged.collect {
+                LogUtils.d("积分变化=${it.first}")
+                if (it.first >= 10) {
+                    creditsPointChanged = it
+                }
+            }
+        }
 
-        if (creditsPointChanged.first > 0) {
+        if (creditsPointChanged.first >= 10) {
             EnergyCelebrationBanner(onDismissRequest = { creditsPointChanged = 0 to 0 }) {
                 Text(
                     stringResource(

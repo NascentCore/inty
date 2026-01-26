@@ -426,20 +426,20 @@ private fun mailTo(context: Context, email: String) {
     }
 }
 
-/** Debug 环境 Boost Points 测试入口（仅 debug 可见） */
+/** Debug 环境 Credits 测试入口（仅 debug 可见） */
 @Composable
 private fun DebugBoostPointsEntry() {
     SettingsItemGroup {
         SettingsArrowItem(
             item =
                 SettingsItemData.CommonItemData(
-                    title = "Add 10000 Boost Points (Debug)",
-                    content = "Click to add 10000 boost points for testing",
+                    title = "Add 10000 Credits (Debug)",
+                    content = "Click to add 10000 credits for testing",
                 ),
             isInGroup = true,
             onItemClick = {
                 BoostManager.requestManualPoints(10000)
-                ToastUtils.showShort("Added 10000 boost points!")
+                ToastUtils.showShort("Added 10000 credits!")
             },
         )
     }
