@@ -504,6 +504,7 @@ internal fun ChatPage(
                         fontSize = 15.sp,
                         avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
                         earnedPoints = null,
+                        showBackButton = showBackButton,
                         onClickCall = {
                             scope.launch {
                                 if (agentInfo?.isDeleted == true) {

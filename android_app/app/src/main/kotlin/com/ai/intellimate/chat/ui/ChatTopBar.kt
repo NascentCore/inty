@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -116,11 +118,29 @@ fun ChatTopBar(
     avatarWidth: Dp = UiConfigs.ChatTopBar.AvatarSize,
     fontSize: TextUnit = 14.sp,
     earnedPoints: Int? = null,
+    showBackButton: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        // 返回按钮：showBackButton 为 true 时显示，样式与电话/更多按钮一致（半透明圆角背景），图标使用 R.drawable.back 与其他页面统一
+        if (showBackButton) {
+            Box(
+                modifier =
+                    Modifier
+                        .noRippleClickable { navController.popBackStack() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.back),
+                    contentDescription = stringResource(R.string.content_desc_back),
+                    colorFilter = ColorFilter.tint(Color.White),
+                    modifier = Modifier.size(UiConfigs.ChatTopBar.MoreButtonIconSize),
+                )
+            }
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.BackButtonToAvatarSpacing))
+        }
         Row(
             modifier =
                 Modifier.background(
