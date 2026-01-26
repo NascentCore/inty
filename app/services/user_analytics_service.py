@@ -1235,6 +1235,34 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def get_user_generated_images_count(self, user_id: str) -> int:
+        """获取用户总的生图数"""
+        try:
+            from sqlalchemy import select
+
+            from app.models.resource import Resource, ResourceType
+
+            # 查询所有符合条件的资源
+            query = select(Resource).where(
+                Resource.user_id == user_id,
+                Resource.type == ResourceType.IMAGE,
+                Resource.resource_metadata.isnot(None),
+            )
+            result = await self.db.execute(query)
+            resources = result.scalars().all()
+
+            # 统计有 generation_prompt 的图片
+            count = 0
+            for resource in resources:
+                metadata = resource.resource_metadata or {}
+                if metadata.get("generation_prompt"):
+                    count += 1
+
+            return count
+        except Exception as e:
+            logger.warning(f"获取用户生图数失败: {str(e)}")
+            return 0
+
     async def get_user_today_stats(self, user_id: str) -> Dict[str, Any]:
         """获取用户当日统计"""
         from datetime import timedelta
@@ -1247,9 +1275,11 @@ class UserAnalyticsService:
 
         chat_ids = await self.get_user_chat_ids(user_id)
         if not chat_ids:
+            total_generated_images = await self.get_user_generated_images_count(user_id)
             return {
                 "today_message_count": 0,
                 "today_session_count": 0,
+                "total_generated_images": total_generated_images,
             }
 
         session_ids = [generate_session_id(chat_id) for chat_id in chat_ids]
@@ -1274,9 +1304,12 @@ class UserAnalyticsService:
         result = await self.db.execute(query, params)
         row = result.fetchone()
 
+        total_generated_images = await self.get_user_generated_images_count(user_id)
+
         return {
             "today_message_count": row[1] if row else 0,
             "today_session_count": row[0] if row else 0,
+            "total_generated_images": total_generated_images,
         }
 
     async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:

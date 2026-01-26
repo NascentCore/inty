@@ -572,6 +572,7 @@ export interface UserDailyMessagesResponse {
 export interface UserTodayStatsResponse {
   today_message_count: number;
   today_session_count: number;
+  total_generated_images: number;
 }
 
 export interface UserSessionItem {
@@ -672,6 +673,24 @@ export interface GeneratedImagesResponse {
 
 export interface ImageCountsResponse {
   counts: Record<string, number>;
+}
+
+// 用户生成图片
+export interface UserGeneratedImageItem {
+  url: string;
+  gcs_url: string;
+  generation_prompt: string;
+  reference_image_url: string | null;
+  width: number | null;
+  height: number | null;
+  created_at: string | null;
+  agent_id: string | null;
+  agent_name: string | null;
+}
+
+export interface UserGeneratedImagesResponse {
+  images: UserGeneratedImageItem[];
+  total: number;
 }
 
 // Report/Feedback 相关类型

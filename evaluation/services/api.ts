@@ -762,6 +762,15 @@ export const userAnalyticsApi = {
   }): Promise<import("../types").SessionMessagesResponse> =>
     apiClient.get("/evaluation/user-analytics/session-messages", params),
 
+  // 获取用户生成图片列表
+  getUserGeneratedImages: (
+    params: UserLookupParams & {
+      skip?: number;
+      limit?: number;
+    },
+  ): Promise<import("../types").UserGeneratedImagesResponse> =>
+    apiClient.get("/evaluation/user-analytics/user-generated-images", params),
+
   // 获取 LLM 调用延迟趋势
   getLLMLatency: (
     params?: AnalyticsDateParams,

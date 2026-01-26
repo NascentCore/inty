@@ -20,6 +20,10 @@ import {
   Spin,
   Empty,
   Pagination,
+  Modal,
+  Image,
+  Typography,
+  Tooltip,
 } from "antd";
 import {
   SearchOutlined,
@@ -27,6 +31,7 @@ import {
   MessageOutlined,
   CalendarOutlined,
   DownloadOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
@@ -44,10 +49,12 @@ import type {
   UserDailyMessageItem,
   UserSessionItem,
   SessionMessageItem,
+  UserGeneratedImageItem,
 } from "../types";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
+const { Text, Paragraph } = Typography;
 
 export const UserDailyMessagesPage: React.FC = () => {
   // 查询表单状态
@@ -79,6 +86,11 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     new Set(),
   );
+  const [loadingUserImages, setLoadingUserImages] = useState(false);
+  const [userImages, setUserImages] = useState<UserGeneratedImageItem[]>([]);
+  const [userImagesTotal, setUserImagesTotal] = useState(0);
+  const [showImagesModal, setShowImagesModal] = useState(false);
+  const [previewImage, setPreviewImage] = useState<UserGeneratedImageItem | null>(null);
 
   // 查询用户每日消息
   const handleSearch = useCallback(async () => {
@@ -204,6 +216,44 @@ export const UserDailyMessagesPage: React.FC = () => {
     },
     [loadSessionMessages],
   );
+
+  // 加载用户生成图片
+  const loadUserGeneratedImages = useCallback(async () => {
+    const trimmed = searchValue.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setLoadingUserImages(true);
+    try {
+      const identifierParams =
+        searchType === "email" ? { email: trimmed } : { user_id: trimmed };
+      const data = await userAnalyticsApi.getUserGeneratedImages({
+        ...identifierParams,
+        skip: 0,
+        limit: 200,
+      });
+      setUserImages(data.images);
+      setUserImagesTotal(data.total);
+    } catch (error: any) {
+      console.error("加载用户生成图片失败:", error);
+      message.error(error?.message || "加载用户生成图片失败");
+      setUserImages([]);
+      setUserImagesTotal(0);
+    } finally {
+      setLoadingUserImages(false);
+    }
+  }, [searchType, searchValue]);
+
+  // 处理点击生图数卡片
+  const handleImageCountClick = useCallback(() => {
+    if (!todayStats || todayStats.total_generated_images === 0) {
+      message.info("该用户暂无生成图片");
+      return;
+    }
+    setShowImagesModal(true);
+    loadUserGeneratedImages();
+  }, [todayStats, loadUserGeneratedImages]);
 
   // 导出会话历史记录
   const handleExportSession = useCallback(
@@ -561,7 +611,7 @@ export const UserDailyMessagesPage: React.FC = () => {
           {/* 当日统计卡片 */}
           {todayStats && (
             <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={12} md={6}>
                 <Card>
                   <Statistic
                     title="今日消息数"
@@ -570,7 +620,7 @@ export const UserDailyMessagesPage: React.FC = () => {
                   />
                 </Card>
               </Col>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={12} md={6}>
                 <Card>
                   <Statistic
                     title="今日会话数"
@@ -579,12 +629,30 @@ export const UserDailyMessagesPage: React.FC = () => {
                   />
                 </Card>
               </Col>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={12} md={6}>
                 <Card>
                   <Statistic
                     title="总消息数"
                     value={totalMessages}
                     prefix={<MessageOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card
+                  style={{
+                    cursor:
+                      todayStats.total_generated_images > 0
+                        ? "pointer"
+                        : "default",
+                  }}
+                  onClick={handleImageCountClick}
+                  hoverable={todayStats.total_generated_images > 0}
+                >
+                  <Statistic
+                    title="用户总的生图数"
+                    value={todayStats.total_generated_images || 0}
+                    prefix={<PictureOutlined />}
                   />
                 </Card>
               </Col>
@@ -870,6 +938,192 @@ export const UserDailyMessagesPage: React.FC = () => {
           <Empty description="请输入用户邮箱或用户ID并点击查询" />
         </Card>
       )}
+
+      {/* 用户生成图片展示 Modal */}
+      <Modal
+        open={showImagesModal}
+        onCancel={() => {
+          setShowImagesModal(false);
+          setUserImages([]);
+          setUserImagesTotal(0);
+        }}
+        footer={null}
+        width={1200}
+        title={
+          <Space>
+            <PictureOutlined />
+            <span>用户生成图片</span>
+            <Tag color="green">{userImagesTotal} 张</Tag>
+          </Space>
+        }
+      >
+        {loadingUserImages ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "400px",
+            }}
+          >
+            <Spin size="large" />
+          </div>
+        ) : userImages.length === 0 ? (
+          <Empty description="该用户暂无生成图片" style={{ marginTop: 100 }} />
+        ) : (
+          <div>
+            <Row gutter={[16, 16]} style={{ maxHeight: "70vh", overflow: "auto" }}>
+              {userImages.map((image, index) => (
+                <Col
+                  key={index}
+                  xs={12}
+                  sm={8}
+                  md={6}
+                  lg={4}
+                  xl={3}
+                >
+                  <Card
+                    hoverable
+                    size="small"
+                    cover={
+                      <div
+                        style={{
+                          position: "relative",
+                          paddingTop: "100%",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <img
+                          src={image.url}
+                          alt={`生成图片 ${index + 1}`}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            cursor: "pointer",
+                          }}
+                          onClick={() => setPreviewImage(image)}
+                          onError={(e) => {
+                            const imgElement = e.target as HTMLImageElement;
+                            console.error("图片加载失败:", {
+                              cdnUrl: image.url,
+                              gcsUrl: image.gcs_url,
+                              error: e,
+                            });
+                            // 如果CDN URL加载失败，尝试使用GCS URL
+                            if (image.gcs_url && imgElement.src !== image.gcs_url) {
+                              imgElement.src = image.gcs_url;
+                            } else {
+                              // 如果GCS URL也失败，显示占位图
+                              imgElement.src =
+                                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999' font-size='12'%3E图片加载失败%3C/text%3E%3C/svg%3E";
+                            }
+                          }}
+                        />
+                      </div>
+                    }
+                    bodyStyle={{ padding: "8px" }}
+                  >
+                    <Tooltip title={image.generation_prompt}>
+                      <Paragraph
+                        ellipsis={{ rows: 2 }}
+                        style={{ fontSize: 12, marginBottom: 4 }}
+                      >
+                        {image.generation_prompt}
+                      </Paragraph>
+                    </Tooltip>
+                    {image.agent_name && (
+                      <div style={{ marginBottom: 4 }}>
+                        <Tag color="blue" style={{ fontSize: 10 }}>
+                          {image.agent_name}
+                        </Tag>
+                      </div>
+                    )}
+                    {image.width && image.height && (
+                      <Text type="secondary" style={{ fontSize: 10, display: "block" }}>
+                        尺寸: {image.width} × {image.height}
+                      </Text>
+                    )}
+                    {image.created_at && (
+                      <Text type="secondary" style={{ fontSize: 10, display: "block" }}>
+                        {formatUtcTimeRaw(image.created_at)}
+                      </Text>
+                    )}
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </div>
+        )}
+      </Modal>
+
+      {/* 图片预览 Modal */}
+      <Modal
+        open={!!previewImage}
+        onCancel={() => setPreviewImage(null)}
+        footer={null}
+        width={900}
+        centered
+        title={
+          previewImage ? (
+            <Space>
+              <PictureOutlined />
+              <span>图片预览</span>
+              {previewImage.agent_name && (
+                <Tag color="blue">{previewImage.agent_name}</Tag>
+              )}
+            </Space>
+          ) : null
+        }
+      >
+        {previewImage && (
+          <div>
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <img
+                src={previewImage.url}
+                alt="预览图片"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "600px",
+                  borderRadius: 8,
+                }}
+                onError={(e) => {
+                  const imgElement = e.target as HTMLImageElement;
+                  if (
+                    previewImage.gcs_url &&
+                    imgElement.src !== previewImage.gcs_url
+                  ) {
+                    imgElement.src = previewImage.gcs_url;
+                  }
+                }}
+              />
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <Text strong>生成提示词：</Text>
+              <Paragraph style={{ marginTop: 8 }}>
+                {previewImage.generation_prompt}
+              </Paragraph>
+              {previewImage.width && previewImage.height && (
+                <div style={{ marginTop: 8 }}>
+                  <Text strong>尺寸：</Text>{" "}
+                  <Text>
+                    {previewImage.width} × {previewImage.height}
+                  </Text>
+                </div>
+              )}
+              {previewImage.created_at && (
+                <div style={{ marginTop: 8 }}>
+                  <Text strong>生成时间：</Text>{" "}
+                  <Text>{formatUtcTimeRaw(previewImage.created_at)}</Text>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
