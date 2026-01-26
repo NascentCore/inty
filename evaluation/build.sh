@@ -13,10 +13,10 @@ pushd "${SCRIPT_DIR}/inty_sdk" >/dev/null
 # 先创建 dist 目录，避免 evaluation/package.json 中的 file:./inty_sdk/dist 引用失败
 # 这在 CI 环境中很重要，因为 yarn 可能会检查整个工作区的依赖
 mkdir -p dist
-# 创建一个临时的 package.json 占位文件，确保 dist 目录被识别为有效的包目录
-if [ ! -f dist/package.json ]; then
-  echo '{"name":"inty","version":"0.0.0"}' > dist/package.json
-fi
+# # 创建一个临时的 package.json 占位文件，确保 dist 目录被识别为有效的包目录
+# if [ ! -f dist/package.json ]; then
+#   echo '{"name":"inty","version":"0.0.0"}' > dist/package.json
+# fi
 
 # tsc-multi 通过 tarball 安装，避免 yarn 解析问题
 yarn add -D tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz
