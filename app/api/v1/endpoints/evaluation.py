@@ -2124,6 +2124,133 @@ async def get_user_today_stats(
 
 
 @router.get(
+    "/user-analytics/user-generated-images",
+    response_model=schemas.user_analytics.UserGeneratedImagesResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_user_generated_images(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    email: Optional[str] = Query(None, description="用户邮箱"),
+    user_id: Optional[str] = Query(None, description="用户ID"),
+    skip: int = Query(0, ge=0, description="跳过的记录数"),
+    limit: int = Query(50, ge=1, le=200, description="返回的记录数"),
+) -> Any:
+    """
+    获取指定用户的所有聊天生成图片
+
+    从 resources 表查询带有 generation_prompt 的图片资源
+    """
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from sqlalchemy import select
+
+        from app.models.resource import Resource, ResourceType
+        from app.services.image_transform_service import image_transform_service
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        service = UserAnalyticsService(db)
+
+        # 查找用户
+        user_info = await _find_user_info_by_identifier(
+            service, email=email, user_id=user_id
+        )
+
+        # 查询指定用户的生成图片
+        query = (
+            select(Resource)
+            .where(
+                Resource.user_id == user_info["id"],
+                Resource.type == ResourceType.IMAGE,
+                Resource.resource_metadata.isnot(None),
+            )
+            .order_by(Resource.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        result = await db.execute(query)
+        resources = result.scalars().all()
+
+        # 收集所有 agent_id 并查询角色信息
+        from app.models.agent import Agent
+
+        agent_ids = list(set(r.agent_id for r in resources if r.agent_id))
+        agent_info_map: dict[str, dict] = {}
+        if agent_ids:
+            agent_query = select(Agent.id, Agent.name).where(Agent.id.in_(agent_ids))
+            agent_result = await db.execute(agent_query)
+            for row in agent_result.all():
+                agent_info_map[row.id] = {
+                    "name": row.name,
+                }
+
+        # 构建返回数据
+        images = []
+        for resource in resources:
+            metadata = resource.resource_metadata or {}
+            generation_prompt = metadata.get("generation_prompt")
+
+            # 只返回有 generation_prompt 的图片
+            if not generation_prompt:
+                continue
+
+            size = metadata.get("size", {})
+            try:
+                cdn_url = image_transform_service.transform_desktop(resource.url)
+            except Exception as e:
+                logger.warning(f"转换图片URL失败: {resource.url}, 错误: {str(e)}")
+                cdn_url = resource.url  # 使用原始URL作为fallback
+            reference_image_url = metadata.get("reference_image_url")
+
+            agent_info = agent_info_map.get(resource.agent_id, {})
+            images.append(
+                {
+                    "url": cdn_url,
+                    "gcs_url": resource.url,
+                    "generation_prompt": generation_prompt,
+                    "reference_image_url": reference_image_url,
+                    "width": size.get("width"),
+                    "height": size.get("height"),
+                    "created_at": (
+                        resource.created_at.isoformat() if resource.created_at else None
+                    ),
+                    "agent_id": resource.agent_id,
+                    "agent_name": agent_info.get("name"),
+                }
+            )
+
+        # 获取总数
+        count_query = (
+            select(Resource)
+            .where(
+                Resource.user_id == user_info["id"],
+                Resource.type == ResourceType.IMAGE,
+                Resource.resource_metadata.isnot(None),
+            )
+        )
+        count_result = await db.execute(count_query)
+        all_resources = count_result.scalars().all()
+        total = 0
+        for resource in all_resources:
+            metadata = resource.resource_metadata or {}
+            if metadata.get("generation_prompt"):
+                total += 1
+
+        logger.debug(f"获取用户 {user_info['id']} 的生成图片，共 {len(images)} 张")
+        return {"images": images, "total": total}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取用户生成图片失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取用户生成图片失败")
+
+
+@router.get(
     "/user-analytics/user-sessions",
     response_model=schemas.user_analytics.UserSessionsResponse,
     tags=[INTY_EVAL_TAG],

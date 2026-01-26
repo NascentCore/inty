@@ -232,6 +232,7 @@ class UserTodayStatsResponse(BaseModel):
 
     today_message_count: int = Field(description="今日消息数")
     today_session_count: int = Field(description="今日会话数")
+    total_generated_images: int = Field(description="用户总的生图数", default=0)
 
 
 class UserSessionItem(BaseModel):
@@ -333,3 +334,24 @@ class LiveChatBasicStatsResponse(BaseModel):
     avg_duration_per_session: float = Field(
         description="每 session 平均时长（秒）", default=0.0
     )
+
+
+class UserGeneratedImageItem(BaseModel):
+    """用户生成图片项"""
+
+    url: str = Field(description="CDN URL")
+    gcs_url: str = Field(description="GCS URL")
+    generation_prompt: str = Field(description="生成提示词")
+    reference_image_url: Optional[str] = Field(None, description="参考图片URL")
+    width: Optional[int] = Field(None, description="图片宽度")
+    height: Optional[int] = Field(None, description="图片高度")
+    created_at: Optional[str] = Field(None, description="创建时间")
+    agent_id: Optional[str] = Field(None, description="角色ID")
+    agent_name: Optional[str] = Field(None, description="角色名称")
+
+
+class UserGeneratedImagesResponse(BaseModel):
+    """用户生成图片列表响应"""
+
+    images: List[UserGeneratedImageItem]
+    total: int = Field(description="总数量")
