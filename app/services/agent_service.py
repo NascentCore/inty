@@ -421,6 +421,69 @@ async def get_user_agents(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+async def get_all_agents_for_admin(
+    db: AsyncSession,
+    *,
+    skip: int = 0,
+    limit: int = 1000,
+) -> List[models.Agent]:
+    """
+    获取所有 AI 角色（仅供超级用户管理后台使用）。
+
+    - 包含超级用户与非超级用户创建的角色
+    - 排除已软删除的角色
+    - 预加载 creator 信息，避免 N+1
+    """
+    try:
+        if skip < 0:
+            raise HTTPException(
+                status_code=400, detail="Skip parameter cannot be negative"
+            )
+        if limit <= 0 or limit > 1000:
+            raise HTTPException(
+                status_code=400, detail="Limit parameter must be between 1-1000"
+            )
+
+        query = (
+            select(
+                models.Agent,
+                func.count(agent_followers.c.user_id).label("follower_count"),
+            )
+            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
+            .options(selectinload(models.Agent.creator))
+            .where(models.Agent.deleted_at.is_(None))
+            .group_by(models.Agent.id)
+            .offset(skip)
+            .limit(limit)
+            .order_by(desc(models.Agent.created_at))
+        )
+
+        result = await db.execute(query)
+        rows = result.all()
+
+        agents: list[models.Agent] = []
+        for row in rows:
+            agent = row[0]
+            follower_count = row[1] or 0
+            agent.follower_count = follower_count
+            agent.is_followed = False
+            agents.append(agent)
+
+        # 批量填充图片尺寸信息（AvatarDisplay 不依赖，但列表页可能用到 URL 转换后尺寸）
+        for agent in agents:
+            await _populate_agent_image_sizes(db, agent)
+
+        return agents
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"Database query error - get all agents for admin: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database query failed")
+    except Exception as e:
+        logger.error(f"Unknown error - get all agents for admin: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 async def get_recommended_agents(
     db: AsyncSession,
     skip: int = 0,

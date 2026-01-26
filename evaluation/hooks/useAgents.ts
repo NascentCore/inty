@@ -49,7 +49,8 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     type = "all",
     autoLoad = true,
     enableCache = true,
-    cacheKey = `agents_cache_${type}`,
+    // 2026-01: 切换为管理员全量列表接口后，避免复用旧缓存导致“非管理员创建”为空
+    cacheKey = `agents_cache_${type}_admin_list_v1`,
   } = options;
 
   // 状态管理
@@ -126,12 +127,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           }
         }
 
-        let response = await api.getIntyClient().api.v1.ai.agents.list({
-          // 增加限制以获取更多智能体；后端限制最多 1000 个，这是分页设计；以后需要调整
+        // 评测后台需要看到全量角色（包含非管理员创建的角色），使用管理员专用列表接口
+        let data = await api.agents.listAll({
           limit: 1000,
           skip: 0,
         });
-        let data = response.data;
         console.log("agent data:", data, "total:", data?.length);
 
         if (type !== "all" && Array.isArray(data)) {
