@@ -482,17 +482,13 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
                     conversation.convertToAgentInfo().id,
                     false,
                     isDeleted = conversation.isDeleted,
-                    fromPage = "conversation"
+                    fromPage = "conversation",
                 )
             )
         },
         onClickFavoriteAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.Chat.chatPage(
-                agent.id,
-                false,
-                fromPage = "favorite"
-            ))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false, fromPage = "favorite"))
         },
         onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
         onOpenSubscription = { navController.navigate(Routes.Me.VipCenter) },
@@ -529,7 +525,7 @@ private fun ExploreTabContent(
                     agent.id,
                     false,
                     shouldAutoFocusInput = false,
-                    fromPage = "explore_$type"
+                    fromPage = "explore_$type",
                 )
             )
         },
@@ -659,12 +655,7 @@ private fun ProfileTabContent(
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(
-                Routes.Chat.chatPage(
-                    agent.id,
-                    false,
-                    fromPage = "profile"
-                ))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false, fromPage = "profile"))
         },
         onClickDraft = { draftId ->
             //            val intent = CreateRoleActivity.getIntent(context, null, draftId)

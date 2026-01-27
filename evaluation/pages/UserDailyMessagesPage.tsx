@@ -90,7 +90,8 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [userImages, setUserImages] = useState<UserGeneratedImageItem[]>([]);
   const [userImagesTotal, setUserImagesTotal] = useState(0);
   const [showImagesModal, setShowImagesModal] = useState(false);
-  const [previewImage, setPreviewImage] = useState<UserGeneratedImageItem | null>(null);
+  const [previewImage, setPreviewImage] =
+    useState<UserGeneratedImageItem | null>(null);
 
   // 查询用户每日消息
   const handleSearch = useCallback(async () => {
@@ -972,16 +973,12 @@ export const UserDailyMessagesPage: React.FC = () => {
           <Empty description="该用户暂无生成图片" style={{ marginTop: 100 }} />
         ) : (
           <div>
-            <Row gutter={[16, 16]} style={{ maxHeight: "70vh", overflow: "auto" }}>
+            <Row
+              gutter={[16, 16]}
+              style={{ maxHeight: "70vh", overflow: "auto" }}
+            >
               {userImages.map((image, index) => (
-                <Col
-                  key={index}
-                  xs={12}
-                  sm={8}
-                  md={6}
-                  lg={4}
-                  xl={3}
-                >
+                <Col key={index} xs={12} sm={8} md={6} lg={4} xl={3}>
                   <Card
                     hoverable
                     size="small"
@@ -1014,7 +1011,10 @@ export const UserDailyMessagesPage: React.FC = () => {
                               error: e,
                             });
                             // 如果CDN URL加载失败，尝试使用GCS URL
-                            if (image.gcs_url && imgElement.src !== image.gcs_url) {
+                            if (
+                              image.gcs_url &&
+                              imgElement.src !== image.gcs_url
+                            ) {
                               imgElement.src = image.gcs_url;
                             } else {
                               // 如果GCS URL也失败，显示占位图
@@ -1043,12 +1043,18 @@ export const UserDailyMessagesPage: React.FC = () => {
                       </div>
                     )}
                     {image.width && image.height && (
-                      <Text type="secondary" style={{ fontSize: 10, display: "block" }}>
+                      <Text
+                        type="secondary"
+                        style={{ fontSize: 10, display: "block" }}
+                      >
                         尺寸: {image.width} × {image.height}
                       </Text>
                     )}
                     {image.created_at && (
-                      <Text type="secondary" style={{ fontSize: 10, display: "block" }}>
+                      <Text
+                        type="secondary"
+                        style={{ fontSize: 10, display: "block" }}
+                      >
                         {formatUtcTimeRaw(image.created_at)}
                       </Text>
                     )}

@@ -457,9 +457,7 @@ fun ExploreContent(
                                             description = theme.description,
                                             agents = theme.agents,
                                             isChristmas = theme.isChristmas,
-                                            onAgentClick = {
-                                                onClickAgent(it, "theme")
-                                            },
+                                            onAgentClick = { onClickAgent(it, "theme") },
                                             onTitleClick = {
                                                 // 跳转到主题详情页面
                                                 navController?.let { nav ->

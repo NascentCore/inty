@@ -218,7 +218,7 @@ internal fun ChatPage(
     isGuideVisible: Boolean = false,
     shouldShowBoostSheetOnOpen: Boolean = false,
     debugAgentIndex: Int? = null,
-    fromPage: String? = null
+    fromPage: String? = null,
 ) {
 
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()

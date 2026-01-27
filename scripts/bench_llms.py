@@ -340,20 +340,18 @@ async def _measure_google_genai_times(
                 config=config,
             )
             non_stream_end = _now_s()
-            
+
             # 检查 prompt_feedback（输入被拦截）
             if hasattr(response, "prompt_feedback") and response.prompt_feedback:
                 prompt_feedback = response.prompt_feedback
                 block_reason = getattr(prompt_feedback, "block_reason", None)
                 if block_reason:
-                    raise RuntimeError(
-                        f"输入被安全策略拦截: {block_reason}"
-                    )
+                    raise RuntimeError(f"输入被安全策略拦截: {block_reason}")
 
             # 检查 candidates
             if response and hasattr(response, "candidates") and response.candidates:
                 candidate = response.candidates[0]
-                
+
                 # 检查 finish_reason
                 finish_reason = getattr(candidate, "finish_reason", None)
                 if finish_reason == "SAFETY":
@@ -369,7 +367,7 @@ async def _measure_google_genai_times(
                     if safety_details:
                         error_msg += f"，原因: {', '.join(safety_details)}"
                     raise RuntimeError(error_msg)
-                
+
                 # 检查是否有文本内容（优先检查文本，而不是 finish_reason）
                 text_parts = []
                 if hasattr(candidate, "content") and candidate.content:
@@ -377,7 +375,7 @@ async def _measure_google_genai_times(
                         for part in candidate.content.parts:
                             if hasattr(part, "text") and part.text:
                                 text_parts.append(part.text)
-                
+
                 if text_parts:
                     # 有文本内容，说明非流式调用成功
                     # 流式调用可能没有正确检测到文本增量
@@ -388,10 +386,12 @@ async def _measure_google_genai_times(
                     total_time = (non_stream_end - non_stream_start) * 1000
                     # 对于流式调用，TTFT 应该比 TTL 小，但如果所有文本都在最后返回，它们可能接近
                     # 使用一个合理的比例：TTFT 约为 TTL 的 90-95%
-                    non_stream_ttft = total_time * 0.95  # 假设大部分时间在生成，首 token 稍早
+                    non_stream_ttft = (
+                        total_time * 0.95
+                    )  # 假设大部分时间在生成，首 token 稍早
                     non_stream_ttl = total_time
                     return (non_stream_ttft, non_stream_ttl)
-                
+
                 # 如果没有文本内容，检查 finish_reason
                 if finish_reason == "MAX_TOKENS":
                     raise RuntimeError(
@@ -418,7 +418,7 @@ async def _measure_google_genai_times(
                             f"响应完成原因: {finish_reason}。"
                             "可能是安全策略拦截或其他问题。"
                         )
-            
+
             # 通用错误
             raise RuntimeError(
                 "流式和非流式调用都未返回文本内容。"
@@ -900,7 +900,9 @@ async def _run(
                     )
                 )
                 # 如果 TTFT 和 TTL 非常接近（差异小于 1%），可能是流式调用没有真正流式返回
-                time_diff_pct = abs(ttl_ms - ttft_ms) / ttft_ms * 100 if ttft_ms > 0 else 0
+                time_diff_pct = (
+                    abs(ttl_ms - ttft_ms) / ttft_ms * 100 if ttft_ms > 0 else 0
+                )
                 if time_diff_pct < 1.0:
                     print(
                         f"  iter {i + 1}/{iterations}: ttft={ttft_ms:.1f}ms, ttl={ttl_ms:.1f}ms "
