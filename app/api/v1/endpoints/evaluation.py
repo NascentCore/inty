@@ -2224,13 +2224,10 @@ async def get_user_generated_images(
             )
 
         # 获取总数
-        count_query = (
-            select(Resource)
-            .where(
-                Resource.user_id == user_info["id"],
-                Resource.type == ResourceType.IMAGE,
-                Resource.resource_metadata.isnot(None),
-            )
+        count_query = select(Resource).where(
+            Resource.user_id == user_info["id"],
+            Resource.type == ResourceType.IMAGE,
+            Resource.resource_metadata.isnot(None),
         )
         count_result = await db.execute(count_query)
         all_resources = count_result.scalars().all()

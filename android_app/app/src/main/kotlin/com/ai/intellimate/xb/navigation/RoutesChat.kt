@@ -22,7 +22,7 @@ object RoutesChat {
         showBoost: Boolean,
         shouldAutoFocusInput: Boolean = true,
         isDeleted: Boolean = false,
-        fromPage: String? = null
+        fromPage: String? = null,
     ) =
         "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}&isDeleted=${isDeleted}&fromPage=${fromPage}"
 

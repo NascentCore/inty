@@ -121,7 +121,7 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
                         entry.agentId,
                         showSheet,
                         shouldAutoFocusInput = false,
-                        fromPage = "boost_leader_board"
+                        fromPage = "boost_leader_board",
                     )
                 )
                 //                ChatActivity.launch(

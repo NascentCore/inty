@@ -79,7 +79,7 @@ fun NavGraphBuilder.exploreGraph(navController: NavController) {
                         agent.id,
                         false,
                         shouldAutoFocusInput = false,
-                        fromPage = "themed_detail"
+                        fromPage = "themed_detail",
                     )
                 )
             },

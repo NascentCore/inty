@@ -118,7 +118,7 @@ fun ChatTopBar(
     avatarWidth: Dp = UiConfigs.ChatTopBar.AvatarSize,
     fontSize: TextUnit = 14.sp,
     earnedPoints: Int? = null,
-    showBackButton: Boolean = false
+    showBackButton: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -127,9 +127,7 @@ fun ChatTopBar(
         // 返回按钮：showBackButton 为 true 时显示，样式与电话/更多按钮一致（半透明圆角背景），图标使用 R.drawable.back 与其他页面统一
         if (showBackButton) {
             Box(
-                modifier =
-                    Modifier
-                        .noRippleClickable { navController.popBackStack() },
+                modifier = Modifier.noRippleClickable { navController.popBackStack() },
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
