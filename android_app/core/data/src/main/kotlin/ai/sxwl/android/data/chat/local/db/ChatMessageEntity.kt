@@ -35,12 +35,14 @@ data class ChatMessageEntity(
     val sortKey: Long,
     val createdAt: Long,
     val updatedAt: Long,
+    val isSending: Boolean = false
 )
 
 fun MsgInfo.toEntity(
     agentId: String,
     existing: ChatMessageEntity? = null,
     now: Long = System.nanoTime(),
+    isSending: Boolean = false,
 ): ChatMessageEntity {
     val stableLocalId = resolveLocalId(agentId, existing)
     val hasMetaPayload = meta_data != null
@@ -93,7 +95,7 @@ fun MsgInfo.toEntity(
             }
 
     return ChatMessageEntity(
-        localId = stableLocalId,
+        localId = id,
         agentId = agentId,
         remoteId = id.takeIf { it.isNotEmpty() } ?: existing?.remoteId,
         role = role,
@@ -111,6 +113,77 @@ fun MsgInfo.toEntity(
         sortKey = sortKey,
         createdAt = existing?.createdAt ?: now,
         updatedAt = now,
+        isSending = isSending,
+    )
+}
+
+/** 发送中占位内容，与 RoomImpl/ChatRepositoryImpl 中 LOADING_PLACEHOLDER_CONTENT 一致 */
+private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
+
+/**
+ * 创建“正在发送”的用户消息临时实体。localId 应尽量大（如 temp_user_${Long.MAX_VALUE}_${nano}），sortKey 尽量大。
+ * 用于发送前插入本地，发送成功后删除并用 user_message_id 更新为正式消息。
+ */
+fun createTempSendingUserEntity(
+    agentId: String,
+    content: String,
+    localId: String
+): ChatMessageEntity {
+    val timestamp =
+        java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+    return ChatMessageEntity(
+        localId = localId,
+        agentId = agentId,
+        remoteId = null,
+        role = "user",
+        content = content,
+        timestamp = timestamp,
+        audioUrl = null,
+        userVote = null,
+        userFeedback = null,
+        isOpening = false,
+        isVoice = false,
+        metaAgentId = agentId,
+        generatedImageUrl = null,
+        generatedImageWidth = null,
+        generatedImageHeight = null,
+        sortKey = 0,
+        createdAt = 0,
+        updatedAt = 0,
+        isSending = true,
+    )
+}
+
+/**
+ * 创建“正在发送”的 loading 占位临时实体。localId 应最大（如 temp_loading_${Long.MAX_VALUE}_${nano}），sortKey 最大。
+ * 发送成功后与临时用户消息一并删除。
+ */
+fun createTempSendingLoadingEntity(
+    agentId: String,
+    localId: String
+): ChatMessageEntity {
+    val timestamp =
+        java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+    return ChatMessageEntity(
+        localId = localId,
+        agentId = agentId,
+        remoteId = null,
+        role = "assistant",
+        content = LOADING_PLACEHOLDER_CONTENT,
+        timestamp = timestamp,
+        audioUrl = null,
+        userVote = null,
+        userFeedback = null,
+        isOpening = false,
+        isVoice = false,
+        metaAgentId = agentId,
+        generatedImageUrl = null,
+        generatedImageWidth = null,
+        generatedImageHeight = null,
+        sortKey = 0,
+        createdAt = 0,
+        updatedAt = 0,
+        isSending = true,
     )
 }
 
@@ -142,7 +215,7 @@ fun ChatMessageEntity.toModel(): MsgInfo {
         }
 
     return MsgInfo(
-        id = remoteId.orEmpty(),
+        id = localId,
         content = content,
         role = role,
         meta_data = meta,

@@ -44,6 +44,9 @@ interface ChatMessageDao {
     )
     suspend fun deleteMessage(agentId: String, messageId: String)
 
+    @Query("DELETE FROM chat_messages WHERE agentId = :agentId AND isSending = 1")
+    suspend fun deleteSendingMsg(agentId: String)
+
     @Query("DELETE FROM chat_messages WHERE agentId = :agentId")
     suspend fun deleteByAgent(agentId: String)
 

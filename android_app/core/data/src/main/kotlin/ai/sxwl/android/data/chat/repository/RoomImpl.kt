@@ -10,6 +10,7 @@ import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
+import java.util.Date
 
 /** 聊天Repository实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
 class RoomImpl(
@@ -186,26 +187,34 @@ class RoomImpl(
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
-        val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
-        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
-        localDataSource.appendMessages(agentId, listOf(userMsg, loadingMsg))
+        val trimmed = content.trimEnd()
+        val timestamp =
+            java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+
+        localDataSource.appendSendingMessages(agentId, trimmed)
 
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(userMsg))
+                remoteDataSource.sendMessage(agentId, listOf(MsgInfo(content = trimmed, role = "user")))
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        val currentMessages = localDataSource.getMessagesFlow(agentId).value
-        val filteredMessages =
-            currentMessages.filterNot {
-                it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
-            }
-        localDataSource.updateMessages(agentId, filteredMessages)
-
         if (result is HttpResult.Success) {
+            localDataSource.removeSendingMessage(agentId)
+
+            val userMessageId = result.data.data?.user_message_id ?: 0L
+
+            localDataSource.appendMessages(
+                agentId,
+                listOf(MsgInfo(
+                    id = userMessageId.toString(),
+                    content = trimmed,
+                    role = "user",
+                    timestamp = timestamp
+                )),
+            )
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message }
@@ -214,6 +223,8 @@ class RoomImpl(
                 )
                 localDataSource.appendMessages(agentId, assistantMsgs)
             }
+        } else {
+            localDataSource.removeSendingMessage(agentId)
         }
 
         return result
@@ -391,25 +402,20 @@ class RoomImpl(
         }
 
         localDataSource.removeMessage(agentId, lastAssistantMessage.localMsgId)
+        localDataSource.appendSendingLoadingOnly(agentId)
 
-        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
-        localDataSource.appendMessages(agentId, listOf(loadingMsg))
-
-        val recallMsg = MsgInfo(content = "recall", role = "user")
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(recallMsg))
+                remoteDataSource.sendMessage(
+                    agentId,
+                    listOf(MsgInfo(content = "recall", role = "user")),
+                )
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.recallLastAssistantMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        val currentMessages = localDataSource.getMessagesFlow(agentId).value
-        val filteredMessages =
-            currentMessages.filterNot {
-                it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
-            }
-        localDataSource.updateMessages(agentId, filteredMessages)
+        localDataSource.removeSendingMessage(agentId)
 
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()

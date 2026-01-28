@@ -167,35 +167,46 @@ class ChatRepositoryImpl(
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("ChatRepositoryImpl.sendMessage called for $agentId: $content")
 
-        // 1) 先插入用户消息与loading占位
-        val userMsg = MsgInfo(content = content.trimEnd(), role = "user")
-        val loadingMsg = MsgInfo(content = LOADING_PLACEHOLDER_CONTENT, role = ROLE_ASSISTANT)
-
+        val trimmed = content.trimEnd()
+        val nano = System.nanoTime()
+        val tempUserLocalId = "temp_user_${Long.MAX_VALUE}_$nano"
+        val tempLoadingLocalId = "temp_loading_${Long.MAX_VALUE}_$nano"
+        val userMsg =
+            MsgInfo(content = trimmed, role = "user", localMsgId = tempUserLocalId)
+        val loadingMsg =
+            MsgInfo(
+                content = LOADING_PLACEHOLDER_CONTENT,
+                role = ROLE_ASSISTANT,
+                localMsgId = tempLoadingLocalId,
+            )
         localDataSource.prependMessages(agentId, listOf(loadingMsg, userMsg))
 
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(userMsg))
+                remoteDataSource.sendMessage(agentId, listOf(MsgInfo(content = trimmed, role = "user")))
             } catch (e: Exception) {
                 LogUtils.e("ChatRepositoryImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        // 2) 移除loading占位
-        val currentMessages = localDataSource.getMessagesFlow(agentId).value
-        val filteredMessages =
-            currentMessages.filterNot {
-                it.content == LOADING_PLACEHOLDER_CONTENT && it.role == ROLE_ASSISTANT
-            }
-        localDataSource.updateMessages(agentId, filteredMessages)
-
-        // 3) 追加AI回复
         if (result is HttpResult.Success) {
+            val currentMessages = localDataSource.getMessagesFlow(agentId).value
+            val filtered =
+                currentMessages.filterNot {
+                    it.localMsgId == tempUserLocalId || it.localMsgId == tempLoadingLocalId
+                }
+            val userMessageId = result.data.data?.user_message_id ?: 0L
+            val confirmedUser =
+                MsgInfo(id = userMessageId.toString(), content = trimmed, role = "user")
             val choices = result.data.data?.choices ?: emptyList()
-            if (choices.isNotEmpty()) {
-                val assistantMsgs = choices.map { it.message }
-                localDataSource.prependMessages(agentId, assistantMsgs)
-            }
+            val assistantMsgs = if (choices.isNotEmpty()) choices.map { it.message } else emptyList()
+            val newList = listOf(confirmedUser) + assistantMsgs + filtered
+            localDataSource.updateMessages(agentId, newList)
+        } else {
+            val currentMessages = localDataSource.getMessagesFlow(agentId).value
+            val filtered =
+                currentMessages.filterNot { it.localMsgId == tempLoadingLocalId }
+            localDataSource.updateMessages(agentId, filtered)
         }
 
         return result

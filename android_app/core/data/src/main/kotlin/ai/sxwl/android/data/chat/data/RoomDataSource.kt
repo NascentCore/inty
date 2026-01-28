@@ -6,6 +6,8 @@ import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.ChatSyncStateDao
 import ai.sxwl.android.data.chat.local.db.ChatSyncStateEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
+import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
+import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toModel
 import androidx.room.withTransaction
@@ -197,6 +199,53 @@ class RoomDataSource(
             }
         }
 
+    /**
+     * 发送前插入临时用户消息与 loading 占位，localId/sortKey 尽量大，isSending=true。
+     * @return Pair(临时用户消息 localId, 临时 loading localId)，发送成功后用于删除并替换为 user_message_id 正式消息。
+     */
+    suspend fun appendSendingMessages(agentId: String, userContent: String) =
+        withContext(dispatcher) {
+            val tempUserLocalId = Long.MAX_VALUE - 1
+            val tempLoadingLocalId = Long.MAX_VALUE
+            db.withTransaction {
+                val userEntity =
+                    createTempSendingUserEntity(
+                        agentId = agentId,
+                        content = userContent,
+                        localId = tempUserLocalId.toString()
+                    )
+                val loadingEntity =
+                    createTempSendingLoadingEntity(
+                        agentId = agentId,
+                        localId = tempLoadingLocalId.toString()
+                    )
+                messageDao.upsert(listOf(userEntity, loadingEntity))
+            }
+            logger.debug {
+                "RoomDataSource.appendSendingMessages saved temp user and loading for agentId=$agentId"
+            }
+        }
+
+    /**
+     * 仅插入“正在发送”的 loading 占位（isSending=true），用于 recall 等不附带用户消息的请求。
+     * 请求结束后调用 removeSendingMessage(agentId) 移除。
+     */
+    suspend fun appendSendingLoadingOnly(agentId: String) =
+        withContext(dispatcher) {
+            val tempLoadingLocalId = Long.MAX_VALUE.toString()
+            db.withTransaction {
+                messageDao.upsert(
+                    createTempSendingLoadingEntity(
+                        agentId = agentId,
+                        localId = tempLoadingLocalId,
+                    ),
+                )
+            }
+            logger.debug {
+                "RoomDataSource.appendSendingLoadingOnly saved temp loading for agentId=$agentId"
+            }
+        }
+
     suspend fun prependMessages(agentId: String, newMessages: List<MsgInfo>) =
         withContext(dispatcher) {
             if (newMessages.isEmpty()) return@withContext
@@ -284,6 +333,10 @@ class RoomDataSource(
 
     suspend fun removeMessage(agentId: String, messageId: String) =
         withContext(dispatcher) { messageDao.deleteMessage(agentId, messageId) }
+
+    suspend fun removeSendingMessage(agentId: String) {
+        with(dispatcher) { messageDao.deleteSendingMsg(agentId)}
+    }
 
     suspend fun addMessage(agentId: String, message: MsgInfo) =
         withContext(dispatcher) {

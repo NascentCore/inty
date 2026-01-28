@@ -14,6 +14,7 @@ data class SendMsgResponse(
     data class SentMsgRspData(
         val error_code: String? = null,
         val description: String? = null,
+        val user_message_id: Long = 0,
         val choices: List<Choice> = listOf(),
         val created: Int = 0,
         val id: String = "",
