@@ -76,10 +76,9 @@ export default defineConfig(() => {
         "@services": resolve(__dirname, "./services"),
         "@types": resolve(__dirname, "./types"),
         "@styles": resolve(__dirname, "./styles"),
-        // 确保 inty 包能正确解析
-        inty: resolve(__dirname, "./inty_sdk/dist"),
+        // 指向入口文件而非目录，避免 load-fallback 对目录 readFile 触发 EISDIR
+        inty: resolve(__dirname, "./inty_sdk/dist/index.mjs"),
       },
-      // 确保解析本地包
       dedupe: ["inty"],
     },
   };

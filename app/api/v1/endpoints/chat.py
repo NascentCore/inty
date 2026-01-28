@@ -64,6 +64,7 @@ def _build_chat_response(
     latest_message_info: Optional[dict],
     audio_url: Optional[str],
     request: ChatCompletionRequest,
+    user_message_id: Optional[int] = None,
 ) -> dict:
     """构建聊天响应数据"""
     message = {"role": "assistant", "content": response_content}
@@ -84,6 +85,7 @@ def _build_chat_response(
         "object": "chat.completion",
         "created": int(time.time()),
         "model": request.model,
+        "user_message_id": user_message_id,
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
         "usage": {
             "prompt_tokens": len(last_user_message.split()),
@@ -283,9 +285,23 @@ async def agent_chat_completions(
             logger.warning(f"获取最新消息信息失败: {str(e)}")
             latest_message_info = None
 
+        user_message_id = None
+        try:
+            with log_time(f"获取最新用户消息ID: session_id={session_id}"):
+                user_message_id = await chat_history_service.get_latest_user_message_id(
+                    db, session_id
+                )
+        except Exception as e:
+            logger.warning(f"获取最新用户消息ID失败: {str(e)}")
+
         # 构建响应
         data = _build_chat_response(
-            response_content, last_user_message, latest_message_info, audio_url, request
+            response_content,
+            last_user_message,
+            latest_message_info,
+            audio_url,
+            request,
+            user_message_id=user_message_id,
         )
 
         timing_message = request_handling_timer.stop()

@@ -626,6 +626,70 @@
                 }
             }
         },
+        "/api/v1/ai/agents/admin/list": {
+            "get": {
+                "tags": [
+                    "agents",
+                    "characters",
+                    "evaluation"
+                ],
+                "summary": "Admin list all AI characters (for evaluation console)",
+                "description": "Superuser-only endpoint to list all AI characters, including those created by non-superusers.",
+                "operationId": "admin_list_all_agents_api_v1_ai_agents_admin_list_get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "default": 0,
+                            "title": "Skip"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 1000,
+                            "minimum": 1,
+                            "default": 1000,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIResponse_List_Agent__"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/ai/agents/search": {
             "get": {
                 "tags": [
@@ -3678,6 +3742,18 @@
                         "$ref": "#/components/schemas/AgentVisibility",
                         "default": "PUBLIC"
                     },
+                    "source": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AgentSource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "\u89d2\u8272\u6765\u6e90\uff1aUSER_CREATED\uff08\u7528\u6237\u521b\u5efa\uff09\u6216 AUTO_GENERATED\uff08\u81ea\u52a8\u751f\u6210\uff09",
+                        "default": "USER_CREATED"
+                    },
                     "photos": {
                         "anyOf": [
                             {
@@ -3997,18 +4073,6 @@
                                 "type": "null"
                             }
                         ]
-                    },
-                    "user": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "User",
-                        "default": "you"
                     }
                 },
                 "type": "object",
@@ -4140,6 +4204,18 @@
                     "visibility": {
                         "$ref": "#/components/schemas/AgentVisibility",
                         "default": "PUBLIC"
+                    },
+                    "source": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AgentSource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "\u89d2\u8272\u6765\u6e90\uff1aUSER_CREATED\uff08\u7528\u6237\u521b\u5efa\uff09\u6216 AUTO_GENERATED\uff08\u81ea\u52a8\u751f\u6210\uff09",
+                        "default": "USER_CREATED"
                     },
                     "photos": {
                         "anyOf": [
@@ -4448,6 +4524,15 @@
                 "title": "AgentSortOption",
                 "description": "Agent sorting options"
             },
+            "AgentSource": {
+                "type": "string",
+                "enum": [
+                    "USER_CREATED",
+                    "AUTO_GENERATED"
+                ],
+                "title": "AgentSource",
+                "description": "AI \u89d2\u8272\u6765\u6e90"
+            },
             "AgentStatus": {
                 "type": "string",
                 "enum": [
@@ -4594,6 +4679,18 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "source": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AgentSource"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "\u89d2\u8272\u6765\u6e90\uff1aUSER_CREATED\uff08\u7528\u6237\u521b\u5efa\uff09\u6216 AUTO_GENERATED\uff08\u81ea\u52a8\u751f\u6210\uff09",
+                        "default": "USER_CREATED"
                     },
                     "photos": {
                         "anyOf": [
