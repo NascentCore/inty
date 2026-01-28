@@ -24,8 +24,6 @@ import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
-import androidx.paging.insertFooterItem
-import androidx.paging.insertHeaderItem
 import androidx.paging.map
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
@@ -34,7 +32,6 @@ import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.chat.uistate.ChatUIState
-import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
@@ -50,14 +47,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -105,18 +100,17 @@ class ChatViewModel : BaseVM() {
     val msgs = _msgs.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val messages = _agentId.flatMapLatest {
-        if (it.isNullOrBlank()) {
-            emptyFlow()
-        } else {
-            chatMessageRepository
-                .getMessagesFlow(it)
-        }
-    }.map {
-        it.map { entity ->
-            entity.toModel()
-        }
-    }.cachedIn(viewModelScope)
+    val messages =
+        _agentId
+            .flatMapLatest {
+                if (it.isNullOrBlank()) {
+                    emptyFlow()
+                } else {
+                    chatMessageRepository.getMessagesFlow(it)
+                }
+            }
+            .map { it.map { entity -> entity.toModel() } }
+            .cachedIn(viewModelScope)
 
     private var lastAiMsgInfo: MsgInfo? = null
     private val _shouldFlowShow = MutableStateFlow(false)

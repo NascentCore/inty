@@ -529,14 +529,22 @@ class Agent:
                         if nickname:
                             user_info_parts.append(f"Name: {nickname}")
                         if gender:
-                            gender_map = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
-                            user_info_parts.append(f"Gender: {gender_map.get(gender, gender)}")
+                            gender_map = {
+                                "MALE": "Male",
+                                "FEMALE": "Female",
+                                "OTHER": "Other",
+                            }
+                            user_info_parts.append(
+                                f"Gender: {gender_map.get(gender, gender)}"
+                            )
                         if age_group:
                             user_info_parts.append(f"Age: {age_group}")
                         if description:
                             user_info_parts.append(f"Description: {description}")
                         if user_info_parts:
-                            user_info_text = "##User Information\n" + "\n".join(user_info_parts)
+                            user_info_text = "##User Information\n" + "\n".join(
+                                user_info_parts
+                            )
                         cache_service.set_user_info(user_id, user_info_text)
                         if user_info_text:
                             logger.debug(
@@ -550,7 +558,9 @@ class Agent:
 
         memory_text = get_user_memory_for_prompt_sync(user_id)
         if memory_text:
-            user_info_text = (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+            user_info_text = (
+                (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+            )
         return user_info_text
 
     # 特殊值，表示返回全部消息

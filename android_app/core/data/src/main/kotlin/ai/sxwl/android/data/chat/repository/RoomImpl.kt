@@ -10,7 +10,6 @@ import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.flow.StateFlow
-import java.util.Date
 
 /** 聊天Repository实现 作为Domain层和Data层之间的桥梁 遵循Clean Architecture的Repository模式 */
 class RoomImpl(
@@ -188,14 +187,16 @@ class RoomImpl(
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
         val trimmed = content.trimEnd()
-        val timestamp =
-            java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+        val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
 
         localDataSource.appendSendingMessages(agentId, trimmed)
 
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(MsgInfo(content = trimmed, role = "user")))
+                remoteDataSource.sendMessage(
+                    agentId,
+                    listOf(MsgInfo(content = trimmed, role = "user")),
+                )
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
@@ -208,12 +209,14 @@ class RoomImpl(
 
             localDataSource.appendMessages(
                 agentId,
-                listOf(MsgInfo(
-                    id = userMessageId.toString(),
-                    content = trimmed,
-                    role = "user",
-                    timestamp = timestamp
-                )),
+                listOf(
+                    MsgInfo(
+                        id = userMessageId.toString(),
+                        content = trimmed,
+                        role = "user",
+                        timestamp = timestamp,
+                    )
+                ),
             )
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {

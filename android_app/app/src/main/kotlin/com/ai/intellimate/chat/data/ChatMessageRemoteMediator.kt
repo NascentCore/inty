@@ -18,8 +18,7 @@ import androidx.room.withTransaction
 import com.architecture.httplib.core.HttpResult
 
 /**
- * 聊天消息的 RemoteMediator
- * 负责从网络同步数据到数据库，并管理分页状态
+ * 聊天消息的 RemoteMediator 负责从网络同步数据到数据库，并管理分页状态
  *
  * 使用场景：
  * - 当 Paging 需要更多数据时，从网络获取并保存到数据库
@@ -48,27 +47,31 @@ class ChatMessageRemoteMediator(
         return try {
             // 确定当前应该使用的 offset
             // API 使用 order=desc，offset=0 是最新消息，offset 增加时获取更早的消息
-            val nextPageKey = when (loadType) {
-                LoadType.REFRESH -> {
-                    // 刷新时重置 offset 为 0，获取最新消息
-                    LogUtils.d("ChatMessageRemoteMediator", "REFRESH: resetting offset to 0 for agentId=$agentId")
-                    0
+            val nextPageKey =
+                when (loadType) {
+                    LoadType.REFRESH -> {
+                        // 刷新时重置 offset 为 0，获取最新消息
+                        LogUtils.d(
+                            "ChatMessageRemoteMediator",
+                            "REFRESH: resetting offset to 0 for agentId=$agentId",
+                        )
+                        0
+                    }
+                    LoadType.PREPEND -> {
+                        return MediatorResult.Success(endOfPaginationReached = true)
+                    }
+                    LoadType.APPEND -> {
+                        // 追加加载：在列表末尾加载更早的消息（历史消息）
+                        // offset 增加以获取更早的消息
+                        val syncState = syncStateDao.get(agentId)
+                        val currentOffset = syncState?.offset ?: 0
+                        LogUtils.d(
+                            "ChatMessageRemoteMediator",
+                            "APPEND: loading older messages from offset=$currentOffset for agentId=$agentId",
+                        )
+                        currentOffset
+                    }
                 }
-                LoadType.PREPEND -> {
-                    return MediatorResult.Success(endOfPaginationReached = true)
-                }
-                LoadType.APPEND -> {
-                    // 追加加载：在列表末尾加载更早的消息（历史消息）
-                    // offset 增加以获取更早的消息
-                    val syncState = syncStateDao.get(agentId)
-                    val currentOffset = syncState?.offset ?: 0
-                    LogUtils.d(
-                        "ChatMessageRemoteMediator",
-                        "APPEND: loading older messages from offset=$currentOffset for agentId=$agentId",
-                    )
-                    currentOffset
-                }
-            }
 
             // 从网络获取数据
             when (val result = remoteDataSource.getMessages(agentId, pageSize, nextPageKey)) {
@@ -85,9 +88,8 @@ class ChatMessageRemoteMediator(
                     database.withTransaction {
                         // 保存消息到数据库
                         if (messages.isNotEmpty()) {
-                            val entities = messages.map { msg ->
-                                msg.toEntity(agentId, existing = null)
-                            }
+                            val entities =
+                                messages.map { msg -> msg.toEntity(agentId, existing = null) }
 
                             messageDao.upsert(entities)
                             LogUtils.d(
@@ -99,19 +101,21 @@ class ChatMessageRemoteMediator(
                         // 更新同步状态
                         // 对于 REFRESH，offset 重置为已加载的消息数量
                         // 对于 APPEND，offset 更新为当前 offset + 已加载的消息数量
-                        val newOffset = if (loadType == LoadType.REFRESH) {
-                            messages.size
-                        } else {
-                            nextPageKey + messages.size
-                        }
-                        val updatedSyncState = ChatSyncStateEntity(
-                            agentId = agentId,
-                            offset = newOffset,
-                            hasMore = response.hasMore,
-                            isInitialLoaded = true,
-                            lastSyncedAt = System.currentTimeMillis(),
-                            updatedAt = System.currentTimeMillis()
-                        )
+                        val newOffset =
+                            if (loadType == LoadType.REFRESH) {
+                                messages.size
+                            } else {
+                                nextPageKey + messages.size
+                            }
+                        val updatedSyncState =
+                            ChatSyncStateEntity(
+                                agentId = agentId,
+                                offset = newOffset,
+                                hasMore = response.hasMore,
+                                isInitialLoaded = true,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                updatedAt = System.currentTimeMillis(),
+                            )
                         syncStateDao.upsert(updatedSyncState)
                     }
 
@@ -124,7 +128,7 @@ class ChatMessageRemoteMediator(
                         "Network request failed: agentId=$agentId, offset=${nextPageKey}, error=${result.message}, code=${result.code}",
                     )
                     MediatorResult.Error(
-                        Exception("Network error: ${result.message} (code: ${result.code})"),
+                        Exception("Network error: ${result.message} (code: ${result.code})")
                     )
                 }
             }

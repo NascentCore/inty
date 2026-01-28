@@ -35,7 +35,7 @@ data class ChatMessageEntity(
     val sortKey: Long,
     val createdAt: Long,
     val updatedAt: Long,
-    val isSending: Boolean = false
+    val isSending: Boolean = false,
 )
 
 fun MsgInfo.toEntity(
@@ -127,10 +127,9 @@ private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 fun createTempSendingUserEntity(
     agentId: String,
     content: String,
-    localId: String
+    localId: String,
 ): ChatMessageEntity {
-    val timestamp =
-        java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+    val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
     return ChatMessageEntity(
         localId = localId,
         agentId = agentId,
@@ -158,12 +157,8 @@ fun createTempSendingUserEntity(
  * 创建“正在发送”的 loading 占位临时实体。localId 应最大（如 temp_loading_${Long.MAX_VALUE}_${nano}），sortKey 最大。
  * 发送成功后与临时用户消息一并删除。
  */
-fun createTempSendingLoadingEntity(
-    agentId: String,
-    localId: String
-): ChatMessageEntity {
-    val timestamp =
-        java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+fun createTempSendingLoadingEntity(agentId: String, localId: String): ChatMessageEntity {
+    val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
     return ChatMessageEntity(
         localId = localId,
         agentId = agentId,

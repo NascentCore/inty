@@ -21,10 +21,18 @@ class Memory(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     memory_type = Column(String, nullable=False, comment="user_common | user_agent")
-    agent_id = Column(String, ForeignKey("agents.id"), nullable=True, comment="user_common 为 NULL")
-    content = Column(Text, nullable=False, comment="单条记忆内容，当前 Part1 整段存为一条")
-    extracted_at = Column(DateTime(timezone=True), nullable=False, comment="所属抽取批次时间")
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    agent_id = Column(
+        String, ForeignKey("agents.id"), nullable=True, comment="user_common 为 NULL"
+    )
+    content = Column(
+        Text, nullable=False, comment="单条记忆内容，当前 Part1 整段存为一条"
+    )
+    extracted_at = Column(
+        DateTime(timezone=True), nullable=False, comment="所属抽取批次时间"
+    )
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
     __table_args__ = (
         Index("ix_memory_user_type", "user_id", "memory_type"),
@@ -44,6 +52,10 @@ class MemoryExtractionLog(Base):
     messages_processed_count = Column(Integer, nullable=False)
     memory_items_count = Column(Integer, nullable=False)
     status = Column(String, nullable=False, comment="success | partial | failed")
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
-    __table_args__ = (Index("ix_memory_extraction_log_user_type", "user_id", "memory_type"),)
+    __table_args__ = (
+        Index("ix_memory_extraction_log_user_type", "user_id", "memory_type"),
+    )

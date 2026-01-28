@@ -171,8 +171,7 @@ class ChatRepositoryImpl(
         val nano = System.nanoTime()
         val tempUserLocalId = "temp_user_${Long.MAX_VALUE}_$nano"
         val tempLoadingLocalId = "temp_loading_${Long.MAX_VALUE}_$nano"
-        val userMsg =
-            MsgInfo(content = trimmed, role = "user", localMsgId = tempUserLocalId)
+        val userMsg = MsgInfo(content = trimmed, role = "user", localMsgId = tempUserLocalId)
         val loadingMsg =
             MsgInfo(
                 content = LOADING_PLACEHOLDER_CONTENT,
@@ -183,7 +182,10 @@ class ChatRepositoryImpl(
 
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(MsgInfo(content = trimmed, role = "user")))
+                remoteDataSource.sendMessage(
+                    agentId,
+                    listOf(MsgInfo(content = trimmed, role = "user")),
+                )
             } catch (e: Exception) {
                 LogUtils.e("ChatRepositoryImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
@@ -199,13 +201,13 @@ class ChatRepositoryImpl(
             val confirmedUser =
                 MsgInfo(id = userMessageId.toString(), content = trimmed, role = "user")
             val choices = result.data.data?.choices ?: emptyList()
-            val assistantMsgs = if (choices.isNotEmpty()) choices.map { it.message } else emptyList()
+            val assistantMsgs =
+                if (choices.isNotEmpty()) choices.map { it.message } else emptyList()
             val newList = listOf(confirmedUser) + assistantMsgs + filtered
             localDataSource.updateMessages(agentId, newList)
         } else {
             val currentMessages = localDataSource.getMessagesFlow(agentId).value
-            val filtered =
-                currentMessages.filterNot { it.localMsgId == tempLoadingLocalId }
+            val filtered = currentMessages.filterNot { it.localMsgId == tempLoadingLocalId }
             localDataSource.updateMessages(agentId, filtered)
         }
 
