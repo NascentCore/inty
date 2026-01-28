@@ -71,6 +71,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostError
@@ -88,6 +90,7 @@ import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
 import com.ai.intellimate.chat.uistate.ChatUIState
+import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
@@ -674,6 +677,8 @@ internal fun ChatPage(
                     val chatViewHeight = remember {
                         with(density) { (maxHeight - 32.dp).roundToPx() }
                     }
+                    val messages = chatViewModel.messages.collectAsLazyPagingItems()
+                    val agent by chatViewModel.agentFlow.collectAsState()
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -706,7 +711,66 @@ internal fun ChatPage(
                             }
                         }
 
-                        val showIntroOpeningTop =
+                        items(
+                            messages.itemCount,
+                            messages.itemKey {
+                                when (it) {
+                                    is MessageItem.Intro -> "intro"
+                                    is MessageItem.Opening -> "opening"
+                                    is MessageItem.NormalMessage -> it.message.id
+                                    is MessageItem.CallMessages -> it.messages.first().id
+                                }
+                            }
+                        ) { index ->
+                            val message = messages[index]
+
+                            if (message != null) {
+                                when (message) {
+                                    is MessageItem.NormalMessage ->  ChatItem(
+                                        navController,
+                                        item = message.message,
+                                        isCurrentPage = isCurrentPage,
+                                        chatViewModel = chatViewModel,
+                                        isLatestMessage = index == 0,
+                                        isGuideVisible = isGuideVisible,
+                                        messageFontSizeSp = chatFontSizeSp,
+                                    )
+                                    is MessageItem.Intro -> {
+                                        AgentInfoChatCard(agent?.intro.orEmpty())
+                                        Spacer(Modifier.height(16.dp))
+                                    }
+                                    is MessageItem.Opening -> {
+                                        Column {
+                                            val openingMessage =
+                                                MsgInfo(
+                                                    content = agent?.opening.orEmpty(),
+                                                    role = "assistant",
+                                                    audio_url = agent?.openingAudioUrl,
+                                                )
+
+                                            Spacer(Modifier.height(16.dp))
+                                            ChatItem(
+                                                navController,
+                                                openingMessage,
+                                                isCurrentPage = isCurrentPage,
+                                                chatViewModel = chatViewModel,
+                                                isGuideVisible = isGuideVisible,
+                                                messageFontSizeSp = chatFontSizeSp,
+                                            )
+                                            Spacer(Modifier.height(16.dp))
+                                        }
+                                    }
+                                    is MessageItem.CallMessages -> {
+
+                                    }
+                                }
+
+                            } else {
+                                Spacer(Modifier.height(50.dp))
+                            }
+                        }
+
+                        /*val showIntroOpeningTop =
                             isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
                         val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                         // 直接在 Composable 作用域中处理，不使用 runCatching
@@ -911,7 +975,7 @@ internal fun ChatPage(
                                     }
                                 }
                             }
-                        }
+                        }*/
                     }
                 }
 

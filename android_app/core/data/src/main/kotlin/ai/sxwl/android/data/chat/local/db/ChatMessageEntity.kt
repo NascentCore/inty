@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
     indices =
         [
             Index(value = ["agentId"]),
-            Index(value = ["remoteId"]),
+            Index(value = ["localId"]),
             Index(value = ["agentId", "sortKey"]),
         ],
 )
@@ -37,7 +37,7 @@ data class ChatMessageEntity(
     val updatedAt: Long,
 )
 
-internal fun MsgInfo.toEntity(
+fun MsgInfo.toEntity(
     agentId: String,
     existing: ChatMessageEntity? = null,
     now: Long = System.nanoTime(),
@@ -114,7 +114,7 @@ internal fun MsgInfo.toEntity(
     )
 }
 
-internal fun ChatMessageEntity.toModel(): MsgInfo {
+fun ChatMessageEntity.toModel(): MsgInfo {
     val generatedImage =
         generatedImageUrl?.let {
             MsgInfo.MsgMetaData.GeneratedImage(
