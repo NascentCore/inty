@@ -611,6 +611,29 @@ async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optiona
         return None
 
 
+async def get_latest_user_message_id(db: AsyncSession, session_id: str) -> Optional[int]:
+    """获取会话中最新的用户消息ID（排除已软删除的）"""
+    try:
+        stmt = (
+            select(ChatHistory.id)
+            .where(
+                and_(
+                    ChatHistory.session_id == session_id,
+                    ChatHistory.message["type"].astext.in_(["human", "HumanMessage"]),
+                    ChatHistory.deleted_at.is_(None),
+                )
+            )
+            .order_by(desc(ChatHistory.created_at), desc(ChatHistory.id))
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        row = result.first()
+        return row[0] if row else None
+    except Exception as e:
+        logger.error(f"获取最新用户消息ID失败 {session_id}: {str(e)}")
+        return None
+
+
 async def delete_image_by_source_message(
     db: AsyncSession, session_id: str, source_message_id: int
 ) -> Optional[str]:
