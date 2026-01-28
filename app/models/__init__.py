@@ -65,3 +65,7 @@ from app.models.character_theme import (
     CharacterTheme as CharacterTheme,
     CharacterThemeAgent as CharacterThemeAgent,
 )
+from app.models.memory import (
+    Memory as Memory,
+    MemoryExtractionLog as MemoryExtractionLog,
+)

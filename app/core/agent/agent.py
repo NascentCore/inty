@@ -501,69 +501,57 @@ class Agent:
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
-        同步获取用户profile信息（优化版本 - 使用全局缓存）
+        同步获取用户profile信息（优化版本 - 使用全局缓存），并追加 ##User Memory。
         """
-        # 检查全局缓存
         cached_user_info = cache_service.get_user_info(user_id)
         if cached_user_info is not None:
             logger.debug(f"从全局缓存获取用户信息: {user_id}")
-            return cached_user_info
-
-        try:
-            # 使用全局同步数据库引擎（避免重复创建）
-            sync_engine = get_sync_engine()
-
-            with sync_engine.connect() as conn:
-                # 查询用户基本信息
-                query = text("""
-                    SELECT nickname, gender, age_group, description, system_language 
-                    FROM users 
-                    WHERE id = :user_id
-                """)
-                result = conn.execute(query, {"user_id": user_id})
-                row = result.fetchone()
-
-                if not row:
-                    logger.debug(f"用户 {user_id} 不存在")
-                    user_info_text = ""
-                    cache_service.set_user_info(user_id, user_info_text, ttl=60)
-                    return user_info_text
-
-                # 构建用户信息字符串
-                user_info_parts = []
-                nickname, gender, age_group, description, system_language = row
-
-                if nickname:
-                    user_info_parts.append(f"Name: {nickname}")
-                if gender:
-                    gender_map = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
-                    user_info_parts.append(f"Gender: {gender_map.get(gender, gender)}")
-                if age_group:
-                    user_info_parts.append(f"Age: {age_group}")
-                if description:
-                    user_info_parts.append(f"Description: {description}")
-                # if system_language:
-                #     user_info_parts.append(f"Language: {system_language}")
-
-                if user_info_parts:
-                    user_info_text = "##User Information\n" + "\n".join(user_info_parts)
-                else:
-                    user_info_text = ""
-
-                cache_service.set_user_info(user_id, user_info_text)
-
-                if user_info_text:
-                    logger.debug(
-                        f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}..."
-                    )
-
-                return user_info_text
-
-        except Exception as e:
-            logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
+            user_info_text = cached_user_info
+        else:
             user_info_text = ""
-            cache_service.set_user_info(user_id, user_info_text, ttl=30)
-            return user_info_text
+            try:
+                sync_engine = get_sync_engine()
+                with sync_engine.connect() as conn:
+                    query = text("""
+                        SELECT nickname, gender, age_group, description, system_language 
+                        FROM users 
+                        WHERE id = :user_id
+                    """)
+                    result = conn.execute(query, {"user_id": user_id})
+                    row = result.fetchone()
+
+                    if not row:
+                        logger.debug(f"用户 {user_id} 不存在")
+                        cache_service.set_user_info(user_id, user_info_text, ttl=60)
+                    else:
+                        user_info_parts = []
+                        nickname, gender, age_group, description, system_language = row
+                        if nickname:
+                            user_info_parts.append(f"Name: {nickname}")
+                        if gender:
+                            gender_map = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
+                            user_info_parts.append(f"Gender: {gender_map.get(gender, gender)}")
+                        if age_group:
+                            user_info_parts.append(f"Age: {age_group}")
+                        if description:
+                            user_info_parts.append(f"Description: {description}")
+                        if user_info_parts:
+                            user_info_text = "##User Information\n" + "\n".join(user_info_parts)
+                        cache_service.set_user_info(user_id, user_info_text)
+                        if user_info_text:
+                            logger.debug(
+                                f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}..."
+                            )
+            except Exception as e:
+                logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
+                cache_service.set_user_info(user_id, user_info_text, ttl=30)
+
+        from app.services.memory_service import get_user_memory_for_prompt_sync
+
+        memory_text = get_user_memory_for_prompt_sync(user_id)
+        if memory_text:
+            user_info_text = (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+        return user_info_text
 
     # 特殊值，表示返回全部消息
     MAX_MESSAGES_ALL = 0

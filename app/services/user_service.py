@@ -192,45 +192,45 @@ GENDER_DISPLAY_MAP = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
 async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
     """
     构建用户信息文本块，用于图片生成提示词。
-    优先从缓存读取，未命中时查询数据库并写回缓存。
-
-    Returns:
-        格式化的用户信息块（如 "##User Information\\nName: xxx\\n..."），
-        若用户不存在或无有效信息则返回空字符串。
+    优先从缓存读取基础块，未命中时查询数据库并写回缓存；再追加 ##User Memory（不缓存）。
     """
+    from app.services.memory_service import get_user_memory_for_prompt_async
+
     cached = cache_service.get_user_info(user_id)
     if cached is not None:
-        return cached
+        user_info_text = cached
+    else:
+        user_info_text = ""
+        try:
+            stmt = select(User).where(User.id == user_id)
+            result = await db.execute(stmt)
+            user = result.scalars().first()
 
-    try:
-        stmt = select(User).where(User.id == user_id)
-        result = await db.execute(stmt)
-        user = result.scalars().first()
+            if not user:
+                cache_service.set_user_info(user_id, "", ttl=60)
+            else:
+                parts = []
+                if user.nickname:
+                    parts.append(f"Name: {user.nickname}")
+                if user.gender:
+                    parts.append(
+                        f"Gender: {GENDER_DISPLAY_MAP.get(user.gender.value, user.gender.value)}"
+                    )
+                if user.age_group:
+                    parts.append(f"Age: {user.age_group}")
+                if user.description:
+                    parts.append(f"Description: {user.description}")
+                user_info_text = "##User Information\n" + "\n".join(parts) if parts else ""
+                cache_service.set_user_info(user_id, user_info_text)
 
-        if not user:
-            cache_service.set_user_info(user_id, "", ttl=60)
-            return ""
+        except Exception as e:
+            logger.error(f"构建用户信息块失败: user_id={user_id}, error={e}")
+            cache_service.set_user_info(user_id, "", ttl=30)
 
-        parts = []
-        if user.nickname:
-            parts.append(f"Name: {user.nickname}")
-        if user.gender:
-            parts.append(
-                f"Gender: {GENDER_DISPLAY_MAP.get(user.gender.value, user.gender.value)}"
-            )
-        if user.age_group:
-            parts.append(f"Age: {user.age_group}")
-        if user.description:
-            parts.append(f"Description: {user.description}")
-
-        user_info_text = "##User Information\n" + "\n".join(parts) if parts else ""
-        cache_service.set_user_info(user_id, user_info_text)
-        return user_info_text
-
-    except Exception as e:
-        logger.error(f"构建用户信息块失败: user_id={user_id}, error={e}")
-        cache_service.set_user_info(user_id, "", ttl=30)
-        return ""
+    memory_text = await get_user_memory_for_prompt_async(db, user_id)
+    if memory_text:
+        user_info_text = (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+    return user_info_text
 
 
 async def register_device_token(
