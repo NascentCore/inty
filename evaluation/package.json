@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "preinstall": "mkdir -p inty_sdk/dist",
+    "prebuild": "test -f inty_sdk/dist/index.mjs || (cd inty_sdk && yarn install && yarn run build)",
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite --mode production",
