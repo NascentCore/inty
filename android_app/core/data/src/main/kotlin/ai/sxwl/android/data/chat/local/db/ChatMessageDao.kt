@@ -2,6 +2,7 @@ package ai.sxwl.android.data.chat.local.db
 
 // CREATED_BY_AGENT
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -18,6 +19,16 @@ interface ChatMessageDao {
     )
     fun streamMessages(agentId: String): Flow<List<ChatMessageEntity>>
 
+    /**
+     * 返回 PagingSource，用于配合 RemoteMediator 进行分页加载
+     * 按 sortKey DESC 排序，最新的消息在列表底部
+     * 排除 isOpening 为 true 的数据
+     */
+    @Query(
+        "SELECT * FROM chat_messages WHERE agentId = :agentId AND isOpening = 0 ORDER BY localId DESC"
+    )
+    fun pagingSource(agentId: String): PagingSource<Int, ChatMessageEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(messages: List<ChatMessageEntity>)
 
@@ -32,6 +43,9 @@ interface ChatMessageDao {
         "DELETE FROM chat_messages WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"
     )
     suspend fun deleteMessage(agentId: String, messageId: String)
+
+    @Query("DELETE FROM chat_messages WHERE agentId = :agentId AND isSending = 1")
+    suspend fun deleteSendingMsg(agentId: String)
 
     @Query("DELETE FROM chat_messages WHERE agentId = :agentId")
     suspend fun deleteByAgent(agentId: String)

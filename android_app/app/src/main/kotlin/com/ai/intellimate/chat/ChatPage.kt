@@ -7,6 +7,7 @@ import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,6 +49,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +74,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.paging.ItemSnapshotList
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostError
@@ -88,6 +95,7 @@ import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
 import com.ai.intellimate.chat.uistate.ChatUIState
+import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
@@ -113,82 +121,48 @@ sealed class ChatMessageItem {
 }
 
 /**
- * 将消息列表分组，连续的语音消息会被分组 包括用户和AI的消息：如果AI消息是语音消息，前一条用户消息也会被包含在语音组中
+ * 将原始消息列表按「普通消息 / 语音消息组」分组，返回用于 LazyColumn 的 MessageItem 列表。
+ * 连续的用户+AI 语音对话会合并为一组（CallMessageIndexs），其余为单条 MessageIndex。
+ * 某条 message 为 null（如 Paging placeholder）时按普通空消息处理。
  *
- * @param messages 原始消息列表（倒序，最新的在前）
- * @return 分组后的消息项列表（保持倒序）
+ * 索引约定：MessageIndex.index 与 CallMessageIndexs.messages 中的每个值均为 messages 的下标，
+ * 与 LazyPagingItems 同序，渲染时用 messages[item.index] / messages[it] 取对应消息。
+ *
+ * @param messages 原始消息（倒序，新消息在前），getOrNull 可能返回 null（placeholder）
+ * @return 分组后的消息项列表，索引均指向 messages 中的位置
  */
-private fun groupVoiceMessages(messages: List<MsgInfo>): List<ChatMessageItem> {
-    if (messages.isEmpty()) return emptyList()
+private fun proFixMessages(messages: ItemSnapshotList<MsgInfo>): List<MessageItem> {
+    val result = mutableListOf<MessageItem>()
+    val currentVoiceGroupIndices = mutableListOf<Int>()
 
-    val result = mutableListOf<ChatMessageItem>()
-    var currentVoiceGroup = mutableListOf<MsgInfo>()
-    var groupIndex = 0
-    var i = 0
-
-    while (i < messages.size) {
-        val message = messages[i]
-
-        // 检查是否是AI的语音消息
-        if (message.role == "assistant" && message.isVoiceMessage()) {
-            // 如果下一条消息（更早的消息）是用户消息，将其也加入语音组
-            if (i + 1 < messages.size && messages[i + 1].role == "user") {
-                // 在倒序列表中，先添加的是最新的消息对，后添加的是更早的消息对
-                // 所以需要先添加用户消息，再添加AI语音消息（保持倒序）
-                currentVoiceGroup.add(messages[i + 1]) // 用户消息
-                currentVoiceGroup.add(message) // AI语音消息
-                i += 2 // 跳过这两条消息
-
-                // 继续检查是否还有连续的语音对话（下一条AI消息是否也是语音消息）
-                while (
-                    i < messages.size &&
-                        messages[i].role == "assistant" &&
-                        messages[i].isVoiceMessage() &&
-                        i + 1 < messages.size &&
-                        messages[i + 1].role == "user"
-                ) {
-                    // 继续添加连续的语音对话（更早的消息对）
-                    currentVoiceGroup.add(messages[i + 1]) // 用户消息
-                    currentVoiceGroup.add(messages[i]) // AI语音消息
-                    i += 2
-                }
-            } else {
-                // 没有下一条用户消息，只添加AI语音消息
-                currentVoiceGroup.add(message)
-                i++
+    messages.forEachIndexed { index, info ->
+        if (info == null) {
+            if (currentVoiceGroupIndices.isNotEmpty()) {
+                result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+                currentVoiceGroupIndices.clear()
             }
+            result.add(MessageItem.MessageIndex(index))
         } else {
-            // 不是AI语音消息，先处理之前的语音组（如果有）
-            if (currentVoiceGroup.isNotEmpty()) {
-                // 反转语音组，使其按时间顺序（更早的消息在前，更新的消息在后）
-                // 在倒序列表中，currentVoiceGroup 的顺序是：[用户3, AI3, 用户2, AI2]
-                // 反转后应该是：[用户2, AI2, 用户3, AI3]（按时间顺序）
-                currentVoiceGroup.reverse()
-                result.add(
-                    ChatMessageItem.VoiceMessageGroup(
-                        messages = currentVoiceGroup.toList(),
-                        groupId = "voice_group_$groupIndex",
-                    )
-                )
-                currentVoiceGroup.clear()
-                groupIndex++
+            if (info.isVoiceMessage()) {
+                currentVoiceGroupIndices.add(index)
+            } else if (info.role == "user" && currentVoiceGroupIndices.isNotEmpty()) {
+                currentVoiceGroupIndices.add(index)
+            } else if (currentVoiceGroupIndices.isNotEmpty()) {
+                result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+                result.add(MessageItem.MessageIndex(index))
+                currentVoiceGroupIndices.clear()
+            } else {
+                result.add(MessageItem.MessageIndex(index))
             }
-            // 添加普通消息
-            result.add(ChatMessageItem.NormalMessage(message))
-            i++
         }
     }
 
-    // 处理最后剩余的语音组
-    if (currentVoiceGroup.isNotEmpty()) {
-        currentVoiceGroup.reverse()
-        result.add(
-            ChatMessageItem.VoiceMessageGroup(
-                messages = currentVoiceGroup.toList(),
-                groupId = "voice_group_$groupIndex",
-            )
-        )
+    if (currentVoiceGroupIndices.isNotEmpty()) {
+        result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+        currentVoiceGroupIndices.clear()
     }
+
+    result.addAll(listOf(MessageItem.Opening, MessageItem.Intro))
 
     return result
 }
@@ -428,17 +402,19 @@ internal fun ChatPage(
 
     Box(
         modifier =
-            modifier.padding(contentPadding).pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        suppressFocusCallback.value = true
-                        focusManager.clearFocus()
-                        if (isCurrentPage) {
-                            onInputFocusChange(false)
+            modifier
+                .padding(contentPadding)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            suppressFocusCallback.value = true
+                            focusManager.clearFocus()
+                            if (isCurrentPage) {
+                                onInputFocusChange(false)
+                            }
                         }
-                    }
-                )
-            }
+                    )
+                }
     ) {
         // 只在非 ChatActivity 场景显示背景图（ChatActivity 中背景图已在外层显示）
         if (!showBackButton) {
@@ -457,7 +433,9 @@ internal fun ChatPage(
         LifecycleResumeEffect(keyboard) { onPauseOrDispose { keyboard?.hide() } }
 
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             snackbarHost = {
@@ -495,13 +473,17 @@ internal fun ChatPage(
                     }
             }
 
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)) {
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
                     ChatTopBar(
                         navController,
-                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp),
                         agentInfo = info,
                         fontSize = 15.sp,
                         avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
@@ -661,10 +643,13 @@ internal fun ChatPage(
                 val lazyColumnModifier =
                     if (chatListFullScreen) {
                         // 全屏模式：使用 weight(1f) 保持现有布局
-                        Modifier.weight(1f).padding(horizontal = 16.dp)
+                        Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp)
                     } else {
                         // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
-                        Modifier.weight(1f - UiConfigs.ChatPage.chatListBlankZone)
+                        Modifier
+                            .weight(1f - UiConfigs.ChatPage.chatListBlankZone)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     }
@@ -672,7 +657,13 @@ internal fun ChatPage(
                 BoxWithConstraints(modifier = lazyColumnModifier) {
                     val density = LocalDensity.current
                     val chatViewHeight = remember {
-                        with(density) { (maxHeight - 32.dp).roundToPx() }
+                        with(density) { (maxHeight - 48.dp).roundToPx() }
+                    }
+                    val messages = chatViewModel.messages.collectAsLazyPagingItems()
+                    val agent by chatViewModel.agentFlow.collectAsState()
+                    val messageItems by remember {
+                        LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
+                        derivedStateOf { proFixMessages(messages.itemSnapshotList) }
                     }
 
                     LazyColumn(
@@ -701,12 +692,85 @@ internal fun ChatPage(
                                         }
                                     },
                                     modifier =
-                                        Modifier.padding(vertical = 16.dp).size(210.5.dp, 312.5.dp),
+                                        Modifier
+                                            .padding(vertical = 16.dp)
+                                            .size(210.5.dp, 312.5.dp),
                                 )
                             }
                         }
 
-                        val showIntroOpeningTop =
+                        itemsIndexed(
+                            items = messageItems,
+                            key = { index, item ->
+                                when (item) {
+                                    is MessageItem.Opening -> "opening"
+                                    is MessageItem.Intro -> "intro"
+                                    is MessageItem.MessageIndex -> messages.peek(item.index)?.id ?: index
+                                    is MessageItem.CallMessageIndexs -> messages.peek(item.messages.first())?.id ?: index
+                                }
+                            }
+                        ) { index, item ->
+                            when (item) {
+                                is MessageItem.Intro -> {
+                                    AgentInfoChatCard(agent?.intro.orEmpty())
+                                    Spacer(Modifier.height(16.dp))
+                                }
+                                is MessageItem.Opening -> {
+                                    Column {
+                                        val openingMessage =
+                                            MsgInfo(
+                                                content = agent?.opening.orEmpty(),
+                                                role = "assistant",
+                                                audio_url = agent?.openingAudioUrl,
+                                            )
+
+                                        Spacer(Modifier.height(16.dp))
+                                        ChatItem(
+                                            navController,
+                                            item = openingMessage,
+                                            isCurrentPage = isCurrentPage,
+                                            chatViewModel = chatViewModel,
+                                            isGuideVisible = isGuideVisible,
+                                            messageFontSizeSp = chatFontSizeSp,
+                                        )
+                                        Spacer(Modifier.height(16.dp))
+                                    }
+                                }
+                                is MessageItem.MessageIndex -> {
+                                    val message = messages[item.index]
+
+                                    if (message != null) {
+                                        ChatItem(
+                                            navController,
+                                            item = message,
+                                            isCurrentPage = isCurrentPage,
+                                            chatViewModel = chatViewModel,
+                                            isLatestMessage = index == 0,
+                                            isGuideVisible = isGuideVisible,
+                                            messageFontSizeSp = chatFontSizeSp,
+                                        )
+                                    } else {
+                                        Spacer(Modifier.height(50.dp))
+                                    }
+                                }
+                                is MessageItem.CallMessageIndexs -> {
+                                    CallMessages(
+                                        messages = item.messages.map { messages[it] },
+                                        navController = navController,
+                                        chatViewModel = chatViewModel,
+                                        isCurrentPage = isCurrentPage,
+                                        isGuideVisible = isGuideVisible,
+                                        messageFontSizeSp = chatFontSizeSp,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onCollapseChange = {
+                                            listState.requestScrollToItem(index + 2, -chatViewHeight)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        /*val showIntroOpeningTop =
                             isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
                         val filteredChatMessages = chatMessages.filter { !it.isOpening() }
                         // 直接在 Composable 作用域中处理，不使用 runCatching
@@ -911,7 +975,7 @@ internal fun ChatPage(
                                     }
                                 }
                             }
-                        }
+                        }*/
                     }
                 }
 
@@ -945,7 +1009,8 @@ internal fun ChatPage(
                 if (agentInfo?.isDeleted == true) {
                     Box(
                         modifier =
-                            Modifier.fillMaxWidth()
+                            Modifier
+                                .fillMaxWidth()
                                 .height(48.dp)
                                 .padding(horizontal = 16.dp)
                                 .clip(RoundedCornerShape(24.dp))
@@ -967,7 +1032,10 @@ internal fun ChatPage(
                         Button(
                             onClick = chatViewModel::chatUnlockByCredits,
                             modifier =
-                                Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(50.dp),
+                                Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .fillMaxWidth()
+                                    .height(50.dp),
                         ) {
                             Text("Unlock by credits")
                         }
@@ -1033,7 +1101,9 @@ internal fun ChatPage(
                             )
                         }
                     } else {
-                        Modifier.consumeWindowInsets(contentPadding).imePadding()
+                        Modifier
+                            .consumeWindowInsets(contentPadding)
+                            .imePadding()
                     }
 
                 Spacer(modifier = bottomSpaceModifier)
@@ -1139,7 +1209,8 @@ internal fun ChatPage(
             // 当有新消息时，始终显示此按钮，即使回到第一条消息也不隐藏
             ScrollToBottomButton(
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .padding(
                             bottom = scrollToBottomButtonBottomOffset,
                             end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
@@ -1158,7 +1229,8 @@ internal fun ChatPage(
             // 当用户滚动到历史记录时，此按钮会自动隐藏，避免与滚动到底部按钮重叠
             KeepTalkingFloatingButton(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd)
+                    Modifier
+                        .align(Alignment.BottomEnd)
                         .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
@@ -1220,7 +1292,8 @@ internal fun ChatPage(
                 totalPoints = boostState.chatMessagePoints,
                 enabled = isCurrentPage,
                 modifier =
-                    Modifier.align(Alignment.TopCenter)
+                    Modifier
+                        .align(Alignment.TopCenter)
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp),
             )
         }

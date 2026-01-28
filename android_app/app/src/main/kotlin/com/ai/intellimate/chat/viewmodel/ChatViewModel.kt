@@ -13,6 +13,7 @@ import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.domain.ChatRepository
+import ai.sxwl.android.data.chat.local.db.toModel
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
@@ -22,12 +23,18 @@ import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
+import androidx.paging.cachedIn
+import androidx.paging.insertFooterItem
+import androidx.paging.insertHeaderItem
+import androidx.paging.map
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.chat.uistate.ChatUIState
+import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
@@ -43,11 +50,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -58,6 +68,7 @@ private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 class ChatViewModel : BaseVM() {
 
     // 依赖注入 - 使用新的架构
+    private val chatMessageRepository = ChatMessageRepository()
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
     private val characterRepository: CharacterRepository = DataModule.getCharacterRepository()
     private val sendMessageUseCase = DataModule.sendMessageUseCase
@@ -92,6 +103,20 @@ class ChatViewModel : BaseVM() {
     // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
     private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
     val msgs = _msgs.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val messages = _agentId.flatMapLatest {
+        if (it.isNullOrBlank()) {
+            emptyFlow()
+        } else {
+            chatMessageRepository
+                .getMessagesFlow(it)
+        }
+    }.map {
+        it.map { entity ->
+            entity.toModel()
+        }
+    }.cachedIn(viewModelScope)
 
     private var lastAiMsgInfo: MsgInfo? = null
     private val _shouldFlowShow = MutableStateFlow(false)
@@ -821,7 +846,7 @@ class ChatViewModel : BaseVM() {
     // endregion
 
     fun queryMsgs(loadMore: Boolean = false) {
-        val currentAgentId = agentInfo.value?.id ?: return
+        /*val currentAgentId = agentInfo.value?.id ?: return
         if (loadMore) {
             viewModelScope.launch(Dispatchers.IO) {
                 chatRepository.loadMoreMessages(currentAgentId, PAGE_SIZE)
@@ -831,7 +856,7 @@ class ChatViewModel : BaseVM() {
                 loadChatHistoryUseCase(currentAgentId, PAGE_SIZE)
                 _isQueryMsgsCompleted.value = true
             }
-        }
+        }*/
     }
 
     /** 同步最新消息：优先加载本地数据，然后检查服务器更新 */
@@ -844,13 +869,13 @@ class ChatViewModel : BaseVM() {
 
     /** 加载更多消息 */
     fun loadMoreMessages() {
-        if (!_hasMoreMessages.value || _isLoadingMore.value || isQueryingMsgs) {
+        /*if (!_hasMoreMessages.value || _isLoadingMore.value || isQueryingMsgs) {
             return
         }
         val currentAgentId = agentInfo.value?.id ?: return
         viewModelScope.launch(Dispatchers.IO) {
             chatRepository.loadMoreMessages(currentAgentId, PAGE_SIZE)
-        }
+        }*/
     }
 
     val showLimitDialog = MutableStateFlow(false)

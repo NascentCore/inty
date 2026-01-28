@@ -60,8 +60,10 @@ dependencies {
 
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.room.paging)
 
     implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.paging.runtime)
 
     implementation(projects.core.firebase)
     api(libs.billing.client)

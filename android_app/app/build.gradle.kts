@@ -103,6 +103,9 @@ dependencies {
     // TODO：考虑将其移动到 core/data 模块中，因为其是本地数据存储，不属于 app 模块。
     implementation(libs.mmkv)
     implementation(libs.androidx.dataStore)
+    implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.room.ktx)
 
     // ===== 项目模块 =====
     implementation(projects.core.common)
