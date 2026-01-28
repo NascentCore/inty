@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -108,14 +109,13 @@ class ChatViewModel : BaseVM() {
         if (it.isNullOrBlank()) {
             emptyFlow()
         } else {
-            chatMessageRepository.getMessagesFlow(it)
+            chatMessageRepository
+                .getMessagesFlow(it)
         }
     }.map {
         it.map { entity ->
-            MessageItem.NormalMessage(entity.toModel()) as MessageItem
+            entity.toModel()
         }
-            .insertFooterItem(item = MessageItem.Opening)
-            .insertFooterItem(item = MessageItem.Intro)
     }.cachedIn(viewModelScope)
 
     private var lastAiMsgInfo: MsgInfo? = null

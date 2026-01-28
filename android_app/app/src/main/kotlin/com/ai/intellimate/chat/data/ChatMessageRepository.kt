@@ -39,7 +39,7 @@ class ChatMessageRepository(
     @OptIn(ExperimentalPagingApi::class)
     fun getMessagesFlow(agentId: String): Flow<PagingData<ChatMessageEntity>> {
         return Pager(
-            config = PagingConfig(pageSize = 20),
+            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
             remoteMediator = ChatMessageRemoteMediator(
                 agentId = agentId,
                 database = database,
