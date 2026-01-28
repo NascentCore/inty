@@ -22,7 +22,10 @@ from app.services.chat_service import generate_session_id
 MEMORY_TYPE_USER_COMMON = "user_common"
 
 _PROMPT_PATH = (
-    Path(__file__).resolve().parents[1] / "core" / "prompting" / "memory_extraction_prompt.txt"
+    Path(__file__).resolve().parents[1]
+    / "core"
+    / "prompting"
+    / "memory_extraction_prompt.txt"
 )
 
 
@@ -107,7 +110,11 @@ def get_all_messages_for_user(user_id: str) -> List[Tuple[str, str]]:
                 continue
             msg_type = data.get("type", "human")
             content = ""
-            if "data" in data and isinstance(data["data"], dict) and "content" in data["data"]:
+            if (
+                "data" in data
+                and isinstance(data["data"], dict)
+                and "content" in data["data"]
+            ):
                 content = data["data"]["content"] or ""
             elif "content" in data:
                 content = data["content"] or ""
@@ -140,9 +147,7 @@ async def get_users_to_extract(db: AsyncSession) -> List[str]:
     thresh_incr = cfg.trigger_incremental_messages
 
     # 所有有会话的用户及其 chat_id
-    r = await db.execute(
-        text("SELECT user_id, id FROM chats WHERE is_active = true")
-    )
+    r = await db.execute(text("SELECT user_id, id FROM chats WHERE is_active = true"))
     rows = r.fetchall()
     user_to_chats: dict = {}
     for uid, cid in rows:

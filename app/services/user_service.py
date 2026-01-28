@@ -220,7 +220,9 @@ async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
                     parts.append(f"Age: {user.age_group}")
                 if user.description:
                     parts.append(f"Description: {user.description}")
-                user_info_text = "##User Information\n" + "\n".join(parts) if parts else ""
+                user_info_text = (
+                    "##User Information\n" + "\n".join(parts) if parts else ""
+                )
                 cache_service.set_user_info(user_id, user_info_text)
 
         except Exception as e:

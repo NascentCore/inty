@@ -201,6 +201,7 @@ class RoomDataSource(
 
     /**
      * 发送前插入临时用户消息与 loading 占位，localId/sortKey 尽量大，isSending=true。
+     *
      * @return Pair(临时用户消息 localId, 临时 loading localId)，发送成功后用于删除并替换为 user_message_id 正式消息。
      */
     suspend fun appendSendingMessages(agentId: String, userContent: String) =
@@ -212,12 +213,12 @@ class RoomDataSource(
                     createTempSendingUserEntity(
                         agentId = agentId,
                         content = userContent,
-                        localId = tempUserLocalId.toString()
+                        localId = tempUserLocalId.toString(),
                     )
                 val loadingEntity =
                     createTempSendingLoadingEntity(
                         agentId = agentId,
-                        localId = tempLoadingLocalId.toString()
+                        localId = tempLoadingLocalId.toString(),
                     )
                 messageDao.upsert(listOf(userEntity, loadingEntity))
             }
@@ -227,18 +228,15 @@ class RoomDataSource(
         }
 
     /**
-     * 仅插入“正在发送”的 loading 占位（isSending=true），用于 recall 等不附带用户消息的请求。
-     * 请求结束后调用 removeSendingMessage(agentId) 移除。
+     * 仅插入“正在发送”的 loading 占位（isSending=true），用于 recall 等不附带用户消息的请求。 请求结束后调用
+     * removeSendingMessage(agentId) 移除。
      */
     suspend fun appendSendingLoadingOnly(agentId: String) =
         withContext(dispatcher) {
             val tempLoadingLocalId = Long.MAX_VALUE.toString()
             db.withTransaction {
                 messageDao.upsert(
-                    createTempSendingLoadingEntity(
-                        agentId = agentId,
-                        localId = tempLoadingLocalId,
-                    ),
+                    createTempSendingLoadingEntity(agentId = agentId, localId = tempLoadingLocalId)
                 )
             }
             logger.debug {
@@ -335,7 +333,7 @@ class RoomDataSource(
         withContext(dispatcher) { messageDao.deleteMessage(agentId, messageId) }
 
     suspend fun removeSendingMessage(agentId: String) {
-        with(dispatcher) { messageDao.deleteSendingMsg(agentId)}
+        with(dispatcher) { messageDao.deleteSendingMsg(agentId) }
     }
 
     suspend fun addMessage(agentId: String, message: MsgInfo) =

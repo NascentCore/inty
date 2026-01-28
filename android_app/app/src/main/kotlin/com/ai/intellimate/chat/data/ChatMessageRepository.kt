@@ -3,7 +3,6 @@ package com.ai.intellimate.chat.data
 // CREATED_BY_AGENT
 
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
-import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import androidx.paging.ExperimentalPagingApi
@@ -13,8 +12,7 @@ import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 聊天消息的 Paging Repository
- * 使用 RemoteMediator 实现数据库查询和网络同步
+ * 聊天消息的 Paging Repository 使用 RemoteMediator 实现数据库查询和网络同步
  *
  * 使用场景：
  * - 在聊天页面中使用 Paging 加载聊天记录
@@ -29,25 +27,22 @@ import kotlinx.coroutines.flow.Flow
  */
 class ChatMessageRepository(
     private val database: IntyChatDatabase = IntyChatDatabase.getInstance(),
-    private val remoteDataSource: ChatRemoteDataSource = ChatRemoteDataSource()
+    private val remoteDataSource: ChatRemoteDataSource = ChatRemoteDataSource(),
 ) {
 
-    /**
-     * 获取聊天消息的 PagingData Flow
-     * 返回的 Flow 会从数据库读取数据，并在需要时通过 RemoteMediator 从网络同步
-     */
+    /** 获取聊天消息的 PagingData Flow 返回的 Flow 会从数据库读取数据，并在需要时通过 RemoteMediator 从网络同步 */
     @OptIn(ExperimentalPagingApi::class)
     fun getMessagesFlow(agentId: String): Flow<PagingData<ChatMessageEntity>> {
         return Pager(
-            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
-            remoteMediator = ChatMessageRemoteMediator(
-                agentId = agentId,
-                database = database,
-                remoteDataSource = remoteDataSource
-            ),
-            pagingSourceFactory = {
-                database.chatMessageDao().pagingSource(agentId)
-            },
-        ).flow
+                config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+                remoteMediator =
+                    ChatMessageRemoteMediator(
+                        agentId = agentId,
+                        database = database,
+                        remoteDataSource = remoteDataSource,
+                    ),
+                pagingSourceFactory = { database.chatMessageDao().pagingSource(agentId) },
+            )
+            .flow
     }
 }

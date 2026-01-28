@@ -40,7 +40,7 @@ CREATED_BY_AGENT
 - **get_all_messages_for_user(user_id)**：拉取该用户在所有会话中的全部消息 `(role, content)`，按 `created_at` 升序；不按 agent 过滤，不限制条数。
 - **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、调用 LLM、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`。
 - **提示词**：`app/core/prompting/memory_extraction_prompt.txt`（英文）。
-- **_extract_part1_summary(full_analysis)**：从 LLM 完整回复中解析 Part 1；支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等中英文 fallback 正则；Part 1 过短（≤50 字）时回退到约 2000 字或全文。
+- **\_extract_part1_summary(full_analysis)**：从 LLM 完整回复中解析 Part 1；支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等中英文 fallback 正则；Part 1 过短（≤50 字）时回退到约 2000 字或全文。
 
 ### 5. 定时任务（`app/services/push_scheduler_service.py`）
 

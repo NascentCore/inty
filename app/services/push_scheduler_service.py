@@ -169,9 +169,7 @@ class PushSchedulerService:
                     coalesce=True,
                     max_instances=1,
                 )
-                logger.info(
-                    f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00"
-                )
+                logger.info(f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00")
 
             logger.info("已添加所有推送检查任务，将在启动后立即执行一次")
 

@@ -611,7 +611,9 @@ async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optiona
         return None
 
 
-async def get_latest_user_message_id(db: AsyncSession, session_id: str) -> Optional[int]:
+async def get_latest_user_message_id(
+    db: AsyncSession, session_id: str
+) -> Optional[int]:
     """获取会话中最新的用户消息ID（排除已软删除的）"""
     try:
         stmt = (
