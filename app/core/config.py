@@ -300,6 +300,17 @@ class SentryConfig:
 
 
 @dataclass
+class MemoryExtractionConfig:
+    """记忆抽取定时任务配置；api_key/base_url 复用 agent。"""
+
+    enabled: bool = True
+    model: str = ""  # 为空时复用 agent.model
+    cron_hour: int = 3  # UTC 小时，每日执行
+    trigger_new_user_messages: int = 30  # 新用户总消息数阈值
+    trigger_incremental_messages: int = 30  # 已提取用户自上次后新增消息数阈值
+
+
+@dataclass
 class PushNotificationConfig:
     """推送通知服务配置"""
 
@@ -377,6 +388,9 @@ class Config:
     cloudflare: CloudflareConfig
     sentry: SentryConfig
     push_notification: PushNotificationConfig
+    memory_extraction: MemoryExtractionConfig = field(
+        default_factory=lambda: MemoryExtractionConfig()
+    )
     fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
 
@@ -416,6 +430,9 @@ def load_config(path: str) -> Config:
         cloudflare=CloudflareConfig(**data.get("cloudflare", {})),
         sentry=SentryConfig(**data.get("sentry", {})),
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
+        memory_extraction=MemoryExtractionConfig(
+            **(data.get("memory_extraction") or {})
+        ),
         fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
     )

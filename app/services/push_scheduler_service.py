@@ -9,11 +9,16 @@ import datetime
 from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
+from app.services.memory_extraction_service import (
+    extract_and_save as memory_extract_and_save,
+    get_users_to_extract as memory_get_users_to_extract,
+)
 from app.services.push_notification_service import (
     discover_new_users_for_push,
     discover_users_with_updated_tokens,
@@ -148,6 +153,26 @@ class PushSchedulerService:
                 next_run_time=datetime.datetime.now(),
             )
 
+            # 记忆抽取：每日 UTC cron_hour 点执行（若启用）
+            mem_cfg = getattr(
+                global_config_loaded_from_config_yaml,
+                "memory_extraction",
+                None,
+            )
+            if mem_cfg and getattr(mem_cfg, "enabled", False):
+                self.scheduler.add_job(
+                    self._run_memory_extraction,
+                    trigger=CronTrigger(hour=mem_cfg.cron_hour, minute=0),
+                    id="run_memory_extraction",
+                    name="记忆抽取",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                )
+                logger.info(
+                    f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00"
+                )
+
             logger.info("已添加所有推送检查任务，将在启动后立即执行一次")
 
             logger.info("推送调度器启动成功")
@@ -265,6 +290,23 @@ class PushSchedulerService:
 
         except Exception as e:
             logger.error(f"token 更新扫描任务执行失败: {str(e)}")
+
+    async def _run_memory_extraction(self) -> None:
+        """每日记忆抽取：筛选待抽取用户并逐个 extract_and_save。"""
+        try:
+            logger.info("[记忆抽取] 开始...")
+            async with AsyncSessionLocal() as db:
+                user_ids = await memory_get_users_to_extract(db)
+                logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
+                for uid in user_ids:
+                    try:
+                        await memory_extract_and_save(db, uid)
+                    except Exception as e:
+                        await db.rollback()
+                        logger.warning(f"[记忆抽取] user_id={uid} 失败: {e}")
+            logger.info("[记忆抽取] 完成")
+        except Exception as e:
+            logger.error(f"[记忆抽取] 执行失败: {str(e)}")
 
 
 # 全局调度器实例
