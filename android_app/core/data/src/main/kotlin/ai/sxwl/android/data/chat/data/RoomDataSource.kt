@@ -201,6 +201,7 @@ class RoomDataSource(
 
     /**
      * 发送前插入临时用户消息与 loading 占位，localId/sortKey 尽量大，isSending=true。
+     *
      * @return Pair(临时用户消息 localId, 临时 loading localId)，发送成功后用于删除并替换为 user_message_id 正式消息。
      */
     suspend fun appendSendingMessages(agentId: String, userContent: String) =
@@ -212,13 +213,10 @@ class RoomDataSource(
                     createTempSendingUserEntity(
                         agentId = agentId,
                         content = userContent,
-                        localId = tempUserLocalId
+                        localId = tempUserLocalId,
                     )
                 val loadingEntity =
-                    createTempSendingLoadingEntity(
-                        agentId = agentId,
-                        localId = tempLoadingLocalId
-                    )
+                    createTempSendingLoadingEntity(agentId = agentId, localId = tempLoadingLocalId)
                 messageDao.upsert(listOf(userEntity, loadingEntity))
             }
             logger.debug {
@@ -235,10 +233,7 @@ class RoomDataSource(
             val tempLoadingLocalId = "${Long.MAX_VALUE}"
             db.withTransaction {
                 messageDao.upsert(
-                    createTempSendingLoadingEntity(
-                        agentId = agentId,
-                        localId = tempLoadingLocalId,
-                    ),
+                    createTempSendingLoadingEntity(agentId = agentId, localId = tempLoadingLocalId)
                 )
             }
             logger.debug {
@@ -386,7 +381,6 @@ class RoomDataSource(
             syncStateDao.upsert(updater(current).copy(updatedAt = now()))
         }*/
     }
-
 
     private fun loadingFlow(agentId: String): MutableStateFlow<Boolean> =
         loadingFlows.getOrPut(agentId) { MutableStateFlow(false) }

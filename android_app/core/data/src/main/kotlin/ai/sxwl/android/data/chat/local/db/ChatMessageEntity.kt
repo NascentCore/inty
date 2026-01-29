@@ -5,16 +5,11 @@ package ai.sxwl.android.data.chat.local.db
 import ai.sxwl.android.data.api.model.MsgInfo
 import androidx.room.Entity
 import androidx.room.Index
-import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "chat_messages",
-    indices =
-        [
-            Index(value = ["agentId"]),
-            Index(value = ["localId"]),
-        ],
-    primaryKeys = ["localId", "agentId"]
+    indices = [Index(value = ["agentId"]), Index(value = ["localId"])],
+    primaryKeys = ["localId", "agentId"],
 )
 data class ChatMessageEntity(
     val localId: String,

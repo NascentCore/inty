@@ -66,8 +66,10 @@ export const SettingsPage: React.FC = () => {
           default_history_count: response.default_history_count,
           free_user_chat_image_model: response.free_user_chat_image_model,
           sub_user_chat_image_model: response.sub_user_chat_image_model,
-          free_user_chat_image_gemini_model: response.free_user_chat_image_gemini_model,
-          sub_user_chat_image_gemini_model: response.sub_user_chat_image_gemini_model,
+          free_user_chat_image_gemini_model:
+            response.free_user_chat_image_gemini_model,
+          sub_user_chat_image_gemini_model:
+            response.sub_user_chat_image_gemini_model,
         });
         message.success("配置加载成功");
       }
@@ -92,8 +94,10 @@ export const SettingsPage: React.FC = () => {
           default_history_count: response.default_history_count,
           free_user_chat_image_model: response.free_user_chat_image_model,
           sub_user_chat_image_model: response.sub_user_chat_image_model,
-          free_user_chat_image_gemini_model: response.free_user_chat_image_gemini_model,
-          sub_user_chat_image_gemini_model: response.sub_user_chat_image_gemini_model,
+          free_user_chat_image_gemini_model:
+            response.free_user_chat_image_gemini_model,
+          sub_user_chat_image_gemini_model:
+            response.sub_user_chat_image_gemini_model,
         });
       }
     } catch (error: any) {
@@ -177,9 +181,13 @@ export const SettingsPage: React.FC = () => {
             </Form.Item>
 
             <Divider orientation="left">消息生图模型配置</Divider>
-            <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 16 }}
+            >
               先选提供商（Gemini 或 fal.ai），选 Gemini 时由下方「Gemini 模型
-              ID」指定具体型号（如 gemini-2.5-flash-image、gemini-3-pro-image-preview）
+              ID」指定具体型号（如
+              gemini-2.5-flash-image、gemini-3-pro-image-preview）
             </Text>
 
             <Form.Item
@@ -188,7 +196,8 @@ export const SettingsPage: React.FC = () => {
               rules={[{ required: true, message: "请选择模型提供商" }]}
               extra={
                 <Text type="secondary">
-                  选 Gemini 时使用下方「免费用户 Gemini 模型 ID」；选 fal.ai 时直接使用对应模型
+                  选 Gemini 时使用下方「免费用户 Gemini 模型 ID」；选 fal.ai
+                  时直接使用对应模型
                 </Text>
               }
             >
@@ -214,7 +223,8 @@ export const SettingsPage: React.FC = () => {
               rules={[{ required: true, message: "请选择模型提供商" }]}
               extra={
                 <Text type="secondary">
-                  选 Gemini 时使用下方「订阅用户 Gemini 模型 ID」；默认 gemini-2.5-flash-image
+                  选 Gemini 时使用下方「订阅用户 Gemini 模型 ID」；默认
+                  gemini-2.5-flash-image
                 </Text>
               }
             >
@@ -240,7 +250,8 @@ export const SettingsPage: React.FC = () => {
               rules={[{ required: true, message: "请输入 Vertex AI 模型 ID" }]}
               extra={
                 <Text type="secondary">
-                  仅当上方「免费用户 - 模型提供商」选 Gemini 时生效，如 gemini-2.5-flash-image
+                  仅当上方「免费用户 - 模型提供商」选 Gemini 时生效，如
+                  gemini-2.5-flash-image
                 </Text>
               }
             >
@@ -253,7 +264,8 @@ export const SettingsPage: React.FC = () => {
               rules={[{ required: true, message: "请输入 Vertex AI 模型 ID" }]}
               extra={
                 <Text type="secondary">
-                  仅当上方「订阅用户 - 模型提供商」选 Gemini 时生效，如 gemini-3-pro-image-preview
+                  仅当上方「订阅用户 - 模型提供商」选 Gemini 时生效，如
+                  gemini-3-pro-image-preview
                 </Text>
               }
             >

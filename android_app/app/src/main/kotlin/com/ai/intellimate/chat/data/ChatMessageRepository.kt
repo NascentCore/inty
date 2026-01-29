@@ -35,26 +35,23 @@ class ChatMessageRepository(
     private val database: IntyChatDatabase = IntyChatDatabase.getInstance(),
     private val remoteDataSource: ChatRemoteDataSource = ChatRemoteDataSource(),
     private val localDataSource: ChatLocalDataSource = ChatLocalDataSource(database),
-    private val roomDataSource: RoomDataSource = RoomDataSource(database)
+    private val roomDataSource: RoomDataSource = RoomDataSource(database),
 ) {
 
-    /**
-     * 获取聊天消息的 PagingData Flow
-     * 返回的 Flow 会从数据库读取数据，并在需要时通过 RemoteMediator 从网络同步
-     */
+    /** 获取聊天消息的 PagingData Flow 返回的 Flow 会从数据库读取数据，并在需要时通过 RemoteMediator 从网络同步 */
     @OptIn(ExperimentalPagingApi::class)
     fun getMessagesFlow(agentId: String): Flow<PagingData<ChatMessageEntity>> {
         return Pager(
-            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
-            remoteMediator = ChatMessageRemoteMediator(
-                agentId = agentId,
-                database = database,
-                remoteDataSource = remoteDataSource
-            ),
-            pagingSourceFactory = {
-                database.chatMessageDao().pagingSource(agentId)
-            },
-        ).flow
+                config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+                remoteMediator =
+                    ChatMessageRemoteMediator(
+                        agentId = agentId,
+                        database = database,
+                        remoteDataSource = remoteDataSource,
+                    ),
+                pagingSourceFactory = { database.chatMessageDao().pagingSource(agentId) },
+            )
+            .flow
     }
 
     suspend fun clearMessages(agentId: String) {
@@ -62,39 +59,43 @@ class ChatMessageRepository(
         localDataSource.updateSyncState(agentId) { it.copy(offset = 0) }
     }
 
-    suspend fun sendMessage(
-        agentId: String,
-        content: String,
-    ): HttpResult<SendMsgResponse> {
+    suspend fun sendMessage(agentId: String, content: String): HttpResult<SendMsgResponse> {
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
         val trimmed = content.trimEnd()
-        val timestamp =
-            java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+        val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
 
         roomDataSource.appendSendingMessages(agentId, trimmed)
 
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, listOf(MsgInfo(content = trimmed, role = "user")))
+                remoteDataSource.sendMessage(
+                    agentId,
+                    listOf(MsgInfo(content = trimmed, role = "user")),
+                )
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        if (result is HttpResult.Success && result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
+        if (
+            result is HttpResult.Success &&
+                result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+        ) {
             roomDataSource.removeSendingMessage(agentId)
 
             val userMessageId = result.data.data?.user_message_id ?: 0L
 
             roomDataSource.appendMessages(
                 agentId,
-                listOf(MsgInfo(
-                    id = userMessageId.toString(),
-                    content = trimmed,
-                    role = "user",
-                    timestamp = timestamp
-                )),
+                listOf(
+                    MsgInfo(
+                        id = userMessageId.toString(),
+                        content = trimmed,
+                        role = "user",
+                        timestamp = timestamp,
+                    )
+                ),
             )
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
@@ -103,17 +104,9 @@ class ChatMessageRepository(
                     "RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId"
                 )
                 roomDataSource.appendMessages(agentId, assistantMsgs)
-                localDataSource.updateSyncState(agentId) {
-                    it.copy(
-                        offset = it.offset + 2
-                    )
-                }
+                localDataSource.updateSyncState(agentId) { it.copy(offset = it.offset + 2) }
             } else {
-                localDataSource.updateSyncState(agentId) {
-                    it.copy(
-                        offset = it.offset + 1
-                    )
-                }
+                localDataSource.updateSyncState(agentId) { it.copy(offset = it.offset + 1) }
             }
         } else {
             roomDataSource.removeSendingMessage(agentId)
@@ -162,5 +155,6 @@ class ChatMessageRepository(
 
     suspend fun countUserMessages(agentId: String) = localDataSource.countUserMessages(agentId)
 
-    suspend fun getMessage(agentId: String, msgId: String) = localDataSource.getMessage(agentId, msgId)
+    suspend fun getMessage(agentId: String, msgId: String) =
+        localDataSource.getMessage(agentId, msgId)
 }
