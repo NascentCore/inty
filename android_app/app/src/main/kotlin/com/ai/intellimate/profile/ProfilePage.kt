@@ -513,20 +513,6 @@ private fun ProfileHeader(
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
 
-        // Daily Rewards Banner - 固定显示（不随上划隐藏）
-        var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
-        DailyRewardsBanner(
-            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-            onClick = {
-                val currentTime = System.currentTimeMillis()
-                if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
-                lastDailyRewardsClickTime = currentTime
-                navController.navigate(Routes.Me.CheckIn)
-            },
-        )
-
-        Spacer(Modifier.height(12.dp))
-
         // VIP Banner - 固定显示
         Box(
             modifier = Modifier.fillMaxWidth().height(UiConfigs.MePage.VipBannerHeight),
@@ -549,6 +535,19 @@ private fun ProfileHeader(
             modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             isSubscribed = isSubscribed,
             onRequestSubscribe = { showSubscribeDialog = true },
+        )
+
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        // Daily Rewards Banner - 固定显示（不随上划隐藏）
+        var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
+        DailyRewardsBanner(
+            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            onClick = {
+                val currentTime = System.currentTimeMillis()
+                if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
+                lastDailyRewardsClickTime = currentTime
+                navController.navigate(Routes.Me.CheckIn)
+            },
         )
 
         if (appUpdateTips) {
