@@ -1231,16 +1231,9 @@ private fun VibeModeBanner(
 
         Spacer(Modifier.width(UiConfigs.MePage.VibeMode.ContentSpacing))
 
-        val switchWrapperModifier =
-            if (isSubscribed) {
-                Modifier
-            } else {
-                Modifier.clickable(onClick = onRequestSubscribe)
-            }
-
         val toggleContentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
 
-        Box(modifier = switchWrapperModifier) {
+        Box {
             Switch(
                 checked = isActive,
                 onCheckedChange = { checked ->
@@ -1252,6 +1245,14 @@ private fun VibeModeBanner(
                 colors = switchColors,
                 modifier = Modifier.semantics { contentDescription = toggleContentDescription },
             )
+            // 未订阅时在开关上叠加透明可点击层，确保点击开关与点击横幅一致：跳转会员中心
+            if (!isSubscribed) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(onClick = onRequestSubscribe),
+                )
+            }
         }
     }
 }
