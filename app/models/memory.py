@@ -52,6 +52,9 @@ class MemoryExtractionLog(Base):
     messages_processed_count = Column(Integer, nullable=False)
     memory_items_count = Column(Integer, nullable=False)
     status = Column(String, nullable=False, comment="success | partial | failed")
+    duration_seconds = Column(Float, nullable=True, comment="当次抽取总耗时秒")
+    prompt_tokens = Column(Integer, nullable=True, comment="LLM 输入 token 数")
+    completion_tokens = Column(Integer, nullable=True, comment="LLM 输出 token 数")
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

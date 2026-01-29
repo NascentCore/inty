@@ -3,6 +3,7 @@
 记忆抽取服务：筛选待抽取用户、拉取全量消息、调用 LLM 抽取并写入 memory、memory_extraction_log。
 """
 
+import asyncio
 import json
 import re
 import time
@@ -15,6 +16,8 @@ from loguru import logger
 from sqlalchemy import delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import psycopg
+
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory, MemoryExtractionLog
 from app.services.chat_history_service import get_chat_history_connection
@@ -24,6 +27,8 @@ from app.utils.gemini import get_genai_client
 MEMORY_TYPE_USER_COMMON = "user_common"
 
 DEFAULT_MEMORY_EXTRACTION_MODEL = "gemini-2.0-flash"
+
+_MAX_IN_PARAMS = 5000
 
 _PROMPT_PATH = (
     Path(__file__).resolve().parents[1]
@@ -135,6 +140,88 @@ def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def _compute_users_to_extract_sync(
+    user_to_chats: dict,
+    user_to_last: dict,
+    thresh_new: int,
+    thresh_incr: int,
+) -> List[str]:
+    """
+    在工作线程中执行：用批量 SQL 按 session 聚合消息数，再按用户汇总并筛出待抽取 user_id。
+    使用线程内新建连接，避免跨线程复用全局连接导致阻塞。
+    """
+    if not user_to_chats:
+        return []
+
+    num_users = len(user_to_chats)
+    logger.info(f"[记忆抽取] 筛选待抽取用户: 开始批量查询，有会话用户数={num_users}")
+
+    user_to_sessions: dict = {}
+    all_sids: set[str] = set()
+    for user_id, chat_ids in user_to_chats.items():
+        sids = [generate_session_id(c) for c in chat_ids]
+        user_to_sessions[user_id] = sids
+        all_sids.update(sids)
+
+    sids_list = list(all_sids)
+    db_url = global_config_loaded_from_config_yaml.database.url
+    conn = psycopg.connect(db_url, autocommit=True)
+    try:
+        session_to_total: dict = {}
+        for i in range(0, len(sids_list), _MAX_IN_PARAMS):
+            chunk = sids_list[i : i + _MAX_IN_PARAMS]
+            ph = ",".join("%s" for _ in chunk)
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT session_id::text, COUNT(*) AS cnt
+                    FROM chat_history
+                    WHERE session_id::text IN ({ph}) AND deleted_at IS NULL
+                    GROUP BY session_id::text
+                    """,
+                    chunk,
+                )
+                for row in cur.fetchall():
+                    session_to_total[row[0]] = row[1] or 0
+
+        distinct_lasts = set(user_to_last.values())
+        last_to_session_incr: dict = {}
+        for last in distinct_lasts:
+            last_to_session_incr[last] = {}
+            for i in range(0, len(sids_list), _MAX_IN_PARAMS):
+                chunk = sids_list[i : i + _MAX_IN_PARAMS]
+                ph = ",".join("%s" for _ in chunk)
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f"""
+                        SELECT session_id::text, COUNT(*) AS cnt
+                        FROM chat_history
+                        WHERE session_id::text IN ({ph}) AND deleted_at IS NULL
+                        AND created_at > %s
+                        GROUP BY session_id::text
+                        """,
+                        chunk + [last],
+                    )
+                    for row in cur.fetchall():
+                        last_to_session_incr[last][row[0]] = row[1] or 0
+
+        result: List[str] = []
+        for user_id, sessions in user_to_sessions.items():
+            total = sum(session_to_total.get(s, 0) for s in sessions)
+            last = user_to_last.get(user_id)
+            if last is None:
+                if total >= thresh_new:
+                    result.append(user_id)
+            else:
+                incr_map = last_to_session_incr.get(last, {})
+                incr = sum(incr_map.get(s, 0) for s in sessions)
+                if incr >= thresh_incr:
+                    result.append(user_id)
+        return result
+    finally:
+        conn.close()
+
+
 async def get_users_to_extract(db: AsyncSession) -> List[str]:
     """
     筛选本次需抽取记忆的用户：新用户总消息>=trigger_new_user_messages，
@@ -169,42 +256,13 @@ async def get_users_to_extract(db: AsyncSession) -> List[str]:
     )
     user_to_last = {r[0]: r[1] for r in r2.fetchall()}
 
-    conn = get_chat_history_connection()
-    result: List[str] = []
-
-    for user_id, chat_ids in user_to_chats.items():
-        sids = [generate_session_id(c) for c in chat_ids]
-        ph = ",".join("%s" for _ in sids)
-        total = 0
-        incr = 0
-        with conn.cursor() as cur:
-            cur.execute(
-                f"""
-                SELECT COUNT(*) FROM chat_history
-                WHERE session_id::text IN ({ph}) AND deleted_at IS NULL
-                """,
-                sids,
-            )
-            total = cur.fetchone()[0] or 0
-            last = user_to_last.get(user_id)
-            if last is not None:
-                cur.execute(
-                    f"""
-                    SELECT COUNT(*) FROM chat_history
-                    WHERE session_id::text IN ({ph}) AND deleted_at IS NULL
-                    AND created_at > %s
-                    """,
-                    sids + [last],
-                )
-                incr = cur.fetchone()[0] or 0
-
-        if last is None:
-            if total >= thresh_new:
-                result.append(user_id)
-        else:
-            if incr >= thresh_incr:
-                result.append(user_id)
-
+    result = await asyncio.to_thread(
+        _compute_users_to_extract_sync,
+        user_to_chats,
+        user_to_last,
+        thresh_new,
+        thresh_incr,
+    )
     return result
 
 
@@ -221,7 +279,7 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
         return
     prompt = _load_prompt()
 
-    messages = get_all_messages_for_user(user_id)
+    messages = await asyncio.to_thread(get_all_messages_for_user, user_id)
     msg_count = len(messages)
     if msg_count == 0:
         logger.debug(f"记忆抽取跳过：user_id={user_id} 无消息")
