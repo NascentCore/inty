@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 3,
-    "identityHash": "bdfb0d0e86df6a23a4a6bcacc7b10d6f",
+    "version": 4,
+    "identityHash": "c17c62816cb6697f0c5cce7c815e0b8a",
     "entities": [
       {
         "tableName": "chat_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localId` TEXT NOT NULL, `agentId` TEXT NOT NULL, `remoteId` TEXT, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `userFeedback` TEXT, `isOpening` INTEGER NOT NULL, `isVoice` INTEGER NOT NULL, `metaAgentId` TEXT, `generatedImageUrl` TEXT, `generatedImageWidth` INTEGER, `generatedImageHeight` INTEGER, `sortKey` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `isSending` INTEGER NOT NULL, PRIMARY KEY(`localId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localId` TEXT NOT NULL, `agentId` TEXT NOT NULL, `remoteId` TEXT, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `userFeedback` TEXT, `isOpening` INTEGER NOT NULL, `isVoice` INTEGER NOT NULL, `metaAgentId` TEXT, `generatedImageUrl` TEXT, `generatedImageWidth` INTEGER, `generatedImageHeight` INTEGER, `sortKey` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `isSending` INTEGER NOT NULL, PRIMARY KEY(`localId`, `agentId`))",
         "fields": [
           {
             "fieldPath": "localId",
@@ -117,7 +117,8 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "localId"
+            "localId",
+            "agentId"
           ]
         },
         "indices": [
@@ -192,7 +193,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bdfb0d0e86df6a23a4a6bcacc7b10d6f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c17c62816cb6697f0c5cce7c815e0b8a')"
     ]
   }
 }

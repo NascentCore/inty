@@ -10,7 +10,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [ChatMessageEntity::class, ChatSyncStateEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class IntyChatDatabase : RoomDatabase() {
