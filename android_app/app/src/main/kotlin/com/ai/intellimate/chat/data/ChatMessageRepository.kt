@@ -8,6 +8,7 @@ import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
+import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
@@ -81,7 +82,7 @@ class ChatMessageRepository(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        if (result is HttpResult.Success) {
+        if (result is HttpResult.Success && result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
             roomDataSource.removeSendingMessage(agentId)
 
             val userMessageId = result.data.data?.user_message_id ?: 0L

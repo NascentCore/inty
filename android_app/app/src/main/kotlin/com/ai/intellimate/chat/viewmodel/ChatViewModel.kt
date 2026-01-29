@@ -562,10 +562,8 @@ class ChatViewModel : BaseVM() {
             )
 
             try {
-                val result = chatMessageRepository.sendMessage(agentId, inputMsg.trimEnd())
-
                 // 处理发送结果
-                when (result) {
+                when (val result = chatMessageRepository.sendMessage(agentId, inputMsg.trimEnd())) {
                     is HttpResult.Success -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
@@ -626,6 +624,10 @@ class ChatViewModel : BaseVM() {
                             withContext(Dispatchers.Main) {
                                 _showFeedbackRequestDialog.value = true
                             }
+                        }
+
+                        if (!result.data.data?.choices.isNullOrEmpty()) {
+                            _shouldFlowShow.value = true
                         }
 
                         runCatching {
@@ -1169,6 +1171,7 @@ class ChatViewModel : BaseVM() {
             try {
                 chatMessageRepository.recallLastAssistantMessage(agentId)
                 _isWaitingForReply.value = false
+                _shouldFlowShow.value = true
             } catch (e: Exception) {
                 LogUtils.e("Recall message error: ${e.message}")
                 NetworkErrorHandler.showNetworkAwareError("Failed to recall message: ${e.message}")
