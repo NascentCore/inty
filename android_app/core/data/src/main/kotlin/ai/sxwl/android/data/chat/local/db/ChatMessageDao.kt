@@ -28,6 +28,13 @@ interface ChatMessageDao {
     )
     fun pagingSource(agentId: String): PagingSource<Int, ChatMessageEntity>
 
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId AND isOpening = 0")
+    suspend fun getMessagesCount(agentId: String): Int
+
+    /** 查询用户是否对该 agent 发送过消息（存在 role = 'user' 的记录即视为发送过） */
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId AND role = 'user'")
+    suspend fun countUserMessages(agentId: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(messages: List<ChatMessageEntity>)
 

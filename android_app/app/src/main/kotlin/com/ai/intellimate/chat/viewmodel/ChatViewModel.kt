@@ -96,8 +96,8 @@ class ChatViewModel : BaseVM() {
     @Deprecated("使用agentFlow从本地数据库查询") val agentInfo = _agentInfo.asStateFlow()
 
     // 使用 StateFlow 替代 mutableStateListOf 来解决并发问题
-    private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
-    val msgs = _msgs.asStateFlow()
+    /*private val _msgs = MutableStateFlow<List<MsgInfo>>(emptyList())
+    val msgs = _msgs.asStateFlow()*/
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val messages =
@@ -212,7 +212,6 @@ class ChatViewModel : BaseVM() {
         // 如果 agent 为空，清理所有状态
         if (agentInfo == null) {
             _agentInfo.value = null
-            _msgs.update { emptyList() }
             lastQueryAgentId = null
             isQueryingMsgs = false
             _isQueryMsgsCompleted.value = false
@@ -348,16 +347,8 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch {
             combine(
                     VipStatusHelper.vipStatus,
-                    isQueryMsgsCompleted,
-                    _agentId.flatMapLatest { id ->
-                        if (id.isNullOrBlank()) {
-                            flowOf(false)
-                        } else {
-                            chatRepository.getMessagesFlow(id).map { it.isNotEmpty() }
-                        }
-                    },
                     agentFlow,
-                ) { vipStatus, isQueryCompleted, hasHistory, agent ->
+                ) { vipStatus, agent ->
                     when {
                         agent?.tags?.any { it.lowercase().contains("vip") } != true ||
                             vipStatus.isSubscribed ||
@@ -365,7 +356,7 @@ class ChatViewModel : BaseVM() {
 
                             ChatUIState.VipAgentLockType.NONE
                         }
-                        hasHistory || !isQueryCompleted -> ChatUIState.VipAgentLockType.INPUT
+                        chatMessageRepository.getMessageCounts(agent.agentId) > 0 -> ChatUIState.VipAgentLockType.INPUT
                         else -> ChatUIState.VipAgentLockType.DIALOG
                     }
                 }
@@ -402,33 +393,6 @@ class ChatViewModel : BaseVM() {
         messagesJob?.cancel()
         loadingMoreJob?.cancel()
         hasMoreJob?.cancel()
-
-        runCatching {
-            _msgs.value = chatRepository.getMessagesFlow(agentId).value
-            _isLoadingMore.value = chatRepository.getLoadingMoreFlow(agentId).value
-            _hasMoreMessages.value = chatRepository.getHasMoreFlow(agentId).value
-        }
-
-        messagesJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                chatRepository.getMessagesFlow(agentId).collect { list ->
-                    _imagePickMessageId.value = null
-                    _msgs.value = list
-
-                    val latestAiMsg = list.find { msg -> msg.role == "assistant" }
-                    _shouldFlowShow.value =
-                        IntySetting.isTextStreaming() &&
-                            lastAiMsgInfo != null &&
-                            latestAiMsg?.id != lastAiMsgInfo?.id
-
-                    lastAiMsgInfo = latestAiMsg
-
-                    val currentAgent = _agentInfo.value
-                    if (currentAgent != null && currentAgent.id == agentId) {
-                        syncCharacterEnergyFromMessages(currentAgent, list)
-                    }
-                }
-            }
         loadingMoreJob =
             viewModelScope.launch(Dispatchers.IO) {
                 chatRepository.getLoadingMoreFlow(agentId).collect { loading ->
@@ -455,6 +419,7 @@ class ChatViewModel : BaseVM() {
             }
     }
 
+    // FIXME: 如果点数在其他地方被消耗，会因为此处的处理逻辑又会使得点数被恢复，没有正确计算消耗
     private fun syncCharacterEnergyFromMessages(agent: AgentInfo, messages: List<MsgInfo>) {
         val energyPoints =
             messages.count { msg ->
@@ -537,12 +502,9 @@ class ChatViewModel : BaseVM() {
         // 记录端到端时间的起始点（用户点击发送按钮的时间）
         val endToEndStartTime = System.currentTimeMillis()
 
-        // 检查是否是第一次聊天（没有历史消息）
-        val currentMessages = _msgs.value
-        val hasChatHistory = currentMessages.any { it.role == "user" }
-
+        viewModelScope.launch(Dispatchers.IO) {
         // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
-        if (!hasChatHistory) {
+        if (chatMessageRepository.countUserMessages(agentId) > 0) {
             FirebaseManager.logEvent(
                 FirebaseManager.Events.CHAT_STARTED,
                 FirebaseManager.safeEventParams(
@@ -585,7 +547,6 @@ class ChatViewModel : BaseVM() {
             ),
         )
 
-        viewModelScope.launch(Dispatchers.IO) {
             val aiResponseStartTime = System.currentTimeMillis()
 
             // ✅ 修复：将 MESSAGE_SENT 事件移到 API 调用开始时上报，确保与 MESSAGE_SEND_SUCCESS/FAILURE 一一对应
@@ -601,7 +562,7 @@ class ChatViewModel : BaseVM() {
             )
 
             try {
-                val result = sendMessageUseCase(agentId, inputMsg.trimEnd())
+                val result = chatMessageRepository.sendMessage(agentId, inputMsg.trimEnd())
 
                 // 处理发送结果
                 when (result) {
@@ -947,7 +908,7 @@ class ChatViewModel : BaseVM() {
                         ),
                     )
 
-                    val result = sendMessageUseCase(agent.id, keepTalkingMsg)
+                    val result = chatMessageRepository.sendMessage(agent.id, keepTalkingMsg)
                     _isWaitingForReply.value = false
 
                     when (result) {
@@ -1085,104 +1046,106 @@ class ChatViewModel : BaseVM() {
 
     /** Like 消息 - 通过 Repository 更新并上报 Firebase 事件 */
     fun likeMessage(localMsgId: String) {
-        val agent = _agentInfo.value ?: return
-        val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId }
+        val agentId = _agentId.value ?: return
 
-        // 如果找不到消息，记录日志但不发送事件
-        if (targetMessage == null) {
-            LogUtils.e("Cannot find message with localMsgId: $localMsgId")
-            return
-        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val targetMessage = chatMessageRepository.getMessage(agentId, localMsgId)
 
-        // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
-        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.LIKE)
+            // 如果找不到消息，记录日志但不发送事件
+            if (targetMessage == null) {
+                LogUtils.e("Cannot find message with localMsgId: $localMsgId")
+            } else {
+                // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
+                updateMessageFeedbackUseCase(agentId, localMsgId, MsgInfo.UserFeedback.LIKE)
 
-        // 如果消息有服务端id，调用投票接口
-        val messageId = targetMessage.id
-        if (messageId.isNotEmpty()) {
-            viewModelScope.launch(Dispatchers.IO) {
-                when (val result = voteMessageUseCase(agent.id, messageId, VoteConstants.LIKE)) {
-                    is HttpResult.Success -> {
-                        LogUtils.i("Vote message success: like")
-                    }
+                // 如果消息有服务端id，调用投票接口
+                val messageId = targetMessage.localId
 
-                    is HttpResult.Failure -> {
-                        LogUtils.e("Vote message failure: ${result.message}")
+                if (messageId.isNotEmpty()) {
+                    when (val result = voteMessageUseCase(agentId, messageId, VoteConstants.LIKE)) {
+                        is HttpResult.Success -> {
+                            LogUtils.i("Vote message success: like")
+                        }
+
+                        is HttpResult.Failure -> {
+                            LogUtils.e("Vote message failure: ${result.message}")
+                        }
                     }
                 }
+
+                // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
+                // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
+                val messageIdForEvent = messageId.ifEmpty { localMsgId }
+
+                val eventParams =
+                    FirebaseManager.safeEventParams(
+                        "click_type" to "message_like",
+                        "agent_id" to agentId,
+                        "agent_name" to agentFlow.value?.name.orEmpty(),
+                        "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
+                        "message_length" to targetMessage.content.length,
+                        "has_generated_image" to !targetMessage.generatedImageUrl.isNullOrBlank(),
+                        "is_opening" to targetMessage.isOpening,
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "timestamp" to System.currentTimeMillis(),
+                    )
+                FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
             }
         }
-
-        // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
-        // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = messageId.ifEmpty { localMsgId }
-
-        val eventParams =
-            FirebaseManager.safeEventParams(
-                "click_type" to "message_like",
-                "agent_id" to agent.id,
-                "agent_name" to agent.name,
-                "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-                "message_length" to targetMessage.content.length,
-                "has_generated_image" to targetMessage.hasGeneratedImage(),
-                "is_opening" to targetMessage.isOpening(),
-                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to System.currentTimeMillis(),
-            )
-
-        FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
     }
 
     /** Dislike 消息 - 通过 Repository 更新并上报 Firebase 事件 */
     fun dislikeMessage(localMsgId: String) {
-        val agent = _agentInfo.value ?: return
-        val targetMessage = _msgs.value.firstOrNull { it.localMsgId == localMsgId }
+        val agent = agentFlow.value ?: return
 
-        // 如果找不到消息，记录日志但不发送事件
-        if (targetMessage == null) {
-            LogUtils.e("Cannot find message with localMsgId: $localMsgId")
-            return
-        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val targetMessage = chatMessageRepository.getMessage(agent.agentId, localMsgId)
+            // 如果找不到消息，记录日志但不发送事件
+            if (targetMessage == null) {
+                LogUtils.e("Cannot find message with localMsgId: $localMsgId")
+                return@launch
+            }
 
-        val previousFeedback = targetMessage.userFeedback?.name ?: "NONE"
+            val previousFeedback = targetMessage.userFeedback ?: "NONE"
 
-        // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
-        updateMessageFeedbackUseCase(agent.id, localMsgId, MsgInfo.UserFeedback.DISLIKE)
+            // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
+            updateMessageFeedbackUseCase(agent.agentId, localMsgId, MsgInfo.UserFeedback.DISLIKE)
 
-        // 如果消息有服务端id，调用投票接口
-        val messageId = targetMessage.id
-        if (messageId.isNotEmpty()) {
-            viewModelScope.launch(Dispatchers.IO) {
-                when (val result = voteMessageUseCase(agent.id, messageId, VoteConstants.DISLIKE)) {
-                    is HttpResult.Success -> {
-                        LogUtils.i("Vote message success: dislike")
-                    }
+            // 如果消息有服务端id，调用投票接口
+            val messageId = targetMessage.remoteId
+            if (!messageId.isNullOrBlank()) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    when (val result = voteMessageUseCase(agent.agentId, messageId, VoteConstants.DISLIKE)) {
+                        is HttpResult.Success -> {
+                            LogUtils.i("Vote message success: dislike")
+                        }
 
-                    is HttpResult.Failure -> {
-                        LogUtils.e("Vote message failure: ${result.message}")
+                        is HttpResult.Failure -> {
+                            LogUtils.e("Vote message failure: ${result.message}")
+                        }
                     }
                 }
             }
+
+            // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
+            // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
+            val messageIdForEvent = messageId?.ifEmpty { localMsgId }
+
+            val eventParams =
+                FirebaseManager.safeEventParams(
+                    "click_type" to "message_dislike",
+                    "agent_id" to agent.agentId,
+                    "agent_name" to agent.name,
+                    "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
+                    "message_length" to targetMessage.content.length,
+                    "has_generated_image" to !targetMessage.generatedImageUrl.isNullOrBlank(),
+                    "is_opening" to targetMessage.isOpening,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to System.currentTimeMillis(),
+                )
+
+            FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
         }
-
-        // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
-        // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-        val messageIdForEvent = messageId.ifEmpty { localMsgId }
-
-        val eventParams =
-            FirebaseManager.safeEventParams(
-                "click_type" to "message_dislike",
-                "agent_id" to agent.id,
-                "agent_name" to agent.name,
-                "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-                "message_length" to targetMessage.content.length,
-                "has_generated_image" to targetMessage.hasGeneratedImage(),
-                "is_opening" to targetMessage.isOpening(),
-                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to System.currentTimeMillis(),
-            )
-
-        FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
     }
 
     /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
@@ -1204,7 +1167,7 @@ class ChatViewModel : BaseVM() {
 
         launchBackground {
             try {
-                recallMessageUseCase(agentId)
+                chatMessageRepository.recallLastAssistantMessage(agentId)
                 _isWaitingForReply.value = false
             } catch (e: Exception) {
                 LogUtils.e("Recall message error: ${e.message}")
@@ -1240,9 +1203,7 @@ class ChatViewModel : BaseVM() {
     }
 
     fun generateImageForMessage(messageId: String) {
-
-        val agentId = _agentInfo.value?.id
-        val agent = _agentInfo.value
+        val agent = agentFlow.value ?: return
 
         // ✅ 修复：将 clicked 事件移到协程内部，确保即使参数检查失败也能上报
         // 同时，即使参数为空也先上报 clicked 事件，然后在协程内部检查并上报 failure
@@ -1253,8 +1214,8 @@ class ChatViewModel : BaseVM() {
             FirebaseManager.logEvent(
                 FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED,
                 FirebaseManager.safeEventParams(
-                    "agent_id" to (agentId ?: "unknown"),
-                    "agent_name" to (agent?.name ?: "unknown"),
+                    "agent_id" to (agent.agentId),
+                    "agent_name" to (agent.name),
                     "message_id" to messageId,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                     "timestamp" to startTime,
@@ -1266,8 +1227,8 @@ class ChatViewModel : BaseVM() {
                 FirebaseManager.Events.CHAT_PAGE_CLICK,
                 FirebaseManager.safeEventParams(
                     "click_type" to "message_to_image",
-                    "agent_id" to (agentId ?: "unknown"),
-                    "agent_name" to (agent?.name ?: "unknown"),
+                    "agent_id" to (agent.agentId),
+                    "agent_name" to (agent.name),
                     "message_id" to messageId,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                     "timestamp" to startTime,
@@ -1275,52 +1236,38 @@ class ChatViewModel : BaseVM() {
             )
 
             // ✅ 修复：参数检查失败时，上报 failure 事件并重置状态
-            if (agentId == null || agent == null) {
-                val endTime = System.currentTimeMillis()
-                FirebaseManager.logEvent(
-                    FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                    FirebaseManager.safeEventParams(
-                        "agent_id" to (agentId ?: "unknown"),
-                        "agent_name" to (agent?.name ?: "unknown"),
-                        "message_id" to messageId,
-                        "error_message" to "agent_id or agent is null",
-                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                        "generation_time_ms" to (endTime - startTime),
-                        "timestamp" to endTime,
-                    ),
-                )
-                LogUtils.e("generateImageForMessage: agentId or agent is null")
-                // 重置生图状态，确保可以再次点击
-                // ✅ 修复：即使 agentId 为 null，也尝试从消息中获取 agentId 来重置状态
-                val actualAgentId =
-                    agentId
-                        ?: run {
-                            val messages = _msgs.value
-                            val targetMessage =
-                                messages.find { it.id == messageId || it.localMsgId == messageId }
-                            targetMessage?.agentId()?.takeIf { it.isNotBlank() }
-                        }
-                actualAgentId?.let {
-                    chatRepository.updateMessageGeneratedImage(it, messageId, null)
-                }
-                return@launch
-            }
+            val endTime = System.currentTimeMillis()
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to (agent.agentId),
+                    "agent_name" to (agent.name),
+                    "message_id" to messageId,
+                    "error_message" to "agent_id or agent is null",
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "generation_time_ms" to (endTime - startTime),
+                    "timestamp" to endTime,
+                ),
+            )
+            LogUtils.e("generateImageForMessage: agentId or agent is null")
+            // 重置生图状态，确保可以再次点击
+            chatRepository.updateMessageGeneratedImage(agent.agentId, messageId, null)
 
             try {
-                val result = generateImageUseCase(agentId, messageId)
+                val result = generateImageUseCase(agent.agentId, messageId)
                 val endTime = System.currentTimeMillis()
                 val generationTime = endTime - startTime
 
                 when (result) {
                     is HttpResult.Success -> {
                         if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
-                            agent?.let { BoostManager.recordImageGeneration(it) }
+                            BoostManager.recordImageGeneration(agent.agentId)
                         }
                         // Firebase Analytics - 记录图片生成成功
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS,
                             FirebaseManager.safeEventParams(
-                                "agent_id" to agentId,
+                                "agent_id" to agent.name,
                                 "agent_name" to agent.name,
                                 "message_id" to messageId,
                                 "image_url" to result.data.imageUrl,
@@ -1338,7 +1285,7 @@ class ChatViewModel : BaseVM() {
                             generationTime.toLong(),
                             "ms",
                             FirebaseManager.safeEventParams(
-                                "agent_id" to agentId,
+                                "agent_id" to agent,
                                 "agent_name" to agent.name,
                                 "message_id" to messageId,
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
@@ -1346,11 +1293,9 @@ class ChatViewModel : BaseVM() {
                         )
 
                         // 重置点赞/点踩状态，确保生图后可以重新点赞/点踩
-                        val messages = _msgs.value
-                        val targetMessage =
-                            messages.find { it.id == messageId || it.localMsgId == messageId }
+                        val targetMessage = chatMessageRepository.getMessage(agent.agentId, messageId)
                         targetMessage?.let {
-                            updateMessageFeedbackUseCase(agentId, it.localMsgId, null)
+                            updateMessageFeedbackUseCase(agent.agentId, targetMessage.localId, null)
                         }
                     }
 
@@ -1369,7 +1314,7 @@ class ChatViewModel : BaseVM() {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
                                     FirebaseManager.safeEventParams(
-                                        "agent_id" to agentId,
+                                        "agent_id" to agent.agentId,
                                         "agent_name" to agent.name,
                                         "message_id" to messageId,
                                         "error_code" to result.code,
@@ -1395,7 +1340,7 @@ class ChatViewModel : BaseVM() {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.IMAGE_GENERATION_LIMIT_REACHED,
                                     FirebaseManager.safeEventParams(
-                                        "agent_id" to agentId,
+                                        "agent_id" to agent.agentId,
                                         "agent_name" to agent.name,
                                         "message_id" to messageId,
                                         "error_code" to result.code,
@@ -1419,7 +1364,7 @@ class ChatViewModel : BaseVM() {
                                 FirebaseManager.logEvent(
                                     FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                                     FirebaseManager.safeEventParams(
-                                        "agent_id" to agentId,
+                                        "agent_id" to agent.agentId,
                                         "agent_name" to agent.name,
                                         "message_id" to messageId,
                                         "error_code" to result.code,
@@ -1436,9 +1381,9 @@ class ChatViewModel : BaseVM() {
                                         content = "image_generation_error_tip", // 特殊标记，UI 层会转换为实际文案
                                         role = "system",
                                         localMsgId = "image_generation_error_${System.nanoTime()}",
-                                        meta_data = MsgInfo.MsgMetaData(agentId = agentId),
+                                        meta_data = MsgInfo.MsgMetaData(agentId = agent.agentId),
                                     )
-                                chatRepository.addMessage(agentId, tipMessage)
+                                chatRepository.addMessage(agent.agentId, tipMessage)
                             }
                         }
                     }
@@ -1452,7 +1397,7 @@ class ChatViewModel : BaseVM() {
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                     FirebaseManager.safeEventParams(
-                        "agent_id" to agentId,
+                        "agent_id" to agent.agentId,
                         "agent_name" to agent.name,
                         "message_id" to messageId,
                         "error_message" to
@@ -1467,7 +1412,7 @@ class ChatViewModel : BaseVM() {
                 FirebaseManager.recordException(
                     e,
                     FirebaseManager.safeEventParams(
-                        "agent_id" to agentId,
+                        "agent_id" to agent.agentId,
                         "agent_name" to agent.name,
                         "message_id" to messageId,
                         "generation_time_ms" to generationTime,
@@ -1475,7 +1420,7 @@ class ChatViewModel : BaseVM() {
                 )
 
                 // 重置生图状态，确保可以再次点击
-                chatRepository.updateMessageGeneratedImage(agentId, messageId, null)
+                chatRepository.updateMessageGeneratedImage(agent.agentId, messageId, null)
 
                 NetworkErrorHandler.showNetworkAwareError("Failed to generate image: ${e.message}")
             }
@@ -1557,7 +1502,6 @@ class ChatViewModel : BaseVM() {
 
     // 新增：清理所有数据的方法
     fun clearAllData() {
-        _msgs.update { emptyList() }
         _agentInfo.value = null
         inputData.update { "" }
         inputSelection.value = 0
@@ -1598,9 +1542,8 @@ class ChatViewModel : BaseVM() {
         }
 
         // 1. 删除本地历史消息
-        chatRepository.clearChatData(agentId)
+        chatMessageRepository.clearMessages(agentId)
         // 2. 清理 ViewModel 中的状态
-        _msgs.value = emptyList()
         _isLoadingMore.value = false
         _hasMoreMessages.value = true
         _isQueryMsgsCompleted.value = false
@@ -1609,9 +1552,7 @@ class ChatViewModel : BaseVM() {
 
         // 3. 重新绑定消息流（因为 clearChatData 会清理内存缓存）
         // 注意：如果使用了 RoomDataSource，消息流会自动更新
-
         // 4. 拉取最新消息
-        chatRepository.ensureInitialHistory(agentId, PAGE_SIZE)
         _isQueryMsgsCompleted.value = true
 
         LogUtils.i("ChatViewModel.resetChatState completed for $agentId")

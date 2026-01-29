@@ -376,14 +376,17 @@ class RoomDataSource(
             logger.info { "RoomDataSource cleared all chat data" }
         }
 
+    @Deprecated("由ChatMessageRepository管理")
     private suspend fun updateSyncState(
         agentId: String,
         updater: (ChatSyncStateEntity) -> ChatSyncStateEntity,
-    ) =
-        withContext(dispatcher) {
+    ) {
+        /*withContext(dispatcher) {
             val current = syncStateDao.get(agentId) ?: ChatSyncStateEntity(agentId = agentId)
             syncStateDao.upsert(updater(current).copy(updatedAt = now()))
-        }
+        }*/
+    }
+
 
     private fun loadingFlow(agentId: String): MutableStateFlow<Boolean> =
         loadingFlows.getOrPut(agentId) { MutableStateFlow(false) }

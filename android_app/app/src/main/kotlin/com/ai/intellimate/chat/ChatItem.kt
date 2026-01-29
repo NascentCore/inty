@@ -107,6 +107,7 @@ private const val DEBUG_METADATA_VALUE_MAX = 64
 @Composable
 fun ChatItem(
     navController: NavController,
+    isOnlyOpeningMessage: Boolean,
     item: MsgInfo,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
@@ -118,6 +119,7 @@ fun ChatItem(
         "assistant" -> {
             ChatItemAI(
                 navController,
+                isOnlyOpeningMessage = isOnlyOpeningMessage,
                 item,
                 isCurrentPage,
                 chatViewModel,
@@ -145,6 +147,7 @@ fun ChatItem(
 @Composable
 private fun ChatItemAI(
     navController: NavController,
+    isOnlyOpeningMessage: Boolean,
     item: MsgInfo,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
@@ -165,7 +168,6 @@ private fun ChatItemAI(
                     (item.content == "loading_animation" &&
                         item.localMsgId.contains("loading_image", ignoreCase = true)) ||
                         (generatedImageUrl == "loading")
-                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
 
                 if (item.content.isNotEmpty() && item.content != "loading_animation") {
                     val vmAgentId = agentInfo?.id
@@ -182,11 +184,6 @@ private fun ChatItemAI(
                             agentName = agentInfo?.name,
                         )
 
-                    val allMessages by viewModel.msgs.collectAsState()
-                    val actualChatMessages =
-                        allMessages.filter { !it.isOpening() && it.role != "system" }
-                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
-
                     val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
                     val shouldAutoPlay =
@@ -194,7 +191,6 @@ private fun ChatItemAI(
                             isOnlyOpeningMessage &&
                             !hasPlayedOpening &&
                             isCurrentPage &&
-                            isQueryMsgsCompleted &&
                             safeAgentId.isNotEmpty() &&
                             audioInfo.url.isNotEmpty() &&
                             IntySetting.isAutoPlayAudio() &&
@@ -268,32 +264,6 @@ private fun ChatItemAI(
                         LoadingAnimation(agentInfo?.name)
                     }
                 } else if (!shouldHideText && item.content.isNotEmpty()) {
-                    val allMessages by viewModel.msgs.collectAsState()
-                    val agentId = agentInfo?.id ?: ""
-
-                    // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
-                    // 使用 LaunchedEffect 在查询完成的瞬间记录消息列表
-                    // 使用 agentId 作为 key，确保切换会话时重置状态
-                    var messagesAtQueryComplete by
-                        remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
-
-                    LaunchedEffect(isQueryMsgsCompleted, agentId) {
-                        if (isQueryMsgsCompleted) {
-                            if (messagesAtQueryComplete.isEmpty()) {
-                                // 查询完成的瞬间，记录当前所有消息的ID
-                                // 优先使用服务器ID，如果没有则使用localMsgId
-                                messagesAtQueryComplete =
-                                    allMessages
-                                        .map {
-                                            it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId
-                                        }
-                                        .toSet()
-                            }
-                        } else {
-                            // 查询未完成时，重置状态（切换会话时会触发）
-                            messagesAtQueryComplete = emptySet()
-                        }
-                    }
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         val context = LocalContext.current
@@ -1308,6 +1278,7 @@ fun CallMessages(
                 list.forEachIndexed { index, msg ->
                     ChatItem(
                         navController = navController,
+                        isOnlyOpeningMessage = false,
                         item = msg,
                         isCurrentPage = isCurrentPage,
                         chatViewModel = chatViewModel,
