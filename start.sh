@@ -40,10 +40,16 @@ python scripts/init_subscription_plans_simple.py
 if [ "$DEV" = true ]; then
   echo "Starting in development mode..."
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=false
-  # 构建 evaluation 前端并拷贝到 app/static/evaluation
-  # 与 docker/Dockerfile 中的操作一致
-  echo "Building evaluation frontend..."
-  ./evaluation/build.sh
+  # 构建 evaluation 前端并拷贝到 app/static/evaluation（CI 中跳过，后端测试不依赖静态资源）
+  # CI 由 GitHub Actions 自动设为 true，见：
+  # https://docs.github.com/zh/actions/reference/workflows-and-actions/variables
+  if [ -z "${CI:-}" ]; then
+    echo "Building evaluation frontend..."
+    ./evaluation/build.sh
+  else
+    echo "CI detected, skipping evaluation frontend build."
+    echo "CI 环境不需要提供评测 web UI"
+  fi
   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."
