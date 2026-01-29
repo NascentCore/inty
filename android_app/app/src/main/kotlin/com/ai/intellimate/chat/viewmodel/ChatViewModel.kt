@@ -345,10 +345,7 @@ class ChatViewModel : BaseVM() {
     private fun checkVipAgentUnlock() {
 
         viewModelScope.launch {
-            combine(
-                    VipStatusHelper.vipStatus,
-                    agentFlow,
-                ) { vipStatus, agent ->
+            combine(VipStatusHelper.vipStatus, agentFlow) { vipStatus, agent ->
                     when {
                         agent?.tags?.any { it.lowercase().contains("vip") } != true ||
                             vipStatus.isSubscribed ||
@@ -356,7 +353,8 @@ class ChatViewModel : BaseVM() {
 
                             ChatUIState.VipAgentLockType.NONE
                         }
-                        chatMessageRepository.getMessageCounts(agent.agentId) > 0 -> ChatUIState.VipAgentLockType.INPUT
+                        chatMessageRepository.getMessageCounts(agent.agentId) > 0 ->
+                            ChatUIState.VipAgentLockType.INPUT
                         else -> ChatUIState.VipAgentLockType.DIALOG
                     }
                 }
@@ -503,49 +501,49 @@ class ChatViewModel : BaseVM() {
         val endToEndStartTime = System.currentTimeMillis()
 
         viewModelScope.launch(Dispatchers.IO) {
-        // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
-        if (chatMessageRepository.countUserMessages(agentId) > 0) {
-            FirebaseManager.logEvent(
-                FirebaseManager.Events.CHAT_STARTED,
+            // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
+            if (chatMessageRepository.countUserMessages(agentId) > 0) {
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.CHAT_STARTED,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agent.id,
+                        "agent_name" to agent.name,
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "timestamp" to endToEndStartTime,
+                    ),
+                )
+            }
+
+            // Firebase Crashlytics - 记录消息发送上下文
+            FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
+            FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
+            FirebaseManager.setCustomKey("last_agent_id", agent.id)
+
+            // 追踪消息发送（用户操作：发送消息）
+            PageTrackingHelper.trackUserInteraction(
+                PageTrackingHelper.UserActions.SEND_MESSAGE,
+                "chat_input",
                 FirebaseManager.safeEventParams(
                     "agent_id" to agent.id,
                     "agent_name" to agent.name,
+                    "message_length" to inputMsg.length,
                     "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                     "timestamp" to endToEndStartTime,
                 ),
             )
-        }
 
-        // Firebase Crashlytics - 记录消息发送上下文
-        FirebaseManager.setCustomKey("last_message_length", inputMsg.length.toString())
-        FirebaseManager.setCustomKey("last_message_preview", inputMsg.take(50))
-        FirebaseManager.setCustomKey("last_agent_id", agent.id)
-
-        // 追踪消息发送（用户操作：发送消息）
-        PageTrackingHelper.trackUserInteraction(
-            PageTrackingHelper.UserActions.SEND_MESSAGE,
-            "chat_input",
-            FirebaseManager.safeEventParams(
-                "agent_id" to agent.id,
-                "agent_name" to agent.name,
-                "message_length" to inputMsg.length,
-                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to endToEndStartTime,
-            ),
-        )
-
-        // Firebase Analytics - 记录消息发送按钮点击（CHAT_PAGE_CLICK事件）
-        FirebaseManager.logEvent(
-            FirebaseManager.Events.CHAT_PAGE_CLICK,
-            FirebaseManager.safeEventParams(
-                "click_type" to "message_sent",
-                "agent_id" to agent.id,
-                "agent_name" to agent.name,
-                "message_length" to inputMsg.length,
-                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to endToEndStartTime,
-            ),
-        )
+            // Firebase Analytics - 记录消息发送按钮点击（CHAT_PAGE_CLICK事件）
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_PAGE_CLICK,
+                FirebaseManager.safeEventParams(
+                    "click_type" to "message_sent",
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "message_length" to inputMsg.length,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to endToEndStartTime,
+                ),
+            )
 
             val aiResponseStartTime = System.currentTimeMillis()
 
@@ -1117,7 +1115,10 @@ class ChatViewModel : BaseVM() {
             val messageId = targetMessage.remoteId
             if (!messageId.isNullOrBlank()) {
                 viewModelScope.launch(Dispatchers.IO) {
-                    when (val result = voteMessageUseCase(agent.agentId, messageId, VoteConstants.DISLIKE)) {
+                    when (
+                        val result =
+                            voteMessageUseCase(agent.agentId, messageId, VoteConstants.DISLIKE)
+                    ) {
                         is HttpResult.Success -> {
                             LogUtils.i("Vote message success: dislike")
                         }
@@ -1296,7 +1297,8 @@ class ChatViewModel : BaseVM() {
                         )
 
                         // 重置点赞/点踩状态，确保生图后可以重新点赞/点踩
-                        val targetMessage = chatMessageRepository.getMessage(agent.agentId, messageId)
+                        val targetMessage =
+                            chatMessageRepository.getMessage(agent.agentId, messageId)
                         targetMessage?.let {
                             updateMessageFeedbackUseCase(agent.agentId, targetMessage.localId, null)
                         }

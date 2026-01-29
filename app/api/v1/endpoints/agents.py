@@ -1232,14 +1232,14 @@ async def update_image_generation_config(
             )
 
         if "free_user_chat_image_gemini_model" in config:
-            global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model = (
-                config["free_user_chat_image_gemini_model"]
-            )
+            global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model = config[
+                "free_user_chat_image_gemini_model"
+            ]
 
         if "sub_user_chat_image_gemini_model" in config:
-            global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model = (
-                config["sub_user_chat_image_gemini_model"]
-            )
+            global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model = config[
+                "sub_user_chat_image_gemini_model"
+            ]
 
         logger.info(f"超级用户 {current_user.id} 更新了图片生成配置")
 

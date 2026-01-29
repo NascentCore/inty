@@ -251,7 +251,9 @@ private fun ChatItemAI(
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
                 val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
                 val shouldShowMessageActions by remember {
-                    derivedStateOf { isLatestMessage && !shouldFlowShow && !item.isOpening() && !isNormalLoading }
+                    derivedStateOf {
+                        isLatestMessage && !shouldFlowShow && !item.isOpening() && !isNormalLoading
+                    }
                 }
 
                 if (isNormalLoading) {

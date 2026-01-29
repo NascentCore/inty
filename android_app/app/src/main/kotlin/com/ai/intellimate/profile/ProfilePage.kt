@@ -1252,11 +1252,7 @@ private fun VibeModeBanner(
             )
             // 未订阅时在开关上叠加透明可点击层，确保点击开关与点击横幅一致：跳转会员中心
             if (!isSubscribed) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clickable(onClick = onRequestSubscribe),
-                )
+                Box(modifier = Modifier.matchParentSize().clickable(onClick = onRequestSubscribe))
             }
         }
     }

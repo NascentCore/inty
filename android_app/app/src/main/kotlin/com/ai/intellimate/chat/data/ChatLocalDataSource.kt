@@ -4,9 +4,7 @@ import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.ChatSyncStateEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 
-class ChatLocalDataSource(
-    private val database: IntyChatDatabase = IntyChatDatabase.getInstance()
-) {
+class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatabase.getInstance()) {
     val chatMessageDao = database.chatMessageDao()
     val syncStateDao = database.chatSyncStateDao()
 
@@ -14,7 +12,7 @@ class ChatLocalDataSource(
         return chatMessageDao.getMessagesCount(agentId)
     }
 
-    suspend fun countUserMessages(agentId: String): Int{
+    suspend fun countUserMessages(agentId: String): Int {
         return chatMessageDao.countUserMessages(agentId)
     }
 
@@ -42,7 +40,7 @@ class ChatLocalDataSource(
 
     suspend fun updateSyncState(
         agentId: String,
-        updater: (ChatSyncStateEntity) -> ChatSyncStateEntity
+        updater: (ChatSyncStateEntity) -> ChatSyncStateEntity,
     ) {
         val current = syncStateDao.get(agentId) ?: ChatSyncStateEntity(agentId = agentId)
         syncStateDao.upsert(updater(current).copy(updatedAt = System.currentTimeMillis()))

@@ -6,19 +6,11 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.togetherWith
-import ai.sxwl.android.design.noRippleClickable
-import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -84,7 +76,6 @@ import androidx.paging.ItemSnapshotList
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
-import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
@@ -225,26 +216,29 @@ internal fun ChatPage(
     }
     val messages = chatViewModel.messages.collectAsLazyPagingItems()
     val agent by chatViewModel.agentFlow.collectAsState()
-    val messageItems by remember(isCurrentPage) {
-        LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
-        derivedStateOf {
-
-            proFixMessages(messages.itemSnapshotList) +
-                    if ((messages.loadState.refresh is LoadState.NotLoading && isCurrentPage) || messages.itemSnapshotList.isNotEmpty()) {
+    val messageItems by
+        remember(isCurrentPage) {
+            LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
+            derivedStateOf {
+                proFixMessages(messages.itemSnapshotList) +
+                    if (
+                        (messages.loadState.refresh is LoadState.NotLoading && isCurrentPage) ||
+                            messages.itemSnapshotList.isNotEmpty()
+                    ) {
                         listOf(MessageItem.Opening, MessageItem.Intro)
                     } else {
                         listOf(MessageItem.Intro)
                     }
+            }
         }
-    }
 
     val hasLoadingMessage by remember {
         derivedStateOf {
             messages.itemSnapshotList.any { msg ->
                 msg != null &&
-                        msg.content == "loading_animation" &&
-                        !msg.hasGeneratedImage() &&
-                        msg.getGeneratedImageUrl() != "loading"
+                    msg.content == "loading_animation" &&
+                    !msg.hasGeneratedImage() &&
+                    msg.getGeneratedImageUrl() != "loading"
             }
         }
     }
@@ -418,19 +412,17 @@ internal fun ChatPage(
 
     Box(
         modifier =
-            modifier
-                .padding(contentPadding)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
-                            suppressFocusCallback.value = true
-                            focusManager.clearFocus()
-                            if (isCurrentPage) {
-                                onInputFocusChange(false)
-                            }
+            modifier.padding(contentPadding).pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        suppressFocusCallback.value = true
+                        focusManager.clearFocus()
+                        if (isCurrentPage) {
+                            onInputFocusChange(false)
                         }
-                    )
-                }
+                    }
+                )
+            }
     ) {
         // 只在非 ChatActivity 场景显示背景图（ChatActivity 中背景图已在外层显示）
         if (!showBackButton) {
@@ -449,9 +441,7 @@ internal fun ChatPage(
         LifecycleResumeEffect(keyboard) { onPauseOrDispose { keyboard?.hide() } }
 
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Transparent),
+            modifier = Modifier.fillMaxSize().background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             snackbarHost = {
@@ -489,17 +479,13 @@ internal fun ChatPage(
                     }
             }
 
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)) {
+            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
                     ChatTopBar(
                         navController,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 18.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                         agentInfo = info,
                         fontSize = 15.sp,
                         avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
@@ -577,13 +563,10 @@ internal fun ChatPage(
                 val lazyColumnModifier =
                     if (chatListFullScreen) {
                         // 全屏模式：使用 weight(1f) 保持现有布局
-                        Modifier
-                            .weight(1f)
-                            .padding(horizontal = 16.dp)
+                        Modifier.weight(1f).padding(horizontal = 16.dp)
                     } else {
                         // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
-                        Modifier
-                            .weight(1f - UiConfigs.ChatPage.chatListBlankZone)
+                        Modifier.weight(1f - UiConfigs.ChatPage.chatListBlankZone)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     }
@@ -620,9 +603,7 @@ internal fun ChatPage(
                                         }
                                     },
                                     modifier =
-                                        Modifier
-                                            .padding(vertical = 16.dp)
-                                            .size(210.5.dp, 312.5.dp),
+                                        Modifier.padding(vertical = 16.dp).size(210.5.dp, 312.5.dp),
                                 )
                             }
                         }
@@ -648,7 +629,9 @@ internal fun ChatPage(
                                 is MessageItem.Opening -> {
                                     val isOnlyOpeningMessage by remember {
                                         derivedStateOf {
-                                            messages.itemSnapshotList.none { it != null && !it.isOpening() && it.role != "system" }
+                                            messages.itemSnapshotList.none {
+                                                it != null && !it.isOpening() && it.role != "system"
+                                            }
                                         }
                                     }
                                     val openingMessage =
@@ -656,10 +639,11 @@ internal fun ChatPage(
                                             content = agent?.opening.orEmpty(),
                                             role = "assistant",
                                             audio_url = agent?.openingAudioUrl,
-                                            meta_data = MsgInfo.MsgMetaData(
-                                                agent?.agentId,
-                                                isOpening = true
-                                            )
+                                            meta_data =
+                                                MsgInfo.MsgMetaData(
+                                                    agent?.agentId,
+                                                    isOpening = true,
+                                                ),
                                         )
 
                                     /*var showContent by remember(isOnlyOpeningMessage, agent) {
@@ -741,8 +725,7 @@ internal fun ChatPage(
                 if (agentInfo?.isDeleted == true) {
                     Box(
                         modifier =
-                            Modifier
-                                .fillMaxWidth()
+                            Modifier.fillMaxWidth()
                                 .height(48.dp)
                                 .padding(horizontal = 16.dp)
                                 .clip(RoundedCornerShape(24.dp))
@@ -760,13 +743,16 @@ internal fun ChatPage(
                             morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
                         else bottomPadding
 
-                    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT || (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && !showBackButton)) {
+                    if (
+                        uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT ||
+                            (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
+                                !showBackButton)
+                    ) {
                         val inputConfig = UiConfigs.ChatPage.ChatInput
                         val unlockCost = BoostConfig.UNLOCK_VIP_AGENT_COST
                         Box(
                             modifier =
-                                Modifier
-                                    .padding(
+                                Modifier.padding(
                                         start = inputConfig.HorizontalPadding,
                                         top = inputConfig.TopPadding,
                                         end = inputConfig.HorizontalPadding,
@@ -786,7 +772,8 @@ internal fun ChatPage(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = stringResource(R.string.unlock_with_credits_price, unlockCost),
+                                text =
+                                    stringResource(R.string.unlock_with_credits_price, unlockCost),
                                 color = Color.White,
                                 fontSize = 14.sp,
                             )
@@ -853,9 +840,7 @@ internal fun ChatPage(
                             )
                         }
                     } else {
-                        Modifier
-                            .consumeWindowInsets(contentPadding)
-                            .imePadding()
+                        Modifier.consumeWindowInsets(contentPadding).imePadding()
                     }
 
                 Spacer(modifier = bottomSpaceModifier)
@@ -864,10 +849,11 @@ internal fun ChatPage(
             val hasLatestAssistantMessage by remember {
                 derivedStateOf {
                     messages.itemSnapshotList.firstOrNull { msg ->
-                        msg != null && msg.role == "assistant" &&
-                                msg.content != "loading_animation" &&
-                                !(msg.content.isEmpty() && msg.hasGeneratedImage()) &&
-                                !msg.isOpening()
+                        msg != null &&
+                            msg.role == "assistant" &&
+                            msg.content != "loading_animation" &&
+                            !(msg.content.isEmpty() && msg.hasGeneratedImage()) &&
+                            !msg.isOpening()
                     } != null
                 }
             }
@@ -875,9 +861,10 @@ internal fun ChatPage(
             val hasLoadingMessageForButton by remember {
                 derivedStateOf {
                     messages.itemSnapshotList.any { msg ->
-                        msg != null && msg.content == "loading_animation" &&
-                                !msg.hasGeneratedImage() &&
-                                msg.getGeneratedImageUrl() != "loading"
+                        msg != null &&
+                            msg.content == "loading_animation" &&
+                            !msg.hasGeneratedImage() &&
+                            msg.getGeneratedImageUrl() != "loading"
                     }
                 }
             }
@@ -962,8 +949,7 @@ internal fun ChatPage(
             // 当有新消息时，始终显示此按钮，即使回到第一条消息也不隐藏
             ScrollToBottomButton(
                 modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
+                    Modifier.align(Alignment.BottomCenter)
                         .padding(
                             bottom = scrollToBottomButtonBottomOffset,
                             end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
@@ -982,8 +968,7 @@ internal fun ChatPage(
             // 当用户滚动到历史记录时，此按钮会自动隐藏，避免与滚动到底部按钮重叠
             KeepTalkingFloatingButton(
                 modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
+                    Modifier.align(Alignment.BottomEnd)
                         .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
@@ -1045,8 +1030,7 @@ internal fun ChatPage(
                 totalPoints = boostState.chatMessagePoints,
                 enabled = isCurrentPage,
                 modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
+                    Modifier.align(Alignment.TopCenter)
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp),
             )
         }
