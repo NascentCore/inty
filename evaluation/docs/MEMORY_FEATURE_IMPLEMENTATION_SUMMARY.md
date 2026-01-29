@@ -12,19 +12,19 @@ CREATED_BY_AGENT
 
 - **ORM**：`app/models/memory.py`
   - **Memory**：`user_id`, `memory_type`（如 `user_common`）, `agent_id`（`user_common` 为 `NULL`）, `content`, `extracted_at`；按每次抽取整批替换，仅保留最新。
-  - **MemoryExtractionLog**：`user_id`, `memory_type`, `extracted_at`, `messages_processed_count`, `memory_items_count`, `status`（`success` | `partial` | `failed`）；用于触发判断与可观测。
-- **迁移**：`alembic/versions/20260127_120000_add_memory_tables.py`，revision `a7b8c9d0e1f2`。
+  - **MemoryExtractionLog**：`user_id`, `memory_type`, `extracted_at`, `messages_processed_count`, `memory_items_count`, `status`（`success` | `partial` | `failed`），`duration_seconds`（当次抽取总耗时秒）、`prompt_tokens`（LLM 输入 token 数）、`completion_tokens`（LLM 输出 token 数）；用于触发判断与可观测、监控与成本分析。
+- **迁移**：`alembic/versions/20260127_120000_add_memory_tables.py`（revision `a7b8c9d0e1f2`）；`alembic/versions/20260127_140000_add_memory_extraction_log_metrics.py`（revision `b8c9d0e1f2a3`，为 `memory_extraction_log` 增加上述三列）。
 
 ### 2. 配置
 
 - **位置**：`app/core/config.py` — `MemoryExtractionConfig`
 - **字段**：
   - `enabled`：是否启用记忆抽取定时任务，默认 `True`
-  - `model`：抽取用 LLM，为空时复用 `agent.model`
+  - `model`：Gemini 模型名（如 `gemini-2.0-flash`），为空时使用代码内默认 `DEFAULT_MEMORY_EXTRACTION_MODEL`
   - `cron_hour`：UTC 小时，每日执行，默认 `3`
   - `trigger_new_user_messages`：新用户总消息数阈值，默认 `30`
   - `trigger_incremental_messages`：已提取用户自上次后新增消息数阈值，默认 `30`
-- `api_key` / `base_url` 复用 `agent` 配置。
+- 记忆抽取使用 Google GenAI 客户端（`app.utils.gemini.get_genai_client()`，Vertex AI），不再使用 `agent` 的 api_key/base_url。
 
 ### 3. 记忆读取服务（`app/services/memory_service.py`）
 
@@ -38,13 +38,13 @@ CREATED_BY_AGENT
   - 新用户：总消息数 ≥ `trigger_new_user_messages`
   - 已提取用户：自上次 `extracted_at` 后新增消息数 ≥ `trigger_incremental_messages`
 - **get_all_messages_for_user(user_id)**：拉取该用户在所有会话中的全部消息 `(role, content)`，按 `created_at` 升序；不按 agent 过滤，不限制条数。
-- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、调用 LLM、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`。
+- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **Google GenAI**（`generate_content`）调用 LLM、从 `response.usage_metadata` 读取 token 消耗、记录端到端耗时、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
 - **提示词**：`app/core/prompting/memory_extraction_prompt.txt`（英文）。
 - **\_extract_part1_summary(full_analysis)**：从 LLM 完整回复中解析 Part 1；支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等中英文 fallback 正则；Part 1 过短（≤50 字）时回退到约 2000 字或全文。
 
 ### 5. 定时任务（`app/services/push_scheduler_service.py`）
 
-- 当 `memory_extraction.enabled` 为真时，注册 `CronTrigger(hour=cron_hour, minute=0)` 的 `_run_memory_extraction` 任务（id: `run_memory_extraction`）。
+- 当 `memory_extraction.enabled` 为真时，注册 `CronTrigger(hour=cron_hour, minute=0)` 的 `_run_memory_extraction` 任务（id: `run_memory_extraction`），并设置 `next_run_time=datetime.datetime.now()`，故**启动后立即执行一次**，之后每日 UTC `cron_hour:00` 执行。
 - `_run_memory_extraction`：调用 `get_users_to_extract` 后对每个 `user_id` 执行 `extract_and_save`；与 push 调度、`start_push_worker.sh` 等同进程。
 
 ### 6. 对话与生图注入
@@ -83,7 +83,8 @@ app/
     └── user_service.py              # build_user_info_prompt_block 中注入 ##User Memory
 
 alembic/versions/
-└── 20260127_120000_add_memory_tables.py   # revision a7b8c9d0e1f2
+├── 20260127_120000_add_memory_tables.py   # revision a7b8c9d0e1f2
+└── 20260127_140000_add_memory_extraction_log_metrics.py   # revision b8c9d0e1f2a3，duration_seconds/prompt_tokens/completion_tokens
 
 scripts/
 └── run_memory_extraction.py         # --user-id 必填，--dry-run 仅拉消息打条数
@@ -93,11 +94,12 @@ scripts/
 
 1. **配置**：在 `config.yaml` 的 `memory_extraction` 下设置 `enabled`、`cron_hour`、`trigger_new_user_messages`、`trigger_incremental_messages`，可选 `model`。
 2. **迁移**：执行 `alembic upgrade head` 以创建 `memory`、`memory_extraction_log` 表。
-3. **定时任务**：启动 push worker（含 scheduler）后，在 `memory_extraction.enabled=true` 时每日 UTC `cron_hour:00` 自动执行记忆抽取。
+3. **定时任务**：启动 push worker（含 scheduler）后，在 `memory_extraction.enabled=true` 时**启动后立即执行一次**记忆抽取，之后每日 UTC `cron_hour:00` 自动执行。
 4. **手动抽取**：`PYTHONPATH=. python scripts/run_memory_extraction.py --user-id <UUID>`；`--dry-run` 可用于验证消息拉取与条数。
+5. **监控与成本**：`memory_extraction_log` 的 `duration_seconds`、`prompt_tokens`、`completion_tokens` 可用于监控单用户抽取耗时与 LLM token 消耗、成本分析。
 
 ## 后续扩展（参考）
 
 - 支持 `user_agent` 类型及按 `agent_id` 的记忆与注入策略。
 - 调整 Part 1 解析或提示词以支持更多输出格式。
-- 在 `memory_extraction_log` 基础上增加监控与告警。
+- 在 `memory_extraction_log` 基础上增加监控与告警（如聚合报表、告警阈值）。

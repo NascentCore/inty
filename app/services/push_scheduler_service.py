@@ -153,7 +153,7 @@ class PushSchedulerService:
                 next_run_time=datetime.datetime.now(),
             )
 
-            # 记忆抽取：每日 UTC cron_hour 点执行（若启用）
+            # 记忆抽取：每日 UTC cron_hour 点执行，启动后立即执行一次（若启用）
             mem_cfg = getattr(
                 global_config_loaded_from_config_yaml,
                 "memory_extraction",
@@ -168,8 +168,11 @@ class PushSchedulerService:
                     replace_existing=True,
                     coalesce=True,
                     max_instances=1,
+                    next_run_time=datetime.datetime.now(),
                 )
-                logger.info(f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00")
+                logger.info(
+                    f"已添加记忆抽取任务: 启动后立即执行，之后每日 UTC {mem_cfg.cron_hour}:00"
+                )
 
             logger.info("已添加所有推送检查任务，将在启动后立即执行一次")
 
