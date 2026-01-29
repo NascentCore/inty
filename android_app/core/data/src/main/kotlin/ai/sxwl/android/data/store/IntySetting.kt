@@ -154,6 +154,15 @@ object IntySetting {
         return curUserSetting.decodeBool("text_streaming", true)
     }
 
+    /** Vibe Mode 开关状态（仅限订阅用户） */
+    fun setVibeModeEnabled(enabled: Boolean) {
+        curUserSetting.putBoolean("vibe_mode_enabled", enabled)
+    }
+
+    fun isVibeModeEnabled(): Boolean {
+        return curUserSetting.decodeBool("vibe_mode_enabled", false)
+    }
+
     /** 禁用 IntelliMate tips 弹窗（用户偏好设置） */
     fun setTipsDisabled(disabled: Boolean) {
         curUserSetting.putBoolean("tips_disabled", disabled)

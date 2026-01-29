@@ -64,7 +64,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -1130,8 +1129,20 @@ private fun VibeModeBanner(
     isSubscribed: Boolean,
     onRequestSubscribe: () -> Unit,
 ) {
-    var vibeEnabled by rememberSaveable(isSubscribed) { mutableStateOf(false) }
+    var vibeEnabled by remember { mutableStateOf(IntySetting.isVibeModeEnabled()) }
     val isActive = isSubscribed && vibeEnabled
+
+    // 持久化 Vibe Mode 状态
+    LaunchedEffect(vibeEnabled, isSubscribed) {
+        if (isSubscribed) {
+            IntySetting.setVibeModeEnabled(vibeEnabled)
+        } else {
+            // 如果用户未订阅，确保 Vibe Mode 被禁用
+            if (vibeEnabled) {
+                vibeEnabled = false
+            }
+        }
+    }
 
     val backgroundBrush =
         when {
@@ -1220,23 +1231,28 @@ private fun VibeModeBanner(
 
         Spacer(Modifier.width(UiConfigs.MePage.VibeMode.ContentSpacing))
 
-        val switchWrapperModifier =
-            if (isSubscribed) {
-                Modifier
-            } else {
-                Modifier.clickable(onClick = onRequestSubscribe)
-            }
-
         val toggleContentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
 
-        Box(modifier = switchWrapperModifier) {
+        Box {
             Switch(
                 checked = isActive,
-                onCheckedChange = { checked -> vibeEnabled = checked },
+                onCheckedChange = { checked ->
+                    if (isSubscribed) {
+                        vibeEnabled = checked
+                    }
+                },
                 enabled = isSubscribed,
                 colors = switchColors,
                 modifier = Modifier.semantics { contentDescription = toggleContentDescription },
             )
+            // 未订阅时在开关上叠加透明可点击层，确保点击开关与点击横幅一致：跳转会员中心
+            if (!isSubscribed) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(onClick = onRequestSubscribe),
+                )
+            }
         }
     }
 }
