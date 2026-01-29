@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -513,20 +514,6 @@ private fun ProfileHeader(
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
 
-        // Daily Rewards Banner - 固定显示（不随上划隐藏）
-        var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
-        DailyRewardsBanner(
-            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-            onClick = {
-                val currentTime = System.currentTimeMillis()
-                if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
-                lastDailyRewardsClickTime = currentTime
-                navController.navigate(Routes.Me.CheckIn)
-            },
-        )
-
-        Spacer(Modifier.height(12.dp))
-
         // VIP Banner - 固定显示
         Box(
             modifier = Modifier.fillMaxWidth().height(UiConfigs.MePage.VipBannerHeight),
@@ -549,6 +536,19 @@ private fun ProfileHeader(
             modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             isSubscribed = isSubscribed,
             onRequestSubscribe = { showSubscribeDialog = true },
+        )
+
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        // Daily Rewards Banner - 固定显示（不随上划隐藏）
+        var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
+        DailyRewardsBanner(
+            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            onClick = {
+                val currentTime = System.currentTimeMillis()
+                if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
+                lastDailyRewardsClickTime = currentTime
+                navController.navigate(Routes.Me.CheckIn)
+            },
         )
 
         if (appUpdateTips) {
@@ -987,10 +987,12 @@ private fun MyAgentCard(
 }
 
 private object DailyRewardsBannerStyle {
-    val Height = 76.dp
-    val Shape = RoundedCornerShape(16.dp)
-    val BorderWidth = 1.dp
-    val BorderColor = Color.White.copy(alpha = 0.12f)
+    /** 最小高度，保证与其他横幅视觉一致；实际高度随文字内容自适应 */
+    val MinHeight = 76.dp
+    val Shape = RoundedCornerShape(UiConfigs.MePage.VibeMode.CornerRadius)
+    val BorderWidth = UiConfigs.MePage.VibeMode.BorderWidth
+    /** 可点击状态边框色，与 Vibe Mode 未打开时一致 */
+    val BorderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
     val TitleColor = Color.White
     val SubtitleColor = Color.White.copy(alpha = 0.7f)
     val DisabledAlpha = 0.6f
@@ -999,11 +1001,12 @@ private object DailyRewardsBannerStyle {
     val DisabledSubtitleColor = Color.White.copy(alpha = 0.55f)
     val TitleSize = 18.sp
     val SubtitleSize = 14.sp
-    val HorizontalPadding = 16.dp
-    val VerticalPadding = 14.dp
+    val HorizontalPadding = UiConfigs.MePage.VibeMode.InnerPadding
+    val VerticalPadding = UiConfigs.MePage.VibeMode.InnerPadding
     val IllustrationHeight = 64.dp
     val IllustrationWidth = 92.dp
-    val BackgroundGradientColors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
+    /** 可点击状态背景渐变，与 Vibe Mode 未打开时一致 */
+    val BackgroundGradientColors = listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
     val DisabledBackgroundGradientColors = listOf(Color(0xFF5D5D62), Color(0xFF3A3A3E))
     val ProgressColor = Color(0xFFFF6B6B)
     val DisabledProgressColor = Color.White.copy(alpha = 0.35f)
@@ -1032,13 +1035,15 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
 
     val backgroundBrush =
         remember(hasCheckedInToday) {
-            Brush.linearGradient(
-                colors =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledBackgroundGradientColors
-                    else DailyRewardsBannerStyle.BackgroundGradientColors,
-                start = Offset.Zero,
-                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
-            )
+            if (hasCheckedInToday) {
+                Brush.linearGradient(
+                    colors = DailyRewardsBannerStyle.DisabledBackgroundGradientColors,
+                    start = Offset.Zero,
+                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+                )
+            } else {
+                Brush.horizontalGradient(DailyRewardsBannerStyle.BackgroundGradientColors)
+            }
         }
 
     val clickableModifier = Modifier.noRippleClickable(onClick = onClick)
@@ -1047,7 +1052,7 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(DailyRewardsBannerStyle.Height)
+                .heightIn(min = DailyRewardsBannerStyle.MinHeight)
                 .clip(DailyRewardsBannerStyle.Shape)
                 .background(backgroundBrush)
                 .border(
@@ -1088,7 +1093,7 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                     else DailyRewardsBannerStyle.SubtitleColor,
                 fontSize = DailyRewardsBannerStyle.SubtitleSize,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
