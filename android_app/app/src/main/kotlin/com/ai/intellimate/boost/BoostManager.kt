@@ -71,13 +71,12 @@ object BoostManager {
         }
     }
 
-    fun recordImageGeneration(agentInfo: AgentInfo?) {
-        if (agentInfo == null) return
+    fun recordImageGeneration(agentId: String) {
         val repo = repository ?: return
         val points = BoostCalculator.imageGenerationPoints()
         scope.launch {
-            repo.addPoints(points, PointSource.Image(agentInfo.id))
-            logPointsEvent(PointSource.Image(agentInfo.id), points)
+            repo.addPoints(points, PointSource.Image(agentId))
+            logPointsEvent(PointSource.Image(agentId), points)
         }
     }
 

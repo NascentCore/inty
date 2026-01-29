@@ -53,19 +53,9 @@ internal fun ChatScreen(
     fromPage: String? = null,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
-    val chatMessages by chatViewModel.msgs.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-    val context = LocalContext.current
-    val hasLoadingMessage =
-        chatMessages.any { msg ->
-            val hasGeneratedImage = msg.hasGeneratedImage()
-            val generatedImageUrl = msg.getGeneratedImageUrl()
-            msg.content == "loading_animation" &&
-                !hasGeneratedImage &&
-                generatedImageUrl != "loading"
-        }
 
     fun isVipTag(tag: String?): Boolean {
         val normalized =
@@ -83,7 +73,7 @@ internal fun ChatScreen(
         AgentBackground(
             agentInfo = agentInfo,
             showGradients = true,
-            isLoading = hasLoadingMessage,
+            isLoading = false,
             isCurrentPage = true,
             enableAnimatedBackground = autoPlayAnimation,
             modifier = Modifier.fillMaxSize(),

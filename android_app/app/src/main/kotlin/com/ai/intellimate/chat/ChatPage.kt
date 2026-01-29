@@ -9,6 +9,16 @@ import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -34,7 +44,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
@@ -72,9 +81,11 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.paging.ItemSnapshotList
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.OpeningPlayState
+import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
@@ -157,8 +168,6 @@ private fun proFixMessages(messages: ItemSnapshotList<MsgInfo>): List<MessageIte
         currentVoiceGroupIndices.clear()
     }
 
-    result.addAll(listOf(MessageItem.Opening, MessageItem.Intro))
-
     return result
 }
 
@@ -193,8 +202,6 @@ internal fun ChatPage(
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
-    val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
-    val chatMessages by chatViewModel.msgs.collectAsState()
 
     // 用户自建私有角色不展示 Boost 相关功能
     val shouldShowBoostUi = agentInfo?.isUserCreatedPrivateRole() != true
@@ -216,17 +223,31 @@ internal fun ChatPage(
             }
         ToastUtils.showShort(messageRes)
     }
+    val messages = chatViewModel.messages.collectAsLazyPagingItems()
+    val agent by chatViewModel.agentFlow.collectAsState()
+    val messageItems by remember(isCurrentPage) {
+        LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
+        derivedStateOf {
 
-    val hasLoadingMessage =
-        remember(chatMessages) {
-            chatMessages.any { msg ->
-                val hasGeneratedImage = msg.hasGeneratedImage()
-                val generatedImageUrl = msg.getGeneratedImageUrl()
-                msg.content == "loading_animation" &&
-                    !hasGeneratedImage &&
-                    generatedImageUrl != "loading"
+            proFixMessages(messages.itemSnapshotList) +
+                    if ((messages.loadState.refresh is LoadState.NotLoading && isCurrentPage) || messages.itemSnapshotList.isNotEmpty()) {
+                        listOf(MessageItem.Opening, MessageItem.Intro)
+                    } else {
+                        listOf(MessageItem.Intro)
+                    }
+        }
+    }
+
+    val hasLoadingMessage by remember {
+        derivedStateOf {
+            messages.itemSnapshotList.any { msg ->
+                msg != null &&
+                        msg.content == "loading_animation" &&
+                        !msg.hasGeneratedImage() &&
+                        msg.getGeneratedImageUrl() != "loading"
             }
         }
+    }
 
     // 获取开关状态用于页面曝光事件和 UI 显示
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
@@ -384,7 +405,7 @@ internal fun ChatPage(
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
 
-    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG) {
+    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && showBackButton) {
         agentInfo?.let {
             VipAgentUnlockDialog(
                 agent = it,
@@ -397,17 +418,19 @@ internal fun ChatPage(
 
     Box(
         modifier =
-            modifier.padding(contentPadding).pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        suppressFocusCallback.value = true
-                        focusManager.clearFocus()
-                        if (isCurrentPage) {
-                            onInputFocusChange(false)
+            modifier
+                .padding(contentPadding)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            suppressFocusCallback.value = true
+                            focusManager.clearFocus()
+                            if (isCurrentPage) {
+                                onInputFocusChange(false)
+                            }
                         }
-                    }
-                )
-            }
+                    )
+                }
     ) {
         // 只在非 ChatActivity 场景显示背景图（ChatActivity 中背景图已在外层显示）
         if (!showBackButton) {
@@ -426,7 +449,9 @@ internal fun ChatPage(
         LifecycleResumeEffect(keyboard) { onPauseOrDispose { keyboard?.hide() } }
 
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             snackbarHost = {
@@ -464,13 +489,17 @@ internal fun ChatPage(
                     }
             }
 
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)) {
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
                     ChatTopBar(
                         navController,
-                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp),
                         agentInfo = info,
                         fontSize = 15.sp,
                         avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
@@ -539,89 +568,7 @@ internal fun ChatPage(
                         showPremiumDialog = false
                     }
                 }
-
-                val chatMessages by chatViewModel.msgs.collectAsState()
-                val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
-                val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
-
-                // 使用 remember 管理每个语音消息组的展开状态（在 Composable 作用域中）
-                // 当 agentId 变化时重置展开状态
-                val expandedGroups =
-                    remember(agentInfo?.id) { mutableStateOf<Set<String>>(emptySet()) }
-
-                val layoutInfo = listState.layoutInfo
-                val visibleItemsForUi = layoutInfo.visibleItemsInfo
-                val totalItemsForUi = layoutInfo.totalItemsCount
-                val lastVisibleIndexForUi = visibleItemsForUi.maxOfOrNull { it.index } ?: -1
-                val hasEnoughDataForUi =
-                    totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                val isNearTopForUi =
-                    totalItemsForUi > 0 &&
-                        lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                val hasScrolledForUi =
-                    listState.firstVisibleItemIndex > 0 ||
-                        listState.firstVisibleItemScrollOffset > 0
-                val showLoadMoreUi =
-                    hasMoreMessages &&
-                        (isLoadingMore ||
-                            (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
-
-                // 判断是否需要播放开场白语音（移到LazyColumn外部）
-                val shouldDelayShowOpening =
-                    remember(
-                        agentInfo?.id,
-                        agentInfo?.opening_audio_url,
-                        isQueryMsgsCompleted,
-                        isCurrentPage,
-                        isGuideVisible,
-                        chatMessages.size,
-                    ) {
-                        agentInfo?.let { agent ->
-                            val actualChatMessages =
-                                chatMessages.filter { !it.isOpening() && it.role != "system" }
-                            val isOnlyOpeningMessage = actualChatMessages.isEmpty()
-                            val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agent.id)
-                            val safeAgentId = agent.id
-                            val audioUrl = agent.opening_audio_url
-
-                            // 判断是否需要自动播放开场白语音
-                            agent.opening.isNotEmpty() &&
-                                isOnlyOpeningMessage &&
-                                !hasPlayedOpening &&
-                                isQueryMsgsCompleted &&
-                                safeAgentId.isNotEmpty() &&
-                                audioUrl.isNotEmpty() &&
-                                IntySetting.isAutoPlayAudio() &&
-                                !isGuideVisible
-                        } ?: false
-                    }
-
-                // 控制开场白显示状态（移到LazyColumn外部）
-                var showOpeningItem by remember(agentInfo?.id) { mutableStateOf(false) }
-
-                // 如果需要延迟显示，延迟1.5秒后显示（移到LazyColumn外部）
-                LaunchedEffect(
-                    shouldDelayShowOpening,
-                    isQueryMsgsCompleted,
-                    isCurrentPage,
-                    agentInfo?.id,
-                ) {
-                    if (agentInfo?.id == null || !isQueryMsgsCompleted) {
-                        showOpeningItem = false
-                        return@LaunchedEffect
-                    }
-
-                    if (isCurrentPage) {
-                        if (shouldDelayShowOpening) {
-                            // 如果需要播放语音，先隐藏，延迟1.5秒后显示
-                            delay(1000)
-                        }
-
-                        showOpeningItem = true
-                    }
-                }
-
                 // 非全屏模式下，先添加空白区域
                 if (!chatListFullScreen) {
                     Spacer(Modifier.weight(UiConfigs.ChatPage.chatListBlankZone))
@@ -630,10 +577,13 @@ internal fun ChatPage(
                 val lazyColumnModifier =
                     if (chatListFullScreen) {
                         // 全屏模式：使用 weight(1f) 保持现有布局
-                        Modifier.weight(1f).padding(horizontal = 16.dp)
+                        Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp)
                     } else {
                         // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
-                        Modifier.weight(1f - UiConfigs.ChatPage.chatListBlankZone)
+                        Modifier
+                            .weight(1f - UiConfigs.ChatPage.chatListBlankZone)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     }
@@ -642,12 +592,6 @@ internal fun ChatPage(
                     val density = LocalDensity.current
                     val chatViewHeight = remember {
                         with(density) { (maxHeight - 48.dp).roundToPx() }
-                    }
-                    val messages = chatViewModel.messages.collectAsLazyPagingItems()
-                    val agent by chatViewModel.agentFlow.collectAsState()
-                    val messageItems by remember {
-                        LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
-                        derivedStateOf { proFixMessages(messages.itemSnapshotList) }
                     }
 
                     LazyColumn(
@@ -676,7 +620,9 @@ internal fun ChatPage(
                                         }
                                     },
                                     modifier =
-                                        Modifier.padding(vertical = 16.dp).size(210.5.dp, 312.5.dp),
+                                        Modifier
+                                            .padding(vertical = 16.dp)
+                                            .size(210.5.dp, 312.5.dp),
                                 )
                             }
                         }
@@ -700,18 +646,50 @@ internal fun ChatPage(
                                     Spacer(Modifier.height(16.dp))
                                 }
                                 is MessageItem.Opening -> {
-                                    Column {
-                                        val openingMessage =
-                                            MsgInfo(
-                                                content = agent?.opening.orEmpty(),
-                                                role = "assistant",
-                                                audio_url = agent?.openingAudioUrl,
+                                    val isOnlyOpeningMessage by remember {
+                                        derivedStateOf {
+                                            messages.itemSnapshotList.none { it != null && !it.isOpening() && it.role != "system" }
+                                        }
+                                    }
+                                    val openingMessage =
+                                        MsgInfo(
+                                            content = agent?.opening.orEmpty(),
+                                            role = "assistant",
+                                            audio_url = agent?.openingAudioUrl,
+                                            meta_data = MsgInfo.MsgMetaData(
+                                                agent?.agentId,
+                                                isOpening = true
                                             )
+                                        )
 
+                                    /*var showContent by remember(isOnlyOpeningMessage, agent) {
+                                        mutableStateOf(!isOnlyOpeningMessage || OpeningPlayState.agentOpeningPlayed(agent?.agentId ?: ""))
+                                    }
+
+                                    LaunchedEffect(isOnlyOpeningMessage, agent) {
+                                        showContent = true
+                                    }
+
+                                    AnimatedContent(
+                                        targetState = showContent,
+                                        transitionSpec = {
+                                            (fadeIn(animationSpec = tween(1000)) +
+                                                    slideInVertically { it })
+                                                .togetherWith(fadeOut(animationSpec = tween(90)))
+                                        }
+                                    ) {
+                                        if (it) {
+
+                                        } else {
+                                            Spacer(Modifier)
+                                        }
+                                    }*/
+                                    Column {
                                         Spacer(Modifier.height(16.dp))
                                         ChatItem(
                                             navController,
                                             item = openingMessage,
+                                            isOnlyOpeningMessage = isOnlyOpeningMessage,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
                                             isGuideVisible = isGuideVisible,
@@ -727,6 +705,7 @@ internal fun ChatPage(
                                         ChatItem(
                                             navController,
                                             item = message,
+                                            isOnlyOpeningMessage = false,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
                                             isLatestMessage = index == 0,
@@ -756,247 +735,14 @@ internal fun ChatPage(
                                 }
                             }
                         }
-
-                        /*val showIntroOpeningTop =
-                            isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
-                        val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-                        // 直接在 Composable 作用域中处理，不使用 runCatching
-                        if (filteredChatMessages.isNotEmpty()) {
-                            val messagesCopy = filteredChatMessages.toList()
-                            val items =
-                                messagesCopy.filter {
-                                    !(it.role == "user" && it.content == "continue")
-                                }
-                            if (items.isNotEmpty()) {
-                                // 将消息分组，连续的语音消息会被分组
-                                val groupedItems = groupVoiceMessages(items)
-
-                                itemsIndexed(
-                                    groupedItems,
-                                    key = { index, item ->
-                                        when (item) {
-                                            is ChatMessageItem.NormalMessage -> {
-                                                item.message.localMsgId.ifEmpty {
-                                                    "${index}_${item.message.role}_${item.message.content.hashCode()}_${index}"
-                                                }
-                                            }
-                                            is ChatMessageItem.VoiceMessageGroup -> {
-                                                item.groupId
-                                            }
-                                        }
-                                    },
-                                ) { index, item ->
-                                    // 直接在 Composable 作用域中处理，不使用 runCatching
-                                    when (item) {
-                                        is ChatMessageItem.NormalMessage -> {
-                                            if (index < groupedItems.size) {
-                                                val message = item.message
-                                                val hasGeneratedImage = message.hasGeneratedImage()
-                                                val isImageMessage =
-                                                    message.content.isEmpty() && hasGeneratedImage
-                                                // latest 消息用于控制 ChatItem 内部的操作区（如
-                                                // 👍/👎、生图入口等）
-                                                // 这里需要包含“纯图片消息”（content 为空但有
-                                                // generated image），否则图片预览下方无法显示
-                                                // 👍/👎
-                                                val isLatestAssistantMessageForActions =
-                                                    index == 0 &&
-                                                        message.role == "assistant" &&
-                                                        message.content != "loading_animation" &&
-                                                        !message.isOpening()
-
-                                                ChatItem(
-                                                    navController,
-                                                    message,
-                                                    isCurrentPage = isCurrentPage,
-                                                    chatViewModel = chatViewModel,
-                                                    isLatestMessage =
-                                                        isLatestAssistantMessageForActions,
-                                                    isGuideVisible = isGuideVisible,
-                                                    messageFontSizeSp = chatFontSizeSp,
-                                                )
-                                            }
-                                        }
-                                        is ChatMessageItem.VoiceMessageGroup -> {
-                                            val isExpanded =
-                                                expandedGroups.value.contains(item.groupId)
-
-                                            if (isExpanded) {
-                                                // 展开状态：将所有消息放在一个大气泡容器中
-                                                // 由于是倒序列表，需要将消息反转以按时间顺序显示（最早的在上）
-                                                val chronologicalMessages = item.messages.reversed()
-
-                                                VoiceChatHistoryExpandedContainer(
-                                                    messages = item.messages,
-                                                    onCollapse = {
-                                                        listState.requestScrollToItem(
-                                                            index +
-                                                                if (showIntroOpeningTop) 2
-                                                                else
-                                                                    0 +
-                                                                        if (showLoadMoreUi) 1
-                                                                        else 0,
-                                                            -chatViewHeight,
-                                                        )
-                                                        expandedGroups.value -= item.groupId
-                                                    },
-                                                ) {
-                                                    chronologicalMessages.forEachIndexed {
-                                                        msgIndex,
-                                                        message ->
-                                                        val hasGeneratedImage =
-                                                            message.hasGeneratedImage()
-                                                        val isImageMessage =
-                                                            message.content.isEmpty() &&
-                                                                hasGeneratedImage
-                                                        // 展开状态下不显示操作按钮
-                                                        val isLatestAssistantMessageForActions =
-                                                            false
-
-                                                        ChatItem(
-                                                            navController,
-                                                            message,
-                                                            isCurrentPage = isCurrentPage,
-                                                            chatViewModel = chatViewModel,
-                                                            isLatestMessage =
-                                                                isLatestAssistantMessageForActions,
-                                                            isGuideVisible = isGuideVisible,
-                                                            messageFontSizeSp = chatFontSizeSp,
-                                                        )
-                                                        // 消息之间添加间距，最后一条不添加
-                                                        if (
-                                                            msgIndex <
-                                                                chronologicalMessages.size - 1
-                                                        ) {
-                                                            Spacer(Modifier.height(12.dp))
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                // 折叠状态：显示折叠提示
-                                                VoiceChatHistoryCollapsed(
-                                                    messages = item.messages,
-                                                    onClick = {
-                                                        listState.requestScrollToItem(
-                                                            index +
-                                                                if (showIntroOpeningTop) 2
-                                                                else
-                                                                    0 +
-                                                                        if (showLoadMoreUi) 1
-                                                                        else 0,
-                                                            -chatViewHeight,
-                                                        )
-                                                        expandedGroups.value += item.groupId
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
-                                    Spacer(Modifier.height(16.dp))
-                                }
-                            }
-                        }
-
-                        if (showIntroOpeningTop) {
-                            item {
-                                agentInfo?.let { agent ->
-                                    val shouldShowOpening = agent.opening.isNotEmpty()
-                                    if (shouldShowOpening && showOpeningItem) {
-                                        Column {
-                                            val openingMessage =
-                                                MsgInfo(
-                                                    content = agent.opening,
-                                                    role = "assistant",
-                                                    meta_data =
-                                                        MsgInfo.MsgMetaData(
-                                                            agentId = agent.id,
-                                                            isOpening = true,
-                                                        ),
-                                                    audio_url = agent.opening_audio_url,
-                                                )
-
-                                            Spacer(Modifier.height(16.dp))
-                                            ChatItem(
-                                                navController,
-                                                openingMessage,
-                                                isCurrentPage = isCurrentPage,
-                                                chatViewModel = chatViewModel,
-                                                isGuideVisible = isGuideVisible,
-                                                messageFontSizeSp = chatFontSizeSp,
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                        }
-                                    }
-                                }
-                            }
-                            item {
-                                agentInfo?.intro?.let { info ->
-                                    if (info.isNotEmpty()) {
-                                        AgentInfoChatCard(info)
-                                        Spacer(Modifier.height(16.dp))
-                                    }
-                                }
-                            }
-                        }
-
-                        if (showLoadMoreUi) {
-                            item {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(60.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (isLoadingMore) {
-                                        CircularProgressIndicator(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.width(24.dp).height(24.dp),
-                                        )
-                                    } else {
-                                        Text(
-                                            text = "Pull to load more",
-                                            color =
-                                                MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.6f
-                                                ),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                    }
-                                }
-                            }
-                        }*/
                     }
-                }
-
-                LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
-                    snapshotFlow {
-                            listState.firstVisibleItemIndex to
-                                listState.firstVisibleItemScrollOffset
-                        }
-                        .collect { (firstVisibleIndex, scrollOffset) ->
-                            delay(100)
-                            val layoutInfo = listState.layoutInfo
-                            val visibleItems = layoutInfo.visibleItemsInfo
-                            val totalItemsCount = layoutInfo.totalItemsCount
-                            val lastVisibleIndex = visibleItems.maxOfOrNull { it.index } ?: 0
-
-                            val hasEnoughData =
-                                totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                            val isNearTop =
-                                totalItemsCount > 0 &&
-                                    lastVisibleIndex >=
-                                        (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                            val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
-                            val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
-
-                            if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
-                                chatViewModel.loadMoreMessages()
-                            }
-                        }
                 }
 
                 if (agentInfo?.isDeleted == true) {
                     Box(
                         modifier =
-                            Modifier.fillMaxWidth()
+                            Modifier
+                                .fillMaxWidth()
                                 .height(48.dp)
                                 .padding(horizontal = 16.dp)
                                 .clip(RoundedCornerShape(24.dp))
@@ -1014,13 +760,36 @@ internal fun ChatPage(
                             morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
                         else bottomPadding
 
-                    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT) {
-                        Button(
-                            onClick = chatViewModel::chatUnlockByCredits,
+                    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT || (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && !showBackButton)) {
+                        val inputConfig = UiConfigs.ChatPage.ChatInput
+                        val unlockCost = BoostConfig.UNLOCK_VIP_AGENT_COST
+                        Box(
                             modifier =
-                                Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(50.dp),
+                                Modifier
+                                    .padding(
+                                        start = inputConfig.HorizontalPadding,
+                                        top = inputConfig.TopPadding,
+                                        end = inputConfig.HorizontalPadding,
+                                        bottom = inputConfig.BottomSpacerHeight,
+                                    )
+                                    .fillMaxWidth()
+                                    .height(inputConfig.MinHeight)
+                                    .clip(RoundedCornerShape(inputConfig.CornerRadius))
+                                    .background(AppColors.DarkPurpleOverlay60)
+                                    .noRippleClickable {
+                                        if (boostState.availablePoints < unlockCost) {
+                                            navController.navigate(Routes.Me.VipCenter)
+                                        } else {
+                                            chatViewModel.chatUnlockByCredits()
+                                        }
+                                    },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text("Unlock by credits")
+                            Text(
+                                text = stringResource(R.string.unlock_with_credits_price, unlockCost),
+                                color = Color.White,
+                                fontSize = 14.sp,
+                            )
                         }
                     } else {
                         CompositionLocalProvider(
@@ -1084,31 +853,34 @@ internal fun ChatPage(
                             )
                         }
                     } else {
-                        Modifier.consumeWindowInsets(contentPadding).imePadding()
+                        Modifier
+                            .consumeWindowInsets(contentPadding)
+                            .imePadding()
                     }
 
                 Spacer(modifier = bottomSpaceModifier)
             }
 
-            val chatMessagesForButton by chatViewModel.msgs.collectAsState()
-            val hasLatestAssistantMessage =
-                chatMessagesForButton.firstOrNull { msg ->
-                    val hasGeneratedImage = msg.hasGeneratedImage()
-                    val isImageMessage = msg.content.isEmpty() && hasGeneratedImage
-                    msg.role == "assistant" &&
-                        msg.content != "loading_animation" &&
-                        !isImageMessage &&
-                        !msg.isOpening()
-                } != null
-
-            val hasLoadingMessageForButton =
-                chatMessagesForButton.any { msg ->
-                    val hasGeneratedImage = msg.hasGeneratedImage()
-                    val generatedImageUrl = msg.getGeneratedImageUrl()
-                    msg.content == "loading_animation" &&
-                        !hasGeneratedImage &&
-                        generatedImageUrl != "loading"
+            val hasLatestAssistantMessage by remember {
+                derivedStateOf {
+                    messages.itemSnapshotList.firstOrNull { msg ->
+                        msg != null && msg.role == "assistant" &&
+                                msg.content != "loading_animation" &&
+                                !(msg.content.isEmpty() && msg.hasGeneratedImage()) &&
+                                !msg.isOpening()
+                    } != null
                 }
+            }
+
+            val hasLoadingMessageForButton by remember {
+                derivedStateOf {
+                    messages.itemSnapshotList.any { msg ->
+                        msg != null && msg.content == "loading_animation" &&
+                                !msg.hasGeneratedImage() &&
+                                msg.getGeneratedImageUrl() != "loading"
+                    }
+                }
+            }
 
             // Keep Talking 按钮显示逻辑：
             // 1. 用户开启了 Keep Talking 功能
@@ -1190,7 +962,8 @@ internal fun ChatPage(
             // 当有新消息时，始终显示此按钮，即使回到第一条消息也不隐藏
             ScrollToBottomButton(
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .padding(
                             bottom = scrollToBottomButtonBottomOffset,
                             end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
@@ -1209,7 +982,8 @@ internal fun ChatPage(
             // 当用户滚动到历史记录时，此按钮会自动隐藏，避免与滚动到底部按钮重叠
             KeepTalkingFloatingButton(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd)
+                    Modifier
+                        .align(Alignment.BottomEnd)
                         .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
@@ -1271,7 +1045,8 @@ internal fun ChatPage(
                 totalPoints = boostState.chatMessagePoints,
                 enabled = isCurrentPage,
                 modifier =
-                    Modifier.align(Alignment.TopCenter)
+                    Modifier
+                        .align(Alignment.TopCenter)
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp),
             )
         }

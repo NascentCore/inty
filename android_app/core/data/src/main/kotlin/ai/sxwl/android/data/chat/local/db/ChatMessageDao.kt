@@ -28,6 +28,13 @@ interface ChatMessageDao {
     )
     fun pagingSource(agentId: String): PagingSource<Int, ChatMessageEntity>
 
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId AND isOpening = 0")
+    suspend fun getMessagesCount(agentId: String): Int
+
+    /** 查询用户是否对该 agent 发送过消息（存在 role = 'user' 的记录即视为发送过） */
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId AND role = 'user'")
+    suspend fun countUserMessages(agentId: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(messages: List<ChatMessageEntity>)
 
@@ -104,4 +111,10 @@ interface ChatMessageDao {
         "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND generatedImageUrl IS NOT NULL AND generatedImageUrl != '' AND generatedImageUrl != 'loading' ORDER BY sortKey DESC, createdAt DESC"
     )
     fun streamMessagesWithImages(agentId: String): Flow<List<ChatMessageEntity>>
+
+    /** 查询该 agent 最近一条 AI 回复消息，排除 isOpening = true（开场白） */
+    @Query(
+        "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND isOpening = 0 ORDER BY sortKey DESC, createdAt DESC LIMIT 1"
+    )
+    suspend fun getLatestAgentMessage(agentId: String): ChatMessageEntity?
 }

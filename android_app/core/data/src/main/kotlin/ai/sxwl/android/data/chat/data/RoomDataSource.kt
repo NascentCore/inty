@@ -201,24 +201,23 @@ class RoomDataSource(
 
     /**
      * 发送前插入临时用户消息与 loading 占位，localId/sortKey 尽量大，isSending=true。
-     *
      * @return Pair(临时用户消息 localId, 临时 loading localId)，发送成功后用于删除并替换为 user_message_id 正式消息。
      */
     suspend fun appendSendingMessages(agentId: String, userContent: String) =
         withContext(dispatcher) {
-            val tempUserLocalId = Long.MAX_VALUE - 1
-            val tempLoadingLocalId = Long.MAX_VALUE
+            val tempUserLocalId = "${(Long.MAX_VALUE - 1)}"
+            val tempLoadingLocalId = "${Long.MAX_VALUE}"
             db.withTransaction {
                 val userEntity =
                     createTempSendingUserEntity(
                         agentId = agentId,
                         content = userContent,
-                        localId = tempUserLocalId.toString(),
+                        localId = tempUserLocalId
                     )
                 val loadingEntity =
                     createTempSendingLoadingEntity(
                         agentId = agentId,
-                        localId = tempLoadingLocalId.toString(),
+                        localId = tempLoadingLocalId
                     )
                 messageDao.upsert(listOf(userEntity, loadingEntity))
             }
@@ -233,10 +232,13 @@ class RoomDataSource(
      */
     suspend fun appendSendingLoadingOnly(agentId: String) =
         withContext(dispatcher) {
-            val tempLoadingLocalId = Long.MAX_VALUE.toString()
+            val tempLoadingLocalId = "${Long.MAX_VALUE}"
             db.withTransaction {
                 messageDao.upsert(
-                    createTempSendingLoadingEntity(agentId = agentId, localId = tempLoadingLocalId)
+                    createTempSendingLoadingEntity(
+                        agentId = agentId,
+                        localId = tempLoadingLocalId,
+                    ),
                 )
             }
             logger.debug {
@@ -374,14 +376,17 @@ class RoomDataSource(
             logger.info { "RoomDataSource cleared all chat data" }
         }
 
+    @Deprecated("由ChatMessageRepository管理")
     private suspend fun updateSyncState(
         agentId: String,
         updater: (ChatSyncStateEntity) -> ChatSyncStateEntity,
-    ) =
-        withContext(dispatcher) {
+    ) {
+        /*withContext(dispatcher) {
             val current = syncStateDao.get(agentId) ?: ChatSyncStateEntity(agentId = agentId)
             syncStateDao.upsert(updater(current).copy(updatedAt = now()))
-        }
+        }*/
+    }
+
 
     private fun loadingFlow(agentId: String): MutableStateFlow<Boolean> =
         loadingFlows.getOrPut(agentId) { MutableStateFlow(false) }

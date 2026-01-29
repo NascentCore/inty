@@ -13,11 +13,11 @@ import androidx.room.PrimaryKey
         [
             Index(value = ["agentId"]),
             Index(value = ["localId"]),
-            Index(value = ["agentId", "sortKey"]),
         ],
+    primaryKeys = ["localId", "agentId"]
 )
 data class ChatMessageEntity(
-    @PrimaryKey val localId: String,
+    val localId: String,
     val agentId: String,
     val remoteId: String?,
     val role: String,
