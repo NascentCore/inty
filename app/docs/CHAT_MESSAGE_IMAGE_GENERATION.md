@@ -2,7 +2,7 @@
 
 ## 概述
 
-消息生图功能允许用户基于聊天上下文为 AI 回复生成图片。该功能使用 Gemini 模型（如 gemini-3-pro-image-preview、gemini-2.5-flash-image），通过 Agent 的参考图（背景图或头像）和聊天上下文生成符合角色外观一致性的图片。订阅用户和超级用户默认使用 `gemini-3-pro-image-preview`，免费用户使用 `gemini-2.5-flash-image`。若遇 404，可尝试将 `agent.vertex_ai_location` 设为 `"global"`。
+消息生图功能允许用户基于聊天上下文为 AI 回复生成图片。该功能使用 Gemini 模型（如 gemini-2.5-flash-image），通过 Agent 的参考图（背景图或头像）和聊天上下文生成符合角色外观一致性的图片。订阅用户、超级用户和免费用户默认均使用 `gemini-2.5-flash-image`。若遇 404，可尝试将 `agent.vertex_ai_location` 设为 `"global"`。
 
 ## 架构概览
 
@@ -283,7 +283,7 @@ async def generate_chat_image_with_gemini(
 - 图片生成提示词模板：`IMAGE_GENERATION_PROMPT_TEMPLATE`（在代码中维护，可通过 `/api/v1/ai/agents/image-generation/config` 运行时更新）
 - 默认历史消息数量：`agent.image_generation_default_history_count`（`config.yaml` 中配置，默认 10）
 - 消息生图模型：`free_user_chat_image_model`、`sub_user_chat_image_model`（"gemini" 或 fal 模型名）
-- Gemini 模型 ID：`sub_user_chat_image_gemini_model`（默认 `gemini-3-pro-image-preview`）、`free_user_chat_image_gemini_model`（默认 `gemini-2.5-flash-image`）
+- Gemini 模型 ID：`sub_user_chat_image_gemini_model`、`free_user_chat_image_gemini_model`（默认均为 `gemini-2.5-flash-image`）
 - Vertex AI 区域：`agent.vertex_ai_location`（默认 `us-central1`，设为 `global` 可改善 Preview 模型可用性）
 - 应用限额：`app.limits.free_user_image_gen_24h_limit`、`app.limits.subscribed_user_image_gen_24h_limit`
 - GCS 配置：`gcs.bucket`

@@ -214,7 +214,7 @@ export const SettingsPage: React.FC = () => {
               rules={[{ required: true, message: "请选择模型提供商" }]}
               extra={
                 <Text type="secondary">
-                  选 Gemini 时使用下方「订阅用户 Gemini 模型 ID」；推荐 gemini-3-pro-image-preview
+                  选 Gemini 时使用下方「订阅用户 Gemini 模型 ID」；默认 gemini-2.5-flash-image
                 </Text>
               }
             >
@@ -257,7 +257,7 @@ export const SettingsPage: React.FC = () => {
                 </Text>
               }
             >
-              <Input placeholder="例如：gemini-3-pro-image-preview" />
+              <Input placeholder="例如：gemini-2.5-flash-image" />
             </Form.Item>
 
             <Form.Item>
