@@ -7,7 +7,7 @@ memory: 存储抽取后的记忆内容，支持多种类型（user_common=与所
 memory_extraction_log: 抽取历史，用于触发判断与可观测性。
 """
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.sql import func
 
 from app.models import Base
