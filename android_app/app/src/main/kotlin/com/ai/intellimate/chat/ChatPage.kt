@@ -17,6 +17,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -42,7 +44,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
@@ -84,6 +85,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.OpeningPlayState
+import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
@@ -223,7 +225,7 @@ internal fun ChatPage(
     }
     val messages = chatViewModel.messages.collectAsLazyPagingItems()
     val agent by chatViewModel.agentFlow.collectAsState()
-    val messageItems by remember {
+    val messageItems by remember(isCurrentPage) {
         LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
         derivedStateOf {
 
@@ -403,7 +405,7 @@ internal fun ChatPage(
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
 
-    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG) {
+    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && showBackButton) {
         agentInfo?.let {
             VipAgentUnlockDialog(
                 agent = it,
@@ -758,16 +760,36 @@ internal fun ChatPage(
                             morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
                         else bottomPadding
 
-                    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT) {
-                        Button(
-                            onClick = chatViewModel::chatUnlockByCredits,
+                    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT || (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && !showBackButton)) {
+                        val inputConfig = UiConfigs.ChatPage.ChatInput
+                        val unlockCost = BoostConfig.UNLOCK_VIP_AGENT_COST
+                        Box(
                             modifier =
                                 Modifier
-                                    .padding(horizontal = 16.dp)
+                                    .padding(
+                                        start = inputConfig.HorizontalPadding,
+                                        top = inputConfig.TopPadding,
+                                        end = inputConfig.HorizontalPadding,
+                                        bottom = inputConfig.BottomSpacerHeight,
+                                    )
                                     .fillMaxWidth()
-                                    .height(50.dp),
+                                    .height(inputConfig.MinHeight)
+                                    .clip(RoundedCornerShape(inputConfig.CornerRadius))
+                                    .background(AppColors.DarkPurpleOverlay60)
+                                    .noRippleClickable {
+                                        if (boostState.availablePoints < unlockCost) {
+                                            navController.navigate(Routes.Me.VipCenter)
+                                        } else {
+                                            chatViewModel.chatUnlockByCredits()
+                                        }
+                                    },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text("Unlock by credits")
+                            Text(
+                                text = stringResource(R.string.unlock_with_credits_price, unlockCost),
+                                color = Color.White,
+                                fontSize = 14.sp,
+                            )
                         }
                     } else {
                         CompositionLocalProvider(
