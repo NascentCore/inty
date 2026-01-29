@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -249,7 +250,9 @@ private fun ChatItemAI(
 
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
                 val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
-                val shouldShowMessageActions = isLatestMessage && !shouldFlowShow
+                val shouldShowMessageActions by remember {
+                    derivedStateOf { isLatestMessage && !shouldFlowShow && !item.isOpening() && !isNormalLoading }
+                }
 
                 if (isNormalLoading) {
                     Box(

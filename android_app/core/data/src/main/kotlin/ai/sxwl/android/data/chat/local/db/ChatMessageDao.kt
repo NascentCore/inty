@@ -111,4 +111,10 @@ interface ChatMessageDao {
         "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND generatedImageUrl IS NOT NULL AND generatedImageUrl != '' AND generatedImageUrl != 'loading' ORDER BY sortKey DESC, createdAt DESC"
     )
     fun streamMessagesWithImages(agentId: String): Flow<List<ChatMessageEntity>>
+
+    /** 查询该 agent 最近一条 AI 回复消息，排除 isOpening = true（开场白） */
+    @Query(
+        "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND isOpening = 0 ORDER BY sortKey DESC, createdAt DESC LIMIT 1"
+    )
+    suspend fun getLatestAgentMessage(agentId: String): ChatMessageEntity?
 }

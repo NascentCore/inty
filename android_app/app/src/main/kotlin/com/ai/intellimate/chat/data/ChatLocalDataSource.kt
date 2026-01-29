@@ -23,11 +23,13 @@ class ChatLocalDataSource(
     }
 
     suspend fun getLatesAgentMessage(agentId: String): ChatMessageEntity? {
-        TODO("查询最近的AI回复消息，注意不包括isOpening=true")
+        return chatMessageDao.getLatestAgentMessage(agentId)
     }
 
     suspend fun removeMessage(agentId: String, messageId: String): ChatMessageEntity? {
-        TODO("移除消息")
+        val entity = chatMessageDao.getMessage(agentId, messageId)
+        if (entity != null) chatMessageDao.deleteMessage(agentId, messageId)
+        return entity
     }
 
     suspend fun upsert(entity: ChatMessageEntity) {
@@ -35,7 +37,7 @@ class ChatLocalDataSource(
     }
 
     suspend fun getMessage(agentId: String, localMessageId: String): ChatMessageEntity? {
-        TODO("查询消息")
+        return chatMessageDao.getMessage(agentId, localMessageId)
     }
 
     suspend fun updateSyncState(

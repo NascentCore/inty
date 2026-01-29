@@ -5,6 +5,7 @@ package com.ai.intellimate.chat.data
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
+import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.utils.LogUtils

@@ -9,6 +9,14 @@ import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -72,6 +80,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.paging.ItemSnapshotList
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.OpeningPlayState
@@ -157,8 +166,6 @@ private fun proFixMessages(messages: ItemSnapshotList<MsgInfo>): List<MessageIte
         currentVoiceGroupIndices.clear()
     }
 
-    result.addAll(listOf(MessageItem.Opening, MessageItem.Intro))
-
     return result
 }
 
@@ -218,7 +225,15 @@ internal fun ChatPage(
     val agent by chatViewModel.agentFlow.collectAsState()
     val messageItems by remember {
         LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
-        derivedStateOf { proFixMessages(messages.itemSnapshotList) }
+        derivedStateOf {
+
+            proFixMessages(messages.itemSnapshotList) +
+                    if ((messages.loadState.refresh is LoadState.NotLoading && isCurrentPage) || messages.itemSnapshotList.isNotEmpty()) {
+                        listOf(MessageItem.Opening, MessageItem.Intro)
+                    } else {
+                        listOf(MessageItem.Intro)
+                    }
+        }
     }
 
     val hasLoadingMessage by remember {
@@ -401,17 +416,19 @@ internal fun ChatPage(
 
     Box(
         modifier =
-            modifier.padding(contentPadding).pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        suppressFocusCallback.value = true
-                        focusManager.clearFocus()
-                        if (isCurrentPage) {
-                            onInputFocusChange(false)
+            modifier
+                .padding(contentPadding)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            suppressFocusCallback.value = true
+                            focusManager.clearFocus()
+                            if (isCurrentPage) {
+                                onInputFocusChange(false)
+                            }
                         }
-                    }
-                )
-            }
+                    )
+                }
     ) {
         // 只在非 ChatActivity 场景显示背景图（ChatActivity 中背景图已在外层显示）
         if (!showBackButton) {
@@ -430,7 +447,9 @@ internal fun ChatPage(
         LifecycleResumeEffect(keyboard) { onPauseOrDispose { keyboard?.hide() } }
 
         Scaffold(
-            modifier = Modifier.fillMaxSize().background(Color.Transparent),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             snackbarHost = {
@@ -468,13 +487,17 @@ internal fun ChatPage(
                     }
             }
 
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)) {
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
                     ChatTopBar(
                         navController,
-                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 18.dp),
                         agentInfo = info,
                         fontSize = 15.sp,
                         avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
@@ -552,10 +575,13 @@ internal fun ChatPage(
                 val lazyColumnModifier =
                     if (chatListFullScreen) {
                         // 全屏模式：使用 weight(1f) 保持现有布局
-                        Modifier.weight(1f).padding(horizontal = 16.dp)
+                        Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp)
                     } else {
                         // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
-                        Modifier.weight(1f - UiConfigs.ChatPage.chatListBlankZone)
+                        Modifier
+                            .weight(1f - UiConfigs.ChatPage.chatListBlankZone)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     }
@@ -592,7 +618,9 @@ internal fun ChatPage(
                                         }
                                     },
                                     modifier =
-                                        Modifier.padding(vertical = 16.dp).size(210.5.dp, 312.5.dp),
+                                        Modifier
+                                            .padding(vertical = 16.dp)
+                                            .size(210.5.dp, 312.5.dp),
                                 )
                             }
                         }
@@ -616,70 +644,45 @@ internal fun ChatPage(
                                     Spacer(Modifier.height(16.dp))
                                 }
                                 is MessageItem.Opening -> {
-                                    Column {
-                                        val isOnlyOpeningMessage by remember {
-                                            derivedStateOf {
-                                                messages.loadState.isIdle && messages.itemSnapshotList.none { it != null && !it.isOpening() && it.role != "system" }
-                                            }
+                                    val isOnlyOpeningMessage by remember {
+                                        derivedStateOf {
+                                            messages.itemSnapshotList.none { it != null && !it.isOpening() && it.role != "system" }
                                         }
-                                        /*// 判断是否需要播放开场白语音（移到LazyColumn外部）
-                                        val shouldDelayShowOpening by
-                                        remember{
-                                            derivedStateOf {
-                                                agentInfo?.let { agent ->
-                                                    val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agent.id)
-                                                    val safeAgentId = agent.id
-                                                    val audioUrl = agent.opening_audio_url
-
-                                                    // 判断是否需要自动播放开场白语音
-                                                    agent.opening.isNotEmpty() &&
-                                                            isOnlyOpeningMessage &&
-                                                            !hasPlayedOpening &&
-                                                            isQueryMsgsCompleted &&
-                                                            safeAgentId.isNotEmpty() &&
-                                                            audioUrl.isNotEmpty() &&
-                                                            IntySetting.isAutoPlayAudio() &&
-                                                            !isGuideVisible
-                                                } ?: false
-                                            }
-                                        }*/
-
-                                        // 控制开场白显示状态（移到LazyColumn外部）
-                                        /*var showOpeningItem by remember(agentInfo?.id) { mutableStateOf(false) }
-
-                                        // 如果需要延迟显示，延迟1.5秒后显示（移到LazyColumn外部）
-                                        LaunchedEffect(
-                                            shouldDelayShowOpening,
-                                            isQueryMsgsCompleted,
-                                            isCurrentPage,
-                                            agentInfo?.id,
-                                        ) {
-                                            if (agentInfo?.id == null || !isQueryMsgsCompleted) {
-                                                showOpeningItem = false
-                                                return@LaunchedEffect
-                                            }
-
-                                            if (isCurrentPage) {
-                                                if (shouldDelayShowOpening) {
-                                                    // 如果需要播放语音，先隐藏，延迟1.5秒后显示
-                                                    delay(1000)
-                                                }
-
-                                                showOpeningItem = true
-                                            }
-                                        }*/
-
-                                        val openingMessage =
-                                            MsgInfo(
-                                                content = agent?.opening.orEmpty(),
-                                                role = "assistant",
-                                                audio_url = agent?.openingAudioUrl,
-                                                meta_data = MsgInfo.MsgMetaData(
-                                                    agent?.agentId,
-                                                    isOpening = true
-                                                )
+                                    }
+                                    val openingMessage =
+                                        MsgInfo(
+                                            content = agent?.opening.orEmpty(),
+                                            role = "assistant",
+                                            audio_url = agent?.openingAudioUrl,
+                                            meta_data = MsgInfo.MsgMetaData(
+                                                agent?.agentId,
+                                                isOpening = true
                                             )
+                                        )
 
+                                    /*var showContent by remember(isOnlyOpeningMessage, agent) {
+                                        mutableStateOf(!isOnlyOpeningMessage || OpeningPlayState.agentOpeningPlayed(agent?.agentId ?: ""))
+                                    }
+
+                                    LaunchedEffect(isOnlyOpeningMessage, agent) {
+                                        showContent = true
+                                    }
+
+                                    AnimatedContent(
+                                        targetState = showContent,
+                                        transitionSpec = {
+                                            (fadeIn(animationSpec = tween(1000)) +
+                                                    slideInVertically { it })
+                                                .togetherWith(fadeOut(animationSpec = tween(90)))
+                                        }
+                                    ) {
+                                        if (it) {
+
+                                        } else {
+                                            Spacer(Modifier)
+                                        }
+                                    }*/
+                                    Column {
                                         Spacer(Modifier.height(16.dp))
                                         ChatItem(
                                             navController,
@@ -736,7 +739,8 @@ internal fun ChatPage(
                 if (agentInfo?.isDeleted == true) {
                     Box(
                         modifier =
-                            Modifier.fillMaxWidth()
+                            Modifier
+                                .fillMaxWidth()
                                 .height(48.dp)
                                 .padding(horizontal = 16.dp)
                                 .clip(RoundedCornerShape(24.dp))
@@ -758,7 +762,10 @@ internal fun ChatPage(
                         Button(
                             onClick = chatViewModel::chatUnlockByCredits,
                             modifier =
-                                Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(50.dp),
+                                Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .fillMaxWidth()
+                                    .height(50.dp),
                         ) {
                             Text("Unlock by credits")
                         }
@@ -824,7 +831,9 @@ internal fun ChatPage(
                             )
                         }
                     } else {
-                        Modifier.consumeWindowInsets(contentPadding).imePadding()
+                        Modifier
+                            .consumeWindowInsets(contentPadding)
+                            .imePadding()
                     }
 
                 Spacer(modifier = bottomSpaceModifier)
@@ -931,7 +940,8 @@ internal fun ChatPage(
             // 当有新消息时，始终显示此按钮，即使回到第一条消息也不隐藏
             ScrollToBottomButton(
                 modifier =
-                    Modifier.align(Alignment.BottomCenter)
+                    Modifier
+                        .align(Alignment.BottomCenter)
                         .padding(
                             bottom = scrollToBottomButtonBottomOffset,
                             end = UiConfigs.ChatPage.FloatingScrollButton.RightPadding,
@@ -950,7 +960,8 @@ internal fun ChatPage(
             // 当用户滚动到历史记录时，此按钮会自动隐藏，避免与滚动到底部按钮重叠
             KeepTalkingFloatingButton(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd)
+                    Modifier
+                        .align(Alignment.BottomEnd)
                         .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
@@ -1012,7 +1023,8 @@ internal fun ChatPage(
                 totalPoints = boostState.chatMessagePoints,
                 enabled = isCurrentPage,
                 modifier =
-                    Modifier.align(Alignment.TopCenter)
+                    Modifier
+                        .align(Alignment.TopCenter)
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp),
             )
         }
