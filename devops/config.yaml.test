@@ -25,6 +25,8 @@ agent:
   sub_user_text_to_image_model: "imagen-3.0-generate-002"
   free_user_chat_image_model: "gemini"
   sub_user_chat_image_model: "gemini"
+  sub_user_chat_image_gemini_model: "gemini-2.5-flash-image"
+  free_user_chat_image_gemini_model: "gemini-2.5-flash-image"
 
 gcs:
   use_fake_gcs: true

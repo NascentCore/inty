@@ -14,12 +14,12 @@ import {
 import { SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import { chatImageApi } from "../services/api";
 
-// 消息生图模型选项
+// 消息生图模型选项：第一级选择提供商（Gemini 或 fal.ai），选 Gemini 时具体型号由下方「Gemini 模型 ID」决定
 const CHAT_IMAGE_MODEL_OPTIONS = [
   {
     value: "gemini",
-    label: "Gemini 2.5 Flash Image",
-    description: "Google 高质量图像生成模型",
+    label: "Gemini（Vertex AI）",
+    description: "由下方 Gemini 模型 ID 指定具体型号",
   },
   {
     value: "fal-ai/z-image/turbo/image-to-image",
@@ -66,6 +66,8 @@ export const SettingsPage: React.FC = () => {
           default_history_count: response.default_history_count,
           free_user_chat_image_model: response.free_user_chat_image_model,
           sub_user_chat_image_model: response.sub_user_chat_image_model,
+          free_user_chat_image_gemini_model: response.free_user_chat_image_gemini_model,
+          sub_user_chat_image_gemini_model: response.sub_user_chat_image_gemini_model,
         });
         message.success("配置加载成功");
       }
@@ -90,6 +92,8 @@ export const SettingsPage: React.FC = () => {
           default_history_count: response.default_history_count,
           free_user_chat_image_model: response.free_user_chat_image_model,
           sub_user_chat_image_model: response.sub_user_chat_image_model,
+          free_user_chat_image_gemini_model: response.free_user_chat_image_gemini_model,
+          sub_user_chat_image_gemini_model: response.sub_user_chat_image_gemini_model,
         });
       }
     } catch (error: any) {
@@ -173,14 +177,18 @@ export const SettingsPage: React.FC = () => {
             </Form.Item>
 
             <Divider orientation="left">消息生图模型配置</Divider>
+            <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+              先选提供商（Gemini 或 fal.ai），选 Gemini 时由下方「Gemini 模型
+              ID」指定具体型号（如 gemini-2.5-flash-image、gemini-3-pro-image-preview）
+            </Text>
 
             <Form.Item
               name="free_user_chat_image_model"
-              label="免费用户模型"
-              rules={[{ required: true, message: "请选择免费用户模型" }]}
+              label="免费用户 - 模型提供商"
+              rules={[{ required: true, message: "请选择模型提供商" }]}
               extra={
                 <Text type="secondary">
-                  免费用户消息生图使用的模型（fal.ai 模型成本更低、速度更快）
+                  选 Gemini 时使用下方「免费用户 Gemini 模型 ID」；选 fal.ai 时直接使用对应模型
                 </Text>
               }
             >
@@ -202,11 +210,11 @@ export const SettingsPage: React.FC = () => {
 
             <Form.Item
               name="sub_user_chat_image_model"
-              label="订阅用户模型"
-              rules={[{ required: true, message: "请选择订阅用户模型" }]}
+              label="订阅用户 - 模型提供商"
+              rules={[{ required: true, message: "请选择模型提供商" }]}
               extra={
                 <Text type="secondary">
-                  订阅用户消息生图使用的模型（推荐使用 Gemini 高质量模型）
+                  选 Gemini 时使用下方「订阅用户 Gemini 模型 ID」；推荐 gemini-3-pro-image-preview
                 </Text>
               }
             >
@@ -224,6 +232,32 @@ export const SettingsPage: React.FC = () => {
                   ),
                 }))}
               />
+            </Form.Item>
+
+            <Form.Item
+              name="free_user_chat_image_gemini_model"
+              label="免费用户 Gemini 模型 ID"
+              rules={[{ required: true, message: "请输入 Vertex AI 模型 ID" }]}
+              extra={
+                <Text type="secondary">
+                  仅当上方「免费用户 - 模型提供商」选 Gemini 时生效，如 gemini-2.5-flash-image
+                </Text>
+              }
+            >
+              <Input placeholder="例如：gemini-2.5-flash-image" />
+            </Form.Item>
+
+            <Form.Item
+              name="sub_user_chat_image_gemini_model"
+              label="订阅用户 Gemini 模型 ID"
+              rules={[{ required: true, message: "请输入 Vertex AI 模型 ID" }]}
+              extra={
+                <Text type="secondary">
+                  仅当上方「订阅用户 - 模型提供商」选 Gemini 时生效，如 gemini-3-pro-image-preview
+                </Text>
+              }
+            >
+              <Input placeholder="例如：gemini-3-pro-image-preview" />
             </Form.Item>
 
             <Form.Item>

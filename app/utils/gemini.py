@@ -71,7 +71,7 @@ def get_genai_client():
 
             # Try to get project ID from credentials file
             project_id = None
-            location = "us-central1"  # Default location for Imagen
+            location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
 
             if os.path.exists(credentials_path):
                 with open(credentials_path, "r") as f:
