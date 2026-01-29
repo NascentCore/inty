@@ -352,9 +352,10 @@ class ImageGenerationService:
         message_content: str,
         user_id: Optional[str] = None,
         history_count: Optional[int] = None,
+        model: Optional[str] = None,
     ) -> Dict:
         """
-        使用 Gemini 2.5 Flash Image 生成聊天图片并更新到消息 meta_data
+        使用 Gemini 模型生成聊天图片并更新到消息 meta_data
 
         Args:
             db: 数据库会话
@@ -362,7 +363,10 @@ class ImageGenerationService:
             message_id: 要更新的消息ID
             agent_data: Agent数据
             message_content: 触发生图的消息内容
+            user_id: 用户ID
             history_count: 要使用的历史消息数量
+            model: Vertex AI 模型 ID，如 gemini-3-pro-image-preview、gemini-2.5-flash-image。
+                   None 时使用 gemini-2.5-flash-image 以保持向后兼容。
 
         Returns:
             包含图片信息的字典
@@ -502,9 +506,9 @@ class ImageGenerationService:
                 ),
             )
 
-            # 调用 Gemini 2.5 Flash Image 生成图片
+            gemini_model = model or "gemini-2.5-flash-image"
             response = client.models.generate_content(
-                model="gemini-2.5-flash-image",
+                model=gemini_model,
                 contents=contents,
                 config=generate_config,
             )

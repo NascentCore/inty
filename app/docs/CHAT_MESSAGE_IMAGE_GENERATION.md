@@ -2,7 +2,7 @@
 
 ## 概述
 
-消息生图功能允许用户基于聊天上下文为 AI 回复生成图片。该功能使用 Gemini 2.5 Flash Image 模型，通过 Agent 的参考图（背景图或头像）和聊天上下文生成符合角色外观一致性的图片。
+消息生图功能允许用户基于聊天上下文为 AI 回复生成图片。该功能使用 Gemini 模型（如 gemini-3-pro-image-preview、gemini-2.5-flash-image），通过 Agent 的参考图（背景图或头像）和聊天上下文生成符合角色外观一致性的图片。订阅用户和超级用户默认使用 `gemini-3-pro-image-preview`，免费用户使用 `gemini-2.5-flash-image`。若遇 404，可尝试将 `agent.vertex_ai_location` 设为 `"global"`。
 
 ## 架构概览
 
@@ -146,7 +146,9 @@ async def generate_chat_image_with_gemini(
     message_id: int,  # 必需参数：要更新的消息ID
     agent_data: dict,
     message_content: str,
+    user_id: Optional[str] = None,
     history_count: Optional[int] = None,
+    model: Optional[str] = None,  # Vertex AI 模型 ID，如 gemini-3-pro-image-preview
 ) -> Dict
 ```
 
@@ -167,9 +169,9 @@ async def generate_chat_image_with_gemini(
    - 将参考图 URL 转换为完整 HTTP URL（支持 `gs://` 到 HTTPS 的转换）
    - 如果两者都不存在，抛出 `ValueError`
 
-5. **调用 Gemini 2.5 Flash Image**
+5. **调用 Gemini 模型**
    - 使用 `google.genai` SDK（通过 `get_genai_client()` 获取客户端）
-   - 模型：`gemini-2.5-flash-image`
+   - 模型：由 `model` 参数指定，默认 `gemini-2.5-flash-image`。订阅用户通常使用 `gemini-3-pro-image-preview`，由配置 `sub_user_chat_image_gemini_model` 控制
    - 输入格式：
      - 参考图（`types.Part.from_uri()`，MIME 类型为 `image/jpeg`）
      - 文字提示词（`types.Part.from_text()`）
@@ -280,6 +282,9 @@ async def generate_chat_image_with_gemini(
 
 - 图片生成提示词模板：`IMAGE_GENERATION_PROMPT_TEMPLATE`（在代码中维护，可通过 `/api/v1/ai/agents/image-generation/config` 运行时更新）
 - 默认历史消息数量：`agent.image_generation_default_history_count`（`config.yaml` 中配置，默认 10）
+- 消息生图模型：`free_user_chat_image_model`、`sub_user_chat_image_model`（"gemini" 或 fal 模型名）
+- Gemini 模型 ID：`sub_user_chat_image_gemini_model`（默认 `gemini-3-pro-image-preview`）、`free_user_chat_image_gemini_model`（默认 `gemini-2.5-flash-image`）
+- Vertex AI 区域：`agent.vertex_ai_location`（默认 `us-central1`，设为 `global` 可改善 Preview 模型可用性）
 - 应用限额：`app.limits.free_user_image_gen_24h_limit`、`app.limits.subscribed_user_image_gen_24h_limit`
 - GCS 配置：`gcs.bucket`
 - Cloudflare CDN：`cloudflare.enabled`、`cloudflare.domain`

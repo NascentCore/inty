@@ -1456,17 +1456,19 @@ async def generate_chat_image(
         )
         raise HTTPException(status_code=400, detail="只能对最后一条AI回复生成图片")
 
-    # 确定使用的模型：订阅用户强制使用 gemini，免费用户使用配置或请求指定的模型
+    # 确定使用的模型：订阅用户和超级用户强制使用 gemini，免费用户使用配置或请求指定的模型
     from app.core.model_selection import select_chat_image_model
+    from app.core.user_privilege.superuser_check import is_superuser
 
     subscription_status = await subscription_service.get_user_subscription_status(
         db, user.id
     )
     is_subscribed = subscription_status.is_subscribed
+    is_admin = is_superuser(user)
 
     # 确定最终使用的模型
-    if is_subscribed:
-        # 订阅用户强制使用 gemini
+    if is_subscribed or is_admin:
+        # 订阅用户和超级用户强制使用 gemini
         selected_model = "gemini"
     elif model:
         # 免费用户使用请求指定的模型
@@ -1476,9 +1478,19 @@ async def generate_chat_image(
         selected_model = select_chat_image_model(user=user, is_subscribed=False)
 
     use_gemini = selected_model == "gemini"
+    if use_gemini:
+        agent_config = global_config_loaded_from_config_yaml.agent
+        # 订阅用户和超级用户使用 sub_user_chat_image_gemini_model（如 gemini-3-pro-image-preview）
+        gemini_model = (
+            agent_config.sub_user_chat_image_gemini_model
+            if (is_subscribed or is_admin)
+            else agent_config.free_user_chat_image_gemini_model
+        )
+    else:
+        gemini_model = None
     logger.info(
-        f"消息生图模型选择 - 订阅用户: {is_subscribed}, 请求模型: {model}, "
-        f"最终模型: {selected_model}"
+        f"消息生图模型选择 - 订阅用户: {is_subscribed}, 超级用户: {is_admin}, "
+        f"请求模型: {model}, 最终模型: {selected_model}"
     )
 
     # 调用图片生成服务
@@ -1523,6 +1535,7 @@ async def generate_chat_image(
                     message_content=message_content,
                     user_id=user_id,
                     history_count=history_count,
+                    model=gemini_model,
                 )
             )
         else:
@@ -1540,11 +1553,14 @@ async def generate_chat_image(
             )
         # 计算生成耗时
         generation_time_ms = int((time.time() - generation_start_time) * 1000)
-        # 添加模型信息和耗时到结果
-        image_generation_result["model"] = selected_model
+        # 添加模型信息和耗时到结果（Gemini 时使用实际 Vertex 模型 ID）
+        image_generation_result["model"] = (
+            gemini_model if use_gemini else selected_model
+        )
         image_generation_result["generation_time_ms"] = generation_time_ms
+        result_model = gemini_model if use_gemini else selected_model
         logger.info(
-            f"图片生成完成 - 模型: {selected_model}, 耗时: {generation_time_ms}ms"
+            f"图片生成完成 - 模型: {result_model}, 耗时: {generation_time_ms}ms"
         )
     except ValueError as e:
         error_message = str(e)
@@ -1690,7 +1706,7 @@ async def generate_chat_image(
                 "success": True,
                 "session_id": session_id,
                 "message_id": message_id,
-                "model": selected_model,
+                "model": image_generation_result.get("model"),
                 "generation_time_ms": image_generation_result.get("generation_time_ms"),
             },
         )
@@ -1698,7 +1714,8 @@ async def generate_chat_image(
     except Exception as e:
         logger.warning(f"记录图片生成用量失败: {str(e)}")
 
-    # 追加更新 meta_data，添加模型和耗时信息
+    # 追加更新 meta_data，添加模型和耗时信息（使用实际模型 ID，如 gemini-3-pro-image-preview）
+    actual_model = gemini_model if use_gemini else selected_model
     try:
         await chat_history_service.update_message_metadata(
             db=db,
@@ -1706,7 +1723,7 @@ async def generate_chat_image(
             message_id=message_id,
             metadata_update={
                 "generated_image": {
-                    "model": selected_model,
+                    "model": actual_model,
                     "generation_time_ms": generation_time_ms,
                 }
             },

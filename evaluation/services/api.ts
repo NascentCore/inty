@@ -1243,6 +1243,8 @@ export const chatImageApi = {
     default_history_count: number;
     free_user_chat_image_model: string;
     sub_user_chat_image_model: string;
+    free_user_chat_image_gemini_model: string;
+    sub_user_chat_image_gemini_model: string;
   }> => apiClient.get("/ai/agents/image-generation/config"),
 
   // 更新图片生成配置（仅超级用户）
@@ -1251,11 +1253,15 @@ export const chatImageApi = {
     default_history_count?: number;
     free_user_chat_image_model?: string;
     sub_user_chat_image_model?: string;
+    free_user_chat_image_gemini_model?: string;
+    sub_user_chat_image_gemini_model?: string;
   }): Promise<{
     prompt_template: string;
     default_history_count: number;
     free_user_chat_image_model: string;
     sub_user_chat_image_model: string;
+    free_user_chat_image_gemini_model: string;
+    sub_user_chat_image_gemini_model: string;
   }> => apiClient.put("/ai/agents/image-generation/config", config),
 };
 

@@ -1130,6 +1130,8 @@ async def get_image_generation_config(
             "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
             "free_user_chat_image_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_model,
             "sub_user_chat_image_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_model,
+            "free_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model,
+            "sub_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model,
         }
 
         logger.debug(f"用户 {current_user.id} 获取图片生成配置")
@@ -1229,6 +1231,16 @@ async def update_image_generation_config(
                 config["sub_user_chat_image_model"]
             )
 
+        if "free_user_chat_image_gemini_model" in config:
+            global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model = (
+                config["free_user_chat_image_gemini_model"]
+            )
+
+        if "sub_user_chat_image_gemini_model" in config:
+            global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model = (
+                config["sub_user_chat_image_gemini_model"]
+            )
+
         logger.info(f"超级用户 {current_user.id} 更新了图片生成配置")
 
         # 返回更新后的配置
@@ -1237,6 +1249,8 @@ async def update_image_generation_config(
             "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
             "free_user_chat_image_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_model,
             "sub_user_chat_image_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_model,
+            "free_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model,
+            "sub_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model,
         }
 
         return schemas.APIResponse.success(data=updated_config)

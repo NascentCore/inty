@@ -204,9 +204,15 @@ class AgentConfig:
     # 图片生成配置
     image_generation_default_history_count: int = 10
     # 消息生图（chat image）模型配置
-    # "gemini" 表示使用 Gemini 2.5 Flash Image，其他值为 fal.ai 模型名
+    # "gemini" 表示使用 Gemini，其他值为 fal.ai 模型名
     free_user_chat_image_model: str = "gemini"
     sub_user_chat_image_model: str = "gemini"
+    # 当 chat_image_model 为 "gemini" 时，使用的 Vertex AI 模型 ID
+    sub_user_chat_image_gemini_model: str = "gemini-3-pro-image-preview"
+    free_user_chat_image_gemini_model: str = "gemini-2.5-flash-image"
+    # Vertex AI 区域，用于 get_genai_client（消息生图、记忆抽取等）
+    # 设为 "global" 可改善 gemini-3-pro-image-preview 等 Preview 模型的可用性
+    vertex_ai_location: str = "us-central1"
     # 视频生成配置
     veo3_model: str = "veo-3.0-fast-generate-preview"  # Veo3 模型名称
     # 动图配置
