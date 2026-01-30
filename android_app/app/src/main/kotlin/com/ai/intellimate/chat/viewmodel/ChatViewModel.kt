@@ -174,13 +174,11 @@ class ChatViewModel : BaseVM() {
     private var lastSyncedEnergyPoints = 0
 
     init {
-        if (BuildConfig.BUILD_TYPE != "release") {
-            checkVipAgentUnlock()
+        checkVipAgentUnlock()
 
-            viewModelScope.launch {
-                _agentId.filterNotNull().collect {
-                    withContext(Dispatchers.IO) { characterRepository.refreshAgent(it) }
-                }
+        viewModelScope.launch {
+            _agentId.filterNotNull().collect {
+                withContext(Dispatchers.IO) { characterRepository.refreshAgent(it) }
             }
         }
     }
@@ -192,6 +190,17 @@ class ChatViewModel : BaseVM() {
 
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
+
+            viewModelScope.launch {
+                characterRepository.updateLocalAgent(agent.id) {
+                    it.copy(
+                        intro = agent.intro,
+                        opening = agent.opening,
+                        opening_audio_url = agent.opening_audio_url,
+                        isFollowed = agent.isFollowed
+                    )
+                }
+            }
 
             // Firebase Crashlytics - 设置自定义键
             FirebaseManager.setCustomKey("current_agent_id", agent.id)
