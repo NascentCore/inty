@@ -325,6 +325,30 @@ object UiConfigs {
 
         /** Explore页面滚动 - 每次手势允许的最大即时位移 */
         const val SCROLL_DELTA_THRESHOLD = 500f
+
+        /** Explore 关系类型筛选条配置 */
+        object RelationshipFilter {
+            /** 筛选条垂直内边距 */
+            val RowVerticalPadding = 8.dp
+
+            /** 筛选项之间的间距 */
+            val ChipSpacing = 8.dp
+
+            /** 筛选项高度 */
+            val ChipHeight = 32.dp
+
+            /** 筛选项圆角半径 */
+            val ChipCornerRadius = 16.dp
+
+            /** 筛选项水平内边距 */
+            val ChipHorizontalPadding = 12.dp
+
+            /** 筛选项垂直内边距 */
+            val ChipVerticalPadding = 6.dp
+
+            /** 筛选项边框宽度 */
+            val ChipBorderWidth = 1.dp
+        }
     }
 
     /** 底部导航栏配置 - 适用于底部导航栏的高度、图标大小、间距等设置 */

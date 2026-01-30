@@ -19,8 +19,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+
+private object RelationshipTagKeys {
+    const val ENCOUNTERING = "encountering"
+    const val LONG_TERM = "long-term relationship"
+    const val EXOTIC = "exotic"
+}
+
+enum class RelationshipType(val tagKey: String) {
+    ALL(""),
+    ENCOUNTERING(RelationshipTagKeys.ENCOUNTERING),
+    LONG_TERM(RelationshipTagKeys.LONG_TERM),
+    EXOTIC(RelationshipTagKeys.EXOTIC),
+}
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM(), ExploreFetchCallback {
@@ -44,6 +57,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
     // Paging数据流
     private val _agentsFlow = MutableStateFlow<Flow<PagingData<AgentInfo>>?>(null)
+
+    // 关系类型筛选
+    private val _relationshipFilter = MutableStateFlow(RelationshipType.ALL)
+    val relationshipFilter: StateFlow<RelationshipType> = _relationshipFilter.asStateFlow()
 
     // 是否已初始化
     private var isInitialized = false
@@ -144,23 +161,8 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         PageTrackingHelper.trackPageView(pageName = "ExplorePage", pageClass = "ExploreViewModel")
 
         // 使用app层的ExplorePagingRepository，支持事件回调
-        val initialFlow =
-            explorePagingRepository
-                .getRecommendAgentsFlow(useCache = true)
-                .map { pagingData ->
-                    // 分页会导致不同页面可能存在相同agent，临时去重解决方案，更好的解决方式需要重构整个流程，从根源上去重
-                    val agentIds = mutableSetOf<String>()
-
-                    pagingData.filter { item ->
-                        if (agentIds.contains(item.id)) {
-                            false // 过滤重复
-                        } else {
-                            agentIds.add(item.id)
-                            true
-                        }
-                    }
-                }
-                .cachedIn(viewModelScope)
+        val baseFlow = explorePagingRepository.getRecommendAgentsFlow(useCache = true)
+        val initialFlow = applyRelationshipFilter(baseFlow).cachedIn(viewModelScope)
 
         _agentsFlow.value = initialFlow
         isInitialized = true
@@ -185,8 +187,8 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 _agentsFlow.value = null
 
                 // 使用刷新方法，会更新sort seed并禁用缓存
-                val refreshFlow =
-                    explorePagingRepository.refreshRecommendAgents().cachedIn(viewModelScope)
+                val baseFlow = explorePagingRepository.refreshRecommendAgents()
+                val refreshFlow = applyRelationshipFilter(baseFlow).cachedIn(viewModelScope)
 
                 _agentsFlow.value = refreshFlow
             } catch (e: Exception) {
@@ -353,6 +355,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         isInitialized = false
         _characterThemes.value = emptyList()
         _isCacheLoaded.value = false
+        _relationshipFilter.value = RelationshipType.ALL
     }
 
     /** 从缓存加载主题专区列表（用于快速显示） */
@@ -522,6 +525,49 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         _searchResults.value = emptyList()
         _isSearching.value = false
         _hasSearchExecuted.value = false
+    }
+
+    fun setRelationshipFilter(type: RelationshipType) {
+        if (_relationshipFilter.value == type) {
+            return
+        }
+        _relationshipFilter.value = type
+    }
+
+    private fun applyRelationshipFilter(
+        baseFlow: Flow<PagingData<AgentInfo>>
+    ): Flow<PagingData<AgentInfo>> {
+        return relationshipFilter.combine(baseFlow) { filterType, pagingData ->
+            filterPagingData(pagingData, filterType)
+        }
+    }
+
+    private fun filterPagingData(
+        pagingData: PagingData<AgentInfo>,
+        relationshipType: RelationshipType,
+    ): PagingData<AgentInfo> {
+        val agentIds = mutableSetOf<String>()
+        return pagingData.filter { item ->
+            val isUnique = agentIds.add(item.id)
+            isUnique && matchesRelationshipType(item, relationshipType)
+        }
+    }
+
+    private fun matchesRelationshipType(
+        agent: AgentInfo,
+        relationshipType: RelationshipType,
+    ): Boolean {
+        if (relationshipType == RelationshipType.ALL) {
+            return true
+        }
+        val targetTag = normalizeRelationshipTag(relationshipType.tagKey)
+        return agent.tags?.asSequence()?.filterNotNull()?.any { tag ->
+            normalizeRelationshipTag(tag) == targetTag
+        } == true
+    }
+
+    private fun normalizeRelationshipTag(value: String): String {
+        return value.trim().lowercase().filterNot { it.isWhitespace() || it == '-' }
     }
 
     /** 刷新主题专区列表（用于下拉刷新，只有成功获取数据后才更新 UI） */

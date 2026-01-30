@@ -427,6 +427,10 @@
     <string name="explore_search_empty">No matching characters</string>
     <string name="explore_search_hint_text">Enter a name or #tag and tap search</string>
     <string name="explore_search_clear_desc">Clear search text</string>
+    <string name="explore_relationship_filter_all">All</string>
+    <string name="explore_relationship_filter_encountering">Encountering</string>
+    <string name="explore_relationship_filter_long_term">Long-term relationship</string>
+    <string name="explore_relationship_filter_exotic">Exotic</string>
 
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>
