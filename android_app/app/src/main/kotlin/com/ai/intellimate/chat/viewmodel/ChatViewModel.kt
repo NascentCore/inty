@@ -18,6 +18,7 @@ import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
@@ -379,13 +380,19 @@ class ChatViewModel : BaseVM() {
 
     fun chatUnlockByCredits() {
         viewModelScope.launch {
-            _agentId.value?.let {
+            _agentId.value?.let { agentId ->
+                val currentCredits = BoostManager.boostState.value.availablePoints
                 if (BoostManager.unlockVipAgent()) {
-                    characterRepository.unlockAgentByCredits(it)
+                    characterRepository.unlockAgentByCredits(agentId)
                 } else {
                     ToastUtils.showShort(R.string.credits_not_enough)
                     _vipRequest.trySend("Credits not enough!")
                 }
+                FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
+                    "agent_id" to agentId,
+                    "unlock_method" to "credits",
+                    "owed_credits" to currentCredits
+                )
             }
         }
     }
