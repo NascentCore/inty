@@ -79,12 +79,15 @@ async def fetch_existing_agent_names(session: AsyncSession) -> list[str]:
     return names
 
 
-def generate_characters(google_api_key: str, existing_names: list[str]) -> list[dict]:
+def generate_characters(
+    google_api_key: str, existing_names: list[str], model: str = "gemini-2.5-flash"
+) -> list[dict]:
     """调用 Gemini 生成 10 个角色信息
 
     Args:
         google_api_key: Google API 密钥
         existing_names: 数据库中已有的角色名称列表
+        model: Gemini 模型名（默认: gemini-2.5-flash）
 
     Returns:
         角色列表，每个角色包含 name 和 description
@@ -113,10 +116,10 @@ Make the characters diverse in name and scenario.
 
 IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
 
-    logger.info(f"调用 Gemini 生成角色，{prompt}")
+    logger.info(f"调用 Gemini 生成角色，model={model}")
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model=model,
             contents=prompt,
         )
         text = response.text.strip()
@@ -196,12 +199,14 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
 async def main(
     config: str = "sync_agents_dev_to_prod/config.yaml.example",
     target_count: int = 3,
+    model: str = "gemini-2.5-flash",
 ) -> int:
     """主函数：查询数据库、生成角色并批量创建
 
     Args:
         config: 配置文件路径，相对于 scripts/ 目录（默认: sync_agents_dev_to_prod/config.yaml.example）
         target_count: 目标创建角色数量（默认: 3，最大: 10）
+        model: Gemini 模型名（默认: gemini-2.5-flash）
     """
     if target_count < 1 or target_count > 10:
         logger.error("target_count 必须在 1-10 之间")
@@ -233,7 +238,7 @@ async def main(
             existing_names = await fetch_existing_agent_names(session)
 
             # 生成 10 个角色
-            characters = generate_characters(google_api_key, existing_names)
+            characters = generate_characters(google_api_key, existing_names, model)
 
             # 循环调用 Dify，达到目标数量即停止
             success_count = 0
