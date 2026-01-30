@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -67,12 +68,11 @@ fun HeartBottomAppBar(
 
     NavigationBar(
         modifier =
-            Modifier.background(HeartColor.primaryColor)
-                .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+            Modifier.windowInsetsPadding(NavigationBarDefaults.windowInsets.exclude(WindowInsets(bottom = 15.dp)))
                 .then(navigationBarModifier),
-        containerColor = Color.Transparent,
+        containerColor = HeartColor.primaryColor,
         tonalElevation = 8.dp,
-        windowInsets = WindowInsets(),
+        windowInsets = WindowInsets()
     ) {
         tabItems.forEach { tab ->
             val isSelected = selectedTab == tab.index
@@ -86,7 +86,7 @@ fun HeartBottomAppBar(
                     )
             ) {
                 NavigationBarItem(
-                    modifier = Modifier.align(Alignment.CenterVertically),
+                    modifier = Modifier.align(Alignment.Bottom),
                     selected = isSelected,
                     onClick = { onTabSelected(tab.index) },
                     icon = {
