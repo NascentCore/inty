@@ -52,6 +52,9 @@ COPY alembic/ alembic/
 COPY scripts/ scripts/
 # 方便操作后端数据库
 COPY devops/ devops/
+# IntelliMate 使用手册，用来给 IntelliMate 官方助手角色提供回答问题的提示词
+COPY docs/INTELLIMATE.md docs/INTELLIMATE.md
+# 启动脚本
 COPY start.sh .
 
 # 复制指定的配置文件到 config.yaml
