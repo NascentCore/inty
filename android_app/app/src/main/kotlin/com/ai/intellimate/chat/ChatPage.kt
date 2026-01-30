@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.utils.HeartAppUtils
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
@@ -89,6 +90,8 @@ import com.ai.intellimate.chat.ui.ChatTopBar
 import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.ui.ImagePickItem
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
+import com.ai.intellimate.chat.ui.OfficialAssistantShortcut
+import com.ai.intellimate.chat.ui.OfficialAssistantWelcomePanel
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
@@ -231,6 +234,36 @@ internal fun ChatPage(
                         listOf(MessageItem.Intro)
                     }
             }
+        }
+    val isOfficialAssistant by
+        remember(agentInfo?.id, agentInfo?.name) {
+            derivedStateOf { AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name) }
+        }
+    val hasConversationMessages by
+        remember {
+            derivedStateOf {
+                messages.itemSnapshotList.any { msg ->
+                    msg != null && !msg.isOpening() && msg.role != "system"
+                }
+            }
+        }
+    val shouldShowOfficialAssistantWelcome = isOfficialAssistant && !hasConversationMessages
+    val officialAssistantShortcuts =
+        remember {
+            listOf(
+                OfficialAssistantShortcut(
+                    labelResId = R.string.official_assistant_shortcut_create_character,
+                    promptResId = R.string.official_assistant_prompt_create_character,
+                ),
+                OfficialAssistantShortcut(
+                    labelResId = R.string.official_assistant_shortcut_explore_characters,
+                    promptResId = R.string.official_assistant_prompt_explore_characters,
+                ),
+                OfficialAssistantShortcut(
+                    labelResId = R.string.official_assistant_shortcut_write_story,
+                    promptResId = R.string.official_assistant_prompt_write_story,
+                ),
+            )
         }
 
     val hasLoadingMessage by remember {
@@ -603,6 +636,28 @@ internal fun ChatPage(
                             PaddingValues(top = UiConfigs.ChatPage.chatPageLazyColumnGapTop),
                     ) {
                         item { Spacer(Modifier.height(16.dp)) }
+                        if (shouldShowOfficialAssistantWelcome) {
+                            item("OfficialAssistantWelcome") {
+                                OfficialAssistantWelcomePanel(
+                                    title = stringResource(R.string.official_assistant_title),
+                                    subtitle = stringResource(R.string.official_assistant_subtitle),
+                                    appIconResId = R.mipmap.ic_launcher,
+                                    shortcuts = officialAssistantShortcuts,
+                                    onShortcutClick = { prompt ->
+                                        chatViewModel.inputData.value = prompt
+                                        chatViewModel.inputSelection.value = prompt.length
+                                        inputFocusRequester.requestFocus()
+                                    },
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .padding(
+                                                vertical =
+                                                    UiConfigs.ChatPage.OfficialAssistant
+                                                        .WelcomeVerticalPadding
+                                            ),
+                                )
+                            }
+                        }
 
                         if (!imagePickMessageId.isNullOrEmpty()) {
                             item("ImagePicker") {

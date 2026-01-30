@@ -633,6 +633,36 @@ object UiConfigs {
         /** 消息列表顶部留白距离 */
         val chatPageLazyColumnGapTop = 360.dp
 
+        /** 官方助手欢迎区配置 - 适用于 IntelliMate 聊天页空状态的引导模块 */
+        object OfficialAssistant {
+            /** 欢迎区上下间距 */
+            val WelcomeVerticalPadding = Spacing.MediumPlus
+
+            /** 标题与副标题之间的间距 */
+            val TitleSubtitleSpacing = Spacing.Tiny
+
+            /** 标题与快捷入口区域之间的间距 */
+            val HeaderToShortcutSpacing = Spacing.MediumPlus
+
+            /** 头像/图标大小 */
+            val HeaderIconSize = 44.dp
+
+            /** 快捷入口圆角 */
+            val ShortcutChipCornerRadius = 18.dp
+
+            /** 快捷入口水平内边距 */
+            val ShortcutChipHorizontalPadding = 14.dp
+
+            /** 快捷入口垂直内边距 */
+            val ShortcutChipVerticalPadding = 8.dp
+
+            /** 快捷入口水平间距 */
+            val ShortcutChipHorizontalSpacing = Spacing.Small
+
+            /** 快捷入口垂直间距 */
+            val ShortcutChipVerticalSpacing = Spacing.Small
+        }
+
         object KeepTalkingButton {
             /** Keep Talking 悬浮按钮宽度（用于扩大点击热区） */
             val width = 50.dp

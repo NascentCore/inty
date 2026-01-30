@@ -431,9 +431,18 @@
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>
     <string name="tab_messages">Messages</string>
+    <string name="tab_intellimate">IntelliMate</string>
     <string name="tab_create">Create</string>
     <string name="tab_explore">Explore</string>
     <string name="tab_me">Me</string>
+    <string name="official_assistant_title">Hi</string>
+    <string name="official_assistant_subtitle">Where should we start?</string>
+    <string name="official_assistant_shortcut_create_character">Create a character</string>
+    <string name="official_assistant_prompt_create_character">Help me create a character.</string>
+    <string name="official_assistant_shortcut_explore_characters">Explore characters</string>
+    <string name="official_assistant_prompt_explore_characters">Show me characters to explore.</string>
+    <string name="official_assistant_shortcut_write_story">Write a story</string>
+    <string name="official_assistant_prompt_write_story">Write a short story for me.</string>
 
     <string name="str_edit_my_persona">Edit My Persona</string>
     <string name="str_name">Name</string>

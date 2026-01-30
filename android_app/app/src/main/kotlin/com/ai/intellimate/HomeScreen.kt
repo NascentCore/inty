@@ -1,6 +1,7 @@
 package com.ai.intellimate
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -10,11 +11,6 @@ import ai.sxwl.android.design.ui.HeartBottomAppBar
 import ai.sxwl.android.design.ui.HeartBottomTabItem
 import ai.sxwl.android.firebase.FirebaseManager
 import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -93,7 +89,7 @@ fun HomeScreen(
             when (selectedTab.value) {
                 HomeTabIndex.Chat -> "chat"
                 HomeTabIndex.Messages -> "messages"
-                HomeTabIndex.Create -> "create"
+                HomeTabIndex.Create -> "official_assistant"
                 HomeTabIndex.Explore -> "explore"
                 HomeTabIndex.Profile -> "profile"
             }
@@ -105,19 +101,7 @@ fun HomeScreen(
         )
     }
 
-    // 创建共享的 CreateRoleActivity launcher，用于处理从 Create Tab 创建后的刷新
-    // 当 CreateRoleActivity 返回成功时，如果当前在 Profile Tab，需要刷新列表
     var shouldRefreshProfile by remember { mutableStateOf(false) }
-    val createRoleLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                // 标记需要刷新 Profile 列表，并切换回 “Me” 页面
-                shouldRefreshProfile = true
-                mainViewModel.selectTab(HomeTabIndex.Profile.ordinal)
-            }
-        }
 
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
@@ -176,7 +160,6 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize().background(HeartColor.primaryColor),
         containerColor = Color.Transparent,
         bottomBar = {
-            val context = LocalContext.current
             HeartBottomAppBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
@@ -202,12 +185,10 @@ fun HomeScreen(
                         // 正常点击，更新记录
                         lastTabClickTime = currentTime
                         lastTabIndex = tabIndex
-                        handleTabSelectionWithLauncher(
+                        handleTabSelection(
                             navController,
                             tabIndex,
-                            context,
                             mainViewModel,
-                            createRoleLauncher,
                         )
                     }
                 },
@@ -363,20 +344,22 @@ private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
     return RESUB_REMINDER_CYCLE_SECONDS * multiplier
 }
 
-/** 处理Tab选择逻辑（带 launcher） */
-private fun handleTabSelectionWithLauncher(
+/** 处理Tab选择逻辑 */
+private fun handleTabSelection(
     navController: NavController,
     tabIndex: Int,
-    context: Context,
     mainViewModel: MainViewModel,
-    createRoleLauncher: ActivityResultLauncher<Intent>,
 ) {
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-            // 使用 CreateRoleActivity 提供的方法获取 Intent
-            //            val intent = CreateRoleActivity.getIntent(context, null)
-            //            createRoleLauncher.launch(intent)
-            navController.navigate(Routes.Creat.CreateRole)
+            navController.navigate(
+                Routes.Chat.chatPage(
+                    AgentConstants.INTELLIMATE_AGENT_ID,
+                    false,
+                    shouldAutoFocusInput = false,
+                    fromPage = "official_assistant_tab",
+                )
+            )
         }
         return
     }
@@ -410,7 +393,7 @@ private fun HomeContent(
         }
 
         HomeTabIndex.Create -> {
-            // Create tab 在 handleTabSelection 中处理，不显示内容
+            // 官方助手入口在 handleTabSelection 中处理，不显示内容
         }
 
         HomeTabIndex.Explore -> {
@@ -704,9 +687,9 @@ private val defaultTabItems =
         ),
         HeartBottomTabItem(
             index = 2,
-            selectedIcon = R.drawable.tab_icon_create,
-            unselectedIcon = R.drawable.tab_icon_create,
-            labelResId = R.string.tab_create,
+            selectedIcon = R.mipmap.ic_launcher,
+            unselectedIcon = R.mipmap.ic_launcher,
+            labelResId = R.string.tab_intellimate,
         ),
         HeartBottomTabItem(
             index = 3,
