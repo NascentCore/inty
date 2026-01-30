@@ -181,7 +181,7 @@ fun ChatTopBar(
             // 名字区域 - 不使用 weight，让所有元素靠左对齐
             Column {
                 // 能量点数区域，目前还未开放显示角色能量点数；需要不断跟踪角色跟用户聊天的共享点数
-                // 而不是角色总共的 boost points，因为那样用户感觉没有实际的提升。
+                // 而不是角色总共的 credits，因为那样用户感觉没有实际的提升。
                 if (showPoints) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(

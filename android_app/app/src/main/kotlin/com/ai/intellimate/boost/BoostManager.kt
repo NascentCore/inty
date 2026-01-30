@@ -240,7 +240,7 @@ object BoostManager {
     }
 
     /**
-     * 手动添加 boost points（用于节日奖励等场景）。
+     * 手动添加 credits（用于节日奖励等场景）。
      *
      * 设计决策：
      * 1. 增强的错误处理和日志记录：
@@ -251,10 +251,10 @@ object BoostManager {
      *     - 使用协程在后台执行：不阻塞调用线程
      *     - 捕获所有异常：确保不会因异常导致应用崩溃
      * 3. 使用场景：
-     *     - 节日庆祝弹窗奖励（100 points）
+     *     - 节日庆祝弹窗奖励（100 credits）
      *     - 其他手动奖励场景
      *
-     * @param points 要添加的 points 数量，必须大于 0
+     * @param points 要添加的 credits 数量，必须大于 0
      */
     fun requestManualPoints(points: Int) {
         val repo = repository
