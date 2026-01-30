@@ -9,6 +9,7 @@ import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
@@ -407,12 +408,25 @@ internal fun ChatPage(
     val uiState by chatViewModel.uiState.collectAsState()
 
     if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && showBackButton) {
-        agentInfo?.let {
+        agentInfo?.let { agent ->
             VipAgentUnlockDialog(
-                agent = it,
+                agent = agent,
                 unlockByCredits = chatViewModel::chatUnlockByCredits,
-                unlockBySub = { navController.navigate(Routes.Me.VipCenter) },
-                onDismissRequest = { navController.navigateUp() },
+                unlockBySub = {
+                    FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
+                        "agent_id" to agent.id,
+                        "unlock_method" to "subscription",
+                    )
+                    navController.navigate(Routes.Me.VipCenter)
+                },
+                onDismissRequest = {
+                    navController.navigateUp()
+
+                    FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
+                        "agent_id" to agent.id,
+                        "unlock_method" to "close_dialog"
+                    )
+                },
             )
         }
     }

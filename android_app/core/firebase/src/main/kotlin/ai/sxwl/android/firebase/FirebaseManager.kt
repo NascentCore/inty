@@ -101,6 +101,7 @@ object FirebaseManager {
                     Events.SUBSCRIPTION_SUCCESS to 1.0, // 订阅验证成功
                     Events.SUBSCRIPTION_FAILURE to 1.0, // 订阅验证失败
                     Events.FREE_LIMIT_REACHED to 1.0, // 达到免费限制
+                    Events.VIP_AGENT_UNLOCK to 1.0, // 聊天页解锁 VIP 角色
                     Events.SUBSCRIPTION_PRICE_VIEW to 1.0, // 订阅价格查看（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_SUCCESS to 1.0, // Explore接口请求成功（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_ERROR to 1.0, // Explore接口请求错误（100%采样）
@@ -535,6 +536,7 @@ object FirebaseManager {
         const val SUBSCRIPTION_FAILURE = "subscription_failure" // 订阅验证失败
         const val SUBSCRIPTION_PRICE_VIEW = "subscription_price_view" // 订阅价格查看
         const val FREE_LIMIT_REACHED = "free_limit_reached"
+        const val VIP_AGENT_UNLOCK = "vip_agent_unlock" // 聊天页解锁 VIP 角色（含解锁方式、角色 id，credits 解锁时含当前积分）
 
         // 用户交互事件
         const val CHAT_PAGE_CLICK = "chat_page_click" // 聊天页面点击
