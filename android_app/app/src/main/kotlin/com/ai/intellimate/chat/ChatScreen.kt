@@ -1,6 +1,5 @@
 package com.ai.intellimate.chat
 
-import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.background
@@ -11,16 +10,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
-import com.ai.intellimate.BuildConfig
-import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.FeedbackRequestDialog
-import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.xb.navigation.Routes
 

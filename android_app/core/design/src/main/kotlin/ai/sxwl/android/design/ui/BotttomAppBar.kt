@@ -68,11 +68,13 @@ fun HeartBottomAppBar(
 
     NavigationBar(
         modifier =
-            Modifier.windowInsetsPadding(NavigationBarDefaults.windowInsets.exclude(WindowInsets(bottom = 15.dp)))
+            Modifier.windowInsetsPadding(
+                    NavigationBarDefaults.windowInsets.exclude(WindowInsets(bottom = 15.dp))
+                )
                 .then(navigationBarModifier),
         containerColor = HeartColor.primaryColor,
         tonalElevation = 8.dp,
-        windowInsets = WindowInsets()
+        windowInsets = WindowInsets(),
     ) {
         tabItems.forEach { tab ->
             val isSelected = selectedTab == tab.index

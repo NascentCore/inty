@@ -26,7 +26,6 @@ import android.content.Context
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
 import androidx.paging.map
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
@@ -176,7 +175,7 @@ class ChatViewModel : BaseVM() {
     private var boundAgentId: String? = null
     private var lastSyncedEnergyPoints = 0
 
-    //显示订阅
+    // 显示订阅
     private val _vipRequest = Channel<String>()
     val vipRequest = _vipRequest.receiveAsFlow()
 
@@ -197,14 +196,13 @@ class ChatViewModel : BaseVM() {
 
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
-
             viewModelScope.launch {
                 characterRepository.updateLocalAgent(agent.id) {
                     it.copy(
                         intro = agent.intro,
                         opening = agent.opening,
                         opening_audio_url = agent.opening_audio_url,
-                        isFollowed = agent.isFollowed
+                        isFollowed = agent.isFollowed,
                     )
                 }
             }
@@ -391,7 +389,7 @@ class ChatViewModel : BaseVM() {
                 FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
                     "agent_id" to agentId,
                     "unlock_method" to "credits",
-                    "owed_credits" to currentCredits
+                    "owed_credits" to currentCredits,
                 )
             }
         }

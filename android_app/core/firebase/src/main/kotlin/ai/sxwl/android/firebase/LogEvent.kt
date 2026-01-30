@@ -27,8 +27,7 @@ fun String.logEvent(vararg params: Pair<String, Any?>) {
 }
 
 /**
- * 使用 DSL 构建参数并上报事件。
- * 参数经 [FirebaseManager.safeEventParams] 校验：参数数量限制、key/value 规范化与截断。
+ * 使用 DSL 构建参数并上报事件。 参数经 [FirebaseManager.safeEventParams] 校验：参数数量限制、key/value 规范化与截断。
  *
  * 使用示例:
  * ```kotlin
@@ -38,10 +37,12 @@ fun String.logEvent(vararg params: Pair<String, Any?>) {
  * }
  * ```
  *
- * @param buildParams 在 [MutableMap] 上执行的 lambda，用于添加事件参数（key 为 String，value 为 Any?，null 会被转为 "unknown"）
+ * @param buildParams 在 [MutableMap] 上执行的 lambda，用于添加事件参数（key 为 String，value 为 Any?，null 会被转为
+ *   "unknown"）
  */
 fun String.logEvent(buildParams: MutableMap<String, Any?>.() -> Unit) {
     val rawParams = mutableMapOf<String, Any?>().apply(buildParams)
-    val params = FirebaseManager.safeEventParams(*rawParams.map { it.key to it.value }.toTypedArray())
+    val params =
+        FirebaseManager.safeEventParams(*rawParams.map { it.key to it.value }.toTypedArray())
     FirebaseManager.logEvent(this, params as Map<String, Any>)
 }

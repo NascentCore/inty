@@ -1,5 +1,6 @@
 # CREATED_BY_AGENT
 """Agent 专属提示词配置，支持按 agent_id 或 agent_name 覆盖 main_prompt / mode_prompt。"""
+
 from dataclasses import dataclass
 from typing import Dict, Optional
 
