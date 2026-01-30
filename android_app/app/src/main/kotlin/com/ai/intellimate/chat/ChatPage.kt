@@ -256,6 +256,13 @@ internal fun ChatPage(
     // 记录上一个 Agent ID，用于判断是否从其他 agent 滑动而来（HorizontalPager 场景）
     val previousAgentId = remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(Unit) {
+        chatViewModel.vipRequest
+            .collect {
+                navController.navigate(Routes.Me.VipCenter)
+            }
+    }
+
     LaunchedEffect(
         isCurrentPage,
         agentInfo?.id,
@@ -763,11 +770,7 @@ internal fun ChatPage(
                                     .clip(RoundedCornerShape(inputConfig.CornerRadius))
                                     .background(AppColors.DarkPurpleOverlay60)
                                     .noRippleClickable {
-                                        if (boostState.availablePoints < unlockCost) {
-                                            navController.navigate(Routes.Me.VipCenter)
-                                        } else {
-                                            chatViewModel.chatUnlockByCredits()
-                                        }
+                                        chatViewModel.chatUnlockByCredits()
                                     },
                             contentAlignment = Alignment.Center,
                         ) {

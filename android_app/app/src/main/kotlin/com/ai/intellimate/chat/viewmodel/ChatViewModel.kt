@@ -42,6 +42,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -172,6 +174,10 @@ class ChatViewModel : BaseVM() {
     private var characterEnergyJob: Job? = null
     private var boundAgentId: String? = null
     private var lastSyncedEnergyPoints = 0
+
+    //显示订阅
+    private val _vipRequest = Channel<String>()
+    val vipRequest = _vipRequest.receiveAsFlow()
 
     init {
         checkVipAgentUnlock()
@@ -377,7 +383,8 @@ class ChatViewModel : BaseVM() {
                 if (BoostManager.unlockVipAgent()) {
                     characterRepository.unlockAgentByCredits(it)
                 } else {
-                    ToastUtils.showShort("Credits not enough!")
+                    ToastUtils.showShort(R.string.credits_not_enough)
+                    _vipRequest.trySend("Credits not enough!")
                 }
             }
         }

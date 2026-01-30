@@ -43,9 +43,10 @@ class CharacterRepository(
 
     suspend fun updateLocalAgent(agentId: String, update: (AgentInfo) -> AgentInfo) {
         withContext(dispatcher) {
-            val agent = dao.getCharacter(agentId)?.toAgentInfo() ?: AgentInfo(id = agentId)
+            val entity = dao.getCharacter(agentId)
+            val agent = entity?.toAgentInfo() ?: AgentInfo(id = agentId)
 
-            dao.upsert(update(agent).toCharacterEntity(null))
+            dao.upsert(update(agent).toCharacterEntity(entity))
         }
     }
 
