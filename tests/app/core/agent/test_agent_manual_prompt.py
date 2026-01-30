@@ -1,5 +1,6 @@
 # CREATED_BY_AGENT
 from app.core.agent import agent as agent_module
+from app.core.agent import prompts
 from app.core.agent.agent import Agent, INTELLIMATE_AGENT_ID, INTELLIMATE_AGENT_NAME
 
 
@@ -68,3 +69,27 @@ def test_non_intellimate_official_does_not_inject_manual_prompt(monkeypatch):
     contents = _get_contents(agent.build_system_messages("", None))
 
     assert not any("##IntelliMate User Manual\n" in content for content in contents)
+
+
+def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypatch):
+    """IntelliMate 的 main_prompt 与 mode_prompt 应为空，不注入默认角色扮演提示词。"""
+    manual_path = tmp_path / "INTELLIMATE.md"
+    manual_path.write_text("# IntelliMate User Guide\nMANUAL_CONTENT", encoding="utf-8")
+    monkeypatch.setattr(agent_module, "INTELLIMATE_USER_MANUAL_PATH", manual_path)
+    agent_module._load_intellimate_user_manual.cache_clear()
+
+    agent = _build_agent(
+        agent_id=INTELLIMATE_AGENT_ID,
+        name=INTELLIMATE_AGENT_NAME,
+        personality="Warm personality.",
+    )
+
+    assert agent._get_effective_main_prompt() == ""
+    assert agent._get_effective_mode_prompt() == ""
+
+    contents = _get_contents(agent.build_system_messages("", None))
+    default_main = prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
+    default_mode = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
+    assert not any(default_main in c for c in contents)
+    assert not any(default_mode in c for c in contents)
+    assert any("##IntelliMate User Manual" in c for c in contents)

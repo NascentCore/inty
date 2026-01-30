@@ -32,6 +32,11 @@ from typing_extensions import deprecated
 
 from app import models
 from app.core.agent import prompt_template, prompts
+from app.core.agent.agent_prompt_configs import (
+    INTELLIMATE_AGENT_ID,
+    INTELLIMATE_AGENT_NAME,
+    get_agent_prompt_override,
+)
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.models import chat_history
 from app.services import chat_history_service
@@ -55,9 +60,6 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
 
-# 这与 android app 中使用的 agent ID 和 name 一致。
-INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
-INTELLIMATE_AGENT_NAME = "IntelliMate"
 INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX = "##IntelliMate User Manual\n"
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -311,6 +313,9 @@ class Agent:
         return self.agent_id == INTELLIMATE_AGENT_ID
 
     def _get_effective_main_prompt(self) -> str:
+        override = get_agent_prompt_override(self.agent_id, self.name)
+        if override is not None and override.main_prompt is not None:
+            return override.main_prompt
         # 如果配置为强制使用默认提示词，则直接返回默认值
         if global_config_loaded_from_config_yaml.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
@@ -326,6 +331,9 @@ class Agent:
         return prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
 
     def _get_effective_mode_prompt(self) -> str:
+        override = get_agent_prompt_override(self.agent_id, self.name)
+        if override is not None and override.mode_prompt is not None:
+            return override.mode_prompt
         # 如果配置为强制使用默认提示词，则直接返回默认值
         if global_config_loaded_from_config_yaml.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
@@ -363,24 +371,29 @@ class Agent:
         # logger.debug(f"角色是否用户创建: {is_char_user_created}")
 
         main_prompt = self._get_effective_main_prompt()
-        rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=main_prompt, char=self.name, user=user_name
-        )
-        system_messages.append(SystemMessage(content=rendered_main_prompt))
+        if main_prompt:
+            rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=main_prompt, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_main_prompt))
 
         character_messages = self._build_character_context(user_name=user_name)
         system_messages.extend(character_messages)
 
-        if chat_settings and chat_settings.premium_mode:
+        override = get_agent_prompt_override(self.agent_id, self.name)
+        if override is not None and override.mode_prompt is not None:
+            mode_prompt = override.mode_prompt
+        elif chat_settings and chat_settings.premium_mode:
             logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
             mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
         else:
             logger.debug(f"Using normal mode prompt")
             mode_prompt = self._get_effective_mode_prompt()
-        rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=mode_prompt, char=self.name, user=user_name
-        )
-        system_messages.append(SystemMessage(content=rendered_mode_prompt))
+        if mode_prompt:
+            rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=mode_prompt, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_mode_prompt))
 
         if chat_settings and chat_settings.style_prompt:
             system_messages.append(SystemMessage(content=chat_settings.style_prompt))
