@@ -275,7 +275,7 @@
     <string name="vip_character_chat_locked_content">This is a VIP character. Go Premium to chat with VIP characters and unlock exclusive features!</string>
     <string name="vip_character_chat_locked_cta">Subscribe to Chat VIP 🔥</string>
     <string name="unlock_with_credits">Unlock with Credits</string>
-    <string name="unlock_with_credits_price">Unlock with %d credits</string>
+    <string name="unlock_with_credits_price">Unlock by %d credits</string>
     <string name="close">Close</string>
 
     <!-- VIP Components -->
@@ -605,6 +605,7 @@
     <!-- Login -->
     <string name="login_welcome">Thousands of AI characters await your match.</string>
     <string name="upload_selfie_tips">Simply upload a clear, front-facing photo; avoid obscuring or blurring it.</string>
+    <string name="credits_not_enough">Credits not enough!</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A relationship to explore</item>
