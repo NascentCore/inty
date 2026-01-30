@@ -258,10 +258,7 @@ internal fun ChatPage(
     val previousAgentId = remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        chatViewModel.vipRequest
-            .collect {
-                navController.navigate(Routes.Me.VipCenter)
-            }
+        chatViewModel.vipRequest.collect { navController.navigate(Routes.Me.VipCenter) }
     }
 
     LaunchedEffect(
@@ -424,7 +421,7 @@ internal fun ChatPage(
 
                     FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
                         "agent_id" to agent.id,
-                        "unlock_method" to "close_dialog"
+                        "unlock_method" to "close_dialog",
                     )
                 },
             )
@@ -783,9 +780,7 @@ internal fun ChatPage(
                                     .height(inputConfig.MinHeight)
                                     .clip(RoundedCornerShape(inputConfig.CornerRadius))
                                     .background(AppColors.DarkPurpleOverlay60)
-                                    .noRippleClickable {
-                                        chatViewModel.chatUnlockByCredits()
-                                    },
+                                    .noRippleClickable { chatViewModel.chatUnlockByCredits() },
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
