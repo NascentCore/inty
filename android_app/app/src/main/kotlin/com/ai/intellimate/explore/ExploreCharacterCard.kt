@@ -132,7 +132,7 @@ fun isCreatedWithin7Days(agent: AgentInfo): Boolean {
  * - 仅用于 Explore 推荐列表的 `ExploreCharacterCard`。
  *
  * 预期视觉效果：
- * - 在卡片右上角绘制一个高饱和强对比色的三角角标，覆盖在图片上方但不影响收藏按钮的点击。
+ * - 在卡片左上角绘制一个高饱和强对比色的三角角标，覆盖在图片上方。
  * - 角标内显示 “VIP” 文案，强化视觉提醒。
  *
  * 可配置项：
@@ -153,9 +153,9 @@ private fun VipCornerHighlighter(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val triangle =
                 Path().apply {
-                    moveTo(size.width, 0f)
-                    lineTo(size.width, size.height)
-                    lineTo(0f, 0f)
+                    moveTo(0f, 0f)
+                    lineTo(size.width, 0f)
+                    lineTo(0f, size.height)
                     close()
                 }
             drawPath(path = triangle, color = AppColors.VipHighlighterStrong)
@@ -164,10 +164,10 @@ private fun VipCornerHighlighter(
         Text(
             text = label,
             modifier =
-                Modifier.align(Alignment.TopEnd)
+                Modifier.align(Alignment.TopStart)
                     .padding(
                         top = CardConfig.VipTextPaddingTop,
-                        end = CardConfig.VipTextPaddingEnd,
+                        start = CardConfig.VipTextPaddingEnd,
                     ),
             fontSize = CardConfig.VipTextSize,
             fontWeight = FontWeight.Black,
@@ -225,22 +225,8 @@ fun ExploreCharacterCard(
             }
         }
     val isVip = remember(filteredTags) { filteredTags.any { normalizeTag(it) == "vip" } }
-    val favoriteButtonTopPadding =
-        remember(isVip) {
-            if (isVip) {
-                CardConfig.VipCornerSize + CardConfig.VipFavoriteTopOffset
-            } else {
-                CardConfig.FavoriteButtonPadding
-            }
-        }
-    val favoriteButtonEndPadding =
-        remember(isVip) {
-            if (isVip) {
-                CardConfig.FavoriteButtonPadding + CardConfig.VipFavoriteExtraPadding
-            } else {
-                CardConfig.FavoriteButtonPadding
-            }
-        }
+    val favoriteButtonTopPadding = CardConfig.FavoriteButtonPadding
+    val favoriteButtonEndPadding = CardConfig.FavoriteButtonPadding
 
     // 获取静态图片URL
     val staticImageUrl =
@@ -439,8 +425,8 @@ fun ExploreCharacterCard(
         if (isVip) {
             VipCornerHighlighter(
                 modifier =
-                    Modifier.align(Alignment.TopEnd)
-                        .clip(RoundedCornerShape(topEnd = CardConfig.CornerRadius)),
+                    Modifier.align(Alignment.TopStart)
+                        .clip(RoundedCornerShape(topStart = CardConfig.CornerRadius)),
                 label = stringResource(com.ai.intellimate.R.string.vip_badge_label),
                 contentDescription =
                     stringResource(com.ai.intellimate.R.string.vip_badge_content_description),
