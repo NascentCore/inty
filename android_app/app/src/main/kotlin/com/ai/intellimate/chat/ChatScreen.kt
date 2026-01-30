@@ -54,18 +54,6 @@ internal fun ChatScreen(
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-
-    fun isVipTag(tag: String?): Boolean {
-        val normalized =
-            tag?.trim()?.removePrefix("#")?.lowercase()?.takeIf { it.isNotBlank() } ?: return false
-        return normalized == "vip"
-    }
-
-    val isVipCharacter =
-        remember(agentInfo?.id, agentInfo?.tags) { agentInfo?.tags?.any { isVipTag(it) } == true }
-
-    val showVipCharacterLockedDialog = isVipCharacter && !vipStatus.isSubscribed
 
     Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
         // 背景图放在最底层，不受 imePadding 影响
@@ -88,22 +76,6 @@ internal fun ChatScreen(
             onCall = onCall,
             fromPage = fromPage,
         )
-
-        // VIP 角色聊天权限拦截：非订阅用户不允许进入 VIP 角色聊天
-        if (showVipCharacterLockedDialog && BuildConfig.BUILD_TYPE == "release") {
-            val dialogData =
-                ChatDialogData(
-                    R.drawable.img_unlimit_dialog_bg,
-                    stringResource(R.string.vip_character_chat_locked_content),
-                    stringResource(R.string.vip_character_chat_locked_cta),
-                )
-            UnlimitChatDialog(
-                dialogData = dialogData,
-                onCancel = { navController.popBackStack() },
-                onSure = { navController.navigate(Routes.Me.VipCenter) },
-                onMoreInfo = { navController.navigate(Routes.Me.VipCenter) },
-            )
-        }
 
         // 反馈请求对话框
         if (showFeedbackDialog) {

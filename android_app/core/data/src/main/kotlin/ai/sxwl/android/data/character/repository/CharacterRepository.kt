@@ -41,6 +41,14 @@ class CharacterRepository(
         return dao.observeCharacter(agentId).filterNotNull()
     }
 
+    suspend fun updateLocalAgent(agentId: String, update: (AgentInfo) -> AgentInfo) {
+        withContext(dispatcher) {
+            val agent = dao.getCharacter(agentId)?.toAgentInfo() ?: AgentInfo(id = agentId)
+
+            dao.upsert(update(agent).toCharacterEntity(null))
+        }
+    }
+
     suspend fun refreshAgent(agentId: String): HttpResult<AgentInfo> {
         return runCatching { NetServiceMgr.getChatApi().getAgentInfo(agentId) }
             .onSuccess {
