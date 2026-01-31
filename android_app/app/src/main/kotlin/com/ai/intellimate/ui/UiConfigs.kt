@@ -432,6 +432,9 @@ object UiConfigs {
         /** 区域之间的间距 */
         val SectionSpacing = 16.dp
 
+        /** 个人页区块横幅圆角半径（Premium、Vibe Mode、Daily Check-in 横幅统一使用） */
+        val SectionBannerCornerRadius = 8.dp
+
         /** 底部间距 */
         val BottomSpacing = 8.dp
 
@@ -497,8 +500,8 @@ object UiConfigs {
             /** Vibe 模式横幅高度 */
             val BannerHeight = 92.dp
 
-            /** Vibe 模式圆角半径 */
-            val CornerRadius = 20.dp
+            /** Vibe 模式圆角半径（与 SectionBannerCornerRadius 一致） */
+            val CornerRadius = SectionBannerCornerRadius
 
             /** Vibe 模式边框宽度 */
             val BorderWidth = 1.dp
