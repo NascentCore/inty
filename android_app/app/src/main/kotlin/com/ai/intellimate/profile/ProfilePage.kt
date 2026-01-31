@@ -989,7 +989,7 @@ private fun MyAgentCard(
 private object DailyRewardsBannerStyle {
     /** 最小高度，保证与其他横幅视觉一致；实际高度随文字内容自适应 */
     val MinHeight = 76.dp
-    val Shape = RoundedCornerShape(UiConfigs.MePage.VibeMode.CornerRadius)
+    val Shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
     val BorderWidth = UiConfigs.MePage.VibeMode.BorderWidth
     /** 可点击状态边框色，与 Vibe Mode 未打开时一致 */
     val BorderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
@@ -1167,7 +1167,7 @@ private fun VibeModeBanner(
                 )
         }
 
-    val shape = RoundedCornerShape(UiConfigs.MePage.VibeMode.CornerRadius)
+    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
     val borderColor =
         if (isActive) Color.White.copy(alpha = 0.45f)
         else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)

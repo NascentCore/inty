@@ -233,7 +233,7 @@ internal fun PremiumBanner(
         modifier =
             Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius))
                 .height(UiConfigs.MePage.VipBannerHeight)
                 .clickable {
                     val currentTime = System.currentTimeMillis()
