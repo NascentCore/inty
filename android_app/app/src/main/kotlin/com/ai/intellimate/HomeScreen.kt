@@ -318,11 +318,8 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
                     } else {
                         // 跳转到订阅中心
                         navController.navigate(Routes.Me.VipCenter)
-                        //                        VipCenterActivity.launch(context,
-                        // VipCenterActivity.HOME_EXPIRED_DIALOG)
                     }
                 }
-
                 showExpiredDialog = false
             },
         )
