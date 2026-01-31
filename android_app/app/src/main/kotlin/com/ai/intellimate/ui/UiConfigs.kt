@@ -435,6 +435,12 @@ object UiConfigs {
         /** 个人页区块横幅圆角半径（Premium、Vibe Mode、Daily Check-in 横幅统一使用） */
         val SectionBannerCornerRadius = 8.dp
 
+        /** 个人页区块横幅垂直内边距（Vibe Mode、Daily Check-in、Create Character 横幅统一使用） */
+        val SectionBannerVerticalPadding = 8.dp
+
+        /** 个人页区块横幅水平内边距（Vibe Mode、Daily Check-in、Create Character 横幅统一使用） */
+        val SectionBannerHorizontalPadding = 18.dp
+
         /** 底部间距 */
         val BottomSpacing = 8.dp
 

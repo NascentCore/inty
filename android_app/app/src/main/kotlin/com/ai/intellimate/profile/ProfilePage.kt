@@ -559,6 +559,13 @@ private fun ProfileHeader(
             )
         }
 
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        CreateCharacterBanner(
+            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            title = stringResource(R.string.me_create_character_banner_title),
+            onClick = { navController.navigate(Routes.Creat.createRole("")) },
+        )
+
         Spacer(Modifier.height(UiConfigs.MePage.BottomSpacing))
     }
 }
@@ -987,24 +994,20 @@ private fun MyAgentCard(
 }
 
 private object DailyRewardsBannerStyle {
-    /** 最小高度，保证与其他横幅视觉一致；实际高度随文字内容自适应 */
-    val MinHeight = 76.dp
+    /** 最小高度，保证内容紧凑；实际高度随文字内容自适应 */
+    val MinHeight = 56.dp
     val Shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
     val BorderWidth = UiConfigs.MePage.VibeMode.BorderWidth
     /** 可点击状态边框色，与 Vibe Mode 未打开时一致 */
     val BorderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
     val TitleColor = Color.White
     val SubtitleColor = Color.White.copy(alpha = 0.7f)
-    val DisabledAlpha = 0.6f
+    const val DISABLED_ALPHA = 0.6f
     val DisabledBorderColor = Color.White.copy(alpha = 0.08f)
     val DisabledTitleColor = Color.White.copy(alpha = 0.75f)
     val DisabledSubtitleColor = Color.White.copy(alpha = 0.55f)
     val TitleSize = 18.sp
     val SubtitleSize = 14.sp
-    val HorizontalPadding = UiConfigs.MePage.VibeMode.InnerPadding
-    val VerticalPadding = UiConfigs.MePage.VibeMode.InnerPadding
-    val IllustrationHeight = 64.dp
-    val IllustrationWidth = 92.dp
     /** 可点击状态背景渐变，与 Vibe Mode 未打开时一致 */
     val BackgroundGradientColors = listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
     val DisabledBackgroundGradientColors = listOf(Color(0xFF5D5D62), Color(0xFF3A3A3E))
@@ -1063,10 +1066,10 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                     shape = DailyRewardsBannerStyle.Shape,
                 )
                 .then(clickableModifier)
-                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledAlpha else 1f)
+                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DISABLED_ALPHA else 1f)
                 .padding(
-                    horizontal = DailyRewardsBannerStyle.HorizontalPadding,
-                    vertical = DailyRewardsBannerStyle.VerticalPadding,
+                    horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                    vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1081,7 +1084,6 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(2.dp))
             Text(
                 text =
                     stringResource(
@@ -1199,7 +1201,10 @@ private fun VibeModeBanner(
                 color = borderColor,
                 shape = shape,
             )
-            .padding(UiConfigs.MePage.VibeMode.InnerPadding)
+            .padding(
+                horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
+            )
 
     Row(
         modifier =
@@ -1224,7 +1229,6 @@ private fun VibeModeBanner(
             )
 
             if (!isActive) {
-                Spacer(Modifier.height(UiConfigs.Spacing.Small))
                 Text(
                     text = stringResource(R.string.vibe_mode_subtitle),
                     color = Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
@@ -1255,6 +1259,51 @@ private fun VibeModeBanner(
                 Box(modifier = Modifier.matchParentSize().clickable(onClick = onRequestSubscribe))
             }
         }
+    }
+}
+
+/**
+ * 创建角色引导 Banner - Me 页最后一个横幅，点击跳转创建角色页。
+ * 样式与 Vibe Mode、Daily Check-in 等区块横幅一致：圆角、边框、渐变背景、单行标题。
+ */
+@Composable
+private fun CreateCharacterBanner(
+    modifier: Modifier = Modifier,
+    title: String,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
+    val backgroundBrush =
+        Brush.horizontalGradient(
+            listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd),
+        )
+    val borderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(backgroundBrush)
+                .border(
+                    width = UiConfigs.MePage.VibeMode.BorderWidth,
+                    color = borderColor,
+                    shape = shape,
+                )
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                    vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = UiConfigs.Typography.ButtonLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
