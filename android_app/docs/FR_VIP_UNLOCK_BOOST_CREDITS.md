@@ -28,7 +28,7 @@
 
 | 场景 | 用户可见效果 |
 |------|--------------|
-| **任意积分增加** | 屏幕顶部弹出 **Banner**：「Added X Boost Points! Total Y Boost Points!」，数秒后自动消失。 |
+| **任意积分增加** | 屏幕顶部弹出 **Banner**：「Added X Credits! Total Y Credits!」，数秒后自动消失。 |
 
 ### VIP 角色解锁
 
@@ -46,7 +46,7 @@
 
 | 术语 | 含义 |
 |------|------|
-| **Credits / 积分** | 与 **Boost 积分（points）** 同义，即 `BoostState.availablePoints`，用于解锁 VIP 角色、投入角色 Boost 等。 |
+| **Credits / 积分** | 即 `BoostState.availablePoints`，用于解锁 VIP 角色、投入角色 Boost 等；产品用语统一为 Credits。 |
 | **Boost** | 用户将积分投入到某角色，提升该角色在排行榜的「能量」与排名；每次投入以 `BoostConfig.BOOST_STEP_POINTS`（100）为步长。 |
 | **VIP 角色** | 带有 `tags` 中含 `"vip"`（不区分大小写）的角色；未订阅用户需满足一定条件才能聊天。 |
 | **解锁 VIP 角色** | 通过**积分解锁**或**订阅会员**获得当日与该 VIP 角色聊天的权限。 |
@@ -151,7 +151,7 @@
    - 数据：`BoostStorage.pointChanged` → `BoostManager.pointChanged`，`Flow<Pair<Int,Int>>`，即 `(delta, newTotal)`。  
    - 消费：`MainActivity` 内 `LaunchedEffect` 收集 `BoostManager.pointChanged`，写入 `creditsPointChanged`。  
    - 展示：当 `creditsPointChanged.first > 0`（仅**增加**）时，弹出 `EnergyCelebrationBanner(onDismissRequest, content = Text(stringResource(R.string.energy_points_add_title, delta, total)))`。  
-   - 文案：`energy_points_add_title` 形如「Added %1$d Boost Points! Total %2$d Boost Points!」。
+   - 文案：`energy_points_add_title` 形如「Added %1$d Credits! Total %2$d Credits!」。
 
 2. **聊天页级：按 `chatMessagePoints` 里程碑的庆祝卡**  
    - 数据：`BoostManager.boostState` 的 `chatMessagePoints`（仅来自 `PointSource.Chat` 的累计）。  

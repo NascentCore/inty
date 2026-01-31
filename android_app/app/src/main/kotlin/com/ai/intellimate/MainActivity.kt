@@ -495,12 +495,12 @@ class MainActivity : BaseActivity() {
                 onDismiss = { showHolidayCelebrationDialog = false },
                 onPrimaryClick = {
                     // 设计决策：点击按钮后执行三个操作：
-                    // 1. 添加 100 个 boost points 作为节日奖励（提升用户参与度）
+                    // 1. 添加 100 credits 作为节日奖励（提升用户参与度）
                     // 2. 显示成功提示（即时反馈）
                     // 3. 导航到随机圣诞角色（增强节日主题体验，引导用户探索圣诞内容）
                     LogUtils.d(
                         "MainActivity",
-                        "Holiday celebration button clicked, adding 100 boost points",
+                        "Holiday celebration button clicked, adding 100 credits",
                     )
                     BoostManager.requestManualPoints(100)
                     ToastUtils.showShort(R.string.holiday_celebration_points_added)
