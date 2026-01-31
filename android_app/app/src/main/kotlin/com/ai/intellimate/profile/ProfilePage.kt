@@ -559,6 +559,13 @@ private fun ProfileHeader(
             )
         }
 
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        CreateCharacterBanner(
+            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            title = stringResource(R.string.me_create_character_banner_title),
+            onClick = { navController.navigate(Routes.Creat.createRole("")) },
+        )
+
         Spacer(Modifier.height(UiConfigs.MePage.BottomSpacing))
     }
 }
@@ -987,8 +994,8 @@ private fun MyAgentCard(
 }
 
 private object DailyRewardsBannerStyle {
-    /** 最小高度，保证与其他横幅视觉一致；实际高度随文字内容自适应 */
-    val MinHeight = 76.dp
+    /** 最小高度，保证内容紧凑；实际高度随文字内容自适应 */
+    val MinHeight = 56.dp
     val Shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
     val BorderWidth = UiConfigs.MePage.VibeMode.BorderWidth
     /** 可点击状态边框色，与 Vibe Mode 未打开时一致 */
@@ -1002,7 +1009,7 @@ private object DailyRewardsBannerStyle {
     val TitleSize = 18.sp
     val SubtitleSize = 14.sp
     val HorizontalPadding = UiConfigs.MePage.VibeMode.InnerPadding
-    val VerticalPadding = UiConfigs.MePage.VibeMode.InnerPadding
+    val VerticalPadding = 12.dp
     val IllustrationHeight = 64.dp
     val IllustrationWidth = 92.dp
     /** 可点击状态背景渐变，与 Vibe Mode 未打开时一致 */
@@ -1199,7 +1206,10 @@ private fun VibeModeBanner(
                 color = borderColor,
                 shape = shape,
             )
-            .padding(UiConfigs.MePage.VibeMode.InnerPadding)
+            .padding(
+                horizontal = UiConfigs.MePage.VibeMode.InnerPadding,
+                vertical = 12.dp,
+            )
 
     Row(
         modifier =
@@ -1255,6 +1265,51 @@ private fun VibeModeBanner(
                 Box(modifier = Modifier.matchParentSize().clickable(onClick = onRequestSubscribe))
             }
         }
+    }
+}
+
+/**
+ * 创建角色引导 Banner - Me 页最后一个横幅，点击跳转创建角色页。
+ * 样式与 Vibe Mode、Daily Check-in 等区块横幅一致：圆角、边框、渐变背景、单行标题。
+ */
+@Composable
+private fun CreateCharacterBanner(
+    modifier: Modifier = Modifier,
+    title: String,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
+    val backgroundBrush =
+        Brush.horizontalGradient(
+            listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd),
+        )
+    val borderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(backgroundBrush)
+                .border(
+                    width = UiConfigs.MePage.VibeMode.BorderWidth,
+                    color = borderColor,
+                    shape = shape,
+                )
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = UiConfigs.MePage.VibeMode.InnerPadding,
+                    vertical = 12.dp,
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = UiConfigs.Typography.ButtonLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

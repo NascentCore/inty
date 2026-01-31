@@ -16,7 +16,7 @@
     <string name="no_agent">Create your own characters now!</string>
     <string name="vibe_mode_title">The Vibe Mode</string>
     <string name="vibe_mode_active_title">Enjoy the vibe</string>
-    <string name="vibe_mode_subtitle">Exclusive access to pre-release features and perks for Premium subscribers</string>
+    <string name="vibe_mode_subtitle">Exclusive access to pre-release features</string>
     <string name="vibe_mode_toggle_content_desc">Toggle Vibe Mode</string>
     <string name="me_icons_row_help">Help Center</string>
     <string name="me_icons_row_discord">Discord</string>
@@ -367,6 +367,7 @@
     <string name="profile_premium_banner_button_activate">Activate now</string>
     <string name="profile_daily_rewards_title">Daily Check-in</string>
     <string name="profile_daily_rewards_subtitle">Get %1$d Credits</string>
+    <string name="me_create_character_banner_title">Create your own character</string>
     <string name="check_in_day_together">💗 Day %1$d Together</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
