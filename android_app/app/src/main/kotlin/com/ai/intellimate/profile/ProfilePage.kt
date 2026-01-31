@@ -1262,10 +1262,7 @@ private fun VibeModeBanner(
     }
 }
 
-/**
- * 创建角色引导 Banner - Me 页最后一个横幅，点击跳转创建角色页。
- * 样式与 Vibe Mode、Daily Check-in 等区块横幅一致：圆角、边框、渐变背景、单行标题。
- */
+/** 创建角色引导 Banner - Me 页最后一个横幅，点击跳转创建角色页。 样式与 Vibe Mode、Daily Check-in 等区块横幅一致：圆角、边框、渐变背景、单行标题。 */
 @Composable
 private fun CreateCharacterBanner(
     modifier: Modifier = Modifier,
@@ -1274,9 +1271,7 @@ private fun CreateCharacterBanner(
 ) {
     val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
     val backgroundBrush =
-        Brush.horizontalGradient(
-            listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd),
-        )
+        Brush.horizontalGradient(listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd))
     val borderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
 
     Row(
