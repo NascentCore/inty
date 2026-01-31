@@ -196,13 +196,8 @@ fun HomeScreen(
                         if (selectedTab.value == HomeTabIndex.Explore) {
                             mainViewModel.triggerExploreReset()
                         }
-                        // 重置计时器，避免连续触发
-                        lastTabClickTime = 0
-                        lastTabIndex = -1
                     } else {
                         // 正常点击，更新记录
-                        lastTabClickTime = currentTime
-                        lastTabIndex = tabIndex
                         handleTabSelectionWithLauncher(
                             navController,
                             tabIndex,
