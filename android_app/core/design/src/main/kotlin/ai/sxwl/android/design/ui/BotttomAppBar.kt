@@ -76,9 +76,11 @@ fun HeartBottomAppBar(
         tonalElevation = 8.dp,
         windowInsets = WindowInsets(),
     ) {
+        val centerTabIndex = tabItems.size / 2
         tabItems.forEach { tab ->
             val isSelected = selectedTab == tab.index
             val iconRes = if (isSelected) tab.selectedIcon else tab.unselectedIcon
+            val tabIconSize = if (tab.index == centerTabIndex) iconSize * 1.8f else iconSize
 
             CompositionLocalProvider(
                 LocalDensity provides
@@ -96,7 +98,7 @@ fun HeartBottomAppBar(
                             Image(
                                 painter = painterResource(id = iconRes),
                                 contentDescription = null,
-                                modifier = Modifier.size(iconSize),
+                                modifier = Modifier.size(tabIconSize),
                             )
                             if (tab.hasRedDot) HeartRedDot(Modifier.align(Alignment.TopEnd))
                         }

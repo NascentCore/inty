@@ -687,9 +687,9 @@ private val defaultTabItems =
         ),
         HeartBottomTabItem(
             index = 2,
-            selectedIcon = R.drawable.tab_icon_create,
-            unselectedIcon = R.drawable.tab_icon_create,
-            labelResId = R.string.tab_intellimate,
+            selectedIcon = R.drawable.app_icon,
+            unselectedIcon = R.drawable.app_icon,
+            // labelResId = R.string.tab_intellimate,
         ),
         HeartBottomTabItem(
             index = 3,
