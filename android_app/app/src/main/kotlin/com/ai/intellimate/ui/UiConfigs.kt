@@ -500,9 +500,6 @@ object UiConfigs {
             /** Vibe 模式横幅高度 */
             val BannerHeight = 92.dp
 
-            /** Vibe 模式圆角半径（与 SectionBannerCornerRadius 一致） */
-            val CornerRadius = SectionBannerCornerRadius
-
             /** Vibe 模式边框宽度 */
             val BorderWidth = 1.dp
 

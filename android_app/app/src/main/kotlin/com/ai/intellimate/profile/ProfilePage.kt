@@ -1167,7 +1167,7 @@ private fun VibeModeBanner(
                 )
         }
 
-    val shape = RoundedCornerShape(UiConfigs.MePage.VibeMode.CornerRadius)
+    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
     val borderColor =
         if (isActive) Color.White.copy(alpha = 0.45f)
         else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
