@@ -1002,16 +1002,12 @@ private object DailyRewardsBannerStyle {
     val BorderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
     val TitleColor = Color.White
     val SubtitleColor = Color.White.copy(alpha = 0.7f)
-    val DisabledAlpha = 0.6f
+    const val DISABLED_ALPHA = 0.6f
     val DisabledBorderColor = Color.White.copy(alpha = 0.08f)
     val DisabledTitleColor = Color.White.copy(alpha = 0.75f)
     val DisabledSubtitleColor = Color.White.copy(alpha = 0.55f)
     val TitleSize = 18.sp
     val SubtitleSize = 14.sp
-    val HorizontalPadding = UiConfigs.MePage.VibeMode.InnerPadding
-    val VerticalPadding = 12.dp
-    val IllustrationHeight = 64.dp
-    val IllustrationWidth = 92.dp
     /** 可点击状态背景渐变，与 Vibe Mode 未打开时一致 */
     val BackgroundGradientColors = listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
     val DisabledBackgroundGradientColors = listOf(Color(0xFF5D5D62), Color(0xFF3A3A3E))
@@ -1070,10 +1066,10 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                     shape = DailyRewardsBannerStyle.Shape,
                 )
                 .then(clickableModifier)
-                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledAlpha else 1f)
+                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DISABLED_ALPHA else 1f)
                 .padding(
-                    horizontal = DailyRewardsBannerStyle.HorizontalPadding,
-                    vertical = DailyRewardsBannerStyle.VerticalPadding,
+                    horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                    vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1088,7 +1084,6 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(2.dp))
             Text(
                 text =
                     stringResource(
@@ -1207,8 +1202,8 @@ private fun VibeModeBanner(
                 shape = shape,
             )
             .padding(
-                horizontal = UiConfigs.MePage.VibeMode.InnerPadding,
-                vertical = 12.dp,
+                horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
             )
 
     Row(
@@ -1234,7 +1229,6 @@ private fun VibeModeBanner(
             )
 
             if (!isActive) {
-                Spacer(Modifier.height(UiConfigs.Spacing.Small))
                 Text(
                     text = stringResource(R.string.vibe_mode_subtitle),
                     color = Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
@@ -1298,8 +1292,8 @@ private fun CreateCharacterBanner(
                 )
                 .clickable(onClick = onClick)
                 .padding(
-                    horizontal = UiConfigs.MePage.VibeMode.InnerPadding,
-                    vertical = 12.dp,
+                    horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                    vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
