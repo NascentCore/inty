@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -211,11 +212,9 @@ fun HomeScreen(
                         )
                     }
                 },
-                iconSize = UiConfigs.BottomBar.TabIconSize,
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
                 height = UiConfigs.BottomBar.Height,
                 labelSpacing = UiConfigs.BottomBar.TabIconLabelSpacing,
-                bottomSpace = UiConfigs.BottomBar.BottomSpacing,
             )
         },
         contentWindowInsets = WindowInsets.navigationBars,
@@ -695,29 +694,34 @@ private val defaultTabItems =
             selectedIcon = R.drawable.tab_icon_home_selected,
             unselectedIcon = R.drawable.tab_icon_chat,
             labelResId = R.string.tab_home,
+            // 不能使用 uiconfigs 因为依赖关系是单向的，uiconfigs 定义于 app 模块，core 模块无法直接访问 app 模块的变量
+            iconSize = 24.dp,
         ),
         HeartBottomTabItem(
             index = 1,
             selectedIcon = R.drawable.tab_icon_messages_selected,
             unselectedIcon = R.drawable.tab_icon_messages,
             labelResId = R.string.tab_messages,
+            iconSize = 24.dp,
         ),
         HeartBottomTabItem(
             index = 2,
-            selectedIcon = R.drawable.tab_icon_create,
-            unselectedIcon = R.drawable.tab_icon_create,
-            labelResId = R.string.tab_create,
+            selectedIcon = R.drawable.app_icon,
+            unselectedIcon = R.drawable.app_icon,
+            iconSize = 32.dp,
         ),
         HeartBottomTabItem(
             index = 3,
             selectedIcon = R.drawable.tab_icon_explore_selected,
             unselectedIcon = R.drawable.tab_icon_explore,
             labelResId = R.string.tab_explore,
+            iconSize = 24.dp,
         ),
         HeartBottomTabItem(
             index = 4,
             selectedIcon = R.drawable.tab_icon_me_selected,
             unselectedIcon = R.drawable.tab_icon_me,
             labelResId = R.string.tab_me,
+            iconSize = 24.dp,
         ),
     )

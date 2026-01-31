@@ -52,11 +52,9 @@ fun HeartBottomAppBar(
     modifier: Modifier = Modifier,
     selectedTab: Int = 0,
     tabItems: List<HeartBottomTabItem> = bottomTabItems,
-    iconSize: Dp = 24.dp,
     textSize: TextUnit = 12.sp,
     height: Dp? = null,
     labelSpacing: Dp = 4.dp,
-    bottomSpace: Dp = 0.dp,
     onTabSelected: (Int) -> Unit = {},
 ) {
     val navigationBarModifier =
@@ -96,7 +94,7 @@ fun HeartBottomAppBar(
                             Image(
                                 painter = painterResource(id = iconRes),
                                 contentDescription = null,
-                                modifier = Modifier.size(iconSize),
+                                modifier = Modifier.size(tab.iconSize),
                             )
                             if (tab.hasRedDot) HeartRedDot(Modifier.align(Alignment.TopEnd))
                         }
@@ -144,6 +142,7 @@ data class HeartBottomTabItem(
     val label: String = "", // 标签文字（直接字符串）
     @StringRes val labelResId: Int? = null, // 标签文字资源 ID（支持国际化，优先级高于 label）
     val hasRedDot: Boolean = false, // 是否有红点
+    val iconSize: Dp,
 ) {
     init {
         require(label.isEmpty() || labelResId == null) {
@@ -162,6 +161,7 @@ private val bottomTabItems =
             selectedIcon = R.drawable.ic_tab_chat_selected,
             unselectedIcon = R.drawable.ic_tab_chat_unselected,
             label = "聊天",
+            iconSize = 24.dp,
         ),
         HeartBottomTabItem(
             index = 1,
@@ -169,24 +169,28 @@ private val bottomTabItems =
             unselectedIcon = R.drawable.ic_tab_notification_unselected,
             label = "消息",
             hasRedDot = true,
+            iconSize = 24.dp,
         ),
         HeartBottomTabItem(
             index = 2,
             selectedIcon = R.drawable.ic_tab_ai,
             unselectedIcon = R.drawable.ic_tab_ai,
             label = "Create",
+            iconSize = 24.dp,
         ),
         HeartBottomTabItem(
             index = 3,
             selectedIcon = R.drawable.ic_tab_recommend_selected,
             unselectedIcon = R.drawable.ic_tab_recommend_unselected,
             label = "推荐",
+            iconSize = 24.dp,
         ),
         HeartBottomTabItem(
             index = 4,
             selectedIcon = R.drawable.ic_tab_profile_selected,
             unselectedIcon = R.drawable.ic_tab_profile_unselected,
             label = "我的",
+            iconSize = 24.dp,
         ),
     )
 
