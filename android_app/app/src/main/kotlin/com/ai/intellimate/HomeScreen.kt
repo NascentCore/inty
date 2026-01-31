@@ -694,7 +694,7 @@ private val defaultTabItems =
             selectedIcon = R.drawable.tab_icon_home_selected,
             unselectedIcon = R.drawable.tab_icon_chat,
             labelResId = R.string.tab_home,
-            // 不能使用 uiconfigs 因为依赖guan
+            // 不能使用 uiconfigs 因为依赖关系是单向的，uiconfigs 定义于 app 模块，core 模块无法直接访问 app 模块的变量
             iconSize = 24.dp,
         ),
         HeartBottomTabItem(
