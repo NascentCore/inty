@@ -178,7 +178,10 @@ internal fun ProfilePage(
 
             // LazyGrid 区域
             if (validDrafts.isEmpty() && agents.isEmpty()) {
-                AgentsEmptyUI(modifier = Modifier.fillMaxWidth())
+                AgentsEmptyUI(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { navController.navigate(Routes.Creat.createRole("")) },
+                )
             } else {
                 Spacer(Modifier.height(UiConfigs.MePage.EmptyStateContentSpacing))
 
