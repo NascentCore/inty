@@ -2,6 +2,10 @@ CREATED_BY_AGENT
 
 # OFFICIAL AI ASSISTANT 设计概要
 
+## 问题
+
+如何安排目前的创建角色功能
+
 ## 人员安排
 
 @思雪 UX/UI 设计
