@@ -73,17 +73,13 @@ import kotlin.random.Random
 
 @Preview
 @Composable
-internal fun AgentsEmptyUI(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-) {
+internal fun AgentsEmptyUI(modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     Column(modifier) {
         Spacer(Modifier.height(UiConfigs.MePage.EmptyStateTopSpacing))
 
         AsyncImage(
             modifier =
-                Modifier
-                    .size(UiConfigs.MePage.EmptyStateIconSize)
+                Modifier.size(UiConfigs.MePage.EmptyStateIconSize)
                     .align(Alignment.CenterHorizontally)
                     .clickable(onClick = onClick),
             model = R.drawable.img_empty_magic,

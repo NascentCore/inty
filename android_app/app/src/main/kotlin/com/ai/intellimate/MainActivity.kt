@@ -420,9 +420,7 @@ class MainActivity : BaseActivity() {
             }
         }
 
-        LifecycleResumeEffect(Unit) {
-            onPauseOrDispose {}
-        }
+        LifecycleResumeEffect(Unit) { onPauseOrDispose {} }
 
         // 在首次显示时执行初始化操作
         LaunchedEffect(Unit) {
