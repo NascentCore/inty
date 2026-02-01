@@ -2,6 +2,14 @@ CREATED_BY_AGENT
 
 # OFFICIAL AI ASSISTANT 设计概要
 
+## 人员安排
+
+@思雪 UX/UI 设计
+@琢誉 产品设计
+@亚雄 产品负责人
+@陈平 前端开发
+@董刚 后端开发
+
 ## 概述
 - 将底部中间的 **Create** tab 替换为 **IntelliMate** 官方助手入口。
 - 点击入口进入官方助手的专属聊天页，首屏风格参考 Gemini 的欢迎页。
