@@ -335,6 +335,7 @@ class MainActivity : BaseActivity() {
         // 直接使用ViewModel的StateFlow，实现响应式UI更新
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
+        val selectedTab by mainViewModel.selectedTab.collectAsState()
 
         // 设计决策：使用会话级标记而非日期级持久化
         // 原因：
@@ -404,22 +405,22 @@ class MainActivity : BaseActivity() {
             // 场景3：用户已登录且已显示过，或日期已过期，不做任何操作
         }
 
-        // 用户从未登录 -> 已登录时，尝试展示随机 tips（同一 session 仅一次）
+        // 登出时仅隐藏 tips 弹窗，不重置 session 门控（同一前台 session 内不应重复弹）
         LaunchedEffect(isLoggedIn) {
-            if (isLoggedIn) {
-                tryShowRandomIntelliMateTip()
-                return@LaunchedEffect
+            if (!isLoggedIn) {
+                showIntelliMateTipDialog = false
+                intelliMateTipText = null
             }
-            // 登出时仅隐藏弹窗，不重置 session 门控（同一前台 session 内不应重复弹）
-            showIntelliMateTipDialog = false
-            intelliMateTipText = null
         }
 
-        // App 从后台回到前台时（Activity resume）尝试展示随机 tips（同一 session 仅一次）
-        LifecycleResumeEffect(isLoggedIn) {
-            if (isLoggedIn) {
+        // 仅在用户打开 Me 页（Profile tab）时尝试展示随机 tips，避免在其他页面打扰
+        LaunchedEffect(selectedTab) {
+            if (selectedTab == HomeTabIndex.Profile && isLoggedIn) {
                 tryShowRandomIntelliMateTip()
             }
+        }
+
+        LifecycleResumeEffect(Unit) {
             onPauseOrDispose {}
         }
 
