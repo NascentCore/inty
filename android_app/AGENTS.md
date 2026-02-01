@@ -49,3 +49,7 @@
 - 禁止使用魔法值（如 `10.dp`）——将 UI 常量定义在 `core/design` token 或 `MaterialTheme` 中，通过入参传递并提供合理默认值。
 - 容器组件应转发 padding/shape/间距；默认配色/字重基于 `MaterialTheme.colorScheme/typography` 或自定义 `CompositionLocal`。
 - Activity/组件需要提供清晰的 `launch`/`onNavigate` 入参，避免在组件内部持有上下文。
+
+## Android Studio
+
+- 图片转换为 webp 格式：https://developer.android.com/studio/write/convert-webp?hl=zh-cn
