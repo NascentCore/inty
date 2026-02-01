@@ -493,7 +493,7 @@ object UiConfigs {
         val EmptyStateBottomSpacing = 16.dp
 
         /** 空状态插图（画笔图标）尺寸 */
-        val EmptyStateIconSize = 80.dp
+        val EmptyStateIconSize = 100.dp
 
         /** 空状态内容间距 */
         val EmptyStateContentSpacing = 10.dp
