@@ -9,13 +9,27 @@
 from datetime import date, datetime, timedelta, timezone
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import global_config_loaded_from_config_yaml
+from app.db.session import AsyncSessionLocal
 from app.models.user_analytics_report import UserAnalyticsReport
+from app.services.user_analytics_service import UserAnalyticsService
 
 BACKFILL_DAILY_DAYS = 30
-from app.services.user_analytics_service import UserAnalyticsService
+
+
+async def _ensure_statement_timeout(db: AsyncSession) -> None:
+    uar_cfg = getattr(
+        global_config_loaded_from_config_yaml,
+        "user_analytics_report",
+        None,
+    )
+    timeout_sec = getattr(uar_cfg, "statement_timeout_sec", 600)
+    await db.execute(
+        text(f"SET LOCAL statement_timeout = '{timeout_sec * 1000}'")
+    )
 
 ALL_USERS_REGISTER_START = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
@@ -29,6 +43,7 @@ async def compute_and_save_daily_report(
     用户范围：register_start=2020-01-01, register_end=report_date+1
     活跃范围：activity_start=report_date, activity_end=report_date+1
     """
+    await _ensure_statement_timeout(db)
     reg_start = ALL_USERS_REGISTER_START
     reg_end = datetime.combine(
         report_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc
@@ -124,6 +139,7 @@ async def compute_and_save_weekly_report(
     用户范围：register_start=2020-01-01, register_end=week_start_date+7
     活跃范围：activity_start=week_start_date, activity_end=week_start_date+7
     """
+    await _ensure_statement_timeout(db)
     reg_start = ALL_USERS_REGISTER_START
     week_end = week_start_date + timedelta(days=7)
     reg_end = datetime.combine(
@@ -283,14 +299,22 @@ async def backfill_missing_reports(
 
     daily_count = 0
     for d in missing_daily:
-        r = await compute_and_save_daily_report(db, d)
-        if r is not None:
-            daily_count += 1
+        try:
+            async with AsyncSessionLocal() as report_db:
+                r = await compute_and_save_daily_report(report_db, d)
+                if r is not None:
+                    daily_count += 1
+        except Exception as e:
+            logger.warning(f"日报 {d} 补算失败: {e}")
 
     weekly_count = 0
     for d in missing_weekly:
-        r = await compute_and_save_weekly_report(db, d)
-        if r is not None:
-            weekly_count += 1
+        try:
+            async with AsyncSessionLocal() as report_db:
+                r = await compute_and_save_weekly_report(report_db, d)
+                if r is not None:
+                    weekly_count += 1
+        except Exception as e:
+            logger.warning(f"周报 {d} 补算失败: {e}")
 
     return (daily_count, weekly_count)
