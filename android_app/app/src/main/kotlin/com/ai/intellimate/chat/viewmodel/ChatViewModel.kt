@@ -13,7 +13,7 @@ import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.domain.ChatRepository
-import ai.sxwl.android.data.chat.local.db.toModel
+import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
@@ -68,13 +68,7 @@ class ChatViewModel : BaseVM() {
     private val chatMessageRepository = ChatMessageRepository()
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
     private val characterRepository: CharacterRepository = DataModule.getCharacterRepository()
-    private val sendMessageUseCase = DataModule.sendMessageUseCase
-    private val loadChatHistoryUseCase = DataModule.loadChatHistoryUseCase
-    private val syncChatDataUseCase = DataModule.syncChatDataUseCase
-    private val updateMessageFeedbackUseCase = DataModule.updateMessageFeedbackUseCase
-    private val recallMessageUseCase = DataModule.recallMessageUseCase
     private val generateImageUseCase = DataModule.generateImageUseCase
-    private val voteMessageUseCase = DataModule.voteMessageUseCase
 
     private val _uiState = MutableStateFlow(ChatUIState())
     val uiState = _uiState.asStateFlow()
@@ -111,7 +105,6 @@ class ChatViewModel : BaseVM() {
                     chatMessageRepository.getMessagesFlow(it)
                 }
             }
-            .map { it.map { entity -> entity.toModel() } }
             .cachedIn(viewModelScope)
 
     private var lastAiMsgInfo: MsgInfo? = null
@@ -189,7 +182,7 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    fun setAgentInfo(agentInfo: AgentInfo?, forceSync: Boolean = false) {
+    fun setAgentInfo(agentInfo: AgentInfo?) {
 
         _agentId.value = agentInfo?.id
         _imagePickMessageId.value = null
@@ -262,14 +255,6 @@ class ChatViewModel : BaseVM() {
             viewModelScope.launch(Dispatchers.IO) {
                 characterRepository.updateEnergy(agentInfo.id, lastSyncedEnergyPoints)
             }
-            // 总是触发后台同步，确保用户看到最新消息
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    syncChatDataUseCase(agentInfo.id)
-                } catch (e: Exception) {
-                    LogUtils.e("ChatViewModel.setAgentInfo sync error: ${e.message}")
-                }
-            }
             return
         }
 
@@ -311,45 +296,6 @@ class ChatViewModel : BaseVM() {
 
         // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
-
-        // 检查是否有本地缓存数据
-        val hasLocalData = chatRepository.getMessagesFlow(agentInfo.id).value.isNotEmpty()
-
-        if (hasLocalData) {
-            if (forceSync) {
-                // 🔧 修复：从通知进入时（forceSync=true），先同步最新数据，等待完成后再标记为完成
-                // 确保UI显示的是最新消息，而不是旧的本地缓存
-                _isQueryMsgsCompleted.value = false
-                viewModelScope.launch(Dispatchers.IO) {
-                    try {
-                        syncChatDataUseCase(agentInfo.id)
-                        _isQueryMsgsCompleted.value = true
-                        LogUtils.i(
-                            "ChatViewModel.setAgentInfo forceSync completed for ${agentInfo.id}"
-                        )
-                    } catch (e: Exception) {
-                        LogUtils.e("ChatViewModel.setAgentInfo forceSync error: ${e.message}")
-                        // 即使同步失败，也标记为完成，避免UI一直等待
-                        _isQueryMsgsCompleted.value = true
-                    }
-                }
-            } else {
-                // 有本地数据，立即标记为完成，然后后台同步
-                _isQueryMsgsCompleted.value = true
-                // 后台同步最新数据
-                viewModelScope.launch(Dispatchers.IO) {
-                    try {
-                        syncChatDataUseCase(agentInfo.id)
-                    } catch (e: Exception) {
-                        LogUtils.e("ChatViewModel.setAgentInfo background sync error: ${e.message}")
-                    }
-                }
-            }
-        } else {
-            // 没有本地数据，需要加载
-            _isQueryMsgsCompleted.value = false
-            loadChatHistory(agentInfo.id)
-        }
 
         // 查询聊天设置
         getChatSetting()
@@ -412,18 +358,6 @@ class ChatViewModel : BaseVM() {
         messagesJob?.cancel()
         loadingMoreJob?.cancel()
         hasMoreJob?.cancel()
-        loadingMoreJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                chatRepository.getLoadingMoreFlow(agentId).collect { loading ->
-                    _isLoadingMore.value = loading
-                }
-            }
-        hasMoreJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                chatRepository.getHasMoreFlow(agentId).collect { more ->
-                    _hasMoreMessages.value = more
-                }
-            }
     }
 
     private fun observeCharacterEnergy(agentId: String) {
@@ -450,42 +384,6 @@ class ChatViewModel : BaseVM() {
         lastSyncedEnergyPoints = energyPoints
         viewModelScope.launch(Dispatchers.IO) {
             characterRepository.updateEnergy(agent.id, energyPoints)
-        }
-    }
-
-    /** 加载聊天历史 - 使用增量同步优化体验 */
-    private fun loadChatHistory(agentId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // ✅ 修复：使用 loadChatHistoryUseCase 而不是 syncChatDataUseCase
-                // 添加超时机制，避免无限等待
-                kotlinx.coroutines.withTimeout(10000) { // 10秒超时
-                    loadChatHistoryUseCase(agentId, PAGE_SIZE)
-                }
-                _isQueryMsgsCompleted.value = true
-                LogUtils.i("ChatViewModel.loadChatHistory completed for $agentId")
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                LogUtils.e("ChatViewModel.loadChatHistory timeout for $agentId")
-                // 超时也标记为完成，避免一直等待，让用户至少能看到 intro/opening
-                _isQueryMsgsCompleted.value = true
-            } catch (e: Exception) {
-                LogUtils.e("ChatViewModel.loadChatHistory error for $agentId: ${e.message}")
-                // 即使出错也标记为完成，避免 UI 一直等待
-                _isQueryMsgsCompleted.value = true
-            }
-        }
-    }
-
-    /** 同步最新消息 - 用于应用恢复、页面切换等场景 优先显示本地数据，后台检查服务器更新 */
-    fun syncLatestMessages() {
-        val agentId = _agentInfo.value?.id ?: return
-        LogUtils.i("ChatViewModel.syncLatestMessages called for agentId=$agentId")
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                syncChatDataUseCase(agentId)
-            } catch (e: Exception) {
-                LogUtils.e("ChatViewModel.syncLatestMessages error: ${e.message}")
-            }
         }
     }
 
@@ -782,7 +680,7 @@ class ChatViewModel : BaseVM() {
     /** 初始化音频管理器 */
     fun initVoiceService(context: Context) {
         if (audioManager == null) {
-            audioManager = AudioManager.Companion.getInstance(context, viewModelScope)
+            audioManager = AudioManager.getInstance(context, viewModelScope)
         }
     }
 
@@ -817,41 +715,6 @@ class ChatViewModel : BaseVM() {
     fun updateMessageAudioUrl(messageId: String, audioUrl: String) {
         val agentId = agentInfo.value?.id ?: return
         chatRepository.updateMessageAudioUrl(agentId, messageId, audioUrl)
-    }
-
-    // endregion
-
-    fun queryMsgs(loadMore: Boolean = false) {
-        /*val currentAgentId = agentInfo.value?.id ?: return
-        if (loadMore) {
-            viewModelScope.launch(Dispatchers.IO) {
-                chatRepository.loadMoreMessages(currentAgentId, PAGE_SIZE)
-            }
-        } else {
-            viewModelScope.launch(Dispatchers.IO) {
-                loadChatHistoryUseCase(currentAgentId, PAGE_SIZE)
-                _isQueryMsgsCompleted.value = true
-            }
-        }*/
-    }
-
-    /** 同步最新消息：优先加载本地数据，然后检查服务器更新 */
-    private fun syncLatestMessages(agentId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            syncChatDataUseCase(agentId, PAGE_SIZE)
-            _isQueryMsgsCompleted.value = true
-        }
-    }
-
-    /** 加载更多消息 */
-    fun loadMoreMessages() {
-        /*if (!_hasMoreMessages.value || _isLoadingMore.value || isQueryingMsgs) {
-            return
-        }
-        val currentAgentId = agentInfo.value?.id ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            chatRepository.loadMoreMessages(currentAgentId, PAGE_SIZE)
-        }*/
     }
 
     val showLimitDialog = MutableStateFlow(false)
@@ -1065,111 +928,42 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    /** Like 消息 - 通过 Repository 更新并上报 Firebase 事件 */
-    fun likeMessage(localMsgId: String) {
+    private fun setMessageVote(msgId: String, userVote: MessageEntity.UserVote) {
         val agentId = _agentId.value ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-            val targetMessage = chatMessageRepository.getMessage(agentId, localMsgId)
 
-            // 如果找不到消息，记录日志但不发送事件
-            if (targetMessage == null) {
-                LogUtils.e("Cannot find message with localMsgId: $localMsgId")
-            } else {
-                // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
-                updateMessageFeedbackUseCase(agentId, localMsgId, MsgInfo.UserFeedback.LIKE)
-
-                // 如果消息有服务端id，调用投票接口
-                val messageId = targetMessage.localId
-
-                if (messageId.isNotEmpty()) {
-                    when (val result = voteMessageUseCase(agentId, messageId, VoteConstants.LIKE)) {
-                        is HttpResult.Success -> {
-                            LogUtils.i("Vote message success: like")
-                        }
-
-                        is HttpResult.Failure -> {
-                            LogUtils.e("Vote message failure: ${result.message}")
-                        }
-                    }
-                }
-
-                // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
-                // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-                val messageIdForEvent = messageId.ifEmpty { localMsgId }
-
-                val eventParams =
-                    FirebaseManager.safeEventParams(
-                        "click_type" to "message_like",
-                        "agent_id" to agentId,
-                        "agent_name" to agentFlow.value?.name.orEmpty(),
-                        "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-                        "message_length" to targetMessage.content.length,
-                        "has_generated_image" to !targetMessage.generatedImageUrl.isNullOrBlank(),
-                        "is_opening" to targetMessage.isOpening,
-                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                        "timestamp" to System.currentTimeMillis(),
-                    )
-                FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
+            try {
+                chatMessageRepository.setMessageVote(agentId, msgId, userVote)
+                LogUtils.i("Vote message success: ${userVote.name}")
+            } catch (error: Exception) {
+                LogUtils.e("Vote message failure: ${error.message}")
             }
+
+            val message = chatMessageRepository.getMessage(agentId, msgId)
+
+            FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                "click_type" to "message_like",
+                "agent_id" to agentId,
+                "agent_name" to agentFlow.value?.name.orEmpty(),
+                "message_id" to msgId, // 优先使用服务端id，这才是有意义的标识
+                "message_length" to message?.content?.length,
+                "has_generated_image" to !message?.metaData?.generatedImage?.imageUrl.isNullOrBlank(),
+                "is_opening" to message?.isOpening,
+                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                "timestamp" to System.currentTimeMillis()
+            )
         }
     }
 
+    /** Like 消息 - 通过 Repository 更新并上报 Firebase 事件 */
+    fun likeMessage(msgId: String) {
+        setMessageVote(msgId, MessageEntity.UserVote.LIKE)
+    }
+
     /** Dislike 消息 - 通过 Repository 更新并上报 Firebase 事件 */
-    fun dislikeMessage(localMsgId: String) {
-        val agent = agentFlow.value ?: return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            val targetMessage = chatMessageRepository.getMessage(agent.agentId, localMsgId)
-            // 如果找不到消息，记录日志但不发送事件
-            if (targetMessage == null) {
-                LogUtils.e("Cannot find message with localMsgId: $localMsgId")
-                return@launch
-            }
-
-            val previousFeedback = targetMessage.userFeedback ?: "NONE"
-
-            // 业务逻辑：本地状态更新始终使用localMsgId（这是本地标识符）
-            updateMessageFeedbackUseCase(agent.agentId, localMsgId, MsgInfo.UserFeedback.DISLIKE)
-
-            // 如果消息有服务端id，调用投票接口
-            val messageId = targetMessage.remoteId
-            if (!messageId.isNullOrBlank()) {
-                viewModelScope.launch(Dispatchers.IO) {
-                    when (
-                        val result =
-                            voteMessageUseCase(agent.agentId, messageId, VoteConstants.DISLIKE)
-                    ) {
-                        is HttpResult.Success -> {
-                            LogUtils.i("Vote message success: dislike")
-                        }
-
-                        is HttpResult.Failure -> {
-                            LogUtils.e("Vote message failure: ${result.message}")
-                        }
-                    }
-                }
-            }
-
-            // Firebase事件统计：优先使用服务端id（message_id），这是有意义的标识
-            // 如果服务端id为空，说明消息还未同步到服务端，此时使用localMsgId作为fallback
-            val messageIdForEvent = messageId?.ifEmpty { localMsgId }
-
-            val eventParams =
-                FirebaseManager.safeEventParams(
-                    "click_type" to "message_dislike",
-                    "agent_id" to agent.agentId,
-                    "agent_name" to agent.name,
-                    "message_id" to messageIdForEvent, // 优先使用服务端id，这才是有意义的标识
-                    "message_length" to targetMessage.content.length,
-                    "has_generated_image" to !targetMessage.generatedImageUrl.isNullOrBlank(),
-                    "is_opening" to targetMessage.isOpening,
-                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                    "timestamp" to System.currentTimeMillis(),
-                )
-
-            FirebaseManager.logEvent(FirebaseManager.Events.CHAT_PAGE_CLICK, eventParams)
-        }
+    fun dislikeMessage(msgId: String) {
+        setMessageVote(msgId, MessageEntity.UserVote.DISLIKE)
     }
 
     /** Recall 消息 - 重新生成最新消息（类似 keep talking 的实现） */
@@ -1202,9 +996,11 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    fun deleteMessage(localMsgId: String) {
+    fun deleteMessage(msgId: String, indexId: String) {
         val agentId = _agentInfo.value?.id ?: return
-        viewModelScope.launch(Dispatchers.IO) { chatRepository.removeMessage(agentId, localMsgId) }
+        viewModelScope.launch(Dispatchers.IO) {
+            chatMessageRepository.removeMessage(agentId, msgId, indexId)
+        }
     }
 
     fun clearGeneratedImage(messageId: String) {
@@ -1261,7 +1057,7 @@ class ChatViewModel : BaseVM() {
             )
 
             // ✅ 修复：参数检查失败时，上报 failure 事件并重置状态
-            val endTime = System.currentTimeMillis()
+            /*val endTime = System.currentTimeMillis()
             FirebaseManager.logEvent(
                 FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
                 FirebaseManager.safeEventParams(
@@ -1276,7 +1072,7 @@ class ChatViewModel : BaseVM() {
             )
             LogUtils.e("generateImageForMessage: agentId or agent is null")
             // 重置生图状态，确保可以再次点击
-            chatRepository.updateMessageGeneratedImage(agent.agentId, messageId, null)
+            chatRepository.updateMessageGeneratedImage(agent.agentId, messageId, null)*/
 
             try {
                 val result = generateImageUseCase(agent.agentId, messageId)
@@ -1318,11 +1114,7 @@ class ChatViewModel : BaseVM() {
                         )
 
                         // 重置点赞/点踩状态，确保生图后可以重新点赞/点踩
-                        val targetMessage =
-                            chatMessageRepository.getMessage(agent.agentId, messageId)
-                        targetMessage?.let {
-                            updateMessageFeedbackUseCase(agent.agentId, targetMessage.localId, null)
-                        }
+                        chatMessageRepository.resetMessageVote(agent.agentId, messageId)
                     }
 
                     is HttpResult.Failure -> {
@@ -1401,15 +1193,7 @@ class ChatViewModel : BaseVM() {
                                     ),
                                 )
 
-                                // 在消息列表中添加 tips 消息（使用字符串常量，后续在 UI 层处理）
-                                val tipMessage =
-                                    MsgInfo(
-                                        content = "image_generation_error_tip", // 特殊标记，UI 层会转换为实际文案
-                                        role = "system",
-                                        localMsgId = "image_generation_error_${System.nanoTime()}",
-                                        meta_data = MsgInfo.MsgMetaData(agentId = agent.agentId),
-                                    )
-                                chatRepository.addMessage(agent.agentId, tipMessage)
+                                chatMessageRepository.addImageGenerationErrorTips(agent.agentId, messageId)
                             }
                         }
                     }
@@ -1512,7 +1296,7 @@ class ChatViewModel : BaseVM() {
                 when (val result = characterRepository.refreshAgent(agentId)) {
                     is HttpResult.Success -> {
                         AgentStore.addAgent(result.data)
-                        setAgentInfo(result.data, forceSync = forceSync)
+                        setAgentInfo(result.data)
                     }
 
                     is HttpResult.Failure -> {
@@ -1548,16 +1332,8 @@ class ChatViewModel : BaseVM() {
     }
 
     suspend fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {
-        val message =
-            MsgInfo(
-                content =
-                    Utils.getApp()
-                        .getString(R.string.boost_system_message, points, agent.name, totalBoosts),
-                role = "system",
-                localMsgId = "boost_${System.nanoTime()}",
-                meta_data = MsgInfo.MsgMetaData(agentId = agent.id),
-            )
-        chatRepository.addMessage(agent.id, message)
+        chatMessageRepository.appendBoostSystemMessage(agent.id, Utils.getApp()
+            .getString(R.string.boost_system_message, points, agent.name, totalBoosts))
     }
 
     suspend fun reset() {

@@ -4,10 +4,10 @@ package com.ai.intellimate.chat.data
 
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.local.db.ChatMessageDao
-import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.ChatSyncStateDao
-import ai.sxwl.android.data.chat.local.db.ChatSyncStateEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
+import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.chat.local.db.SyncStateEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.ExperimentalPagingApi
@@ -35,14 +35,14 @@ class ChatMessageRemoteMediator(
     private val database: IntyChatDatabase,
     private val remoteDataSource: ChatRemoteDataSource,
     private val pageSize: Int = 20,
-) : RemoteMediator<Int, ChatMessageEntity>() {
+) : RemoteMediator<Int, MessageEntity>() {
 
     private val messageDao: ChatMessageDao = database.chatMessageDao()
     private val syncStateDao: ChatSyncStateDao = database.chatSyncStateDao()
 
     override suspend fun load(
         loadType: LoadType,
-        state: PagingState<Int, ChatMessageEntity>,
+        state: PagingState<Int, MessageEntity>,
     ): MediatorResult {
         return try {
             // 确定当前应该使用的 offset
@@ -89,7 +89,7 @@ class ChatMessageRemoteMediator(
                         // 保存消息到数据库
                         if (messages.isNotEmpty()) {
                             val entities =
-                                messages.map { msg -> msg.toEntity(agentId, existing = null) }
+                                messages.map { msg -> msg.toEntity(agentId) }
 
                             messageDao.upsert(entities)
                             LogUtils.d(
@@ -108,7 +108,7 @@ class ChatMessageRemoteMediator(
                                 nextPageKey + messages.size
                             }
                         val updatedSyncState =
-                            ChatSyncStateEntity(
+                            SyncStateEntity(
                                 agentId = agentId,
                                 offset = newOffset,
                                 hasMore = response.hasMore,

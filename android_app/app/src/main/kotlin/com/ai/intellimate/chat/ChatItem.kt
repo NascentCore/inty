@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
@@ -109,7 +110,7 @@ private const val DEBUG_METADATA_VALUE_MAX = 64
 fun ChatItem(
     navController: NavController,
     isOnlyOpeningMessage: Boolean,
-    item: MsgInfo,
+    item: MessageEntity,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
@@ -149,7 +150,7 @@ fun ChatItem(
 private fun ChatItemAI(
     navController: NavController,
     isOnlyOpeningMessage: Boolean,
-    item: MsgInfo,
+    item: MessageEntity,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
@@ -165,10 +166,7 @@ private fun ChatItemAI(
             Column(modifier = Modifier.fillMaxWidth()) {
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
-                val isImageLoading =
-                    (item.content == "loading_animation" &&
-                        item.localMsgId.contains("loading_image", ignoreCase = true)) ||
-                        (generatedImageUrl == "loading")
+                val isImageLoading = generatedImageUrl == "loading"
 
                 if (item.content.isNotEmpty() && item.content != "loading_animation") {
                     val vmAgentId = agentInfo?.id
@@ -177,10 +175,10 @@ private fun ChatItemAI(
 
                     val audioInfo =
                         AudioInfo(
-                            url = item.audio_url ?: "",
+                            url = item.audioUrl ?: "",
                             title = "Voice Message",
                             artist = "AI Agent",
-                            messageId = item.localMsgId,
+                            messageId = item.id.takeIf { it.isNotBlank() },
                             agentId = safeAgentId,
                             agentName = agentInfo?.name,
                         )
@@ -188,7 +186,7 @@ private fun ChatItemAI(
                     val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
                     val shouldAutoPlay =
-                        item.isOpening() &&
+                        item.isOpening &&
                             isOnlyOpeningMessage &&
                             !hasPlayedOpening &&
                             isCurrentPage &&
@@ -210,7 +208,7 @@ private fun ChatItemAI(
                                 modifier =
                                     Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
                                 onTtsGenerated = { audioUrl ->
-                                    viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                                    viewModel.updateMessageAudioUrl(item.id, audioUrl)
                                 },
                                 serverMessageId = item.id,
                             )
@@ -252,7 +250,7 @@ private fun ChatItemAI(
                 val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
                 val shouldShowMessageActions by remember {
                     derivedStateOf {
-                        isLatestMessage && !shouldFlowShow && !item.isOpening() && !isNormalLoading
+                        isLatestMessage && !shouldFlowShow && !item.isOpening && !isNormalLoading
                     }
                 }
 
@@ -329,8 +327,8 @@ private fun ChatItemAI(
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
-                        onLike = { viewModel.likeMessage(item.localMsgId) },
-                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onLike = { viewModel.likeMessage(item.id) },
+                        onDislike = { viewModel.dislikeMessage(item.id) },
                         onRecall = { viewModel.recallMessage() },
                     )
                 }
@@ -366,7 +364,7 @@ private fun ChatItemAI(
                                         .background(Color.Black.copy(alpha = 0.3f))
                                         .padding(16.dp)
                                         .noRippleClickable {
-                                            viewModel.clearGeneratedImage(item.localMsgId)
+                                            viewModel.clearGeneratedImage(item.id)
                                         },
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -503,8 +501,8 @@ private fun ChatItemAI(
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
-                        onLike = { viewModel.likeMessage(item.localMsgId) },
-                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onLike = { viewModel.likeMessage(item.id) },
+                        onDislike = { viewModel.dislikeMessage(item.id) },
                         onRecall = { viewModel.recallMessage() },
                     )
                 }
@@ -553,7 +551,7 @@ private fun ChatItemAI(
 
 /** 用户消息气泡布局，靠右对齐。 */
 @Composable
-private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
+private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
             Row(
@@ -646,7 +644,7 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
 }
 
 @Composable
-private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = null) {
+private fun ChatItemSystemTips(item: MessageEntity, chatViewModel: ChatViewModel? = null) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
     val displayText =
@@ -661,7 +659,7 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.localMsgId) },
+            modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.id, item.indexId) },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -678,7 +676,7 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
 }
 
 @Composable
-private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
+private fun DebugMessageMetadata(item: MessageEntity, modifier: Modifier = Modifier) {
     if (!BuildConfig.DEBUG) return
 
     val metadataLines =
@@ -687,22 +685,22 @@ private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
                     val roleLabel = item.role.ifBlank { "unknown" }
                     add("role=$roleLabel")
                     item.id.takeIf { it.isNotBlank() }?.let { add("id=${it.debugEllipsize()}") }
-                    add("local=${item.localMsgId}")
+                    add("local=${item.id}")
                     item.timestamp?.takeIf { it.isNotBlank() }?.let { add("ts=$it") }
-                    item.meta_data?.let { meta ->
+                    item.metaData.let { meta ->
                         val metaParts = mutableListOf<String>()
-                        meta.agentId?.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
+                        meta.agentId.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
                         if (meta.isOpening) metaParts += "opening=true"
                         meta.generatedImage?.let { image ->
                             metaParts +=
-                                "image=${image.imageUrl.debugEllipsize()} (${image.width}x${image.height})"
+                                "image=${image.imageUrl?.debugEllipsize()} (${image.width}x${image.height})"
                         }
                         if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
                     }
-                    item.audio_url
+                    item.audioUrl
                         ?.takeIf { it.isNotBlank() }
                         ?.let { add("audio=${it.debugEllipsize()}") }
-                    item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
+                    item.userVote?.let { add("vote=$it") }
                 }
             }
             .filter { it.isNotBlank() }
@@ -1033,7 +1031,7 @@ private fun formatTimestamp(rawTimestamp: String?): String? {
 }
 
 /** 计算语音消息组的时长（秒） 通过最后一条AI语音消息的时间戳减去第一条用户消息的时间戳计算 */
-private fun calculateVoiceChatDuration(messages: List<MsgInfo>): Long {
+private fun calculateVoiceChatDuration(messages: List<MessageEntity>): Long {
     if (messages.isEmpty()) return 0L
 
     // 找到第一条用户消息的时间戳
@@ -1042,7 +1040,7 @@ private fun calculateVoiceChatDuration(messages: List<MsgInfo>): Long {
         firstUserMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
 
     // 找到最后一条AI语音消息的时间戳
-    val lastAiVoiceMessage = messages.lastOrNull { it.role == "assistant" && it.isVoiceMessage() }
+    val lastAiVoiceMessage = messages.lastOrNull { it.role == "assistant" && it.isVoice }
     val lastAiVoiceTimestamp =
         lastAiVoiceMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
 
@@ -1075,7 +1073,7 @@ private fun formatDuration(durationSeconds: Long): String {
  */
 @Composable
 fun VoiceChatHistoryCollapsed(
-    messages: List<MsgInfo>,
+    messages: List<MessageEntity>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1155,7 +1153,7 @@ fun VoiceChatHistoryCollapsed(
  */
 @Composable
 fun VoiceChatHistoryExpandedContainer(
-    messages: List<MsgInfo>,
+    messages: List<MessageEntity>,
     onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -1257,7 +1255,7 @@ fun VoiceChatHistoryExpandedContainer(
  */
 @Composable
 fun CallMessages(
-    messages: List<MsgInfo?>,
+    messages: List<MessageEntity?>,
     navController: NavController,
     chatViewModel: ChatViewModel?,
     onCollapseChange: () -> Unit,

@@ -5,8 +5,8 @@ package ai.sxwl.android.data.chat.local.db
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "chat_sync_state")
-data class ChatSyncStateEntity(
+@Entity(tableName = "sync_state")
+data class SyncStateEntity(
     @PrimaryKey val agentId: String,
     val offset: Int = 0,
     val hasMore: Boolean = true,

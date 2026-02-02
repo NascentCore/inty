@@ -6,10 +6,12 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
+import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.agent.info.AgentInfoViewModel.Companion.DEFAULT_GALLERY_DIMENSION
+import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
 import com.squareup.moshi.JsonClass
@@ -57,6 +59,7 @@ class AgentInfoViewModel : BaseVM() {
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
     private val roomDataSource: RoomDataSource = DataModule.getRoomDataSource()
+    private val chatMessageRepository: ChatMessageRepository = ChatMessageRepository()
 
     private var galleryAgentId: String? = null
     private var galleryJob: Job? = null
@@ -124,16 +127,7 @@ class AgentInfoViewModel : BaseVM() {
 
         galleryJob =
             viewModelScope.launch {
-                launch(Dispatchers.IO) {
-                    runCatching { chatRepository.ensureInitialHistory(agentId, GALLERY_PAGE_SIZE) }
-                        .onFailure { throwable ->
-                            LogUtils.e(
-                                "ensureInitialHistory failed for $agentId: ${throwable.message}"
-                            )
-                        }
-                }
-
-                roomDataSource.getMessagesWithImagesFlow(agentId).collect { messages ->
+                chatMessageRepository.getImageMessages(agentId).collect { messages ->
                     val galleryItems =
                         messages
                             .asSequence()
@@ -148,14 +142,15 @@ class AgentInfoViewModel : BaseVM() {
             }
     }
 
-    private fun mapMessageToGalleryItem(message: MsgInfo): AgentImageGalleryItem? {
-        val generatedImage = message.meta_data?.generatedImage ?: return null
-        val messageId = message.id.ifBlank { message.localMsgId }
+    private fun mapMessageToGalleryItem(message: MessageEntity): AgentImageGalleryItem? {
+        val generatedImage = message.metaData.generatedImage ?: return null
+
+        val messageId = message.id
         return AgentImageGalleryItem(
             messageId = messageId,
-            imageUrl = generatedImage.imageUrl,
-            width = generatedImage.width.takeIf { it > 0 } ?: DEFAULT_GALLERY_DIMENSION,
-            height = generatedImage.height.takeIf { it > 0 } ?: DEFAULT_GALLERY_DIMENSION,
+            imageUrl = generatedImage.imageUrl.orEmpty(),
+            width = generatedImage.width?.takeIf { it > 0 } ?: DEFAULT_GALLERY_DIMENSION,
+            height = generatedImage.height?.takeIf { it > 0 } ?: DEFAULT_GALLERY_DIMENSION,
             timestamp = message.timestamp,
         )
     }
