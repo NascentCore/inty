@@ -21,7 +21,7 @@
 
 参考 [RunPod 教程](https://docs.runpod.io/tutorials/pods/comfyui)：
 
-- **模板**：标准 GPU 选 [ComfyUI](https://console.runpod.io/hub/template/comfyui)；Blackwell（RTX 5090/B200）选 [ComfyUI Blackwell Edition](https://console.runpod.io/hub/template/comfyui-blackwell-edition-5090-b200)。
+- **模板**：标准 GPU 选 [ComfyUI](https://console.runpod.io/hub/template/comfyui?id=cw3nka7d08)；Blackwell（RTX 5090/B200）选 [ComfyUI Blackwell Edition](https://console.runpod.io/hub/template/comfyui-blackwell-edition-5090-b200?id=2lv7ev3wfp)。
 - **GPU 选型（目标：10 秒内完成高质量 1024×1024 生图）**：根据公开基准，Z-Image-Turbo 在 1024×1024 下的典型耗时约为：
   - **H800 / H100**：亚秒级（约 1–1.4 秒）
   - **RTX A6000 48GB**：约 4 秒
@@ -32,7 +32,7 @@
 
   建议：若要求**至少 10 秒内高质量出图**，在 RunPod 上优先选 **L40**、**RTX 4090**、**A100 PCIe** 或 **RTX A6000**；显存建议 ≥16GB（官方推荐 16GB，8GB 可跑但速度较慢）。
 - **端口**：8188（ComfyUI HTTP）。
-- **存储**：默认或增加磁盘；若需持久化模型，挂载 [Network Volume](https://docs.runpod.io/storage/network-volumes)（本仓库实践为挂载到 `/runpod-volume`，ComfyUI 模板路径以 RunPod 文档为准，一般为 `/workspace/.../ComfyUI/models`）。
+- **存储**：默认或增加磁盘；若需持久化模型，可挂载 [Network Volume](https://docs.runpod.io/storage/network-volumes)。**Pod** 使用 Network Volume 时挂载点为 `/workspace`，ComfyUI 模型路径一般为 `/workspace/madapps/ComfyUI/models`（以 RunPod 控制台/模板为准）。**Serverless** 下本仓库 worker 使用 `/runpod-volume`（见方案 B 与 [experimental/comfyui/README.md](../experimental/comfyui/README.md)）。
 
 部署后等待 Pod 初始化（首次可能约 30 分钟），在 RunPod 控制台找到该 Pod，点击 **Connect** → **Connect to HTTP Service [Port 8188]** 打开 ComfyUI 界面（URL 形如 `https://[POD_ID]-8188.proxy.runpod.net`）。
 
@@ -65,6 +65,7 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 - 从 ComfyUI 官方获取 workflow JSON：[image_z_image_turbo.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo.json)。
 - 在 ComfyUI Web UI 中：**Workflow** → **Open** → 选择该 JSON 文件。
 - 若模板浏览器支持，可在 **Image** → **Z-Image-Turbo** 下直接选模板（需 ComfyUI 已更新至含 Z-Image 模板的版本）。
+- 该 JSON 内含纯 T2I 与带 LoRA 两个子图；若出现「Missing Models」且包含 `pixel_art_style_z_image_turbo.safetensors`，仅跑纯 T2I 时可忽略该 LoRA，保证三件套（qwen_3_4b、z_image_turbo_bf16、ae）即可。
 
 ### 3.4 生成图像
 
@@ -80,6 +81,7 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 
 - 下载 [Z-Image-Turbo-Fun-Controlnet-Union.safetensors](https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union/resolve/main/Z-Image-Turbo-Fun-Controlnet-Union.safetensors) 至 `ComfyUI/models/model_patches/`。
 - 使用 ControlNet 专用 workflow：[image_z_image_turbo_fun_union_controlnet.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo_fun_union_controlnet.json)。
+- 该 workflow 通过 **LoadImage** 加载一张参考图（默认文件名如 `image_z_image_turbo_fun_union_controlnet_input_image.png`）；使用前需在 ComfyUI 中上传或放入该图并确保节点指向正确路径。
 
 ## 4. 参考链接汇总
 
