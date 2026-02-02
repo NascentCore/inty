@@ -21,7 +21,7 @@
 
 参考 [RunPod 教程](https://docs.runpod.io/tutorials/pods/comfyui)：
 
-- **模板**：标准 GPU 选 [ComfyUI](https://console.runpod.io/hub/template/comfyui?id=cw3nka7d08)；Blackwell（RTX 5090/B200）选 [ComfyUI Blackwell Edition](https://console.runpod.io/hub/template/comfyui-blackwell-edition-5090-b200?id=2lv7ev3wfp)。
+- **模板**：标准 GPU 选 [ComfyUI](https://console.runpod.io/hub/template/comfyui?id=cw3nka7d08)；Blackwell（RTX 5090/B200）选 [ComfyUI Blackwell Edition](https://console.runpod.io/hub/template/comfyui-blackwell-edition-5090-b200?id=2lv7ev3wfp)。打开模板页后点击 **Configure Pod**，在配置页选好 GPU、存储等，再点击 **Deploy On-Demand** 创建 Pod。
 - **GPU 选型（目标：10 秒内完成高质量 1024×1024 生图）**：根据公开基准，Z-Image-Turbo 在 1024×1024 下的典型耗时约为：
   - **H800 / H100**：亚秒级（约 1–1.4 秒）
   - **RTX A6000 48GB**：约 4 秒
