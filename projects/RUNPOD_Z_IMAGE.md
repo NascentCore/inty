@@ -77,7 +77,7 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 - 从 ComfyUI 官方获取 workflow JSON：[image_z_image_turbo.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo.json)。
 - 在 ComfyUI Web UI 中：**Workflow** → **Open** → 选择该 JSON 文件。
 - 若模板浏览器支持，可在 **Image** → **Z-Image-Turbo** 下直接选模板（需 ComfyUI 已更新至含 Z-Image 模板的版本）。
-- 该 JSON 内含纯 T2I 与带 LoRA 两个子图；若出现「Missing Models」且包含 `pixel_art_style_z_image_turbo.safetensors`，仅跑纯 T2I 时可忽略该 LoRA，保证三件套（qwen_3_4b、z_image_turbo_bf16、ae）即可。
+- 该 JSON 内含纯 T2I 与带 LoRA 两个子图。若出现「Missing Models」弹窗且仅列出 `loras / pixel_art_style_z_image_turbo.safetensors`，**此步骤可跳过**：关掉弹窗（可勾选 Don't show this again），仅用纯 T2I 子图即可生成，三件套（qwen_3_4b、z_image_turbo_bf16、ae）已足够；需要像素风时再点弹窗中的 **Download to Pod** 下载该 LoRA。
 
 ### 3.4 生成图像
 
@@ -121,8 +121,9 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
      ```
    - 三件套下载完成后，用 `ls -la` 检查 `models/text_encoders`、`models/diffusion_models`、`models/vae` 下对应文件是否存在且大小正常。
 
-4. **后续**
+4. **加载 workflow 与生成**
    - 在 ComfyUI（Port 8188）中按 3.3–3.4 节加载 workflow、输入 prompt、生成图像。
+   - 若加载 workflow 后出现「Missing Models」且仅缺 `pixel_art_style_z_image_turbo.safetensors`，**可跳过**：关掉弹窗后直接用纯 T2I 子图生成即可。
 
 ## 4. 参考链接汇总
 
