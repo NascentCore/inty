@@ -109,3 +109,12 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 ---
 
 CREATED_BY_AGENT
+
+---
+
+CREATED_BY_ZYX
+
+## 参考资料
+
+<img width="800" height="1698" alt="image" src="https://github.com/user-attachments/assets/05dbf333-c9ad-4e50-a972-3d10e15e264e" />
+
