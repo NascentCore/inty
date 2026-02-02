@@ -1361,8 +1361,6 @@ async def get_popular_agents(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from collections import defaultdict
-
         from app.services.user_analytics_service import UserAnalyticsService
 
         reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
@@ -1375,75 +1373,9 @@ async def get_popular_agents(
         )
 
         service = UserAnalyticsService(db)
-        activity_data = await service.get_user_chat_activity(reg_start, reg_end)
-
-        agent_stats = defaultdict(
-            lambda: {
-                "users": set(),
-                "rounds": 0,
-                "sessions": [],
-                "total_chats": set(),
-            }
+        return await service.get_popular_agents(
+            reg_start, reg_end, act_start, act_end, limit=20
         )
-        rounds_data = await service.get_conversation_rounds(
-            reg_start, reg_end, act_start, act_end
-        )
-        chat_to_rounds = {
-            item["chat_id"]: item["message_count_excluding_opening"]
-            for item in rounds_data
-        }
-
-        for item in activity_data:
-            if item["chat_id"] and item["agent_name"]:
-                agent_name = item["agent_name"]
-                agent_stats[agent_name]["total_chats"].add(item["chat_id"])
-
-        for item in activity_data:
-            if item["chat_id"] and item["agent_name"]:
-                agent_name = item["agent_name"]
-                rounds = chat_to_rounds.get(item["chat_id"], 0)
-                if rounds > 0:
-                    agent_stats[agent_name]["users"].add(item["user_id"])
-                    agent_stats[agent_name]["rounds"] += rounds
-                    agent_stats[agent_name]["sessions"].append(rounds)
-
-        result = []
-        for agent_name, stats in agent_stats.items():
-            user_count = len(stats["users"])
-            total_rounds = stats["rounds"]
-            sessions = stats["sessions"]
-            active_sessions = len(sessions)
-            total_sessions = len(stats["total_chats"])
-
-            avg_rounds_per_user = total_rounds / user_count if user_count > 0 else 0.0
-            sessions_ge_5 = sum(1 for r in sessions if r >= 5)
-            sessions_ge_10 = sum(1 for r in sessions if r >= 10)
-            pct_sessions_ge_5 = (
-                (sessions_ge_5 / active_sessions * 100) if active_sessions > 0 else 0.0
-            )
-            pct_sessions_ge_10 = (
-                (sessions_ge_10 / active_sessions * 100) if active_sessions > 0 else 0.0
-            )
-            open_rate = (
-                (active_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
-            )
-
-            result.append(
-                {
-                    "agent_name": agent_name,
-                    "user_count": user_count,
-                    "total_rounds": total_rounds,
-                    "avg_rounds_per_user": round(avg_rounds_per_user, 2),
-                    "pct_sessions_ge_5": round(pct_sessions_ge_5, 2),
-                    "pct_sessions_ge_10": round(pct_sessions_ge_10, 2),
-                    "total_sessions": total_sessions,
-                    "active_sessions": active_sessions,
-                    "open_rate": round(open_rate, 2),
-                }
-            )
-
-        result.sort(key=lambda x: x["user_count"], reverse=True)
-        return result[:20]
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1775,6 +1707,79 @@ async def get_user_analytics_stats(
     except Exception as e:
         logger.error(f"获取统计数据失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取统计数据失败")
+
+
+@router.get(
+    "/user-analytics/reports",
+    response_model=schemas.user_analytics.UserAnalyticsReportsResponse,
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
+)
+async def get_user_analytics_reports(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    report_type: Optional[str] = Query(
+        None, description="daily | weekly，不传则返回全部"
+    ),
+    limit: int = Query(30, ge=1, le=100, description="返回条数"),
+) -> Any:
+    """获取用户数据分析预计算报告列表（日报/周报）"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from sqlalchemy import desc, select
+
+        from app.models.user_analytics_report import UserAnalyticsReport
+
+        stmt = (
+            select(UserAnalyticsReport)
+            .order_by(desc(UserAnalyticsReport.report_date))
+            .limit(limit)
+        )
+        if report_type in ("daily", "weekly"):
+            stmt = stmt.where(UserAnalyticsReport.report_type == report_type)
+
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+        reports = []
+        for row in rows:
+            charts_data = None
+            if row.charts:
+                charts_data = schemas.user_analytics.UserAnalyticsReportCharts(
+                    new_users=row.charts.get("new_users", []),
+                    conversation_rounds=row.charts.get(
+                        "conversation_rounds", []
+                    ),
+                    user_rounds_distribution=row.charts.get(
+                        "user_rounds_distribution", []
+                    ),
+                    users_hitting_limit=row.charts.get(
+                        "users_hitting_limit", []
+                    ),
+                    popular_agents=row.charts.get("popular_agents", []),
+                )
+            reports.append(
+                schemas.user_analytics.UserAnalyticsReportItem(
+                    id=row.id,
+                    report_type=row.report_type,
+                    report_date=row.report_date.isoformat(),
+                    stats=row.stats,
+                    charts=charts_data,
+                    created_at=(
+                        row.created_at.isoformat() if row.created_at else None
+                    ),
+                )
+            )
+
+        return schemas.user_analytics.UserAnalyticsReportsResponse(
+            reports=reports
+        )
+
+    except Exception as e:
+        logger.error(f"获取预计算报告失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取预计算报告失败")
 
 
 @router.get(

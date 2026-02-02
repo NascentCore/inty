@@ -680,6 +680,13 @@ export const userAnalyticsApi = {
   ): Promise<import("../types").UserAnalyticsStatsResponse> =>
     apiClient.get("/evaluation/user-analytics/stats", params),
 
+  // 获取预计算报告列表（日报/周报）
+  getReports: (params?: {
+    report_type?: "daily" | "weekly";
+    limit?: number;
+  }): Promise<import("../types").UserAnalyticsReportsResponse> =>
+    apiClient.get("/evaluation/user-analytics/reports", params),
+
   // 获取用户注册统计
   getNewUsers: (
     params?: AnalyticsDateParams,

@@ -520,6 +520,42 @@ export interface ConversationsDetailResponse {
   sessions: ConversationsDetailSession[];
 }
 
+export interface UserAnalyticsReportCharts {
+  new_users: Array<{ date: string; auth_type: string; count: number }>;
+  conversation_rounds: Array<{
+    chat_id: string;
+    message_count: number;
+    message_count_excluding_opening: number;
+  }>;
+  user_rounds_distribution: Array<{
+    user_id: string;
+    total_rounds: number;
+  }>;
+  users_hitting_limit: Array<{
+    date: string;
+    user_id: string;
+    auth_type: string;
+    nickname: string | null;
+    email: string | null;
+    chat_count_24h: number;
+    limit_value: number;
+  }>;
+  popular_agents: PopularAgentsResponse[];
+}
+
+export interface UserAnalyticsReportItem {
+  id: string;
+  report_type: "daily" | "weekly";
+  report_date: string;
+  stats: UserAnalyticsStatsResponse;
+  charts: UserAnalyticsReportCharts | null;
+  created_at: string | null;
+}
+
+export interface UserAnalyticsReportsResponse {
+  reports: UserAnalyticsReportItem[];
+}
+
 export interface UserAnalyticsStatsResponse {
   // 统计类型
   total_new_users: number;

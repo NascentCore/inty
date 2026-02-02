@@ -355,3 +355,44 @@ class UserGeneratedImagesResponse(BaseModel):
 
     images: List[UserGeneratedImageItem]
     total: int = Field(description="总数量")
+
+
+class UserAnalyticsReportCharts(BaseModel):
+    """用户数据分析预计算报告图表数据"""
+
+    new_users: List[Dict[str, Any]] = Field(
+        default_factory=list, description="每日新用户"
+    )
+    conversation_rounds: List[Dict[str, Any]] = Field(
+        default_factory=list, description="对话轮数（按Session）"
+    )
+    user_rounds_distribution: List[Dict[str, Any]] = Field(
+        default_factory=list, description="对话轮数分布（按用户）"
+    )
+    users_hitting_limit: List[Dict[str, Any]] = Field(
+        default_factory=list, description="达到聊天限制的用户"
+    )
+    popular_agents: List[Dict[str, Any]] = Field(
+        default_factory=list, description="热门角色排行"
+    )
+
+
+class UserAnalyticsReportItem(BaseModel):
+    """用户数据分析预计算报告项"""
+
+    id: str = Field(description="报告 ID")
+    report_type: str = Field(description="daily | weekly")
+    report_date: str = Field(description="日报：统计日期；周报：该周周一日期 (YYYY-MM-DD)")
+    stats: UserAnalyticsStatsResponse = Field(description="聚合统计数据")
+    charts: Optional[UserAnalyticsReportCharts] = Field(
+        None, description="图表数据"
+    )
+    created_at: Optional[str] = Field(None, description="创建时间")
+
+
+class UserAnalyticsReportsResponse(BaseModel):
+    """用户数据分析预计算报告列表响应"""
+
+    reports: List[UserAnalyticsReportItem] = Field(
+        default_factory=list, description="报告列表"
+    )

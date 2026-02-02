@@ -20,6 +20,7 @@ import {
   ExclamationCircleOutlined,
   PhoneOutlined,
   DashboardOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -29,6 +30,7 @@ import AgentManagePage from "./pages/AgentManagePage";
 import CharacterThemeManagePage from "./pages/CharacterThemeManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UserAnalyticsPage } from "./pages/UserAnalyticsPage";
+import { UserAnalyticsReportsPage } from "./pages/UserAnalyticsReportsPage";
 import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
 import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
@@ -50,6 +52,7 @@ type PageKey =
   | "live2d"
   | "settings"
   | "user-analytics"
+  | "user-analytics-reports"
   | "user-daily-messages"
   | "character-themes"
   | "generated-images"
@@ -202,6 +205,12 @@ const AppContent: React.FC = () => {
       description: "查看用户注册和聊天行为数据",
     },
     {
+      key: "user-analytics-reports",
+      icon: <FileTextOutlined />,
+      label: "用户日报周报",
+      description: "全部用户预计算日报与周报",
+    },
+    {
       key: "performance-analytics",
       icon: <DashboardOutlined />,
       label: "性能监控",
@@ -248,6 +257,8 @@ const AppContent: React.FC = () => {
         return "系统设置";
       case "user-analytics":
         return "用户数据分析";
+      case "user-analytics-reports":
+        return "用户日报周报";
       case "performance-analytics":
         return "性能监控";
       case "user-daily-messages":
@@ -286,6 +297,8 @@ const AppContent: React.FC = () => {
         return <SettingsPage />;
       case "user-analytics":
         return <UserAnalyticsPage />;
+      case "user-analytics-reports":
+        return <UserAnalyticsReportsPage />;
       case "performance-analytics":
         return <PerformanceAnalyticsPage />;
       case "user-daily-messages":

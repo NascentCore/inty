@@ -317,6 +317,15 @@ class MemoryExtractionConfig:
 
 
 @dataclass
+class UserAnalyticsReportConfig:
+    """用户数据分析日报周报定时任务配置"""
+
+    enabled: bool = True
+    daily_cron_hour: int = 4  # UTC 小时，每日执行，统计 T-1 日
+    weekly_cron_hour: int = 5  # UTC 小时，每周一执行，统计上一周
+
+
+@dataclass
 class PushNotificationConfig:
     """推送通知服务配置"""
 
@@ -397,6 +406,9 @@ class Config:
     memory_extraction: MemoryExtractionConfig = field(
         default_factory=lambda: MemoryExtractionConfig()
     )
+    user_analytics_report: UserAnalyticsReportConfig = field(
+        default_factory=lambda: UserAnalyticsReportConfig()
+    )
     fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
 
@@ -438,6 +450,9 @@ def load_config(path: str) -> Config:
         push_notification=PushNotificationConfig(**data.get("push_notification", {})),
         memory_extraction=MemoryExtractionConfig(
             **(data.get("memory_extraction") or {})
+        ),
+        user_analytics_report=UserAnalyticsReportConfig(
+            **(data.get("user_analytics_report") or {})
         ),
         fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),

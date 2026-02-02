@@ -369,6 +369,100 @@ class UserAnalyticsService:
             for user_id, total_rounds in user_to_total_rounds.items()
         ]
 
+    async def get_popular_agents(
+        self,
+        register_start_date: datetime,
+        register_end_date: datetime,
+        activity_start_date: Optional[datetime] = None,
+        activity_end_date: Optional[datetime] = None,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """获取热门角色排行（Top N）"""
+        from collections import defaultdict
+
+        activity_data = await self.get_user_chat_activity(
+            register_start_date, register_end_date
+        )
+        rounds_data = await self.get_conversation_rounds(
+            register_start_date,
+            register_end_date,
+            activity_start_date,
+            activity_end_date,
+        )
+        chat_to_rounds = {
+            item["chat_id"]: item["message_count_excluding_opening"]
+            for item in rounds_data
+        }
+
+        agent_stats: Dict[str, Dict[str, Any]] = defaultdict(
+            lambda: {
+                "users": set(),
+                "rounds": 0,
+                "sessions": [],
+                "total_chats": set(),
+            }
+        )
+
+        for item in activity_data:
+            if item["chat_id"] and item["agent_name"]:
+                agent_name = item["agent_name"]
+                agent_stats[agent_name]["total_chats"].add(item["chat_id"])
+
+        for item in activity_data:
+            if item["chat_id"] and item["agent_name"]:
+                agent_name = item["agent_name"]
+                rounds = chat_to_rounds.get(item["chat_id"], 0)
+                if rounds > 0:
+                    agent_stats[agent_name]["users"].add(item["user_id"])
+                    agent_stats[agent_name]["rounds"] += rounds
+                    agent_stats[agent_name]["sessions"].append(rounds)
+
+        result = []
+        for agent_name, stats in agent_stats.items():
+            user_count = len(stats["users"])
+            total_rounds = stats["rounds"]
+            sessions = stats["sessions"]
+            active_sessions = len(sessions)
+            total_sessions = len(stats["total_chats"])
+
+            avg_rounds_per_user = (
+                total_rounds / user_count if user_count > 0 else 0.0
+            )
+            sessions_ge_5 = sum(1 for r in sessions if r >= 5)
+            sessions_ge_10 = sum(1 for r in sessions if r >= 10)
+            pct_sessions_ge_5 = (
+                (sessions_ge_5 / active_sessions * 100)
+                if active_sessions > 0
+                else 0.0
+            )
+            pct_sessions_ge_10 = (
+                (sessions_ge_10 / active_sessions * 100)
+                if active_sessions > 0
+                else 0.0
+            )
+            open_rate = (
+                (active_sessions / total_sessions * 100)
+                if total_sessions > 0
+                else 0.0
+            )
+
+            result.append(
+                {
+                    "agent_name": agent_name,
+                    "user_count": user_count,
+                    "total_rounds": total_rounds,
+                    "avg_rounds_per_user": round(avg_rounds_per_user, 2),
+                    "pct_sessions_ge_5": round(pct_sessions_ge_5, 2),
+                    "pct_sessions_ge_10": round(pct_sessions_ge_10, 2),
+                    "total_sessions": total_sessions,
+                    "active_sessions": active_sessions,
+                    "open_rate": round(open_rate, 2),
+                }
+            )
+
+        result.sort(key=lambda x: x["user_count"], reverse=True)
+        return result[:limit]
+
     async def get_voice_usage(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
         """查询语音使用统计"""
         if not chat_ids:
