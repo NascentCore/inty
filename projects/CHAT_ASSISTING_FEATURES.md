@@ -1,4 +1,4 @@
-# CHAT_ASSISTING_FEATURES PRD
+# 聊天辅助功能 PRD
 
 CREATED_BY_AGENT: gpt-5.2-codex-high
 
