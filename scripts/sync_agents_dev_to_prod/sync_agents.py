@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-同步dev环境的角色数据到prod环境
+同步角色数据在 dev 与 prod 环境之间
 
-从dev环境中同步指定运营用户创建的未删除角色到prod环境。
+支持两个方向：
+- dev-to-prod：从 dev 同步指定运营用户创建的角色到 prod
+- prod-to-dev：从 prod 按名称同步指定角色到 dev
+
 支持创建和更新操作。
 """
 
@@ -243,6 +246,14 @@ async def fetch_agents(session: AsyncSession, user_id: str) -> list[Agent]:
     return list(agents)
 
 
+async def fetch_agents_by_name(session: AsyncSession, name: str) -> list[Agent]:
+    """按名称获取未删除角色"""
+    result = await session.execute(
+        select(Agent).where(Agent.name == name, Agent.deleted_at.is_(None))
+    )
+    return list(result.scalars().all())
+
+
 FIELDS_TO_SYNC = [
     # 基础字段
     "name",
@@ -333,35 +344,30 @@ def copy_agent_fields(source: Agent, target: Agent) -> None:
 
 
 async def sync_agents(
-    dev_session: AsyncSession,
-    prod_session: AsyncSession,
-    user_id: str,
+    source_session: AsyncSession,
+    target_session: AsyncSession,
+    source_agents: dict[str, Agent],
+    target_agents: dict[str, Agent],
+    source_label: str,
+    target_label: str,
     dry_run: bool = False,
 ) -> None:
-    """同步角色数据"""
+    """同步角色数据：从 source 到 target"""
     logger.info("=" * 60)
     logger.info("开始同步角色数据")
-    logger.info(f"运营用户ID: {user_id}")
+    logger.info(f"方向: {source_label} → {target_label}")
     logger.info(f"模式: {'预览模式 (dry-run)' if dry_run else '执行模式'}")
     logger.info("=" * 60)
 
-    dev_agents_list = await fetch_agents(dev_session, user_id)
-    logger.info(f"Dev环境找到 {len(dev_agents_list)} 个未删除角色")
+    logger.info(f"{source_label}环境找到 {len(source_agents)} 个角色")
+    logger.info(f"{target_label}环境找到 {len(target_agents)} 个角色")
 
-    prod_agents_list = await fetch_agents(prod_session, user_id)
-    logger.info(f"Prod环境找到 {len(prod_agents_list)} 个未删除角色")
-
-    dev_agents = {agent.id: agent for agent in dev_agents_list}
-    prod_agents = {agent.id: agent for agent in prod_agents_list}
-
-    to_create_ids = dev_agents.keys() - prod_agents.keys()
-
-    to_check_update_ids = dev_agents.keys() & prod_agents.keys()
-
+    to_create_ids = source_agents.keys() - target_agents.keys()
+    to_check_update_ids = source_agents.keys() & target_agents.keys()
     to_update_ids = [
         agent_id
         for agent_id in to_check_update_ids
-        if compare_agents(dev_agents[agent_id], prod_agents[agent_id])
+        if compare_agents(source_agents[agent_id], target_agents[agent_id])
     ]
 
     logger.info("")
@@ -378,7 +384,7 @@ async def sync_agents(
         if to_create_ids:
             logger.info("创建角色列表:")
             for agent_id in to_create_ids:
-                agent = dev_agents[agent_id]
+                agent = source_agents[agent_id]
                 custom_prompts = []
                 if is_custom_main_prompt(agent.main_prompt):
                     custom_prompts.append("main_prompt")
@@ -395,7 +401,7 @@ async def sync_agents(
             logger.info("")
             logger.info("更新角色列表:")
             for agent_id in to_update_ids:
-                agent = dev_agents[agent_id]
+                agent = source_agents[agent_id]
                 custom_prompts = []
                 if is_custom_main_prompt(agent.main_prompt):
                     custom_prompts.append("main_prompt")
@@ -424,54 +430,44 @@ async def sync_agents(
     updated_count = 0
 
     try:
-        # 第一步：更新操作
         if to_update_ids:
             logger.info("第 1 步：执行更新操作...")
             for agent_id in to_update_ids:
-                source_agent = dev_agents[agent_id]
-                target_agent = prod_agents[agent_id]
+                source_agent = source_agents[agent_id]
 
-                result = await prod_session.execute(
+                result = await target_session.execute(
                     select(Agent).where(Agent.id == agent_id)
                 )
-                prod_agent = result.scalar_one()
+                target_agent = result.scalar_one()
 
-                copy_agent_fields(source_agent, prod_agent)
-
-                # 确保 readable_id 唯一（排除当前 agent）
-                prod_agent.readable_id = await ensure_unique_readable_id(
-                    prod_session, prod_agent.readable_id, exclude_agent_id=agent_id
+                copy_agent_fields(source_agent, target_agent)
+                target_agent.readable_id = await ensure_unique_readable_id(
+                    target_session, target_agent.readable_id, exclude_agent_id=agent_id
                 )
 
-                await prod_session.flush()
-
+                await target_session.flush()
                 updated_count += 1
-                logger.info(f"🔄 更新成功: {prod_agent.name} (ID: {agent_id})")
+                logger.info(f"🔄 更新成功: {target_agent.name} (ID: {agent_id})")
             logger.info("")
 
-        # 第二步：创建操作
         if to_create_ids:
             logger.info("第 2 步：执行创建操作...")
             for agent_id in to_create_ids:
-                source_agent = dev_agents[agent_id]
-                dev_session.expunge(source_agent)
+                source_agent = source_agents[agent_id]
+                source_session.expunge(source_agent)
 
                 new_agent = Agent(id=source_agent.id)
                 copy_agent_fields(source_agent, new_agent)
-
-                # 确保 readable_id 唯一，如果冲突则生成新的自增 ID
                 new_agent.readable_id = await ensure_unique_readable_id(
-                    prod_session, new_agent.readable_id
+                    target_session, new_agent.readable_id
                 )
 
-                prod_session.add(new_agent)
-                await prod_session.flush()
-
+                target_session.add(new_agent)
+                await target_session.flush()
                 created_count += 1
                 logger.info(f"✨ 创建成功: {new_agent.name} (ID: {agent_id})")
 
-        # 所有操作成功，提交事务
-        await prod_session.commit()
+        await target_session.commit()
         logger.info("")
         logger.info("=" * 60)
         logger.info("同步完成！")
@@ -480,7 +476,7 @@ async def sync_agents(
         logger.info("=" * 60)
 
     except Exception as e:
-        await prod_session.rollback()
+        await target_session.rollback()
         logger.error("")
         logger.error("=" * 60)
         logger.error("同步失败，已回滚所有操作")
@@ -491,11 +487,21 @@ async def sync_agents(
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="同步dev环境角色到prod环境")
+    parser = argparse.ArgumentParser(description="同步角色数据在 dev 与 prod 环境之间")
     parser.add_argument(
         "--config",
         default="config.yaml",
         help="配置文件路径（默认: config.yaml）",
+    )
+    parser.add_argument(
+        "--direction",
+        choices=["dev-to-prod", "prod-to-dev"],
+        default="dev-to-prod",
+        help="同步方向（默认: dev-to-prod）",
+    )
+    parser.add_argument(
+        "--agent-name",
+        help="按名称筛选角色；prod-to-dev 时必填",
     )
     parser.add_argument(
         "--dry-run",
@@ -503,6 +509,10 @@ async def main():
         help="预览模式，不实际执行操作",
     )
     args = parser.parse_args()
+
+    if args.direction == "prod-to-dev" and not args.agent_name:
+        logger.error("prod-to-dev 方向必须指定 --agent-name")
+        sys.exit(1)
 
     config = load_config(args.config)
 
@@ -537,7 +547,6 @@ async def main():
     )
 
     try:
-        # 先测试连接
         logger.info("正在测试数据库连接...")
         dev_ok = await test_connection(dev_engine, "Dev")
         prod_ok = await test_connection(prod_engine, "Prod")
@@ -553,7 +562,6 @@ async def main():
         async with DevSession() as dev_session, ProdSession() as prod_session:
             logger.info("数据库会话创建成功")
 
-            # 检查 alembic 版本是否一致
             if not await check_alembic_versions(dev_session, prod_session):
                 logger.error("同步终止：Alembic 版本不一致")
                 sys.exit(1)
@@ -561,18 +569,61 @@ async def main():
             user_config = config["operator_user"]
             user_id = user_config["id"]
 
-            result = await dev_session.execute(select(User).where(User.id == user_id))
-            dev_user = result.scalar_one_or_none()
-            if not dev_user:
-                logger.error(f"Dev环境中不存在运营用户: {user_id}")
-                sys.exit(1)
+            if args.direction == "dev-to-prod":
+                source_session = dev_session
+                target_session = prod_session
+                source_label = "Dev"
+                target_label = "Prod"
 
-            logger.info(f"Dev环境运营用户: {dev_user.nickname} ({user_id})")
+                source_list = await fetch_agents(dev_session, user_id)
+                if args.agent_name:
+                    source_list = [a for a in source_list if a.name == args.agent_name]
+                source_agents = {a.id: a for a in source_list}
 
-            if not args.dry_run:
-                await ensure_operator_user(prod_session, user_config)
+                prod_list = await fetch_agents(prod_session, user_id)
+                target_agents = {a.id: a for a in prod_list}
 
-            await sync_agents(dev_session, prod_session, user_id, args.dry_run)
+                result = await dev_session.execute(select(User).where(User.id == user_id))
+                dev_user = result.scalar_one_or_none()
+                if not dev_user:
+                    logger.error(f"Dev环境中不存在运营用户: {user_id}")
+                    sys.exit(1)
+                logger.info(f"Dev环境运营用户: {dev_user.nickname} ({user_id})")
+
+                if not args.dry_run:
+                    await ensure_operator_user(prod_session, user_config)
+            else:
+                source_session = prod_session
+                target_session = dev_session
+                source_label = "Prod"
+                target_label = "Dev"
+
+                source_list = await fetch_agents_by_name(prod_session, args.agent_name)
+                if not source_list:
+                    logger.error(f"Prod 中不存在名为 {args.agent_name!r} 的未删除角色")
+                    sys.exit(1)
+                source_agents = {a.id: a for a in source_list}
+
+                target_ids = [a.id for a in source_list]
+                result = await target_session.execute(
+                    select(Agent).where(
+                        Agent.id.in_(target_ids), Agent.deleted_at.is_(None)
+                    )
+                )
+                target_agents = {a.id: a for a in result.scalars().all()}
+
+                if not args.dry_run:
+                    await ensure_operator_user(dev_session, user_config)
+
+            await sync_agents(
+                source_session,
+                target_session,
+                source_agents,
+                target_agents,
+                source_label,
+                target_label,
+                args.dry_run,
+            )
 
     except ConnectionResetError as e:
         logger.error("数据库连接被重置，可能的原因：")
