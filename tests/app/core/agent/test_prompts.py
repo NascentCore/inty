@@ -186,6 +186,20 @@ IMAGE_GENERATION_PROMPT_TEMPLATE = """
 - 画面中无文字、对白或身体畸形。
 """
 
+def test_prompts_data_yaml_comments_not_in_loaded_values():
+    """
+    验证 prompts_data.yaml 中的注释不会被读入代码：
+    _load_prompts_data() 使用 yaml.safe_load，解析后的字符串不应包含 YAML 注释内容。
+    """
+    data = _load_prompts_data()
+    comment_substring = "这一句要做调整"
+    for key, value in data.items():
+        assert isinstance(value, str), f"Prompt {key!r} must be str"
+        assert comment_substring not in value, (
+            f"YAML comment content {comment_substring!r} must not appear in loaded prompt {key!r}"
+        )
+
+
 def test_yaml_prompts_identical_to_prompts():
     """Test that YAML prompts are identical to prompts."""
     assert YAML_PROACTIVE_CHAT_SYSTEM_PROMPT == PROACTIVE_CHAT_SYSTEM_PROMPT
