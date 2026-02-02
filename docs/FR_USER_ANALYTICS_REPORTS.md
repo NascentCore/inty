@@ -43,6 +43,7 @@ user_analytics_report:
   enabled: true
   daily_cron_hour: 4
   weekly_cron_hour: 5
+  statement_timeout_sec: 600  # 生产大数据量时需调大，默认 600 秒
 ```
 
 定时任务由 `push_scheduler_service` 调度，需启动 push worker 后生效。
@@ -53,6 +54,10 @@ user_analytics_report:
 
 - **日报补算范围**：`today - 30` 至 `today - 1` 共 30 天
 - **周报补算范围**：当年 1 月第 1 个周一到 6 月最后一个周一
+
+### 生产大数据量
+
+数据库默认 `command_timeout=30` 秒，复杂统计查询易超时。日报/周报计算会在事务内执行 `SET LOCAL statement_timeout`，使用 `user_analytics_report.statement_timeout_sec`（默认 600 秒）。生产环境若仍超时，可在 `config.yaml` 中调大，例如 `statement_timeout_sec: 900` 或 `1200`。
 
 ## 补算脚本
 

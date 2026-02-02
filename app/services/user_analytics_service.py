@@ -930,6 +930,10 @@ class UserAnalyticsService:
                 f"guest_limit={guest_limit}, google_limit={google_limit}"
             )
             logger.exception(e)
+            try:
+                await self.db.rollback()
+            except Exception:
+                pass
             return []
 
     async def get_agent_analytics(
