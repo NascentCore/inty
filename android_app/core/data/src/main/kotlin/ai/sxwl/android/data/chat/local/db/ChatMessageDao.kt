@@ -15,106 +15,103 @@ data class AgentMessageCount(val agentId: String, val messageCount: Int)
 interface ChatMessageDao {
 
     @Query(
-        "SELECT * FROM chat_messages WHERE agentId = :agentId ORDER BY sortKey DESC, createdAt DESC"
+        "SELECT * FROM message WHERE agentId = :agentId ORDER BY id DESC"
     )
-    fun streamMessages(agentId: String): Flow<List<ChatMessageEntity>>
+    fun streamMessages(agentId: String): Flow<List<MessageEntity>>
 
     /**
      * 返回 PagingSource，用于配合 RemoteMediator 进行分页加载 按 sortKey DESC 排序，最新的消息在列表底部 排除 isOpening 为 true
      * 的数据
      */
     @Query(
-        "SELECT * FROM chat_messages WHERE agentId = :agentId AND isOpening = 0 ORDER BY localId DESC"
+        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC"
     )
-    fun pagingSource(agentId: String): PagingSource<Int, ChatMessageEntity>
+    fun pagingSource(agentId: String): PagingSource<Int, MessageEntity>
 
-    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId AND isOpening = 0")
+    @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND isOpening = 0")
     suspend fun getMessagesCount(agentId: String): Int
 
     /** 查询用户是否对该 agent 发送过消息（存在 role = 'user' 的记录即视为发送过） */
-    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId AND role = 'user'")
+    @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND role = 'user'")
     suspend fun countUserMessages(agentId: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(messages: List<ChatMessageEntity>)
+    suspend fun upsert(messages: List<MessageEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: ChatMessageEntity)
-
-    @Query(
-        "SELECT * FROM chat_messages WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId) LIMIT 1"
-    )
-    suspend fun getMessage(agentId: String, messageId: String): ChatMessageEntity?
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: MessageEntity)
 
     @Query(
-        "DELETE FROM chat_messages WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"
+        "SELECT * FROM message WHERE agentId = :agentId AND id = :messageId LIMIT 1"
     )
-    suspend fun deleteMessage(agentId: String, messageId: String)
+    suspend fun getMessage(agentId: String, messageId: String): MessageEntity?
 
-    @Query("DELETE FROM chat_messages WHERE agentId = :agentId AND isSending = 1")
+    @Query(
+        "DELETE FROM message WHERE agentId = :agentId AND id = :messageId AND indexId = :indexId"
+    )
+    suspend fun deleteMessage(agentId: String, messageId: String, indexId: String)
+
+    @Query("DELETE FROM message WHERE agentId = :agentId AND isSending = 1")
     suspend fun deleteSendingMsg(agentId: String)
 
-    @Query("DELETE FROM chat_messages WHERE agentId = :agentId")
+    @Query("DELETE FROM message WHERE agentId = :agentId")
     suspend fun deleteByAgent(agentId: String)
 
-    @Query("DELETE FROM chat_messages") suspend fun deleteAll()
+    @Query("DELETE FROM message") suspend fun deleteAll()
 
     @Query(
-        "UPDATE chat_messages SET audioUrl = :audioUrl, updatedAt = :updatedAt WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"
+        "UPDATE message SET audioUrl = :audioUrl WHERE agentId = :agentId AND id = :messageId"
     )
     suspend fun updateAudioUrl(
         agentId: String,
         messageId: String,
-        audioUrl: String?,
-        updatedAt: Long,
+        audioUrl: String?
     )
 
     @Query(
-        "UPDATE chat_messages SET userFeedback = :feedback, updatedAt = :updatedAt WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"
+        "UPDATE message SET userVote = :feedback WHERE agentId = :agentId AND id = :messageId"
     )
     suspend fun updateUserFeedback(
         agentId: String,
         messageId: String,
-        feedback: String?,
-        updatedAt: Long,
+        feedback: MessageEntity.UserVote?
     )
 
     @Query(
-        "UPDATE chat_messages SET generatedImageUrl = :url, generatedImageWidth = :width, generatedImageHeight = :height, updatedAt = :updatedAt WHERE agentId = :agentId AND (localId = :messageId OR remoteId = :messageId)"
+        "UPDATE message SET generate_image_imageUrl = :url, generate_image_width = :width, generate_image_height = :height WHERE agentId = :agentId AND id = :messageId"
     )
     suspend fun updateGeneratedImage(
         agentId: String,
         messageId: String,
         url: String?,
         width: Int?,
-        height: Int?,
-        updatedAt: Long,
+        height: Int?
     )
 
-    @Query("SELECT MAX(sortKey) FROM chat_messages WHERE agentId = :agentId")
-    suspend fun getMaxSortKey(agentId: String): Long?
 
-    @Query("SELECT MIN(sortKey) FROM chat_messages WHERE agentId = :agentId")
-    suspend fun getMinSortKey(agentId: String): Long?
+    @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY id DESC")
+    suspend fun getAllMessages(agentId: String): List<MessageEntity>
 
-    @Query("SELECT * FROM chat_messages WHERE agentId = :agentId")
-    suspend fun getAllMessages(agentId: String): List<ChatMessageEntity>
-
-    @Query("SELECT COUNT(*) FROM chat_messages WHERE agentId = :agentId")
+    @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId")
     suspend fun getMessageCount(agentId: String): Int
 
     @Query(
-        "SELECT agentId AS agentId, COUNT(*) AS messageCount FROM chat_messages WHERE agentId IN (:agentIds) GROUP BY agentId"
+        "SELECT agentId AS agentId, COUNT(*) AS messageCount FROM message WHERE agentId IN (:agentIds) GROUP BY agentId"
     )
     suspend fun getMessageCounts(agentIds: List<String>): List<AgentMessageCount>
 
     @Query(
-        "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND generatedImageUrl IS NOT NULL AND generatedImageUrl != '' AND generatedImageUrl != 'loading' ORDER BY sortKey DESC, createdAt DESC"
+        "SELECT * FROM message WHERE agentId = :agentId AND role = 'assistant' AND generate_image_imageUrl IS NOT NULL AND generate_image_imageUrl != '' AND generate_image_imageUrl != 'loading' ORDER BY id DESC"
     )
-    fun streamMessagesWithImages(agentId: String): Flow<List<ChatMessageEntity>>
+    fun streamMessagesWithImages(agentId: String): Flow<List<MessageEntity>>
 
     /** 查询该 agent 最近一条 AI 回复消息，排除 isOpening = true（开场白） */
     @Query(
-        "SELECT * FROM chat_messages WHERE agentId = :agentId AND role = 'assistant' AND isOpening = 0 ORDER BY sortKey DESC, createdAt DESC LIMIT 1"
+        "SELECT * FROM message WHERE agentId = :agentId AND role = 'assistant' AND isOpening = 0 ORDER BY id DESC LIMIT 1"
     )
-    suspend fun getLatestAgentMessage(agentId: String): ChatMessageEntity?
+    suspend fun getLatestAgentMessage(agentId: String): MessageEntity?
+
+    @Query(
+        "SELECT id FROM message WHERE agentId = :agentId ORDER BY id DESC LIMIT 1"
+    )
+    suspend fun getLatestMessageId(agentId: String): String?
 }

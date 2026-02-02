@@ -9,8 +9,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ChatMessageEntity::class, ChatSyncStateEntity::class],
-    version = 4,
+    entities = [MessageEntity::class, SyncStateEntity::class],
+    version = 5,
     exportSchema = true,
 )
 abstract class IntyChatDatabase : RoomDatabase() {
@@ -37,7 +37,7 @@ abstract class IntyChatDatabase : RoomDatabase() {
                                 IntyChatDatabase::class.java,
                                 DATABASE_NAME,
                             )
-                            .fallbackToDestructiveMigration()
+                            .fallbackToDestructiveMigration(true)
                             .build()
                             .also { instance = it }
                 }

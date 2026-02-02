@@ -160,10 +160,8 @@ fun VoicePlayer(
                     hasReportedPlayEnd = false
 
                     // 开场白播放开始时立即标记为已播放
-                    if (messageId.contains("_assistant_")) {
-                        audioInfo.agentId?.let { agentId ->
-                            OpeningPlayState.openingPlayedAsync(agentId)
-                        }
+                    audioInfo.agentId?.let { agentId ->
+                        OpeningPlayState.openingPlayedAsync(agentId)
                     }
                 }
 

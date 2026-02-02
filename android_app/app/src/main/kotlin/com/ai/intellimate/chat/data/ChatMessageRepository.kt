@@ -4,18 +4,25 @@ package com.ai.intellimate.chat.data
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.VoteConstants
+import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.data.RoomDataSource
-import ai.sxwl.android.data.chat.local.db.ChatMessageEntity
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
+import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import com.ai.intellimate.R
 import com.architecture.httplib.core.HttpResult
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 /**
  * 聊天消息的 Paging Repository 使用 RemoteMediator 实现数据库查询和网络同步
@@ -40,7 +47,7 @@ class ChatMessageRepository(
 
     /** 获取聊天消息的 PagingData Flow 返回的 Flow 会从数据库读取数据，并在需要时通过 RemoteMediator 从网络同步 */
     @OptIn(ExperimentalPagingApi::class)
-    fun getMessagesFlow(agentId: String): Flow<PagingData<ChatMessageEntity>> {
+    fun getMessagesFlow(agentId: String): Flow<PagingData<MessageEntity>> {
         return Pager(
                 config = PagingConfig(pageSize = 20, enablePlaceholders = false),
                 remoteMediator =
@@ -65,7 +72,7 @@ class ChatMessageRepository(
         val trimmed = content.trimEnd()
         val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
 
-        roomDataSource.appendSendingMessages(agentId, trimmed)
+        localDataSource.appendSendingMessages(agentId, trimmed)
 
         val result =
             try {
@@ -86,24 +93,19 @@ class ChatMessageRepository(
 
             val userMessageId = result.data.data?.user_message_id ?: 0L
 
-            roomDataSource.appendMessages(
-                agentId,
-                listOf(
-                    MsgInfo(
-                        id = userMessageId.toString(),
-                        content = trimmed,
-                        role = "user",
-                        timestamp = timestamp,
-                    )
-                ),
+            localDataSource.appendUserMessage(
+                messageId = userMessageId.toString(),
+                agentId = agentId,
+                content = trimmed,
+                timestamp = timestamp
             )
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
-                val assistantMsgs = choices.map { it.message }
+                val assistantMsgs = choices.map { it.message.toEntity(agentId) }
                 LogUtils.d(
                     "RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId"
                 )
-                roomDataSource.appendMessages(agentId, assistantMsgs)
+                localDataSource.appendMessages(assistantMsgs)
                 localDataSource.updateSyncState(agentId) { it.copy(offset = it.offset + 2) }
             } else {
                 localDataSource.updateSyncState(agentId) { it.copy(offset = it.offset + 1) }
@@ -124,8 +126,8 @@ class ChatMessageRepository(
             return
         }
 
-        localDataSource.removeMessage(agentId, lastAssistantMessage.localId)
-        roomDataSource.appendSendingLoadingOnly(agentId)
+        localDataSource.removeMessage(agentId, lastAssistantMessage.id, lastAssistantMessage.indexId)
+        localDataSource.appendSendingLoadingOnly(agentId)
 
         val result =
             try {
@@ -143,8 +145,8 @@ class ChatMessageRepository(
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
-                val assistantMsgs = choices.map { it.message }
-                roomDataSource.appendMessages(agentId, assistantMsgs)
+                val assistantMsgs = choices.map { it.message.toEntity(agentId) }
+                localDataSource.appendMessages(assistantMsgs)
             }
         } else {
             localDataSource.upsert(lastAssistantMessage)
@@ -157,4 +159,73 @@ class ChatMessageRepository(
 
     suspend fun getMessage(agentId: String, msgId: String) =
         localDataSource.getMessage(agentId, msgId)
+
+    suspend fun setMessageVote(
+        agentId: String,
+        messageId: String,
+        userVote: MessageEntity.UserVote
+    ) {
+        withContext(Dispatchers.IO) {
+            val preMessage = localDataSource.getMessage(agentId, messageId)
+
+            try {
+                localDataSource.setMessageVote(agentId, messageId, userVote)
+
+                val result = remoteDataSource.voteMessage(agentId, messageId, userVote.name)
+
+                if (result is HttpResult.Failure) {
+                    throw Exception(result.message)
+                }
+            } catch (error: Exception) {
+                localDataSource.setMessageVote(agentId, messageId, preMessage?.userVote)
+                throw error
+            }
+        }
+    }
+
+    suspend fun resetMessageVote(agentId: String, msgId: String) {
+        withContext(Dispatchers.IO) {
+            localDataSource.setMessageVote(agentId, msgId, null)
+        }
+    }
+
+    suspend fun addImageGenerationErrorTips(agentId: String, messageId: String) {
+        // 在消息列表中添加 tips 消息（使用字符串常量，后续在 UI 层处理）
+        val tipMessage =
+            MessageEntity(
+                id = messageId,
+                content = "image_generation_error_tip", // 特殊标记，UI 层会转换为实际文案
+                role = "system",
+                indexId = "image_generation_error_${System.nanoTime()}",
+                metaData = MessageEntity.MetaData(agentId = agentId),
+            )
+
+        withContext(Dispatchers.IO) {
+            localDataSource.appendMessages(listOf(tipMessage))
+        }
+    }
+
+    suspend fun appendBoostSystemMessage(agentId: String, content: String) {
+
+        withContext(Dispatchers.IO) {
+            val lastMessageId = localDataSource.getLatestMessageId(agentId)
+
+            val message =
+                MessageEntity(
+                    id = lastMessageId ?: "${Long.MAX_VALUE}",
+                    content = content,
+                    role = "system",
+                    indexId = "boost_${System.nanoTime()}",
+                    metaData = MessageEntity.MetaData(agentId = agentId),
+                )
+
+            localDataSource.appendMessages(listOf(message))
+        }
+    }
+
+    suspend fun removeMessage(agentId: String, msgId: String, indexId: String) {
+        localDataSource.removeMessage(agentId, msgId, indexId)
+    }
+
+    suspend fun getImageMessages(agentId: String) = localDataSource.getImageMessages(agentId)
 }

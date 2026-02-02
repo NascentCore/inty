@@ -4,6 +4,7 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
@@ -129,7 +130,7 @@ sealed class ChatMessageItem {
  * @param messages 原始消息（倒序，新消息在前），getOrNull 可能返回 null（placeholder）
  * @return 分组后的消息项列表，索引均指向 messages 中的位置
  */
-private fun proFixMessages(messages: ItemSnapshotList<MsgInfo>): List<MessageItem> {
+private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<MessageItem> {
     val result = mutableListOf<MessageItem>()
     val currentVoiceGroupIndices = mutableListOf<Int>()
 
@@ -141,7 +142,7 @@ private fun proFixMessages(messages: ItemSnapshotList<MsgInfo>): List<MessageIte
             }
             result.add(MessageItem.MessageIndex(index))
         } else {
-            if (info.isVoiceMessage()) {
+            if (info.isVoice) {
                 currentVoiceGroupIndices.add(index)
             } else if (info.role == "user" && currentVoiceGroupIndices.isNotEmpty()) {
                 currentVoiceGroupIndices.add(index)
@@ -355,12 +356,10 @@ internal fun ChatPage(
     }
 
     LaunchedEffect(chatViewModel) {
-        chatViewModel.queryMsgs()
         chatViewModel.initVoiceService(context)
     }
 
     LifecycleResumeEffect(isCurrentPage) {
-        chatViewModel.syncLatestMessages()
         onPauseOrDispose { chatViewModel.pauseVoicePlayback() }
     }
 
@@ -648,44 +647,22 @@ internal fun ChatPage(
                                     val isOnlyOpeningMessage by remember {
                                         derivedStateOf {
                                             messages.itemSnapshotList.none {
-                                                it != null && !it.isOpening() && it.role != "system"
+                                                it != null && !it.isOpening && it.role != "system"
                                             }
                                         }
                                     }
                                     val openingMessage =
-                                        MsgInfo(
+                                        MessageEntity(
+                                            id = "",
                                             content = agent?.opening.orEmpty(),
                                             role = "assistant",
-                                            audio_url = agent?.openingAudioUrl,
-                                            meta_data =
-                                                MsgInfo.MsgMetaData(
-                                                    agent?.agentId,
-                                                    isOpening = true,
-                                                ),
+                                            audioUrl = agent?.openingAudioUrl,
+                                            metaData = MessageEntity.MetaData(
+                                                agentId = agent?.agentId.orEmpty(),
+                                                isOpening = true
+                                            )
                                         )
 
-                                    /*var showContent by remember(isOnlyOpeningMessage, agent) {
-                                        mutableStateOf(!isOnlyOpeningMessage || OpeningPlayState.agentOpeningPlayed(agent?.agentId ?: ""))
-                                    }
-
-                                    LaunchedEffect(isOnlyOpeningMessage, agent) {
-                                        showContent = true
-                                    }
-
-                                    AnimatedContent(
-                                        targetState = showContent,
-                                        transitionSpec = {
-                                            (fadeIn(animationSpec = tween(1000)) +
-                                                    slideInVertically { it })
-                                                .togetherWith(fadeOut(animationSpec = tween(90)))
-                                        }
-                                    ) {
-                                        if (it) {
-
-                                        } else {
-                                            Spacer(Modifier)
-                                        }
-                                    }*/
                                     Column {
                                         Spacer(Modifier.height(16.dp))
                                         ChatItem(
@@ -865,7 +842,7 @@ internal fun ChatPage(
                             msg.role == "assistant" &&
                             msg.content != "loading_animation" &&
                             !(msg.content.isEmpty() && msg.hasGeneratedImage()) &&
-                            !msg.isOpening()
+                            !msg.isOpening
                     } != null
                 }
             }
