@@ -1,5 +1,9 @@
 # RunPod 运行 Z-Image 方案
 
+## TODOs
+
+- [ ] 补充设置 ssh 登录 public/private key 的方法
+
 ## 1. 概述
 
 - **Z-Image**：Tongyi-MAI 的 6B 参数图像生成模型，[GitHub](https://github.com/Tongyi-MAI/Z-Image)。Z-Image-Turbo 约 8 NFE、适合 16GB VRAM，支持中英文与写实风格。
