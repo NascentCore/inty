@@ -35,7 +35,7 @@ CREATED_BY_AGENT
 - 当前提供的快捷入口：
   - Create a character
   - Explore characters
-  - Write a story
+  - Feature feedback
 
 ## 显示条件
 仅在以下条件同时满足时展示欢迎页：
