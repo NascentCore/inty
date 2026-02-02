@@ -1749,15 +1749,11 @@ async def get_user_analytics_reports(
             if row.charts:
                 charts_data = schemas.user_analytics.UserAnalyticsReportCharts(
                     new_users=row.charts.get("new_users", []),
-                    conversation_rounds=row.charts.get(
-                        "conversation_rounds", []
-                    ),
+                    conversation_rounds=row.charts.get("conversation_rounds", []),
                     user_rounds_distribution=row.charts.get(
                         "user_rounds_distribution", []
                     ),
-                    users_hitting_limit=row.charts.get(
-                        "users_hitting_limit", []
-                    ),
+                    users_hitting_limit=row.charts.get("users_hitting_limit", []),
                     popular_agents=row.charts.get("popular_agents", []),
                 )
             reports.append(
@@ -1767,15 +1763,11 @@ async def get_user_analytics_reports(
                     report_date=row.report_date.isoformat(),
                     stats=row.stats,
                     charts=charts_data,
-                    created_at=(
-                        row.created_at.isoformat() if row.created_at else None
-                    ),
+                    created_at=(row.created_at.isoformat() if row.created_at else None),
                 )
             )
 
-        return schemas.user_analytics.UserAnalyticsReportsResponse(
-            reports=reports
-        )
+        return schemas.user_analytics.UserAnalyticsReportsResponse(reports=reports)
 
     except Exception as e:
         logger.error(f"获取预计算报告失败: {str(e)}")

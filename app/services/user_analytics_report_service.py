@@ -27,9 +27,8 @@ async def _ensure_statement_timeout(db: AsyncSession) -> None:
         None,
     )
     timeout_sec = getattr(uar_cfg, "statement_timeout_sec", 600)
-    await db.execute(
-        text(f"SET LOCAL statement_timeout = '{timeout_sec * 1000}'")
-    )
+    await db.execute(text(f"SET LOCAL statement_timeout = '{timeout_sec * 1000}'"))
+
 
 ALL_USERS_REGISTER_START = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
@@ -66,9 +65,7 @@ async def compute_and_save_daily_report(
     user_rounds_distribution = await service.get_user_rounds_distribution(
         reg_start, reg_end, act_start, act_end
     )
-    users_hitting_limit = await service.get_users_hitting_chat_limit(
-        act_start, act_end
-    )
+    users_hitting_limit = await service.get_users_hitting_chat_limit(act_start, act_end)
     popular_agents = await service.get_popular_agents(
         reg_start, reg_end, act_start, act_end, limit=20
     )
@@ -82,9 +79,7 @@ async def compute_and_save_daily_report(
             {
                 "chat_id": d["chat_id"],
                 "message_count": d["message_count"],
-                "message_count_excluding_opening": d[
-                    "message_count_excluding_opening"
-                ],
+                "message_count_excluding_opening": d["message_count_excluding_opening"],
             }
             for d in conversation_rounds
         ],
@@ -142,9 +137,7 @@ async def compute_and_save_weekly_report(
     await _ensure_statement_timeout(db)
     reg_start = ALL_USERS_REGISTER_START
     week_end = week_start_date + timedelta(days=7)
-    reg_end = datetime.combine(
-        week_end, datetime.min.time(), tzinfo=timezone.utc
-    )
+    reg_end = datetime.combine(week_end, datetime.min.time(), tzinfo=timezone.utc)
     act_start = datetime.combine(
         week_start_date, datetime.min.time(), tzinfo=timezone.utc
     )
@@ -165,9 +158,7 @@ async def compute_and_save_weekly_report(
     user_rounds_distribution = await service.get_user_rounds_distribution(
         reg_start, reg_end, act_start, act_end
     )
-    users_hitting_limit = await service.get_users_hitting_chat_limit(
-        act_start, act_end
-    )
+    users_hitting_limit = await service.get_users_hitting_chat_limit(act_start, act_end)
     popular_agents = await service.get_popular_agents(
         reg_start, reg_end, act_start, act_end, limit=20
     )
@@ -181,9 +172,7 @@ async def compute_and_save_weekly_report(
             {
                 "chat_id": d["chat_id"],
                 "message_count": d["message_count"],
-                "message_count_excluding_opening": d[
-                    "message_count_excluding_opening"
-                ],
+                "message_count_excluding_opening": d["message_count_excluding_opening"],
             }
             for d in conversation_rounds
         ],
@@ -251,9 +240,7 @@ async def get_missing_daily_report_dates(
     today = datetime.now(timezone.utc).date()
     start = today - timedelta(days=days)
     end = today - timedelta(days=1)
-    expected_dates = [
-        start + timedelta(days=i) for i in range((end - start).days + 1)
-    ]
+    expected_dates = [start + timedelta(days=i) for i in range((end - start).days + 1)]
     if not expected_dates:
         return []
 
@@ -293,9 +280,7 @@ async def backfill_missing_reports(
     target_year = year if year is not None else today.year
 
     missing_daily = await get_missing_daily_report_dates(db, days=days)
-    missing_weekly = await get_missing_weekly_report_dates_first_half(
-        db, target_year
-    )
+    missing_weekly = await get_missing_weekly_report_dates_first_half(db, target_year)
 
     daily_count = 0
     for d in missing_daily:

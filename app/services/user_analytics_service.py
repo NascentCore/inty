@@ -425,25 +425,17 @@ class UserAnalyticsService:
             active_sessions = len(sessions)
             total_sessions = len(stats["total_chats"])
 
-            avg_rounds_per_user = (
-                total_rounds / user_count if user_count > 0 else 0.0
-            )
+            avg_rounds_per_user = total_rounds / user_count if user_count > 0 else 0.0
             sessions_ge_5 = sum(1 for r in sessions if r >= 5)
             sessions_ge_10 = sum(1 for r in sessions if r >= 10)
             pct_sessions_ge_5 = (
-                (sessions_ge_5 / active_sessions * 100)
-                if active_sessions > 0
-                else 0.0
+                (sessions_ge_5 / active_sessions * 100) if active_sessions > 0 else 0.0
             )
             pct_sessions_ge_10 = (
-                (sessions_ge_10 / active_sessions * 100)
-                if active_sessions > 0
-                else 0.0
+                (sessions_ge_10 / active_sessions * 100) if active_sessions > 0 else 0.0
             )
             open_rate = (
-                (active_sessions / total_sessions * 100)
-                if total_sessions > 0
-                else 0.0
+                (active_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
             )
 
             result.append(

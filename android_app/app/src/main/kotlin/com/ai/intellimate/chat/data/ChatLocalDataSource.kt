@@ -1,14 +1,11 @@
 package com.ai.intellimate.chat.data
 
-import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.SyncStateEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
-import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 
 class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatabase.getInstance()) {
     val chatMessageDao = database.chatMessageDao()
@@ -44,23 +41,15 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         return chatMessageDao.getMessage(agentId, messageId)
     }
 
-    suspend fun updateSyncState(
-        agentId: String,
-        updater: (SyncStateEntity) -> SyncStateEntity,
-    ) {
+    suspend fun updateSyncState(agentId: String, updater: (SyncStateEntity) -> SyncStateEntity) {
         val current = syncStateDao.get(agentId) ?: SyncStateEntity(agentId = agentId)
         syncStateDao.upsert(updater(current).copy(updatedAt = System.currentTimeMillis()))
     }
 
     suspend fun appendSendingMessages(agentId: String, userContent: String) {
 
-        val userEntity =
-            createTempSendingUserEntity(
-                agentId = agentId,
-                content = userContent
-            )
-        val loadingEntity =
-            createTempSendingLoadingEntity(agentId = agentId)
+        val userEntity = createTempSendingUserEntity(agentId = agentId, content = userContent)
+        val loadingEntity = createTempSendingLoadingEntity(agentId = agentId)
 
         chatMessageDao.upsert(listOf(userEntity, loadingEntity))
     }
@@ -70,12 +59,15 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
      * removeSendingMessage(agentId) 移除。
      */
     suspend fun appendSendingLoadingOnly(agentId: String) {
-        chatMessageDao.upsert(
-            createTempSendingLoadingEntity(agentId = agentId)
-        )
+        chatMessageDao.upsert(createTempSendingLoadingEntity(agentId = agentId))
     }
 
-    suspend fun appendUserMessage(agentId: String, messageId: String, content: String, timestamp: String) {
+    suspend fun appendUserMessage(
+        agentId: String,
+        messageId: String,
+        content: String,
+        timestamp: String,
+    ) {
         chatMessageDao.upsert(
             MessageEntity(
                 id = messageId,
@@ -94,7 +86,7 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
     suspend fun setMessageVote(
         agentId: String,
         messageId: String,
-        userVote: MessageEntity.UserVote?
+        userVote: MessageEntity.UserVote?,
     ) {
         chatMessageDao.updateUserFeedback(agentId, messageId, userVote)
     }

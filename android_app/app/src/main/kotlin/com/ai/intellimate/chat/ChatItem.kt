@@ -1,7 +1,6 @@
 package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.getCdnImageUrl
-import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
@@ -659,7 +658,8 @@ private fun ChatItemSystemTips(item: MessageEntity, chatViewModel: ChatViewModel
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.id, item.indexId) },
+            modifier =
+                Modifier.noRippleClickable { viewModel.deleteMessage(item.id, item.indexId) },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

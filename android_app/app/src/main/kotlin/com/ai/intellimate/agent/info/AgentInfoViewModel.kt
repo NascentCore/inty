@@ -3,7 +3,6 @@ package com.ai.intellimate.agent.info
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.chat.local.db.MessageEntity

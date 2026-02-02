@@ -382,11 +382,11 @@ class UserAnalyticsReportItem(BaseModel):
 
     id: str = Field(description="报告 ID")
     report_type: str = Field(description="daily | weekly")
-    report_date: str = Field(description="日报：统计日期；周报：该周周一日期 (YYYY-MM-DD)")
-    stats: UserAnalyticsStatsResponse = Field(description="聚合统计数据")
-    charts: Optional[UserAnalyticsReportCharts] = Field(
-        None, description="图表数据"
+    report_date: str = Field(
+        description="日报：统计日期；周报：该周周一日期 (YYYY-MM-DD)"
     )
+    stats: UserAnalyticsStatsResponse = Field(description="聚合统计数据")
+    charts: Optional[UserAnalyticsReportCharts] = Field(None, description="图表数据")
     created_at: Optional[str] = Field(None, description="创建时间")
 
 

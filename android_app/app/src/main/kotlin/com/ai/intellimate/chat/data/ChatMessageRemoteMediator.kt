@@ -88,8 +88,7 @@ class ChatMessageRemoteMediator(
                     database.withTransaction {
                         // 保存消息到数据库
                         if (messages.isNotEmpty()) {
-                            val entities =
-                                messages.map { msg -> msg.toEntity(agentId) }
+                            val entities = messages.map { msg -> msg.toEntity(agentId) }
 
                             messageDao.upsert(entities)
                             LogUtils.d(

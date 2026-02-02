@@ -19,8 +19,7 @@ interface ChatSyncStateDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: SyncStateEntity)
 
-    @Query("DELETE FROM sync_state WHERE agentId = :agentId")
-    suspend fun delete(agentId: String)
+    @Query("DELETE FROM sync_state WHERE agentId = :agentId") suspend fun delete(agentId: String)
 
     @Query("DELETE FROM sync_state") suspend fun deleteAll()
 }

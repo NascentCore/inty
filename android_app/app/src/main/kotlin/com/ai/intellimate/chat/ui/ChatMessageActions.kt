@@ -1,6 +1,5 @@
 package com.ai.intellimate.chat.ui
 
-import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.layout.Arrangement

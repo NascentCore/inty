@@ -9,7 +9,6 @@ import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.UserProfile
-import ai.sxwl.android.data.api.model.VoteConstants
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.domain.ChatRepository
@@ -25,7 +24,6 @@ import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
-import androidx.paging.map
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
@@ -53,7 +51,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -932,7 +929,6 @@ class ChatViewModel : BaseVM() {
         val agentId = _agentId.value ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-
             try {
                 chatMessageRepository.setMessageVote(agentId, msgId, userVote)
                 LogUtils.i("Vote message success: ${userVote.name}")
@@ -948,10 +944,11 @@ class ChatViewModel : BaseVM() {
                 "agent_name" to agentFlow.value?.name.orEmpty(),
                 "message_id" to msgId, // 优先使用服务端id，这才是有意义的标识
                 "message_length" to message?.content?.length,
-                "has_generated_image" to !message?.metaData?.generatedImage?.imageUrl.isNullOrBlank(),
+                "has_generated_image" to
+                    !message?.metaData?.generatedImage?.imageUrl.isNullOrBlank(),
                 "is_opening" to message?.isOpening,
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                "timestamp" to System.currentTimeMillis()
+                "timestamp" to System.currentTimeMillis(),
             )
         }
     }
@@ -1193,7 +1190,10 @@ class ChatViewModel : BaseVM() {
                                     ),
                                 )
 
-                                chatMessageRepository.addImageGenerationErrorTips(agent.agentId, messageId)
+                                chatMessageRepository.addImageGenerationErrorTips(
+                                    agent.agentId,
+                                    messageId,
+                                )
                             }
                         }
                     }
@@ -1332,8 +1332,10 @@ class ChatViewModel : BaseVM() {
     }
 
     suspend fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {
-        chatMessageRepository.appendBoostSystemMessage(agent.id, Utils.getApp()
-            .getString(R.string.boost_system_message, points, agent.name, totalBoosts))
+        chatMessageRepository.appendBoostSystemMessage(
+            agent.id,
+            Utils.getApp().getString(R.string.boost_system_message, points, agent.name, totalBoosts),
+        )
     }
 
     suspend fun reset() {
