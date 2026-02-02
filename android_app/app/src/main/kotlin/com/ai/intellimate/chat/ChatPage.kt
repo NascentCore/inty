@@ -355,13 +355,9 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(chatViewModel) {
-        chatViewModel.initVoiceService(context)
-    }
+    LaunchedEffect(chatViewModel) { chatViewModel.initVoiceService(context) }
 
-    LifecycleResumeEffect(isCurrentPage) {
-        onPauseOrDispose { chatViewModel.pauseVoicePlayback() }
-    }
+    LifecycleResumeEffect(isCurrentPage) { onPauseOrDispose { chatViewModel.pauseVoicePlayback() } }
 
     DisposableEffect(chatViewModel, isCurrentPage) {
         onDispose {
@@ -657,10 +653,11 @@ internal fun ChatPage(
                                             content = agent?.opening.orEmpty(),
                                             role = "assistant",
                                             audioUrl = agent?.openingAudioUrl,
-                                            metaData = MessageEntity.MetaData(
-                                                agentId = agent?.agentId.orEmpty(),
-                                                isOpening = true
-                                            )
+                                            metaData =
+                                                MessageEntity.MetaData(
+                                                    agentId = agent?.agentId.orEmpty(),
+                                                    isOpening = true,
+                                                ),
                                         )
 
                                     Column {

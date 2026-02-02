@@ -14,18 +14,14 @@ data class AgentMessageCount(val agentId: String, val messageCount: Int)
 @Dao
 interface ChatMessageDao {
 
-    @Query(
-        "SELECT * FROM message WHERE agentId = :agentId ORDER BY id DESC"
-    )
+    @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY id DESC")
     fun streamMessages(agentId: String): Flow<List<MessageEntity>>
 
     /**
      * 返回 PagingSource，用于配合 RemoteMediator 进行分页加载 按 sortKey DESC 排序，最新的消息在列表底部 排除 isOpening 为 true
      * 的数据
      */
-    @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC"
-    )
+    @Query("SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC")
     fun pagingSource(agentId: String): PagingSource<Int, MessageEntity>
 
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND isOpening = 0")
@@ -40,9 +36,7 @@ interface ChatMessageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: MessageEntity)
 
-    @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND id = :messageId LIMIT 1"
-    )
+    @Query("SELECT * FROM message WHERE agentId = :agentId AND id = :messageId LIMIT 1")
     suspend fun getMessage(agentId: String, messageId: String): MessageEntity?
 
     @Query(
@@ -58,22 +52,14 @@ interface ChatMessageDao {
 
     @Query("DELETE FROM message") suspend fun deleteAll()
 
-    @Query(
-        "UPDATE message SET audioUrl = :audioUrl WHERE agentId = :agentId AND id = :messageId"
-    )
-    suspend fun updateAudioUrl(
-        agentId: String,
-        messageId: String,
-        audioUrl: String?
-    )
+    @Query("UPDATE message SET audioUrl = :audioUrl WHERE agentId = :agentId AND id = :messageId")
+    suspend fun updateAudioUrl(agentId: String, messageId: String, audioUrl: String?)
 
-    @Query(
-        "UPDATE message SET userVote = :feedback WHERE agentId = :agentId AND id = :messageId"
-    )
+    @Query("UPDATE message SET userVote = :feedback WHERE agentId = :agentId AND id = :messageId")
     suspend fun updateUserFeedback(
         agentId: String,
         messageId: String,
-        feedback: MessageEntity.UserVote?
+        feedback: MessageEntity.UserVote?,
     )
 
     @Query(
@@ -84,9 +70,8 @@ interface ChatMessageDao {
         messageId: String,
         url: String?,
         width: Int?,
-        height: Int?
+        height: Int?,
     )
-
 
     @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY id DESC")
     suspend fun getAllMessages(agentId: String): List<MessageEntity>
@@ -110,8 +95,6 @@ interface ChatMessageDao {
     )
     suspend fun getLatestAgentMessage(agentId: String): MessageEntity?
 
-    @Query(
-        "SELECT id FROM message WHERE agentId = :agentId ORDER BY id DESC LIMIT 1"
-    )
+    @Query("SELECT id FROM message WHERE agentId = :agentId ORDER BY id DESC LIMIT 1")
     suspend fun getLatestMessageId(agentId: String): String?
 }

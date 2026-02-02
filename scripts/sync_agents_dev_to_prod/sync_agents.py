@@ -583,7 +583,9 @@ async def main():
                 prod_list = await fetch_agents(prod_session, user_id)
                 target_agents = {a.id: a for a in prod_list}
 
-                result = await dev_session.execute(select(User).where(User.id == user_id))
+                result = await dev_session.execute(
+                    select(User).where(User.id == user_id)
+                )
                 dev_user = result.scalar_one_or_none()
                 if not dev_user:
                     logger.error(f"Dev环境中不存在运营用户: {user_id}")

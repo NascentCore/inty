@@ -22,8 +22,8 @@ data class MessageEntity(
     val audioUrl: String? = null,
     val userVote: UserVote? = null,
     @Embedded val metaData: MetaData,
-    //以下为本地字段
-    val isSending: Boolean = false
+    // 以下为本地字段
+    val isSending: Boolean = false,
 ) {
     val isVoice: Boolean
         get() = metaData.isVoice
@@ -55,12 +55,12 @@ data class MessageEntity(
         val agentId: String,
         val isVoice: Boolean = false,
         val isOpening: Boolean = false,
-        @Embedded("generate_image_") val generatedImage: GeneratedImage? = null
+        @Embedded("generate_image_") val generatedImage: GeneratedImage? = null,
     ) {
         data class GeneratedImage(
-           val imageUrl: String? = null,
-           val width: Int? = null,
-           val height: Int? = null,
+            val imageUrl: String? = null,
+            val width: Int? = null,
+            val height: Int? = null,
         )
     }
 
@@ -79,20 +79,22 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
         timestamp = timestamp,
         audioUrl = audio_url,
         userVote = user_vote?.let { runCatching { UserVote.valueOf(it) }.getOrNull() },
-        metaData = meta_data?.run {
-            MessageEntity.MetaData(
-                agentId = this.agentId.orEmpty(),
-                isVoice = isVoice,
-                isOpening = isOpening,
-                generatedImage = generatedImage?.run {
-                    MessageEntity.MetaData.GeneratedImage(
-                        imageUrl = imageUrl,
-                        width = width,
-                        height = height
-                    )
-                }
-            )
-        } ?: MessageEntity.MetaData(agentId),
+        metaData =
+            meta_data?.run {
+                MessageEntity.MetaData(
+                    agentId = this.agentId.orEmpty(),
+                    isVoice = isVoice,
+                    isOpening = isOpening,
+                    generatedImage =
+                        generatedImage?.run {
+                            MessageEntity.MetaData.GeneratedImage(
+                                imageUrl = imageUrl,
+                                width = width,
+                                height = height,
+                            )
+                        },
+                )
+            } ?: MessageEntity.MetaData(agentId),
         isSending = false,
     )
 }
@@ -104,10 +106,7 @@ private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
  * 创建“正在发送”的用户消息临时实体。localId 应尽量大（如 temp_user_${Long.MAX_VALUE}_${nano}），sortKey 尽量大。
  * 用于发送前插入本地，发送成功后删除并用 user_message_id 更新为正式消息。
  */
-fun createTempSendingUserEntity(
-    agentId: String,
-    content: String,
-): MessageEntity {
+fun createTempSendingUserEntity(agentId: String, content: String): MessageEntity {
     val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
     return MessageEntity(
         id = "${(Long.MAX_VALUE - 1)}",
@@ -115,7 +114,7 @@ fun createTempSendingUserEntity(
         content = content,
         timestamp = timestamp,
         metaData = MessageEntity.MetaData(agentId = agentId),
-        isSending = true
+        isSending = true,
     )
 }
 
@@ -131,6 +130,6 @@ fun createTempSendingLoadingEntity(agentId: String): MessageEntity {
         content = LOADING_PLACEHOLDER_CONTENT,
         timestamp = timestamp,
         metaData = MessageEntity.MetaData(agentId = agentId),
-        isSending = true
+        isSending = true,
     )
 }

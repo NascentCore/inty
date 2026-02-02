@@ -55,9 +55,7 @@ async def main() -> int:
         return 1
 
     if args.type == "weekly" and report_date.weekday() != 0:
-        logger.warning(
-            f"周报日期 {args.date} 不是周一（weekday=0），将按该周周一计算"
-        )
+        logger.warning(f"周报日期 {args.date} 不是周一（weekday=0），将按该周周一计算")
         report_date = report_date - timedelta(days=report_date.weekday())
 
     init_logger()
@@ -79,14 +77,10 @@ async def main() -> int:
             if args.type == "daily":
                 result = await compute_and_save_daily_report(db, report_date)
             else:
-                result = await compute_and_save_weekly_report(
-                    db, report_date
-                )
+                result = await compute_and_save_weekly_report(db, report_date)
 
         if result:
-            logger.info(
-                f"{args.type} 报告 {args.date} 已保存，id={result.id}"
-            )
+            logger.info(f"{args.type} 报告 {args.date} 已保存，id={result.id}")
         else:
             logger.info(f"{args.type} 报告 {args.date} 已存在，跳过")
         return 0

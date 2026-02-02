@@ -187,9 +187,7 @@ class PushSchedulerService:
             if uar_cfg and getattr(uar_cfg, "enabled", False):
                 self.scheduler.add_job(
                     self._run_user_analytics_daily_report,
-                    trigger=CronTrigger(
-                        hour=uar_cfg.daily_cron_hour, minute=0
-                    ),
+                    trigger=CronTrigger(hour=uar_cfg.daily_cron_hour, minute=0),
                     id="run_user_analytics_daily_report",
                     name="用户数据分析日报",
                     replace_existing=True,
@@ -223,17 +221,15 @@ class PushSchedulerService:
 
                     try:
                         async with AsyncSessionLocal() as db:
-                            daily_count, weekly_count = (
-                                await backfill_missing_reports(db)
+                            daily_count, weekly_count = await backfill_missing_reports(
+                                db
                             )
                             if daily_count or weekly_count:
                                 logger.info(
                                     f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
                                 )
                     except Exception as e:
-                        logger.error(
-                            f"[用户数据分析补算] 执行失败: {str(e)}"
-                        )
+                        logger.error(f"[用户数据分析补算] 执行失败: {str(e)}")
 
                 asyncio.create_task(backfill_user_analytics_reports())
 

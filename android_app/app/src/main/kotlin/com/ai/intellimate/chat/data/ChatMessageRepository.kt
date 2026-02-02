@@ -4,8 +4,6 @@ package com.ai.intellimate.chat.data
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.SendMsgResponse
-import ai.sxwl.android.data.api.model.VoteConstants
-import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
@@ -13,12 +11,10 @@ import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.utils.LogUtils
-import ai.sxwl.android.utils.Utils
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import com.ai.intellimate.R
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -97,7 +93,7 @@ class ChatMessageRepository(
                 messageId = userMessageId.toString(),
                 agentId = agentId,
                 content = trimmed,
-                timestamp = timestamp
+                timestamp = timestamp,
             )
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
@@ -126,7 +122,11 @@ class ChatMessageRepository(
             return
         }
 
-        localDataSource.removeMessage(agentId, lastAssistantMessage.id, lastAssistantMessage.indexId)
+        localDataSource.removeMessage(
+            agentId,
+            lastAssistantMessage.id,
+            lastAssistantMessage.indexId,
+        )
         localDataSource.appendSendingLoadingOnly(agentId)
 
         val result =
@@ -163,7 +163,7 @@ class ChatMessageRepository(
     suspend fun setMessageVote(
         agentId: String,
         messageId: String,
-        userVote: MessageEntity.UserVote
+        userVote: MessageEntity.UserVote,
     ) {
         withContext(Dispatchers.IO) {
             val preMessage = localDataSource.getMessage(agentId, messageId)
@@ -184,9 +184,7 @@ class ChatMessageRepository(
     }
 
     suspend fun resetMessageVote(agentId: String, msgId: String) {
-        withContext(Dispatchers.IO) {
-            localDataSource.setMessageVote(agentId, msgId, null)
-        }
+        withContext(Dispatchers.IO) { localDataSource.setMessageVote(agentId, msgId, null) }
     }
 
     suspend fun addImageGenerationErrorTips(agentId: String, messageId: String) {
@@ -200,9 +198,7 @@ class ChatMessageRepository(
                 metaData = MessageEntity.MetaData(agentId = agentId),
             )
 
-        withContext(Dispatchers.IO) {
-            localDataSource.appendMessages(listOf(tipMessage))
-        }
+        withContext(Dispatchers.IO) { localDataSource.appendMessages(listOf(tipMessage)) }
     }
 
     suspend fun appendBoostSystemMessage(agentId: String, content: String) {

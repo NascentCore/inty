@@ -5,21 +5,14 @@ import ai.sxwl.android.data.chat.local.db.ChatMessageDao
 import ai.sxwl.android.data.chat.local.db.ChatSyncStateDao
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
-import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
-import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
-import ai.sxwl.android.data.chat.local.db.toEntity
 import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.max
 
 /**
  * 聊天本地数据源 使用 Room 作为单一可信数据源，遵循 Offline-First 设计：
@@ -48,9 +41,7 @@ class RoomDataSource(
     }
 
     suspend fun updateMessage(agentId: String, messageId: String, updatedMessage: MessageEntity) =
-        withContext(dispatcher) {
-            messageDao.upsert(updatedMessage)
-        }
+        withContext(dispatcher) { messageDao.upsert(updatedMessage) }
 
     fun updateMessageGeneratedImage(
         agentId: String,
@@ -63,7 +54,7 @@ class RoomDataSource(
                 messageId = messageId,
                 url = generatedImage?.imageUrl,
                 width = generatedImage?.width,
-                height = generatedImage?.height
+                height = generatedImage?.height,
             )
         }
     }

@@ -55,7 +55,7 @@ const ROUNDS_LABELS = [
 ];
 
 function computeRoundsDistributionBySession(
-  conversationRounds: UserAnalyticsReportCharts["conversation_rounds"]
+  conversationRounds: UserAnalyticsReportCharts["conversation_rounds"],
 ) {
   const buckets: Record<string, number> = {};
   ROUNDS_LABELS.forEach((l) => (buckets[l] = 0));
@@ -83,7 +83,7 @@ function computeRoundsDistributionBySession(
 }
 
 function computeRoundsDistributionByUser(
-  userRoundsDistribution: UserAnalyticsReportCharts["user_rounds_distribution"]
+  userRoundsDistribution: UserAnalyticsReportCharts["user_rounds_distribution"],
 ) {
   const buckets: Record<string, number> = {};
   ROUNDS_LABELS.forEach((l) => (buckets[l] = 0));
@@ -112,7 +112,7 @@ function computeRoundsDistributionByUser(
 }
 
 function computeUsersHittingLimitTrend(
-  usersHittingLimit: UserAnalyticsReportCharts["users_hitting_limit"]
+  usersHittingLimit: UserAnalyticsReportCharts["users_hitting_limit"],
 ) {
   const dailyData: Record<string, { GUEST: number; GOOGLE: number }> = {};
   usersHittingLimit.forEach((item) => {
@@ -120,7 +120,11 @@ function computeUsersHittingLimitTrend(
     dailyData[item.date][item.auth_type as "GUEST" | "GOOGLE"] += 1;
   });
   return Object.entries(dailyData)
-    .map(([date, counts]) => ({ date, GUEST: counts.GUEST, GOOGLE: counts.GOOGLE }))
+    .map(([date, counts]) => ({
+      date,
+      GUEST: counts.GUEST,
+      GOOGLE: counts.GOOGLE,
+    }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -136,19 +140,19 @@ function ReportContent({
       charts
         ? computeRoundsDistributionBySession(charts.conversation_rounds)
         : [],
-    [charts]
+    [charts],
   );
   const roundsDistributionByUser = useMemo(
     () =>
       charts
         ? computeRoundsDistributionByUser(charts.user_rounds_distribution)
         : [],
-    [charts]
+    [charts],
   );
   const usersHittingLimitTrend = useMemo(
     () =>
       charts ? computeUsersHittingLimitTrend(charts.users_hitting_limit) : [],
-    [charts]
+    [charts],
   );
   const newUsers = charts?.new_users ?? [];
   const popularAgents = charts?.popular_agents ?? [];
@@ -201,9 +205,24 @@ function ReportContent({
             {popularAgents.length > 0 ? (
               <Table
                 columns={[
-                  { title: "角色名称", dataIndex: "agent_name", key: "agent_name", width: 200 },
-                  { title: "浏览数", dataIndex: "total_sessions", key: "total_sessions", width: 120 },
-                  { title: "真实发起聊天人数", dataIndex: "user_count", key: "user_count", width: 150 },
+                  {
+                    title: "角色名称",
+                    dataIndex: "agent_name",
+                    key: "agent_name",
+                    width: 200,
+                  },
+                  {
+                    title: "浏览数",
+                    dataIndex: "total_sessions",
+                    key: "total_sessions",
+                    width: 120,
+                  },
+                  {
+                    title: "真实发起聊天人数",
+                    dataIndex: "user_count",
+                    key: "user_count",
+                    width: 150,
+                  },
                   {
                     title: "开口率",
                     dataIndex: "open_rate",
@@ -211,7 +230,12 @@ function ReportContent({
                     width: 120,
                     render: (v: number) => `${v.toFixed(2)}%`,
                   },
-                  { title: "总聊天轮数", dataIndex: "total_rounds", key: "total_rounds", width: 120 },
+                  {
+                    title: "总聊天轮数",
+                    dataIndex: "total_rounds",
+                    key: "total_rounds",
+                    width: 120,
+                  },
                   {
                     title: "人均聊天轮数",
                     dataIndex: "avg_rounds_per_user",
@@ -336,68 +360,114 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
       <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="用户数" value={stats.total_new_users} prefix={<UserOutlined />} />
+            <Statistic
+              title="用户数"
+              value={stats.total_new_users}
+              prefix={<UserOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="发起聊天的人数" value={stats.total_chat_initiators} prefix={<UserOutlined />} />
+            <Statistic
+              title="发起聊天的人数"
+              value={stats.total_chat_initiators}
+              prefix={<UserOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="包含用户消息的会话数" value={stats.total_active_sessions} prefix={<MessageOutlined />} />
+            <Statistic
+              title="包含用户消息的会话数"
+              value={stats.total_active_sessions}
+              prefix={<MessageOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="总发送消息数" value={stats.total_user_messages} prefix={<MessageOutlined />} />
+            <Statistic
+              title="总发送消息数"
+              value={stats.total_user_messages}
+              prefix={<MessageOutlined />}
+            />
           </Card>
         </Col>
       </Row>
       <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="人均消息数" value={stats.avg_messages_per_user.toFixed(1)} />
+            <Statistic
+              title="人均消息数"
+              value={stats.avg_messages_per_user.toFixed(1)}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="人均会话数" value={stats.avg_sessions_per_user.toFixed(1)} />
+            <Statistic
+              title="人均会话数"
+              value={stats.avg_sessions_per_user.toFixed(1)}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="人均语音请求数" value={stats.avg_voice_requests_per_user.toFixed(1)} />
+            <Statistic
+              title="人均语音请求数"
+              value={stats.avg_voice_requests_per_user.toFixed(1)}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="每会话平均轮数" value={stats.avg_rounds_per_session.toFixed(1)} />
+            <Statistic
+              title="每会话平均轮数"
+              value={stats.avg_rounds_per_session.toFixed(1)}
+            />
           </Card>
         </Col>
       </Row>
       <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="开口率" value={stats.new_user_open_rate.toFixed(2)} suffix="%" />
+            <Statistic
+              title="开口率"
+              value={stats.new_user_open_rate.toFixed(2)}
+              suffix="%"
+            />
           </Card>
         </Col>
       </Row>
       <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card size="small">
-            <Statistic title="总生图请求数" value={stats.total_image_generation_requests} prefix={<PictureOutlined />} />
+            <Statistic
+              title="总生图请求数"
+              value={stats.total_image_generation_requests}
+              prefix={<PictureOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card size="small">
-            <Statistic title="生图成功次数" value={stats.total_image_generation_success} prefix={<PictureOutlined />} valueStyle={{ color: "#3f8600" }} />
+            <Statistic
+              title="生图成功次数"
+              value={stats.total_image_generation_success}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#3f8600" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card size="small">
-            <Statistic title="生图失败次数" value={stats.total_image_generation_failures} prefix={<PictureOutlined />} valueStyle={{ color: "#cf1322" }} />
+            <Statistic
+              title="生图失败次数"
+              value={stats.total_image_generation_failures}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#cf1322" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={4}>
@@ -422,29 +492,51 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
       <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="新生成次数" value={stats.total_image_new_generation} prefix={<PictureOutlined />} valueStyle={{ color: "#3f8600" }} />
+            <Statistic
+              title="新生成次数"
+              value={stats.total_image_new_generation}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#3f8600" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
-            <Statistic title="兜底图片次数" value={stats.total_image_fallback_used} prefix={<PictureOutlined />} valueStyle={{ color: "#faad14" }} />
+            <Statistic
+              title="兜底图片次数"
+              value={stats.total_image_fallback_used}
+              prefix={<PictureOutlined />}
+              valueStyle={{ color: "#faad14" }}
+            />
           </Card>
         </Col>
       </Row>
       <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card size="small">
-            <Statistic title="发起语音通话人数" value={stats.total_live_chat_users} prefix={<PhoneOutlined />} />
+            <Statistic
+              title="发起语音通话人数"
+              value={stats.total_live_chat_users}
+              prefix={<PhoneOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card size="small">
-            <Statistic title="语音通话次数" value={stats.total_live_chat_sessions} prefix={<PhoneOutlined />} />
+            <Statistic
+              title="语音通话次数"
+              value={stats.total_live_chat_sessions}
+              prefix={<PhoneOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card size="small">
-            <Statistic title="总通话时长（秒）" value={stats.total_live_chat_duration} prefix={<PhoneOutlined />} />
+            <Statistic
+              title="总通话时长（秒）"
+              value={stats.total_live_chat_duration}
+              prefix={<PhoneOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={4}>
@@ -508,9 +600,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
   const items = reports.map((report) => ({
     key: report.id,
     label: `${report.report_date}（${REPORT_TYPE_LABELS[report.report_type]}）`,
-    children: (
-      <ReportContent stats={report.stats} charts={report.charts} />
-    ),
+    children: <ReportContent stats={report.stats} charts={report.charts} />,
   }));
 
   return (

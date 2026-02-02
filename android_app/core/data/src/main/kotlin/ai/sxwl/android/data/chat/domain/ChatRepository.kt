@@ -1,12 +1,8 @@
 package ai.sxwl.android.data.chat.domain
 
 import ai.sxwl.android.data.api.model.MsgInfo
-import ai.sxwl.android.data.api.model.SendMsgResponse
-import ai.sxwl.android.data.api.model.VoteMessageRsp
-import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.http.services.ChatService
 import com.architecture.httplib.core.HttpResult
-import kotlinx.coroutines.flow.StateFlow
 
 /** Chat领域层接口 定义聊天相关的业务逻辑接口 来完成与后端服务的交互，并写入数据到本地存储中 */
 interface ChatRepository {
