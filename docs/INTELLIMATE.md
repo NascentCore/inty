@@ -64,6 +64,7 @@ Click the **Me** or the **right-most** icon
 | Chat with an agent | Tap any agent card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
 | Create or edit an agent | Explore → “Create/+” or Profile → My Agents | Guided flow with image upload and text-to-image background (`POST /api/v1/ai/agents/text-to-image`). |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
+| Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
 | Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. |
 | Check version info | Settings → About | Version code comes from git commit count. If Play build lags behind, install the QA APK. |
 | Send feedback or report | Chat → ⋮ → Report, or Profile → Feedback | Reports go through the Report Service; attach screenshots when possible. |

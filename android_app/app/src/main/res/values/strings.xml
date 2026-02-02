@@ -243,7 +243,6 @@
     <string name="subscription_description_fmt_str" formatted="false">%s will be charged %s, cancel at any time</string>
 
     <!-- Chat -->
-    <string name="chat_settings_my_persona_title">My Persona</string>
     <string name="chat_settings_settings_title">Settings</string>
     <string name="chat_settings_support_resources_title">Support</string>
     <string name="chat_settings_user_manual_title">User Manual (Notion)</string>
