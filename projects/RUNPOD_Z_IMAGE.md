@@ -52,6 +52,14 @@
 
 在 Pod 内可用 `curl`/`wget` 或 ComfyUI Manager 下载；大文件建议用 Network Volume 预先下载或 [RunPod CLI](https://docs.runpod.io/runpodctl/overview) 上传到 Pod 的 `ComfyUI/models` 对应子目录。
 
+**确定 ComfyUI 根路径**：不同 RunPod 模板安装路径可能不同。若 `/workspace/madapps/ComfyUI` 不存在，在 Pod 的 Web Terminal 中执行：
+
+```bash
+find /workspace -maxdepth 4 -type d -iname "*comfy*" 2>/dev/null
+```
+
+取输出中顶层 ComfyUI 目录（如 `/workspace/runpod-slim/ComfyUI`）作为 `COMFYUI_ROOT`。常见情况：runpod-slim 等模板为 `/workspace/runpod-slim/ComfyUI`。
+
 示例（在 Pod 终端中，按实际 `ComfyUI` 根路径替换 `COMFYUI_ROOT`）：
 
 ```bash
@@ -86,6 +94,35 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 - 下载 [Z-Image-Turbo-Fun-Controlnet-Union.safetensors](https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union/resolve/main/Z-Image-Turbo-Fun-Controlnet-Union.safetensors) 至 `ComfyUI/models/model_patches/`。
 - 使用 ControlNet 专用 workflow：[image_z_image_turbo_fun_union_controlnet.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo_fun_union_controlnet.json)。
 - 该 workflow 通过 **LoadImage** 加载一张参考图（默认文件名如 `image_z_image_turbo_fun_union_controlnet_input_image.png`）；使用前需在 ComfyUI 中上传或放入该图并确保节点指向正确路径。
+
+### 3.6 实际操作记录（方案 A 逐步对照）
+
+以下为按本文档执行方案 A 时的实际操作步骤，便于复现与排错。
+
+1. **创建 Pod**
+   - 打开 [ComfyUI 模板](https://console.runpod.io/hub/template/comfyui?id=cw3nka7d08)，点击 **Configure Pod**（模板页无 “Deploy” 按钮属正常）。
+   - 在配置页选择 GPU（如 L40/RTX 4090）、存储（默认或 Network Volume），部署类型选 **On-Demand**，点击 **Deploy On-Demand**。
+   - 等待 Pod 就绪（首次约 30 分钟）；状态为 Running 且 **Connect to HTTP Service [Port 8188]** 显示 Ready 后可继续。
+
+2. **Pod 就绪后的入口**
+   - **Connect** 页提供：Port 8188 → ComfyUI；Port 8080 → FileBrowser；Port 8888 → JupyterLab。
+   - **Web Terminal**：同一 Connect 页中打开 **Enable web terminal**，用于在 Pod 内执行命令（如下载模型）。
+   - **FileBrowser** 默认登录：用户名 `admin`，密码 `adminadmin12`（仅在做文件管理时需要；跑 Z-Image 不必须）。
+
+3. **确认 ComfyUI 路径并下载三件套**
+   - 在 Web Terminal 中确认 ComfyUI 根目录。若 `ls /workspace/madapps/ComfyUI` 报错 No such file or directory，则执行：
+     ```bash
+     find /workspace -maxdepth 4 -type d -iname "*comfy*" 2>/dev/null
+     ```
+   - 以输出中的 ComfyUI 根目录为准（例如 runpod-slim 模板为 `/workspace/runpod-slim/ComfyUI`），在终端执行 3.2 节的 curl 命令块，并将第一行 `COMFYUI_ROOT=...` 设为该路径，例如：
+     ```bash
+     COMFYUI_ROOT=/workspace/runpod-slim/ComfyUI
+     # 后续 cd 与 curl 命令同 3.2 节
+     ```
+   - 三件套下载完成后，用 `ls -la` 检查 `models/text_encoders`、`models/diffusion_models`、`models/vae` 下对应文件是否存在且大小正常。
+
+4. **后续**
+   - 在 ComfyUI（Port 8188）中按 3.3–3.4 节加载 workflow、输入 prompt、生成图像。
 
 ## 4. 参考链接汇总
 
