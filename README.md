@@ -1,5 +1,7 @@
 # InTy - 长期 AI 情感陪伴
 
+IntelliMate 2026 Q1 目标：建立生活节奏（晨午晚仪式）+ 共同记忆（挚爱馆/歌/回顾）+ 角色人生线三位一体的长期陪伴底座，使关系可回溯、可延续、可生长。
+
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
 
