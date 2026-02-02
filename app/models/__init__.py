@@ -69,3 +69,6 @@ from app.models.memory import (
     Memory as Memory,
     MemoryExtractionLog as MemoryExtractionLog,
 )
+from app.models.user_analytics_report import (
+    UserAnalyticsReport as UserAnalyticsReport,
+)

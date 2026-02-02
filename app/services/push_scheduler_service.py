@@ -19,6 +19,10 @@ from app.services.memory_extraction_service import (
     extract_and_save as memory_extract_and_save,
     get_users_to_extract as memory_get_users_to_extract,
 )
+from app.services.user_analytics_report_service import (
+    compute_and_save_daily_report as user_analytics_compute_daily,
+    compute_and_save_weekly_report as user_analytics_compute_weekly,
+)
 from app.services.push_notification_service import (
     discover_new_users_for_push,
     discover_users_with_updated_tokens,
@@ -174,6 +178,65 @@ class PushSchedulerService:
                     f"已添加记忆抽取任务: 启动后立即执行，之后每日 UTC {mem_cfg.cron_hour}:00"
                 )
 
+            # 用户数据分析日报周报：每日/每周执行（若启用）
+            uar_cfg = getattr(
+                global_config_loaded_from_config_yaml,
+                "user_analytics_report",
+                None,
+            )
+            if uar_cfg and getattr(uar_cfg, "enabled", False):
+                self.scheduler.add_job(
+                    self._run_user_analytics_daily_report,
+                    trigger=CronTrigger(
+                        hour=uar_cfg.daily_cron_hour, minute=0
+                    ),
+                    id="run_user_analytics_daily_report",
+                    name="用户数据分析日报",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                    next_run_time=datetime.datetime.now(),
+                )
+                self.scheduler.add_job(
+                    self._run_user_analytics_weekly_report,
+                    trigger=CronTrigger(
+                        day_of_week="mon",
+                        hour=uar_cfg.weekly_cron_hour,
+                        minute=0,
+                    ),
+                    id="run_user_analytics_weekly_report",
+                    name="用户数据分析周报",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                    next_run_time=datetime.datetime.now(),
+                )
+                logger.info(
+                    f"已添加用户数据分析日报周报任务: 日报每日 UTC {uar_cfg.daily_cron_hour}:00, "
+                    f"周报每周一 UTC {uar_cfg.weekly_cron_hour}:00"
+                )
+
+                async def backfill_user_analytics_reports():
+                    from app.services.user_analytics_report_service import (
+                        backfill_missing_reports,
+                    )
+
+                    try:
+                        async with AsyncSessionLocal() as db:
+                            daily_count, weekly_count = (
+                                await backfill_missing_reports(db)
+                            )
+                            if daily_count or weekly_count:
+                                logger.info(
+                                    f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
+                                )
+                    except Exception as e:
+                        logger.error(
+                            f"[用户数据分析补算] 执行失败: {str(e)}"
+                        )
+
+                asyncio.create_task(backfill_user_analytics_reports())
+
             logger.info("已添加所有推送检查任务，将在启动后立即执行一次")
 
             logger.info("推送调度器启动成功")
@@ -308,6 +371,34 @@ class PushSchedulerService:
             logger.info("[记忆抽取] 完成")
         except Exception as e:
             logger.error(f"[记忆抽取] 执行失败: {str(e)}")
+
+    async def _run_user_analytics_daily_report(self) -> None:
+        """每日用户数据分析日报：统计 T-1 日数据。"""
+        try:
+            from datetime import timedelta, timezone
+
+            logger.info("[用户数据分析日报] 开始...")
+            today_utc = datetime.datetime.now(timezone.utc).date()
+            report_date = today_utc - timedelta(days=1)
+            async with AsyncSessionLocal() as db:
+                await user_analytics_compute_daily(db, report_date)
+            logger.info("[用户数据分析日报] 完成")
+        except Exception as e:
+            logger.error(f"[用户数据分析日报] 执行失败: {str(e)}")
+
+    async def _run_user_analytics_weekly_report(self) -> None:
+        """每周用户数据分析周报：统计上一周（周一到周日）数据。"""
+        try:
+            from datetime import timedelta, timezone
+
+            logger.info("[用户数据分析周报] 开始...")
+            today = datetime.datetime.now(timezone.utc).date()
+            week_start = today - timedelta(days=today.weekday() + 7)
+            async with AsyncSessionLocal() as db:
+                await user_analytics_compute_weekly(db, week_start)
+            logger.info("[用户数据分析周报] 完成")
+        except Exception as e:
+            logger.error(f"[用户数据分析周报] 执行失败: {str(e)}")
 
 
 # 全局调度器实例
