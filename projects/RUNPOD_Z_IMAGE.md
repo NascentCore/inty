@@ -1,5 +1,7 @@
 # RunPod 运行 Z-Image 方案
 
+> **注意**：第一次启动 ComfyUI workflow 会很慢，因为需要加载模型；后续请求会快很多。
+
 ## TODOs
 
 - [ ] 补充设置 ssh 登录 public/private key 的方法
