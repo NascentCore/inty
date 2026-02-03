@@ -179,5 +179,10 @@ CREATED_BY_ZYX
 
 ## 参考资料
 
-<img width="800" height="1698" alt="image" src="https://github.com/user-attachments/assets/05dbf333-c9ad-4e50-a972-3d10e15e264e" />
+### 启动 Web Terminal
 
+<img width="400" height="1698" alt="image" src="https://github.com/user-attachments/assets/05dbf333-c9ad-4e50-a972-3d10e15e264e" />
+
+### 启动 Pod 设置页面
+
+<img width="900" height="5958" alt="image" src="https://github.com/user-attachments/assets/a3ae122b-7aa3-41d6-b81f-ac4191dfd8da" />
