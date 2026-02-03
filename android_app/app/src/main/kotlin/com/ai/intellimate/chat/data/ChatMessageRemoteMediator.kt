@@ -9,6 +9,7 @@ import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.SyncStateEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
+import ai.sxwl.android.data.chat.local.db.toUpdate
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.LoadType
@@ -33,12 +34,10 @@ import com.architecture.httplib.core.HttpResult
 class ChatMessageRemoteMediator(
     private val agentId: String,
     private val database: IntyChatDatabase,
-    private val remoteDataSource: ChatRemoteDataSource,
-    private val pageSize: Int = 20,
+    private val remoteDataSource: ChatRemoteDataSource
 ) : RemoteMediator<Int, MessageEntity>() {
 
     private val messageDao: ChatMessageDao = database.chatMessageDao()
-    private val syncStateDao: ChatSyncStateDao = database.chatSyncStateDao()
 
     override suspend fun load(
         loadType: LoadType,
@@ -61,20 +60,16 @@ class ChatMessageRemoteMediator(
                         return MediatorResult.Success(endOfPaginationReached = true)
                     }
                     LoadType.APPEND -> {
-                        // 追加加载：在列表末尾加载更早的消息（历史消息）
-                        // offset 增加以获取更早的消息
-                        val syncState = syncStateDao.get(agentId)
-                        val currentOffset = syncState?.offset ?: 0
-                        LogUtils.d(
-                            "ChatMessageRemoteMediator",
-                            "APPEND: loading older messages from offset=$currentOffset for agentId=$agentId",
-                        )
-                        currentOffset
+                        val lastItem = state.lastItemOrNull()
+                        if (lastItem == null) 0 else state.pages.sumOf { it.data.size }
                     }
                 }
-
+            LogUtils.d(
+                "ChatMessageRemoteMediator",
+                "offset=${nextPageKey} PageSize=${state.config.pageSize}",
+            )
             // 从网络获取数据
-            when (val result = remoteDataSource.getMessages(agentId, pageSize, nextPageKey)) {
+            when (val result = remoteDataSource.getMessages(agentId, state.config.pageSize, nextPageKey)) {
                 is HttpResult.Success -> {
                     val response = result.data
                     val messages = response.messages ?: emptyList()
@@ -88,38 +83,18 @@ class ChatMessageRemoteMediator(
                     database.withTransaction {
                         // 保存消息到数据库
                         if (messages.isNotEmpty()) {
-                            val entities = messages.map { msg -> msg.toEntity(agentId) }
+                            val entities = messages.map { msg -> msg.toUpdate(agentId) }
 
-                            messageDao.upsert(entities)
+                            messageDao.insertOrDrop(entities)
                             LogUtils.d(
                                 "ChatMessageRemoteMediator",
                                 "Saved ${entities.size} messages to database for agentId=$agentId",
                             )
                         }
-
-                        // 更新同步状态
-                        // 对于 REFRESH，offset 重置为已加载的消息数量
-                        // 对于 APPEND，offset 更新为当前 offset + 已加载的消息数量
-                        val newOffset =
-                            if (loadType == LoadType.REFRESH) {
-                                messages.size
-                            } else {
-                                nextPageKey + messages.size
-                            }
-                        val updatedSyncState =
-                            SyncStateEntity(
-                                agentId = agentId,
-                                offset = newOffset,
-                                hasMore = response.hasMore,
-                                isInitialLoaded = true,
-                                lastSyncedAt = System.currentTimeMillis(),
-                                updatedAt = System.currentTimeMillis(),
-                            )
-                        syncStateDao.upsert(updatedSyncState)
                     }
 
                     // 返回成功结果
-                    MediatorResult.Success(endOfPaginationReached = !response.hasMore)
+                    MediatorResult.Success(endOfPaginationReached = !response.hasMore || messages.size < state.config.pageSize)
                 }
                 is HttpResult.Failure -> {
                     LogUtils.e(

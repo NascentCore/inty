@@ -34,7 +34,6 @@ class RoomDataSource(
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val messageDao: ChatMessageDao by lazy { db.chatMessageDao() }
-    private val syncStateDao: ChatSyncStateDao by lazy { db.chatSyncStateDao() }
 
     fun updateMessageAudioUrl(agentId: String, messageId: String, audioUrl: String) {
         scope.launch { messageDao.updateAudioUrl(agentId, messageId, audioUrl) }
@@ -68,7 +67,6 @@ class RoomDataSource(
             logger.debug { "RoomDataSource.clearChatData starting for agent $agentId" }
             db.withTransaction {
                 messageDao.deleteByAgent(agentId)
-                syncStateDao.delete(agentId)
             }
             // 等待数据库操作完成后再清理内存状态和设置
             logger.info { "RoomDataSource cleared chat data for agent $agentId" }
@@ -79,7 +77,6 @@ class RoomDataSource(
             logger.debug { "RoomDataSource.clearAllChatData starting" }
             db.withTransaction {
                 messageDao.deleteAll()
-                syncStateDao.deleteAll()
             }
             logger.info { "RoomDataSource cleared all chat data" }
         }

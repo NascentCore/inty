@@ -9,15 +9,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [MessageEntity::class, SyncStateEntity::class],
-    version = 5,
+    entities = [MessageEntity::class],
+    version = 6,
     exportSchema = true,
 )
 abstract class IntyChatDatabase : RoomDatabase() {
 
     abstract fun chatMessageDao(): ChatMessageDao
-
-    abstract fun chatSyncStateDao(): ChatSyncStateDao
 
     companion object {
         private const val DATABASE_NAME = "inty_chat.db"

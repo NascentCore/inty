@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.paging.ItemSnapshotList
@@ -223,14 +224,7 @@ internal fun ChatPage(
             LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
             derivedStateOf {
                 proFixMessages(messages.itemSnapshotList) +
-                    if (
-                        (messages.loadState.refresh is LoadState.NotLoading && isCurrentPage) ||
-                            messages.itemSnapshotList.isNotEmpty()
-                    ) {
                         listOf(MessageItem.Opening, MessageItem.Intro)
-                    } else {
-                        listOf(MessageItem.Intro)
-                    }
             }
         }
 
@@ -260,6 +254,13 @@ internal fun ChatPage(
 
     LaunchedEffect(Unit) {
         chatViewModel.vipRequest.collect { navController.navigate(Routes.Me.VipCenter) }
+    }
+
+    LifecycleStartEffect(Unit) {
+
+        messages.refresh()
+
+        onStopOrDispose {  }
     }
 
     LaunchedEffect(
@@ -628,9 +629,9 @@ internal fun ChatPage(
                                     is MessageItem.Opening -> "opening"
                                     is MessageItem.Intro -> "intro"
                                     is MessageItem.MessageIndex ->
-                                        messages.peek(item.index)?.id ?: index
+                                        messages.peek(item.index)?.let { "${it.id}${it.indexId}" } ?: index
                                     is MessageItem.CallMessageIndexs ->
-                                        messages.peek(item.messages.first())?.id ?: index
+                                        messages.peek(item.messages.first())?.let { "${it.id}${it.indexId}" } ?: index
                                 }
                             },
                         ) { index, item ->
@@ -642,9 +643,7 @@ internal fun ChatPage(
                                 is MessageItem.Opening -> {
                                     val isOnlyOpeningMessage by remember {
                                         derivedStateOf {
-                                            messages.itemSnapshotList.none {
-                                                it != null && !it.isOpening && it.role != "system"
-                                            }
+                                            messages.itemSnapshotList.isEmpty() && messages.loadState.isIdle
                                         }
                                     }
                                     val openingMessage =

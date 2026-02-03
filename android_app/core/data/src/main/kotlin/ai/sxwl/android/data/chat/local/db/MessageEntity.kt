@@ -3,6 +3,7 @@ package ai.sxwl.android.data.chat.local.db
 // CREATED_BY_AGENT
 
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.chat.local.db.MessageEntity.MetaData
 import ai.sxwl.android.data.chat.local.db.MessageEntity.UserVote
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -69,6 +70,43 @@ data class MessageEntity(
         LIKE,
         DISLIKE,
     }
+}
+
+data class MessageUpdate(
+    val id: String,
+    val indexId: String = "",
+    val role: String? = null,
+    val content: String? = null,
+    val timestamp: String? = null,
+    val audioUrl: String? = null,
+    @Embedded val metaData: MetaData,
+    val isSending: Boolean = false
+)
+
+fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
+    return MessageUpdate(
+        id = id,
+        role = role,
+        content = content,
+        timestamp = timestamp,
+        audioUrl = audio_url,
+        metaData =
+            meta_data?.run {
+                MetaData(
+                    agentId = this.agentId.orEmpty(),
+                    isVoice = isVoice,
+                    isOpening = isOpening,
+                    generatedImage =
+                        generatedImage?.run {
+                            MetaData.GeneratedImage(
+                                imageUrl = imageUrl,
+                                width = width,
+                                height = height,
+                            )
+                        },
+                )
+            } ?: MetaData(agentId)
+    )
 }
 
 fun MsgInfo.toEntity(agentId: String): MessageEntity {

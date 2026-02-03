@@ -508,18 +508,6 @@ class ChatViewModel : BaseVM() {
                             ),
                         )
 
-                        val assistantContent =
-                            result.data.data?.choices?.lastOrNull()?.message?.content
-                        if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
-                            BoostManager.recordChatTokens(agent, inputMsg)
-                        }
-                        val hasAssistantReply =
-                            !result.data.data?.choices.isNullOrEmpty() ||
-                                !assistantContent.isNullOrBlank()
-                        if (hasAssistantReply) {
-                            BoostManager.recordAssistantMessage(agent)
-                        }
-
                         // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
                         sessionMessageCount++
                         val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
@@ -540,8 +528,10 @@ class ChatViewModel : BaseVM() {
                             }
                         }
 
-                        if (!result.data.data?.choices.isNullOrEmpty()) {
-                            _shouldFlowShow.value = true
+                        result.data.data?.choices?.getOrNull(0)?.let {
+                            if (it.message.agentId() == _agentId.value) {
+                                _shouldFlowShow.value = true
+                            }
                         }
 
                         runCatching {
@@ -753,6 +743,11 @@ class ChatViewModel : BaseVM() {
         }
         lastSendTime = currentTime
 
+        // 确保状态正确
+        if (_isWaitingForReply.value) {
+            return
+        }
+
         // Firebase Analytics - 记录Keep Talking按钮点击
         agentInfo.value?.let { agent ->
             FirebaseManager.logEvent(
@@ -812,18 +807,6 @@ class ChatViewModel : BaseVM() {
                                 ),
                             )
 
-                            val assistantContent =
-                                result.data.data?.choices?.lastOrNull()?.message?.content
-                            if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
-                                BoostManager.recordChatTokens(agent, keepTalkingMsg)
-                            }
-                            val hasAssistantReply =
-                                !result.data.data?.choices.isNullOrEmpty() ||
-                                    !assistantContent.isNullOrBlank()
-                            if (hasAssistantReply) {
-                                BoostManager.recordAssistantMessage(agent)
-                            }
-
                             runCatching {
                                     // 有免费次数限制，需要vip订阅
                                     if (
@@ -841,6 +824,12 @@ class ChatViewModel : BaseVM() {
                                     // 错误恢复：确保状态正确
                                     _isWaitingForReply.value = false
                                 }
+
+                            result.data.data?.choices?.getOrNull(0)?.let {
+                                if (it.message.agentId() == _agentId.value) {
+                                    _shouldFlowShow.value = true
+                                }
+                            }
                         }
 
                         is HttpResult.Failure -> {
@@ -934,6 +923,9 @@ class ChatViewModel : BaseVM() {
                 LogUtils.i("Vote message success: ${userVote.name}")
             } catch (error: Exception) {
                 LogUtils.e("Vote message failure: ${error.message}")
+                withContext(Dispatchers.Main) {
+                    LogUtils.e(error.message)
+                }
             }
 
             val message = chatMessageRepository.getMessage(agentId, msgId)
@@ -1078,9 +1070,6 @@ class ChatViewModel : BaseVM() {
 
                 when (result) {
                     is HttpResult.Success -> {
-                        if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
-                            BoostManager.recordImageGeneration(agent.agentId)
-                        }
                         // Firebase Analytics - 记录图片生成成功
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.MESSAGE_TO_IMAGE_GENERATION_SUCCESS,
