@@ -36,7 +36,7 @@
 
   建议：若要求**至少 10 秒内高质量出图**，在 RunPod 上优先选 **L40**、**RTX 4090**、**A100 PCIe** 或 **RTX A6000**；显存建议 ≥16GB（官方推荐 16GB，8GB 可跑但速度较慢）。
 - **端口**：8188（ComfyUI HTTP）。
-- **存储**：默认或增加磁盘；若需持久化模型，可挂载 [Network Volume](https://docs.runpod.io/storage/network-volumes)。**Pod** 使用 Network Volume 时挂载点为 `/workspace`，ComfyUI 模型路径一般为 `/workspace/madapps/ComfyUI/models`（以 RunPod 控制台/模板为准）。**Serverless** 下本仓库 worker 使用 `/runpod-volume`（见方案 B 与 [experimental/comfyui/README.md](../experimental/comfyui/README.md)）。
+- **存储**：默认或增加磁盘；若需持久化模型、避免反复下载，可挂载 [Network Volume](https://docs.runpod.io/storage/network-volumes)，步骤见 **3.2.1 节**。**Pod** 使用 Network Volume 时挂载点为 `/workspace`，ComfyUI 模型路径以 RunPod 控制台/模板为准（如 `/workspace/runpod-slim/ComfyUI/models`）。**Serverless** 下本仓库 worker 使用 `/runpod-volume`（见方案 B 与 [experimental/comfyui/README.md](../experimental/comfyui/README.md)）。
 
 部署后等待 Pod 初始化（首次可能约 30 分钟），在 RunPod 控制台找到该 Pod，点击 **Connect** → **Connect to HTTP Service [Port 8188]** 打开 ComfyUI 界面（URL 形如 `https://[POD_ID]-8188.proxy.runpod.net`）。
 
@@ -75,6 +75,38 @@ cd $COMFYUI_ROOT/models/vae
 curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors"
 ```
 
+### 3.2.1 使用 Network Volume 持久化模型（避免反复下载）
+
+将三件套与 ComfyUI 放在共享的 Network Volume 上，新 Pod 挂载同一 Volume 即可复用，无需每次重新下载。
+
+**1. 创建 Network Volume**
+
+- 打开 RunPod 控制台 [Storage](https://www.runpod.io/console/user/storage)，点击 **New Network Volume**。
+- 选择**数据中心**（须与后续创建 Pod 时可选 GPU 所在数据中心一致或兼容，见 [Network Volumes 文档](https://docs.runpod.io/storage/network-volumes)）。
+- 设置容量（建议 ≥100 GB，用于 ComfyUI + 三件套约 20GB+ 及后续扩展）。
+- 创建完成后记下该 Volume 名称或 ID。
+
+**2. 部署 Pod 时挂载该 Volume**
+
+- 按 3.1 节打开 ComfyUI 模板，点击 **Configure Pod**。
+- 在配置页的**存储**处选择 **Network Volume**，从下拉中选中刚创建的 Volume。
+- 选 GPU、**Deploy On-Demand**。Pod 启动后，该 Volume 会挂载为 **`/workspace`**（替代默认容器盘）。
+
+**3. 首次使用：在 Volume 上下载模型**
+
+- Pod 就绪后，按 3.6 节用 `find` 确认 ComfyUI 根路径（例如 `/workspace/runpod-slim/ComfyUI`）。因 `/workspace` 即 Volume，此处即 Volume 上的路径。
+- 在 Web Terminal 中按 3.2 节执行完整 curl 命令块，将三件套下载到 `$COMFYUI_ROOT/models/text_encoders`、`models/unet`、`models/vae`。数据会写入 Network Volume。
+- 按 3.3–3.4 节加载 workflow 并生成图像。
+
+**4. 再次使用：复用 Volume，跳过下载**
+
+- 当前 Pod 用完后可 **Stop**；Volume 上的数据会保留。
+- 下次需要时：再 **Deploy** 一个 ComfyUI Pod，在配置页**挂载同一 Network Volume**，其他配置同前。
+- 新 Pod 启动后，`/workspace` 即为该 Volume，若其中已存在 ComfyUI 及三件套，**无需重新下载**；用 `find` 确认 ComfyUI 路径后，直接打开 ComfyUI（Port 8188）、加载 workflow、生成即可。
+- 若模板将 Volume 视为空盘并重新初始化，导致原有内容被覆盖，则需再次按 3.2 节下载三件套（可考虑先用小 Volume 或单次 Pod 验证行为）。
+
+**注意**：Network Volume 按容量与时长计费（见 [定价](https://docs.runpod.io/storage/network-volumes#pricing)）；同一 Volume 仅能挂载到同数据中心或文档允许的 Pod/Serverless。多 Pod 同时挂载同一 Volume 时避免并发写同一文件，以防冲突。
+
 ### 3.3 加载 Z-Image-Turbo 工作流
 
 - 获取 workflow JSON：本仓库已保存 [experimental/runpod/image_z_image_turbo.json](../experimental/runpod/image_z_image_turbo.json)；或从 ComfyUI 官方下载 [image_z_image_turbo.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo.json)。
@@ -104,7 +136,7 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 
 1. **创建 Pod**
    - 打开 [ComfyUI 模板](https://console.runpod.io/hub/template/comfyui?id=cw3nka7d08)，点击 **Configure Pod**（模板页无 “Deploy” 按钮属正常）。
-   - 在配置页选择 GPU（如 L40/RTX 4090）、存储（默认或 Network Volume），部署类型选 **On-Demand**，点击 **Deploy On-Demand**。
+   - 在配置页选择 GPU（如 L40/RTX 4090）、存储（默认或 **Network Volume**；若用 Volume 做持久化、避免反复下载，按 **3.2.1 节** 先创建 Volume 再在此处挂载），部署类型选 **On-Demand**，点击 **Deploy On-Demand**。
    - 等待 Pod 就绪（首次约 30 分钟）；状态为 Running 且 **Connect to HTTP Service [Port 8188]** 显示 Ready 后可继续。
 
 2. **Pod 就绪后的入口**
