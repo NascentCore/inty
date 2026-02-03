@@ -47,8 +47,10 @@
 | 文件 | 目录 | 下载链接 |
 | ------ | ------ | ---------- |
 | `qwen_3_4b.safetensors` | `ComfyUI/models/text_encoders/` | [Hugging Face](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors) |
-| `z_image_turbo_bf16.safetensors` | `ComfyUI/models/diffusion_models/` | [Hugging Face](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors) |
+| `z_image_turbo_bf16.safetensors` | `ComfyUI/models/unet/` | [Hugging Face](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors) |
 | `ae.safetensors` | `ComfyUI/models/vae/` | [Hugging Face](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors) |
+
+runpod-slim 等模板的 **UNETLoader** 从 `models/unet` 读取（非官方 Z-Image 文档中的 `diffusion_models`）；若此前已下载到 `diffusion_models/`，可复制到 `unet/`：`cp $COMFYUI_ROOT/models/diffusion_models/z_image_turbo_bf16.safetensors $COMFYUI_ROOT/models/unet/`。
 
 在 Pod 内可用 `curl`/`wget` 或 ComfyUI Manager 下载；大文件建议用 Network Volume 预先下载或 [RunPod CLI](https://docs.runpod.io/runpodctl/overview) 上传到 Pod 的 `ComfyUI/models` 对应子目录。
 
@@ -63,10 +65,11 @@ find /workspace -maxdepth 4 -type d -iname "*comfy*" 2>/dev/null
 示例（在 Pod 终端中，按实际 `ComfyUI` 根路径替换 `COMFYUI_ROOT`）：
 
 ```bash
-COMFYUI_ROOT=/workspace/madapps/ComfyUI
+COMFYUI_ROOT=/workspace/runpod-slim/ComfyUI   # 或 /workspace/madapps/ComfyUI，以 find 结果为准
+mkdir -p $COMFYUI_ROOT/models/unet
 cd $COMFYUI_ROOT/models/text_encoders
 curl -L -o qwen_3_4b.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors"
-cd $COMFYUI_ROOT/models/diffusion_models
+cd $COMFYUI_ROOT/models/unet
 curl -L -o z_image_turbo_bf16.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors"
 cd $COMFYUI_ROOT/models/vae
 curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors"
@@ -119,7 +122,7 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
      COMFYUI_ROOT=/workspace/runpod-slim/ComfyUI
      # 后续 cd 与 curl 命令同 3.2 节
      ```
-   - 三件套下载完成后，用 `ls -la` 检查 `models/text_encoders`、`models/diffusion_models`、`models/vae` 下对应文件是否存在且大小正常。
+   - 三件套下载完成后，用 `ls -la` 检查 `models/text_encoders`、`models/unet`、`models/vae` 下对应文件是否存在且大小正常。
 
 4. **加载 workflow 与生成**
    - 在 ComfyUI（Port 8188）中按 3.3–3.4 节加载 workflow、输入 prompt、生成图像。
