@@ -74,7 +74,7 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 
 ### 3.3 加载 Z-Image-Turbo 工作流
 
-- 从 ComfyUI 官方获取 workflow JSON：[image_z_image_turbo.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo.json)。
+- 获取 workflow JSON：本仓库已保存 [experimental/runpod/image_z_image_turbo.json](../experimental/runpod/image_z_image_turbo.json)；或从 ComfyUI 官方下载 [image_z_image_turbo.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo.json)。
 - 在 ComfyUI Web UI 中：**Workflow** → **Open** → 选择该 JSON 文件。
 - 若模板浏览器支持，可在 **Image** → **Z-Image-Turbo** 下直接选模板（需 ComfyUI 已更新至含 Z-Image 模板的版本）。
 - 该 JSON 内含纯 T2I 与带 LoRA 两个子图。若出现「Missing Models」弹窗且仅列出 `loras / pixel_art_style_z_image_turbo.safetensors`，**此步骤可跳过**：关掉弹窗（可勾选 Don't show this again），仅用纯 T2I 子图即可生成，三件套（qwen_3_4b、z_image_turbo_bf16、ae）已足够；需要像素风时再点弹窗中的 **Download to Pod** 下载该 LoRA。
@@ -165,7 +165,7 @@ The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_70 sm_75 s
 
 使用 RunPod Serverless 的 ComfyUI worker，通过 API 提交 workflow 并取回图片。
 
-- **调用方式**：与现有 SD3 serverless 调用方式相同，仅将 workflow 换为 Z-Image-Turbo 的 JSON（如 [image_z_image_turbo.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo.json)），并确保 endpoint 镜像或挂载卷中有上述三个模型（`qwen_3_4b.safetensors`、`z_image_turbo_bf16.safetensors`、`ae.safetensors`）。
+- **调用方式**：与现有 SD3 serverless 调用方式相同，仅将 workflow 换为 Z-Image-Turbo 的 JSON（本仓库 [experimental/runpod/image_z_image_turbo.json](../experimental/runpod/image_z_image_turbo.json) 或 [官方 image_z_image_turbo.json](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/image_z_image_turbo.json)），并确保 endpoint 镜像或挂载卷中有上述三个模型（`qwen_3_4b.safetensors`、`z_image_turbo_bf16.safetensors`、`ae.safetensors`）。
 - **参考实现**：本仓库 [experimental/comfyui/runpod_serverless_endpoint_worker_comfyui.py](../experimental/comfyui/runpod_serverless_endpoint_worker_comfyui.py) 传入 `workflow` JSON、用 `endpoint.run_sync()` 取结果。
 - **前提**：需使用已包含 Z-Image 模型的 worker 镜像，或自建镜像/在镜像内放置上述三个模型；Serverless 使用 Network Volume 时路径需与 worker 约定一致（如 [experimental/comfyui/README.md](../experimental/comfyui/README.md) 中的 `/runpod-volume`）。镜像构建与 endpoint 部署细节不在此文档展开。
 
