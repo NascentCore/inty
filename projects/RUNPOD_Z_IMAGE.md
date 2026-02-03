@@ -25,7 +25,7 @@
 
 参考 [RunPod 教程](https://docs.runpod.io/tutorials/pods/comfyui)：
 
-- **模板**：标准 GPU 选 [ComfyUI](https://console.runpod.io/hub/template/comfyui?id=cw3nka7d08)；Blackwell（RTX 5090/B200）选 [ComfyUI Blackwell Edition](https://console.runpod.io/hub/template/comfyui-blackwell-edition-5090-b200?id=2lv7ev3wfp)。打开模板页后点击 **Configure Pod**，在配置页选好 GPU、存储等，再点击 **Deploy On-Demand** 创建 Pod。
+- **模板**：标准 GPU 选 [ComfyUI](https://console.runpod.io/hub/template/comfyui?id=cw3nka7d08)；**Blackwell（RTX 5090/B200）必须选** [ComfyUI Blackwell Edition](https://console.runpod.io/hub/template/comfyui-blackwell-edition-5090-b200?id=2lv7ev3wfp)，不可使用标准 ComfyUI 模板（否则会报 CUDA kernel 错误，见 3.7 节）。打开模板页后点击 **Configure Pod**，在配置页选好 GPU、存储等，再点击 **Deploy On-Demand** 创建 Pod。
 - **GPU 选型（目标：10 秒内完成高质量 1024×1024 生图）**：根据公开基准，Z-Image-Turbo 在 1024×1024 下的典型耗时约为：
   - **H800 / H100**：亚秒级（约 1–1.4 秒）
   - **RTX A6000 48GB**：约 4 秒
@@ -124,6 +124,27 @@ curl -L -o ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolv
 4. **加载 workflow 与生成**
    - 在 ComfyUI（Port 8188）中按 3.3–3.4 节加载 workflow、输入 prompt、生成图像。
    - 若加载 workflow 后出现「Missing Models」且仅缺 `pixel_art_style_z_image_turbo.safetensors`，**可跳过**：关掉弹窗后直接用纯 T2I 子图生成即可。
+
+### 3.7 故障排除：RTX 5090 / Blackwell 与 CUDA kernel 错误
+
+**现象**：在 ComfyUI 中点击 Run 后报错，节点类型为 `CLIPTextEncode`，错误信息为：
+
+```text
+RuntimeError: CUDA error: no kernel image is available for execution on the device
+```
+
+启动日志中可见：
+
+```text
+NVIDIA GeForce RTX 5090 with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90.
+```
+
+**原因**：当前 Pod 使用的是 **标准 ComfyUI 模板**，其预装 PyTorch 为 cu124 等版本，仅包含 sm_50–sm_90 的 CUDA kernel；**RTX 5090 / B200** 为 Blackwell 架构（计算能力 sm_120），需要支持 sm_120 的 PyTorch/CUDA，否则无法在设备上执行 kernel。
+
+**解决方法**：使用 **ComfyUI Blackwell Edition** 模板重新部署 Pod（见 3.1 节模板说明）。该模板镜像内已配备支持 Blackwell（sm_120）的 PyTorch/CUDA。部署后按 3.6 节重新确认 ComfyUI 路径、下载三件套、加载 workflow 并生成即可。
+
+**参考**：[ComfyUI #10382](https://github.com/Comfy-Org/ComfyUI/issues/10382)（RTX 5080 同类错误）、[ComfyUI issues 搜索](https://github.com/Comfy-Org/ComfyUI/issues?q=CUDA+error%3A+no+kernel+image+is+available+for+execution+on+the+device)、[PyTorch 本地安装说明](https://pytorch.org/get-started/locally/)。
 
 ## 4. 参考链接汇总
 
