@@ -2,13 +2,13 @@ package com.ai.intellimate.chat.data
 
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
-import ai.sxwl.android.data.chat.local.db.SyncStateEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
 import kotlinx.coroutines.flow.Flow
 
 class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatabase.getInstance()) {
     val chatMessageDao = database.chatMessageDao()
+
     suspend fun getMessageCounts(agentId: String): Int {
         return chatMessageDao.getMessagesCount(agentId)
     }

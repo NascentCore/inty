@@ -22,7 +22,9 @@ interface ChatMessageDao {
      * 返回 PagingSource，用于配合 RemoteMediator 进行分页加载 按 sortKey DESC 排序，最新的消息在列表底部 排除 isOpening 为 true
      * 的数据
      */
-    @Query("SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC, indexId DESC ")
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC, indexId DESC "
+    )
     fun pagingSource(agentId: String): PagingSource<Int, MessageEntity>
 
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND isOpening = 0")
@@ -38,8 +40,7 @@ interface ChatMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(messages: List<MessageEntity>)
 
-    @Upsert(entity = MessageEntity::class)
-    suspend fun insertOrDrop(messages: List<MessageUpdate>)
+    @Upsert(entity = MessageEntity::class) suspend fun insertOrDrop(messages: List<MessageUpdate>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: MessageEntity)
 

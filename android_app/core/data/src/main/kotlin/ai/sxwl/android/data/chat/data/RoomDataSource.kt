@@ -2,7 +2,6 @@ package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.local.db.ChatMessageDao
-import ai.sxwl.android.data.chat.local.db.ChatSyncStateDao
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import androidx.room.withTransaction
@@ -65,9 +64,7 @@ class RoomDataSource(
     suspend fun clearChatData(agentId: String) =
         withContext(dispatcher) {
             logger.debug { "RoomDataSource.clearChatData starting for agent $agentId" }
-            db.withTransaction {
-                messageDao.deleteByAgent(agentId)
-            }
+            db.withTransaction { messageDao.deleteByAgent(agentId) }
             // 等待数据库操作完成后再清理内存状态和设置
             logger.info { "RoomDataSource cleared chat data for agent $agentId" }
         }
@@ -75,9 +72,7 @@ class RoomDataSource(
     suspend fun clearAllChatData() =
         withContext(dispatcher) {
             logger.debug { "RoomDataSource.clearAllChatData starting" }
-            db.withTransaction {
-                messageDao.deleteAll()
-            }
+            db.withTransaction { messageDao.deleteAll() }
             logger.info { "RoomDataSource cleared all chat data" }
         }
 
