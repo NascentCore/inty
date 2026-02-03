@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # CREATED_BY_AGENT
 """
-调用 Gemini 生成角色，再通过 Dify API 创建角色的定时脚本
+调用 Gemini 或 OpenRouter 生成角色，再通过 Dify API 创建角色的定时脚本
+
+默认使用 OpenRouter 模型 mistralai/devstral-2512。模型名包含 "/" 时走 OpenRouter，否则走 Gemini。
 
 从环境变量读取：
-- GOOGLE_API_KEY: Gemini API 密钥
+- OpenRouter：OPENROUTER_API_KEY 或 OPENAI_API_KEY
+- Gemini：GOOGLE_API_KEY
 - DIFY_API_KEY: Dify API 密钥
 
 数据库配置文件默认使用 scripts/sync_agents_dev_to_prod/config.yaml.example
@@ -21,11 +24,14 @@ import cyclopts
 import requests
 import yaml
 from google import genai
+from openai import OpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models.agent import Agent
+
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 app = cyclopts.App()
 
@@ -80,21 +86,25 @@ async def fetch_existing_agent_names(session: AsyncSession) -> list[str]:
 
 
 def generate_characters(
-    google_api_key: str, existing_names: list[str], model: str = "gemini-2.5-flash"
+    existing_names: list[str],
+    model: str = "mistralai/devstral-2512",
+    *,
+    google_api_key: str | None = None,
+    openrouter_api_key: str | None = None,
 ) -> list[dict]:
-    """调用 Gemini 生成 10 个角色信息
+    """调用 Gemini 或 OpenRouter 生成 10 个角色信息
+
+    模型名包含 "/" 时使用 OpenRouter（需 openrouter_api_key），否则使用 Gemini（需 google_api_key）。
 
     Args:
-        google_api_key: Google API 密钥
         existing_names: 数据库中已有的角色名称列表
-        model: Gemini 模型名（默认: gemini-2.5-flash）
+        model: 模型名，默认 mistralai/devstral-2512（OpenRouter）
+        google_api_key: Google API 密钥，Gemini 时必填
+        openrouter_api_key: OpenRouter API 密钥，OpenRouter 时必填
 
     Returns:
         角色列表，每个角色包含 name 和 description
     """
-    client = genai.Client(api_key=google_api_key)
-
-    # 构造排除已有名称的 prompt
     excluded_names_text = ", ".join(existing_names[:100]) if existing_names else "none"
     if len(existing_names) > 100:
         excluded_names_text += f" (and {len(existing_names) - 100} more)"
@@ -116,32 +126,51 @@ Make the characters diverse in name and scenario.
 
 IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
 
-    logger.info(f"调用 Gemini 生成角色，model={model}")
-    try:
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-        )
-        text = response.text.strip()
+    use_openrouter = "/" in model
+    if use_openrouter:
+        if not openrouter_api_key:
+            raise ValueError(
+                "使用 OpenRouter 模型时需设置 OPENROUTER_API_KEY 或 OPENAI_API_KEY"
+            )
+        logger.info(f"调用 OpenRouter 生成角色，model={model}")
+        client = OpenAI(api_key=openrouter_api_key, base_url=OPENROUTER_BASE_URL)
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                stream=False,
+            )
+            text = (response.choices[0].message.content or "").strip()
+        except Exception as e:
+            logger.error(f"OpenRouter 调用失败: {e}")
+            raise
+    else:
+        if not google_api_key:
+            raise ValueError("使用 Gemini 模型时需设置 GOOGLE_API_KEY")
+        logger.info(f"调用 Gemini 生成角色，model={model}")
+        client = genai.Client(api_key=google_api_key)
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+            )
+            text = response.text.strip()
+        except Exception as e:
+            logger.error(f"Gemini 调用失败: {e}")
+            raise
 
-        # 移除可能的 markdown 代码块标记
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
+    if text.startswith("```json"):
+        text = text[7:]
+    if text.startswith("```"):
+        text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    text = text.strip()
 
-        characters = json.loads(text)
-        logger.info(f"成功生成 {len(characters)} 个角色")
-        logger.debug(
-            f"角色列表: {json.dumps(characters, indent=2, ensure_ascii=False)}"
-        )
-        return characters
-    except Exception as e:
-        logger.error(f"Gemini 调用失败: {e}")
-        raise
+    characters = json.loads(text)
+    logger.info(f"成功生成 {len(characters)} 个角色")
+    logger.debug(f"角色列表: {json.dumps(characters, indent=2, ensure_ascii=False)}")
+    return characters
 
 
 def call_dify(dify_api_key: str, character: dict) -> bool:
@@ -199,23 +228,32 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
 async def main(
     config: str = "sync_agents_dev_to_prod/config.yaml.example",
     target_count: int = 3,
-    model: str = "gemini-2.5-flash",
+    model: str = "mistralai/devstral-2512",
 ) -> int:
     """主函数：查询数据库、生成角色并批量创建
 
     Args:
         config: 配置文件路径，相对于 scripts/ 目录（默认: sync_agents_dev_to_prod/config.yaml.example）
         target_count: 目标创建角色数量（默认: 3，最大: 10）
-        model: Gemini 模型名（默认: gemini-2.5-flash）
+        model: 模型名，含 "/" 为 OpenRouter（默认: mistralai/devstral-2512），否则为 Gemini
     """
     if target_count < 1 or target_count > 10:
         logger.error("target_count 必须在 1-10 之间")
         return 1
+    use_openrouter = "/" in model
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get(
+        "OPENAI_API_KEY"
+    )
     google_api_key = os.environ.get("GOOGLE_API_KEY")
     dify_api_key = os.environ.get("DIFY_API_KEY")
 
-    if not google_api_key:
-        logger.error("环境变量 GOOGLE_API_KEY 未设置")
+    if use_openrouter and not openrouter_api_key:
+        logger.error(
+            "使用 OpenRouter 模型时需设置环境变量 OPENROUTER_API_KEY 或 OPENAI_API_KEY"
+        )
+        return 1
+    if not use_openrouter and not google_api_key:
+        logger.error("使用 Gemini 模型时需设置环境变量 GOOGLE_API_KEY")
         return 1
     if not dify_api_key:
         logger.error("环境变量 DIFY_API_KEY 未设置")
@@ -238,7 +276,12 @@ async def main(
             existing_names = await fetch_existing_agent_names(session)
 
             # 生成 10 个角色
-            characters = generate_characters(google_api_key, existing_names, model)
+            characters = generate_characters(
+                existing_names,
+                model,
+                google_api_key=google_api_key,
+                openrouter_api_key=openrouter_api_key,
+            )
 
             # 循环调用 Dify，达到目标数量即停止
             success_count = 0
