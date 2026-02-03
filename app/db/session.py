@@ -1,22 +1,24 @@
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-# 异步数据库引擎
+_db = global_config_loaded_from_config_yaml.database
+
+# 异步数据库引擎（主库）
 async_engine = create_async_engine(
-    str(global_config_loaded_from_config_yaml.database.async_url),
-    pool_size=global_config_loaded_from_config_yaml.database.pool_size,  # 连接池大小，可根据需求调整
-    max_overflow=global_config_loaded_from_config_yaml.database.max_overflow,  # 超出 pool_size 后最大可创建的连接数
-    pool_timeout=global_config_loaded_from_config_yaml.database.pool_timeout,  # 获取连接的超时时间
-    pool_recycle=global_config_loaded_from_config_yaml.database.pool_recycle,  # 连接多长时间后自动回收
-    pool_pre_ping=global_config_loaded_from_config_yaml.database.pool_pre_ping,  # 检查连接可用性
+    str(_db.async_url),
+    pool_size=_db.pool_size,
+    max_overflow=_db.max_overflow,
+    pool_timeout=_db.pool_timeout,
+    pool_recycle=_db.pool_recycle,
+    pool_pre_ping=_db.pool_pre_ping,
     connect_args={
-        "command_timeout": global_config_loaded_from_config_yaml.database.command_timeout,
+        "command_timeout": _db.command_timeout,
         "server_settings": {
-            "jit": "off",  # 关闭JIT以减少查询延迟
+            "jit": "off",
             "application_name": "inty_backend",
         },
     },
@@ -25,7 +27,47 @@ AsyncSessionLocal = sessionmaker(
     bind=async_engine, class_=AsyncSession, expire_on_commit=False
 )
 
+# 只读副本引擎（用于日报周报等读多写少场景，未配置时为空）
+_replica_url = _db.async_replica_url
+async_replica_engine = (
+    create_async_engine(
+        str(_replica_url),
+        pool_size=_db.pool_size,
+        max_overflow=_db.max_overflow,
+        pool_timeout=_db.pool_timeout,
+        pool_recycle=_db.pool_recycle,
+        pool_pre_ping=_db.pool_pre_ping,
+        connect_args={
+            "command_timeout": _db.command_timeout,
+            "server_settings": {
+                "jit": "off",
+                "application_name": "inty_backend_replica",
+            },
+        },
+    )
+    if _replica_url
+    else None
+)
+AsyncSessionLocalReplica: Optional[type] = (
+    sessionmaker(
+        bind=async_replica_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    if async_replica_engine is not None
+    else None
+)
+
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
+
+
+async def get_async_replica_db() -> AsyncGenerator[AsyncSession, None]:
+    if AsyncSessionLocalReplica is not None:
+        async with AsyncSessionLocalReplica() as session:
+            yield session
+    else:
+        async with AsyncSessionLocal() as session:
+            yield session

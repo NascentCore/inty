@@ -36,10 +36,16 @@ def reports_app():
     async def override_get_async_db():
         yield None
 
+    async def override_get_async_replica_db():
+        yield None
+
     app.dependency_overrides[deps.get_current_active_user] = (
         override_current_active_user
     )
     app.dependency_overrides[deps.get_async_db] = override_get_async_db
+    app.dependency_overrides[deps.get_async_replica_db] = (
+        override_get_async_replica_db
+    )
 
     try:
         yield app
@@ -63,10 +69,12 @@ def test_user_analytics_reports_returns_empty_when_no_data(
     mock_db = MagicMock()
     mock_db.execute = AsyncMock(side_effect=mock_execute)
 
-    async def override_get_async_db():
+    async def override_get_async_replica_db():
         yield mock_db
 
-    reports_app.dependency_overrides[deps.get_async_db] = override_get_async_db
+    reports_app.dependency_overrides[deps.get_async_replica_db] = (
+        override_get_async_replica_db
+    )
 
     with TestClient(reports_app) as client:
         resp = client.get(

@@ -1,7 +1,7 @@
 # CREATED_BY_AGENT
 """用户数据分析预计算报告服务测试"""
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,6 +14,7 @@ from app.services.user_analytics_report_service import (
     compute_and_save_weekly_report,
     get_missing_daily_report_dates,
     get_missing_weekly_report_dates_first_half,
+    get_missing_weekly_report_dates_past_weeks,
 )
 
 
@@ -55,9 +56,7 @@ def sample_stats():
 
 
 @pytest.mark.asyncio
-async def test_compute_and_save_daily_report_skips_existing(
-    mock_db, sample_stats
-):
+async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stats):
     """已存在的日报应跳过"""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = MagicMock()
@@ -67,14 +66,10 @@ async def test_compute_and_save_daily_report_skips_existing(
         "app.services.user_analytics_report_service.UserAnalyticsService"
     ) as MockService:
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(
-            return_value=sample_stats
-        )
+        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
 
-        result = await compute_and_save_daily_report(
-            mock_db, date(2026, 2, 1)
-        )
+        result = await compute_and_save_daily_report(mock_db, date(2026, 2, 1))
 
     assert result is None
     mock_db.add.assert_not_called()
@@ -92,14 +87,10 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
         "app.services.user_analytics_report_service.UserAnalyticsService"
     ) as MockService:
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(
-            return_value=sample_stats
-        )
+        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
 
-        result = await compute_and_save_daily_report(
-            mock_db, date(2026, 2, 1)
-        )
+        result = await compute_and_save_daily_report(mock_db, date(2026, 2, 1))
 
     assert result is not None
     mock_db.add.assert_called_once()
@@ -107,9 +98,7 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
 
 
 @pytest.mark.asyncio
-async def test_compute_and_save_weekly_report_skips_existing(
-    mock_db, sample_stats
-):
+async def test_compute_and_save_weekly_report_skips_existing(mock_db, sample_stats):
     """已存在的周报应跳过"""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = MagicMock()
@@ -119,14 +108,10 @@ async def test_compute_and_save_weekly_report_skips_existing(
         "app.services.user_analytics_report_service.UserAnalyticsService"
     ) as MockService:
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(
-            return_value=sample_stats
-        )
+        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
 
-        result = await compute_and_save_weekly_report(
-            mock_db, date(2026, 1, 27)
-        )
+        result = await compute_and_save_weekly_report(mock_db, date(2026, 1, 27))
 
     assert result is None
     mock_db.add.assert_not_called()
@@ -134,9 +119,7 @@ async def test_compute_and_save_weekly_report_skips_existing(
 
 
 @pytest.mark.asyncio
-async def test_compute_and_save_weekly_report_creates_new(
-    mock_db, sample_stats
-):
+async def test_compute_and_save_weekly_report_creates_new(mock_db, sample_stats):
     """新周报应创建并保存"""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
@@ -146,14 +129,10 @@ async def test_compute_and_save_weekly_report_creates_new(
         "app.services.user_analytics_report_service.UserAnalyticsService"
     ) as MockService:
         mock_service_instance = AsyncMock()
-        mock_service_instance.get_analytics_stats = AsyncMock(
-            return_value=sample_stats
-        )
+        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
 
-        result = await compute_and_save_weekly_report(
-            mock_db, date(2026, 1, 27)
-        )
+        result = await compute_and_save_weekly_report(mock_db, date(2026, 1, 27))
 
     assert result is not None
     mock_db.add.assert_called_once()
@@ -178,17 +157,13 @@ async def test_get_missing_daily_report_dates_all_missing(mock_db):
     mock_result.scalars.return_value.all.return_value = []
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.user_analytics_report_service.datetime"
-    ) as mock_dt:
+    with patch("app.services.user_analytics_report_service.datetime") as mock_dt:
         mock_dt.now.return_value = MagicMock()
         mock_dt.now.return_value.date.return_value = date(2026, 2, 2)
+        missing = await get_missing_daily_report_dates(mock_db, days=3)
 
-    missing = await get_missing_daily_report_dates(mock_db, days=3)
     assert len(missing) == 3
-    assert date(2026, 1, 30) in missing
-    assert date(2026, 1, 31) in missing
-    assert date(2026, 2, 1) in missing
+    assert set(missing) == {date(2026, 1, 30), date(2026, 1, 31), date(2026, 2, 1)}
 
 
 @pytest.mark.asyncio
@@ -197,17 +172,13 @@ async def test_get_missing_daily_report_dates_partial_existing(mock_db):
     mock_result.scalars.return_value.all.return_value = [date(2026, 2, 1)]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.user_analytics_report_service.datetime"
-    ) as mock_dt:
+    with patch("app.services.user_analytics_report_service.datetime") as mock_dt:
         mock_dt.now.return_value = MagicMock()
         mock_dt.now.return_value.date.return_value = date(2026, 2, 2)
+        missing = await get_missing_daily_report_dates(mock_db, days=3)
 
-    missing = await get_missing_daily_report_dates(mock_db, days=3)
     assert len(missing) == 2
-    assert date(2026, 2, 1) not in missing
-    assert date(2026, 1, 30) in missing
-    assert date(2026, 1, 31) in missing
+    assert set(missing) == {date(2026, 1, 30), date(2026, 1, 31)}
 
 
 @pytest.mark.asyncio
@@ -234,3 +205,20 @@ async def test_get_missing_weekly_report_dates_first_half_partial_existing(
 
     missing = await get_missing_weekly_report_dates_first_half(mock_db, 2026)
     assert date(2026, 1, 5) not in missing
+
+
+@pytest.mark.asyncio
+async def test_get_missing_weekly_report_dates_past_weeks(mock_db):
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    with patch("app.services.user_analytics_report_service.datetime") as mock_dt:
+        mock_dt.now.return_value = MagicMock()
+        mock_dt.now.return_value.date.return_value = date(2026, 2, 2)
+        missing = await get_missing_weekly_report_dates_past_weeks(mock_db, weeks=7)
+
+    assert len(missing) == 7
+    assert all(d.weekday() == 0 for d in missing)
+    base_expected = date(2026, 1, 26)
+    assert set(missing) == {base_expected - timedelta(days=i * 7) for i in range(7)}
