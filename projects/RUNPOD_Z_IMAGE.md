@@ -186,3 +186,7 @@ CREATED_BY_ZYX
 ### 启动 Pod 设置页面
 
 <img width="900" height="5958" alt="image" src="https://github.com/user-attachments/assets/a3ae122b-7aa3-41d6-b81f-ac4191dfd8da" />
+
+### 加载工作流配置文件
+
+<img width="400" height="1310" alt="image" src="https://github.com/user-attachments/assets/e24f4561-5b18-4b3c-88ea-14a6bfc91c62" />
