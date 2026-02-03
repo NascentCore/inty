@@ -28,6 +28,9 @@ interface ChatMessageDao {
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND isOpening = 0")
     suspend fun getMessagesCount(agentId: String): Int
 
+    @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND isOpening = 0")
+    fun messageCountFlow(agentId: String): Flow<Int>
+
     /** 查询用户是否对该 agent 发送过消息（存在 role = 'user' 的记录即视为发送过） */
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND role = 'user'")
     suspend fun countUserMessages(agentId: String): Int

@@ -220,4 +220,6 @@ class ChatMessageRepository(
     }
 
     suspend fun getImageMessages(agentId: String) = localDataSource.getImageMessages(agentId)
+
+    suspend fun messageCountFlow(agentId: String) = localDataSource.messageCountFlow(agentId)
 }

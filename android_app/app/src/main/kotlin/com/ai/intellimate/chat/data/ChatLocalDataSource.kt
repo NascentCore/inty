@@ -21,6 +21,8 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         chatMessageDao.deleteByAgent(agentId)
     }
 
+    fun messageCountFlow(agentId: String) = chatMessageDao.messageCountFlow(agentId)
+
     suspend fun getLatesAgentMessage(agentId: String): MessageEntity? {
         return chatMessageDao.getLatestAgentMessage(agentId)
     }

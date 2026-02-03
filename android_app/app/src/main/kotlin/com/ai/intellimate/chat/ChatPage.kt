@@ -400,7 +400,7 @@ internal fun ChatPage(
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
 
-    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && showBackButton) {
+    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && showBackButton && messages.loadState.refresh is LoadState.NotLoading) {
         agentInfo?.let { agent ->
             VipAgentUnlockDialog(
                 agent = agent,
@@ -957,7 +957,17 @@ internal fun ChatPage(
                         .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
-                onClick = { chatViewModel.sendKeepTalkingMessage() },
+                onClick = {
+                    if (messages.loadState.refresh is LoadState.NotLoading) {
+                        if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.NONE) {
+                            chatViewModel.sendKeepTalkingMessage()
+                        } else {
+                            ToastUtils.showShort(R.string.str_character_not_unlocked)
+                        }
+                    } else {
+                        ToastUtils.showShort(R.string.str_please_wait_loading)
+                    }
+                },
             )
         }
 
@@ -1079,7 +1089,7 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(agentInfo?.id, isCurrentPage, shouldAutoFocusInput) {
+    LaunchedEffect(agentInfo?.id, isCurrentPage, shouldAutoFocusInput, messages.loadState.refresh) {
         if (!isCurrentPage) return@LaunchedEffect
 
         if (showMorePanel || agentInfo == null) {
@@ -1088,7 +1098,7 @@ internal fun ChatPage(
             return@LaunchedEffect
         }
 
-        if (shouldAutoFocusInput) {
+        if (shouldAutoFocusInput && messages.loadState.refresh is LoadState.NotLoading) {
             delay(50)
             inputFocusRequester.requestFocus()
         } else {

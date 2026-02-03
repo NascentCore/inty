@@ -104,6 +104,15 @@ class ChatViewModel : BaseVM() {
             }
             .cachedIn(viewModelScope)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val messageCount = _agentId.flatMapLatest {
+        if (it.isNullOrBlank()) {
+            flowOf(0)
+        } else {
+            chatMessageRepository.messageCountFlow(it)
+        }
+    }
+
     private var lastAiMsgInfo: MsgInfo? = null
     private val _shouldFlowShow = MutableStateFlow(false)
     val shouldFlowShow = _shouldFlowShow.asStateFlow()
@@ -301,8 +310,12 @@ class ChatViewModel : BaseVM() {
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun checkVipAgentUnlock() {
 
-        viewModelScope.launch {
-            combine(VipStatusHelper.vipStatus, agentFlow) { vipStatus, agent ->
+        viewModelScope.launch(Dispatchers.IO) {
+            combine(
+                VipStatusHelper.vipStatus,
+                agentFlow,
+                messageCount
+            ) { vipStatus, agent, count ->
                     when {
                         agent?.tags?.any { it.lowercase().contains("vip") } != true ||
                             vipStatus.isSubscribed ||
@@ -310,7 +323,7 @@ class ChatViewModel : BaseVM() {
 
                             ChatUIState.VipAgentLockType.NONE
                         }
-                        chatMessageRepository.getMessageCounts(agent.agentId) > 0 ->
+                        count > 0 ->
                             ChatUIState.VipAgentLockType.INPUT
                         else -> ChatUIState.VipAgentLockType.DIALOG
                     }
