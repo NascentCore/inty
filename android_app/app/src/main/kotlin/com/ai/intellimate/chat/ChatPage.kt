@@ -224,7 +224,7 @@ internal fun ChatPage(
             LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
             derivedStateOf {
                 proFixMessages(messages.itemSnapshotList) +
-                        listOf(MessageItem.Opening, MessageItem.Intro)
+                    listOf(MessageItem.Opening, MessageItem.Intro)
             }
         }
 
@@ -257,10 +257,9 @@ internal fun ChatPage(
     }
 
     LifecycleStartEffect(Unit) {
-
         messages.refresh()
 
-        onStopOrDispose {  }
+        onStopOrDispose {}
     }
 
     LaunchedEffect(
@@ -400,7 +399,11 @@ internal fun ChatPage(
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
 
-    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG && showBackButton && messages.loadState.refresh is LoadState.NotLoading) {
+    if (
+        uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
+            showBackButton &&
+            messages.loadState.refresh is LoadState.NotLoading
+    ) {
         agentInfo?.let { agent ->
             VipAgentUnlockDialog(
                 agent = agent,
@@ -629,9 +632,12 @@ internal fun ChatPage(
                                     is MessageItem.Opening -> "opening"
                                     is MessageItem.Intro -> "intro"
                                     is MessageItem.MessageIndex ->
-                                        messages.peek(item.index)?.let { "${it.id}${it.indexId}" } ?: index
+                                        messages.peek(item.index)?.let { "${it.id}${it.indexId}" }
+                                            ?: index
                                     is MessageItem.CallMessageIndexs ->
-                                        messages.peek(item.messages.first())?.let { "${it.id}${it.indexId}" } ?: index
+                                        messages.peek(item.messages.first())?.let {
+                                            "${it.id}${it.indexId}"
+                                        } ?: index
                                 }
                             },
                         ) { index, item ->
@@ -643,7 +649,8 @@ internal fun ChatPage(
                                 is MessageItem.Opening -> {
                                     val isOnlyOpeningMessage by remember {
                                         derivedStateOf {
-                                            messages.itemSnapshotList.isEmpty() && messages.loadState.isIdle
+                                            messages.itemSnapshotList.isEmpty() &&
+                                                messages.loadState.isIdle
                                         }
                                     }
                                     val openingMessage =
@@ -958,7 +965,9 @@ internal fun ChatPage(
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
                 onClick = {
-                    if (messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0) {
+                    if (
+                        messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0
+                    ) {
                         if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.NONE) {
                             chatViewModel.sendKeepTalkingMessage()
                         } else {
@@ -1098,7 +1107,10 @@ internal fun ChatPage(
             return@LaunchedEffect
         }
 
-        if (shouldAutoFocusInput && (messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0)) {
+        if (
+            shouldAutoFocusInput &&
+                (messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0)
+        ) {
             delay(50)
             inputFocusRequester.requestFocus()
         } else {

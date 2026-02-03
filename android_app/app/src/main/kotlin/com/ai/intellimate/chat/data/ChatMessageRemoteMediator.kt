@@ -4,11 +4,8 @@ package com.ai.intellimate.chat.data
 
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.local.db.ChatMessageDao
-import ai.sxwl.android.data.chat.local.db.ChatSyncStateDao
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
-import ai.sxwl.android.data.chat.local.db.SyncStateEntity
-import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toUpdate
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.ExperimentalPagingApi
@@ -34,7 +31,7 @@ import com.architecture.httplib.core.HttpResult
 class ChatMessageRemoteMediator(
     private val agentId: String,
     private val database: IntyChatDatabase,
-    private val remoteDataSource: ChatRemoteDataSource
+    private val remoteDataSource: ChatRemoteDataSource,
 ) : RemoteMediator<Int, MessageEntity>() {
 
     private val messageDao: ChatMessageDao = database.chatMessageDao()
@@ -69,7 +66,10 @@ class ChatMessageRemoteMediator(
                 "offset=${nextPageKey} PageSize=${state.config.pageSize}",
             )
             // 从网络获取数据
-            when (val result = remoteDataSource.getMessages(agentId, state.config.pageSize, nextPageKey)) {
+            when (
+                val result =
+                    remoteDataSource.getMessages(agentId, state.config.pageSize, nextPageKey)
+            ) {
                 is HttpResult.Success -> {
                     val response = result.data
                     val messages = response.messages ?: emptyList()
@@ -94,7 +94,10 @@ class ChatMessageRemoteMediator(
                     }
 
                     // 返回成功结果
-                    MediatorResult.Success(endOfPaginationReached = !response.hasMore || messages.size < state.config.pageSize)
+                    MediatorResult.Success(
+                        endOfPaginationReached =
+                            !response.hasMore || messages.size < state.config.pageSize
+                    )
                 }
                 is HttpResult.Failure -> {
                     LogUtils.e(

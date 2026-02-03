@@ -80,7 +80,7 @@ data class MessageUpdate(
     val timestamp: String? = null,
     val audioUrl: String? = null,
     @Embedded val metaData: MetaData,
-    val isSending: Boolean = false
+    val isSending: Boolean = false,
 )
 
 fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
@@ -105,7 +105,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
                             )
                         },
                 )
-            } ?: MetaData(agentId)
+            } ?: MetaData(agentId),
     )
 }
 

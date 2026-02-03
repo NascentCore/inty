@@ -2,7 +2,6 @@ package com.ai.intellimate.chat.viewmodel
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatSettingsReq
@@ -105,13 +104,14 @@ class ChatViewModel : BaseVM() {
             .cachedIn(viewModelScope)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val messageCount = _agentId.flatMapLatest {
-        if (it.isNullOrBlank()) {
-            flowOf(0)
-        } else {
-            chatMessageRepository.messageCountFlow(it)
+    val messageCount =
+        _agentId.flatMapLatest {
+            if (it.isNullOrBlank()) {
+                flowOf(0)
+            } else {
+                chatMessageRepository.messageCountFlow(it)
+            }
         }
-    }
 
     private var lastAiMsgInfo: MsgInfo? = null
     private val _shouldFlowShow = MutableStateFlow(false)
@@ -311,11 +311,7 @@ class ChatViewModel : BaseVM() {
     private fun checkVipAgentUnlock() {
 
         viewModelScope.launch(Dispatchers.IO) {
-            combine(
-                VipStatusHelper.vipStatus,
-                agentFlow,
-                messageCount
-            ) { vipStatus, agent, count ->
+            combine(VipStatusHelper.vipStatus, agentFlow, messageCount) { vipStatus, agent, count ->
                     when {
                         agent?.tags?.any { it.lowercase().contains("vip") } != true ||
                             vipStatus.isSubscribed ||
@@ -323,8 +319,7 @@ class ChatViewModel : BaseVM() {
 
                             ChatUIState.VipAgentLockType.NONE
                         }
-                        count > 0 ->
-                            ChatUIState.VipAgentLockType.INPUT
+                        count > 0 -> ChatUIState.VipAgentLockType.INPUT
                         else -> ChatUIState.VipAgentLockType.DIALOG
                     }
                 }
@@ -936,9 +931,7 @@ class ChatViewModel : BaseVM() {
                 LogUtils.i("Vote message success: ${userVote.name}")
             } catch (error: Exception) {
                 LogUtils.e("Vote message failure: ${error.message}")
-                withContext(Dispatchers.Main) {
-                    LogUtils.e(error.message)
-                }
+                withContext(Dispatchers.Main) { LogUtils.e(error.message) }
             }
 
             val message = chatMessageRepository.getMessage(agentId, msgId)
