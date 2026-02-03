@@ -9,8 +9,6 @@ import kotlinx.coroutines.flow.Flow
 
 class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatabase.getInstance()) {
     val chatMessageDao = database.chatMessageDao()
-    val syncStateDao = database.chatSyncStateDao()
-
     suspend fun getMessageCounts(agentId: String): Int {
         return chatMessageDao.getMessagesCount(agentId)
     }
@@ -22,6 +20,8 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
     suspend fun clearMessages(agentId: String) {
         chatMessageDao.deleteByAgent(agentId)
     }
+
+    fun messageCountFlow(agentId: String) = chatMessageDao.messageCountFlow(agentId)
 
     suspend fun getLatesAgentMessage(agentId: String): MessageEntity? {
         return chatMessageDao.getLatestAgentMessage(agentId)
@@ -39,11 +39,6 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
 
     suspend fun getMessage(agentId: String, messageId: String): MessageEntity? {
         return chatMessageDao.getMessage(agentId, messageId)
-    }
-
-    suspend fun updateSyncState(agentId: String, updater: (SyncStateEntity) -> SyncStateEntity) {
-        val current = syncStateDao.get(agentId) ?: SyncStateEntity(agentId = agentId)
-        syncStateDao.upsert(updater(current).copy(updatedAt = System.currentTimeMillis()))
     }
 
     suspend fun appendSendingMessages(agentId: String, userContent: String) {

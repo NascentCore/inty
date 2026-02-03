@@ -7,6 +7,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 data class AgentMessageCount(val agentId: String, val messageCount: Int)
@@ -21,11 +22,14 @@ interface ChatMessageDao {
      * 返回 PagingSource，用于配合 RemoteMediator 进行分页加载 按 sortKey DESC 排序，最新的消息在列表底部 排除 isOpening 为 true
      * 的数据
      */
-    @Query("SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC")
+    @Query("SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC, indexId DESC ")
     fun pagingSource(agentId: String): PagingSource<Int, MessageEntity>
 
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND isOpening = 0")
     suspend fun getMessagesCount(agentId: String): Int
+
+    @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND isOpening = 0")
+    fun messageCountFlow(agentId: String): Flow<Int>
 
     /** 查询用户是否对该 agent 发送过消息（存在 role = 'user' 的记录即视为发送过） */
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND role = 'user'")
@@ -33,6 +37,9 @@ interface ChatMessageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(messages: List<MessageEntity>)
+
+    @Upsert(entity = MessageEntity::class)
+    suspend fun insertOrDrop(messages: List<MessageUpdate>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entity: MessageEntity)
 

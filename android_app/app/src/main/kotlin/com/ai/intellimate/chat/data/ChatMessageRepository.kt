@@ -59,7 +59,6 @@ class ChatMessageRepository(
 
     suspend fun clearMessages(agentId: String) {
         localDataSource.chatMessageDao.deleteByAgent(agentId)
-        localDataSource.updateSyncState(agentId) { it.copy(offset = 0) }
     }
 
     suspend fun sendMessage(agentId: String, content: String): HttpResult<SendMsgResponse> {
@@ -102,9 +101,6 @@ class ChatMessageRepository(
                     "RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId"
                 )
                 localDataSource.appendMessages(assistantMsgs)
-                localDataSource.updateSyncState(agentId) { it.copy(offset = it.offset + 2) }
-            } else {
-                localDataSource.updateSyncState(agentId) { it.copy(offset = it.offset + 1) }
             }
         } else {
             roomDataSource.removeSendingMessage(agentId)
@@ -224,4 +220,6 @@ class ChatMessageRepository(
     }
 
     suspend fun getImageMessages(agentId: String) = localDataSource.getImageMessages(agentId)
+
+    suspend fun messageCountFlow(agentId: String) = localDataSource.messageCountFlow(agentId)
 }

@@ -91,9 +91,6 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                     "timestamp" to playbackStartTime,
                 ),
             )
-            if (HeartAppUtils.isAppDebugMode(context)) {
-                BoostManager.recordAudioPlayback(agentId, agentName ?: "")
-            }
         }
 
         // 检查是否启用自动播放
