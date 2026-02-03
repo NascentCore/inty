@@ -13,7 +13,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, AsyncSessionLocalReplica
 from app.models.user_analytics_report import UserAnalyticsReport
 from app.services.user_analytics_service import UserAnalyticsService
 
@@ -33,44 +33,14 @@ async def _ensure_statement_timeout(db: AsyncSession) -> None:
 ALL_USERS_REGISTER_START = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
 
-async def compute_and_save_daily_report(
-    db: AsyncSession, report_date: date
-) -> UserAnalyticsReport | None:
-    """计算并保存日报
-
-    统计 report_date 当天的全部用户活跃数据。
-    用户范围：register_start=2020-01-01, register_end=report_date+1
-    活跃范围：activity_start=report_date, activity_end=report_date+1
-    """
-    await _ensure_statement_timeout(db)
-    reg_start = ALL_USERS_REGISTER_START
-    reg_end = datetime.combine(
-        report_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc
-    )
-    act_start = datetime.combine(report_date, datetime.min.time(), tzinfo=timezone.utc)
-    act_end = reg_end
-
-    service = UserAnalyticsService(db)
-    stats = await service.get_analytics_stats(
-        register_start_date=reg_start,
-        register_end_date=reg_end,
-        activity_start_date=act_start,
-        activity_end_date=act_end,
-    )
-
-    new_users = await service.get_new_users(reg_start, reg_end)
-    conversation_rounds = await service.get_conversation_rounds(
-        reg_start, reg_end, act_start, act_end
-    )
-    user_rounds_distribution = await service.get_user_rounds_distribution(
-        reg_start, reg_end, act_start, act_end
-    )
-    users_hitting_limit = await service.get_users_hitting_chat_limit(act_start, act_end)
-    popular_agents = await service.get_popular_agents(
-        reg_start, reg_end, act_start, act_end, limit=20
-    )
-
-    charts = {
+def _build_daily_charts(
+    new_users: list,
+    conversation_rounds: list,
+    user_rounds_distribution: list,
+    users_hitting_limit: list,
+    popular_agents: list,
+) -> dict:
+    return {
         "new_users": [
             {"date": d["date"], "auth_type": d["auth_type"], "count": d["count"]}
             for d in new_users
@@ -101,6 +71,84 @@ async def compute_and_save_daily_report(
         ],
         "popular_agents": popular_agents,
     }
+
+
+async def compute_and_save_daily_report(
+    db: AsyncSession, report_date: date
+) -> UserAnalyticsReport | None:
+    """计算并保存日报
+
+    统计 report_date 当天的全部用户活跃数据。
+    用户范围：register_start=2020-01-01, register_end=report_date+1
+    活跃范围：activity_start=report_date, activity_end=report_date+1
+    读请求走副本（若已配置），写请求走主库 db。
+    """
+    reg_start = ALL_USERS_REGISTER_START
+    reg_end = datetime.combine(
+        report_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc
+    )
+    act_start = datetime.combine(report_date, datetime.min.time(), tzinfo=timezone.utc)
+    act_end = reg_end
+
+    if AsyncSessionLocalReplica is not None:
+        async with AsyncSessionLocalReplica() as read_db:
+            await _ensure_statement_timeout(read_db)
+            service = UserAnalyticsService(read_db)
+            stats = await service.get_analytics_stats(
+                register_start_date=reg_start,
+                register_end_date=reg_end,
+                activity_start_date=act_start,
+                activity_end_date=act_end,
+            )
+            new_users = await service.get_new_users(reg_start, reg_end)
+            conversation_rounds = await service.get_conversation_rounds(
+                reg_start, reg_end, act_start, act_end
+            )
+            user_rounds_distribution = await service.get_user_rounds_distribution(
+                reg_start, reg_end, act_start, act_end
+            )
+            users_hitting_limit = await service.get_users_hitting_chat_limit(
+                act_start, act_end
+            )
+            popular_agents = await service.get_popular_agents(
+                reg_start, reg_end, act_start, act_end, limit=20
+            )
+            charts = _build_daily_charts(
+                new_users,
+                conversation_rounds,
+                user_rounds_distribution,
+                users_hitting_limit,
+                popular_agents,
+            )
+    else:
+        await _ensure_statement_timeout(db)
+        service = UserAnalyticsService(db)
+        stats = await service.get_analytics_stats(
+            register_start_date=reg_start,
+            register_end_date=reg_end,
+            activity_start_date=act_start,
+            activity_end_date=act_end,
+        )
+        new_users = await service.get_new_users(reg_start, reg_end)
+        conversation_rounds = await service.get_conversation_rounds(
+            reg_start, reg_end, act_start, act_end
+        )
+        user_rounds_distribution = await service.get_user_rounds_distribution(
+            reg_start, reg_end, act_start, act_end
+        )
+        users_hitting_limit = await service.get_users_hitting_chat_limit(
+            act_start, act_end
+        )
+        popular_agents = await service.get_popular_agents(
+            reg_start, reg_end, act_start, act_end, limit=20
+        )
+        charts = _build_daily_charts(
+            new_users,
+            conversation_rounds,
+            user_rounds_distribution,
+            users_hitting_limit,
+            popular_agents,
+        )
 
     existing = await db.execute(
         select(UserAnalyticsReport).where(
@@ -125,45 +173,14 @@ async def compute_and_save_daily_report(
     return report
 
 
-async def compute_and_save_weekly_report(
-    db: AsyncSession, week_start_date: date
-) -> UserAnalyticsReport | None:
-    """计算并保存周报
-
-    统计 week_start_date（周一）至周日共 7 天的全部用户活跃数据。
-    用户范围：register_start=2020-01-01, register_end=week_start_date+7
-    活跃范围：activity_start=week_start_date, activity_end=week_start_date+7
-    """
-    await _ensure_statement_timeout(db)
-    reg_start = ALL_USERS_REGISTER_START
-    week_end = week_start_date + timedelta(days=7)
-    reg_end = datetime.combine(week_end, datetime.min.time(), tzinfo=timezone.utc)
-    act_start = datetime.combine(
-        week_start_date, datetime.min.time(), tzinfo=timezone.utc
-    )
-    act_end = reg_end
-
-    service = UserAnalyticsService(db)
-    stats = await service.get_analytics_stats(
-        register_start_date=reg_start,
-        register_end_date=reg_end,
-        activity_start_date=act_start,
-        activity_end_date=act_end,
-    )
-
-    new_users = await service.get_new_users(reg_start, reg_end)
-    conversation_rounds = await service.get_conversation_rounds(
-        reg_start, reg_end, act_start, act_end
-    )
-    user_rounds_distribution = await service.get_user_rounds_distribution(
-        reg_start, reg_end, act_start, act_end
-    )
-    users_hitting_limit = await service.get_users_hitting_chat_limit(act_start, act_end)
-    popular_agents = await service.get_popular_agents(
-        reg_start, reg_end, act_start, act_end, limit=20
-    )
-
-    charts = {
+def _build_weekly_charts(
+    new_users: list,
+    conversation_rounds: list,
+    user_rounds_distribution: list,
+    users_hitting_limit: list,
+    popular_agents: list,
+) -> dict:
+    return {
         "new_users": [
             {"date": d["date"], "auth_type": d["auth_type"], "count": d["count"]}
             for d in new_users
@@ -194,6 +211,85 @@ async def compute_and_save_weekly_report(
         ],
         "popular_agents": popular_agents,
     }
+
+
+async def compute_and_save_weekly_report(
+    db: AsyncSession, week_start_date: date
+) -> UserAnalyticsReport | None:
+    """计算并保存周报
+
+    统计 week_start_date（周一）至周日共 7 天的全部用户活跃数据。
+    用户范围：register_start=2020-01-01, register_end=week_start_date+7
+    活跃范围：activity_start=week_start_date, activity_end=week_start_date+7
+    读请求走副本（若已配置），写请求走主库 db。
+    """
+    reg_start = ALL_USERS_REGISTER_START
+    week_end = week_start_date + timedelta(days=7)
+    reg_end = datetime.combine(week_end, datetime.min.time(), tzinfo=timezone.utc)
+    act_start = datetime.combine(
+        week_start_date, datetime.min.time(), tzinfo=timezone.utc
+    )
+    act_end = reg_end
+
+    if AsyncSessionLocalReplica is not None:
+        async with AsyncSessionLocalReplica() as read_db:
+            await _ensure_statement_timeout(read_db)
+            service = UserAnalyticsService(read_db)
+            stats = await service.get_analytics_stats(
+                register_start_date=reg_start,
+                register_end_date=reg_end,
+                activity_start_date=act_start,
+                activity_end_date=act_end,
+            )
+            new_users = await service.get_new_users(reg_start, reg_end)
+            conversation_rounds = await service.get_conversation_rounds(
+                reg_start, reg_end, act_start, act_end
+            )
+            user_rounds_distribution = await service.get_user_rounds_distribution(
+                reg_start, reg_end, act_start, act_end
+            )
+            users_hitting_limit = await service.get_users_hitting_chat_limit(
+                act_start, act_end
+            )
+            popular_agents = await service.get_popular_agents(
+                reg_start, reg_end, act_start, act_end, limit=20
+            )
+            charts = _build_weekly_charts(
+                new_users,
+                conversation_rounds,
+                user_rounds_distribution,
+                users_hitting_limit,
+                popular_agents,
+            )
+    else:
+        await _ensure_statement_timeout(db)
+        service = UserAnalyticsService(db)
+        stats = await service.get_analytics_stats(
+            register_start_date=reg_start,
+            register_end_date=reg_end,
+            activity_start_date=act_start,
+            activity_end_date=act_end,
+        )
+        new_users = await service.get_new_users(reg_start, reg_end)
+        conversation_rounds = await service.get_conversation_rounds(
+            reg_start, reg_end, act_start, act_end
+        )
+        user_rounds_distribution = await service.get_user_rounds_distribution(
+            reg_start, reg_end, act_start, act_end
+        )
+        users_hitting_limit = await service.get_users_hitting_chat_limit(
+            act_start, act_end
+        )
+        popular_agents = await service.get_popular_agents(
+            reg_start, reg_end, act_start, act_end, limit=20
+        )
+        charts = _build_weekly_charts(
+            new_users,
+            conversation_rounds,
+            user_rounds_distribution,
+            users_hitting_limit,
+            popular_agents,
+        )
 
     existing = await db.execute(
         select(UserAnalyticsReport).where(
@@ -271,16 +367,35 @@ async def get_missing_weekly_report_dates_first_half(
     return [d for d in expected_dates if d not in existing]
 
 
+async def get_missing_weekly_report_dates_past_weeks(
+    db: AsyncSession, weeks: int = 7
+) -> list[date]:
+    today = datetime.now(timezone.utc).date()
+    base = today - timedelta(days=today.weekday() + 7)
+    expected_dates = [base - timedelta(days=i * 7) for i in range(weeks)]
+    if not expected_dates:
+        return []
+
+    result = await db.execute(
+        select(UserAnalyticsReport.report_date).where(
+            UserAnalyticsReport.report_type == "weekly",
+            UserAnalyticsReport.report_date.in_(expected_dates),
+        )
+    )
+    existing = set(result.scalars().all())
+    return [d for d in expected_dates if d not in existing]
+
+
 async def backfill_missing_reports(
     db: AsyncSession,
     days: int = BACKFILL_DAILY_DAYS,
     year: int | None = None,
 ) -> tuple[int, int]:
-    today = datetime.now(timezone.utc).date()
-    target_year = year if year is not None else today.year
-
     missing_daily = await get_missing_daily_report_dates(db, days=days)
-    missing_weekly = await get_missing_weekly_report_dates_first_half(db, target_year)
+    if year is not None:
+        missing_weekly = await get_missing_weekly_report_dates_first_half(db, year)
+    else:
+        missing_weekly = await get_missing_weekly_report_dates_past_weeks(db, weeks=7)
 
     daily_count = 0
     for d in missing_daily:

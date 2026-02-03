@@ -50,14 +50,35 @@ user_analytics_report:
 
 ### 启动时自动补算
 
-定时任务启动时，会异步执行一次补算逻辑：检查前 30 天日报和当年上半年周报是否存在，对缺失的日期逐个补算。补算在后台执行，不阻塞 scheduler 启动；`compute_and_save_*` 已包含「已存在则跳过」逻辑，不会重复写入。
+定时任务启动时，会异步执行一次补算逻辑：检查前 30 天日报和前七周周报是否存在，对缺失的日期逐个补算。补算在后台执行，不阻塞 scheduler 启动；`compute_and_save_*` 已包含「已存在则跳过」逻辑，不会重复写入。
 
 - **日报补算范围**：`today - 30` 至 `today - 1` 共 30 天
-- **周报补算范围**：当年 1 月第 1 个周一到 6 月最后一个周一
+- **周报补算范围**：从今日起前七周（上一周周一、上上周周一、…、7 周前周一，共 7 个周一，可跨年）
 
 ### 生产大数据量
 
 数据库默认 `command_timeout=30` 秒，复杂统计查询易超时。日报/周报计算会在事务内执行 `SET LOCAL statement_timeout`，使用 `user_analytics_report.statement_timeout_sec`（默认 600 秒）。生产环境若仍超时，可在 `config.yaml` 中调大，例如 `statement_timeout_sec: 900` 或 `1200`。
+
+### 只读副本（减轻主库压力）
+
+日报/周报相关**读请求**可走只读副本，**写请求**仍走主库。在 `config.yaml` 的 `database` 下启用副本：
+
+```yaml
+database:
+  host: "主库 host"
+  port: 5432
+  # ... 其他主库配置 ...
+  # 只读副本（用于日报周报等读多写少场景）
+  replica_host: "34.87.163.31"  # 副本 host，不填则全部走主库
+  replica_port: 5432             # 可选，不填则用主库 port
+```
+
+启用后：
+
+- **GET /api/v1/evaluation/user-analytics/reports**：从副本读 `user_analytics_report`。
+- **预计算日报/周报**（定时任务、补算、脚本）：统计类查询从副本读，写入 `user_analytics_report` 仍走主库。
+
+未配置 `replica_host` 时行为与之前一致，全部使用主库。
 
 ## 补算脚本
 

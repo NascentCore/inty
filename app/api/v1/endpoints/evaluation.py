@@ -1716,7 +1716,7 @@ async def get_user_analytics_stats(
 )
 async def get_user_analytics_reports(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     report_type: Optional[str] = Query(
         None, description="daily | weekly，不传则返回全部"

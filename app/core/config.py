@@ -85,6 +85,8 @@ class DatabaseSettings:
     pool_pre_ping: bool = True
     connect_timeout: int = 5
     command_timeout: int = 30
+    replica_host: Optional[str] = None
+    replica_port: Optional[int] = None
 
     @property
     def url(self) -> str:
@@ -93,6 +95,16 @@ class DatabaseSettings:
     @property
     def async_url(self) -> str:
         return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
+
+    @property
+    def async_replica_url(self) -> Optional[str]:
+        if not self.replica_host:
+            return None
+        port = self.replica_port if self.replica_port is not None else self.port
+        return (
+            f"postgresql+asyncpg://{self.user}:{self.password}"
+            f"@{self.replica_host}:{port}/{self.db}"
+        )
 
 
 @dataclass
@@ -321,8 +333,8 @@ class UserAnalyticsReportConfig:
     """用户数据分析日报周报定时任务配置"""
 
     enabled: bool = True
-    daily_cron_hour: int = 4  # UTC 小时，每日执行，统计 T-1 日
-    weekly_cron_hour: int = 5  # UTC 小时，每周一执行，统计上一周
+    daily_cron_hour: int = 6  # UTC 小时，每日执行，统计 T-1 日
+    weekly_cron_hour: int = 6  # UTC 小时，每周一执行，统计上一周
     statement_timeout_sec: int = 600  # 单条 SQL 超时秒数，生产大数据量时需调大
 
 
