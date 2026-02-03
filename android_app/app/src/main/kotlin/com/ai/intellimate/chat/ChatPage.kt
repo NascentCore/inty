@@ -958,7 +958,7 @@ internal fun ChatPage(
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
                 onClick = {
-                    if (messages.loadState.refresh is LoadState.NotLoading) {
+                    if (messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0) {
                         if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.NONE) {
                             chatViewModel.sendKeepTalkingMessage()
                         } else {
@@ -1098,7 +1098,7 @@ internal fun ChatPage(
             return@LaunchedEffect
         }
 
-        if (shouldAutoFocusInput && messages.loadState.refresh is LoadState.NotLoading) {
+        if (shouldAutoFocusInput && (messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0)) {
             delay(50)
             inputFocusRequester.requestFocus()
         } else {
