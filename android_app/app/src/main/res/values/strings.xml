@@ -273,7 +273,7 @@
     <string name="chat_voice_input_release_to_end">Release to finish</string>
     <string name="chat_voice_input_permission_rationale">Microphone permission is required for voice input.</string>
     <string name="chat_voice_input_not_available">Speech recognition is unavailable on this device.</string>
-    <string name="chat_voice_input_failed">Couldn't recognize speech. Try again.</string>
+    <string name="chat_voice_input_failed">Could not recognize speech. Try again.</string>
     <string name="chat_ai_typing_placeholder">%1$s is typing</string>
     <string name="chat_ai_typing_default_name">Your IntelliMate</string>
 
