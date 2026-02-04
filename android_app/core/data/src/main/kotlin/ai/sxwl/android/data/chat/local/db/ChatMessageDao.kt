@@ -15,9 +15,6 @@ data class AgentMessageCount(val agentId: String, val messageCount: Int)
 @Dao
 interface ChatMessageDao {
 
-    @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC")
-    fun streamMessages(agentId: String): Flow<List<MessageEntity>>
-
     /**
      * 返回 PagingSource，用于配合 RemoteMediator 进行分页加载 按 sortKey DESC 排序，最新的消息在列表底部 排除 isOpening 为 true
      * 的数据

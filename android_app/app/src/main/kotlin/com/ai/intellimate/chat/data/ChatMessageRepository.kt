@@ -87,23 +87,25 @@ class ChatMessageRepository(
                 result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
         ) {
 
-            val userMessageId = result.data.data?.user_message_id ?: 0L
+            result.data.data?.let { data ->
 
-            localDataSource.appendUserMessage(
-                messageId = userMessageId.toString(),
-                agentId = agentId,
-                content = trimmed,
-                timestamp = timestamp,
-            )
-            val choices = result.data.data?.choices
-            if (!choices.isNullOrEmpty()) {
-                val assistantMsgs = choices.map { it.message.toEntity(agentId) }
+                val buildMessages = buildList {
+                    add(MessageEntity(
+                        id = data.user_message_id.toString(),
+                        content = content,
+                        role = "user",
+                        metaData = MessageEntity.MetaData(agentId),
+                        timestamp = timestamp,
+                    ))
+                    addAll(
+                        data.choices.map { it.message.toEntity(agentId) }
+                    )
+                }
+
+                localDataSource.appendMessages(buildMessages)
+
                 LogUtils.d(
-                    "RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId"
-                )
-                localDataSource.appendMessages(assistantMsgs)
-                LogUtils.d(
-                    "RoomImpl.sendMessage saving id =${assistantMsgs[0].id} content = ${assistantMsgs[0].content}"
+                    "RoomImpl.sendMessage saving ${buildMessages.size} assistant messages for agentId=$agentId"
                 )
             }
         }

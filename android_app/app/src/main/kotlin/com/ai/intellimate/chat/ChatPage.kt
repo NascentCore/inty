@@ -135,6 +135,7 @@ sealed class ChatMessageItem {
 private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<MessageItem> {
     val result = mutableListOf<MessageItem>()
     val currentVoiceGroupIndices = mutableListOf<Int>()
+    var voiceSessionId: String? = null
 
     messages.forEachIndexed { index, info ->
         if (info == null) {
@@ -145,6 +146,16 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
             result.add(MessageItem.MessageIndex(index))
         } else {
             if (info.isVoice) {
+
+                if (voiceSessionId != info.metaData.voiceSessionId) {
+                    if (currentVoiceGroupIndices.isNotEmpty()) {
+                        result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+                        currentVoiceGroupIndices.clear()
+                    }
+
+                    voiceSessionId = info.metaData.voiceSessionId
+                }
+
                 currentVoiceGroupIndices.add(index)
             } else if (info.role == "user" && currentVoiceGroupIndices.isNotEmpty()) {
                 currentVoiceGroupIndices.add(index)

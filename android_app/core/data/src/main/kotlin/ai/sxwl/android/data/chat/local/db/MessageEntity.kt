@@ -56,6 +56,7 @@ data class MessageEntity(
         val agentId: String,
         val isVoice: Boolean = false,
         val isOpening: Boolean = false,
+        val voiceSessionId: String? = null,
         @Embedded("generate_image_") val generatedImage: GeneratedImage? = null,
     ) {
         data class GeneratedImage(
@@ -104,6 +105,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
                                 height = height,
                             )
                         },
+                    voiceSessionId = voice_session_id
                 )
             } ?: MetaData(agentId),
     )
