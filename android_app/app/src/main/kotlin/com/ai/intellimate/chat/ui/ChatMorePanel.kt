@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Checkroom
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ProvideTextStyle
@@ -209,6 +210,34 @@ fun ChatMorePanel(
                                     )
                                 },
                                 text = { Text(stringResource(R.string.str_reset)) },
+                            )
+                        }
+
+                        item("Change outfit") {
+                            MorePanelItem(
+                                onClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "change_outfit",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    chatViewModel.setInputMessage(
+                                        "Could you change your outfit for me?",
+                                    )
+                                    onDismiss()
+                                },
+                                icon = {
+                                    Image(
+                                        imageVector = Icons.Rounded.Checkroom,
+                                        contentDescription = "change outfit",
+                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.chat_more_change_outfit)) },
                             )
                         }
 
