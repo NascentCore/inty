@@ -155,7 +155,8 @@ fun ChatMorePanel(
                                     onHeightChange(maxHeight - transY.value)
                                 }
                                 .background(color = HeartColor.primaryColor),
-                        contentPadding = PaddingValues(vertical = 20.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         item("Chat Style") {
@@ -279,6 +280,26 @@ fun ChatMorePanel(
                                 },
                                 text = { Text(stringResource(R.string.str_feedback)) },
                             )
+                        }
+
+                        item("Reset") {
+                            Box(modifier = Modifier.graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f }) {
+                                MorePanelItem(
+                                    onClick = {
+                                        if (hasUserMessages && IntySetting.isLogin()) {
+                                            showResetConfirmDialog = true
+                                        }
+                                    },
+                                    icon = {
+                                        Image(
+                                            painter = painterResource(R.drawable.icon_reset_chat),
+                                            contentDescription = "reset",
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    },
+                                    text = { Text(stringResource(R.string.str_reset)) },
+                                )
+                            }
                         }
 
                         item("Report") {

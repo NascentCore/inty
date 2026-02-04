@@ -1355,11 +1355,14 @@ class ChatViewModel : BaseVM() {
     suspend fun reset() {
         val agentId = agentInfo.value?.id ?: throw Exception("Agent is null")
 
-        // 非会员重置前检查积分余额
         val isVip = VipStatusHelper.isUserVip()
         if (!isVip) {
             val availablePoints = BoostManager.boostState.value.availablePoints
             if (availablePoints < BoostConfig.CHAT_RESET_COST) {
+                throw BoostException(BoostError.NotEnoughPoints)
+            }
+            // 先扣积分再清聊天，避免扣款失败却已清空记录；扣款失败则抛异常，不执行后续清空
+            if (!BoostManager.deductPoints(BoostConfig.CHAT_RESET_COST)) {
                 throw BoostException(BoostError.NotEnoughPoints)
             }
         }
@@ -1381,11 +1384,6 @@ class ChatViewModel : BaseVM() {
         // 注意：如果使用了 RoomDataSource，消息流会自动更新
         // 4. 拉取最新消息
         _isQueryMsgsCompleted.value = true
-
-        // 非会员重置成功后扣除积分
-        if (!isVip) {
-            BoostManager.deductPoints(BoostConfig.CHAT_RESET_COST)
-        }
 
         LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
     }
