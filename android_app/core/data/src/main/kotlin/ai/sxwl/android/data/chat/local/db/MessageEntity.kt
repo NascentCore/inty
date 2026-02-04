@@ -137,6 +137,33 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
     )
 }
 
+/** 将 Room 实体转回 MsgInfo，localMsgId 使用实体的 id 以保持稳定。 */
+fun MessageEntity.toModel(): MsgInfo {
+    return MsgInfo(
+        id = id,
+        content = content,
+        role = role,
+        timestamp = timestamp,
+        audio_url = audioUrl,
+        user_vote = userVote?.name,
+        localMsgId = id,
+        meta_data =
+            MsgInfo.MsgMetaData(
+                agentId = metaData.agentId,
+                isVoice = metaData.isVoice,
+                isOpening = metaData.isOpening,
+                generatedImage =
+                    metaData.generatedImage?.let { g ->
+                        MsgInfo.MsgMetaData.GeneratedImage(
+                            imageUrl = g.imageUrl.orEmpty(),
+                            width = g.width ?: 0,
+                            height = g.height ?: 0,
+                        )
+                    },
+            ),
+    )
+}
+
 /** 发送中占位内容，与 RoomImpl/ChatRepositoryImpl 中 LOADING_PLACEHOLDER_CONTENT 一致 */
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
