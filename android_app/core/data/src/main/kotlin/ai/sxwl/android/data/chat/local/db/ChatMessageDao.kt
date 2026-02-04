@@ -15,7 +15,7 @@ data class AgentMessageCount(val agentId: String, val messageCount: Int)
 @Dao
 interface ChatMessageDao {
 
-    @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY id DESC")
+    @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC")
     fun streamMessages(agentId: String): Flow<List<MessageEntity>>
 
     /**

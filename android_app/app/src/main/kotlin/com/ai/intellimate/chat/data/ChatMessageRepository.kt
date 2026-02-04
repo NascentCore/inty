@@ -80,11 +80,12 @@ class ChatMessageRepository(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
+        roomDataSource.removeSendingMessage(agentId)
+
         if (
             result is HttpResult.Success &&
                 result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
         ) {
-            roomDataSource.removeSendingMessage(agentId)
 
             val userMessageId = result.data.data?.user_message_id ?: 0L
 
@@ -94,16 +95,17 @@ class ChatMessageRepository(
                 content = trimmed,
                 timestamp = timestamp,
             )
-            val choices = result.data.data?.choices ?: emptyList()
-            if (choices.isNotEmpty()) {
+            val choices = result.data.data?.choices
+            if (!choices.isNullOrEmpty()) {
                 val assistantMsgs = choices.map { it.message.toEntity(agentId) }
                 LogUtils.d(
                     "RoomImpl.sendMessage saving ${assistantMsgs.size} assistant messages for agentId=$agentId"
                 )
                 localDataSource.appendMessages(assistantMsgs)
+                LogUtils.d(
+                    "RoomImpl.sendMessage saving id =${assistantMsgs[0].id} content = ${assistantMsgs[0].content}"
+                )
             }
-        } else {
-            roomDataSource.removeSendingMessage(agentId)
         }
 
         return result

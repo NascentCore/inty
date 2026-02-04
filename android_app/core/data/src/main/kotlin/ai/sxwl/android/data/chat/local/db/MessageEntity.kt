@@ -93,7 +93,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
         metaData =
             meta_data?.run {
                 MetaData(
-                    agentId = this.agentId.orEmpty(),
+                    agentId = this.agentId ?: agentId,
                     isVoice = isVoice,
                     isOpening = isOpening,
                     generatedImage =
