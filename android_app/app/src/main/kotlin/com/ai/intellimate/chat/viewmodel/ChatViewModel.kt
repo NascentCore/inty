@@ -930,8 +930,8 @@ class ChatViewModel : BaseVM() {
     fun sendPredefinedMessage(message: String, analyticsClickType: String = "predefined_message") {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) return
-        if (_isWaitingForReply.value) return
         lastSendTime = currentTime
+        if (_isWaitingForReply.value) return
 
         agentInfo.value?.let { agent ->
             FirebaseManager.logEvent(
@@ -994,6 +994,13 @@ class ChatViewModel : BaseVM() {
                                     showLimitDialog.emit(true)
                                 }
                             }
+                                .onFailure {
+                                    LogUtils.e(
+                                        "Error processing predefined message AI response: ${it.message}"
+                                    )
+                                    it.printStackTrace()
+                                    _isWaitingForReply.value = false
+                                }
                         }
                         is HttpResult.Failure -> {
                             if (
