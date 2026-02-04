@@ -149,7 +149,9 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
 
                 if (voiceSessionId != info.metaData.voiceSessionId) {
                     if (currentVoiceGroupIndices.isNotEmpty()) {
-                        result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+                        result.add(
+                            MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed())
+                        )
                         currentVoiceGroupIndices.clear()
                     }
 
@@ -265,7 +267,9 @@ internal fun ChatPage(
     val previousAgentId = remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        chatViewModel.vipRequest.collect { navController.navigate(Routes.Me.vipCenter("chat_vip_request")) }
+        chatViewModel.vipRequest.collect {
+            navController.navigate(Routes.Me.vipCenter("chat_vip_request"))
+        }
     }
 
     LifecycleStartEffect(Unit) {
@@ -527,7 +531,8 @@ internal fun ChatPage(
                                     "click_type" to "call",
                                     "agent_id" to agent?.agentId,
                                     "agent_name" to agent?.name,
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 )
 
                                 scope.launch {
@@ -543,7 +548,8 @@ internal fun ChatPage(
                                     "click_type" to "sidebar",
                                     "agent_id" to agent?.agentId,
                                     "agent_name" to agent?.name,
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 )
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {
@@ -814,7 +820,8 @@ internal fun ChatPage(
                                         "click_type" to "more",
                                         "agent_id" to agent?.agentId,
                                         "agent_name" to agent?.name,
-                                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
                                     )
 
                                     showMorePanel = !showMorePanel
@@ -1045,7 +1052,10 @@ internal fun ChatPage(
                             chatViewModel.reset()
                             resetSuccess = true
                             if (!VipStatusHelper.isUserVip()) {
-                                ToastUtils.showShort(R.string.credits_deducted, BoostConfig.CHAT_RESET_COST)
+                                ToastUtils.showShort(
+                                    R.string.credits_deducted,
+                                    BoostConfig.CHAT_RESET_COST,
+                                )
                             }
                         } catch (e: BoostException) {
                             if (e.error == BoostError.NotEnoughPoints) {
@@ -1114,7 +1124,7 @@ internal fun ChatPage(
                                         R.string.boost_toast_success_points,
                                         result.pointsSpent,
                                         info.name,
-                                    ),
+                                    )
                                 )
                                 chatViewModel.appendBoostSystemMessage(
                                     agent = info,
@@ -1259,7 +1269,9 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.vipCenter("chat_image_generation_dialog"))
+                            navController.navigate(
+                                Routes.Me.vipCenter("chat_image_generation_dialog")
+                            )
                         }
                     }
 
@@ -1271,7 +1283,9 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.vipCenter("chat_image_generation_dialog"))
+                            navController.navigate(
+                                Routes.Me.vipCenter("chat_image_generation_dialog")
+                            )
                         }
                     }
 

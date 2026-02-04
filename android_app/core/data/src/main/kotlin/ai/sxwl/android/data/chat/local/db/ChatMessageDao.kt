@@ -104,6 +104,8 @@ interface ChatMessageDao {
     )
     suspend fun getLatestAgentMessage(agentId: String): MessageEntity?
 
-    @Query("SELECT id FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC LIMIT 1")
+    @Query(
+        "SELECT id FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC LIMIT 1"
+    )
     suspend fun getLatestMessageId(agentId: String): String?
 }

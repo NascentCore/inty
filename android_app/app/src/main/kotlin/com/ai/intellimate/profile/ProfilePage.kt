@@ -522,9 +522,7 @@ private fun ProfileHeader(
                 status = currentVipStatus.subscriptionStatus,
                 purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
                 expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
-                onClick = {
-                    navController.navigate(Routes.Me.vipCenter("profile_upgrade"))
-                },
+                onClick = { navController.navigate(Routes.Me.vipCenter("profile_upgrade")) },
             )
         }
 

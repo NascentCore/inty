@@ -40,7 +40,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -374,7 +373,9 @@ fun ChatSettingsDrawer(
                                                 !vipStatus.isSubscribed &&
                                                     option.id != CHAT_MODEL_ID_DEFAULT
                                             ) {
-                                                navController.navigate(Routes.Me.vipCenter("chat_settings_model"))
+                                                navController.navigate(
+                                                    Routes.Me.vipCenter("chat_settings_model")
+                                                )
                                                 FirebaseManager.logEvent(
                                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                                     FirebaseManager.safeEventParams(
@@ -622,7 +623,7 @@ fun ChatSettingsDrawer(
                                     ),
                                 )
                                 pendingFontSize = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP
-                            },
+                            }
                         ) {
                             Text(text = stringResource(R.string.str_reset))
                         }
@@ -637,7 +638,7 @@ fun ChatSettingsDrawer(
                                     ),
                                 )
                                 showFontSizeDialog = false
-                            },
+                            }
                         ) {
                             Text(text = stringResource(R.string.cancel))
                         }

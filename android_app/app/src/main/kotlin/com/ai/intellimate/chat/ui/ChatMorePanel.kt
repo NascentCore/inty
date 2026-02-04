@@ -73,8 +73,8 @@ import androidx.navigation.NavController
 import com.ai.intellimate.R
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.ReplyStyleSheet
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.xb.navigation.Routes
 
 /** 聊天更多面板组件 */
@@ -155,10 +155,11 @@ fun ChatMorePanel(
                                     onHeightChange(maxHeight - transY.value)
                                 }
                                 .background(color = HeartColor.primaryColor),
-                        contentPadding = PaddingValues(
-                            horizontal = UiConfigs.Padding.ScreenHorizontal,
-                            vertical = UiConfigs.Spacing.Large,
-                        ),
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = UiConfigs.Padding.ScreenHorizontal,
+                                vertical = UiConfigs.Spacing.Large,
+                            ),
                         horizontalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
                         verticalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
                     ) {
@@ -185,7 +186,9 @@ fun ChatMorePanel(
                                             showSheet = true
                                         } else {
                                             // 去会员中心
-                                            navController.navigate(Routes.Me.vipCenter("chat_more_panel"))
+                                            navController.navigate(
+                                                Routes.Me.vipCenter("chat_more_panel")
+                                            )
                                             onDismiss() // 要关闭掉panel
                                         }
                                     }
@@ -203,9 +206,10 @@ fun ChatMorePanel(
 
                         item("Reset") {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f },
+                                modifier =
+                                    Modifier.fillMaxWidth().graphicsLayer {
+                                        alpha = if (hasUserMessages) 1f else 0.4f
+                                    }
                             ) {
                                 MorePanelItem(
                                     modifier = Modifier.fillMaxWidth(),
@@ -213,7 +217,7 @@ fun ChatMorePanel(
                                         FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
                                             "click_type" to "reset",
                                             "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis()
+                                            "timestamp" to System.currentTimeMillis(),
                                         )
                                         if (hasUserMessages && IntySetting.isLogin()) {
                                             showResetConfirmDialog = true
@@ -270,7 +274,7 @@ fun ChatMorePanel(
                                         ),
                                     )
                                     chatViewModel.setInputMessage(
-                                        "Could you change your outfit for me?",
+                                        "Could you change your outfit for me?"
                                     )
                                     onDismiss()
                                 },

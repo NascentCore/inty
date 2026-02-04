@@ -5,7 +5,6 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.navigation.toRoute
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.agent.report.ReportPage
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -25,15 +24,18 @@ fun NavGraphBuilder.meGraph(
     // 定义vip订阅页面路由
     composable(
         route = Routes.Me.VipCenter,
-        arguments = listOf(
-            navArgument("pageSource") {
-                type = NavType.StringType
-                nullable = true
-            }
-        )
+        arguments =
+            listOf(
+                navArgument("pageSource") {
+                    type = NavType.StringType
+                    nullable = true
+                }
+            ),
     ) { backStackEntry ->
-
-        VipCenterContent(navController, pageFrom = backStackEntry.arguments?.getString("pageSource"))
+        VipCenterContent(
+            navController,
+            pageFrom = backStackEntry.arguments?.getString("pageSource"),
+        )
     }
 
     composable(Routes.Me.CheckIn) { IgnoreSystemFontScaling { CheckInScreen(navController) } }
