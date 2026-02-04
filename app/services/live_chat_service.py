@@ -10,6 +10,7 @@ import base64
 import os
 import re
 import time
+import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
@@ -42,6 +43,7 @@ class LiveSession:
     agent_id: str
     user_id: str
     chat_id: str
+    voice_session_id: str = ""
     status: LiveChatStatus = LiveChatStatus.CONNECTING
     config: LiveChatConfig = field(default_factory=LiveChatConfig)
     gemini_session: Any = None
@@ -153,6 +155,7 @@ class LiveChatService:
             agent_id=agent_id,
             user_id=user_id,
             chat_id=chat.id,
+            voice_session_id=str(uuid.uuid4()),
             config=config or LiveChatConfig(),
         )
 
@@ -880,7 +883,7 @@ class LiveChatService:
                                 chat_history_service.add_user_message(
                                     session.session_id,
                                     user_text,
-                                    meta_data={"is_voice": True},
+                                    meta_data={"is_voice": True, "voice_session_id": session.voice_session_id},
                                 )
                         if ai_text:
                             await on_transcript(ai_text, "assistant")
@@ -890,7 +893,7 @@ class LiveChatService:
                                     session_id=session.session_id,
                                     message=ai_text,
                                     agent_id=session.agent_id,
-                                    meta_data={"is_voice": True},
+                                    meta_data={"is_voice": True, "voice_session_id": session.voice_session_id},
                                 )
 
                         session.pending_user_transcript = ""
@@ -910,7 +913,7 @@ class LiveChatService:
                                 session_id=session.session_id,
                                 message=session.ai_transcript_buffer.strip(),
                                 agent_id=session.agent_id,
-                                meta_data={"is_voice": True},
+                                meta_data={"is_voice": True, "voice_session_id": session.voice_session_id},
                             )
                             session.ai_transcript_buffer = ""
 
@@ -961,7 +964,7 @@ class LiveChatService:
                 chat_history_service.add_user_message(
                     session.session_id,
                     session.user_transcript_buffer,
-                    meta_data={"is_voice": True},
+                    meta_data={"is_voice": True, "voice_session_id": session.voice_session_id},
                 )
                 logger.debug(
                     f"保存用户语音转录: {session.user_transcript_buffer[:50]}..."
@@ -972,7 +975,7 @@ class LiveChatService:
                     session_id=session.session_id,
                     message=session.ai_transcript_buffer,
                     agent_id=session.agent_id,
-                    meta_data={"is_voice": True},
+                    meta_data={"is_voice": True, "voice_session_id": session.voice_session_id},
                 )
                 logger.debug(
                     f"保存 AI 语音转录: {session.ai_transcript_buffer[:50]}..."

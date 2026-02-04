@@ -15,60 +15,42 @@ Base = declarative_base()
 
 from app.models.agent import Agent as Agent
 from app.models.associations import agent_followers as agent_followers
+from app.models.character_theme import CharacterTheme as CharacterTheme
+from app.models.character_theme import CharacterThemeAgent as CharacterThemeAgent
 from app.models.chat import Chat as Chat
 from app.models.chat_history import ChatHistory as ChatHistory
 from app.models.chat_settings import ChatSettings as ChatSettings
-from app.models.evaluation import (
-    EvaluationInteraction as EvaluationInteraction,
-    EvaluationResult as EvaluationResult,
-    EvaluationSession as EvaluationSession,
-    EvaluationStatus as EvaluationStatus,
-    EvaluationTemplate as EvaluationTemplate,
-)
+from app.models.evaluation import EvaluationInteraction as EvaluationInteraction
+from app.models.evaluation import EvaluationResult as EvaluationResult
+from app.models.evaluation import EvaluationSession as EvaluationSession
+from app.models.evaluation import EvaluationStatus as EvaluationStatus
+from app.models.evaluation import EvaluationTemplate as EvaluationTemplate
+from app.models.feedback_push import FeedbackPushHistory as FeedbackPushHistory
+from app.models.memory import Memory as Memory
+from app.models.memory import MemoryExtractionLog as MemoryExtractionLog
 from app.models.message import Message as Message
-from app.models.notification import (
-    NotificationTemplate as NotificationTemplate,
-    UserNotification as UserNotification,
-)
+from app.models.notification import NotificationTemplate as NotificationTemplate
+from app.models.notification import UserNotification as UserNotification
 from app.models.push_notification import (
     PushNotificationHistory as PushNotificationHistory,
-)
-from app.models.feedback_push import (
-    FeedbackPushHistory as FeedbackPushHistory,
 )
 from app.models.report import Report as Report
 from app.models.resource import Resource as Resource
 from app.models.settings import Settings as Settings
-from app.models.subscription import (
-    SubscriptionPlan as SubscriptionPlan,
-    SubscriptionPlanType as SubscriptionPlanType,
-    SubscriptionStatus as SubscriptionStatus,
-    SubscriptionTransaction as SubscriptionTransaction,
-    SubscriptionUsage as SubscriptionUsage,
-    TransactionType as TransactionType,
-    UserSubscription as UserSubscription,
-)
-from app.models.system_settings import (
-    SettingCategory as SettingCategory,
-    SettingType as SettingType,
-    SystemSettings as SystemSettings,
-)
-from app.models.user import (
-    AuthType as AuthType,
-    DeviceToken as DeviceToken,
-    Gender as Gender,
-    User as User,
-)
+from app.models.subscription import SubscriptionPlan as SubscriptionPlan
+from app.models.subscription import SubscriptionPlanType as SubscriptionPlanType
+from app.models.subscription import SubscriptionStatus as SubscriptionStatus
+from app.models.subscription import SubscriptionTransaction as SubscriptionTransaction
+from app.models.subscription import SubscriptionUsage as SubscriptionUsage
+from app.models.subscription import TransactionType as TransactionType
+from app.models.subscription import UserSubscription as UserSubscription
+from app.models.system_settings import SettingCategory as SettingCategory
+from app.models.system_settings import SettingType as SettingType
+from app.models.system_settings import SystemSettings as SystemSettings
+from app.models.user import AuthType as AuthType
+from app.models.user import DeviceToken as DeviceToken
+from app.models.user import Gender as Gender
+from app.models.user import User as User
+from app.models.user_analytics_report import UserAnalyticsReport as UserAnalyticsReport
 from app.models.verification_code import VerificationCode as VerificationCode
 from app.models.voice_cache import VoiceCache as VoiceCache
-from app.models.character_theme import (
-    CharacterTheme as CharacterTheme,
-    CharacterThemeAgent as CharacterThemeAgent,
-)
-from app.models.memory import (
-    Memory as Memory,
-    MemoryExtractionLog as MemoryExtractionLog,
-)
-from app.models.user_analytics_report import (
-    UserAnalyticsReport as UserAnalyticsReport,
-)
