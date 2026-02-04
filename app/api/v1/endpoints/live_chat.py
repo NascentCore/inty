@@ -225,8 +225,13 @@ async def live_chat_session(
             except Exception as e:
                 logger.debug(f"发送音频失败（连接可能已关闭）: {str(e)}")
 
-        async def on_transcript(text: str, role: str):
-            """处理转录文本"""
+        async def on_transcript(
+            text: str,
+            role: str,
+            message_id: Optional[int] = None,
+            timestamp: Optional[float] = None,
+        ):
+            """处理转录文本；落库后的最终转录会带 message_id 与 timestamp（毫秒）。"""
             if session_ended_by_timeout:
                 return
             try:
@@ -239,6 +244,8 @@ async def live_chat_session(
                     type=msg_type,
                     text=text,
                     is_final=True,
+                    message_id=message_id,
+                    timestamp=timestamp,
                 )
                 await websocket.send_json(msg.model_dump())
             except Exception as e:

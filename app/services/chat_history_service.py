@@ -242,29 +242,34 @@ def has_user_messages_ever(session_id: str) -> bool:
 
 def add_user_message(
     session_id: str, message: str, meta_data: Optional[dict] = None
-) -> None:
-    """添加用户消息到聊天历史。meta_data 非空时用 raw INSERT 写入元数据，否则走 PostgresChatMessageHistory。"""
+) -> Optional[int]:
+    """添加用户消息到聊天历史。meta_data 非空时用 raw INSERT 写入元数据并返回插入 id，否则走 PostgresChatMessageHistory 并返回 None。"""
     try:
         if meta_data is None:
             history = get_chat_history(session_id)
             history.add_messages([HumanMessage(content=message)])
-        else:
-            conn = get_chat_history_connection()
-            message_data = {"type": "human", "data": {"content": message}}
-            insert_query = """
-                INSERT INTO chat_history (session_id, message, meta_data)
-                VALUES (%s, %s, %s)
-            """
-            with conn.cursor() as cur:
-                cur.execute(
-                    insert_query,
-                    (
-                        session_id,
-                        json.dumps(message_data),
-                        json.dumps(meta_data),
-                    ),
-                )
-        logger.debug(f"添加用户消息到会话 {session_id}: {message[:50]}...")
+            logger.debug(f"添加用户消息到会话 {session_id}: {message[:50]}...")
+            return None
+        conn = get_chat_history_connection()
+        message_data = {"type": "human", "data": {"content": message}}
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                insert_query,
+                (
+                    session_id,
+                    json.dumps(message_data),
+                    json.dumps(meta_data),
+                ),
+            )
+            result = cur.fetchone()
+            message_id = result[0] if result else None
+        logger.debug(f"添加用户消息到会话 {session_id}: {message[:50]}..., ID: {message_id}")
+        return message_id
     except Exception as e:
         logger.error(f"添加用户消息失败 {session_id}: {str(e)}")
         raise
