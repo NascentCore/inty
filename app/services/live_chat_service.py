@@ -877,24 +877,30 @@ class LiveChatService:
                         )
 
                         if user_text:
-                            await on_transcript(user_text, "user")
                             flushed_user = True
                             if session.config.save_history:
-                                chat_history_service.add_user_message(
+                                user_message_id = chat_history_service.add_user_message(
                                     session.session_id,
                                     user_text,
                                     meta_data={"is_voice": True, "voice_session_id": session.voice_session_id},
                                 )
+                                ts = time.time() * 1000
+                                await on_transcript(user_text, "user", user_message_id, ts)
+                            else:
+                                await on_transcript(user_text, "user")
                         if ai_text:
-                            await on_transcript(ai_text, "assistant")
                             flushed_ai = True
                             if session.config.save_history:
-                                chat_history_service.add_ai_message_sync(
+                                ai_message_id = chat_history_service.add_ai_message_sync(
                                     session_id=session.session_id,
                                     message=ai_text,
                                     agent_id=session.agent_id,
                                     meta_data={"is_voice": True, "voice_session_id": session.voice_session_id},
                                 )
+                                ts = time.time() * 1000
+                                await on_transcript(ai_text, "assistant", ai_message_id, ts)
+                            else:
+                                await on_transcript(ai_text, "assistant")
 
                         session.pending_user_transcript = ""
                         session.pending_ai_transcript = ""

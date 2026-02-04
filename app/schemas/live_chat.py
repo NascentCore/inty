@@ -97,6 +97,8 @@ class LiveChatTranscriptMessage(BaseModel):
     type: LiveChatMessageType = Field(..., description="消息类型")
     text: str = Field(..., description="转录文本")
     is_final: bool = Field(default=True, description="是否是最终转录结果")
+    message_id: Optional[int] = Field(default=None, description="chat_history 记录 id，仅落库后的最终转录有")
+    timestamp: Optional[float] = Field(default=None, description="时间戳（毫秒），仅落库后的最终转录有")
 
 
 class LiveChatAudioResponseMessage(BaseModel):
