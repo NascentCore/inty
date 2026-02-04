@@ -161,6 +161,7 @@ fun ChatMorePanel(
                     ) {
                         item("Chat Style") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 isVip = true,
                                 onClick = {
                                     // 检查是否已登录
@@ -224,6 +225,7 @@ fun ChatMorePanel(
 
                         item("Change outfit") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_MORE_CLICK,
@@ -252,6 +254,7 @@ fun ChatMorePanel(
 
                         item("Feedback") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     // 检查是否已登录
                                     if (
@@ -283,8 +286,13 @@ fun ChatMorePanel(
                         }
 
                         item("Reset") {
-                            Box(modifier = Modifier.graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f }) {
+                            Box(
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f },
+                            ) {
                                 MorePanelItem(
+                                    modifier = Modifier.fillMaxWidth(),
                                     onClick = {
                                         if (hasUserMessages && IntySetting.isLogin()) {
                                             showResetConfirmDialog = true
@@ -304,6 +312,7 @@ fun ChatMorePanel(
 
                         item("Report") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     // 检查是否已登录
                                     if (
@@ -343,6 +352,7 @@ fun ChatMorePanel(
 
                         item("Call") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_MORE_CALL,
