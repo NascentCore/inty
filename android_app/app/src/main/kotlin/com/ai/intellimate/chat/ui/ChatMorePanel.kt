@@ -155,9 +155,12 @@ fun ChatMorePanel(
                                     onHeightChange(maxHeight - transY.value)
                                 }
                                 .background(color = HeartColor.primaryColor),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = UiConfigs.Padding.ScreenHorizontal,
+                            vertical = UiConfigs.Spacing.Large,
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
+                        verticalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
                     ) {
                         item("Chat Style") {
                             MorePanelItem(
@@ -199,8 +202,13 @@ fun ChatMorePanel(
                         }
 
                         item("Reset") {
-                            Box(modifier = Modifier.graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f }) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f },
+                            ) {
                                 MorePanelItem(
+                                    modifier = Modifier.fillMaxWidth(),
                                     onClick = {
                                         FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
                                             "click_type" to "reset",
