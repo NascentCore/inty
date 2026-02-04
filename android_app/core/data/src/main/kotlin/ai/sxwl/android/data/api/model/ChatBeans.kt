@@ -118,6 +118,7 @@ data class MsgInfo(
         val agentId: String? = null,
         @Json(name = "is_voice") val isVoice: Boolean = false,
         val isOpening: Boolean = false,
+        val voice_session_id: String? = null,
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
     ) {
         @JsonClass(generateAdapter = true)
