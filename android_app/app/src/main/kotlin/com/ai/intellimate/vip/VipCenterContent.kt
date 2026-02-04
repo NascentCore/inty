@@ -61,7 +61,7 @@ fun VipCenterContent(
     //    onClose: () -> Unit,
     //    onPurchase: () -> Unit,
     viewModel: VipCenterViewModel = viewModel(),
-    pageFrom: String? = null
+    pageFrom: String? = null,
 ) {
     val plans by viewModel.plansFlow.collectAsState()
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
@@ -165,12 +165,13 @@ fun VipCenterContent(
                             viewModel.selectPlan(index)
 
                             FirebaseManager.Events.SUBSCRIPTION_CTA_CLICK.logEvent(
-                                "click_type" to when(index) {
-                                    0 -> "monthly"
-                                    1 -> "quarterly"
-                                    2 -> "annually"
-                                    else -> "unknown"
-                                }
+                                "click_type" to
+                                    when (index) {
+                                        0 -> "monthly"
+                                        1 -> "quarterly"
+                                        2 -> "annually"
+                                        else -> "unknown"
+                                    }
                             )
                         },
                     )

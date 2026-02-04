@@ -105,7 +105,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
                                 height = height,
                             )
                         },
-                    voiceSessionId = voice_session_id
+                    voiceSessionId = voice_session_id,
                 )
             } ?: MetaData(agentId),
     )

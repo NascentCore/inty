@@ -88,18 +88,17 @@ class ChatMessageRepository(
         ) {
 
             result.data.data?.let { data ->
-
                 val buildMessages = buildList {
-                    add(MessageEntity(
-                        id = data.user_message_id.toString(),
-                        content = content,
-                        role = "user",
-                        metaData = MessageEntity.MetaData(agentId),
-                        timestamp = timestamp,
-                    ))
-                    addAll(
-                        data.choices.map { it.message.toEntity(agentId) }
+                    add(
+                        MessageEntity(
+                            id = data.user_message_id.toString(),
+                            content = content,
+                            role = "user",
+                            metaData = MessageEntity.MetaData(agentId),
+                            timestamp = timestamp,
+                        )
                     )
+                    addAll(data.choices.map { it.message.toEntity(agentId) })
                 }
 
                 localDataSource.appendMessages(buildMessages)

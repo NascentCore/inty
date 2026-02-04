@@ -268,7 +268,9 @@ def add_user_message(
             )
             result = cur.fetchone()
             message_id = result[0] if result else None
-        logger.debug(f"添加用户消息到会话 {session_id}: {message[:50]}..., ID: {message_id}")
+        logger.debug(
+            f"添加用户消息到会话 {session_id}: {message[:50]}..., ID: {message_id}"
+        )
         return message_id
     except Exception as e:
         logger.error(f"添加用户消息失败 {session_id}: {str(e)}")

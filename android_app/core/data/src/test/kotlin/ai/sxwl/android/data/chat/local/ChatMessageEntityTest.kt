@@ -3,7 +3,6 @@ package ai.sxwl.android.data.chat.local
 // CREATED_BY_AGENT
 
 import ai.sxwl.android.data.api.model.MsgInfo
-import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toModel
 import org.junit.Assert.assertEquals
@@ -47,7 +46,9 @@ class ChatMessageEntityTest {
         assertEquals(640, entityWithImage.getGeneratedImageHeight())
 
         val withoutImage =
-            withImage.copy(meta_data = MsgInfo.MsgMetaData(agentId = agentId, generatedImage = null))
+            withImage.copy(
+                meta_data = MsgInfo.MsgMetaData(agentId = agentId, generatedImage = null)
+            )
         val entityWithoutImage = withoutImage.toEntity(agentId = agentId)
         assertNull(entityWithoutImage.getGeneratedImageUrl())
         assertNull(entityWithoutImage.getGeneratedImageWidth())
