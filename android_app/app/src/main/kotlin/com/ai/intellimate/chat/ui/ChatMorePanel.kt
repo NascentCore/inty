@@ -224,9 +224,8 @@ fun ChatMorePanel(
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
-                                    chatViewModel.sendPredefinedMessage(
+                                    chatViewModel.setInputMessage(
                                         "Could you change your outfit for me?",
-                                        "change_outfit",
                                     )
                                     onDismiss()
                                 },
