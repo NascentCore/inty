@@ -104,7 +104,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
-import ai.sxwl.android.data.billing.VipStatusHelper
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
