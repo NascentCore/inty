@@ -23,7 +23,7 @@ interface ChatMessageDao {
      * 的数据
      */
     @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY id DESC, indexId DESC "
+        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY Cast(id as INTEGER) DESC, indexId DESC "
     )
     fun pagingSource(agentId: String): PagingSource<Int, MessageEntity>
 
@@ -85,7 +85,7 @@ interface ChatMessageDao {
         height: Int?,
     )
 
-    @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY id DESC")
+    @Query("SELECT * FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC")
     suspend fun getAllMessages(agentId: String): List<MessageEntity>
 
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId")
@@ -97,16 +97,16 @@ interface ChatMessageDao {
     suspend fun getMessageCounts(agentIds: List<String>): List<AgentMessageCount>
 
     @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND role = 'assistant' AND generate_image_imageUrl IS NOT NULL AND generate_image_imageUrl != '' AND generate_image_imageUrl != 'loading' ORDER BY id DESC"
+        "SELECT * FROM message WHERE agentId = :agentId AND role = 'assistant' AND generate_image_imageUrl IS NOT NULL AND generate_image_imageUrl != '' AND generate_image_imageUrl != 'loading' ORDER BY Cast(id as INTEGER) DESC"
     )
     fun streamMessagesWithImages(agentId: String): Flow<List<MessageEntity>>
 
     /** 查询该 agent 最近一条 AI 回复消息，排除 isOpening = true（开场白） */
     @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND role = 'assistant' AND isOpening = 0 ORDER BY id DESC LIMIT 1"
+        "SELECT * FROM message WHERE agentId = :agentId AND role = 'assistant' AND isOpening = 0 ORDER BY Cast(id as INTEGER) DESC LIMIT 1"
     )
     suspend fun getLatestAgentMessage(agentId: String): MessageEntity?
 
-    @Query("SELECT id FROM message WHERE agentId = :agentId ORDER BY id DESC LIMIT 1")
+    @Query("SELECT id FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC LIMIT 1")
     suspend fun getLatestMessageId(agentId: String): String?
 }
