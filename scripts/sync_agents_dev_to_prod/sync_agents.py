@@ -270,6 +270,7 @@ FIELDS_TO_SYNC = [
     "photos",
     "category",
     "status",
+    "source",
     "prompt",
     # 主提示词和模式提示词字段
     "main_prompt",
