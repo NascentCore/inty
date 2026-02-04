@@ -880,6 +880,7 @@ class LiveChatService:
                                 chat_history_service.add_user_message(
                                     session.session_id,
                                     user_text,
+                                    meta_data={"is_voice": True},
                                 )
                         if ai_text:
                             await on_transcript(ai_text, "assistant")
@@ -960,6 +961,7 @@ class LiveChatService:
                 chat_history_service.add_user_message(
                     session.session_id,
                     session.user_transcript_buffer,
+                    meta_data={"is_voice": True},
                 )
                 logger.debug(
                     f"保存用户语音转录: {session.user_transcript_buffer[:50]}..."

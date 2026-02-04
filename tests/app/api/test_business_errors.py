@@ -41,18 +41,18 @@ def _make_user(
 def _create_mock_db_session():
     """Create a mock database session that can handle v2 endpoint queries."""
     mock_db = AsyncMock()
-    
+
     # Mock result object for agent query
     mock_result = MagicMock()
     # Return a mock agent when first() is called
     mock_agent = SimpleNamespace(id="agent-1", name="Test Agent")
     mock_result.first = MagicMock(return_value=mock_agent)
     mock_result.scalar_one_or_none = MagicMock(return_value=mock_agent)
-    
+
     # Make execute return the mock result
     mock_db.execute = AsyncMock(return_value=mock_result)
     mock_db.scalar = AsyncMock(return_value=mock_agent)
-    
+
     return mock_db
 
 
@@ -91,7 +91,9 @@ def _client_with_user(app: FastAPI, user: User):
         app.dependency_overrides.pop(deps.get_current_active_user, None)
 
 
-def test_create_agent_limit_returns_business_error(monkeypatch: pytest.MonkeyPatch, test_app: FastAPI):
+def test_create_agent_limit_returns_business_error(
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
+):
     async def fake_check_agent_creation_limit(db, current_user):
         return False, 6, 6
 
@@ -114,13 +116,18 @@ def test_create_agent_limit_returns_business_error(monkeypatch: pytest.MonkeyPat
     assert response.status_code == 200
     assert body["code"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["code"]
     assert body["message"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["message"]
-    assert body["data"]["error_code"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["error_code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["error_code"]
+    )
     assert body["data"]["used_count"] == 6
     assert body["data"]["limit"] == 6
     assert body["data"]["feature"] == "agent_creation"
 
 
-def test_text_to_image_limit_returns_business_error(monkeypatch: pytest.MonkeyPatch, test_app: FastAPI):
+def test_text_to_image_limit_returns_business_error(
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
+):
     async def fake_check_image_gen_limit(db, current_user):
         return False, 3, 3
 
@@ -143,8 +150,7 @@ def test_text_to_image_limit_returns_business_error(monkeypatch: pytest.MonkeyPa
     assert response.status_code == 200
     assert body["code"] == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["code"]
     assert (
-        body["message"]
-        == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["message"]
+        body["message"] == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["message"]
     )
     assert (
         body["data"]["error_code"]
@@ -171,7 +177,7 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
     async def fake_check_voice_limit(db, user):
         return False, 2, 2
 
-    def fake_add_user_message(session_id, message):
+    def fake_add_user_message(session_id, message, meta_data=None):
         return None
 
     monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
@@ -219,7 +225,10 @@ def test_generate_message_voice_guest_login_required(
 
     assert response.status_code == 200
     assert body["code"] == BusinessErrorCode.GUEST_LOGIN_REQUIRED["code"]
-    assert body["data"]["error_code"] == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+    )
     assert body["data"]["used_count"] == 2
     assert body["data"]["limit"] == 2
 
@@ -240,10 +249,7 @@ def test_generate_message_voice_limit_reached_for_signed_in_user(
     body = response.json()
 
     assert response.status_code == 200
-    assert (
-        body["code"]
-        == BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED["code"]
-    )
+    assert body["code"] == BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED["code"]
     assert (
         body["data"]["error_code"]
         == BusinessErrorCode.VOICE_GENERATION_LIMIT_REACHED["error_code"]
@@ -320,7 +326,7 @@ def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
     async def fake_check_chat_limit(db, user):
         return False, 5, 5
 
-    def fake_add_user_message(session_id, message):
+    def fake_add_user_message(session_id, message, meta_data=None):
         return None
 
     monkeypatch.setattr(
@@ -367,7 +373,10 @@ def test_v1_chat_completions_guest_requires_login(
 
     assert response.status_code == 200
     assert body["code"] == BusinessErrorCode.GUEST_LOGIN_REQUIRED["code"]
-    assert body["data"]["error_code"] == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+    )
     assert body["data"]["used_count"] == 5
     assert body["data"]["daily_limit"] == 5
 
