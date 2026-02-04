@@ -497,78 +497,81 @@ internal fun ChatPage(
             }
 
             Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                Spacer(Modifier.height(48.dp))
+                // 键盘弹起时隐藏顶部栏，把视觉面积留给角色展示
+                if (!isKeyboardVisible) {
+                    Spacer(Modifier.height(48.dp))
 
-                agentInfo?.let { info ->
-                    ChatTopBar(
-                        navController,
-                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
-                        agentInfo = info,
-                        fontSize = 15.sp,
-                        avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
-                        earnedPoints = null,
-                        showBackButton = showBackButton,
-                        onClickCall = {
-                            scope.launch {
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    onCall()
-                                }
-                            }
-                        },
-                        onClickMore = {
-                            scope.launch {
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    if (drawerState.value == DrawerValue.Closed) {
-                                        drawerState.value = DrawerValue.Open
+                    agentInfo?.let { info ->
+                        ChatTopBar(
+                            navController,
+                            modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                            agentInfo = info,
+                            fontSize = 15.sp,
+                            avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
+                            earnedPoints = null,
+                            showBackButton = showBackButton,
+                            onClickCall = {
+                                scope.launch {
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
                                     } else {
-                                        drawerState.value = DrawerValue.Closed
+                                        onCall()
+                                    }
+                                }
+                            },
+                            onClickMore = {
+                                scope.launch {
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                    } else {
+                                        if (drawerState.value == DrawerValue.Closed) {
+                                            drawerState.value = DrawerValue.Open
+                                        } else {
+                                            drawerState.value = DrawerValue.Closed
+                                        }
+                                    }
+                                }
+                            },
+                        )
+
+                        if (isDebugMode && debugAgentIndex != null) {
+                            Spacer(Modifier.height(8.dp))
+                            DebugAgentIndexBadge(
+                                modifier = Modifier.padding(start = 18.dp),
+                                index = debugAgentIndex,
+                                agentName = info.name,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    if (
+                        agentInfo != null &&
+                            !vipStatus.isSubscribed &&
+                            UiConfigs.ChatPage.showSubscriptionButton
+                    ) {
+                        PremiumModelTag(
+                            onClick = {
+                                scope.launch {
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                    } else {
+                                        showPremiumDialog = true
                                     }
                                 }
                             }
-                        },
-                    )
-
-                    if (isDebugMode && debugAgentIndex != null) {
-                        Spacer(Modifier.height(8.dp))
-                        DebugAgentIndexBadge(
-                            modifier = Modifier.padding(start = 18.dp),
-                            index = debugAgentIndex,
-                            agentName = info.name,
                         )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                if (
-                    agentInfo != null &&
-                        !vipStatus.isSubscribed &&
-                        UiConfigs.ChatPage.showSubscriptionButton
-                ) {
-                    PremiumModelTag(
-                        onClick = {
-                            scope.launch {
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    showPremiumDialog = true
-                                }
+                        Spacer(Modifier.height(8.dp))
+                        if (showPremiumDialog) {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                navController.navigate(Routes.Me.VipCenter)
+                                //
+                                // VipCenterActivity.launch(context,
+                                // VipCenterActivity.CHAT_PAGE)
                             }
+                            showPremiumDialog = false
                         }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    if (showPremiumDialog) {
-                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.VipCenter)
-                            //
-                            // VipCenterActivity.launch(context,
-                            // VipCenterActivity.CHAT_PAGE)
-                        }
-                        showPremiumDialog = false
                     }
                 }
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
