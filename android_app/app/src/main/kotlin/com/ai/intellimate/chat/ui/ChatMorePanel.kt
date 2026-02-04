@@ -71,7 +71,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.xb.navigation.Routes
 
@@ -461,12 +463,29 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                 )
         ) {
             Column() {
-                Text(
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    text = stringResource(R.string.chat_reset_tips),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-                )
+                Column(
+                    modifier =
+                        Modifier.padding(
+                            horizontal = UiConfigs.Padding.ScreenHorizontal,
+                            vertical = UiConfigs.Padding.DialogEdge,
+                        )
+                ) {
+                    Text(
+                        color = Color.White,
+                        fontSize = UiConfigs.Typography.BodyLarge,
+                        text = stringResource(R.string.chat_reset_tips),
+                    )
+                    Spacer(Modifier.height(UiConfigs.Spacing.Small))
+                    Text(
+                        color = UiConfigs.Colors.VipSecondaryText,
+                        fontSize = UiConfigs.Typography.Support,
+                        text =
+                            stringResource(
+                                R.string.chat_reset_cost_hint,
+                                BoostConfig.CHAT_RESET_COST,
+                            ),
+                    )
+                }
                 HorizontalDivider(thickness = .5.dp, color = Color(0xFF201731))
                 Row {
                     TextButton(

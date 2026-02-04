@@ -569,6 +569,7 @@
     <string name="explore_boost_shortcut">Top IntelliMates</string>
     <string name="explore_boost_shortcut_cd">Open credits leaderboard</string>
     <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
+    <string name="chat_reset_cost_hint">Non-members cost %1$d credits. Members reset for free.</string>
     <string name="reset">Reset</string>
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
     <string name="reset_suc_msg">A new conversation has started.</string>

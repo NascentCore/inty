@@ -1032,6 +1032,12 @@ internal fun ChatPage(
                         try {
                             chatViewModel.reset()
                             resetSuccess = true
+                        } catch (e: BoostException) {
+                            if (e.error == BoostError.NotEnoughPoints) {
+                                ToastUtils.showShort(R.string.credits_not_enough)
+                            } else {
+                                ToastUtils.showShort(R.string.reset_failed_msg)
+                            }
                         } catch (_: Throwable) {
                             ToastUtils.showShort(R.string.reset_failed_msg)
                         }

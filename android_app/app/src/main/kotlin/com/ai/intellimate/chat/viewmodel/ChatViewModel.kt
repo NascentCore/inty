@@ -26,6 +26,9 @@ import androidx.paging.cachedIn
 import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
+import com.ai.intellimate.boost.BoostConfig
+import com.ai.intellimate.boost.BoostError
+import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.chat.uistate.ChatUIState
@@ -1342,6 +1345,15 @@ class ChatViewModel : BaseVM() {
     suspend fun reset() {
         val agentId = agentInfo.value?.id ?: throw Exception("Agent is null")
 
+        // 非会员重置前检查积分余额
+        val isVip = VipStatusHelper.isUserVip()
+        if (!isVip) {
+            val availablePoints = BoostManager.boostState.value.availablePoints
+            if (availablePoints < BoostConfig.CHAT_RESET_COST) {
+                throw BoostException(BoostError.NotEnoughPoints)
+            }
+        }
+
         if (!chatRepository.clearMessage(agentId)) {
             throw Exception("Reset Failed")
         }
@@ -1359,6 +1371,11 @@ class ChatViewModel : BaseVM() {
         // 注意：如果使用了 RoomDataSource，消息流会自动更新
         // 4. 拉取最新消息
         _isQueryMsgsCompleted.value = true
+
+        // 非会员重置成功后扣除积分
+        if (!isVip) {
+            BoostManager.deductPoints(BoostConfig.CHAT_RESET_COST)
+        }
 
         LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
     }
