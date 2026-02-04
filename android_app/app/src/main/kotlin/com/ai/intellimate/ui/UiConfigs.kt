@@ -681,6 +681,46 @@ object UiConfigs {
             /** 尾部控件内边距 - 输入框文本区域距离右侧按钮区域的距离 */
             val TrailingControlsPadding = 104.dp
 
+            /** 语音输入切换按钮大小 */
+            val VoiceToggleButtonSize = ButtonSize
+
+            /** 语音输入切换按钮图标大小 */
+            val VoiceToggleIconSize = 18.dp
+
+            /** 语音输入切换按钮左侧边距 */
+            val VoiceTogglePaddingStart = UiConfigs.Spacing.Small
+
+            /** 语音输入切换按钮与输入区域间距 */
+            val VoiceTogglePaddingEnd = UiConfigs.Spacing.Tiny
+
+            /** 头部控件内边距 - 输入框文本区域距离左侧语音按钮的距离 */
+            val LeadingControlsPadding =
+                VoiceTogglePaddingStart + VoiceToggleButtonSize + VoiceTogglePaddingEnd
+
+            /** 语音输入按住说话按钮边框宽度 */
+            val VoiceHoldButtonBorderWidth = 1.dp
+
+            /** 语音输入按住说话按钮背景透明度（未录制） */
+            const val VoiceHoldButtonIdleAlpha = 0.12f
+
+            /** 语音输入按住说话按钮背景透明度（录制中） */
+            const val VoiceHoldButtonRecordingAlpha = 0.22f
+
+            /** 语音输入按住说话按钮边框透明度 */
+            const val VoiceHoldButtonBorderAlpha = 0.22f
+
+            /** 语音输入按住说话按钮禁用文本透明度 */
+            const val VoiceHoldButtonDisabledTextAlpha = 0.4f
+
+            /** 语音输入切换按钮背景透明度（可用） */
+            const val VoiceToggleBackgroundAlpha = 0.16f
+
+            /** 语音输入切换按钮背景透明度（不可用） */
+            const val VoiceToggleDisabledBackgroundAlpha = 0.08f
+
+            /** 语音输入切换按钮图标透明度（不可用） */
+            const val VoiceToggleDisabledIconAlpha = 0.4f
+
             /** 场景操作按钮间距 - 场景操作按钮与发送/更多按钮之间的间距 */
             val SceneActionButtonSpacing = 6.dp
         }
