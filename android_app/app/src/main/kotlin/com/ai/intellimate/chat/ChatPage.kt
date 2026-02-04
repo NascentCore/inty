@@ -1021,7 +1021,6 @@ internal fun ChatPage(
         }
 
         ChatSettingsDrawer(
-            chatViewModel = chatViewModel,
             agentInfo = agentInfo,
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
