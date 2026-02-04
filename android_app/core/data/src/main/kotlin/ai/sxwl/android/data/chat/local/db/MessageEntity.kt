@@ -11,7 +11,7 @@ import androidx.room.Index
 
 @Entity(
     tableName = "message",
-    indices = [Index(value = ["agentId"]), Index(value = ["id"]), Index(value = ["indexId"])],
+    indices = [Index(value = ["agentId"]), Index(value = ["indexId"])],
     primaryKeys = ["id", "agentId", "indexId"],
 )
 data class MessageEntity(

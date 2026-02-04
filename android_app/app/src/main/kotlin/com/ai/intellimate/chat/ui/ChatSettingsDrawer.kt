@@ -374,7 +374,7 @@ fun ChatSettingsDrawer(
                                                 !vipStatus.isSubscribed &&
                                                     option.id != CHAT_MODEL_ID_DEFAULT
                                             ) {
-                                                navController.navigate(Routes.Me.VipCenter)
+                                                navController.navigate(Routes.Me.vipCenter("chat_settings_model"))
                                                 FirebaseManager.logEvent(
                                                     FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
                                                     FirebaseManager.safeEventParams(
@@ -495,20 +495,18 @@ fun ChatSettingsDrawer(
                             isInGroup = true,
                             horizontalPadding = horizontalPadding,
                             onItemClick = {
-                                // 检查是否已登录
-                                if (
+                                val isLoggedIn =
                                     IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
-                                ) {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "feedback",
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "feedback",
+                                        "logged_in" to isLoggedIn,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                if (isLoggedIn) {
                                     navController.navigate(Routes.Me.reportPage(true))
-                                    //
-                                    // ReportActivity.launchFeedback(context)
                                 }
                             },
                         )
@@ -528,24 +526,22 @@ fun ChatSettingsDrawer(
                                 isInGroup = true,
                                 horizontalPadding = horizontalPadding,
                                 onItemClick = {
-                                    // 检查是否已登录
-                                    if (
+                                    val isLoggedIn =
                                         IntySetting.isLogin() &&
                                             IntySetting.getCurToken().isNotEmpty()
-                                    ) {
-                                        FirebaseManager.logEvent(
-                                            FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                            FirebaseManager.safeEventParams(
-                                                "click_type" to "report",
-                                                "agent_id" to agent.id,
-                                                "timestamp" to System.currentTimeMillis(),
-                                            ),
-                                        )
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "report",
+                                            "agent_id" to agent.id,
+                                            "logged_in" to isLoggedIn,
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    if (isLoggedIn) {
                                         navController.navigate(
                                             Routes.Me.reportPage(false, "AGENT", agent.id)
                                         )
-                                        //
-                                        // ReportActivity.launch(context, agent.id, "AGENT")
                                     }
                                 },
                             )
@@ -618,13 +614,31 @@ fun ChatSettingsDrawer(
                     ) {
                         TextButton(
                             onClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "font_size_reset",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
                                 pendingFontSize = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP
-                            }
+                            },
                         ) {
                             Text(text = stringResource(R.string.str_reset))
                         }
                         Spacer(modifier = Modifier.width(4.dp))
-                        TextButton(onClick = { showFontSizeDialog = false }) {
+                        TextButton(
+                            onClick = {
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "font_size_cancel",
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                showFontSizeDialog = false
+                            },
+                        ) {
                             Text(text = stringResource(R.string.cancel))
                         }
                         Spacer(modifier = Modifier.width(8.dp))

@@ -4,6 +4,7 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
@@ -253,7 +254,7 @@ internal fun ChatPage(
     val previousAgentId = remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        chatViewModel.vipRequest.collect { navController.navigate(Routes.Me.VipCenter) }
+        chatViewModel.vipRequest.collect { navController.navigate(Routes.Me.vipCenter("chat_vip_request")) }
     }
 
     LifecycleStartEffect(Unit) {
@@ -413,7 +414,7 @@ internal fun ChatPage(
                         "agent_id" to agent.id,
                         "unlock_method" to "subscription",
                     )
-                    navController.navigate(Routes.Me.VipCenter)
+                    navController.navigate(Routes.Me.vipCenter("chat_vip_agent_unlock"))
                 },
                 onDismissRequest = {
                     navController.navigateUp()
@@ -511,6 +512,13 @@ internal fun ChatPage(
                             earnedPoints = null,
                             showBackButton = showBackButton,
                             onClickCall = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "call",
+                                    "agent_id" to agent?.agentId,
+                                    "agent_name" to agent?.name,
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                                )
+
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {
                                         ToastUtils.showShort(R.string.str_agent_is_deleted)
@@ -520,6 +528,12 @@ internal fun ChatPage(
                                 }
                             },
                             onClickMore = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "sidebar",
+                                    "agent_id" to agent?.agentId,
+                                    "agent_name" to agent?.name,
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                                )
                                 scope.launch {
                                     if (agentInfo?.isDeleted == true) {
                                         ToastUtils.showShort(R.string.str_agent_is_deleted)
@@ -565,7 +579,7 @@ internal fun ChatPage(
                         Spacer(Modifier.height(8.dp))
                         if (showPremiumDialog) {
                             if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                navController.navigate(Routes.Me.VipCenter)
+                                navController.navigate(Routes.Me.vipCenter("chat_premium_dialog"))
                                 //
                                 // VipCenterActivity.launch(context,
                                 // VipCenterActivity.CHAT_PAGE)
@@ -785,6 +799,13 @@ internal fun ChatPage(
                                 chatViewModel = chatViewModel,
                                 onSendMessage = { chatViewModel.sendMsg() },
                                 onToggleMorePanel = {
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "more",
+                                        "agent_id" to agent?.agentId,
+                                        "agent_name" to agent?.name,
+                                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free"
+                                    )
+
                                     showMorePanel = !showMorePanel
                                     focusManager.clearFocus()
                                 },
@@ -1163,17 +1184,13 @@ private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatVie
             onCancel = { chatViewModel.dismissDialog() },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.CHAT_PAGE)
+                    navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
                 }
                 chatViewModel.dismissDialog()
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.CHAT_PAGE)
+                    navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
                 }
                 chatViewModel.dismissDialog()
             },
@@ -1213,9 +1230,7 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.VipCenter)
-                            //                            VipCenterActivity.launch(context,
-                            // VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(Routes.Me.vipCenter("chat_image_generation_dialog"))
                         }
                     }
 
@@ -1227,9 +1242,7 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.VipCenter)
-                            //                            VipCenterActivity.launch(context,
-                            // VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(Routes.Me.vipCenter("chat_image_generation_dialog"))
                         }
                     }
 

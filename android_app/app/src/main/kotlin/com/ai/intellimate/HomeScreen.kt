@@ -312,7 +312,7 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
                         // 跳转到订阅中心
-                        navController.navigate(Routes.Me.VipCenter)
+                        navController.navigate(Routes.Me.vipCenter("explore_vip"))
                     }
                 }
                 showExpiredDialog = false
@@ -482,7 +482,7 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
             navController.navigate(Routes.Chat.chatPage(agent.id, false, fromPage = "favorite"))
         },
         onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
-        onOpenSubscription = { navController.navigate(Routes.Me.VipCenter) },
+        onOpenSubscription = { navController.navigate(Routes.Me.vipCenter("home_subscription")) },
         pageTrackingContext = "MainActivity",
     )
 }

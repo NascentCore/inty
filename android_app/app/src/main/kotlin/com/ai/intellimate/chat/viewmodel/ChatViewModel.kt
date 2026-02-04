@@ -942,11 +942,12 @@ class ChatViewModel : BaseVM() {
             val message = chatMessageRepository.getMessage(agentId, msgId)
 
             FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
-                "click_type" to "message_like",
+                "click_type" to "message_${userVote.name.lowercase()}",
                 "agent_id" to agentId,
                 "agent_name" to agentFlow.value?.name.orEmpty(),
                 "message_id" to msgId, // 优先使用服务端id，这才是有意义的标识
                 "message_length" to message?.content?.length,
+                "message" to message?.content,
                 "has_generated_image" to
                     !message?.metaData?.generatedImage?.imageUrl.isNullOrBlank(),
                 "is_opening" to message?.isOpening,
