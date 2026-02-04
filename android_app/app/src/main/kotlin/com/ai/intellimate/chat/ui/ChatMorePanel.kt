@@ -223,6 +223,32 @@ fun ChatMorePanel(
                             }
                         }
 
+                        item("Call") {
+                            MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CALL,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "call",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    onCall()
+                                },
+                                icon = {
+                                    Image(
+                                        imageVector = Icons.Rounded.Call,
+                                        contentDescription = "call",
+                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.call)) },
+                            )
+                        }
+
                         item("Change outfit") {
                             MorePanelItem(
                                 modifier = Modifier.fillMaxWidth(),
@@ -285,31 +311,6 @@ fun ChatMorePanel(
                             )
                         }
 
-                        item("Reset") {
-                            Box(
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f },
-                            ) {
-                                MorePanelItem(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onClick = {
-                                        if (hasUserMessages && IntySetting.isLogin()) {
-                                            showResetConfirmDialog = true
-                                        }
-                                    },
-                                    icon = {
-                                        Image(
-                                            painter = painterResource(R.drawable.icon_reset_chat),
-                                            contentDescription = "reset",
-                                            modifier = Modifier.fillMaxSize(),
-                                        )
-                                    },
-                                    text = { Text(stringResource(R.string.str_reset)) },
-                                )
-                            }
-                        }
-
                         item("Report") {
                             MorePanelItem(
                                 modifier = Modifier.fillMaxWidth(),
@@ -347,32 +348,6 @@ fun ChatMorePanel(
                                     )
                                 },
                                 text = { Text(stringResource(R.string.str_report)) },
-                            )
-                        }
-
-                        item("Call") {
-                            MorePanelItem(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CALL,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "call",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    onCall()
-                                },
-                                icon = {
-                                    Image(
-                                        imageVector = Icons.Rounded.Call,
-                                        contentDescription = "call",
-                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                },
-                                text = { Text(stringResource(R.string.call)) },
                             )
                         }
                     }
