@@ -572,7 +572,7 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
                             )
                             .padding(
                                 horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
                             )
                             .widthIn(
                                 min = 1.dp,
@@ -622,7 +622,7 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
                             )
                             .padding(
                                 horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
                             )
                             .widthIn(
                                 min = 1.dp,
