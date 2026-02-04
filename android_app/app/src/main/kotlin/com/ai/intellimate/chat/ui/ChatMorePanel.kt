@@ -88,6 +88,7 @@ fun ChatMorePanel(
     onHeightChange: (Dp) -> Unit,
     onReset: () -> Unit,
     onCall: () -> Unit,
+    hasUserMessages: Boolean = true,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -196,30 +197,28 @@ fun ChatMorePanel(
                         }
 
                         item("Reset") {
-                            MorePanelItem(
-                                onClick = {
-
-                                    FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
-                                        "click_type" to "reset",
-                                        "agent_id" to (agentInfo?.id ?: ""),
-                                        "timestamp" to System.currentTimeMillis()
-                                    )
-                                    // 检查是否已登录
-                                    if (IntySetting.isLogin()) {
-                                        // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
-                                        // 相当于重新开始和agent初次聊天
-                                        showResetConfirmDialog = true
-                                    }
-                                },
-                                icon = {
-                                    Image(
-                                        painter = painterResource(R.drawable.icon_reset_chat),
-                                        contentDescription = "reset",
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                },
-                                text = { Text(stringResource(R.string.str_reset)) },
-                            )
+                            Box(modifier = Modifier.graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f }) {
+                                MorePanelItem(
+                                    onClick = {
+                                        FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
+                                            "click_type" to "reset",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis()
+                                        )
+                                        if (hasUserMessages && IntySetting.isLogin()) {
+                                            showResetConfirmDialog = true
+                                        }
+                                    },
+                                    icon = {
+                                        Image(
+                                            painter = painterResource(R.drawable.icon_reset_chat),
+                                            contentDescription = "reset",
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    },
+                                    text = { Text(stringResource(R.string.str_reset)) },
+                                )
+                            }
                         }
 
                         item("Change outfit") {

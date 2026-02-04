@@ -104,6 +104,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
+import ai.sxwl.android.data.billing.VipStatusHelper
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1018,6 +1019,7 @@ internal fun ChatPage(
                 }
         }
 
+        val hasUserMessages by chatViewModel.hasUserMessagesInChat.collectAsState()
         if (showMorePanel) {
             ChatMorePanel(
                 navController,
@@ -1032,6 +1034,9 @@ internal fun ChatPage(
                         try {
                             chatViewModel.reset()
                             resetSuccess = true
+                            if (!VipStatusHelper.isUserVip()) {
+                                ToastUtils.showShort(R.string.credits_deducted, BoostConfig.CHAT_RESET_COST)
+                            }
                         } catch (e: BoostException) {
                             if (e.error == BoostError.NotEnoughPoints) {
                                 ToastUtils.showShort(R.string.credits_not_enough)
@@ -1047,6 +1052,7 @@ internal fun ChatPage(
                     showMorePanel = false
                     onCall()
                 },
+                hasUserMessages = hasUserMessages,
             )
         }
 
@@ -1093,6 +1099,13 @@ internal fun ChatPage(
                         scope.launch {
                             try {
                                 val result = BoostManager.boostAgent(info, points)
+                                ToastUtils.showShort(
+                                    context.getString(
+                                        R.string.boost_toast_success_points,
+                                        result.pointsSpent,
+                                        info.name,
+                                    ),
+                                )
                                 chatViewModel.appendBoostSystemMessage(
                                     agent = info,
                                     points = result.pointsSpent,

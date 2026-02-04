@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -115,6 +116,14 @@ class ChatViewModel : BaseVM() {
                 chatMessageRepository.messageCountFlow(it)
             }
         }
+
+    /** 当前会话是否至少有一条用户消息，用于禁用重置按钮等 UI */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val hasUserMessagesInChat =
+        _agentId.flatMapLatest { id ->
+            if (id.isNullOrBlank()) flowOf(false)
+            else chatMessageRepository.userMessageCountFlow(id).map { it > 0 }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private var lastAiMsgInfo: MsgInfo? = null
     private val _shouldFlowShow = MutableStateFlow(false)
@@ -336,6 +345,7 @@ class ChatViewModel : BaseVM() {
                 val currentCredits = BoostManager.boostState.value.availablePoints
                 if (BoostManager.unlockVipAgent()) {
                     characterRepository.unlockAgentByCredits(agentId)
+                    ToastUtils.showShort(R.string.credits_deducted, BoostConfig.UNLOCK_VIP_AGENT_COST)
                 } else {
                     ToastUtils.showShort(R.string.credits_not_enough)
                     _vipRequest.trySend("Credits not enough!")
