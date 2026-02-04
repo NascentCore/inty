@@ -247,6 +247,10 @@ object AppColors {
     val PremiumBannerCtaForeground = Color(0xFF1C1523)
     /** Material Design Green 500 - 用于表示成功状态、激活状态或选中状态的绿色指示器 */
     val Green500 = Color(0xFF4CAF50)
+    /** Create/Explore 等 CTA 按钮渐变起始色（粉红） */
+    val IntelliMateCtaGradientStart = Color(0xFFE91E63)
+    /** Create/Explore 等 CTA 按钮渐变结束色（橙） */
+    val IntelliMateCtaGradientEnd = Color(0xFFFF9800)
 }
 
 object VibeModeColors {

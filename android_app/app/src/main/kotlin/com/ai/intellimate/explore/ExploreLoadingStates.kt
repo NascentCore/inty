@@ -7,16 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,6 +25,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.IntelliMateCtaButton
 
 /** Explore页面的加载状态组件 */
 @Composable
@@ -109,8 +107,8 @@ private fun LoadMoreErrorIndicator(onRetry: () -> Unit) {
  * 末尾 Explore More 按钮 - 跨两列显示。
  *
  * 使用场景：推荐列表加载完毕时，提示用户还有更多内容可探索。
- * 预期视觉效果：居中显示描边按钮，文字为 Explore More，保持轻量提示感。
- * 可配置项：onExploreMore - 按钮点击回调（当前为占位）。
+ * 预期视觉效果：与 Create My IntelliMate 一致的粉橙渐变 CTA 按钮，全宽圆角，白字 Explore More。
+ * 可配置项：onExploreMore - 按钮点击回调。
  */
 @Composable
 private fun NoMoreDataIndicator(onExploreMore: () -> Unit = {}) {
@@ -118,16 +116,9 @@ private fun NoMoreDataIndicator(onExploreMore: () -> Unit = {}) {
         modifier = Modifier.fillMaxWidth().padding(UiConfigs.Spacing.MediumPlus),
         contentAlignment = Alignment.Center,
     ) {
-        OutlinedButton(
+        IntelliMateCtaButton(
+            text = stringResource(R.string.explore_loading_explore_more),
             onClick = onExploreMore,
-            shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-        ) {
-            Text(
-                text = stringResource(R.string.explore_loading_explore_more),
-                style = MaterialTheme.typography.labelLarge,
-                textAlign = TextAlign.Center,
-            )
-        }
+        )
     }
 }
