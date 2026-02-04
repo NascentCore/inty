@@ -37,6 +37,10 @@ interface ChatMessageDao {
     @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND role = 'user'")
     suspend fun countUserMessages(agentId: String): Int
 
+    /** 当前会话用户消息数量的 Flow，用于 UI 根据是否有用户消息启用/禁用重置等操作 */
+    @Query("SELECT COUNT(*) FROM message WHERE agentId = :agentId AND role = 'user'")
+    fun userMessageCountFlow(agentId: String): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(messages: List<MessageEntity>)
 

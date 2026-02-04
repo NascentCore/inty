@@ -331,7 +331,8 @@
     <string name="report_button_content_description">Report inappropriate content</string>
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
-    <string name="chat_more_change_outfit">Change outfit</string>
+    <!-- Change outfit 更合适，但是太长会导致文字换行 -->
+    <string name="chat_more_change_outfit">New Outfit</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate</string>
     <string name="upload_from_gallery">Upload</string>
@@ -569,6 +570,7 @@
     <string name="explore_boost_shortcut">Top IntelliMates</string>
     <string name="explore_boost_shortcut_cd">Open credits leaderboard</string>
     <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
+    <string name="chat_reset_cost_hint">Non-members cost %1$d credits. Members reset for free.</string>
     <string name="reset">Reset</string>
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
     <string name="reset_suc_msg">A new conversation has started.</string>
@@ -609,6 +611,7 @@
     <string name="login_welcome">Thousands of AI characters await your match.</string>
     <string name="upload_selfie_tips">Simply upload a clear, front-facing photo; avoid obscuring or blurring it.</string>
     <string name="credits_not_enough">Not enough credits.</string>
+    <string name="credits_deducted">%1$d credits deducted.</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A relationship to explore</item>

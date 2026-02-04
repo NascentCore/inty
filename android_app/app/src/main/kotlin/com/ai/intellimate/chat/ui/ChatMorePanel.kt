@@ -71,7 +71,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
 import com.ai.intellimate.R
+import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.ReplyStyleSheet
 import com.ai.intellimate.xb.navigation.Routes
 
@@ -86,6 +88,7 @@ fun ChatMorePanel(
     onHeightChange: (Dp) -> Unit,
     onReset: () -> Unit,
     onCall: () -> Unit,
+    hasUserMessages: Boolean = true,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -152,11 +155,16 @@ fun ChatMorePanel(
                                     onHeightChange(maxHeight - transY.value)
                                 }
                                 .background(color = HeartColor.primaryColor),
-                        contentPadding = PaddingValues(vertical = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = UiConfigs.Padding.ScreenHorizontal,
+                            vertical = UiConfigs.Spacing.Large,
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
+                        verticalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
                     ) {
                         item("Chat Style") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 isVip = true,
                                 onClick = {
                                     // 检查是否已登录
@@ -194,34 +202,64 @@ fun ChatMorePanel(
                         }
 
                         item("Reset") {
-                            MorePanelItem(
-                                onClick = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer { alpha = if (hasUserMessages) 1f else 0.4f },
+                            ) {
+                                MorePanelItem(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
+                                            "click_type" to "reset",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis()
+                                        )
+                                        if (hasUserMessages && IntySetting.isLogin()) {
+                                            showResetConfirmDialog = true
+                                        }
+                                    },
+                                    icon = {
+                                        Image(
+                                            painter = painterResource(R.drawable.icon_reset_chat),
+                                            contentDescription = "reset",
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    },
+                                    text = { Text(stringResource(R.string.str_reset)) },
+                                )
+                            }
+                        }
 
-                                    FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
-                                        "click_type" to "reset",
-                                        "agent_id" to (agentInfo?.id ?: ""),
-                                        "timestamp" to System.currentTimeMillis()
+                        item("Call") {
+                            MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CALL,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "call",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
                                     )
-                                    // 检查是否已登录
-                                    if (IntySetting.isLogin()) {
-                                        // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
-                                        // 相当于重新开始和agent初次聊天
-                                        showResetConfirmDialog = true
-                                    }
+                                    onCall()
                                 },
                                 icon = {
                                     Image(
-                                        painter = painterResource(R.drawable.icon_reset_chat),
-                                        contentDescription = "reset",
+                                        imageVector = Icons.Rounded.Call,
+                                        contentDescription = "call",
+                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 },
-                                text = { Text(stringResource(R.string.str_reset)) },
+                                text = { Text(stringResource(R.string.call)) },
                             )
                         }
 
                         item("Change outfit") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     FirebaseManager.logEvent(
                                         FirebaseManager.Events.CHAT_MORE_CLICK,
@@ -250,6 +288,7 @@ fun ChatMorePanel(
 
                         item("Feedback") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     // 检查是否已登录
                                     if (
@@ -282,6 +321,7 @@ fun ChatMorePanel(
 
                         item("Report") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     // 检查是否已登录
                                     if (
@@ -316,31 +356,6 @@ fun ChatMorePanel(
                                     )
                                 },
                                 text = { Text(stringResource(R.string.str_report)) },
-                            )
-                        }
-
-                        item("Call") {
-                            MorePanelItem(
-                                onClick = {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CALL,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "call",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    onCall()
-                                },
-                                icon = {
-                                    Image(
-                                        imageVector = Icons.Rounded.Call,
-                                        contentDescription = "call",
-                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                },
-                                text = { Text(stringResource(R.string.call)) },
                             )
                         }
                     }
@@ -461,12 +476,29 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                 )
         ) {
             Column() {
-                Text(
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    text = stringResource(R.string.chat_reset_tips),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-                )
+                Column(
+                    modifier =
+                        Modifier.padding(
+                            horizontal = UiConfigs.Padding.ScreenHorizontal,
+                            vertical = UiConfigs.Padding.DialogEdge,
+                        )
+                ) {
+                    Text(
+                        color = Color.White,
+                        fontSize = UiConfigs.Typography.BodyLarge,
+                        text = stringResource(R.string.chat_reset_tips),
+                    )
+                    Spacer(Modifier.height(UiConfigs.Spacing.Small))
+                    Text(
+                        color = UiConfigs.Colors.VipSecondaryText,
+                        fontSize = UiConfigs.Typography.Support,
+                        text =
+                            stringResource(
+                                R.string.chat_reset_cost_hint,
+                                BoostConfig.CHAT_RESET_COST,
+                            ),
+                    )
+                }
                 HorizontalDivider(thickness = .5.dp, color = Color(0xFF201731))
                 Row {
                     TextButton(

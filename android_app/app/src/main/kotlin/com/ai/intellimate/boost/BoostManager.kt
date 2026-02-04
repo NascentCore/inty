@@ -99,6 +99,16 @@ object BoostManager {
         return repo.deductPoints(BoostConfig.UNLOCK_VIP_AGENT_COST)
     }
 
+    /**
+     * 扣除积分（用于重置等消耗场景）。
+     *
+     * @return 积分不足时返回 false
+     */
+    suspend fun deductPoints(points: Int): Boolean {
+        val repo = repository ?: throw BoostException(BoostError.NotInitialized)
+        return repo.deductPoints(points)
+    }
+
     /** 检查积分奖励领取 */
     suspend fun checkClaimReward() {
         claimDailyRewardLogin()
