@@ -331,6 +331,7 @@
     <string name="report_button_content_description">Report inappropriate content</string>
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
+    <string name="chat_more_change_outfit">Change outfit</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate</string>
     <string name="upload_from_gallery">Upload</string>
