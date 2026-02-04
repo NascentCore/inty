@@ -513,6 +513,8 @@ object FirebaseManager {
         const val PURCHASE = FirebaseAnalytics.Event.PURCHASE
 
         // 业务自定义事件
+        const val SUBSCRIPTION_PAGE_VIEW ="subscription_page_view"
+        const val SUBSCRIPTION_CTA_CLICK = "subscription_cta_click"
         const val USER_LOGOUT = "user_logout"
         const val MESSAGE_SENT = "message_sent"
         const val MESSAGE_SEND_SUCCESS = "message_send_success"

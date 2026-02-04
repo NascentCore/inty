@@ -105,8 +105,8 @@ fun AppNavHost(
             if (agentId != null) {
                 VoiceCallScreen(
                     onBack = { navController.popBackStack() },
-                    onVip = { navController.navigate(Routes.Me.VipCenter) },
-                    onVipMoreInfo = { navController.navigate(Routes.Me.VipCenter) },
+                    onVip = { navController.navigate(Routes.Me.vipCenter("voice_call")) },
+                    onVipMoreInfo = { navController.navigate(Routes.Me.vipCenter("voice_call")) },
                     agentId = agentId,
                 )
             }

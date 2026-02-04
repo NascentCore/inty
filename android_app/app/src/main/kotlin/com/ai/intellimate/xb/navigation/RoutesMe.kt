@@ -5,7 +5,7 @@ object RoutesMe {
     const val Settings = "settings"
 
     /** VIP订阅中心页面路由 */
-    const val VipCenter = "vip_center"
+    const val VipCenter = "vip_center?pageSource={pageSource}"
 
     /** 签到页面路由 */
     const val CheckIn = "check_in"
@@ -17,6 +17,8 @@ object RoutesMe {
     const val SubsManagement = "subs_management"
 
     const val ReportPage = "report_page/{isFeedback}/{targetType}/{targetId}"
+
+    fun vipCenter(pageSource: String) = "vip_center?pageSource=${pageSource}"
 
     fun reportPage(isFeedback: Boolean, targetType: String = "USER", targetId: String = "") =
         "report_page/${isFeedback}/${targetType}/${targetId}"

@@ -79,7 +79,7 @@
 - **积分解锁**：`ChatViewModel.chatUnlockByCredits()`  
   - 调用 `BoostManager.unlockVipAgent()` 扣减 `BoostConfig.UNLOCK_VIP_AGENT_COST`（10）积分；不足则 Toast「Credits not enough!」  
   - 成功则 `characterRepository.unlockAgentByCredits(agentId)`，将 `last_unlock_by_credits` 设为当日。  
-- **订阅解锁**：弹窗内「订阅」按钮执行 `navController.navigate(Routes.Me.VipCenter)`，用户完成订阅后 `VipStatusHelper.isUserVip()` 为 true，`VipAgentLockType` 会变为 `NONE`。
+- **订阅解锁**：弹窗内「订阅」按钮执行 `navController.navigate(Routes.Me.vipCenter("chat_vip_agent_unlock"))`，用户完成订阅后 `VipStatusHelper.isUserVip()` 为 true，`VipAgentLockType` 会变为 `NONE`。
 
 ### 2.3 相关实现位置
 

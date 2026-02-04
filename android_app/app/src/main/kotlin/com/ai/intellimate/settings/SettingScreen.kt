@@ -314,7 +314,7 @@ private fun SupportAndHelpSection(
                     //                    SubsManageActivity.launch(context)
                     navController.navigate(Routes.Me.SubsManagement)
                 } else {
-                    navController.navigate(Routes.Me.VipCenter)
+                    navController.navigate(Routes.Me.vipCenter("settings"))
                 }
             },
         )

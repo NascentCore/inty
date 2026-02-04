@@ -9,6 +9,7 @@ import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
@@ -175,7 +176,7 @@ fun ChatMorePanel(
                                             showSheet = true
                                         } else {
                                             // 去会员中心
-                                            navController.navigate(Routes.Me.VipCenter)
+                                            navController.navigate(Routes.Me.vipCenter("chat_more_panel"))
                                             onDismiss() // 要关闭掉panel
                                         }
                                     }
@@ -194,6 +195,12 @@ fun ChatMorePanel(
                         item("Reset") {
                             MorePanelItem(
                                 onClick = {
+
+                                    FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
+                                        "click_type" to "reset",
+                                        "agent_id" to (agentInfo?.id ?: ""),
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
                                     // 检查是否已登录
                                     if (IntySetting.isLogin()) {
                                         // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息

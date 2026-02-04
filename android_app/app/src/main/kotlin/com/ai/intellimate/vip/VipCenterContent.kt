@@ -1,6 +1,8 @@
 package com.ai.intellimate.vip
 
+import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import android.app.Activity
 import android.content.Context
@@ -59,6 +61,7 @@ fun VipCenterContent(
     //    onClose: () -> Unit,
     //    onPurchase: () -> Unit,
     viewModel: VipCenterViewModel = viewModel(),
+    pageFrom: String? = null
 ) {
     val plans by viewModel.plansFlow.collectAsState()
     val selectedPlanIndex by viewModel.selectedPlanIndex.collectAsState()
@@ -86,6 +89,14 @@ fun VipCenterContent(
                 "${it.googleProductId}:${it.price}:${it.currencyCode}:${it.priceAmountMicros}"
             }
         }
+
+    LaunchedEffect(Unit) {
+        PageTrackingHelper.trackPageView("subscriptionPage")
+
+        FirebaseManager.Events.SUBSCRIPTION_PAGE_VIEW.logEvent(
+            "page_source" to (pageFrom ?: "unknown")
+        )
+    }
 
     LaunchedEffect(plansKey) {
         if (plans.isNotEmpty()) {
@@ -150,7 +161,18 @@ fun VipCenterContent(
                         plans = plans,
                         selectedIndex = selectedPlanIndex,
                         isSubscribed = vipStatus.isSubscribed,
-                        onPlanSelected = { index -> viewModel.selectPlan(index) },
+                        onPlanSelected = { index ->
+                            viewModel.selectPlan(index)
+
+                            FirebaseManager.Events.SUBSCRIPTION_CTA_CLICK.logEvent(
+                                "click_type" to when(index) {
+                                    0 -> "monthly"
+                                    1 -> "quarterly"
+                                    2 -> "annually"
+                                    else -> "unknown"
+                                }
+                            )
+                        },
                     )
                 }
 

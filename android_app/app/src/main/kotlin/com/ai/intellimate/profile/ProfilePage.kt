@@ -301,17 +301,13 @@ private fun ProfileHeader(
             onCancel = { showSubscribeDialog = false },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.PROFILE_UPGRADE)
+                    navController.navigate(Routes.Me.vipCenter("profile_upgrade"))
                 }
                 showSubscribeDialog = false
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.PROFILE_UPGRADE)
+                    navController.navigate(Routes.Me.vipCenter("profile_upgrade"))
                 }
                 showSubscribeDialog = false
             },
@@ -527,9 +523,7 @@ private fun ProfileHeader(
                 purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
                 expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
                 onClick = {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                        VipCenterActivity.launch(context,
-                    // VipCenterActivity.PROFILE_UPGRADE)
+                    navController.navigate(Routes.Me.vipCenter("profile_upgrade"))
                 },
             )
         }
