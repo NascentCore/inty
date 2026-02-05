@@ -533,7 +533,15 @@ fun ExploreContent(
                         }
                     }
 
-                    item { Spacer(Modifier.height(16.dp)) }
+                    // 底部留白 ≥ Back to top 按钮高度 + 与 Explore More 的间距，避免二者重叠
+                    item {
+                        Spacer(
+                            Modifier.height(
+                                UiConfigs.ChatPage.FloatingScrollButton.ButtonSize +
+                                    UiConfigs.Spacing.MediumPlus,
+                            ),
+                        )
+                    }
                 }
 
                 // 复用 Chat 的回到顶部按钮样式与交互：不在顶部时显示，点击平滑滚动回第一个 item。
