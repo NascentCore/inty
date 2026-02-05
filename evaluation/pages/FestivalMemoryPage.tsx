@@ -210,8 +210,7 @@ export const FestivalMemoryPage: React.FC = () => {
       dataIndex: "run_at_hour",
       key: "run_at_hour",
       width: 110,
-      render: (v: number | null) =>
-        v != null ? `${v}:00` : "-",
+      render: (v: number | null) => (v != null ? `${v}:00` : "-"),
     },
     {
       title: "最近执行",
@@ -226,7 +225,8 @@ export const FestivalMemoryPage: React.FC = () => {
       dataIndex: "prompt",
       key: "prompt",
       ellipsis: true,
-      render: (v: string) => (v ? (v.length > 60 ? `${v.slice(0, 60)}...` : v) : "-"),
+      render: (v: string) =>
+        v ? (v.length > 60 ? `${v.slice(0, 60)}...` : v) : "-",
     },
     {
       title: "启用",
@@ -256,7 +256,9 @@ export const FestivalMemoryPage: React.FC = () => {
             icon={<PlayCircleOutlined />}
             loading={runLoading}
             disabled={!!row.last_run_at}
-            title={row.last_run_at ? "该配置已执行过，不可再次立即执行" : undefined}
+            title={
+              row.last_run_at ? "该配置已执行过，不可再次立即执行" : undefined
+            }
             onClick={() => handleRun(row)}
           >
             立即执行
@@ -286,7 +288,8 @@ export const FestivalMemoryPage: React.FC = () => {
         }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          仅对在节日当天 0 点至次日 4 点（UTC）28 小时内用户消息达 30 条以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
+          仅对在节日当天 0 点至次日 4 点（UTC）28 小时内用户消息达 30 条以上的
+          (用户, 角色) 组合抽取节日回忆并写入 memory
           表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。
         </Text>
         <Table
@@ -347,7 +350,10 @@ export const FestivalMemoryPage: React.FC = () => {
               onChange={(d) => setFormRunAtDate(d)}
               style={{ width: "100%", marginTop: 4 }}
             />
-            <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: 12, marginTop: 4, display: "block" }}
+            >
               不能早于节日日期；定时任务每 5 分钟扫描，到点后执行一次
             </Text>
           </div>
@@ -380,7 +386,9 @@ export const FestivalMemoryPage: React.FC = () => {
                 checked={formEnabled}
                 onChange={(e) => setFormEnabled(e.target.checked)}
               />
-              <Text style={{ marginLeft: 8 }}>启用（定时任务会执行该配置）</Text>
+              <Text style={{ marginLeft: 8 }}>
+                启用（定时任务会执行该配置）
+              </Text>
             </label>
           </div>
         </Space>

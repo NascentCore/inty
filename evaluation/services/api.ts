@@ -1386,7 +1386,10 @@ export const festivalMemoryApi = {
     configId: number,
     data: import("../types").FestivalMemoryConfigUpdate,
   ): Promise<import("../types").FestivalMemoryConfigItem> =>
-    apiClient.put(`/evaluation/admin/festival-memory-configs/${configId}`, data),
+    apiClient.put(
+      `/evaluation/admin/festival-memory-configs/${configId}`,
+      data,
+    ),
 
   deleteConfig: (configId: number): Promise<null> =>
     apiClient.delete(`/evaluation/admin/festival-memory-configs/${configId}`),
