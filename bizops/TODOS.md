@@ -1,5 +1,13 @@
 # 商业运营推进
 
+## 深链接从 https://intellimate.app 到 android app
+
+TODO：调研如何开始 @亚雄
+
+https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/deeplinks?selectedVersionCode=3173
+
+<img width="800" height="1724" alt="image" src="https://github.com/user-attachments/assets/6158016d-7975-40b7-ba93-1dcb94181639" />
+
 ## 指标
 
 ### 卸载率
