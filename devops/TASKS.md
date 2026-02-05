@@ -1,5 +1,9 @@
 # 与运维相关的任务
 
+- [ ] 创建新的 dev-intellimate GCE VM 实例
+  - [ ] 将 inty-dev 实例迁移到该实例上，需要修改 DNS 映射
+  - [ ] 将 self-hosted runner 迁移到 dev-intellimate GCE VM 实例上
+
 - [ ] 在数据库实例中，打开流式数据同步，从而保证副本中的数据实时性
   <img width="800" height="228" alt="image" src="https://github.com/user-attachments/assets/dbcee2db-7ee4-4f9e-af77-74eada343efe" />
 
