@@ -93,16 +93,44 @@ class PushWorker:
             logger.error(f"启动推送服务失败: {str(e)}")
             raise
 
-    def stop(self) -> None:
-        """停止推送服务"""
+    async def _stop_async(self) -> None:
+        """异步停止：停调度器与缓存清理，取消其余任务并等待至多 SHUTDOWN_WAIT 秒，避免 to_thread/DB 长时间阻塞退出。"""
         if not self.is_running:
             return
-
+        SHUTDOWN_WAIT = 5.0
         try:
+            from app.services.cache_service import cache_service
+
+            cache_service.stop_cleanup_task()
+            push_scheduler_service.stop()
+            loop = asyncio.get_running_loop()
+            current = asyncio.current_task(loop)
+            pending = [
+                t
+                for t in asyncio.all_tasks(loop)
+                if t is not current and not t.done()
+            ]
+            for t in pending:
+                t.cancel()
+            if pending:
+                await asyncio.wait(pending, timeout=SHUTDOWN_WAIT)
+            self.is_running = False
+            logger.info("推送服务已停止")
+        except Exception as e:
+            logger.error(f"停止推送服务失败: {str(e)}")
+            self.is_running = False
+
+    def stop(self) -> None:
+        """同步停止（仅用于未启动或 _stop_async 不可用时的兜底）。"""
+        if not self.is_running:
+            return
+        try:
+            from app.services.cache_service import cache_service
+
+            cache_service.stop_cleanup_task()
             push_scheduler_service.stop()
             self.is_running = False
             logger.info("推送服务已停止")
-
         except Exception as e:
             logger.error(f"停止推送服务失败: {str(e)}")
 
@@ -118,6 +146,11 @@ class PushWorker:
             # 如果服务未启用，直接返回
             if not started:
                 return
+
+            # 启动缓存清理任务，避免 user_cache/agent_cache 无限增长
+            from app.services.cache_service import cache_service
+
+            await cache_service.start_cleanup_task()
 
             # 创建关闭事件
             self.shutdown_event = asyncio.Event()
@@ -138,7 +171,7 @@ class PushWorker:
             logger.error(f"推送服务运行失败: {str(e)}")
             raise
         finally:
-            self.stop()
+            await self._stop_async()
 
 
 def setup_signal_handlers(worker: PushWorker, loop: asyncio.AbstractEventLoop) -> None:
@@ -187,4 +220,18 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # 不用 asyncio.run()：其退出时会 _cancel_all_tasks 并 gather 等待，若 job 卡在 async I/O 会一直不退出
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        logger.info("收到键盘中断，退出")
+    except asyncio.CancelledError:
+        logger.info("服务被取消，退出")
+    except Exception as e:
+        logger.error(f"推送服务异常退出: {str(e)}")
+        sys.exit(1)
+    finally:
+        # 不调用 shutdown_asyncgens()：会再次 run_until_complete 并驱动事件循环，可能继续执行卡在 I/O 的已取消任务导致不退出
+        loop.close()
