@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
@@ -60,6 +60,21 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
 
+MINUTES_PER_HOUR = 60
+TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##Time Context"
+TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
+    "- This time reflects the user's local time, not the assistant's.",
+    "- Use it only as context for the user's situation and daily rhythm.",
+    "- Do not claim to need sleep or be offline.",
+]
+
+
+class TimeContext(TypedDict, total=False):
+    local_time: str
+    timezone: str
+    utc_offset_minutes: int
+
+
 INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX = "##IntelliMate User Manual\n"
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -75,6 +90,40 @@ def _load_intellimate_user_manual() -> str:
         line for line in raw.splitlines() if not line.lstrip().startswith(">")
     ]
     return "\n".join(filtered_lines).strip()
+
+
+def _format_utc_offset_minutes(offset_minutes: int) -> str:
+    sign = "+" if offset_minutes >= 0 else "-"
+    total_minutes = abs(offset_minutes)
+    hours, minutes = divmod(total_minutes, MINUTES_PER_HOUR)
+    return f"UTC{sign}{hours:02d}:{minutes:02d}"
+
+
+def _build_time_context_prompt(time_context: Optional[TimeContext]) -> Optional[str]:
+    if not time_context:
+        return None
+
+    lines = [TIME_CONTEXT_SYSTEM_PROMPT_TITLE]
+
+    local_time = time_context.get("local_time")
+    if local_time:
+        lines.append(f"- User local time: {local_time}")
+
+    timezone = time_context.get("timezone")
+    if timezone:
+        lines.append(f"- User timezone: {timezone}")
+
+    utc_offset_minutes = time_context.get("utc_offset_minutes")
+    if isinstance(utc_offset_minutes, int):
+        lines.append(
+            f"- UTC offset: {_format_utc_offset_minutes(utc_offset_minutes)}"
+        )
+
+    if len(lines) == 1:
+        return None
+
+    lines.extend(TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE)
+    return "\n".join(lines)
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -355,7 +404,10 @@ class Agent:
         )
 
     def build_system_messages(
-        self, user_profile: str, chat_settings: models.chat_settings.ChatSettings
+        self,
+        user_profile: str,
+        chat_settings: models.chat_settings.ChatSettings,
+        time_context: Optional[TimeContext] = None,
     ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
         user_name = self._extract_user_name_from_profile(user_profile)
@@ -400,6 +452,10 @@ class Agent:
 
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
+
+        time_context_prompt = _build_time_context_prompt(time_context)
+        if time_context_prompt:
+            system_messages.append(SystemMessage(content=time_context_prompt))
 
         if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
@@ -824,6 +880,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        time_context: Optional[TimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -882,7 +939,7 @@ class Agent:
                 }
 
                 system_messages = self.build_system_messages(
-                    user_profile, chat_settings
+                    user_profile, chat_settings, time_context
                 )
 
                 messages: list[BaseMessage] = system_messages + all_messages
@@ -1120,6 +1177,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        time_context: Optional[TimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -1175,7 +1233,7 @@ class Agent:
                 }
 
                 system_messages = self.build_system_messages(
-                    user_profile, chat_settings
+                    user_profile, chat_settings, time_context
                 )
 
                 messages_list: list[BaseMessage] = system_messages + all_messages
@@ -1279,6 +1337,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        time_context: Optional[TimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -1311,6 +1370,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                time_context,
                 model_override,
             )
             return result
@@ -1327,6 +1387,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         chat_settings: models.chat_settings.ChatSettings = None,
+        time_context: Optional[TimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
@@ -1350,6 +1411,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                time_context,
                 model_override,
             )
             return result
