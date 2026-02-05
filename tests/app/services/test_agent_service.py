@@ -319,7 +319,8 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
 
 
 @pytest.mark.asyncio
-async def test_get_recommended_agents_paginated_superuser_includes_private(db_session):
+async def test_get_recommended_agents_paginated_excludes_private_always(db_session):
+    """推荐列表始终只返回公开角色，超级用户也不会看到私有角色。"""
     test_id = str(uuid.uuid4())[:6]
 
     public_agent = models.Agent(
@@ -371,4 +372,4 @@ async def test_get_recommended_agents_paginated_superuser_includes_private(db_se
     )
     super_ids = {agent.id for agent in super_page.list}
     assert public_agent.id in super_ids
-    assert private_agent.id in super_ids
+    assert private_agent.id not in super_ids

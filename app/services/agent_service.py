@@ -21,7 +21,6 @@ from app.core.agent.prompt_template import (
     has_template_variable,
     render_prompt_jinja2_template,
 )
-from app.core.user_privilege.superuser_check import is_superuser
 from app.external_services.gcs import (
     append_filename_suffix,
     download_from_gcs,
@@ -579,16 +578,14 @@ def get_deterministic_random_order(sort_seed: str):
     return func.md5(func.concat(models.Agent.id, sort_seed))
 
 
-def _select_agents_with_sizes(*, include_private: bool) -> select:
+def _select_agents_with_sizes() -> select:
     avatar_resource = models.Resource.__table__.alias("avatar_resource")
     background_resource = models.Resource.__table__.alias("background_resource")
     conditions = [
         models.Agent.deleted_at.is_(None),
         models.User.is_superuser == True,  # 只返回超级用户创建的角色
+        models.Agent.visibility == AgentVisibility.PUBLIC,  # 推荐列表不返回私有角色
     ]
-    if not include_private:
-        # Public ones, users can create private agents
-        conditions.append(models.Agent.visibility == AgentVisibility.PUBLIC)
     return (
         select(
             models.Agent,
@@ -630,8 +627,6 @@ async def get_balanced_score_based_agents(
     page_size: int,
     sort_seed: str = "",
     current_user_id: Optional[str] = None,  # pylint: disable=unused-argument
-    *,
-    include_private: bool = False,
 ) -> List[models.Agent]:
     """
     简化的平衡权重排序：score * 2 + random(0-100)
@@ -641,7 +636,7 @@ async def get_balanced_score_based_agents(
 
     # 平衡权重排序查询，同时获取头像和背景图的尺寸信息
     query = (
-        _select_agents_with_sizes(include_private=include_private)
+        _select_agents_with_sizes()
         .order_by(
             (
                 # score * 2 + random(0-100)
@@ -690,15 +685,12 @@ async def get_recommended_agents_paginated(
                 status_code=400, detail="Page size parameter must be between 1-100"
             )
 
-        include_private = is_superuser(current_user)
-
-        # 构建基础查询条件，只返回超级用户创建的角色
+        # 构建基础查询条件：只返回超级用户创建的公开角色，不返回私有角色
         base_conditions = [
             models.Agent.deleted_at.is_(None),
             models.User.is_superuser == True,
+            models.Agent.visibility == AgentVisibility.PUBLIC,
         ]
-        if not include_private:
-            base_conditions.append(models.Agent.visibility == AgentVisibility.PUBLIC)
         base_query = (
             select(models.Agent)
             .join(models.User, models.Agent.creator_id == models.User.id)
@@ -719,7 +711,6 @@ async def get_recommended_agents_paginated(
                 page_size,
                 sort_seed,
                 current_user.id,
-                include_private=include_private,
             )
             # 保持使用原来的总数计算（基于基础查询条件）
         else:
@@ -742,7 +733,7 @@ async def get_recommended_agents_paginated(
 
             # 获取分页数据，同时获取头像和背景图的尺寸信息
             data_query = (
-                _select_agents_with_sizes(include_private=include_private)
+                _select_agents_with_sizes()
                 .offset(skip)
                 .limit(page_size)
                 .order_by(*order_by_clauses)
