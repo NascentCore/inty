@@ -5,8 +5,13 @@
 1. 重启 GCE VM
 2. 所有 docker 容器应该自动重启
 3. 检查 app.inty.cc
-4. 重启 GitHub self-hosted runner
-5. 确保 https://github.com/NascentCore/inty/actions/workflows/dify_chat_cron.yaml https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml 正常运行
+4. 重启 GitHub self-hosted runner，使用 gcp web ssh 登录
+   ```bash
+   cd github-self-hosted-actions-runner
+   nohup ./run.sh &
+   tail -f nohup.out # 观察日至输出，确保服务正常启动
+   ```
+6. 确保 https://github.com/NascentCore/inty/actions/workflows/dify_chat_cron.yaml https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml 正常运行
 
 ## 修改角色背景图片
 
