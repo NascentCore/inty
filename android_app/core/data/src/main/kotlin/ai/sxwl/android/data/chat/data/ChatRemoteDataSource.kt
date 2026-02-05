@@ -84,7 +84,7 @@ class ChatRemoteDataSource {
         return if (DebugBackendEndpointStore.isRuntimeOverrideSupported()) {
             DebugBackendEndpointStore.getUserTimeContextReportingEnabled()
         } else {
-            true
+            false
         }
     }
 

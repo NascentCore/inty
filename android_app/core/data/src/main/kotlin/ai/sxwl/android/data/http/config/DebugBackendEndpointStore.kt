@@ -73,8 +73,8 @@ object DebugBackendEndpointStore {
     }
 
     fun getUserTimeContextReportingEnabled(): Boolean {
-        if (!isRuntimeOverrideSupported()) return true
-        return prefs.getBoolean(KEY_USER_TIME_CONTEXT_REPORTING, true)
+        if (!isRuntimeOverrideSupported()) return false
+        return prefs.getBoolean(KEY_USER_TIME_CONTEXT_REPORTING, false)
     }
 
     fun persistUserTimeContextReportingEnabled(enabled: Boolean) {
