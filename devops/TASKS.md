@@ -1,5 +1,7 @@
 # 与运维相关的任务
 
+- [ ] 对接飞书 MCAP <https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/mcp_integration/mcp_introduction>
+
 - [ ] 创建新的 dev-intellimate GCE VM 实例
   - [ ] 调查故障诱因
   - [ ] 将 inty-dev 实例迁移到该实例上，需要修改 DNS 映射
