@@ -10,6 +10,7 @@ from app.core.agent.agent import get_sync_engine
 from app.models.memory import Memory
 
 MEMORY_TYPE_USER_COMMON = "user_common"
+MEMORY_TYPE_FESTIVAL = "festival"
 
 
 def get_user_memory_for_prompt_sync(
@@ -56,3 +57,42 @@ async def get_user_memory_for_prompt_async(
     if not rows:
         return ""
     return "\n\n".join(r[0] for r in rows if r[0])
+
+
+async def get_festival_memories_for_user_agent(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> list[dict]:
+    """
+    获取指定用户与指定角色的节日记忆列表，供角色详情 features.festival_memories 使用。
+    返回列表元素：{"festival_date": "YYYY-MM-DD", "festival_name": str, "memory": str}
+    """
+    stmt = (
+        select(
+            Memory.festival_date,
+            Memory.festival_name,
+            Memory.content,
+        )
+        .where(
+            Memory.user_id == user_id,
+            Memory.agent_id == agent_id,
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+        )
+        .order_by(Memory.festival_date.asc())
+    )
+    result = await db.execute(stmt)
+    rows = result.fetchall()
+    out = []
+    for row in rows:
+        festival_date, festival_name, content = row
+        if festival_date is None or festival_name is None or content is None:
+            continue
+        out.append(
+            {
+                "festival_date": festival_date.isoformat()
+                if hasattr(festival_date, "isoformat")
+                else str(festival_date),
+                "festival_name": festival_name,
+                "memory": content,
+            }
+        )
+    return out

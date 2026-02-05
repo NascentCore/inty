@@ -9,8 +9,10 @@ from app.schemas.agent import (
 from app.schemas.agent import (
     AgentRecommendationResponse as AgentRecommendationResponse,
 )
+from app.schemas.agent import AgentFeatures as AgentFeatures
 from app.schemas.agent import AgentUpdate as AgentUpdate
 from app.schemas.agent import CreatorAgentStats as CreatorAgentStats
+from app.schemas.agent import FestivalMemoryItem as FestivalMemoryItem
 from app.schemas.agent import (
     GenerateBackgroundAnimatedRequest as GenerateBackgroundAnimatedRequest,
 )

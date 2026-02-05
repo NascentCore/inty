@@ -751,3 +751,39 @@ export interface ReportsListResponse {
   items: ReportItem[];
   total: number;
 }
+
+// 节日记忆配置与执行
+export interface FestivalMemoryConfigItem {
+  id: number;
+  festival_name: string;
+  festival_date: string;
+  prompt: string;
+  enabled: boolean;
+}
+
+export interface FestivalMemoryConfigCreate {
+  festival_name: string;
+  festival_date: string;
+  prompt: string;
+  enabled?: boolean;
+}
+
+export interface FestivalMemoryConfigUpdate {
+  festival_name?: string;
+  festival_date?: string;
+  prompt?: string;
+  enabled?: boolean;
+}
+
+export interface FestivalMemoryExtractionRunRequest {
+  config_id?: number;
+  festival_name?: string;
+  festival_date?: string;
+  prompt?: string;
+}
+
+export interface FestivalMemoryExtractionRunResponse {
+  total_pairs: number;
+  success_count: number;
+  failed_count: number;
+}

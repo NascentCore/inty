@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Tuple
 
-from google.genai import types
 from loguru import logger
 from sqlalchemy import delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,11 +21,12 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory, MemoryExtractionLog
 from app.services.chat_history_service import get_chat_history_connection
 from app.services.chat_service import generate_session_id
-from app.utils.gemini import get_genai_client
+from app.utils.openrouter_memory import (
+    DEFAULT_MEMORY_EXTRACTION_MODEL,
+    call_openrouter_for_extraction,
+)
 
 MEMORY_TYPE_USER_COMMON = "user_common"
-
-DEFAULT_MEMORY_EXTRACTION_MODEL = "gemini-2.0-flash"
 
 _MAX_IN_PARAMS = 5000
 
@@ -291,38 +291,16 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
     start_time = time.perf_counter()
     try:
         model_name = cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
-        client = get_genai_client()
-        contents = [
-            types.Content(role="user", parts=[types.Part.from_text(text=full_prompt)])
-        ]
-        config = types.GenerateContentConfig(
-            temperature=0.3,
-            max_output_tokens=4000,
+        full_analysis, prompt_tokens, completion_tokens = (
+            await call_openrouter_for_extraction(
+                full_prompt,
+                model=model_name,
+                max_tokens=4000,
+                temperature=0.3,
+            )
         )
-        response = client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config,
-        )
-        if hasattr(response, "prompt_feedback") and response.prompt_feedback:
-            pf = response.prompt_feedback
-            if hasattr(pf, "block_reason") and pf.block_reason:
-                raise ValueError(f"记忆抽取请求被安全过滤器阻止: {pf.block_reason}")
-        if not response.candidates or len(response.candidates) == 0:
-            raise ValueError("Gemini 未返回任何候选结果")
-        candidate = response.candidates[0]
-        finish_reason = getattr(candidate, "finish_reason", None)
-        if finish_reason and finish_reason != "STOP":
-            if finish_reason == "SAFETY":
-                raise ValueError("记忆抽取被安全过滤器阻止")
-        if not candidate.content or not candidate.content.parts:
-            raise ValueError("候选结果中没有内容")
-        full_analysis = ""
-        for part in candidate.content.parts:
-            if hasattr(part, "text") and part.text:
-                full_analysis += part.text
-        if not full_analysis:
-            raise ValueError("无法从响应中提取文本")
+        if not full_analysis or len(full_analysis.strip()) < 10:
+            raise ValueError("无法从响应中提取文本或内容过短")
         part1 = _extract_part1_summary(full_analysis)
     except Exception as e:
         logger.warning(f"记忆抽取 LLM 调用失败 user_id={user_id}: {e}")
@@ -343,19 +321,6 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
         return
 
     duration_seconds = time.perf_counter() - start_time
-    usage = getattr(response, "usage_metadata", None)
-    prompt_tokens = None
-    completion_tokens = None
-    if usage is not None:
-        # Vertex AI UsageMetadata: promptTokenCount, candidatesTokenCount
-        # https://docs.cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/GenerateContentResponse#UsageMetadata
-        prompt_tokens = getattr(usage, "prompt_token_count", None) or getattr(
-            usage, "promptTokenCount", None
-        )
-        completion_tokens = getattr(usage, "candidates_token_count", None) or getattr(
-            usage, "candidatesTokenCount", None
-        )
-
     extracted_at = datetime.now(timezone.utc)
     # 删除该用户 user_common、agent_id 为 NULL 的旧记忆
     await db.execute(

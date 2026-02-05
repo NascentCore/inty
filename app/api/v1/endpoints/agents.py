@@ -44,6 +44,7 @@ from app.schemas.response import (
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
+from app.services import memory_service
 from app.services.resource_service import async_create_image_resource
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
 from app.utils.image import AspectRatio, ImageFormat
@@ -262,12 +263,20 @@ async def get_agent(
     """
     Get AI agent by ID
     """
-    agent = await agent_service.get_agent(
+    agent_orm = await agent_service.get_agent(
         db, agent_id=agent_id, current_user_id=current_user.id
     )
-    if not agent:
+    if not agent_orm:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return agent
+    agent_schema = schemas.Agent.model_validate(agent_orm)
+    festival_list = await memory_service.get_festival_memories_for_user_agent(
+        db, current_user.id, agent_id
+    )
+    if festival_list:
+        agent_schema.features = schemas.AgentFeatures(
+            festival_memories=[schemas.FestivalMemoryItem(**item) for item in festival_list]
+        )
+    return agent_schema
 
 
 @router.put(
