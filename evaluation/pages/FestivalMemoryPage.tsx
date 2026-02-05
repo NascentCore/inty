@@ -255,6 +255,8 @@ export const FestivalMemoryPage: React.FC = () => {
             size="small"
             icon={<PlayCircleOutlined />}
             loading={runLoading}
+            disabled={!!row.last_run_at}
+            title={row.last_run_at ? "该配置已执行过，不可再次立即执行" : undefined}
             onClick={() => handleRun(row)}
           >
             立即执行
