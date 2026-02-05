@@ -43,6 +43,10 @@ def create_user(
 
     if existing_user:
         logger.warning(f"Admin user already exists with ID: {user_id}")
+        if existing_user.is_superuser != is_superuser:
+            existing_user.is_superuser = is_superuser
+            db.commit()
+            db.refresh(existing_user)
         created_user = existing_user
     else:
         # Create new admin user

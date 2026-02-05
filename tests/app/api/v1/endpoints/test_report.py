@@ -6,6 +6,8 @@
 - 使用 reason_ids 创建举报（向后兼容，旧 API）
 - 使用 reason_codes 创建反馈（新 API）
 - 使用 reason_ids 创建反馈（向后兼容，旧 API）
+
+Report 相关接口仅对超级用户开放，测试前需将当前用户临时提升为超级用户。
 """
 
 import pytest
@@ -14,6 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.report import Report, ReportStatus, ReportType
+from app.models.user import User
 from tests.app.api.v1.endpoints.conftest import integration_client
 
 
@@ -35,6 +38,27 @@ def _get_reporter_id(integration_client):
     user_data = user_response.json()
     assert user_data.get("code") == 200, f"Get user info returned error: {user_data}"
     return user_data["data"]["id"]
+
+
+@pytest.fixture
+def report_superuser(integration_client, db_session):
+    """将当前集成测试用户临时提升为超级用户（/report 接口仅对超级用户开放）。"""
+    user_response = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me"
+    )
+    assert user_response.status_code == 200, user_response.text
+    user_id = user_response.json()["data"]["id"]
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+    db_user.is_superuser = True
+    db_session.commit()
+    try:
+        yield
+    finally:
+        db_user = db_session.query(User).filter(User.id == user_id).first()
+        if db_user is not None:
+            db_user.is_superuser = False
+            db_session.commit()
 
 
 def _find_report(db_session, agent_id, reporter_id):
@@ -64,7 +88,7 @@ def _find_feedback(db_session, reporter_id):
     )
 
 
-def test_create_report_with_reason_codes(integration_client, db_session):
+def test_create_report_with_reason_codes(integration_client, db_session, report_superuser):
     """测试使用 reason_codes 创建举报（新 API）"""
     # 创建一个 agent 作为被举报的目标
     agent_id = integration_client.create_agent(
@@ -116,7 +140,7 @@ def test_create_report_with_reason_codes(integration_client, db_session):
     ), f"Report type should be None or REPORT, got {report.report_type}"
 
 
-def test_create_report_with_reason_ids(integration_client, db_session):
+def test_create_report_with_reason_ids(integration_client, db_session, report_superuser):
     """测试使用 reason_ids 创建举报（向后兼容，旧 API）"""
     # 创建一个 agent 作为被举报的目标
     agent_id = integration_client.create_agent(
@@ -172,7 +196,7 @@ def test_create_report_with_reason_ids(integration_client, db_session):
     ), "Report type should be None or REPORT for legacy reports"
 
 
-def test_create_feedback_with_reason_codes(integration_client, db_session):
+def test_create_feedback_with_reason_codes(integration_client, db_session, report_superuser):
     """测试使用 reason_codes 创建反馈（新 API）"""
     # 准备反馈数据，使用新的 reason_codes API
     # 注意：feedback 模式下，target_id 和 target_type 可以为空字符串（Android 端的实现）
@@ -233,7 +257,7 @@ def test_create_feedback_with_reason_codes(integration_client, db_session):
     ), f"Feedback status should be PENDING, got {feedback.status}"
 
 
-def test_create_feedback_with_reason_ids(integration_client, db_session):
+def test_create_feedback_with_reason_ids(integration_client, db_session, report_superuser):
     """测试使用 reason_ids 创建反馈（向后兼容，旧 API）
 
     验证 feedback 使用 reason_ids 时，会被正确转换为 feedback 的 reason_codes。
@@ -300,7 +324,7 @@ def test_create_feedback_with_reason_ids(integration_client, db_session):
     ), f"Feedback status should be PENDING, got {feedback.status}"
 
 
-def test_create_feedback_with_reason_id_zero(integration_client, db_session):
+def test_create_feedback_with_reason_id_zero(integration_client, db_session, report_superuser):
     """测试使用 reason_id 0 (OTHER) 创建反馈
 
     验证 feedback 使用 reason_id 0 时，会被正确转换为 "OTHER"。
@@ -346,7 +370,7 @@ def test_create_feedback_with_reason_id_zero(integration_client, db_session):
     ), f"Feedback report_type should be FEEDBACK, got {feedback.report_type}"
 
 
-def test_delete_report_by_reporter(integration_client, db_session):
+def test_delete_report_by_reporter(integration_client, db_session, report_superuser):
     """测试举报人可以删除自己提交的举报记录"""
     agent_id = integration_client.create_agent(
         name="Test Delete Report Agent",

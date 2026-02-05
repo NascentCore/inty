@@ -17,8 +17,14 @@ import {
   Descriptions,
   message,
   Empty,
+  Input,
 } from "antd";
-import { ReloadOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  ReloadOutlined,
+  EyeOutlined,
+  DeleteOutlined,
+  CopyOutlined,
+} from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { reportApi } from "../services/api";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
@@ -80,6 +86,15 @@ const TYPE_LABELS: Record<ReportType, string> = {
   FEEDBACK: "反馈",
 };
 
+/** 生成该举报详情的永久链接（用于分享或书签） */
+function getReportDetailUrl(reportId: string): string {
+  const base =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${window.location.pathname}`
+      : "";
+  return `${base}#report-feedback?reportId=${encodeURIComponent(reportId)}`;
+}
+
 export const ReportFeedbackPage: React.FC = () => {
   // 筛选状态
   const [reportType, setReportType] = useState<ReportType | undefined>(
@@ -130,10 +145,43 @@ export const ReportFeedbackPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // 查看详情
+  // 永久链接：若 URL 中带有 reportId，则拉取该举报并自动打开详情弹窗
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#report-feedback")) return;
+    const params = new URLSearchParams(hash.split("?")[1] || "");
+    const reportId = params.get("reportId");
+    if (!reportId) return;
+    reportApi
+      .get(reportId)
+      .then((item) => {
+        setSelectedItem(item);
+        setDetailVisible(true);
+      })
+      .catch((err) => {
+        console.error("根据链接加载举报详情失败:", err);
+        message.error("无法加载该举报，可能已被删除或链接无效");
+      });
+  }, []);
+
+  // 查看详情：打开弹窗并同步 URL hash，使当前地址即为该举报的永久链接
   const handleViewDetail = (record: ReportItem) => {
     setSelectedItem(record);
     setDetailVisible(true);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", getReportDetailUrl(record.id));
+    }
+  };
+
+  const copyReportLink = async (reportId: string) => {
+    const url = getReportDetailUrl(reportId);
+    try {
+      await navigator.clipboard.writeText(url);
+      message.success("链接已复制到剪贴板");
+    } catch {
+      message.error("复制失败，请手动复制链接");
+    }
   };
 
   const deleteRecord = async (record: ReportItem) => {
@@ -354,7 +402,13 @@ export const ReportFeedbackPage: React.FC = () => {
       <Modal
         title="举报/反馈详情"
         open={detailVisible}
-        onCancel={() => setDetailVisible(false)}
+        onCancel={() => {
+          setDetailVisible(false);
+          if (typeof window !== "undefined") {
+            const base = `${window.location.origin}${window.location.pathname}`;
+            window.history.replaceState(null, "", `${base}#report-feedback`);
+          }
+        }}
         footer={null}
         width={700}
       >
@@ -362,6 +416,22 @@ export const ReportFeedbackPage: React.FC = () => {
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="ID" span={2}>
               {selectedItem.id}
+            </Descriptions.Item>
+            <Descriptions.Item label="永久链接" span={2}>
+              <Space.Compact style={{ width: "100%" }}>
+                <Input
+                  readOnly
+                  value={getReportDetailUrl(selectedItem.id)}
+                  style={{ fontSize: 12 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<CopyOutlined />}
+                  onClick={() => copyReportLink(selectedItem.id)}
+                >
+                  复制链接
+                </Button>
+              </Space.Compact>
             </Descriptions.Item>
             <Descriptions.Item label="类型">
               <Tag color={TYPE_COLORS[selectedItem.report_type || "REPORT"]}>

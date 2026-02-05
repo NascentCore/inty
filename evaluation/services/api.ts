@@ -1312,6 +1312,10 @@ export const reportApi = {
   }): Promise<import("../types").ReportsListResponse> =>
     apiClient.get("/report/", params),
 
+  // 按 id 获取单条举报详情（用于永久链接）
+  get: (reportId: string): Promise<import("../types").ReportItem> =>
+    apiClient.get(`/report/${reportId}`),
+
   // 删除举报/反馈记录
   delete: (reportId: string): Promise<null> =>
     apiClient.delete(`/report/${reportId}`),
