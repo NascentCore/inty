@@ -76,7 +76,10 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 
-/** 聊天输入框组件 */
+/** 聊天输入框组件
+ * @param isVoiceInputMode 当前是否为语音输入模式（与 ChatPage 左右滑动共享，保持滑动前后一致）
+ * @param onVoiceInputModeChange 语音/文字模式切换回调
+ */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ChatInput(
@@ -85,6 +88,8 @@ fun ChatInput(
     onToggleMorePanel: () -> Unit,
     showMorePanel: Boolean,
     bottomPadding: Dp,
+    isVoiceInputMode: Boolean,
+    onVoiceInputModeChange: (Boolean) -> Unit,
     focusRequester: FocusRequester? = null,
     onFocusChange: (Boolean) -> Unit = {},
 ) {
@@ -100,7 +105,6 @@ fun ChatInput(
     val context = LocalContext.current
     val isSpeechRecognitionAvailable =
         remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
-    var isVoiceInputMode by remember { mutableStateOf(false) }
     var isVoiceRecording by remember { mutableStateOf(false) }
     var pendingEnterVoiceModeAfterPermission by remember { mutableStateOf(false) }
     val voicePermissionState =
@@ -108,7 +112,7 @@ fun ChatInput(
             if (granted && pendingEnterVoiceModeAfterPermission) {
                 if (showMorePanel) onToggleMorePanel()
                 if (isKeyboardVisible) keyboardController?.hide()
-                isVoiceInputMode = true
+                onVoiceInputModeChange(true)
                 pendingEnterVoiceModeAfterPermission = false
             } else if (!granted) {
                 pendingEnterVoiceModeAfterPermission = false
@@ -204,7 +208,7 @@ fun ChatInput(
 
     LaunchedEffect(voicePermissionState.status.isGranted) {
         if (!voicePermissionState.status.isGranted && isVoiceInputMode) {
-            isVoiceInputMode = false
+            onVoiceInputModeChange(false)
             isVoiceRecording = false
         }
     }
@@ -213,7 +217,7 @@ fun ChatInput(
     LifecycleResumeEffect(Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             if (isVoiceInputMode || isVoiceRecording) {
-                isVoiceInputMode = false
+                onVoiceInputModeChange(false)
                 isVoiceRecording = false
             }
         }
@@ -259,7 +263,7 @@ fun ChatInput(
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
                 if (isVoiceInputMode) {
-                    isVoiceInputMode = false
+                    onVoiceInputModeChange(false)
                     // 切换回文字模式后延迟一帧再请求焦点并拉键盘，确保 IntySmallTextField 已重组
                     scope.launch {
                         yield()
@@ -280,7 +284,7 @@ fun ChatInput(
                     if (isKeyboardVisible) {
                         keyboardController?.hide()
                     }
-                    isVoiceInputMode = true
+                    onVoiceInputModeChange(true)
                 }
             }
             val onVoicePressStart: () -> Boolean = onVoicePressStart@{

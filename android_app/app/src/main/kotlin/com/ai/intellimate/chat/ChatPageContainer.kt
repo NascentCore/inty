@@ -124,6 +124,8 @@ fun ChatPageContainer(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var autoFocusEnabled by rememberSaveable { mutableStateOf(false) }
+    // 左右滑动时保持输入模式一致：上一页语音则下一页也语音，上一页文字则下一页也文字
+    var isVoiceInputMode by remember { mutableStateOf(false) }
 
     // 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
@@ -243,13 +245,13 @@ fun ChatPageContainer(
                             isKeyboardVisibleChatPage = nextState
                         }
                     },
-                    // 为角色应援/Boost 功能
-                    // 参数用途：shouldShowBoostSheetOnOpen 控制是否在打开聊天页面时自动显示 BoostSheet 弹窗
-                    // 这里默认不自动显示，因为从 Explore 页面点击 "Boost" 按钮跳转到聊天页面时，会自动打开 BoostSheet
+                    // 为角色应援/Boost 功能：这里默认不自动显示 BoostSheet
                     shouldShowBoostSheetOnOpen = false,
                     debugAgentIndex = currentPage,
                     onCall = { navController.navigate(Routes.Chat.voiceCall(agent.id)) },
                     refreshMessageCount = 1,
+                    isVoiceInputMode = isVoiceInputMode,
+                    onVoiceInputModeChange = { isVoiceInputMode = it },
                 )
             }
         }
