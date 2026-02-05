@@ -70,6 +70,8 @@ async def create_festival_memory_config(
         festival_date=body.festival_date,
         prompt=body.prompt,
         enabled=body.enabled,
+        run_at_date=body.run_at_date,
+        run_at_hour=body.run_at_hour,
     )
     db.add(config)
     await db.commit()
@@ -119,6 +121,12 @@ async def update_festival_memory_config(
         config.prompt = body.prompt
     if body.enabled is not None:
         config.enabled = body.enabled
+    if body.run_at_date is not None:
+        config.run_at_date = body.run_at_date
+    if body.run_at_hour is not None:
+        config.run_at_hour = body.run_at_hour
+    if config.run_at_date is not None and config.festival_date is not None and config.run_at_date < config.festival_date:
+        raise HTTPException(status_code=400, detail="执行日期不能早于节日日期")
     await db.commit()
     await db.refresh(config)
     return schemas.APIResponse.success(data=FestivalMemoryConfigInDB.model_validate(config))

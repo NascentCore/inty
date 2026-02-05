@@ -759,6 +759,12 @@ export interface FestivalMemoryConfigItem {
   festival_date: string;
   prompt: string;
   enabled: boolean;
+  /** 执行日期，须不早于节日日期 */
+  run_at_date: string | null;
+  /** 执行时刻 UTC 小时 0-23 */
+  run_at_hour: number | null;
+  /** 最近一次被定时任务执行的时间 */
+  last_run_at: string | null;
 }
 
 export interface FestivalMemoryConfigCreate {
@@ -766,6 +772,8 @@ export interface FestivalMemoryConfigCreate {
   festival_date: string;
   prompt: string;
   enabled?: boolean;
+  run_at_date: string;
+  run_at_hour: number; // 0-23
 }
 
 export interface FestivalMemoryConfigUpdate {
@@ -773,6 +781,8 @@ export interface FestivalMemoryConfigUpdate {
   festival_date?: string;
   prompt?: string;
   enabled?: boolean;
+  run_at_date?: string;
+  run_at_hour?: number; // 0-23
 }
 
 export interface FestivalMemoryExtractionRunRequest {
