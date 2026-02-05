@@ -1,6 +1,7 @@
 # 与运维相关的任务
 
 - [ ] 创建新的 dev-intellimate GCE VM 实例
+  - [ ] 调查故障诱因
   - [ ] 将 inty-dev 实例迁移到该实例上，需要修改 DNS 映射
   - [ ] 将 self-hosted runner 迁移到 dev-intellimate GCE VM 实例上
 
