@@ -713,7 +713,6 @@ internal fun ChatPage(
                                             isGuideVisible = isGuideVisible,
                                             messageFontSizeSp = chatFontSizeSp,
                                         )
-                                        Spacer(Modifier.height(16.dp))
                                     }
                                 }
                                 is MessageItem.MessageIndex -> {
