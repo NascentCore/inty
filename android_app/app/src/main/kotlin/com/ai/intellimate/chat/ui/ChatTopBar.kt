@@ -4,13 +4,16 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,10 +40,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -55,6 +61,21 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.launch
+
+private const val VIP_TAG = "vip"
+
+/** 统一清洗标签，避免大小写与前缀差异影响判断结果。 */
+private fun normalizeTag(tag: String): String {
+    val trimmed = tag.trim()
+    if (trimmed.isEmpty()) return ""
+    return trimmed.removePrefix("#").lowercase()
+}
+
+/** 判断角色是否包含 VIP 标签。 */
+private fun isVipAgent(tags: List<String?>?): Boolean {
+    if (tags.isNullOrEmpty()) return false
+    return tags.filterNotNull().any { normalizeTag(it) == VIP_TAG }
+}
 
 /**
  * 收藏按钮组件
@@ -107,6 +128,63 @@ private fun FavoriteButton(
     }
 }
 
+/**
+ * VIP 角标组件
+ *
+ * 使用场景：
+ * - 聊天页面顶部栏展示 VIP 角色标识，与 Explore 页面视觉一致。
+ *
+ * 预期视觉效果：
+ * - 在容器左上角绘制高饱和黄色三角角标。
+ * - 角标内展示 “VIP” 文案，增强识别。
+ *
+ * 可配置项：
+ * - label: 角标文案（通常来自 string 资源）
+ * - contentDescription: 无障碍描述
+ * - cornerSize: 角标尺寸
+ * - textPaddingTop/textPaddingStart: 文案内边距
+ * - textSize: 文案大小
+ */
+@Composable
+private fun VipCornerBadge(
+    modifier: Modifier = Modifier,
+    label: String,
+    contentDescription: String,
+    cornerSize: Dp = UiConfigs.ChatTopBar.VipBadge.CornerSize,
+    textPaddingTop: Dp = UiConfigs.ChatTopBar.VipBadge.TextPaddingTop,
+    textPaddingStart: Dp = UiConfigs.ChatTopBar.VipBadge.TextPaddingStart,
+    textSize: TextUnit = UiConfigs.ChatTopBar.VipBadge.TextSize,
+) {
+    Box(
+        modifier =
+            modifier.size(cornerSize).semantics {
+                this.contentDescription = contentDescription
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val triangle =
+                Path().apply {
+                    moveTo(0f, 0f)
+                    lineTo(size.width, 0f)
+                    lineTo(0f, size.height)
+                    close()
+                }
+            drawPath(path = triangle, color = AppColors.VipHighlighterStrong)
+        }
+
+        Text(
+            text = label,
+            modifier =
+                Modifier.align(Alignment.TopStart)
+                    .padding(top = textPaddingTop, start = textPaddingStart),
+            fontSize = textSize,
+            fontWeight = FontWeight.Black,
+            color = AppColors.Background,
+            maxLines = 1,
+        )
+    }
+}
+
 /** 聊天页面顶部栏组件 */
 @Composable
 fun ChatTopBar(
@@ -122,6 +200,7 @@ fun ChatTopBar(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val isVip = remember(agentInfo.tags) { isVipAgent(agentInfo.tags) }
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮：showBackButton 为 true 时显示，样式与电话/更多按钮一致（半透明圆角背景），图标使用 R.drawable.back 与其他页面统一
@@ -139,7 +218,7 @@ fun ChatTopBar(
             }
             Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.BackButtonToAvatarSpacing))
         }
-        Row(
+        Box(
             modifier =
                 Modifier.background(
                         color = UiConfigs.ChatTopBar.BackgroundColor,
@@ -156,73 +235,89 @@ fun ChatTopBar(
                             }
                         }
                     },
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
-                modifier =
-                    Modifier.padding(UiConfigs.ChatTopBar.AvatarPadding)
-                        .size(avatarWidth)
-                        .clip(CircleShape),
-                model =
-                    ImageRequest.Builder(context)
-                        .data(getCdnImageUrl(agentInfo.avatar, width = 64))
-                        .build(),
-                placeholder = painterResource(R.drawable.img_default_avatar),
-                error = painterResource(R.drawable.img_default_avatar),
-                contentDescription = null,
-                alignment = Alignment.TopCenter,
-                contentScale = ContentScale.Crop,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    modifier =
+                        Modifier.padding(UiConfigs.ChatTopBar.AvatarPadding)
+                            .size(avatarWidth)
+                            .clip(CircleShape),
+                    model =
+                        ImageRequest.Builder(context)
+                            .data(getCdnImageUrl(agentInfo.avatar, width = 64))
+                            .build(),
+                    placeholder = painterResource(R.drawable.img_default_avatar),
+                    error = painterResource(R.drawable.img_default_avatar),
+                    contentDescription = null,
+                    alignment = Alignment.TopCenter,
+                    contentScale = ContentScale.Crop,
+                )
 
-            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.AvatarToContentSpacing))
+                Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.AvatarToContentSpacing))
 
-            val showPoints = earnedPoints != null
+                val showPoints = earnedPoints != null
 
-            // 名字区域 - 不使用 weight，让所有元素靠左对齐
-            Column {
-                // 能量点数区域，目前还未开放显示角色能量点数；需要不断跟踪角色跟用户聊天的共享点数
-                // 而不是角色总共的 credits，因为那样用户感觉没有实际的提升。
-                if (showPoints) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.EnergySavingsLeaf,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(UiConfigs.ChatTopBar.EnergyIconSize),
-                        )
+                // 名字区域 - 不使用 weight，让所有元素靠左对齐
+                Column {
+                    // 能量点数区域，目前还未开放显示角色能量点数；需要不断跟踪角色跟用户聊天的共享点数
+                    // 而不是角色总共的 credits，因为那样用户感觉没有实际的提升。
+                    if (showPoints) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Rounded.EnergySavingsLeaf,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(UiConfigs.ChatTopBar.EnergyIconSize),
+                            )
+                            Spacer(
+                                modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing)
+                            )
+                            Text(
+                                text =
+                                    stringResource(
+                                        id = R.string.energy_points_counter,
+                                        earnedPoints,
+                                    ),
+                                fontSize = UiConfigs.ChatTopBar.EnergyPointsFontSize,
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
                         Spacer(
-                            modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing)
-                        )
-                        Text(
-                            text =
-                                stringResource(id = R.string.energy_points_counter, earnedPoints),
-                            fontSize = UiConfigs.ChatTopBar.EnergyPointsFontSize,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium,
+                            modifier =
+                                Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing)
                         )
                     }
-                    Spacer(
-                        modifier = Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing)
+                    Text(
+                        text = agentInfo.name,
+                        fontSize = fontSize,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
-                    text = agentInfo.name,
-                    fontSize = fontSize,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+
+                // 名字与收藏按钮之间的间距 - 紧贴名字右侧
+                Spacer(modifier = Modifier.width(0.dp))
+
+                // 收藏按钮 - 移动到横幅内，名字的右侧
+                FavoriteButton(agentId = agentInfo.id, containerColor = Color.Transparent)
+
+                // 收藏按钮右侧内边距
+                Spacer(modifier = Modifier.width(4.dp))
             }
 
-            // 名字与收藏按钮之间的间距 - 紧贴名字右侧
-            Spacer(modifier = Modifier.width(0.dp))
-
-            // 收藏按钮 - 移动到横幅内，名字的右侧
-            FavoriteButton(agentId = agentInfo.id, containerColor = Color.Transparent)
-
-            // 收藏按钮右侧内边距
-            Spacer(modifier = Modifier.width(4.dp))
+            if (isVip) {
+                VipCornerBadge(
+                    modifier =
+                        Modifier.align(Alignment.TopStart)
+                            .clip(RoundedCornerShape(topStart = UiConfigs.ChatTopBar.CornerRadius)),
+                    label = stringResource(R.string.vip_badge_label),
+                    contentDescription =
+                        stringResource(R.string.vip_badge_content_description),
+                )
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))

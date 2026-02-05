@@ -629,6 +629,21 @@ object UiConfigs {
 
         /** 收藏按钮未激活状态颜色（白色） */
         val FavoriteInactiveTint = Color.White
+
+        /** VIP 角标配置 - 适用于聊天顶部栏的 VIP 标识 */
+        object VipBadge {
+            /** 角标尺寸（与顶部栏高度接近，保证视觉一致） */
+            val CornerSize = AvatarSize + AvatarPadding * 2
+
+            /** 角标文字顶部内边距 */
+            val TextPaddingTop = UiConfigs.Spacing.Tiny
+
+            /** 角标文字左侧内边距 */
+            val TextPaddingStart = UiConfigs.Spacing.Tiny
+
+            /** 角标文字大小 */
+            val TextSize = 11.sp
+        }
     }
 
     /** 聊天页面配置 - 适用于聊天页面的功能开关，如 Remix 按钮可见性等 */
