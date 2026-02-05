@@ -7,6 +7,7 @@ import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.ToastUtils
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -60,6 +61,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -204,6 +207,17 @@ fun ChatInput(
             isVoiceInputMode = false
             isVoiceRecording = false
         }
+    }
+
+    // 从后台回到前台时用系统 API 再查一次麦克风权限（应对「仅此次」在进程存活/重启后撤销时机因设备而异）
+    LifecycleResumeEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (isVoiceInputMode || isVoiceRecording) {
+                isVoiceInputMode = false
+                isVoiceRecording = false
+            }
+        }
+        onPauseOrDispose { }
     }
 
     LaunchedEffect(isVoiceInputMode) {
