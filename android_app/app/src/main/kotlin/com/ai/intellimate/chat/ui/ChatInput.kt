@@ -105,11 +105,15 @@ fun ChatInput(
         remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
     var isVoiceRecording by remember { mutableStateOf(false) }
     var pendingEnterVoiceModeAfterPermission by remember { mutableStateOf(false) }
+    val currentShowMorePanel = rememberUpdatedState(showMorePanel)
+    val currentOnToggleMorePanel = rememberUpdatedState(onToggleMorePanel)
+    val currentIsKeyboardVisible = rememberUpdatedState(isKeyboardVisible)
+    val currentKeyboardController = rememberUpdatedState(keyboardController)
     val voicePermissionState =
         rememberPermissionState(Manifest.permission.RECORD_AUDIO) { granted: Boolean ->
             if (granted && pendingEnterVoiceModeAfterPermission) {
-                if (showMorePanel) onToggleMorePanel()
-                if (isKeyboardVisible) keyboardController?.hide()
+                if (currentShowMorePanel.value) currentOnToggleMorePanel.value()
+                if (currentIsKeyboardVisible.value) currentKeyboardController.value?.hide()
                 SettingStateManager.updateChatInputMode(ChatInputMode.VOICE)
                 pendingEnterVoiceModeAfterPermission = false
             } else if (!granted) {
@@ -271,7 +275,8 @@ fun ChatInput(
                     }
                 } else {
                     if (!ensureVoiceInputReady()) {
-                        if (!voicePermissionState.status.isGranted) {
+                        // 仅在实际发起权限请求时设置 pending，避免语音不可用但未授权时在设置中授权后误进语音模式
+                        if (isSpeechRecognitionAvailable && !voicePermissionState.status.isGranted) {
                             pendingEnterVoiceModeAfterPermission = true
                         }
                         return@onVoiceToggleClick
