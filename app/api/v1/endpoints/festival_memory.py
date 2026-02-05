@@ -163,8 +163,9 @@ async def run_festival_memory_extraction(
         prompt = body.prompt
 
     pairs = await asyncio.to_thread(
-        festival_memory_service.get_pairs_with_min_rounds_sync,
-        festival_memory_service.FESTIVAL_MEMORY_MIN_ROUNDS,
+        festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
+        festival_date,
+        festival_memory_service.FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
     )
     total = len(pairs)
     success = 0

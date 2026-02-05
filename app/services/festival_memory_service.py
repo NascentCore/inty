@@ -5,7 +5,7 @@
 
 import asyncio
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Tuple
 
 from loguru import logger
@@ -25,13 +25,27 @@ from app.utils.openrouter_memory import (
 )
 
 _MAX_IN_PARAMS = 5000
-FESTIVAL_MEMORY_MIN_ROUNDS = 3
+FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW = 30
 
 
-def get_pairs_with_min_rounds_sync(min_rounds: int = FESTIVAL_MEMORY_MIN_ROUNDS) -> List[Tuple[str, str]]:
+def _window_for_festival_date(festival_date: date) -> Tuple[datetime, datetime]:
+    """节日当天 00:00 UTC 至次日 04:00 UTC，共 28 小时。返回 (window_start, window_end) 左闭右开。"""
+    window_start = datetime(
+        festival_date.year, festival_date.month, festival_date.day, 0, 0, 0, tzinfo=timezone.utc
+    )
+    window_end = window_start + timedelta(days=1) + timedelta(hours=4)
+    return (window_start, window_end)
+
+
+def get_pairs_with_min_rounds_in_window_sync(
+    festival_date: date,
+    min_rounds: int = FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
+) -> List[Tuple[str, str]]:
     """
-    同步筛选 (user_id, agent_id) 列表：仅包含该用户与该角色会话中用户消息数（排除开场白）>= min_rounds 的组合。
+    同步筛选 (user_id, agent_id)：仅包含在「节日当天 00:00 至次日 04:00 UTC」28 小时内，
+    该会话用户消息数（排除开场白）>= min_rounds 的组合。
     """
+    window_start, window_end = _window_for_festival_date(festival_date)
     db_url = global_config_loaded_from_config_yaml.database.url
     conn = psycopg.connect(db_url, autocommit=True)
     try:
@@ -62,9 +76,10 @@ def get_pairs_with_min_rounds_sync(min_rounds: int = FESTIVAL_MEMORY_MIN_ROUNDS)
                         ) AS user_message_count
                     FROM chat_history
                     WHERE session_id::text IN ({ph}) AND deleted_at IS NULL
+                        AND created_at >= %s AND created_at < %s
                     GROUP BY session_id
                     """,
-                    chunk,
+                    chunk + [window_start, window_end],
                 )
                 for row in cur.fetchall():
                     session_to_count[row[0]] = row[1] or 0
