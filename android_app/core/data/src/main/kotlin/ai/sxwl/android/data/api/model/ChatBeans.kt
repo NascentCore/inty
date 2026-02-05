@@ -29,6 +29,14 @@ data class SendMsgReq(
     val messages: List<MsgInfo> = listOf(),
     val model: String = "chatbot",
     val stream: Boolean = false,
+    @Json(name = "time_context") val timeContext: UserTimeContext? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class UserTimeContext(
+    @Json(name = "local_time") val localTime: String,
+    val timezone: String,
+    @Json(name = "utc_offset_minutes") val utcOffsetMinutes: Int,
 )
 
 @JsonClass(generateAdapter = true)

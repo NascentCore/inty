@@ -11,6 +11,7 @@ object DebugBackendEndpointStore {
     private const val PREF_NAME = "debug_network_config"
     private const val KEY_BASE_URL = "override_base_url"
     private const val KEY_REMIX_BUTTON_VISIBLE = "char_remix_button_visible"
+    private const val KEY_USER_TIME_CONTEXT_REPORTING = "chat_user_time_context_reporting"
 
     private val prefs by lazy {
         Utils.getApp().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -69,5 +70,27 @@ object DebugBackendEndpointStore {
         if (!prefs.contains(KEY_REMIX_BUTTON_VISIBLE)) return
         prefs.edit().remove(KEY_REMIX_BUTTON_VISIBLE).apply()
         LogUtils.i("DebugBackendEndpointStore", "Runtime remix button override cleared")
+    }
+
+    fun getUserTimeContextReportingEnabled(): Boolean {
+        if (!isRuntimeOverrideSupported()) return true
+        return prefs.getBoolean(KEY_USER_TIME_CONTEXT_REPORTING, true)
+    }
+
+    fun persistUserTimeContextReportingEnabled(enabled: Boolean) {
+        require(isRuntimeOverrideSupported()) {
+            "Runtime user time context override is only available for debug builds"
+        }
+        prefs.edit().putBoolean(KEY_USER_TIME_CONTEXT_REPORTING, enabled).apply()
+        LogUtils.i(
+            "DebugBackendEndpointStore",
+            "Runtime user time context reporting updated to $enabled",
+        )
+    }
+
+    fun clearUserTimeContextReportingOverride() {
+        if (!prefs.contains(KEY_USER_TIME_CONTEXT_REPORTING)) return
+        prefs.edit().remove(KEY_USER_TIME_CONTEXT_REPORTING).apply()
+        LogUtils.i("DebugBackendEndpointStore", "Runtime user time context override cleared")
     }
 }

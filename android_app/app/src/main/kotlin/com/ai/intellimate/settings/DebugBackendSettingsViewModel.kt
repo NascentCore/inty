@@ -27,6 +27,8 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val activeBaseUrl: String,
         // Remix 按钮可见性（仅在 debug 构建中有效）
         val remixButtonVisible: Boolean,
+        // 用户时间上下文上报（仅在 debug 构建中有效）
+        val userTimeContextReportingEnabled: Boolean,
     )
 
     val quickPresets =
@@ -48,10 +50,13 @@ class DebugBackendSettingsViewModel : ViewModel() {
     private fun createInitialState(): UiState {
         val activeBaseUrl = NetworkConfig.getBaseUrl()
         val remixButtonVisible = getRemixButtonEffectiveVisibility()
+        val userTimeContextReportingEnabled =
+            DebugBackendEndpointStore.getUserTimeContextReportingEnabled()
         return UiState(
             buildType = NetworkConfig.getCurrentBuildType().value,
             activeBaseUrl = activeBaseUrl,
             remixButtonVisible = remixButtonVisible,
+            userTimeContextReportingEnabled = userTimeContextReportingEnabled,
         )
     }
 
@@ -105,6 +110,13 @@ class DebugBackendSettingsViewModel : ViewModel() {
         _uiState.update { it.copy(remixButtonVisible = defaultVisibility) }
         // 通知全局状态变化
         RemixButtonVisibilityManager.updateVisibility(defaultVisibility)
+    }
+
+    fun toggleUserTimeContextReporting() {
+        val current = _uiState.value.userTimeContextReportingEnabled
+        val updated = !current
+        DebugBackendEndpointStore.persistUserTimeContextReportingEnabled(updated)
+        _uiState.update { it.copy(userTimeContextReportingEnabled = updated) }
     }
 }
 

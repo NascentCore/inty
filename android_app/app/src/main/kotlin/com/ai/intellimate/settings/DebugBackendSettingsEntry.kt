@@ -20,10 +20,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ai.intellimate.R
 
 private object Spacing {
     val ContentHorizontalPadding = 12.dp
@@ -102,6 +104,33 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             Spacer(Modifier.height(Spacing.SmallSpacer))
             TextButton(onClick = viewModel::resetRemixButtonOverride) {
                 Text(text = "恢复默认", color = Color.White)
+            }
+
+            Spacer(Modifier.height(Spacing.MediumSpacer * 2))
+            Text(
+                text = stringResource(R.string.settings_debug_user_time_context_title),
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text =
+                        if (uiState.userTimeContextReportingEnabled) {
+                            stringResource(R.string.settings_debug_user_time_context_on)
+                        } else {
+                            stringResource(R.string.settings_debug_user_time_context_off)
+                        },
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                )
+                Switch(
+                    checked = uiState.userTimeContextReportingEnabled,
+                    onCheckedChange = { viewModel.toggleUserTimeContextReporting() },
+                )
             }
         }
     }
