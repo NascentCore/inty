@@ -12,6 +12,7 @@ from app.models import Base
 # 对应关系与 Android 端老版本保持一致（参考 ReportViewModel.kt）：
 # 用来兼容旧版本的 android app，因为旧版本没有 reason_codes 字段
 # TODO: 2026/2/28 删除
+# @deprecated("2026/2/28", "使用 ReasonCode enum 枚举值代替")
 REASON_ID_TO_CODE = {
     1: "SENSITIVE_CONTENT",
     2: "MISINFORMATION",
@@ -25,6 +26,7 @@ REASON_ID_TO_CODE = {
 # 对应关系与 Android 端老版本保持一致（参考 ReportViewModel.kt）：
 # 用来兼容旧版本的 android app
 # TODO: 2026/2/28 删除
+# @deprecated("2026/2/28", "使用 ReasonCode enum 枚举值代替")
 FEEDBACK_REASON_ID_TO_CODE = {
     0: "OTHER",
     1: "CHAT_NOT_NATURAL",

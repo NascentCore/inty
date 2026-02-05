@@ -38,8 +38,7 @@ alembic -c "$ALEMBIC_CONFIG" upgrade head
 python scripts/init_subscription_plans_simple.py
 
 if [ "$DEV" = true ]; then
-  echo "Starting in development mode..."
-  python scripts/init_admin_user.py --user-id user-testing --is-superuser=false
+  echo "Starting in dev mode..."
   # 构建 evaluation 前端并拷贝到 app/static/evaluation（CI 中跳过，后端测试不依赖静态资源）
   # CI 由 GitHub Actions 自动设为 true，见：
   # https://docs.github.com/zh/actions/reference/workflows-and-actions/variables
@@ -50,6 +49,8 @@ if [ "$DEV" = true ]; then
     echo "CI detected, skipping evaluation frontend build."
     echo "CI 环境不需要提供评测 web UI"
   fi
+  python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
+  python scripts/seed_report_test_data.py
   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."

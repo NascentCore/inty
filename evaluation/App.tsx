@@ -73,7 +73,12 @@ interface NavigationItem {
 const AppContent: React.FC = () => {
   // 状态管理
   const [currentPage, setCurrentPage] = useState<PageKey>(() => {
-    // GEMINI: 从 localStorage 读取上次访问的页面，如果不存在则默认为 "evaluation"
+    if (
+      typeof window !== "undefined" &&
+      window.location.hash.startsWith("#report-feedback")
+    ) {
+      return "report-feedback";
+    }
     const savedPage = localStorage.getItem("lastVisitedPage");
     return (savedPage as PageKey) || "chat";
   });

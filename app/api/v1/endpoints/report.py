@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,11 +11,22 @@ from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.models.report import ReportStatus, ReportType
 from app.models.user import User
-from app.schemas.report import ReportCreate, ReportQuery, ReportsList, TargetType
+from app.schemas.report import ReportCreate, ReportOut, ReportQuery, ReportsList, TargetType
 from app.schemas.response import APIResponse
 from app.services import report_service
 
 router = APIRouter(prefix="/report", route_class=LoggerRoute)
+
+
+async def get_current_superuser(
+    current_user: User = Depends(deps.get_current_active_user),
+) -> User:
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="举报与反馈相关接口仅对超级用户开放",
+        )
+    return current_user
 
 
 @router.get("/", response_model=ReportsList, tags=[WEB_APP_TAG])
@@ -27,7 +38,7 @@ async def list_reports(
     skip: int = 0,
     limit: int = 50,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
 ):
     """查询 Report/Feedback 列表，支持按创建时间排序（order_by: created_at_desc 或 created_at_asc）"""
     query = ReportQuery(
@@ -42,11 +53,22 @@ async def list_reports(
     return ReportsList(items=items, total=total)
 
 
+@router.get("/{report_id}", response_model=ReportOut, tags=[WEB_APP_TAG])
+async def get_report(
+    report_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_superuser),
+):
+    """按 id 获取单条举报详情（用于永久链接打开）。"""
+    report = await report_service.get_report(db, report_id)
+    return ReportOut.model_validate(report)
+
+
 @router.post("/", response_model=APIResponse, tags=[WEB_APP_TAG, NOT_USED_TAG])
 async def create_report(
     report_in: ReportCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
 ):
     """Submit report"""
     try:
@@ -61,7 +83,7 @@ async def create_report(
 async def delete_report(
     report_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
 ):
     try:
         await report_service.delete_report(
