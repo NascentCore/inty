@@ -70,6 +70,35 @@ class GCSService:
             logger.exception("GCS上传异常详细信息:")
             return None
 
+    async def upload_live_chat_audio(
+        self,
+        user_id: str,
+        agent_id: str,
+        session_id: str,
+        wav_bytes: bytes,
+    ) -> Optional[str]:
+        """
+        上传 live chat 单路 WAV 到 GCS，路径为 {user_id}/{agent_id}/{session_id}.wav。
+        """
+        try:
+            path = f"live_chat/{user_id}/{agent_id}/{session_id}.wav"
+            logger.debug(
+                f"GCS 上传 live chat 音频: {path}, 大小: {len(wav_bytes)} bytes"
+            )
+            public_url = upload_to_gcs(
+                file_data=wav_bytes,
+                content_type="audio/wav",
+                bucket_name=self.bucket_name,
+                path=path,
+            )
+            if public_url:
+                logger.info(f"Live chat 音频上传成功: {path}")
+                return public_url
+            return None
+        except Exception as e:
+            logger.error(f"Live chat 音频上传失败: {str(e)}")
+            return None
+
     async def delete_voice_file(self, file_path: str) -> bool:
         """
         删除语音文件

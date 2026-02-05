@@ -9,11 +9,13 @@ import asyncio
 import base64
 import os
 import re
+import tempfile
 import time
 import uuid
 from collections import deque
+from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from google import genai
 from google.genai import types
@@ -23,9 +25,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.voice import tts_api as voice_tts_api
 from app.schemas.live_chat import LiveChatConfig, LiveChatStatus
 from app.services import agent_service, chat_history_service
 from app.services.chat_service import generate_session_id, get_or_create_chat_by_agent
+from app.services.gcs_service import GCSService
+from app.utils.audio import build_interleaved_pcm_24k
 
 # 语音通话默认音色映射（按性别选择 Gemini 预置音色）
 GENDER_TO_GEMINI_VOICE_MAPPING = {
@@ -74,6 +79,10 @@ class LiveSession:
     turn_latencies: List[float] = field(default_factory=list)
     current_turn_start_time: Optional[float] = None
     last_response_after_silence_ms: Optional[int] = None
+    # 按对话顺序累积的音频（"user" | "ai", bytes），用于保存单路 WAV 到 GCS
+    conversation_audio_chunks: List[Tuple[str, bytes]] = field(
+        default_factory=list, repr=False
+    )
 
     def get_latency_metrics(self) -> dict:
         """计算并返回延迟指标"""
@@ -657,6 +666,10 @@ class LiveChatService:
                                 and audio_data
                             ):
                                 session.pending_audio.append(bytes(audio_data))
+                                if session.config.save_history:
+                                    session.conversation_audio_chunks.append(
+                                        ("user", bytes(audio_data))
+                                    )
                         continue
 
                     if item_type == "activity_start":
@@ -695,6 +708,10 @@ class LiveChatService:
                             mime_type=f"audio/pcm;rate={self._config.send_sample_rate}",
                         )
                     )
+                    if session.config.save_history:
+                        session.conversation_audio_chunks.append(
+                            ("user", bytes(audio_data))
+                        )
             finally:
                 if session.receive_task is not None:
                     session.receive_task.cancel()
@@ -869,6 +886,10 @@ class LiveChatService:
                                 logger.debug(
                                     f"收到音频数据: {len(part.inline_data.data)} bytes"
                                 )
+                                if session.config.save_history:
+                                    session.conversation_audio_chunks.append(
+                                        ("ai", bytes(part.inline_data.data))
+                                    )
                                 await on_audio(part.inline_data.data)
 
                             # 兼容：如果未启用 output_audio_transcription，且模型确实返回文本 parts
@@ -998,13 +1019,20 @@ class LiveChatService:
         session: LiveSession,
         db: AsyncSession,
     ):
-        """保存语音对话到聊天历史"""
-        if not session.user_transcript_buffer and not session.ai_transcript_buffer:
+        """保存语音对话到聊天历史；若有音频则生成单路 WAV 写本地、上传 GCS、写表后删除本地文件。"""
+        has_transcript = bool(
+            session.user_transcript_buffer or session.ai_transcript_buffer
+        )
+        has_audio = bool(session.conversation_audio_chunks)
+        if not has_transcript and not has_audio:
             return
+
+        user_message_id: Optional[int] = None
+        ai_message_id: Optional[int] = None
 
         try:
             if session.user_transcript_buffer:
-                chat_history_service.add_user_message(
+                user_message_id = chat_history_service.add_user_message(
                     session.session_id,
                     session.user_transcript_buffer,
                     meta_data={
@@ -1017,7 +1045,7 @@ class LiveChatService:
                 )
 
             if session.ai_transcript_buffer:
-                chat_history_service.add_ai_message_sync(
+                ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session.session_id,
                     message=session.ai_transcript_buffer,
                     agent_id=session.agent_id,
@@ -1032,6 +1060,76 @@ class LiveChatService:
 
         except Exception as e:
             logger.error(f"保存对话历史失败: {str(e)}")
+            return
+
+        if not has_audio:
+            return
+
+        if user_message_id is None:
+            user_message_id = await chat_history_service.get_latest_user_message_id(
+                db, session.session_id
+            )
+        if ai_message_id is None:
+            ai_message_id = await chat_history_service.get_latest_ai_message_id(
+                db, session.session_id
+            )
+
+        temp_path: Optional[Path] = None
+        try:
+            pcm_24k = build_interleaved_pcm_24k(
+                session.conversation_audio_chunks,
+                user_sample_rate=self._config.send_sample_rate,
+                ai_sample_rate=self._config.receive_sample_rate,
+            )
+            if not pcm_24k:
+                return
+            wav_bytes = voice_tts_api._pcm_to_wav(
+                pcm_24k, mime_type="audio/L16;rate=24000"
+            )
+            temp_dir = self._config.audio_temp_dir or tempfile.gettempdir()
+            temp_path = Path(temp_dir) / (
+                f"live_chat_{session.session_id}_{uuid.uuid4().hex}.wav"
+            )
+            temp_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path.write_bytes(wav_bytes)
+            wav_for_upload = temp_path.read_bytes()
+
+            gcs_service = GCSService()
+            gcs_url = await gcs_service.upload_live_chat_audio(
+                str(session.user_id),
+                session.agent_id,
+                session.session_id,
+                wav_for_upload,
+            )
+            if not gcs_url:
+                logger.warning("Live chat 音频上传 GCS 未返回 URL，跳过写表")
+                return
+
+            total_duration = len(pcm_24k) / (self._config.receive_sample_rate * 2)
+            if user_message_id is not None:
+                await chat_history_service.update_message_audio_url(
+                    db,
+                    session.session_id,
+                    str(user_message_id),
+                    gcs_url,
+                    audio_duration=total_duration,
+                )
+            if ai_message_id is not None:
+                await chat_history_service.update_message_audio_url(
+                    db,
+                    session.session_id,
+                    str(ai_message_id),
+                    gcs_url,
+                    audio_duration=total_duration,
+                )
+        except Exception as e:
+            logger.error(f"保存 live chat 音频到 GCS 失败: {str(e)}")
+        finally:
+            if temp_path is not None and temp_path.exists():
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError as e:
+                    logger.debug(f"删除临时文件失败（忽略）: {e}")
 
     def _cleanup_session(self, session_id: str):
         """清理会话"""
