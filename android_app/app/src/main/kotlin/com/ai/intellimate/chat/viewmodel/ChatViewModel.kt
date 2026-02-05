@@ -43,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -943,6 +944,15 @@ class ChatViewModel : BaseVM() {
     /** 将预定义文案填入输入框（如更多面板「换装」），用户可编辑后发送。 */
     fun setInputMessage(text: String) {
         inputData.value = text
+    }
+
+    fun loadRecentMessages(count: Int) {
+        val agentId = _agentId.value ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            delay(1000)
+            chatMessageRepository.loadRecentMessages(agentId, maxOf(count, 20))
+        }
     }
 
     private fun setMessageVote(msgId: String, userVote: MessageEntity.UserVote) {

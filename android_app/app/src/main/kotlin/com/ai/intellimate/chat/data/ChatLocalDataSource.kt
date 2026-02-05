@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.data
 
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.chat.local.db.MessageUpdate
 import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
 import kotlinx.coroutines.flow.Flow
@@ -78,6 +79,10 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
 
     suspend fun appendMessages(messages: List<MessageEntity>) {
         chatMessageDao.upsert(messages)
+    }
+
+    suspend fun upsert(updates: List<MessageUpdate>) {
+        chatMessageDao.insertOrDrop(updates)
     }
 
     suspend fun setMessageVote(

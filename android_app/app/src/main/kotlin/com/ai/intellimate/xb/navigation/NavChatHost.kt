@@ -36,6 +36,8 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
         val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
         val shouldAutoFocusInput = backStackEntry.arguments?.getBoolean("shouldAutoFocusInput")
         val isDeleted = backStackEntry.arguments?.getBoolean("isDeleted") ?: false
+        val refreshCount = backStackEntry.savedStateHandle.get<Int>("messageCount") ?: 0
+
         LaunchedEffect(agentId) {
             val agent = AgentStore.getAgent(agentId = agentId)
             if (agentId != null) {
@@ -47,6 +49,8 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
                     chatViewModel.setAgentID(agentId)
                 }
             }
+
+            backStackEntry.savedStateHandle.remove<Int>("messageCount")
         }
 
         ChatScreen(
@@ -57,6 +61,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             shouldAutoFocusInput = shouldAutoFocusInput ?: true,
             onCall = { agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) } },
             fromPage = backStackEntry.arguments?.getString("fromPage"),
+            refreshMessageCount = refreshCount
         )
     }
 }

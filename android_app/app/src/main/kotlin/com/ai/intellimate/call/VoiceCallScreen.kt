@@ -91,19 +91,20 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun VoiceCallScreen(
-    onBack: () -> Unit,
+    onBack: (Int) -> Unit,
     onVip: () -> Unit,
     onVipMoreInfo: () -> Unit,
     agentId: String,
 ) {
 
-    VoiceCallScreen(onBack = onBack) { contentPadding ->
+    val viewModel = koinViewModel<VoiceCallViewModel>()
+
+    VoiceCallScreen(onBack = {onBack(viewModel.messageCount)}) { contentPadding ->
         // 权限请求Launcher
         val audioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
         val context = LocalContext.current
 
         if (audioPermissionState.status.isGranted) {
-            val viewModel = koinViewModel<VoiceCallViewModel>()
             val uiState by viewModel.uiState.collectAsState()
             val audioStreamPlayer = AudioStreamPlayer.getInstance()
             val audioRecordManager = AudioRecordManager.getInstance(context)
@@ -170,7 +171,7 @@ fun VoiceCallScreen(
             }
 
             VoiceCallContent(
-                onEnd = onBack,
+                onEnd = {onBack(viewModel.messageCount)},
                 uiState = uiState,
                 onMuteChange = viewModel::setMuted,
                 modifier = Modifier.padding(contentPadding).fillMaxSize(),
@@ -206,7 +207,7 @@ fun VoiceCallScreen(
                         dialogData,
                         onCancel = {
                             error = null
-                            onBack()
+                            onBack(viewModel.messageCount)
                         },
                         onSure = {
                             error = null
@@ -214,7 +215,7 @@ fun VoiceCallScreen(
                                 IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
                                     onVip()
                                 }
-                                else -> onBack()
+                                else -> onBack(viewModel.messageCount)
                             }
                         },
                         onMoreInfo = {
