@@ -28,6 +28,10 @@ import type {
   ReportStatus,
   ReportType,
 } from "../types";
+import {
+  REPORT_IMAGE_PREVIEW_SIZE,
+  REPORT_IMAGE_PREVIEW_STYLE,
+} from "../utils/reportImagePreview";
 
 const { Option } = Select;
 
@@ -407,9 +411,9 @@ export const ReportFeedbackPage: React.FC = () => {
                       <Image
                         key={index}
                         src={url}
-                        width={100}
-                        height={100}
-                        style={{ objectFit: "cover" }}
+                        width={REPORT_IMAGE_PREVIEW_SIZE}
+                        height={REPORT_IMAGE_PREVIEW_SIZE}
+                        style={REPORT_IMAGE_PREVIEW_STYLE}
                       />
                     ))}
                   </Space>
