@@ -1,6 +1,7 @@
 # IntelliMate Android app
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `android_app/`。
+- 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
+  [MMKV](https://github.com/Tencent/MMKV) 已计划废弃
 
 ## 功能
 
