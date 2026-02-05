@@ -60,10 +60,8 @@
 
 > **关于 `/recommend` 端点的行为说明**：
 >
-> - 该端点只返回**超级用户**（`is_superuser=True`）创建的角色，不会返回普通用户创建的角色
-> - **普通用户**调用时：只返回超级用户创建的**公开**（`visibility=PUBLIC`）角色
-> - **超级用户**调用时：返回所有超级用户创建的**公开和私有**角色，包括其他超级用户创建的私有角色
-> - 无论调用者身份如何，都不会返回普通用户创建的私有角色
+> - 该端点只返回**超级用户**（`is_superuser=True`）创建的**公开**（`visibility=PUBLIC`）角色
+> - 不返回私有角色，也不返回普通用户创建的角色；调用者身份不影响结果
 
 ### 聊天 (Chat)
 
@@ -219,18 +217,6 @@
 | `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/session-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
 
-### 节日记忆（管理员，Evaluation Admin）
-
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v1/evaluation/admin/festival-memory-configs` | GET | `app/api/v1/endpoints/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-configs` | POST | `app/api/v1/endpoints/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | PUT | `app/api/v1/endpoints/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | DELETE | `app/api/v1/endpoints/festival_memory.py` |
-| `/api/v1/evaluation/admin/festival-memory-extraction/run` | POST | `app/api/v1/endpoints/festival_memory.py` |
-
-> 以上端点仅超级用户可访问。节日记忆通过角色详情 `GET /api/v1/ai/agents/{agent_id}` 的响应字段 `features.festival_memories` 返回。
-
 ## API v2 端点 (`/api/v2`)
 
 ### 聊天 (Chat)
@@ -247,7 +233,5 @@
 
 > **关于 `/recommend` 端点的行为说明**：
 >
-> - 该端点只返回**超级用户**（`is_superuser=True`）创建的角色，不会返回普通用户创建的角色
-> - **普通用户**调用时：只返回超级用户创建的**公开**（`visibility=PUBLIC`）角色
-> - **超级用户**调用时：返回所有超级用户创建的**公开和私有**角色，包括其他超级用户创建的私有角色
-> - 无论调用者身份如何，都不会返回普通用户创建的私有角色
+> - 该端点只返回**超级用户**（`is_superuser=True`）创建的**公开**（`visibility=PUBLIC`）角色
+> - 不返回私有角色，也不返回普通用户创建的角色；调用者身份不影响结果
