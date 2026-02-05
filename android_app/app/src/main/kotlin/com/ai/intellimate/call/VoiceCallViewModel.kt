@@ -62,6 +62,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     // 日志节流：记录上次打印警告的时间
     private var lastWarningLogTime = 0L
     private val warningLogInterval = 5000L // 5秒内最多打印一次警告
+    var messageCount = 0
 
     init {
         // 启动队列消费协程
@@ -161,6 +162,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                                 )
                             }
                         }
+
+                        CallType.TRANSCRIPT, CallType.USER_TRANSCRIPT -> messageCount ++
 
                         else -> {}
                     }

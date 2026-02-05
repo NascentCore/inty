@@ -205,6 +205,7 @@ internal fun ChatPage(
     shouldShowBoostSheetOnOpen: Boolean = false,
     debugAgentIndex: Int? = null,
     fromPage: String? = null,
+    refreshMessageCount: Int = 0,
 ) {
 
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
@@ -272,10 +273,11 @@ internal fun ChatPage(
         }
     }
 
-    LifecycleStartEffect(Unit) {
-        messages.refresh()
-
-        onStopOrDispose {}
+    LaunchedEffect(refreshMessageCount, isCurrentPage) {
+        if (isCurrentPage && refreshMessageCount > 0) {
+            LogUtils.d("chatPage: refreshCount = $refreshMessageCount")
+            chatViewModel.loadRecentMessages(refreshMessageCount)
+        }
     }
 
     LaunchedEffect(

@@ -9,6 +9,7 @@ import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
+import ai.sxwl.android.data.chat.local.db.toUpdate
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.utils.LogUtils
 import androidx.paging.ExperimentalPagingApi
@@ -158,6 +159,23 @@ class ChatMessageRepository(
 
     suspend fun getMessage(agentId: String, msgId: String) =
         localDataSource.getMessage(agentId, msgId)
+
+    suspend fun loadRecentMessages(agentId: String, count: Int) {
+        val result = runCatching {
+            LogUtils.d("加载最近消息:Count=$count")
+            remoteDataSource.getMessages(agentId, count, 0)
+        }.getOrElse {
+            HttpResult.Failure(it.message ?: "unknown error", -1)
+        }
+
+        if (result is HttpResult.Success) {
+            val entities = result.data.messages?.map { it.toUpdate(agentId) }.orEmpty()
+
+            if (entities.isNotEmpty()) {
+                localDataSource.upsert(entities)
+            }
+        }
+    }
 
     suspend fun setMessageVote(
         agentId: String,

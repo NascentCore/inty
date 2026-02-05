@@ -1,5 +1,6 @@
 package com.ai.intellimate.xb.navigation
 
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -104,7 +105,11 @@ fun AppNavHost(
 
             if (agentId != null) {
                 VoiceCallScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = {
+                        LogUtils.d("Call:语音聊天消息数=$it")
+                        navController.previousBackStackEntry?.savedStateHandle?.set("messageCount", it)
+                        navController.popBackStack()
+                    },
                     onVip = { navController.navigate(Routes.Me.vipCenter("voice_call")) },
                     onVipMoreInfo = { navController.navigate(Routes.Me.vipCenter("voice_call")) },
                     agentId = agentId,
