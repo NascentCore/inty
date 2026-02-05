@@ -265,7 +265,8 @@ class PushSchedulerService:
 
         try:
             if self.scheduler:
-                self.scheduler.shutdown(wait=True)
+                # wait=False 避免死锁：stop() 与 job 同处一事件循环，wait=True 会阻塞循环导致 job 无法结束
+                self.scheduler.shutdown(wait=False)
             self.is_running = False
             logger.info("推送调度器已停止")
 
