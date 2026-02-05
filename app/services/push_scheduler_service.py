@@ -416,11 +416,12 @@ class PushSchedulerService:
             if not due_configs:
                 logger.debug("[节日记忆抽取] 无到点配置，跳过")
                 return
-            pairs = await asyncio.to_thread(
-                festival_memory_service.get_pairs_with_min_rounds_sync,
-                festival_memory_service.FESTIVAL_MEMORY_MIN_ROUNDS,
-            )
             for config in due_configs:
+                pairs = await asyncio.to_thread(
+                    festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
+                    config.festival_date,
+                    festival_memory_service.FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
+                )
                 async with AsyncSessionLocal() as db:
                     ran_ok = True
                     for user_id, agent_id in pairs:

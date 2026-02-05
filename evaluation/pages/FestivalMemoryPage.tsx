@@ -284,7 +284,7 @@ export const FestivalMemoryPage: React.FC = () => {
         }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          仅对「用户 + 角色」聊天轮数 ≥ 30 的组合抽取节日回忆并写入 memory
+          仅对在节日当天 0 点至次日 4 点（UTC）28 小时内用户消息达 30 条以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
           表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。
         </Text>
         <Table
