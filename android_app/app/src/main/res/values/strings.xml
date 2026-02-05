@@ -431,6 +431,10 @@
     <string name="explore_search_hint_text">Enter a name or #tag and tap search</string>
     <string name="explore_search_clear_desc">Clear search text</string>
 
+    <!-- Explore Loading States -->
+    <string name="explore_loading_more_hint">More characters to load...</string>
+    <string name="explore_loading_explore_more">Explore More</string>
+
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>
     <string name="tab_messages">Messages</string>

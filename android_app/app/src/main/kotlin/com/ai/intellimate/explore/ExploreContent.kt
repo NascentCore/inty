@@ -524,6 +524,7 @@ fun ExploreContent(
 
                         // 加载状态指示器
                         item(span = { GridItemSpan(maxLineSpan) }) {
+                            // TODO: 传入 onExploreMore，跳转到官方小助手以拓展角色发现；参考 项目管理/Explore 页面限制角色数量.md，开场白填充「你似乎没有在 Explore 页面找到你心仪的交往对象？他们还缺少什么呢？」。当前未传导致点击 Explore More 无响应。
                             ExploreLoadingStates(
                                 onRetry = { lazyPagingItems.retry() },
                                 lazyPagingItems,
@@ -533,7 +534,15 @@ fun ExploreContent(
                         }
                     }
 
-                    item { Spacer(Modifier.height(16.dp)) }
+                    // 底部留白 ≥ Back to top 按钮高度 + 与 Explore More 的间距，避免二者重叠
+                    item {
+                        Spacer(
+                            Modifier.height(
+                                UiConfigs.ChatPage.FloatingScrollButton.ButtonSize +
+                                    UiConfigs.Spacing.MediumPlus,
+                            ),
+                        )
+                    }
                 }
 
                 // 复用 Chat 的回到顶部按钮样式与交互：不在顶部时显示，点击平滑滚动回第一个 item。

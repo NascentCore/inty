@@ -78,6 +78,9 @@ object UiConfigs {
         /** 主要按钮高度 */
         val PrimaryButtonHeight = 50.dp
 
+        /** CTA 按钮高度（Create My IntelliMate、Explore More 等） */
+        val CtaButtonHeight = 56.dp
+
         /** 聊天对话框最小高度 */
         val ChatDialogMinHeight = 430.dp
 

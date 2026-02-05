@@ -102,6 +102,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.components.IntelliMateCtaButton
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.ui.UiConfigs
@@ -982,17 +983,17 @@ fun CreateRolePage(
             val scope = rememberCoroutineScope()
 
             // Create Button
-            CreateButton(
+            IntelliMateCtaButton(
+                text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",
                 isLoading = isLoading,
-                isEditMode = isEditMode,
-                onClick = {
+                onClick = click@{
 
                     // Validate required fields
                     if (
                         name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()
                     ) {
                         ToastUtils.showShort(R.string.please_fill_required_fields)
-                        return@CreateButton
+                        return@click
                     }
 
                     isLoading = true
@@ -1990,49 +1991,6 @@ private fun VisibilitySwitchSection(
                         checkedBorderColor = Color.Transparent,
                         uncheckedBorderColor = Color.Transparent,
                     ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClick: () -> Unit) {
-    var lastClickTime by remember { mutableLongStateOf(0L) }
-
-    Button(
-        onClick = {
-            val currentTime = System.currentTimeMillis()
-            if (AntiClick.isValidClick(lastClickTime)) {
-                lastClickTime = currentTime
-                onClick()
-            }
-        },
-        enabled = !isLoading,
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-        shape = RoundedCornerShape(25.dp),
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFFE91E63), Color(0xFFFF9800))
-                        ),
-                    shape = RoundedCornerShape(25.dp),
-                ),
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                color = Color.White,
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.5.dp,
-            )
-        } else {
-            Text(
-                text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
             )
         }
     }
