@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -123,29 +124,6 @@ fun ChatInput(
         return true
     }
 
-    fun insertVoiceInputText(voiceText: String) {
-        val trimmedText = voiceText.trim()
-        if (trimmedText.isBlank()) {
-            ToastUtils.showShort(R.string.chat_voice_input_failed)
-            return
-        }
-        val currentText = inputData.value
-        val safeSelection = inputSelection.value.coerceIn(0, currentText.length)
-        val newLength = currentText.length + trimmedText.length
-        if (newLength > CHAT_INPUT_MAX_LENGTH) {
-            ToastUtils.showShort(R.string.str_message_is_too_long)
-            return
-        }
-        val newText =
-            buildString(currentText.length + trimmedText.length) {
-                append(currentText.take(safeSelection))
-                append(trimmedText)
-                append(currentText.substring(safeSelection))
-            }
-        chatViewModel.inputData.value = newText
-        chatViewModel.inputSelection.value = safeSelection + trimmedText.length
-    }
-
     fun focusInputAndShowKeyboard() {
         focusRequester?.requestFocus()
         // requestFocus() 的生效时机可能在下一帧，show() 放到协程里更稳定
@@ -154,6 +132,8 @@ fun ChatInput(
             keyboardController?.show()
         }
     }
+
+    val currentOnSendMessage = rememberUpdatedState(onSendMessage)
 
     DisposableEffect(speechRecognizer) {
         if (speechRecognizer == null) return@DisposableEffect onDispose {}
@@ -191,9 +171,8 @@ fun ChatInput(
                             ToastUtils.showShort(R.string.chat_voice_input_failed)
                             return@launch
                         }
-                        insertVoiceInputText(resultText)
-                        isVoiceInputMode = false
-                        focusInputAndShowKeyboard()
+                        chatViewModel.inputData.value = resultText.trim()
+                        currentOnSendMessage.value.invoke()
                     }
                 }
 
@@ -253,7 +232,13 @@ fun ChatInput(
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
                 if (isVoiceInputMode) {
                     isVoiceInputMode = false
-                    focusInputAndShowKeyboard()
+                    // 切换回文字模式后延迟一帧再请求焦点并拉键盘，确保 IntySmallTextField 已重组
+                    scope.launch {
+                        yield()
+                        focusRequester?.requestFocus()
+                        yield()
+                        keyboardController?.show()
+                    }
                 } else {
                     if (!ensureVoiceInputReady()) return@onVoiceToggleClick
                     if (showMorePanel) {
