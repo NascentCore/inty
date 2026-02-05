@@ -129,6 +129,11 @@ class APIEndpointsConfig:
 
 
 @dataclass
+class FeaturesConfig:
+    experimental_enable_chat_with_user_time_context: bool = False
+
+
+@dataclass
 class AppConfig:
     name: str = "inty-backend"
     # The app tolerates more failures, and does more logging in the debug mode.
@@ -144,6 +149,7 @@ class AppConfig:
     api_v1_prefix: str = "/api/v1"
 
     api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
+    features: FeaturesConfig = field(default_factory=FeaturesConfig)
 
     @dataclass
     class LimitsConfig:
@@ -170,6 +176,8 @@ class AppConfig:
     def __post_init__(self):
         if self.limits is None:
             self.limits = self.LimitsConfig()
+        if self.features is None:
+            self.features = FeaturesConfig()
 
     @property
     def name_for_openrouter(self) -> str:
@@ -444,6 +452,8 @@ def load_config(path: str) -> Config:
     app_data = data.get("app", {})
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
+    if "features" in app_data and isinstance(app_data["features"], dict):
+        app_data["features"] = FeaturesConfig(**app_data["features"])
 
     # Convert environment string to Environment enum if present
     if "environment" in app_data and isinstance(app_data["environment"], str):

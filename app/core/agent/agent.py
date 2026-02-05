@@ -61,15 +61,15 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
 
 MINUTES_PER_HOUR = 60
-TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##Time Context"
-TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
+USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##User Time Context"
+USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
     "- This time reflects the user's local time, not the assistant's.",
     "- Use it only as context for the user's situation and daily rhythm.",
     "- Do not claim to need sleep or be offline.",
 ]
 
 
-class TimeContext(TypedDict, total=False):
+class UserTimeContext(TypedDict, total=False):
     local_time: str
     timezone: str
     utc_offset_minutes: int
@@ -99,21 +99,23 @@ def _format_utc_offset_minutes(offset_minutes: int) -> str:
     return f"UTC{sign}{hours:02d}:{minutes:02d}"
 
 
-def _build_time_context_prompt(time_context: Optional[TimeContext]) -> Optional[str]:
-    if not time_context:
+def _build_user_time_context_prompt(
+    user_time_context: Optional[UserTimeContext],
+) -> Optional[str]:
+    if not user_time_context:
         return None
 
-    lines = [TIME_CONTEXT_SYSTEM_PROMPT_TITLE]
+    lines = [USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE]
 
-    local_time = time_context.get("local_time")
+    local_time = user_time_context.get("local_time")
     if local_time:
         lines.append(f"- User local time: {local_time}")
 
-    timezone = time_context.get("timezone")
+    timezone = user_time_context.get("timezone")
     if timezone:
         lines.append(f"- User timezone: {timezone}")
 
-    utc_offset_minutes = time_context.get("utc_offset_minutes")
+    utc_offset_minutes = user_time_context.get("utc_offset_minutes")
     if isinstance(utc_offset_minutes, int):
         lines.append(
             f"- UTC offset: {_format_utc_offset_minutes(utc_offset_minutes)}"
@@ -122,7 +124,7 @@ def _build_time_context_prompt(time_context: Optional[TimeContext]) -> Optional[
     if len(lines) == 1:
         return None
 
-    lines.extend(TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE)
+    lines.extend(USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE)
     return "\n".join(lines)
 
 
@@ -407,7 +409,7 @@ class Agent:
         self,
         user_profile: str,
         chat_settings: models.chat_settings.ChatSettings,
-        time_context: Optional[TimeContext] = None,
+        user_time_context: Optional[UserTimeContext] = None,
     ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
         user_name = self._extract_user_name_from_profile(user_profile)
@@ -453,9 +455,15 @@ class Agent:
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
-        time_context_prompt = _build_time_context_prompt(time_context)
-        if time_context_prompt:
-            system_messages.append(SystemMessage(content=time_context_prompt))
+        if (
+            user_time_context
+            and global_config_loaded_from_config_yaml.app.features.experimental_enable_chat_with_user_time_context
+        ):
+            user_time_context_prompt = _build_user_time_context_prompt(
+                user_time_context
+            )
+            if user_time_context_prompt:
+                system_messages.append(SystemMessage(content=user_time_context_prompt))
 
         if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
@@ -880,7 +888,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
-        time_context: Optional[TimeContext] = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -939,7 +947,7 @@ class Agent:
                 }
 
                 system_messages = self.build_system_messages(
-                    user_profile, chat_settings, time_context
+                    user_profile, chat_settings, user_time_context
                 )
 
                 messages: list[BaseMessage] = system_messages + all_messages
@@ -1177,7 +1185,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
-        time_context: Optional[TimeContext] = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -1233,7 +1241,7 @@ class Agent:
                 }
 
                 system_messages = self.build_system_messages(
-                    user_profile, chat_settings, time_context
+                    user_profile, chat_settings, user_time_context
                 )
 
                 messages_list: list[BaseMessage] = system_messages + all_messages
@@ -1337,7 +1345,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
-        time_context: Optional[TimeContext] = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -1370,7 +1378,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
-                time_context,
+                user_time_context,
                 model_override,
             )
             return result
@@ -1387,7 +1395,7 @@ class Agent:
         session_id: str,
         messages: List[HumanMessage],
         chat_settings: models.chat_settings.ChatSettings = None,
-        time_context: Optional[TimeContext] = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
@@ -1411,7 +1419,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
-                time_context,
+                user_time_context,
                 model_override,
             )
             return result

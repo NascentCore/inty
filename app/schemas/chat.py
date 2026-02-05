@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from pydantic import BaseModel, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.models.message import MessageType, SenderType
 
@@ -283,7 +283,7 @@ class ChatMessage(BaseModel):
     content: str
 
 
-class TimeContext(BaseModel):
+class UserTimeContext(BaseModel):
     """用户时间上下文（来自客户端）"""
 
     local_time: Optional[str] = None  # ISO 8601 或可读时间字符串
@@ -292,6 +292,8 @@ class TimeContext(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     messages: List[ChatMessage]
     # DEPRECATED: Currently this parameter has no effect.
     stream: bool = False
@@ -300,7 +302,9 @@ class ChatCompletionRequest(BaseModel):
     # DEPRECATED: Currently this parameter has no use.
     language: str = "zh"  # 添加语言字段，默认中文
     request_id: Optional[str] = None
-    time_context: Optional[TimeContext] = None  # 可选的用户时间上下文
+    user_time_context: Optional[UserTimeContext] = Field(
+        default=None, alias="time_context"
+    )  # 可选的用户时间上下文
     # TODO：目前还在实施中 https://github.com/NascentCore/inty/issues/1364
     message_id: Optional[str] = (
         None  # Android 端生成的消息唯一标识；前后端用该 ID 确认该信息，ID 由生成方产生。
