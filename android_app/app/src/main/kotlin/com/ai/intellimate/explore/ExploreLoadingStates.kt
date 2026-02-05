@@ -106,8 +106,7 @@ private fun LoadMoreErrorIndicator(onRetry: () -> Unit) {
 /**
  * 末尾 Explore More 按钮 - 跨两列显示。
  *
- * 使用场景：推荐列表加载完毕时，提示用户还有更多内容可探索。
- * 预期视觉效果：与 Create My IntelliMate 一致的粉橙渐变 CTA 按钮，全宽圆角，白字 Explore More。
+ * 使用场景：推荐列表加载完毕时，提示用户还有更多内容可探索。 预期视觉效果：与 Create My IntelliMate 一致的粉橙渐变 CTA 按钮，全宽圆角，白字 Explore More。
  * 可配置项：onExploreMore - 按钮点击回调。
  */
 @Composable

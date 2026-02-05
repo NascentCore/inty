@@ -24,7 +24,9 @@ from app.schemas.festival_memory import (
 )
 from app.services import festival_memory_service
 
-router = APIRouter(prefix="/evaluation/admin", route_class=LoggerRoute, tags=[INTY_EVAL_TAG])
+router = APIRouter(
+    prefix="/evaluation/admin", route_class=LoggerRoute, tags=[INTY_EVAL_TAG]
+)
 
 
 async def get_current_superuser(
@@ -47,7 +49,10 @@ async def list_festival_memory_configs(
     current_user: schemas.User = Depends(get_current_superuser),
 ) -> Any:
     result = await db.execute(
-        select(FestivalMemoryConfig).order_by(FestivalMemoryConfig.id.desc()).offset(skip).limit(limit)
+        select(FestivalMemoryConfig)
+        .order_by(FestivalMemoryConfig.id.desc())
+        .offset(skip)
+        .limit(limit)
     )
     configs = result.scalars().all()
     return schemas.APIResponse.success(
@@ -76,7 +81,9 @@ async def create_festival_memory_config(
     db.add(config)
     await db.commit()
     await db.refresh(config)
-    return schemas.APIResponse.success(data=FestivalMemoryConfigInDB.model_validate(config))
+    return schemas.APIResponse.success(
+        data=FestivalMemoryConfigInDB.model_validate(config)
+    )
 
 
 @router.delete(
@@ -89,7 +96,9 @@ async def delete_festival_memory_config(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(get_current_superuser),
 ) -> Any:
-    result = await db.execute(select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id))
+    result = await db.execute(
+        select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id)
+    )
     config = result.scalar_one_or_none()
     if not config:
         raise HTTPException(status_code=404, detail="配置不存在")
@@ -109,7 +118,9 @@ async def update_festival_memory_config(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(get_current_superuser),
 ) -> Any:
-    result = await db.execute(select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id))
+    result = await db.execute(
+        select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id)
+    )
     config = result.scalar_one_or_none()
     if not config:
         raise HTTPException(status_code=404, detail="配置不存在")
@@ -125,11 +136,17 @@ async def update_festival_memory_config(
         config.run_at_date = body.run_at_date
     if body.run_at_hour is not None:
         config.run_at_hour = body.run_at_hour
-    if config.run_at_date is not None and config.festival_date is not None and config.run_at_date < config.festival_date:
+    if (
+        config.run_at_date is not None
+        and config.festival_date is not None
+        and config.run_at_date < config.festival_date
+    ):
         raise HTTPException(status_code=400, detail="执行日期不能早于节日日期")
     await db.commit()
     await db.refresh(config)
-    return schemas.APIResponse.success(data=FestivalMemoryConfigInDB.model_validate(config))
+    return schemas.APIResponse.success(
+        data=FestivalMemoryConfigInDB.model_validate(config)
+    )
 
 
 @router.post(
@@ -144,7 +161,9 @@ async def run_festival_memory_extraction(
 ) -> Any:
     if body.config_id is not None:
         result = await db.execute(
-            select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == body.config_id)
+            select(FestivalMemoryConfig).where(
+                FestivalMemoryConfig.id == body.config_id
+            )
         )
         config = result.scalar_one_or_none()
         if not config:
@@ -153,7 +172,11 @@ async def run_festival_memory_extraction(
         festival_date = config.festival_date
         prompt = config.prompt
     else:
-        if body.festival_name is None or body.festival_date is None or body.prompt is None:
+        if (
+            body.festival_name is None
+            or body.festival_date is None
+            or body.prompt is None
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="未指定 config_id 时需提供 festival_name、festival_date、prompt",

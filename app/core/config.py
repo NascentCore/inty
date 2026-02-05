@@ -322,7 +322,9 @@ class MemoryExtractionConfig:
     """记忆抽取定时任务配置；默认使用 OpenRouter mistralai/devstral-2512。"""
 
     enabled: bool = True
-    model: str = ""  # OpenRouter 模型 id，为空时使用代码内默认（mistralai/devstral-2512）
+    model: str = (
+        ""  # OpenRouter 模型 id，为空时使用代码内默认（mistralai/devstral-2512）
+    )
     cron_hour: int = 3  # UTC 小时，每日执行
     trigger_new_user_messages: int = 30  # 新用户总消息数阈值
     trigger_incremental_messages: int = 30  # 已提取用户自上次后新增消息数阈值

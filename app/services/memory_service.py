@@ -88,9 +88,11 @@ async def get_festival_memories_for_user_agent(
             continue
         out.append(
             {
-                "festival_date": festival_date.isoformat()
-                if hasattr(festival_date, "isoformat")
-                else str(festival_date),
+                "festival_date": (
+                    festival_date.isoformat()
+                    if hasattr(festival_date, "isoformat")
+                    else str(festival_date)
+                ),
                 "festival_name": festival_name,
                 "memory": content,
             }

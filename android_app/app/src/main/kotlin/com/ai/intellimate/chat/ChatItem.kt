@@ -162,9 +162,7 @@ private fun ChatItemAI(
     val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
-            Column(
-                modifier = Modifier.padding(bottom = 16.dp).fillMaxWidth()
-            ) {
+            Column(modifier = Modifier.padding(bottom = 16.dp).fillMaxWidth()) {
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
                 val isImageLoading = generatedImageUrl == "loading"

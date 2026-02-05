@@ -106,9 +106,7 @@ class PushWorker:
             loop = asyncio.get_running_loop()
             current = asyncio.current_task(loop)
             pending = [
-                t
-                for t in asyncio.all_tasks(loop)
-                if t is not current and not t.done()
+                t for t in asyncio.all_tasks(loop) if t is not current and not t.done()
             ]
             for t in pending:
                 t.cancel()

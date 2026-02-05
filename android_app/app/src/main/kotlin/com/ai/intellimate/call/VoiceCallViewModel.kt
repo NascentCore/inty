@@ -163,7 +163,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             }
                         }
 
-                        CallType.TRANSCRIPT, CallType.USER_TRANSCRIPT -> messageCount ++
+                        CallType.TRANSCRIPT,
+                        CallType.USER_TRANSCRIPT -> messageCount++
 
                         else -> {}
                     }

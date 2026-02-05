@@ -249,7 +249,7 @@ fun ChatPageContainer(
                     shouldShowBoostSheetOnOpen = false,
                     debugAgentIndex = currentPage,
                     onCall = { navController.navigate(Routes.Chat.voiceCall(agent.id)) },
-                    refreshMessageCount = 1
+                    refreshMessageCount = 1,
                 )
             }
         }
