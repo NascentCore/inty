@@ -28,8 +28,8 @@ import com.ai.intellimate.ui.UiConfigs
  *
  * 适用范围：创建/编辑 IntelliMate 页底部、Explore 列表底部「Explore More」等需要强 CTA 的场景。
  *
- * 预期视觉效果：全宽、圆角 25.dp、高 56.dp，水平渐变（粉红→橙），白字 18.sp SemiBold；
- * loading 时显示白色 CircularProgressIndicator，禁用点击。
+ * 预期视觉效果：全宽、圆角 25.dp、高 56.dp，水平渐变（粉红→橙），白字 18.sp SemiBold； loading 时显示白色
+ * CircularProgressIndicator，禁用点击。
  *
  * 可配置项：[text] 按钮文案、[onClick] 点击回调、[modifier]、[isLoading]、[enabled]。
  */
@@ -65,7 +65,7 @@ fun IntelliMateCtaButton(
                                 listOf(
                                     AppColors.IntelliMateCtaGradientStart,
                                     AppColors.IntelliMateCtaGradientEnd,
-                                ),
+                                )
                         ),
                     shape = RoundedCornerShape(UiConfigs.Shape.PrimaryButton),
                 ),

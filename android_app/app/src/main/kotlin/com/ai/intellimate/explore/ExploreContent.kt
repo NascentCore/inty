@@ -524,7 +524,9 @@ fun ExploreContent(
 
                         // 加载状态指示器
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            // TODO: 传入 onExploreMore，跳转到官方小助手以拓展角色发现；参考 项目管理/Explore 页面限制角色数量.md，开场白填充「你似乎没有在 Explore 页面找到你心仪的交往对象？他们还缺少什么呢？」。当前未传导致点击 Explore More 无响应。
+                            // TODO: 传入 onExploreMore，跳转到官方小助手以拓展角色发现；参考 项目管理/Explore
+                            // 页面限制角色数量.md，开场白填充「你似乎没有在 Explore 页面找到你心仪的交往对象？他们还缺少什么呢？」。当前未传导致点击
+                            // Explore More 无响应。
                             ExploreLoadingStates(
                                 onRetry = { lazyPagingItems.retry() },
                                 lazyPagingItems,
@@ -539,8 +541,8 @@ fun ExploreContent(
                         Spacer(
                             Modifier.height(
                                 UiConfigs.ChatPage.FloatingScrollButton.ButtonSize +
-                                    UiConfigs.Spacing.MediumPlus,
-                            ),
+                                    UiConfigs.Spacing.MediumPlus
+                            )
                         )
                     }
                 }

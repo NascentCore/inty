@@ -61,7 +61,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             shouldAutoFocusInput = shouldAutoFocusInput ?: true,
             onCall = { agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) } },
             fromPage = backStackEntry.arguments?.getString("fromPage"),
-            refreshMessageCount = refreshCount
+            refreshMessageCount = refreshCount,
         )
     }
 }

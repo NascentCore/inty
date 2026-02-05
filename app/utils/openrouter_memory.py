@@ -46,9 +46,7 @@ async def call_openrouter_for_extraction(
         response = await client.post(url, headers=headers, json=payload)
         response.raise_for_status()
     data = response.json()
-    content = (
-        data.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
-    )
+    content = data.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
     usage = data.get("usage") or {}
     prompt_tokens = usage.get("prompt_tokens")
     completion_tokens = usage.get("completion_tokens")

@@ -161,12 +161,12 @@ class ChatMessageRepository(
         localDataSource.getMessage(agentId, msgId)
 
     suspend fun loadRecentMessages(agentId: String, count: Int) {
-        val result = runCatching {
-            LogUtils.d("加载最近消息:Count=$count")
-            remoteDataSource.getMessages(agentId, count, 0)
-        }.getOrElse {
-            HttpResult.Failure(it.message ?: "unknown error", -1)
-        }
+        val result =
+            runCatching {
+                    LogUtils.d("加载最近消息:Count=$count")
+                    remoteDataSource.getMessages(agentId, count, 0)
+                }
+                .getOrElse { HttpResult.Failure(it.message ?: "unknown error", -1) }
 
         if (result is HttpResult.Success) {
             val entities = result.data.messages?.map { it.toUpdate(agentId) }.orEmpty()

@@ -274,7 +274,9 @@ async def get_agent(
     )
     if festival_list:
         agent_schema.features = schemas.AgentFeatures(
-            festival_memories=[schemas.FestivalMemoryItem(**item) for item in festival_list]
+            festival_memories=[
+                schemas.FestivalMemoryItem(**item) for item in festival_list
+            ]
         )
     return agent_schema
 

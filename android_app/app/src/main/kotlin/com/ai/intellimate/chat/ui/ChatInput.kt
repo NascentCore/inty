@@ -96,18 +96,18 @@ fun ChatInput(
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     val context = LocalContext.current
     val voicePermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
-    val isSpeechRecognitionAvailable = remember(context) {
-        SpeechRecognizer.isRecognitionAvailable(context)
-    }
+    val isSpeechRecognitionAvailable =
+        remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
     var isVoiceInputMode by remember { mutableStateOf(false) }
     var isVoiceRecording by remember { mutableStateOf(false) }
-    val speechRecognizer = remember(context, isSpeechRecognitionAvailable) {
-        if (isSpeechRecognitionAvailable) {
-            SpeechRecognizer.createSpeechRecognizer(context)
-        } else {
-            null
+    val speechRecognizer =
+        remember(context, isSpeechRecognitionAvailable) {
+            if (isSpeechRecognitionAvailable) {
+                SpeechRecognizer.createSpeechRecognizer(context)
+            } else {
+                null
+            }
         }
-    }
 
     fun ensureVoiceInputReady(): Boolean {
         if (!isSpeechRecognitionAvailable || speechRecognizer == null) {
@@ -162,7 +162,8 @@ fun ChatInput(
 
                 override fun onResults(results: Bundle?) {
                     val resultText =
-                        results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        results
+                            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                             ?.firstOrNull()
                             .orEmpty()
                     scope.launch {
@@ -226,7 +227,9 @@ fun ChatInput(
             val inputContentModifier =
                 Modifier.padding(
                         start = config.LeadingControlsPadding,
-                        end = if (isVoiceInputMode) config.VoiceModeTrailingPadding else config.TrailingControlsPadding,
+                        end =
+                            if (isVoiceInputMode) config.VoiceModeTrailingPadding
+                            else config.TrailingControlsPadding,
                     )
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
@@ -259,7 +262,10 @@ fun ChatInput(
                             RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                             RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
                         )
-                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+                        putExtra(
+                            RecognizerIntent.EXTRA_LANGUAGE,
+                            Locale.getDefault().toLanguageTag(),
+                        )
                         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, VOICE_INPUT_MAX_RESULTS)
                     }
                 isVoiceRecording = true
@@ -308,10 +314,7 @@ fun ChatInput(
                                         ?: stringResource(R.string.chat_ai_typing_default_name)
                                 Text(
                                     text =
-                                        stringResource(
-                                            R.string.chat_input_placeholder,
-                                            targetName,
-                                        ),
+                                        stringResource(R.string.chat_input_placeholder, targetName),
                                     fontSize = 14.sp,
                                     color = Color.White.copy(alpha = 0.5f),
                                 )
@@ -469,6 +472,7 @@ private fun SceneActionQuickButton(
  * - 点击不显示波纹，交互与输入框风格保持一致。
  *
  * 可配置项：
+ *
  * @param modifier 按钮外层修饰符（用于定位与间距）
  * @param isVoiceMode 当前是否处于语音输入模式
  * @param buttonSize 按钮尺寸
@@ -532,6 +536,7 @@ private fun VoiceInputToggleButton(
  * - 文案居中，整体高度与输入框最小高度一致。
  *
  * 可配置项：
+ *
  * @param modifier 按钮外层修饰符（用于宽度、对齐）
  * @param isRecording 是否处于录制中状态
  * @param enabled 是否允许录制（权限/设备能力）
@@ -589,7 +594,7 @@ private fun VoiceHoldToTalkButton(
                             } else {
                                 onPressCancel()
                             }
-                        },
+                        }
                     )
                 },
         contentAlignment = Alignment.Center,

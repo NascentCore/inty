@@ -43,7 +43,7 @@ internal fun ChatScreen(
     onCall: () -> Unit = {},
     shouldShowBoostSheetOnOpen: Boolean = false,
     fromPage: String? = null,
-    refreshMessageCount: Int = 0
+    refreshMessageCount: Int = 0,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
@@ -69,7 +69,7 @@ internal fun ChatScreen(
             shouldAutoFocusInput = shouldAutoFocusInput,
             onCall = onCall,
             fromPage = fromPage,
-            refreshMessageCount = refreshMessageCount
+            refreshMessageCount = refreshMessageCount,
         )
 
         // 反馈请求对话框

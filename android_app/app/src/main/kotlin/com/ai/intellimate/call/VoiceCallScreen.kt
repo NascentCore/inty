@@ -99,7 +99,7 @@ fun VoiceCallScreen(
 
     val viewModel = koinViewModel<VoiceCallViewModel>()
 
-    VoiceCallScreen(onBack = {onBack(viewModel.messageCount)}) { contentPadding ->
+    VoiceCallScreen(onBack = { onBack(viewModel.messageCount) }) { contentPadding ->
         // 权限请求Launcher
         val audioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
         val context = LocalContext.current
@@ -171,7 +171,7 @@ fun VoiceCallScreen(
             }
 
             VoiceCallContent(
-                onEnd = {onBack(viewModel.messageCount)},
+                onEnd = { onBack(viewModel.messageCount) },
                 uiState = uiState,
                 onMuteChange = viewModel::setMuted,
                 modifier = Modifier.padding(contentPadding).fillMaxSize(),

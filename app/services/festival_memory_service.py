@@ -31,7 +31,13 @@ FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW = 30
 def _window_for_festival_date(festival_date: date) -> Tuple[datetime, datetime]:
     """节日当天 00:00 UTC 至次日 04:00 UTC，共 28 小时。返回 (window_start, window_end) 左闭右开。"""
     window_start = datetime(
-        festival_date.year, festival_date.month, festival_date.day, 0, 0, 0, tzinfo=timezone.utc
+        festival_date.year,
+        festival_date.month,
+        festival_date.day,
+        0,
+        0,
+        0,
+        tzinfo=timezone.utc,
     )
     window_end = window_start + timedelta(days=1) + timedelta(hours=4)
     return (window_start, window_end)
@@ -50,13 +56,11 @@ def get_pairs_with_min_rounds_in_window_sync(
     conn = psycopg.connect(db_url, autocommit=True)
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT user_id, agent_id, id
                 FROM chats
                 WHERE is_active = true
-                """
-            )
+                """)
             rows = cur.fetchall()
         if not rows:
             return []
@@ -93,7 +97,9 @@ def get_pairs_with_min_rounds_in_window_sync(
         conn.close()
 
 
-def get_messages_for_user_agent_sync(user_id: str, agent_id: str) -> List[Tuple[str, str]]:
+def get_messages_for_user_agent_sync(
+    user_id: str, agent_id: str
+) -> List[Tuple[str, str]]:
     """
     拉取该用户与该角色的单会话消息 (role, content)，按 created_at 升序。
     """
@@ -121,12 +127,20 @@ def get_messages_for_user_agent_sync(user_id: str, agent_id: str) -> List[Tuple[
         for r in cur.fetchall():
             raw = r[0]
             try:
-                data = json.loads(raw) if isinstance(raw, str) else (raw if isinstance(raw, dict) else json.loads(str(raw)))
+                data = (
+                    json.loads(raw)
+                    if isinstance(raw, str)
+                    else (raw if isinstance(raw, dict) else json.loads(str(raw)))
+                )
             except Exception:
                 continue
             msg_type = data.get("type", "human")
             content = ""
-            if "data" in data and isinstance(data.get("data"), dict) and "content" in data["data"]:
+            if (
+                "data" in data
+                and isinstance(data.get("data"), dict)
+                and "content" in data["data"]
+            ):
                 content = data["data"].get("content") or ""
             elif "content" in data:
                 content = data["content"] or ""
@@ -156,12 +170,18 @@ async def extract_festival_and_save(
     删除旧节日记忆后写入一条 memory（memory_type=festival）。
     返回是否成功。
     """
-    messages = await asyncio.to_thread(get_messages_for_user_agent_sync, user_id, agent_id)
+    messages = await asyncio.to_thread(
+        get_messages_for_user_agent_sync, user_id, agent_id
+    )
     if not messages:
         logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
         return False
     chat_text = _format_chat_for_prompt(messages)
-    date_str = festival_date.isoformat() if isinstance(festival_date, date) else str(festival_date)
+    date_str = (
+        festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date)
+    )
     full_prompt = f"""{prompt_template}
 
 ---
@@ -178,8 +198,8 @@ async def extract_festival_and_save(
 
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
     model_name = (
-        (cfg.model.strip() if cfg and cfg.model else None) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
-    )
+        cfg.model.strip() if cfg and cfg.model else None
+    ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
     try:
         summary, _, _ = await call_openrouter_for_extraction(
             full_prompt,
@@ -191,7 +211,9 @@ async def extract_festival_and_save(
             raise ValueError("抽取结果过短或为空")
         summary = summary.strip()
     except Exception as e:
-        logger.warning(f"节日记忆 LLM 调用失败 user_id={user_id} agent_id={agent_id}: {e}")
+        logger.warning(
+            f"节日记忆 LLM 调用失败 user_id={user_id} agent_id={agent_id}: {e}"
+        )
         return False
 
     extracted_at = datetime.now(timezone.utc)
@@ -216,5 +238,7 @@ async def extract_festival_and_save(
         )
     )
     await db.commit()
-    logger.debug(f"节日记忆写入完成 user_id={user_id} agent_id={agent_id} festival={festival_name}")
+    logger.debug(
+        f"节日记忆写入完成 user_id={user_id} agent_id={agent_id} festival={festival_name}"
+    )
     return True

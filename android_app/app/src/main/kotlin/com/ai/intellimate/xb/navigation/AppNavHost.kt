@@ -107,7 +107,9 @@ fun AppNavHost(
                 VoiceCallScreen(
                     onBack = {
                         LogUtils.d("Call:语音聊天消息数=$it")
-                        navController.previousBackStackEntry?.savedStateHandle?.set("messageCount", it)
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("messageCount", it)
                         navController.popBackStack()
                     },
                     onVip = { navController.navigate(Routes.Me.vipCenter("voice_call")) },
