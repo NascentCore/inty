@@ -1,10 +1,14 @@
 # CREATED_BY_AGENT
 """节日记忆配置与执行相关 schema"""
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+
+RUN_AT_HOUR_MIN = 0
+RUN_AT_HOUR_MAX = 23
 
 
 class FestivalMemoryConfigCreate(BaseModel):
@@ -14,6 +18,14 @@ class FestivalMemoryConfigCreate(BaseModel):
     festival_date: date = Field(..., description="节日日期")
     prompt: str = Field(..., description="抽取提示词")
     enabled: bool = Field(True, description="是否启用")
+    run_at_date: date = Field(..., description="执行日期，须不早于节日日期")
+    run_at_hour: int = Field(..., ge=RUN_AT_HOUR_MIN, le=RUN_AT_HOUR_MAX, description="执行时刻 UTC 小时 0-23")
+
+    @model_validator(mode="after")
+    def run_at_not_before_festival(self) -> "FestivalMemoryConfigCreate":
+        if self.run_at_date < self.festival_date:
+            raise ValueError("执行日期不能早于节日日期")
+        return self
 
 
 class FestivalMemoryConfigUpdate(BaseModel):
@@ -23,6 +35,16 @@ class FestivalMemoryConfigUpdate(BaseModel):
     festival_date: Optional[date] = Field(None, description="节日日期")
     prompt: Optional[str] = Field(None, description="抽取提示词")
     enabled: Optional[bool] = Field(None, description="是否启用")
+    run_at_date: Optional[date] = Field(None, description="执行日期，须不早于节日日期")
+    run_at_hour: Optional[int] = Field(None, ge=RUN_AT_HOUR_MIN, le=RUN_AT_HOUR_MAX, description="执行时刻 UTC 小时 0-23")
+
+    @model_validator(mode="after")
+    def run_at_not_before_festival(self) -> "FestivalMemoryConfigUpdate":
+        run_at = self.run_at_date
+        festival = self.festival_date
+        if run_at is not None and festival is not None and run_at < festival:
+            raise ValueError("执行日期不能早于节日日期")
+        return self
 
 
 class FestivalMemoryConfigInDB(BaseModel):
@@ -33,6 +55,9 @@ class FestivalMemoryConfigInDB(BaseModel):
     festival_date: date
     prompt: str
     enabled: bool
+    run_at_date: Optional[date] = Field(None, description="执行日期")
+    run_at_hour: Optional[int] = Field(None, description="执行时刻 UTC 小时")
+    last_run_at: Optional[datetime] = Field(None, description="最近一次被定时任务执行的时间")
 
     class Config:
         from_attributes = True

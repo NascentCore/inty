@@ -182,11 +182,10 @@ class PushSchedulerService:
                     f"已添加记忆抽取任务: 启动后立即执行，之后每日 UTC {mem_cfg.cron_hour}:00"
                 )
 
-            # 节日记忆抽取：每日 UTC cron_hour+1 点执行，扫 festival_memory_config 表
-            festival_cron_hour = (mem_cfg.cron_hour + 1) % 24 if mem_cfg else 4
+            # 节日记忆抽取：每 5 分钟扫描，仅执行 run_at 已到且未跑过的配置
             self.scheduler.add_job(
                 self._run_festival_memory_extraction,
-                trigger=CronTrigger(hour=festival_cron_hour, minute=0),
+                trigger=IntervalTrigger(minutes=5),
                 id="run_festival_memory_extraction",
                 name="节日记忆抽取",
                 replace_existing=True,
@@ -194,9 +193,7 @@ class PushSchedulerService:
                 max_instances=1,
                 next_run_time=datetime.datetime.now(),
             )
-            logger.info(
-                f"已添加节日记忆抽取任务: 启动后立即执行，之后每日 UTC {festival_cron_hour}:00"
-            )
+            logger.info("已添加节日记忆抽取任务: 启动后立即执行，之后每 5 分钟扫描")
 
             # 用户数据分析日报周报：每日/每周执行（若启用）
             uar_cfg = getattr(
@@ -389,25 +386,43 @@ class PushSchedulerService:
             logger.error(f"[记忆抽取] 执行失败: {str(e)}")
 
     async def _run_festival_memory_extraction(self) -> None:
-        """节日记忆抽取：读取已启用的 festival_memory_config，对每个配置筛选 (user, agent) 并抽取。"""
+        """节日记忆抽取：每 5 分钟扫描，仅执行 run_at 已到且尚未为此执行时刻跑过的配置。"""
+        from datetime import timezone as dt_timezone
+
         try:
             logger.info("[节日记忆抽取] 开始...")
+            now = datetime.datetime.now(dt_timezone.utc)
             async with AsyncSessionLocal() as db:
                 result = await db.execute(
                     select(FestivalMemoryConfig).where(
-                        FestivalMemoryConfig.enabled.is_(True)
+                        FestivalMemoryConfig.enabled.is_(True),
+                        FestivalMemoryConfig.run_at_date.isnot(None),
+                        FestivalMemoryConfig.run_at_hour.isnot(None),
                     )
                 )
-                configs = result.scalars().all()
-            if not configs:
-                logger.info("[节日记忆抽取] 无启用配置，跳过")
+                all_configs = result.scalars().all()
+            due_configs = []
+            for config in all_configs:
+                run_at_dt = datetime.datetime.combine(
+                    config.run_at_date,
+                    datetime.time(config.run_at_hour or 0, 0, 0),
+                    tzinfo=dt_timezone.utc,
+                )
+                if now < run_at_dt:
+                    continue
+                if config.last_run_at is not None and config.last_run_at >= run_at_dt:
+                    continue
+                due_configs.append(config)
+            if not due_configs:
+                logger.debug("[节日记忆抽取] 无到点配置，跳过")
                 return
             pairs = await asyncio.to_thread(
                 festival_memory_service.get_pairs_with_min_rounds_sync,
                 festival_memory_service.FESTIVAL_MEMORY_MIN_ROUNDS,
             )
-            for config in configs:
+            for config in due_configs:
                 async with AsyncSessionLocal() as db:
+                    ran_ok = True
                     for user_id, agent_id in pairs:
                         try:
                             await festival_memory_service.extract_festival_and_save(
@@ -420,10 +435,21 @@ class PushSchedulerService:
                             )
                         except Exception as e:
                             await db.rollback()
+                            ran_ok = False
                             logger.warning(
                                 f"[节日记忆抽取] user_id={user_id} agent_id={agent_id} "
                                 f"festival={config.festival_name} 失败: {e}"
                             )
+                    if ran_ok:
+                        result = await db.execute(
+                            select(FestivalMemoryConfig).where(
+                                FestivalMemoryConfig.id == config.id
+                            )
+                        )
+                        row = result.scalar_one_or_none()
+                        if row:
+                            row.last_run_at = now
+                            await db.commit()
             logger.info("[节日记忆抽取] 完成")
         except Exception as e:
             logger.error(f"[节日记忆抽取] 执行失败: {str(e)}")

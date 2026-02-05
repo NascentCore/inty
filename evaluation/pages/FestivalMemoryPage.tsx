@@ -10,6 +10,7 @@ import {
   Card,
   DatePicker,
   Input,
+  InputNumber,
   message,
   Modal,
   Space,
@@ -45,6 +46,8 @@ export const FestivalMemoryPage: React.FC = () => {
   const [formDate, setFormDate] = useState<dayjs.Dayjs | null>(null);
   const [formPrompt, setFormPrompt] = useState("");
   const [formEnabled, setFormEnabled] = useState(true);
+  const [formRunAtDate, setFormRunAtDate] = useState<dayjs.Dayjs | null>(null);
+  const [formRunAtHour, setFormRunAtHour] = useState<number>(4);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -69,6 +72,8 @@ export const FestivalMemoryPage: React.FC = () => {
     setFormDate(null);
     setFormPrompt("");
     setFormEnabled(true);
+    setFormRunAtDate(null);
+    setFormRunAtHour(4);
     setModalOpen(true);
   };
 
@@ -78,6 +83,12 @@ export const FestivalMemoryPage: React.FC = () => {
     setFormDate(row.festival_date ? dayjs(row.festival_date) : null);
     setFormPrompt(row.prompt);
     setFormEnabled(row.enabled);
+    setFormRunAtDate(row.run_at_date ? dayjs(row.run_at_date) : null);
+    setFormRunAtHour(
+      row.run_at_hour != null && row.run_at_hour >= 0 && row.run_at_hour <= 23
+        ? row.run_at_hour
+        : 4,
+    );
     setModalOpen(true);
   };
 
@@ -94,7 +105,21 @@ export const FestivalMemoryPage: React.FC = () => {
       message.warning("请输入提示词");
       return;
     }
+    if (!formRunAtDate) {
+      message.warning("请选择执行日期");
+      return;
+    }
     const dateStr = formDate.format("YYYY-MM-DD");
+    const runAtDateStr = formRunAtDate.format("YYYY-MM-DD");
+    if (formRunAtDate.isBefore(formDate, "day")) {
+      message.warning("执行日期不能早于节日日期");
+      return;
+    }
+    const hour = Math.floor(formRunAtHour);
+    if (hour < 0 || hour > 23) {
+      message.warning("执行时刻（UTC 小时）须为 0–23");
+      return;
+    }
     try {
       if (editingId != null) {
         const update: FestivalMemoryConfigUpdate = {
@@ -102,6 +127,8 @@ export const FestivalMemoryPage: React.FC = () => {
           festival_date: dateStr,
           prompt: formPrompt.trim(),
           enabled: formEnabled,
+          run_at_date: runAtDateStr,
+          run_at_hour: hour,
         };
         await festivalMemoryApi.updateConfig(editingId, update);
         message.success("更新成功");
@@ -111,6 +138,8 @@ export const FestivalMemoryPage: React.FC = () => {
           festival_date: dateStr,
           prompt: formPrompt.trim(),
           enabled: formEnabled,
+          run_at_date: runAtDateStr,
+          run_at_hour: hour,
         };
         await festivalMemoryApi.createConfig(create);
         message.success("创建成功");
@@ -168,6 +197,29 @@ export const FestivalMemoryPage: React.FC = () => {
       key: "festival_date",
       width: 120,
       render: (v: string) => v || "-",
+    },
+    {
+      title: "执行日期",
+      dataIndex: "run_at_date",
+      key: "run_at_date",
+      width: 120,
+      render: (v: string | null) => v || "-",
+    },
+    {
+      title: "执行时刻(UTC)",
+      dataIndex: "run_at_hour",
+      key: "run_at_hour",
+      width: 110,
+      render: (v: number | null) =>
+        v != null ? `${v}:00` : "-",
+    },
+    {
+      title: "最近执行",
+      dataIndex: "last_run_at",
+      key: "last_run_at",
+      width: 180,
+      render: (v: string | null) =>
+        v ? dayjs(v).format("YYYY-MM-DD HH:mm") : "-",
     },
     {
       title: "提示词摘要",
@@ -269,6 +321,42 @@ export const FestivalMemoryPage: React.FC = () => {
             <DatePicker
               value={formDate}
               onChange={(d) => setFormDate(d)}
+              style={{ width: "100%", marginTop: 4 }}
+            />
+          </div>
+          <div>
+            <Space style={{ marginBottom: 4 }}>
+              <Text strong>执行日期</Text>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => {
+                  const now = new Date();
+                  const utcDateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+                  setFormRunAtDate(dayjs(utcDateStr));
+                  setFormRunAtHour(now.getUTCHours());
+                }}
+              >
+                立刻执行（设为当前 UTC 时间）
+              </Button>
+            </Space>
+            <DatePicker
+              value={formRunAtDate}
+              onChange={(d) => setFormRunAtDate(d)}
+              style={{ width: "100%", marginTop: 4 }}
+            />
+            <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
+              不能早于节日日期；定时任务每 5 分钟扫描，到点后执行一次
+            </Text>
+          </div>
+          <div>
+            <Text strong>执行时刻（UTC 小时）</Text>
+            <br />
+            <InputNumber
+              min={0}
+              max={23}
+              value={formRunAtHour}
+              onChange={(v) => setFormRunAtHour(v ?? 4)}
               style={{ width: "100%", marginTop: 4 }}
             />
           </div>
