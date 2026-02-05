@@ -95,11 +95,22 @@ fun ChatInput(
     val scope = rememberCoroutineScope()
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     val context = LocalContext.current
-    val voicePermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
     val isSpeechRecognitionAvailable =
         remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
     var isVoiceInputMode by remember { mutableStateOf(false) }
     var isVoiceRecording by remember { mutableStateOf(false) }
+    var pendingEnterVoiceModeAfterPermission by remember { mutableStateOf(false) }
+    val voicePermissionState =
+        rememberPermissionState(Manifest.permission.RECORD_AUDIO) { granted: Boolean ->
+            if (granted && pendingEnterVoiceModeAfterPermission) {
+                if (showMorePanel) onToggleMorePanel()
+                if (isKeyboardVisible) keyboardController?.hide()
+                isVoiceInputMode = true
+                pendingEnterVoiceModeAfterPermission = false
+            } else if (!granted) {
+                pendingEnterVoiceModeAfterPermission = false
+            }
+        }
     val speechRecognizer =
         remember(context, isSpeechRecognitionAvailable) {
             if (isSpeechRecognitionAvailable) {
@@ -243,7 +254,12 @@ fun ChatInput(
                         keyboardController?.show()
                     }
                 } else {
-                    if (!ensureVoiceInputReady()) return@onVoiceToggleClick
+                    if (!ensureVoiceInputReady()) {
+                        if (!voicePermissionState.status.isGranted) {
+                            pendingEnterVoiceModeAfterPermission = true
+                        }
+                        return@onVoiceToggleClick
+                    }
                     if (showMorePanel) {
                         onToggleMorePanel()
                     }
