@@ -26,6 +26,7 @@ from app.models.evaluation import EvaluationSession as EvaluationSession
 from app.models.evaluation import EvaluationStatus as EvaluationStatus
 from app.models.evaluation import EvaluationTemplate as EvaluationTemplate
 from app.models.feedback_push import FeedbackPushHistory as FeedbackPushHistory
+from app.models.memory import FestivalMemoryConfig as FestivalMemoryConfig
 from app.models.memory import Memory as Memory
 from app.models.memory import MemoryExtractionLog as MemoryExtractionLog
 from app.models.message import Message as Message

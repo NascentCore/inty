@@ -20,11 +20,11 @@ CREATED_BY_AGENT
 - **位置**：`app/core/config.py` — `MemoryExtractionConfig`
 - **字段**：
   - `enabled`：是否启用记忆抽取定时任务，默认 `True`
-  - `model`：Gemini 模型名（如 `gemini-2.0-flash`），为空时使用代码内默认 `DEFAULT_MEMORY_EXTRACTION_MODEL`
+  - `model`：OpenRouter 模型 id（如 `mistralai/devstral-2512`），为空时使用代码内默认 `mistralai/devstral-2512`
   - `cron_hour`：UTC 小时，每日执行，默认 `3`
   - `trigger_new_user_messages`：新用户总消息数阈值，默认 `30`
   - `trigger_incremental_messages`：已提取用户自上次后新增消息数阈值，默认 `30`
-- 记忆抽取使用 Google GenAI 客户端（`app.utils.gemini.get_genai_client()`，Vertex AI），不再使用 `agent` 的 api_key/base_url。
+- 记忆抽取使用 OpenRouter（`app.utils.openrouter_memory.call_openrouter_for_extraction()`，`agent.base_url` 与 `agent.api_key`）。
 
 ### 3. 记忆读取服务（`app/services/memory_service.py`）
 
@@ -38,7 +38,7 @@ CREATED_BY_AGENT
   - 新用户：总消息数 ≥ `trigger_new_user_messages`
   - 已提取用户：自上次 `extracted_at` 后新增消息数 ≥ `trigger_incremental_messages`
 - **get_all_messages_for_user(user_id)**：拉取该用户在所有会话中的全部消息 `(role, content)`，按 `created_at` 升序；不按 agent 过滤，不限制条数。
-- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **Google GenAI**（`generate_content`）调用 LLM、从 `response.usage_metadata` 读取 token 消耗、记录端到端耗时、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
+- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **OpenRouter**（`call_openrouter_for_extraction`，默认模型 `mistralai/devstral-2512`）调用 LLM、从响应 `usage` 读取 token 消耗、记录端到端耗时、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
 - **提示词**：`app/core/prompting/memory_extraction_prompt.txt`（英文）。
 - **\_extract_part1_summary(full_analysis)**：从 LLM 完整回复中解析 Part 1；支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等中英文 fallback 正则；Part 1 过短（≤50 字）时回退到约 2000 字或全文。
 
@@ -97,6 +97,12 @@ scripts/
 3. **定时任务**：启动 push worker（含 scheduler）后，在 `memory_extraction.enabled=true` 时**启动后立即执行一次**记忆抽取，之后每日 UTC `cron_hour:00` 自动执行。
 4. **手动抽取**：`PYTHONPATH=. python scripts/run_memory_extraction.py --user-id <UUID>`；`--dry-run` 可用于验证消息拉取与条数。
 5. **监控与成本**：`memory_extraction_log` 的 `duration_seconds`、`prompt_tokens`、`completion_tokens` 可用于监控单用户抽取耗时与 LLM token 消耗、成本分析。
+
+## 节日记忆提取（Festival Memory）
+
+- 管理员在 evaluation 侧边栏「节日记忆提取」页面配置节日（名称、日期）与提示词，可立即执行或由定时任务对「用户 + 角色」聊天轮数 ≥ 30 的组合抽取节日回忆并写入 `memory` 表。
+- 节日记忆通过角色详情接口 `GET /api/v1/ai/agents/{agent_id}` 的响应字段 `features.festival_memories` 返回。
+- 后端功能说明见仓库根目录 `docs/FR_FESTIVAL_MEMORY.md`。
 
 ## 后续扩展（参考）
 

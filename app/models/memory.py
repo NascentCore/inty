@@ -7,7 +7,18 @@ memory: 存储抽取后的记忆内容，支持多种类型（user_common=与所
 memory_extraction_log: 抽取历史，用于触发判断与可观测性。
 """
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.sql import func
 
 from app.models import Base
@@ -20,7 +31,9 @@ class Memory(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    memory_type = Column(String, nullable=False, comment="user_common | user_agent")
+    memory_type = Column(
+        String, nullable=False, comment="user_common | user_agent | festival"
+    )
     agent_id = Column(
         String, ForeignKey("agents.id"), nullable=True, comment="user_common 为 NULL"
     )
@@ -32,6 +45,12 @@ class Memory(Base):
     )
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    festival_name = Column(
+        String, nullable=True, comment="节日名称，仅 memory_type=festival 时使用"
+    )
+    festival_date = Column(
+        Date, nullable=True, comment="节日日期，仅 memory_type=festival 时使用"
     )
 
     __table_args__ = (
@@ -61,4 +80,22 @@ class MemoryExtractionLog(Base):
 
     __table_args__ = (
         Index("ix_memory_extraction_log_user_type", "user_id", "memory_type"),
+    )
+
+
+class FestivalMemoryConfig(Base):
+    """节日记忆抽取配置：节日名称、日期、提示词，供定时任务与管理员执行。"""
+
+    __tablename__ = "festival_memory_config"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    festival_name = Column(String, nullable=False, comment="节日名称")
+    festival_date = Column(Date, nullable=False, comment="节日日期")
+    prompt = Column(Text, nullable=False, comment="抽取提示词")
+    enabled = Column(Boolean, nullable=False, default=True, comment="是否启用")
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )

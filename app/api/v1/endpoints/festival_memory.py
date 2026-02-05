@@ -1,0 +1,181 @@
+# CREATED_BY_AGENT
+"""节日记忆配置与立即执行 API（仅超级用户）"""
+
+import asyncio
+from typing import Any, List
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app import schemas
+from app.api import deps
+from app.api.tags import INTY_EVAL_TAG
+from app.api.utils.logger_route import LoggerRoute
+from app.core.user_privilege.superuser_check import is_superuser
+from app.models.memory import FestivalMemoryConfig
+from app.schemas.festival_memory import (
+    FestivalMemoryConfigCreate,
+    FestivalMemoryConfigInDB,
+    FestivalMemoryConfigUpdate,
+    FestivalMemoryExtractionRunRequest,
+    FestivalMemoryExtractionRunResponse,
+)
+from app.services import festival_memory_service
+
+router = APIRouter(prefix="/evaluation/admin", route_class=LoggerRoute, tags=[INTY_EVAL_TAG])
+
+
+async def get_current_superuser(
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> schemas.User:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="只有超级用户才能访问此接口")
+    return current_user
+
+
+@router.get(
+    "/festival-memory-configs",
+    response_model=schemas.APIResponse[List[FestivalMemoryConfigInDB]],
+    summary="节日记忆配置列表",
+)
+async def list_festival_memory_configs(
+    db: AsyncSession = Depends(deps.get_async_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: schemas.User = Depends(get_current_superuser),
+) -> Any:
+    result = await db.execute(
+        select(FestivalMemoryConfig).order_by(FestivalMemoryConfig.id.desc()).offset(skip).limit(limit)
+    )
+    configs = result.scalars().all()
+    return schemas.APIResponse.success(
+        data=[FestivalMemoryConfigInDB.model_validate(c) for c in configs]
+    )
+
+
+@router.post(
+    "/festival-memory-configs",
+    response_model=schemas.APIResponse[FestivalMemoryConfigInDB],
+    summary="创建节日记忆配置",
+)
+async def create_festival_memory_config(
+    body: FestivalMemoryConfigCreate,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(get_current_superuser),
+) -> Any:
+    config = FestivalMemoryConfig(
+        festival_name=body.festival_name,
+        festival_date=body.festival_date,
+        prompt=body.prompt,
+        enabled=body.enabled,
+    )
+    db.add(config)
+    await db.commit()
+    await db.refresh(config)
+    return schemas.APIResponse.success(data=FestivalMemoryConfigInDB.model_validate(config))
+
+
+@router.delete(
+    "/festival-memory-configs/{config_id}",
+    response_model=schemas.APIResponse[None],
+    summary="删除节日记忆配置",
+)
+async def delete_festival_memory_config(
+    config_id: int,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(get_current_superuser),
+) -> Any:
+    result = await db.execute(select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id))
+    config = result.scalar_one_or_none()
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
+    await db.delete(config)
+    await db.commit()
+    return schemas.APIResponse.success(data=None)
+
+
+@router.put(
+    "/festival-memory-configs/{config_id}",
+    response_model=schemas.APIResponse[FestivalMemoryConfigInDB],
+    summary="更新节日记忆配置",
+)
+async def update_festival_memory_config(
+    config_id: int,
+    body: FestivalMemoryConfigUpdate,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(get_current_superuser),
+) -> Any:
+    result = await db.execute(select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id))
+    config = result.scalar_one_or_none()
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
+    if body.festival_name is not None:
+        config.festival_name = body.festival_name
+    if body.festival_date is not None:
+        config.festival_date = body.festival_date
+    if body.prompt is not None:
+        config.prompt = body.prompt
+    if body.enabled is not None:
+        config.enabled = body.enabled
+    await db.commit()
+    await db.refresh(config)
+    return schemas.APIResponse.success(data=FestivalMemoryConfigInDB.model_validate(config))
+
+
+@router.post(
+    "/festival-memory-extraction/run",
+    response_model=schemas.APIResponse[FestivalMemoryExtractionRunResponse],
+    summary="立即执行节日记忆抽取",
+)
+async def run_festival_memory_extraction(
+    body: FestivalMemoryExtractionRunRequest,
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(get_current_superuser),
+) -> Any:
+    if body.config_id is not None:
+        result = await db.execute(
+            select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == body.config_id)
+        )
+        config = result.scalar_one_or_none()
+        if not config:
+            raise HTTPException(status_code=404, detail="配置不存在")
+        festival_name = config.festival_name
+        festival_date = config.festival_date
+        prompt = config.prompt
+    else:
+        if body.festival_name is None or body.festival_date is None or body.prompt is None:
+            raise HTTPException(
+                status_code=400,
+                detail="未指定 config_id 时需提供 festival_name、festival_date、prompt",
+            )
+        festival_name = body.festival_name
+        festival_date = body.festival_date
+        prompt = body.prompt
+
+    pairs = await asyncio.to_thread(
+        festival_memory_service.get_pairs_with_min_rounds_sync,
+        festival_memory_service.FESTIVAL_MEMORY_MIN_ROUNDS,
+    )
+    total = len(pairs)
+    success = 0
+    failed = 0
+    for user_id, agent_id in pairs:
+        ok = await festival_memory_service.extract_festival_and_save(
+            db, user_id, agent_id, festival_name, festival_date, prompt
+        )
+        if ok:
+            success += 1
+        else:
+            failed += 1
+    logger.info(
+        f"节日记忆抽取完成 festival={festival_name} total={total} success={success} failed={failed}"
+    )
+    return schemas.APIResponse.success(
+        data=FestivalMemoryExtractionRunResponse(
+            total_pairs=total,
+            success_count=success,
+            failed_count=failed,
+        )
+    )

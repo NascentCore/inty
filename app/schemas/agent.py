@@ -316,6 +316,23 @@ class AgentInDB(AgentBase):
         from_attributes = True
 
 
+class FestivalMemoryItem(BaseModel):
+    """角色详情 features 中的单条节日记忆"""
+
+    festival_date: str = Field(..., description="节日日期，如 YYYY-MM-DD")
+    festival_name: str = Field(..., description="节日名称")
+    memory: str = Field(..., description="用户与该角色在此节日下的回忆摘要")
+
+
+class AgentFeatures(BaseModel):
+    """角色详情可扩展的 features，当前包含节日记忆"""
+
+    festival_memories: List[FestivalMemoryItem] = Field(
+        default_factory=list,
+        description="当前用户与该角色的节日记忆列表",
+    )
+
+
 class Agent(AgentInDB):
     """AI角色，在 sqlalchemy 模型基础上添加额外多表查询来的数据"""
 
@@ -323,6 +340,10 @@ class Agent(AgentInDB):
     follower_count: int = 0
     connector_count: int = 0
     creator: Optional[User] = None
+    features: Optional[AgentFeatures] = Field(
+        None,
+        description="可扩展功能数据，如节日记忆等",
+    )
     # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
     avatar_size: Optional[ImageSize] = None
     # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。

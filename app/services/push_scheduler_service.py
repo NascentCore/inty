@@ -13,8 +13,12 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
 
+from sqlalchemy import select
+
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
+from app.models.memory import FestivalMemoryConfig
+from app.services import festival_memory_service
 from app.services.memory_extraction_service import (
     extract_and_save as memory_extract_and_save,
     get_users_to_extract as memory_get_users_to_extract,
@@ -177,6 +181,22 @@ class PushSchedulerService:
                 logger.info(
                     f"已添加记忆抽取任务: 启动后立即执行，之后每日 UTC {mem_cfg.cron_hour}:00"
                 )
+
+            # 节日记忆抽取：每日 UTC cron_hour+1 点执行，扫 festival_memory_config 表
+            festival_cron_hour = (mem_cfg.cron_hour + 1) % 24 if mem_cfg else 4
+            self.scheduler.add_job(
+                self._run_festival_memory_extraction,
+                trigger=CronTrigger(hour=festival_cron_hour, minute=0),
+                id="run_festival_memory_extraction",
+                name="节日记忆抽取",
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+                next_run_time=datetime.datetime.now(),
+            )
+            logger.info(
+                f"已添加节日记忆抽取任务: 启动后立即执行，之后每日 UTC {festival_cron_hour}:00"
+            )
 
             # 用户数据分析日报周报：每日/每周执行（若启用）
             uar_cfg = getattr(
@@ -367,6 +387,46 @@ class PushSchedulerService:
             logger.info("[记忆抽取] 完成")
         except Exception as e:
             logger.error(f"[记忆抽取] 执行失败: {str(e)}")
+
+    async def _run_festival_memory_extraction(self) -> None:
+        """节日记忆抽取：读取已启用的 festival_memory_config，对每个配置筛选 (user, agent) 并抽取。"""
+        try:
+            logger.info("[节日记忆抽取] 开始...")
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    select(FestivalMemoryConfig).where(
+                        FestivalMemoryConfig.enabled.is_(True)
+                    )
+                )
+                configs = result.scalars().all()
+            if not configs:
+                logger.info("[节日记忆抽取] 无启用配置，跳过")
+                return
+            pairs = await asyncio.to_thread(
+                festival_memory_service.get_pairs_with_min_rounds_sync,
+                festival_memory_service.FESTIVAL_MEMORY_MIN_ROUNDS,
+            )
+            for config in configs:
+                async with AsyncSessionLocal() as db:
+                    for user_id, agent_id in pairs:
+                        try:
+                            await festival_memory_service.extract_festival_and_save(
+                                db,
+                                user_id,
+                                agent_id,
+                                config.festival_name,
+                                config.festival_date,
+                                config.prompt,
+                            )
+                        except Exception as e:
+                            await db.rollback()
+                            logger.warning(
+                                f"[节日记忆抽取] user_id={user_id} agent_id={agent_id} "
+                                f"festival={config.festival_name} 失败: {e}"
+                            )
+            logger.info("[节日记忆抽取] 完成")
+        except Exception as e:
+            logger.error(f"[节日记忆抽取] 执行失败: {str(e)}")
 
     async def _run_user_analytics_daily_report(self) -> None:
         """每日用户数据分析日报：统计 T-1 日数据。"""

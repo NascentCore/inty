@@ -1367,6 +1367,37 @@ export const characterThemeApi = {
 };
 
 // =============================================================================
+// 节日记忆配置与抽取（管理员）
+// =============================================================================
+
+export const festivalMemoryApi = {
+  listConfigs: (params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<import("../types").FestivalMemoryConfigItem[]> =>
+    apiClient.get("/evaluation/admin/festival-memory-configs", params),
+
+  createConfig: (
+    data: import("../types").FestivalMemoryConfigCreate,
+  ): Promise<import("../types").FestivalMemoryConfigItem> =>
+    apiClient.post("/evaluation/admin/festival-memory-configs", data),
+
+  updateConfig: (
+    configId: number,
+    data: import("../types").FestivalMemoryConfigUpdate,
+  ): Promise<import("../types").FestivalMemoryConfigItem> =>
+    apiClient.put(`/evaluation/admin/festival-memory-configs/${configId}`, data),
+
+  deleteConfig: (configId: number): Promise<null> =>
+    apiClient.delete(`/evaluation/admin/festival-memory-configs/${configId}`),
+
+  runExtraction: (
+    body: import("../types").FestivalMemoryExtractionRunRequest,
+  ): Promise<import("../types").FestivalMemoryExtractionRunResponse> =>
+    apiClient.post("/evaluation/admin/festival-memory-extraction/run", body),
+};
+
+// =============================================================================
 // 导出默认API实例
 // =============================================================================
 
@@ -1386,6 +1417,7 @@ export default {
   userAnalytics: userAnalyticsApi,
   generatedImages: generatedImagesApi,
   report: reportApi,
+  festivalMemory: festivalMemoryApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端

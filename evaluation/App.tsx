@@ -21,6 +21,7 @@ import {
   PhoneOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -36,6 +37,7 @@ import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
 import { PerformanceAnalyticsPage } from "./pages/PerformanceAnalyticsPage";
+import { FestivalMemoryPage } from "./pages/FestivalMemoryPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -57,7 +59,8 @@ type PageKey =
   | "character-themes"
   | "generated-images"
   | "report-feedback"
-  | "performance-analytics";
+  | "performance-analytics"
+  | "festival-memory";
 
 interface NavigationItem {
   key: PageKey;
@@ -234,6 +237,12 @@ const AppContent: React.FC = () => {
       label: "举报与反馈",
       description: "查看用户举报和反馈列表",
     },
+    {
+      key: "festival-memory",
+      icon: <CalendarOutlined />,
+      label: "节日记忆提取",
+      description: "配置节日与提示词，抽取用户与角色的节日回忆",
+    },
   ];
 
   // 获取页面标题
@@ -267,6 +276,8 @@ const AppContent: React.FC = () => {
         return "生成图片管理";
       case "report-feedback":
         return "举报与反馈";
+      case "festival-memory":
+        return "节日记忆提取";
       default:
         return "智能体评测系统";
     }
@@ -307,6 +318,8 @@ const AppContent: React.FC = () => {
         return <GeneratedImagesPage />;
       case "report-feedback":
         return <ReportFeedbackPage />;
+      case "festival-memory":
+        return <FestivalMemoryPage />;
 
       default:
         return null;

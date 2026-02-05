@@ -219,6 +219,18 @@
 | `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/session-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
 
+### 节日记忆（管理员，Evaluation Admin）
+
+| 路径 | 方法 | 实现文件 |
+|------|------|----------|
+| `/api/v1/evaluation/admin/festival-memory-configs` | GET | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs` | POST | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | PUT | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | DELETE | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-extraction/run` | POST | `app/api/v1/endpoints/festival_memory.py` |
+
+> 以上端点仅超级用户可访问。节日记忆通过角色详情 `GET /api/v1/ai/agents/{agent_id}` 的响应字段 `features.festival_memories` 返回。
+
 ## API v2 端点 (`/api/v2`)
 
 ### 聊天 (Chat)
