@@ -681,9 +681,6 @@ object UiConfigs {
             /** 尾部控件内边距 - 输入框文本区域距离右侧按钮区域的距离 */
             val TrailingControlsPadding = 104.dp
 
-            /** 语音模式下尾部内边距 - Hold to talk 右侧与 + 按钮间距与 ButtonRightPadding 一致 */
-            val VoiceModeTrailingPadding = ButtonRightPadding + ButtonSize
-
             /** 语音输入切换按钮大小 */
             val VoiceToggleButtonSize = ButtonSize
 
@@ -695,6 +692,9 @@ object UiConfigs {
 
             /** 语音输入切换按钮与输入区域间距 */
             val VoiceTogglePaddingEnd = UiConfigs.Spacing.Tiny
+
+            /** 语音模式下尾部内边距 - Hold to talk 与 + 的间距与左侧和键盘按钮的间距一致（VoiceTogglePaddingEnd） */
+            val VoiceModeTrailingPadding = VoiceTogglePaddingEnd + ButtonSize + ButtonRightPadding
 
             /** 头部控件内边距 - 输入框文本区域距离左侧语音按钮的距离 */
             val LeadingControlsPadding =
