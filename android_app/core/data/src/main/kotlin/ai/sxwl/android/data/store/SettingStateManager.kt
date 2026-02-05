@@ -8,8 +8,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 /** 全局设置状态管理器 用于在多个Compose屏幕之间同步设置状态 */
 object SettingStateManager {
@@ -72,6 +74,18 @@ object SettingStateManager {
         // 避免重复初始化
         if (initialized) {
             return
+        }
+
+        // 同步读取 DataStore 中的聊天输入方式，避免 initialized = true 后消费者仍读到默认 TEXT
+        try {
+            val initialMode = runBlocking(Dispatchers.IO) {
+                dataStore().getString("voice_input_mode").map { raw ->
+                    raw?.let { runCatching { ChatInputMode.valueOf(it) }.getOrElse { ChatInputMode.TEXT } } ?: ChatInputMode.TEXT
+                }.first()
+            }
+            _voiceInputModeFlow.value = initialMode
+        } catch (e: Exception) {
+            LogUtils.e("SettingStateManager", "读取 voice_input_mode 失败: ${e.message}", e)
         }
 
         try {
