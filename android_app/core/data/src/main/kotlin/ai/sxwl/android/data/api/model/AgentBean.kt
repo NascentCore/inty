@@ -37,6 +37,7 @@ data class AgentInfo(
     @Json(name = "follower_count") val followerCount: Int = 0,
     @Json(name = "connector_count") val connectorCount: Int = 0,
     @Json(name = "deleted_at") val deletedAt: Long? = null,
+    val features: Features? = null
 ) : Parcelable {
     // 本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false // 标记该agent是否被服务端已经删除
@@ -79,6 +80,21 @@ data class AgentInfo(
                 System.currentTimeMillis().milliseconds - it.seconds <= 30.days
             } ?: false
 }
+
+@Parcelize
+@JsonClass(generateAdapter = true)
+data class Features(
+    @Json(name = "festival_memories") val festivalMemories: List<FestivalMemory> = emptyList()
+) : Parcelable
+
+@Parcelize
+@JsonClass(generateAdapter = true)
+data class FestivalMemory(
+    @Json(name = "memory_id") val memoryId: Long? = null,
+    @Json(name = "festival_date")val festivalDate: String = "",
+    @Json(name = "festival_name")val festivalName: String? = null,
+    val memory: String = ""
+) : Parcelable
 
 @Parcelize
 @JsonClass(generateAdapter = true)

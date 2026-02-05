@@ -25,6 +25,8 @@ data class MessageEntity(
     @Embedded val metaData: MetaData,
     // 以下为本地字段
     val isSending: Boolean = false,
+    val type: String? = null,
+    val festivalMemoryId: Long? = null
 ) {
     val isVoice: Boolean
         get() = metaData.isVoice
@@ -82,6 +84,8 @@ data class MessageUpdate(
     val audioUrl: String? = null,
     @Embedded val metaData: MetaData,
     val isSending: Boolean = false,
+    val type: String? = null,
+    val festivalMemoryId: Long? = null
 )
 
 fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
@@ -108,6 +112,8 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
                     voiceSessionId = voice_session_id,
                 )
             } ?: MetaData(agentId),
+        type = type,
+        festivalMemoryId = festivalMemoryId
     )
 }
 
@@ -136,6 +142,8 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
                 )
             } ?: MessageEntity.MetaData(agentId),
         isSending = false,
+        type = type,
+        festivalMemoryId = festivalMemoryId
     )
 }
 

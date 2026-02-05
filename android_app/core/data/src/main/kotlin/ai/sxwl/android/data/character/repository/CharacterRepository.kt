@@ -8,7 +8,10 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.character.local.db.CharacterDao
 import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
+import ai.sxwl.android.data.character.local.db.FestivalMemory
 import ai.sxwl.android.utils.LogUtils
+import androidx.compose.animation.core.DecayAnimation
+import androidx.room.withTransaction
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlin.math.max
@@ -41,6 +44,10 @@ class CharacterRepository(
         return dao.observeCharacter(agentId).filterNotNull()
     }
 
+    fun getFestivalMemories(agentId: String): Flow<List<FestivalMemory>> {
+        return dao.getFestivalMemories(agentId)
+    }
+
     suspend fun updateLocalAgent(agentId: String, update: (AgentInfo) -> AgentInfo) {
         withContext(dispatcher) {
             val entity = dao.getCharacter(agentId)
@@ -53,9 +60,28 @@ class CharacterRepository(
     suspend fun refreshAgent(agentId: String): HttpResult<AgentInfo> {
         return runCatching { NetServiceMgr.getChatApi().getAgentInfo(agentId) }
             .onSuccess {
+
                 val existing = dao.getCharacter(agentId)
                 if (it is HttpResult.Success) {
                     dao.upsert(it.data.toCharacterEntity(existing))
+
+                    val memories = it.data.features?.festivalMemories?.map { memory ->
+                        FestivalMemory(
+                            id = memory.memoryId ?: 0,
+                            agentId = agentId,
+                            festivalDate = memory.festivalDate,
+                            festivalName = memory.festivalName,
+                            memory = memory.memory
+                        )
+                    }
+
+                    if (!memories.isNullOrEmpty()) {
+                        CharacterDatabase.getInstance().withTransaction {
+                            dao.clearMemories(agentId)
+                            dao.upsert(memories)
+                        }
+                        LogUtils.d("更新角色记忆${memories.size}条")
+                    }
                 }
             }
             .onFailure { error -> LogUtils.e("setAgentID exception: ${error.message}") }

@@ -7,6 +7,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -44,4 +45,13 @@ interface CharacterDao {
             "ORDER BY name LIMIT :limit"
     )
     suspend fun searchCharactersByTag(query: String, limit: Int = 100): List<CharacterEntity>
+
+    @Query("SELECT * FROM festival_memory WHERE agentId = :agentId ORDER BY id DESC")
+    fun getFestivalMemories(agentId: String): Flow<List<FestivalMemory>>
+
+    @Query("DELETE FROM festival_memory WHERE agentId = :agentId")
+    suspend fun clearMemories(agentId: String)
+
+    @Upsert
+    suspend fun upsert(memories: List<FestivalMemory>)
 }

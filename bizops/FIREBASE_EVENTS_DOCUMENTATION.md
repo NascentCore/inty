@@ -66,6 +66,7 @@
 
 **页面来源参数说明：**
 - `page_source`：页面来源标识，用于统计用户从哪个入口进入页面
+  - **Heartbeat**（心跳/回忆页）：进入时通过 `PageTrackingHelper.trackPageView("Heartbeat", "MainActivity", ...)` 上报 SCREEN_VIEW，附加参数 `agent_id`、`page_source`。`page_source` 取值：`more_panel`（聊天更多面板入口）、`message_notify`（聊天消息条中的回忆入口）、`unknown`（未传或其它）。代码位置：`Heartbeat.kt` 的 `toHeartbeat()`，入口：`ChatMorePanel.kt`、`ChatItem.kt`。
   - **subscriptionPage**：`home_expired_dialog`（首页过期VIP对话框）、`chat_page`（聊天页面）、`chat_more_panel`（聊天更多面板）、`profile_upgrade`（个人中心升级按钮）、`settings_subscription`（设置页面订阅管理）、`settings_premium_dialog`（设置页面高级模型对话框）
   - **ChatPage**：
     - `chat_activity`：在 ChatActivity 中（独立页面）

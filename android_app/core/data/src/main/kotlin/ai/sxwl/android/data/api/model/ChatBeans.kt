@@ -90,6 +90,8 @@ data class MsgInfo(
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
     // 本地状态：用户反馈（like/dislike）- 不序列化
     val userFeedback: UserFeedback? = null,
+    val type: String? = null,
+    @Json(name = "festival_memory_id")val festivalMemoryId: Long? = null
 ) {
 
     fun isOpening(): Boolean {

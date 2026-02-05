@@ -1,11 +1,13 @@
 package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.api.model.FestivalMemory
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
@@ -14,6 +16,7 @@ import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.text.style.ClickableSpan
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -21,10 +24,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -41,8 +47,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -71,8 +81,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,6 +98,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.heartbeat.toHeartbeat
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.audio.VoicePlayer
@@ -113,38 +126,98 @@ fun ChatItem(
     navController: NavController,
     isOnlyOpeningMessage: Boolean,
     item: MessageEntity,
+    agentName: String? = null,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
-    when (item.role) {
-        "assistant" -> {
-            ChatItemAI(
-                navController,
-                isOnlyOpeningMessage = isOnlyOpeningMessage,
-                item,
-                isCurrentPage,
-                chatViewModel,
-                isLatestMessage,
-                isGuideVisible,
-                messageFontSizeSp,
-            )
-        }
+    when (item.type) {
+        "festival_memory_prompt" -> ChatItemFestivalMemory(
+            agentName = agentName.orEmpty(),
+            onClick = {
+                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                    "click_type" to "heartbeat",
+                    "agent_id" to item.metaData.agentId,
+                    "memory_id" to item.festivalMemoryId
+                )
+                navController.toHeartbeat(
+                    item.metaData.agentId,
+                    item.festivalMemoryId,
+                    "message_notify"
+                )
+            }
+        )
+        else -> when (item.role) {
+            "assistant" -> {
+                ChatItemAI(
+                    navController,
+                    isOnlyOpeningMessage = isOnlyOpeningMessage,
+                    item,
+                    isCurrentPage,
+                    chatViewModel,
+                    isLatestMessage,
+                    isGuideVisible,
+                    messageFontSizeSp,
+                )
+            }
 
-        "user" -> {
-            ChatItemUser(item, messageFontSizeSp)
-        }
+            "user" -> {
+                ChatItemUser(item, messageFontSizeSp)
+            }
 
-        "system" -> {
-            ChatItemSystemTips(item, chatViewModel)
-        }
+            "system" -> {
+                ChatItemSystemTips(item, chatViewModel)
+            }
 
-        else -> {
-            LogUtils.w("ChatItem - 未知角色: ${item.role}")
-            ChatItemUser(item, messageFontSizeSp)
+            else -> {
+                LogUtils.w("ChatItem - 未知角色: ${item.role}")
+                ChatItemUser(item, messageFontSizeSp)
+            }
         }
+    }
+
+}
+
+@Composable
+private fun ChatItemFestivalMemory(
+    agentName: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    Box(modifier = modifier) {
+
+        Text(
+            text = buildAnnotatedString {
+                append(stringResource(R.string.chat_festival_memory_notify, agentName))
+                withStyle(
+                    SpanStyle(
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                ) {
+                    append(stringResource(R.string.take_a_look))
+                }
+            },
+            textAlign = TextAlign.Center,
+            color = Color.White,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .noRippleClickable(onClick = onClick)
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun FestivalMemoryPreview() {
+    IntelliMateTheme {
+        ChatItemFestivalMemory(
+            agentName = "Agent",
+            onClick = {}
+        )
     }
 }
 
@@ -165,7 +238,9 @@ private fun ChatItemAI(
     val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
-            Column(modifier = Modifier.padding(bottom = 16.dp).fillMaxWidth()) {
+            Column(modifier = Modifier
+                .padding(bottom = 16.dp)
+                .fillMaxWidth()) {
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
                 val isImageLoading = generatedImageUrl == "loading"
@@ -200,7 +275,9 @@ private fun ChatItemAI(
 
                     // 消息气泡上方的辅助内容条
                     Row(
-                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // 显示音频播放按钮
@@ -264,7 +341,8 @@ private fun ChatItemAI(
                 if (isNormalLoading) {
                     Box(
                         modifier =
-                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                 .padding(
                                     horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                     vertical = UiConfigs.ChatMessagePane.PaddingVertical,
@@ -279,7 +357,8 @@ private fun ChatItemAI(
                         val context = LocalContext.current
                         Box(
                             modifier =
-                                Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                                Modifier
+                                    .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                     .padding(
                                         horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                         vertical = UiConfigs.ChatMessagePane.PaddingVertical,
@@ -321,11 +400,15 @@ private fun ChatItemAI(
                                         viewModel.generateImageForMessageOrPickImage(item.id)
                                     },
                                     modifier =
-                                        Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),
+                                        Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .offset(10.dp, 10.dp),
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        Spacer(modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f))
                     }
                 }
 
@@ -359,7 +442,9 @@ private fun ChatItemAI(
                         if (isImageLoading) {
                             val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
                             ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                                 showLoadingDots = true,
                                 showSpeedUpButton = !vipStatus.isSubscribed,
@@ -373,7 +458,8 @@ private fun ChatItemAI(
                         } else if (imageLoadError) {
                             Box(
                                 modifier =
-                                    Modifier.fillMaxWidth(0.35f)
+                                    Modifier
+                                        .fillMaxWidth(0.35f)
                                         .aspectRatio(aspectRatio)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.Black.copy(alpha = 0.3f))
@@ -412,7 +498,8 @@ private fun ChatItemAI(
                                 // 使用 Box 叠加 shimmer 和图片
                                 Box(
                                     modifier =
-                                        Modifier.fillMaxWidth(0.35f)
+                                        Modifier
+                                            .fillMaxWidth(0.35f)
                                             .aspectRatio(aspectRatio)
                                             .constrainAs(img) {}
                                             .clip(RoundedCornerShape(12.dp))
@@ -455,7 +542,9 @@ private fun ChatItemAI(
                         } else {
                             // URL 为空或其他情况，显示 shimmer
                             ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                             )
                         }
@@ -529,7 +618,9 @@ private fun ChatItemAI(
                             modifier =
                                 Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
                         )
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        Spacer(modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f))
                     }
                 }
             }
@@ -539,7 +630,8 @@ private fun ChatItemAI(
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -559,7 +651,9 @@ private fun ChatItemAI(
                         fontSize = messageFontSize,
                     )
                 }
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f))
             }
         }
 }
@@ -578,7 +672,8 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
 
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -628,7 +723,8 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -670,7 +766,9 @@ private fun ChatItemSystemTips(item: MessageEntity, chatViewModel: ChatViewModel
         }
 
     Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -936,7 +1034,8 @@ private fun LoadingAnimation(agentName: String?) {
 
                 Box(
                     modifier =
-                        Modifier.size(6.dp)
+                        Modifier
+                            .size(6.dp)
                             .background(
                                 color = Color.White.copy(dotAlpha * 0.7f),
                                 shape = CircleShape,
@@ -960,7 +1059,8 @@ internal fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier.border(
+            Modifier
+                .border(
                     width = .5.dp,
                     brush = Brush.horizontalGradient(colors = listOf(purpleStart, purpleEnd)),
                     shape = RoundedCornerShape(12.dp),
@@ -996,7 +1096,9 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -1017,7 +1119,8 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier.size(18.dp)
+                    Modifier
+                        .size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,
@@ -1099,11 +1202,15 @@ fun VoiceChatHistoryCollapsed(
 
     Box(
         modifier =
-            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp)
+            modifier
+                .fillMaxWidth()
+                .noRippleClickable(onClick = onClick)
+                .padding(vertical = 8.dp)
     ) {
         Row(
             modifier =
-                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                Modifier
+                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                     .background(
                         color = Color.Black.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(12.dp),
@@ -1190,13 +1297,15 @@ fun VoiceChatHistoryExpandedContainer(
         // 顶部折叠提示卡片（与折叠状态相同样式，但提示文字不同）
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .noRippleClickable(onClick = onCollapse)
                     .padding(bottom = 8.dp)
         ) {
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .background(
                             color = Color.Black.copy(alpha = 0.3f),
                             shape = RoundedCornerShape(12.dp),
