@@ -1,18 +1,7 @@
 # Inty 长期 AI 陪伴（仓库总入口 AGENTS.md）
 
-本文件适用于仓库根目录及全局协作约定；各子目录如存在自己的 `AGENTS.md`，则**以子目录文件为准并视为对本文件的补充/覆盖**。
-
-## 快速导航（优先阅读各目录 AGENTS.md）
-
-- `app/AGENTS.md`：后端服务（FastAPI）开发规范
-- `tests/AGENTS.md`：测试规范
-- `alembic/AGENTS.md`：数据库迁移规范
-- `evaluation/AGENTS.md`：运营工具（React）规范
-- `web_app/`：独立 Web App（如有规则，优先遵循其目录内规则文件）
-- `android_app/AGENTS.md`：Android App 开发规范
-- `scripts/AGENTS.md`：脚本开发规范
-- `devops/AGENTS.md`：运维与部署规范
-- `experimental/AGENTS.md`：原型与实验代码规范
+- 本代码库开发人员母语为中文普通话
+- 如有可能、在不影响正确性前提下，使用中文编写各类非代码的文字内容：代码注释、GitHub Pull Request 标题 & 描述等等
 
 ## 基础约定
 
