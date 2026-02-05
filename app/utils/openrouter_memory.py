@@ -29,7 +29,7 @@ async def call_openrouter_for_extraction(
         raise ValueError("agent.api_key 未配置，无法调用 OpenRouter")
     url = f"{base_url}/chat/completions"
     app_cfg = global_config_loaded_from_config_yaml.app
-    referer = app_cfg.name_for_openrouter()
+    referer = app_cfg.name_for_openrouter
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
