@@ -205,15 +205,7 @@ internal fun ChatPage(
     debugAgentIndex: Int? = null,
     fromPage: String? = null,
     refreshMessageCount: Int = 0,
-    /** 与 ChatPageContainer 左右滑动共享的语音/文字模式；为 null 时使用本页内部状态（如 ChatScreen 单页） */
-    isVoiceInputMode: Boolean? = null,
-    onVoiceInputModeChange: ((Boolean) -> Unit)? = null,
 ) {
-    var internalVoiceMode by remember { mutableStateOf(false) }
-    val effectiveVoiceMode = isVoiceInputMode ?: internalVoiceMode
-    val effectiveOnVoiceInputModeChange: (Boolean) -> Unit =
-        onVoiceInputModeChange ?: { internalVoiceMode = it }
-
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
@@ -836,8 +828,6 @@ internal fun ChatPage(
                                 },
                                 showMorePanel = showMorePanel,
                                 bottomPadding = UiConfigs.ChatPage.ChatInput.BottomSpacerHeight,
-                                isVoiceInputMode = effectiveVoiceMode,
-                                onVoiceInputModeChange = effectiveOnVoiceInputModeChange,
                                 focusRequester = inputFocusRequester,
                                 onFocusChange = { focused ->
                                     if (!isCurrentPage) return@ChatInput

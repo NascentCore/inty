@@ -67,13 +67,14 @@ object DataStoreManager {
      * @return DataStore 实例，可用于存储和读取 Preferences 数据
      */
     fun getOrCreateDataStore(context: Context, name: String?): DataStore<Preferences> {
-        return dataStoreRegistry.getOrPut(name) {
+        val registryKey = name ?: GLOBAL_DATASTORE_KEY
+        return dataStoreRegistry.getOrPut(registryKey) {
             PreferenceDataStoreFactory.create(
                 corruptionHandler = null,
                 migrations = listOf(),
                 scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             ) {
-                context.applicationContext.preferencesDataStoreFile(name ?: GLOBAL_DATASTORE_KEY)
+                context.applicationContext.preferencesDataStoreFile(registryKey)
             }
         }
     }

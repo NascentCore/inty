@@ -124,8 +124,6 @@ fun ChatPageContainer(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var autoFocusEnabled by rememberSaveable { mutableStateOf(false) }
-    // 左右滑动时保持输入模式一致：上一页语音则下一页也语音，上一页文字则下一页也文字
-    var isVoiceInputMode by remember { mutableStateOf(false) }
 
     // 新用户引导状态
     var hasShowGuest by remember { mutableStateOf(IntySetting.hasShowGuest()) }
@@ -250,8 +248,6 @@ fun ChatPageContainer(
                     debugAgentIndex = currentPage,
                     onCall = { navController.navigate(Routes.Chat.voiceCall(agent.id)) },
                     refreshMessageCount = 1,
-                    isVoiceInputMode = isVoiceInputMode,
-                    onVoiceInputModeChange = { isVoiceInputMode = it },
                 )
             }
         }

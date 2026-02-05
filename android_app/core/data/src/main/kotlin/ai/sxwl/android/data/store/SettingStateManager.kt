@@ -2,9 +2,14 @@ package ai.sxwl.android.data.store
 
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /** 全局设置状态管理器 用于在多个Compose屏幕之间同步设置状态 */
 object SettingStateManager {
@@ -49,6 +54,12 @@ object SettingStateManager {
     // 消息列表是否全屏状态
     private val _chatListFullScreenFlow = MutableStateFlow(IntySetting.isChatListFullScreen())
     val chatListFullScreenFlow: StateFlow<Boolean> = _chatListFullScreenFlow.asStateFlow()
+
+    // 聊天输入方式：TEXT / VOICE（DataStore 持久化，全局配置，默认 TEXT）
+    private val _voiceInputModeFlow = MutableStateFlow(ChatInputMode.TEXT)
+    val voiceInputModeFlow: StateFlow<ChatInputMode> = _voiceInputModeFlow.asStateFlow()
+
+    private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 
     // 标记是否已经初始化过（避免重复初始化）
     @Volatile private var initialized = false
@@ -119,6 +130,15 @@ object SettingStateManager {
             // 自动播放背景动画暂不依赖 Remote Config，直接使用本地存储值
             _autoPlayAnimationFlow.value = IntySetting.isAutoPlayAnimation()
 
+            // 从 DataStore 同步聊天输入方式（TEXT/VOICE，持久化在 DataStore，非 MMKV）
+            scope.launch {
+                dataStore().getString("voice_input_mode").map { raw ->
+                    raw?.let { runCatching { ChatInputMode.valueOf(it) }.getOrElse { ChatInputMode.TEXT } } ?: ChatInputMode.TEXT
+                }.collect { mode ->
+                    _voiceInputModeFlow.value = mode
+                }
+            }
+
             initialized = true
         } catch (e: Exception) {
             LogUtils.e("SettingStateManager", "从 Remote Config 初始化失败: ${e.message}", e)
@@ -185,5 +205,13 @@ object SettingStateManager {
     fun updateChatListFullScreen(fullScreen: Boolean) {
         IntySetting.setChatListFullScreen(fullScreen)
         _chatListFullScreenFlow.value = fullScreen
+    }
+
+    /** 更新聊天输入方式（TEXT/VOICE），持久化到 DataStore，全局生效 */
+    fun updateChatInputMode(mode: ChatInputMode) {
+        _voiceInputModeFlow.value = mode
+        scope.launch(Dispatchers.IO) {
+            dataStore().putString("voice_input_mode", mode.name)
+        }
     }
 }

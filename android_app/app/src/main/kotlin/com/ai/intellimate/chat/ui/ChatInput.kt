@@ -1,6 +1,7 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.store.ChatInputMode
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
@@ -76,10 +77,7 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 
-/** 聊天输入框组件
- * @param isVoiceInputMode 当前是否为语音输入模式（与 ChatPage 左右滑动共享，保持滑动前后一致）
- * @param onVoiceInputModeChange 语音/文字模式切换回调
- */
+/** 聊天输入框组件。语音/文字模式为全局配置，所有聊天入口一致（Explore、Me、Chat 标签等）。 */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ChatInput(
@@ -88,8 +86,6 @@ fun ChatInput(
     onToggleMorePanel: () -> Unit,
     showMorePanel: Boolean,
     bottomPadding: Dp,
-    isVoiceInputMode: Boolean,
-    onVoiceInputModeChange: (Boolean) -> Unit,
     focusRequester: FocusRequester? = null,
     onFocusChange: (Boolean) -> Unit = {},
 ) {
@@ -97,6 +93,8 @@ fun ChatInput(
     val inputSelection = chatViewModel.inputSelection.collectAsState()
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
+    val chatInputMode by SettingStateManager.voiceInputModeFlow.collectAsState()
+    val isVoiceInputMode = chatInputMode == ChatInputMode.VOICE
 
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -112,7 +110,7 @@ fun ChatInput(
             if (granted && pendingEnterVoiceModeAfterPermission) {
                 if (showMorePanel) onToggleMorePanel()
                 if (isKeyboardVisible) keyboardController?.hide()
-                onVoiceInputModeChange(true)
+                SettingStateManager.updateChatInputMode(ChatInputMode.VOICE)
                 pendingEnterVoiceModeAfterPermission = false
             } else if (!granted) {
                 pendingEnterVoiceModeAfterPermission = false
@@ -208,7 +206,7 @@ fun ChatInput(
 
     LaunchedEffect(voicePermissionState.status.isGranted) {
         if (!voicePermissionState.status.isGranted && isVoiceInputMode) {
-            onVoiceInputModeChange(false)
+            SettingStateManager.updateChatInputMode(ChatInputMode.TEXT)
             isVoiceRecording = false
         }
     }
@@ -217,7 +215,7 @@ fun ChatInput(
     LifecycleResumeEffect(Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             if (isVoiceInputMode || isVoiceRecording) {
-                onVoiceInputModeChange(false)
+                SettingStateManager.updateChatInputMode(ChatInputMode.TEXT)
                 isVoiceRecording = false
             }
         }
@@ -263,7 +261,7 @@ fun ChatInput(
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
                 if (isVoiceInputMode) {
-                    onVoiceInputModeChange(false)
+                    SettingStateManager.updateChatInputMode(ChatInputMode.TEXT)
                     // 切换回文字模式后延迟一帧再请求焦点并拉键盘，确保 IntySmallTextField 已重组
                     scope.launch {
                         yield()
@@ -284,7 +282,7 @@ fun ChatInput(
                     if (isKeyboardVisible) {
                         keyboardController?.hide()
                     }
-                    onVoiceInputModeChange(true)
+                    SettingStateManager.updateChatInputMode(ChatInputMode.VOICE)
                 }
             }
             val onVoicePressStart: () -> Boolean = onVoicePressStart@{
