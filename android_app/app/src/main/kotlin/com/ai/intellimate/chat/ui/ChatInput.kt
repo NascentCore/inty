@@ -226,7 +226,7 @@ fun ChatInput(
             val inputContentModifier =
                 Modifier.padding(
                         start = config.LeadingControlsPadding,
-                        end = config.TrailingControlsPadding,
+                        end = if (isVoiceInputMode) config.VoiceModeTrailingPadding else config.TrailingControlsPadding,
                     )
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
