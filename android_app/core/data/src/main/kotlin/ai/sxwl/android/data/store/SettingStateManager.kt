@@ -130,7 +130,7 @@ object SettingStateManager {
             // 自动播放背景动画暂不依赖 Remote Config，直接使用本地存储值
             _autoPlayAnimationFlow.value = IntySetting.isAutoPlayAnimation()
 
-            // 从 DataStore 同步聊天输入方式（TEXT/VOICE，持久化在 DataStore，非 MMKV）
+            // 从 DataStore 同步聊天输入方式（TEXT/VOICE，持久化在 DataStore，与 Remote Config 无关）
             scope.launch {
                 dataStore().getString("voice_input_mode").map { raw ->
                     raw?.let { runCatching { ChatInputMode.valueOf(it) }.getOrElse { ChatInputMode.TEXT } } ?: ChatInputMode.TEXT
@@ -138,15 +138,22 @@ object SettingStateManager {
                     _voiceInputModeFlow.value = mode
                 }
             }
-
-            initialized = true
         } catch (e: Exception) {
             LogUtils.e("SettingStateManager", "从 Remote Config 初始化失败: ${e.message}", e)
             // 初始化失败时，使用本地存储的当前值（如果有）或默认值
             _showKeepTalkingFlow.value = IntySetting.isShowKeepTalking()
             _autoPlayAudioFlow.value = IntySetting.isAutoPlayAudio()
             _autoPlayAnimationFlow.value = IntySetting.isAutoPlayAnimation()
+            // 聊天输入方式存于 DataStore，与 Remote Config 无关，确保异常时也加载
+            scope.launch {
+                dataStore().getString("voice_input_mode").map { raw ->
+                    raw?.let { runCatching { ChatInputMode.valueOf(it) }.getOrElse { ChatInputMode.TEXT } } ?: ChatInputMode.TEXT
+                }.collect { mode ->
+                    _voiceInputModeFlow.value = mode
+                }
+            }
         }
+        initialized = true
     }
 
     fun setKeyboardHeight(height: Float) {
