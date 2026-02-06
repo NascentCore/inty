@@ -164,6 +164,8 @@ def _compute_users_to_extract_sync(
         all_sids.update(sids)
 
     sids_list = list(all_sids)
+    distinct_lasts = set(user_to_last.values())
+
     db_url = global_config_loaded_from_config_yaml.database.url
     conn = psycopg.connect(db_url, autocommit=True)
     try:
@@ -184,7 +186,6 @@ def _compute_users_to_extract_sync(
                 for row in cur.fetchall():
                     session_to_total[row[0]] = row[1] or 0
 
-        distinct_lasts = set(user_to_last.values())
         last_to_session_incr: dict = {}
         for last in distinct_lasts:
             last_to_session_incr[last] = {}

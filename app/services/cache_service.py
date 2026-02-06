@@ -108,6 +108,7 @@ class CacheService:
 
         self._cleanup_task = None
         self._cleanup_running = False
+        self._cleanup_run_count = 0
 
     async def start_cleanup_task(self):
         """启动清理任务"""

@@ -376,7 +376,7 @@ class PushSchedulerService:
             async with AsyncSessionLocal() as db:
                 user_ids = await memory_get_users_to_extract(db)
                 logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
-                for uid in user_ids:
+                for idx, uid in enumerate(user_ids):
                     try:
                         await memory_extract_and_save(db, uid)
                     except Exception as e:
