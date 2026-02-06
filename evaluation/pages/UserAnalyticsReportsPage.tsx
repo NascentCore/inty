@@ -33,6 +33,10 @@ import type {
   UserAnalyticsStatsResponse,
   UserAnalyticsReportCharts,
 } from "../types";
+import {
+  DAILY_USAGE_METRICS,
+  buildDailyUsageSeries,
+} from "../utils/userAnalyticsReports";
 
 type ReportType = "daily" | "weekly";
 
@@ -54,6 +58,9 @@ const ROUNDS_LABELS = [
   "91-100",
   "100+",
 ];
+
+const USAGE_CHART_HEIGHT = 360;
+const USAGE_MARKER_SIZE = 6;
 
 function computeRoundsDistributionBySession(
   conversationRounds: UserAnalyticsReportCharts["conversation_rounds"],
@@ -609,6 +616,27 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     loadReports();
   }, [loadReports]);
 
+  const dailyUsageSeries = useMemo(() => {
+    if (reportType !== "daily") {
+      return null;
+    }
+    return buildDailyUsageSeries(reports);
+  }, [reportType, reports]);
+  const dailyUsagePlotData = useMemo(() => {
+    if (!dailyUsageSeries) {
+      return [];
+    }
+    return DAILY_USAGE_METRICS.map((metric) => ({
+      x: dailyUsageSeries.dates,
+      y: dailyUsageSeries.valuesByMetric[metric.key],
+      name: metric.label,
+      type: "scatter",
+      mode: "lines+markers",
+      marker: { size: USAGE_MARKER_SIZE, color: metric.color },
+      line: { color: metric.color },
+    }));
+  }, [dailyUsageSeries]);
+
   const items = reports.map((report) => ({
     key: report.id,
     label: `${report.report_date}（${REPORT_TYPE_LABELS[report.report_type]}）`,
@@ -641,6 +669,25 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       </Card>
 
       <Spin spinning={loading}>
+        {reportType === "daily" && (
+          <Card title="每日用量曲线" style={{ marginBottom: "24px" }}>
+            {dailyUsageSeries ? (
+              <Plot
+                data={dailyUsagePlotData}
+                layout={{
+                  height: USAGE_CHART_HEIGHT,
+                  hovermode: "x unified",
+                  xaxis: { title: "日期" },
+                  yaxis: { title: "用量" },
+                  legend: { orientation: "h" },
+                }}
+                style={{ width: "100%", height: "100%" }}
+              />
+            ) : (
+              <Empty description="暂无日报数据" />
+            )}
+          </Card>
+        )}
         {reports.length === 0 && !loading ? (
           <Empty description="暂无预计算报告数据" />
         ) : (
