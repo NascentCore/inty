@@ -334,11 +334,10 @@ fun ChatInput(
                     onPressCancel = onVoicePressCancel,
                 )
             } else {
-                // 文本输入区左边界与语音“按住说话”按钮左边界对齐：两者与语音切换按钮的间距一致（LeadingControlsPadding 为 hold 按钮起始；TextField 有默认内边距，故将容器 start 左移 TextFieldHorizontal，使文字起始与 hold 按钮内容起始对齐）
+                // 文本输入区左边界与语音“按住说话”按钮左边界对齐（均为 LeadingControlsPadding），两者内部均有 TextFieldHorizontal 内边距，文字起始位置一致
                 val textFieldContentModifier =
                     Modifier.padding(
-                            start =
-                                config.LeadingControlsPadding - UiConfigs.Padding.TextFieldHorizontal,
+                            start = config.LeadingControlsPadding,
                             end = trailingPadding,
                         )
                         .align(Alignment.Center)
@@ -411,10 +410,10 @@ fun ChatInput(
 
             Row(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd)
-                        .padding(end = config.ButtonRightPadding, bottom = 13.dp),
+                    Modifier.align(Alignment.CenterEnd)
+                        .padding(end = config.ButtonRightPadding),
                 horizontalArrangement = Arrangement.spacedBy(config.SceneActionButtonSpacing),
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (showSceneActionButton) {
                     SceneActionQuickButton(
