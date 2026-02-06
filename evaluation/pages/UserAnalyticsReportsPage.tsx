@@ -4,7 +4,13 @@
  * CREATED_BY_AGENT
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   Card,
   Select,
@@ -36,6 +42,7 @@ import type {
 import {
   DAILY_USAGE_METRICS,
   buildDailyUsageSeries,
+  sortReportsByDateDesc,
 } from "../utils/userAnalyticsReports";
 
 type ReportType = "daily" | "weekly";
@@ -61,6 +68,8 @@ const ROUNDS_LABELS = [
 
 const USAGE_CHART_HEIGHT = 360;
 const USAGE_MARKER_SIZE = 6;
+const REPORTS_LIMIT = 30;
+const DAILY_LATEST_LIMIT = 1;
 
 function computeRoundsDistributionBySession(
   conversationRounds: UserAnalyticsReportCharts["conversation_rounds"],
@@ -592,36 +601,151 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
 
 export const UserAnalyticsReportsPage: React.FC = () => {
   const [reportType, setReportType] = useState<ReportType>("daily");
-  const [loading, setLoading] = useState(false);
   const [reports, setReports] = useState<UserAnalyticsReportItem[]>([]);
+  const [usageReports, setUsageReports] = useState<UserAnalyticsReportItem[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [loadingUsage, setLoadingUsage] = useState(false);
+  const requestIdRef = useRef(0);
 
-  const loadReports = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await userAnalyticsApi.getReports({
-        report_type: reportType,
-        limit: 30,
+  const isStaleRequest = useCallback(
+    (requestId: number) => requestId !== requestIdRef.current,
+    [],
+  );
+
+  const loadDailyFullReports = useCallback(
+    (requestId: number) => {
+      userAnalyticsApi
+        .getReports({
+          report_type: "daily",
+          limit: REPORTS_LIMIT,
+        })
+        .then((data) => {
+          if (isStaleRequest(requestId)) return;
+          setReports(data.reports);
+        })
+        .catch((error) => {
+          if (isStaleRequest(requestId)) return;
+          console.error("加载更多日报失败:", error);
+          message.warning("加载更多日报失败");
+        });
+    },
+    [isStaleRequest],
+  );
+
+  const loadDailyLatestReport = useCallback(
+    (requestId: number) => {
+      userAnalyticsApi
+        .getReports({
+          report_type: "daily",
+          limit: DAILY_LATEST_LIMIT,
+        })
+        .then((data) => {
+          if (isStaleRequest(requestId)) return;
+          setReports(data.reports);
+          message.success("数据加载成功");
+          if (data.reports.length > 0) {
+            loadDailyFullReports(requestId);
+          }
+        })
+        .catch((error) => {
+          if (isStaleRequest(requestId)) return;
+          console.error("加载日报失败:", error);
+          message.error("加载日报失败");
+        })
+        .finally(() => {
+          if (isStaleRequest(requestId)) return;
+          setLoadingReports(false);
+        });
+    },
+    [isStaleRequest, loadDailyFullReports],
+  );
+
+  const loadDailyUsageReports = useCallback(
+    (requestId: number) => {
+      userAnalyticsApi
+        .getReports({
+          report_type: "daily",
+          limit: REPORTS_LIMIT,
+          include_charts: false,
+        })
+        .then((data) => {
+          if (isStaleRequest(requestId)) return;
+          setUsageReports(data.reports);
+        })
+        .catch((error) => {
+          if (isStaleRequest(requestId)) return;
+          console.error("加载每日用量曲线失败:", error);
+          message.warning("每日用量曲线加载失败");
+        })
+        .finally(() => {
+          if (isStaleRequest(requestId)) return;
+          setLoadingUsage(false);
+        });
+    },
+    [isStaleRequest],
+  );
+
+  const loadDailyReports = useCallback(() => {
+    const requestId = ++requestIdRef.current;
+    setReports([]);
+    setUsageReports([]);
+    setLoadingReports(true);
+    setLoadingUsage(true);
+    loadDailyLatestReport(requestId);
+    loadDailyUsageReports(requestId);
+  }, [loadDailyLatestReport, loadDailyUsageReports]);
+
+  const loadWeeklyReports = useCallback(() => {
+    const requestId = ++requestIdRef.current;
+
+    setReports([]);
+    setUsageReports([]);
+    setLoadingReports(true);
+    setLoadingUsage(false);
+
+    userAnalyticsApi
+      .getReports({
+        report_type: "weekly",
+        limit: REPORTS_LIMIT,
+      })
+      .then((data) => {
+        if (isStaleRequest(requestId)) return;
+        setReports(data.reports);
+        message.success("数据加载成功");
+      })
+      .catch((error) => {
+        if (isStaleRequest(requestId)) return;
+        console.error("加载周报失败:", error);
+        message.error("加载周报失败");
+      })
+      .finally(() => {
+        if (isStaleRequest(requestId)) return;
+        setLoadingReports(false);
       });
-      setReports(data.reports);
-      message.success("数据加载成功");
-    } catch (error) {
-      console.error("加载报告失败:", error);
-      message.error("加载报告失败");
-    } finally {
-      setLoading(false);
+  }, [isStaleRequest]);
+
+  const loadReports = useCallback(() => {
+    if (reportType === "daily") {
+      loadDailyReports();
+      return;
     }
-  }, [reportType]);
+    loadWeeklyReports();
+  }, [reportType, loadDailyReports, loadWeeklyReports]);
 
   useEffect(() => {
     loadReports();
   }, [loadReports]);
 
+  const sortedReports = useMemo(
+    () => sortReportsByDateDesc(reports),
+    [reports],
+  );
   const dailyUsageSeries = useMemo(() => {
     if (reportType !== "daily") {
       return null;
     }
-    return buildDailyUsageSeries(reports);
-  }, [reportType, reports]);
+    return buildDailyUsageSeries(usageReports);
+  }, [reportType, usageReports]);
   const dailyUsagePlotData = useMemo(() => {
     if (!dailyUsageSeries) {
       return [];
@@ -637,11 +761,15 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     }));
   }, [dailyUsageSeries]);
 
-  const items = reports.map((report) => ({
-    key: report.id,
-    label: `${report.report_date}（${REPORT_TYPE_LABELS[report.report_type]}）`,
-    children: <ReportContent stats={report.stats} charts={report.charts} />,
-  }));
+  const items = useMemo(
+    () =>
+      sortedReports.map((report) => ({
+        key: report.id,
+        label: `${report.report_date}（${REPORT_TYPE_LABELS[report.report_type]}）`,
+        children: <ReportContent stats={report.stats} charts={report.charts} />,
+      })),
+    [sortedReports],
+  );
 
   return (
     <div style={{ padding: "24px" }}>
@@ -668,9 +796,9 @@ export const UserAnalyticsReportsPage: React.FC = () => {
         </Space>
       </Card>
 
-      <Spin spinning={loading}>
-        {reportType === "daily" && (
-          <Card title="每日用量曲线" style={{ marginBottom: "24px" }}>
+      {reportType === "daily" && (
+        <Card title="每日用量曲线" style={{ marginBottom: "24px" }}>
+          <Spin spinning={loadingUsage}>
             {dailyUsageSeries ? (
               <Plot
                 data={dailyUsagePlotData}
@@ -683,15 +811,22 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                 }}
                 style={{ width: "100%", height: "100%" }}
               />
+            ) : loadingUsage ? (
+              <div style={{ height: USAGE_CHART_HEIGHT }} />
             ) : (
               <Empty description="暂无日报数据" />
             )}
-          </Card>
-        )}
-        {reports.length === 0 && !loading ? (
-          <Empty description="暂无预计算报告数据" />
+          </Spin>
+        </Card>
+      )}
+      <Spin spinning={loadingReports}>
+        {sortedReports.length === 0 ? (
+          loadingReports ? null : <Empty description="暂无预计算报告数据" />
         ) : (
-          <Collapse items={items} defaultActiveKey={items[0]?.key} />
+          <Collapse
+            items={items}
+            defaultActiveKey={sortedReports[0]?.id}
+          />
         )}
       </Spin>
     </div>

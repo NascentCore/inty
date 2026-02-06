@@ -684,6 +684,7 @@ export const userAnalyticsApi = {
   getReports: (params?: {
     report_type?: "daily" | "weekly";
     limit?: number;
+    include_charts?: boolean;
   }): Promise<import("../types").UserAnalyticsReportsResponse> =>
     apiClient.get("/evaluation/user-analytics/reports", params),
 
