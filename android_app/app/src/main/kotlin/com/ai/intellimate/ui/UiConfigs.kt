@@ -350,7 +350,7 @@ object UiConfigs {
         /** 订阅横幅配置 */
         object PremiumBanner {
             /** 横幅高度 */
-            val Height = 110.dp
+            val Height = 102.dp
 
             /** 横幅圆角半径 */
             val CornerRadius = 20.dp
@@ -374,7 +374,7 @@ object UiConfigs {
             val CtaHorizontalPadding = 14.dp
 
             /** CTA 按钮垂直内边距 */
-            val CtaVerticalPadding = 6.dp
+            val CtaVerticalPadding = 8.dp
 
             /** CTA 图标大小 */
             val CtaIconSize = 16.dp
