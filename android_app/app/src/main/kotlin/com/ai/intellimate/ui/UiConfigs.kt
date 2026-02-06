@@ -737,9 +737,9 @@ object UiConfigs {
             /** 语音输入切换按钮图标透明度（不可用） */
             const val VoiceToggleDisabledIconAlpha = 0.4f
 
-            /** 显示场景操作 () 按钮时的尾部内边距 - 避免输入区与 ()、+ 按钮重叠，与左侧间距一致（VoiceTogglePaddingEnd）的间隙后为 () + 间距 + + */
+            /** 显示场景操作 () 按钮时的尾部内边距 - 在 TrailingControlsPadding 基础上增加 () 按钮及间距，避免输入区与 ()、+ 按钮重叠 */
             val TrailingControlsPaddingWithSceneAction =
-                UiConfigs.Spacing.Tiny + ButtonSize + SceneActionButtonSpacing + ButtonSize + ButtonRightPadding
+                TrailingControlsPadding + SceneActionButtonSpacing + ButtonSize
         }
 
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
