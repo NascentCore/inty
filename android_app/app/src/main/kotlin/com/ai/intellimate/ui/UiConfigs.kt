@@ -624,6 +624,9 @@ object UiConfigs {
         /** 右上角操作按钮容器圆角（电话/更多） */
         val ActionButtonContainerCornerRadius = 16.dp
 
+        /** VIP 角标文字字号 */
+        val VipBadgeFontSize = 12.sp
+
         /** 收藏按钮激活状态颜色（粉色） */
         val FavoriteActiveTint = Color(0xFFFF5A8A)
 
