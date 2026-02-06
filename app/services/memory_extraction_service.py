@@ -140,6 +140,9 @@ def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+_USAGE_TYPE_CHAT = "chat"
+
+
 def _compute_users_to_extract_sync(
     user_to_chats: dict,
     user_to_last: dict,
@@ -147,76 +150,68 @@ def _compute_users_to_extract_sync(
     thresh_incr: int,
 ) -> List[str]:
     """
-    在工作线程中执行：用批量 SQL 按 session 聚合消息数，再按用户汇总并筛出待抽取 user_id。
+    在工作线程中执行：用 subscription_usage 的 chat 次数筛出待抽取 user_id。
+    新用户按总聊天次数>=thresh_new；已提取用户按自上次 extracted_at 以来增量>=thresh_incr。
     使用线程内新建连接，避免跨线程复用全局连接导致阻塞。
     """
     if not user_to_chats:
         return []
 
-    num_users = len(user_to_chats)
-    logger.info(f"[记忆抽取] 筛选待抽取用户: 开始批量查询，有会话用户数={num_users}")
+    candidate_user_ids = list(user_to_chats.keys())
+    new_user_ids = [uid for uid in candidate_user_ids if uid not in user_to_last]
+    old_user_items = [(uid, user_to_last[uid]) for uid in candidate_user_ids if uid in user_to_last]
+    num_users = len(candidate_user_ids)
+    logger.info(
+        f"[记忆抽取] 筛选待抽取用户: subscription_usage 统计，有会话用户数={num_users} "
+        f"(新={len(new_user_ids)}, 已提取={len(old_user_items)})"
+    )
 
-    user_to_sessions: dict = {}
-    all_sids: set[str] = set()
-    for user_id, chat_ids in user_to_chats.items():
-        sids = [generate_session_id(c) for c in chat_ids]
-        user_to_sessions[user_id] = sids
-        all_sids.update(sids)
-
-    sids_list = list(all_sids)
     db_url = global_config_loaded_from_config_yaml.database.url
     conn = psycopg.connect(db_url, autocommit=True)
     try:
-        session_to_total: dict = {}
-        for i in range(0, len(sids_list), _MAX_IN_PARAMS):
-            chunk = sids_list[i : i + _MAX_IN_PARAMS]
-            ph = ",".join("%s" for _ in chunk)
-            with conn.cursor() as cur:
-                cur.execute(
-                    f"""
-                    SELECT session_id::text, COUNT(*) AS cnt
-                    FROM chat_history
-                    WHERE session_id::text IN ({ph}) AND deleted_at IS NULL
-                    GROUP BY session_id::text
-                    """,
-                    chunk,
-                )
-                for row in cur.fetchall():
-                    session_to_total[row[0]] = row[1] or 0
+        result: List[str] = []
 
-        distinct_lasts = set(user_to_last.values())
-        last_to_session_incr: dict = {}
-        for last in distinct_lasts:
-            last_to_session_incr[last] = {}
-            for i in range(0, len(sids_list), _MAX_IN_PARAMS):
-                chunk = sids_list[i : i + _MAX_IN_PARAMS]
-                ph = ",".join("%s" for _ in chunk)
+        if new_user_ids:
+            for i in range(0, len(new_user_ids), _MAX_IN_PARAMS):
+                chunk = new_user_ids[i : i + _MAX_IN_PARAMS]
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT user_id, COALESCE(SUM(usage_count), 0)::bigint AS total
+                        FROM subscription_usage
+                        WHERE usage_type = %s AND user_id = ANY(%s)
+                        GROUP BY user_id
+                        """,
+                        (_USAGE_TYPE_CHAT, chunk),
+                    )
+                    for row in cur.fetchall():
+                        if (row[1] or 0) >= thresh_new:
+                            result.append(row[0])
+
+        if old_user_items:
+            for i in range(0, len(old_user_items), _MAX_IN_PARAMS):
+                chunk = old_user_items[i : i + _MAX_IN_PARAMS]
+                values_ph = ",".join("(%s::text, %s::timestamptz)" for _ in chunk)
+                flat = []
+                for uid, last_at in chunk:
+                    flat.append(uid)
+                    flat.append(last_at)
                 with conn.cursor() as cur:
                     cur.execute(
                         f"""
-                        SELECT session_id::text, COUNT(*) AS cnt
-                        FROM chat_history
-                        WHERE session_id::text IN ({ph}) AND deleted_at IS NULL
-                        AND created_at > %s
-                        GROUP BY session_id::text
+                        SELECT su.user_id, COALESCE(SUM(su.usage_count), 0)::bigint AS incr
+                        FROM subscription_usage su
+                        JOIN (VALUES {values_ph}) AS v(user_id, last_at)
+                          ON su.user_id = v.user_id AND su.usage_date > v.last_at
+                        WHERE su.usage_type = %s
+                        GROUP BY su.user_id
                         """,
-                        chunk + [last],
+                        flat + [_USAGE_TYPE_CHAT],
                     )
                     for row in cur.fetchall():
-                        last_to_session_incr[last][row[0]] = row[1] or 0
+                        if (row[1] or 0) >= thresh_incr:
+                            result.append(row[0])
 
-        result: List[str] = []
-        for user_id, sessions in user_to_sessions.items():
-            total = sum(session_to_total.get(s, 0) for s in sessions)
-            last = user_to_last.get(user_id)
-            if last is None:
-                if total >= thresh_new:
-                    result.append(user_id)
-            else:
-                incr_map = last_to_session_incr.get(last, {})
-                incr = sum(incr_map.get(s, 0) for s in sessions)
-                if incr >= thresh_incr:
-                    result.append(user_id)
         return result
     finally:
         conn.close()
@@ -224,8 +219,9 @@ def _compute_users_to_extract_sync(
 
 async def get_users_to_extract(db: AsyncSession) -> List[str]:
     """
-    筛选本次需抽取记忆的用户：新用户总消息>=trigger_new_user_messages，
-    或已提取用户自上次提取后新增>=trigger_incremental_messages。
+    筛选本次需抽取记忆的用户：依据 subscription_usage 的 chat 次数，
+    新用户总聊天次数>=trigger_new_user_messages，或已提取用户自上次提取后新增聊天次数>=trigger_incremental_messages。
+    单用户抽取仍从 chat_history 拉取消息，见 get_all_messages_for_user / extract_and_save。
     """
     cfg = getattr(
         global_config_loaded_from_config_yaml,

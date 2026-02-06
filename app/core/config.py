@@ -326,8 +326,8 @@ class MemoryExtractionConfig:
         ""  # OpenRouter 模型 id，为空时使用代码内默认（mistralai/devstral-2512）
     )
     cron_hour: int = 3  # UTC 小时，每日执行
-    trigger_new_user_messages: int = 30  # 新用户总消息数阈值
-    trigger_incremental_messages: int = 30  # 已提取用户自上次后新增消息数阈值
+    trigger_new_user_messages: int = 30  # 新用户总聊天次数阈值（subscription_usage）
+    trigger_incremental_messages: int = 30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
 
 
 @dataclass
