@@ -1037,7 +1037,7 @@ private fun ChatMessageTimestamp(timestampText: String?, fontSize: TextUnit) {
 
 private fun formatTimestamp(rawTimestamp: String?): String? {
     if (rawTimestamp.isNullOrBlank()) return null
-    return TimeUtils.convertUtcToLocalFull(rawTimestamp).takeIf { it.isNotBlank() }
+    return TimeUtils.convertUtcToLocalFullForDisplay(rawTimestamp).takeIf { it.isNotBlank() }
 }
 
 /** 计算语音消息组的时长（秒） 通过最后一条AI语音消息的时间戳减去第一条用户消息的时间戳计算 */
