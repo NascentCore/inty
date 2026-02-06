@@ -247,8 +247,12 @@ fun ChatInput(
                     }
         ) {
             val trailingPadding =
-                if (showSceneActionButton) config.TrailingControlsPaddingWithSceneAction
-                else config.TrailingControlsPadding
+                when {
+                    isVoiceInputMode && showSceneActionButton -> config.VoiceModeTrailingPaddingWithSceneAction
+                    isVoiceInputMode -> config.VoiceModeTrailingPadding
+                    showSceneActionButton -> config.TrailingControlsPaddingWithSceneAction
+                    else -> config.TrailingControlsPadding
+                }
             val inputContentModifier =
                 Modifier.padding(
                         start = config.LeadingControlsPadding,
