@@ -85,6 +85,7 @@ fun ChatInput(
     bottomPadding: Dp,
     focusRequester: FocusRequester? = null,
     onFocusChange: (Boolean) -> Unit = {},
+    onVoiceInputActiveChange: (Boolean) -> Unit = {},
 ) {
     val inputData = chatViewModel.inputData.collectAsState()
     val inputSelection = chatViewModel.inputSelection.collectAsState()
@@ -212,6 +213,10 @@ fun ChatInput(
             speechRecognizer?.cancel()
             isVoiceRecording = false
         }
+    }
+
+    LaunchedEffect(isVoiceInputMode, isVoiceRecording) {
+        onVoiceInputActiveChange(isVoiceInputMode || isVoiceRecording)
     }
 
     val config = UiConfigs.ChatPage.ChatInput

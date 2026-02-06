@@ -411,6 +411,7 @@ internal fun ChatPage(
     var showMorePanel by remember { mutableStateOf(false) }
     var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
+    var isVoiceInputActive by remember { mutableStateOf(false) }
 
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -514,8 +515,8 @@ internal fun ChatPage(
             }
 
             Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                // 键盘弹起时隐藏顶部栏，把视觉面积留给角色展示
-                if (!isKeyboardVisible) {
+                // 键盘弹起或语音输入激活时隐藏顶部栏，把视觉面积留给角色展示
+                if (!isKeyboardVisible && !isVoiceInputActive) {
                     Spacer(Modifier.height(48.dp))
 
                     agentInfo?.let { info ->
@@ -838,6 +839,7 @@ internal fun ChatPage(
                                     }
                                     onInputFocusChange(focused)
                                 },
+                                onVoiceInputActiveChange = { isVoiceInputActive = it },
                             )
                         }
                     }
