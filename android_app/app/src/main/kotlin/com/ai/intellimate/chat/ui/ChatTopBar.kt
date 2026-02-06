@@ -307,20 +307,38 @@ fun ChatTopBar(
                 // 收藏按钮右侧内边距
                 Spacer(modifier = Modifier.width(4.dp))
             }
-
-            if (isVip) {
-                VipCornerBadge(
-                    modifier =
-                        Modifier.align(Alignment.TopStart)
-                            .clip(RoundedCornerShape(topStart = UiConfigs.ChatTopBar.CornerRadius)),
-                    label = stringResource(R.string.vip_badge_label),
-                    contentDescription =
-                        stringResource(R.string.vip_badge_content_description),
-                )
-            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        if (isVip) {
+            val vipContentDesc = stringResource(R.string.vip_badge_content_description)
+            Box(
+                modifier =
+                    Modifier.size(
+                            UiConfigs.ChatTopBar.ActionButtonContainerWidth,
+                            UiConfigs.ChatTopBar.ActionButtonContainerHeight,
+                        )
+                        .background(
+                            color = UiConfigs.ChatTopBar.VipActionButtonBackgroundColor,
+                            shape =
+                                RoundedCornerShape(
+                                    UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
+                                ),
+                        )
+                        .semantics { contentDescription = vipContentDesc },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.vip_badge_label),
+                    fontSize = UiConfigs.ChatTopBar.VipBadge.TextSize,
+                    fontWeight = FontWeight.Black,
+                    color = AppColors.Background,
+                    maxLines = 1,
+                )
+            }
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ActionButtonSpacing))
+        }
 
         Box(
             modifier =
