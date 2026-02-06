@@ -4,6 +4,7 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -226,6 +227,32 @@ fun ChatTopBar(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        // VIP 角标：与通话/菜单按钮同尺寸、同圆角，黄色背景，仅展示
+        Box(
+            modifier =
+                Modifier.size(
+                        UiConfigs.ChatTopBar.ActionButtonContainerWidth,
+                        UiConfigs.ChatTopBar.ActionButtonContainerHeight,
+                    )
+                    .background(
+                        color = AppColors.VipHighlighterStrong,
+                        shape =
+                            RoundedCornerShape(
+                                UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
+                            ),
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.vip_badge_label),
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                fontSize = UiConfigs.ChatTopBar.VipBadgeFontSize,
+            )
+        }
+
+        Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ActionButtonSpacing))
 
         Box(
             modifier =
