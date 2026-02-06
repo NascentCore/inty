@@ -102,6 +102,7 @@ fun SettingsCheckBoxItem(
 @Composable
 fun SettingsSwitchItem(
     item: SettingsItemData.SwitchItemData,
+    showVip: Boolean = false,
     fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
     horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
@@ -157,26 +158,39 @@ fun SettingsSwitchItem(
             }
         }
         Spacer(Modifier.width(8.dp))
-        // 如果提供了图标资源，使用Image；否则使用Switch
-        if (openedIconRes != null && closedIconRes != null) {
-            Image(
-                painter = painterResource(if (item.checked) openedIconRes else closedIconRes),
-                contentDescription = null,
-            )
-        } else {
-            Switch(
-                checked = item.checked,
-                onCheckedChange = onCheckChanged,
-                colors =
-                    SwitchDefaults.colors()
-                        .copy(
-                            checkedTrackColor = Color(0xFF62C18E),
-                            uncheckedTrackColor = Color(0xFF43394F),
-                            uncheckedBorderColor = Color.Transparent,
-                            disabledCheckedBorderColor = Color.Transparent,
-                            disabledUncheckedBorderColor = Color.Transparent,
-                        ),
-            )
+
+        Box() {
+            // 如果提供了图标资源，使用Image；否则使用Switch
+            if (openedIconRes != null && closedIconRes != null) {
+                Image(
+                    painter = painterResource(if (item.checked) openedIconRes else closedIconRes),
+                    contentDescription = null,
+                )
+            } else {
+                Switch(
+                    checked = item.checked,
+                    onCheckedChange = onCheckChanged,
+                    colors =
+                        SwitchDefaults.colors()
+                            .copy(
+                                checkedTrackColor = Color(0xFF62C18E),
+                                uncheckedTrackColor = Color(0xFF43394F),
+                                uncheckedBorderColor = Color.Transparent,
+                                disabledCheckedBorderColor = Color.Transparent,
+                                disabledUncheckedBorderColor = Color.Transparent,
+                            ),
+                )
+            }
+
+            if (showVip) {
+                Image(
+                    painter = painterResource(R.drawable.ic_vip_badge),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(24.dp, 12.dp)
+                )
+            }
         }
     }
 }
