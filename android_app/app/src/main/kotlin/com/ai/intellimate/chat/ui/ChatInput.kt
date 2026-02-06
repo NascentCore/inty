@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -216,6 +217,8 @@ fun ChatInput(
     val config = UiConfigs.ChatPage.ChatInput
     val minHeight = config.MinHeight
     val maxHeight = config.MaxHeight
+    // 文字模式下测量到的输入区高度（px），用于切到语音模式时保持高度一致，避免输入框突然变矮
+    var lastTextModeHeightPx by remember { mutableStateOf(0) }
 
     Column(
         modifier =
@@ -232,8 +235,16 @@ fun ChatInput(
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .heightIn(min = minHeight, max = maxHeight)
-                    .wrapContentHeight()
+                    .then(
+                        if (isVoiceInputMode && lastTextModeHeightPx > 0) {
+                            Modifier.height(with(density) { lastTextModeHeightPx.toDp() })
+                        } else {
+                            Modifier.heightIn(min = minHeight, max = maxHeight).wrapContentHeight()
+                        }
+                    )
+                    .onSizeChanged {
+                        if (!isVoiceInputMode) lastTextModeHeightPx = it.height
+                    }
         ) {
             val trailingPadding =
                 if (showSceneActionButton) config.TrailingControlsPaddingWithSceneAction
