@@ -320,7 +320,7 @@ fun ChatTopBar(
                             UiConfigs.ChatTopBar.ActionButtonContainerHeight,
                         )
                         .background(
-                            color = UiConfigs.ChatTopBar.VipActionButtonBackgroundColor,
+                            color = AppColors.VipHighlighterStrong,
                             shape =
                                 RoundedCornerShape(
                                     UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius

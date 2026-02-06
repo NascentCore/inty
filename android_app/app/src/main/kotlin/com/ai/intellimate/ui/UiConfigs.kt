@@ -630,9 +630,6 @@ object UiConfigs {
         /** 收藏按钮未激活状态颜色（白色） */
         val FavoriteInactiveTint = Color.White
 
-        /** 右上角 VIP 操作按钮背景色（与 design 中 VipHighlighterStrong 一致） */
-        val VipActionButtonBackgroundColor = Color(0xFFFFD54F)
-
         /** VIP 角标配置 - 适用于聊天顶部栏的 VIP 标识 */
         object VipBadge {
             /** 角标尺寸（与顶部栏高度接近，保证视觉一致） */
