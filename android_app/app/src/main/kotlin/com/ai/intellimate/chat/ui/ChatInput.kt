@@ -369,7 +369,7 @@ fun ChatInput(
                     onFocusChanged = onFocusChange,
                     onSelectionChanged = { chatViewModel.inputSelection.value = it },
                     selection = inputSelection.value,
-                    maxLines = 4,
+                    maxLines = 3,
                     maxLength = CHAT_INPUT_MAX_LENGTH,
                     focusRequester = focusRequester,
                 )
