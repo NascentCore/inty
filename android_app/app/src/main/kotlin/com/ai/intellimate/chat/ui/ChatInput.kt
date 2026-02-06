@@ -100,6 +100,8 @@ fun ChatInput(
         remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
     var isVoiceInputMode by remember { mutableStateOf(false) }
     var isVoiceRecording by remember { mutableStateOf(false) }
+    /** 点击语音按钮时因无权限而发起了授权请求，授权通过后需切到语音模式 */
+    var pendingSwitchToVoiceMode by remember { mutableStateOf(false) }
     val speechRecognizer =
         remember(context, isSpeechRecognitionAvailable) {
             if (isSpeechRecognitionAvailable) {
@@ -189,7 +191,16 @@ fun ChatInput(
     }
 
     LaunchedEffect(voicePermissionState.status.isGranted) {
-        if (!voicePermissionState.status.isGranted && isVoiceInputMode) {
+        if (voicePermissionState.status.isGranted && pendingSwitchToVoiceMode) {
+            pendingSwitchToVoiceMode = false
+            if (showMorePanel) {
+                onToggleMorePanel()
+            }
+            if (isKeyboardVisible) {
+                keyboardController?.hide()
+            }
+            isVoiceInputMode = true
+        } else if (!voicePermissionState.status.isGranted && isVoiceInputMode) {
             isVoiceInputMode = false
             isVoiceRecording = false
         }
@@ -243,7 +254,12 @@ fun ChatInput(
                         keyboardController?.show()
                     }
                 } else {
-                    if (!ensureVoiceInputReady()) return@onVoiceToggleClick
+                    if (!ensureVoiceInputReady()) {
+                        if (isSpeechRecognitionAvailable && speechRecognizer != null && !voicePermissionState.status.isGranted) {
+                            pendingSwitchToVoiceMode = true
+                        }
+                        return@onVoiceToggleClick
+                    }
                     if (showMorePanel) {
                         onToggleMorePanel()
                     }
