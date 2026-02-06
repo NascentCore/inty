@@ -85,7 +85,7 @@
 
     <string name="premium_title">IntelliMate Premium</string>
     <string name="premium_subtitle">Experience your imagination without limits!</string>
-    <string name="messages_premium_banner_title">Unlock unlimited messages, photos, and voices.</string>
+    <string name="messages_premium_banner_title">✨💕 Unlock unlimited chats,\nphotos, and voice</string>
     <string name="messages_premium_banner_cta">Get Premium</string>
 
     <string name="premium_benefit_unlimited_chat">Unlimited chat</string>
@@ -477,6 +477,8 @@
     <!-- Image Generation Error Messages -->
     <string name="image_generation_failed">Image generation failed</string>
     <string name="image_generation_failed_tap_to_delete">Image generation failed, tap to delete</string>
+    <string name="image_generating">Image generating...</string>
+    <string name="vip_speed_up">Speed Up</string>
 
     <!-- Billing Error Messages -->
     <!-- 购买相关错误 -->
@@ -623,6 +625,7 @@
     <string name="upload_selfie_tips">Simply upload a clear, front-facing photo; avoid obscuring or blurring it.</string>
     <string name="credits_not_enough">Not enough credits.</string>
     <string name="credits_deducted">%1$d credits deducted.</string>
+    <string name="speed_up">Speed Up</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A relationship to explore</item>

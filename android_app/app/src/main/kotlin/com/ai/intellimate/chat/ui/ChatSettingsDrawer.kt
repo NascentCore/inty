@@ -56,7 +56,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.MyModalNavigationDrawer
+import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.math.roundToInt
 
@@ -125,6 +127,7 @@ fun ChatSettingsDrawer(
 
     val horizontalPadding = 16
     var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
+    var showVipDialogPageSource by rememberSaveable { mutableStateOf<String?>(null) }
     var showModelMenu by rememberSaveable { mutableStateOf(false) }
     var pendingFontSize by rememberSaveable {
         mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP)
@@ -159,7 +162,7 @@ fun ChatSettingsDrawer(
 
                 Column(modifier = Modifier.padding(horizontal = horizontalPadding.dp)) {
                     SettingsItemGroup {
-                        // Show "Keep Talking" button开关
+                        // Show "Keep Talking" button开关：打开时需会员，关闭不判断
                         SettingsSwitchItem(
                             item =
                                 SettingsItemData.SwitchItemData(
@@ -167,6 +170,7 @@ fun ChatSettingsDrawer(
                                         stringResource(R.string.chat_settings_show_keep_talking),
                                     checked = showKeepTalking,
                                 ),
+                            showVip = true,
                             fontLight = true,
                             isInGroup = true,
                             horizontalPadding = horizontalPadding,
@@ -181,8 +185,44 @@ fun ChatSettingsDrawer(
                                         "timestamp" to System.currentTimeMillis(),
                                     ),
                                 )
+                                if (enabled && !vipStatus.isSubscribed) {
+                                    showVipDialogPageSource = "chat_settings_keep_talking"
+                                    return@SettingsSwitchItem
+                                }
                                 SettingStateManager.updateShowKeepTalking(enabled)
                                 onKeepTalkingChange(enabled)
+                            },
+                        )
+
+                        IntelliMateDivider()
+
+                        // Auto-play voice messages开关：打开时需会员，关闭不判断
+                        SettingsSwitchItem(
+                            item =
+                                SettingsItemData.SwitchItemData(
+                                    title = stringResource(R.string.chat_settings_auto_play_voice),
+                                    checked = autoPlayVoice,
+                                ),
+                            showVip = true,
+                            fontLight = true,
+                            isInGroup = true,
+                            horizontalPadding = horizontalPadding,
+                            openedIconRes = R.drawable.opened,
+                            closedIconRes = R.drawable.closed,
+                            onCheckChanged = { enabled ->
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                    FirebaseManager.safeEventParams(
+                                        "click_type" to "toggle_auto_play_voice",
+                                        "enabled" to enabled,
+                                        "timestamp" to System.currentTimeMillis(),
+                                    ),
+                                )
+                                if (enabled && !vipStatus.isSubscribed) {
+                                    showVipDialogPageSource = "chat_settings_auto_play"
+                                    return@SettingsSwitchItem
+                                }
+                                SettingStateManager.updateAutoPlayAudio(enabled)
                             },
                         )
 
@@ -216,32 +256,7 @@ fun ChatSettingsDrawer(
                             },
                         )
 
-                        IntelliMateDivider()
 
-                        // Auto-play voice messages开关
-                        SettingsSwitchItem(
-                            item =
-                                SettingsItemData.SwitchItemData(
-                                    title = stringResource(R.string.chat_settings_auto_play_voice),
-                                    checked = autoPlayVoice,
-                                ),
-                            fontLight = true,
-                            isInGroup = true,
-                            horizontalPadding = horizontalPadding,
-                            openedIconRes = R.drawable.opened,
-                            closedIconRes = R.drawable.closed,
-                            onCheckChanged = { enabled ->
-                                FirebaseManager.logEvent(
-                                    FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
-                                    FirebaseManager.safeEventParams(
-                                        "click_type" to "toggle_auto_play_voice",
-                                        "enabled" to enabled,
-                                        "timestamp" to System.currentTimeMillis(),
-                                    ),
-                                )
-                                SettingStateManager.updateAutoPlayAudio(enabled)
-                            },
-                        )
 
                         IntelliMateDivider()
 
@@ -555,6 +570,30 @@ fun ChatSettingsDrawer(
             }
         },
     ) {
+        showVipDialogPageSource?.let { pageSource ->
+            val data =
+                ChatDialogData(
+                    R.drawable.img_unlimit_dialog_bg,
+                    stringResource(R.string.str_unlimit_dialog_content),
+                    stringResource(R.string.str_unlimit_btn_text),
+                )
+            UnlimitChatDialog(
+                data,
+                onCancel = { showVipDialogPageSource = null },
+                onSure = {
+                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                        navController.navigate(Routes.Me.vipCenter(pageSource))
+                    }
+                    showVipDialogPageSource = null
+                },
+                onMoreInfo = {
+                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                        navController.navigate(Routes.Me.vipCenter(pageSource))
+                    }
+                    showVipDialogPageSource = null
+                },
+            )
+        }
         if (showFontSizeDialog) {
             Dialog(
                 onDismissRequest = { showFontSizeDialog = false },
