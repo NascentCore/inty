@@ -24,6 +24,7 @@ import {
   MessageOutlined,
   PictureOutlined,
   PhoneOutlined,
+  SoundOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import { userAnalyticsApi } from "../services/api";
@@ -361,6 +362,44 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
         <Col xs={24} sm={12} md={6}>
           <Card size="small">
             <Statistic
+              title="消息数"
+              value={stats.total_user_messages}
+              prefix={<MessageOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small">
+            <Statistic
+              title="生图请求数"
+              value={stats.total_image_generation_requests}
+              prefix={<PictureOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small">
+            <Statistic
+              title="语音通话次数"
+              value={stats.total_live_chat_sessions}
+              prefix={<PhoneOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small">
+            <Statistic
+              title="语音播报次数"
+              value={stats.total_voice_requests}
+              prefix={<SoundOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
+      <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small">
+            <Statistic
               title="用户数"
               value={stats.total_new_users}
               prefix={<UserOutlined />}
@@ -381,15 +420,6 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
             <Statistic
               title="包含用户消息的会话数"
               value={stats.total_active_sessions}
-              prefix={<MessageOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small">
-            <Statistic
-              title="总发送消息数"
-              value={stats.total_user_messages}
               prefix={<MessageOutlined />}
             />
           </Card>
@@ -441,15 +471,6 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
         </Col>
       </Row>
       <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
-        <Col xs={24} sm={12} md={6} lg={4}>
-          <Card size="small">
-            <Statistic
-              title="总生图请求数"
-              value={stats.total_image_generation_requests}
-              prefix={<PictureOutlined />}
-            />
-          </Card>
-        </Col>
         <Col xs={24} sm={12} md={6} lg={4}>
           <Card size="small">
             <Statistic
@@ -517,15 +538,6 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
             <Statistic
               title="发起语音通话人数"
               value={stats.total_live_chat_users}
-              prefix={<PhoneOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6} lg={4}>
-          <Card size="small">
-            <Statistic
-              title="语音通话次数"
-              value={stats.total_live_chat_sessions}
               prefix={<PhoneOutlined />}
             />
           </Card>
