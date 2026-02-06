@@ -235,10 +235,13 @@ fun ChatInput(
                     .heightIn(min = minHeight, max = maxHeight)
                     .wrapContentHeight()
         ) {
+            val trailingPadding =
+                if (showSceneActionButton) config.TrailingControlsPaddingWithSceneAction
+                else config.TrailingControlsPadding
             val inputContentModifier =
                 Modifier.padding(
                         start = config.LeadingControlsPadding,
-                        end = config.TrailingControlsPadding,
+                        end = trailingPadding,
                     )
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
@@ -321,7 +324,7 @@ fun ChatInput(
                     Modifier.padding(
                             start =
                                 config.LeadingControlsPadding - UiConfigs.Padding.TextFieldHorizontal,
-                            end = config.TrailingControlsPadding,
+                            end = trailingPadding,
                         )
                         .align(Alignment.Center)
                 IntySmallTextField(

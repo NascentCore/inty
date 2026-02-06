@@ -729,6 +729,10 @@ object UiConfigs {
 
             /** 场景操作按钮间距 - 场景操作按钮与发送/更多按钮之间的间距 */
             val SceneActionButtonSpacing = 6.dp
+
+            /** 显示场景操作 () 按钮时的尾部内边距 - 避免输入区与 ()、+ 按钮重叠，与左侧间距一致（VoiceTogglePaddingEnd）的间隙后为 () + 间距 + + */
+            val TrailingControlsPaddingWithSceneAction =
+                UiConfigs.Spacing.Tiny + ButtonSize + SceneActionButtonSpacing + ButtonSize + ButtonRightPadding
         }
 
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
