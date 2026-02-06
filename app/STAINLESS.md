@@ -1,5 +1,7 @@
 # Stainless OpenAPI SDK generator
 
+**已计划废弃，不再使用。**
+
 总体工作流程：
 
 1. 修改 fastapi endpoints 类型定义、增加/删除 endpoints，改动 `app/api/**/*.py` 提交代码到代码库
