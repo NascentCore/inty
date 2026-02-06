@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -216,6 +217,8 @@ fun ChatInput(
     val config = UiConfigs.ChatPage.ChatInput
     val minHeight = config.MinHeight
     val maxHeight = config.MaxHeight
+    // 文字模式下测量到的输入区高度（px），用于切到语音模式时保持高度一致，避免输入框突然变矮
+    var lastTextModeHeightPx by remember { mutableStateOf(0) }
 
     Column(
         modifier =
@@ -232,15 +235,28 @@ fun ChatInput(
         Box(
             modifier =
                 Modifier.fillMaxWidth()
-                    .heightIn(min = minHeight, max = maxHeight)
-                    .wrapContentHeight()
+                    .then(
+                        if (isVoiceInputMode && lastTextModeHeightPx > 0) {
+                            Modifier.height(with(density) { lastTextModeHeightPx.toDp() })
+                        } else {
+                            Modifier.heightIn(min = minHeight, max = maxHeight).wrapContentHeight()
+                        }
+                    )
+                    .onSizeChanged {
+                        if (!isVoiceInputMode) lastTextModeHeightPx = it.height
+                    }
         ) {
+            val trailingPadding =
+                when {
+                    isVoiceInputMode && showSceneActionButton -> config.VoiceModeTrailingPaddingWithSceneAction
+                    isVoiceInputMode -> config.VoiceModeTrailingPadding
+                    showSceneActionButton -> config.TrailingControlsPaddingWithSceneAction
+                    else -> config.TrailingControlsPadding
+                }
             val inputContentModifier =
                 Modifier.padding(
                         start = config.LeadingControlsPadding,
-                        end =
-                            if (isVoiceInputMode) config.VoiceModeTrailingPadding
-                            else config.TrailingControlsPadding,
+                        end = trailingPadding,
                     )
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
@@ -318,8 +334,15 @@ fun ChatInput(
                     onPressCancel = onVoicePressCancel,
                 )
             } else {
+                // 文本输入区左边界与语音“按住说话”按钮左边界对齐（均为 LeadingControlsPadding），两者内部均有 TextFieldHorizontal 内边距，文字起始位置一致
+                val textFieldContentModifier =
+                    Modifier.padding(
+                            start = config.LeadingControlsPadding,
+                            end = trailingPadding,
+                        )
+                        .align(Alignment.Center)
                 IntySmallTextField(
-                    modifier = inputContentModifier,
+                    modifier = textFieldContentModifier,
                     value = inputData.value,
                     singleLine = false,
                     placeholder =
@@ -346,7 +369,7 @@ fun ChatInput(
                     onFocusChanged = onFocusChange,
                     onSelectionChanged = { chatViewModel.inputSelection.value = it },
                     selection = inputSelection.value,
-                    maxLines = 4,
+                    maxLines = 3,
                     maxLength = CHAT_INPUT_MAX_LENGTH,
                     focusRequester = focusRequester,
                 )
@@ -387,10 +410,10 @@ fun ChatInput(
 
             Row(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd)
-                        .padding(end = config.ButtonRightPadding, bottom = 13.dp),
+                    Modifier.align(Alignment.CenterEnd)
+                        .padding(end = config.ButtonRightPadding),
                 horizontalArrangement = Arrangement.spacedBy(config.SceneActionButtonSpacing),
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (showSceneActionButton) {
                     SceneActionQuickButton(
