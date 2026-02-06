@@ -62,6 +62,7 @@ Click the **Me** or the **right-most** icon
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
 | Find or follow agents | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
 | Chat with an agent | Tap any agent card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
+| Use voice input in chat | Chat → tap mic icon next to the text field | Switch to voice mode, then hold the button to talk. Your choice (text or voice) is remembered for all chat screens. See “Voice input” under Feature Deep Dive. |
 | Create or edit an agent | Explore → “Create/+” or Profile → My Agents | Guided flow with image upload and text-to-image background (`POST /api/v1/ai/agents/text-to-image`). |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
@@ -86,6 +87,13 @@ Click the **Me** or the **right-most** icon
 - *Screenshot placeholder:*
   
   ![Chat screenshot placeholder](<ADD_CHAT_SCREENSHOT_URL_HERE>)
+
+#### Voice input
+- **Switch to voice mode**: In any chat, tap the **microphone icon** on the left of the input area. The input bar switches to voice mode (hold-to-talk button). Tap the **keyboard icon** to switch back to text.
+- **Speak**: In voice mode, **hold** the “Hold to talk” button while speaking, then **release** to send. Your speech is sent for recognition and the result is posted as a message.
+- **Permission**: The first time you use voice input, the app will ask for **microphone permission**. Choose “While using the app” or “Only this time” to enable it. If you deny, you can try again next time you switch to voice—the app will ask again. If the system no longer shows the permission dialog (e.g. after “Don’t ask again”), you’ll see a message to enable the microphone in **System Settings**.
+  - *System Settings**: Find IntelliMate in Apps, and find microphone in the denied list, click and follow instructions to enable microphone for IntelliMate.
+- **Same choice everywhere**: Your last input mode (text or voice) is saved and reused for every chat you open (Explore, Chats, Messages, Me, etc.), so you don’t have to switch again on each screen.
 
 ### 3. Agents
 - Follow/unfollow directly on Explore cards.

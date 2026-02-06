@@ -129,6 +129,7 @@ fun ChatInput(
             }
         }
 
+    /** 每次切换到语音且未授权时都会发起权限请求；若系统不再弹窗（如用户曾选「不再询问」）则提示去设置中开启 */
     fun ensureVoiceInputReady(): Boolean {
         if (!isSpeechRecognitionAvailable || speechRecognizer == null) {
             ToastUtils.showShort(R.string.chat_voice_input_not_available)
@@ -137,6 +138,8 @@ fun ChatInput(
         if (!voicePermissionState.status.isGranted) {
             if (voicePermissionState.status.shouldShowRationale) {
                 ToastUtils.showShort(R.string.chat_voice_input_permission_rationale)
+            } else {
+                ToastUtils.showShort(R.string.chat_voice_input_enable_in_settings)
             }
             voicePermissionState.launchPermissionRequest()
             return false
