@@ -55,13 +55,14 @@
 - **原因**：push_worker 未启动 `cache_service.start_cleanup_task()`，user_cache / agent_cache 等过期条目仅在被访问时顺带删除，未访问则常驻，随推送量增加 total_entries 单调上升。
 - **修复**：在 push_worker 的 `run()` 中调用 `cache_service.start_cleanup_task()`，在 `_stop_async()` 与 `stop()` 中调用 `cache_service.stop_cleanup_task()`。
 
-### 5.2 当前主因：记忆抽取「获取待处理用户」长时间占用且持续分配
+### 5.2 已解决：记忆抽取「获取待处理用户」长时间占用且持续分配
 
 - **责任任务**：**记忆抽取 (memory_extraction)** 中的 **获取待处理用户** 步骤。  
 - **代码路径**：`push_scheduler_service._run_memory_extraction()` → `memory_get_users_to_extract()` → `asyncio.to_thread(_compute_users_to_extract_sync, ...)`。  
-- **文件与函数**：`app/services/memory_extraction_service.py` 中的 `_compute_users_to_extract_sync`（在 to_thread 内执行）。
+- **文件与函数**：`app/services/memory_extraction_service.py` 中的 `_compute_users_to_extract_sync`（在 to_thread 内执行）。  
+- **现状**：已通过「筛选用 subscription_usage、单用户处理仍用 chat_history」方案修复，见 6.1。
 
-**为何导致内存持续增加：**
+**为何曾导致内存持续增加：**
 
 1. **单次运行时间极长**：当前实现对每个 `last`（约 4558 个）、每个 sids chunk（约 41 个）各执行一次针对 `chat_history` 的 SQL，共约 **18.7 万次** 查询，在单一线程内顺序执行，耗时可长达数小时。
 2. **运行过程中持续分配**：工作线程内构建并持有 `session_to_total`（约 20 万 key）、`last_to_session_incr`（每个 last 对应若干 session 的计数），以及大量查询结果；主进程在 `get_users_to_extract()` 返回前一直持有传入的 `user_to_chats`、`user_to_last`。随着循环推进，这些结构不断增长，RSS 随执行时间**单调上升**。
@@ -83,10 +84,17 @@
 
 - **cache 清理**：push_worker 启动/停止时与主应用一致地启停 cache 清理任务。  
 - **Ctrl+C 退出**：`push_scheduler_service.stop()` 改为 `shutdown(wait=False)`；push_worker 改为自建事件循环、在 main 返回后仅 `loop.close()`，避免卡在 to_thread 或 I/O 时无法退出。
+- **优化 `_compute_users_to_extract_sync`（最终方案）**：  
+  **筛选阶段**改为基于 `subscription_usage` 表，不再查询 `chat_history`。  
+  - 新用户：对「在 chats 有会话且未在 memory_extraction_log 出现过」的用户，用一条（或按 `_MAX_IN_PARAMS` 分块）聚合 SQL：`SELECT user_id, SUM(usage_count) FROM subscription_usage WHERE usage_type = 'chat' AND user_id = ANY(...) GROUP BY user_id`，总聊天次数 ≥ `trigger_new_user_messages` 的进入待抽取列表。  
+  - 老用户：对「已有抽取记录」的用户，用一条（或分块）批量 SQL：`subscription_usage` JOIN `(VALUES (user_id, last_at), ...)`，条件 `usage_date > last_at`，按 user 聚合 `SUM(usage_count)`，增量 ≥ `trigger_incremental_messages` 的进入待抽取列表。  
+  - 查询量从原先约 18.7 万次 chat_history 查询降为少量（通常 2～4 条）subscription_usage 聚合查询，不再构建 `session_to_total`、逐用户 session 块 COUNT 等大结构，耗时与峰值内存显著下降。  
+  **单用户处理阶段**不变：仍由 `get_all_messages_for_user` 从 `chat_history` 拉取消息，`extract_and_save` 做 LLM 抽取与写入 memory / memory_extraction_log。  
+  **配置**：`MemoryExtractionConfig` 的 `trigger_new_user_messages`、`trigger_incremental_messages` 语义改为「按 subscription_usage 统计的聊天次数」；见 `app/core/config.py` 注释与 `get_users_to_extract` 的 docstring。  
+  **索引（可选）**：为加速筛选查询，可为 `subscription_usage` 增加复合索引 `(user_id, usage_type, usage_date)`，通过单独 alembic version 应用（见 `alembic/versions/20260206_120000_subscription_usage_index_for_memory_extraction.py`）；不执行迁移仅影响查询性能，不影响正确性。
 
 ### 6.2 待做（建议）
 
-- **优化 `_compute_users_to_extract_sync`**：将约 18.7 万次 SQL 批量化或改为更少、更大的查询，缩短单次运行时间与峰值内存。  
 - **限流或超时**：对记忆抽取任务做并发控制（如同一时间只允许一轮），或对 to_thread 设置超时，避免长时间占用叠加 OOM。
 
 ---
@@ -118,5 +126,5 @@ export PYTHONPATH=.
 - `app/services/push_worker.py`：cache 清理任务启停；退出流程（自建 loop、`shutdown(wait=False)` 等）。  
 - `app/services/push_scheduler_service.py`：`stop()` 中 `shutdown(wait=False)`。  
 - `app/services/cache_service.py`：逻辑未改，被 push_worker 调用 `start_cleanup_task` / `stop_cleanup_task`。  
-- `app/services/memory_extraction_service.py`：包含 `_compute_users_to_extract_sync`（待优化）。  
+- `app/services/memory_extraction_service.py`：包含 `_compute_users_to_extract_sync`（已改为用 subscription_usage 筛选）、`get_all_messages_for_user`（仍从 chat_history 读消息）。  
 - `scripts/run_memory_extraction_to_thread_standalone.py`：独立测试 to_thread 内存的脚本（保留）。
