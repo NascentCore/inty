@@ -1,5 +1,7 @@
 # Inty SDK 迁移待办事项
 
+**本项目不再推进，仍沿用现有的 HTTP 调用技术栈，而非 Stainless 生成的 SDK。**
+
 ## 未使用生成 SDK 的 API 端点
 
 以下 API 端点目前使用 Retrofit/Moshi 实现，但**在生成的 SDK 中不可用**。这些端点应在可能的情况下迁移到使用生成的
