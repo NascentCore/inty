@@ -11,7 +11,13 @@ from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.models.report import ReportStatus, ReportType
 from app.models.user import User
-from app.schemas.report import ReportCreate, ReportOut, ReportQuery, ReportsList, TargetType
+from app.schemas.report import (
+    ReportCreate,
+    ReportOut,
+    ReportQuery,
+    ReportsList,
+    TargetType,
+)
 from app.schemas.response import APIResponse
 from app.services import report_service
 

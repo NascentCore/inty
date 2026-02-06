@@ -5,7 +5,6 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
-import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.theme.brushes
 import ai.sxwl.android.design.theme.textOnLightSurface
@@ -35,7 +34,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -63,7 +61,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -137,9 +134,7 @@ private fun Content(
     onOpenSubscription: () -> Unit,
 ) {
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent),
+        modifier = Modifier.fillMaxSize().background(Color.Transparent),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -147,9 +142,7 @@ private fun Content(
                     Image(
                         painter = painterResource(R.drawable.img_message_title),
                         contentDescription = null,
-                        modifier = Modifier
-                            .height(30.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.height(30.dp).fillMaxWidth(),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart,
                     )
@@ -159,9 +152,7 @@ private fun Content(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             MessageTabContent(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -191,9 +182,7 @@ private fun MessageTabContent(
     Column(modifier = Modifier.fillMaxSize()) {
         MessagesSubscriptionBanner(
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             titleText = stringResource(R.string.messages_premium_banner_title),
             ctaText = stringResource(R.string.messages_premium_banner_cta),
             onClick = onOpenSubscription,
@@ -202,9 +191,7 @@ private fun MessageTabContent(
         MessagesTabSwitcher(
             selectedTab = selectedTab,
             onTabSelected = { viewModel.setSelectedTab(it) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
         Spacer(Modifier.height(12.dp))
         when (selectedTab) {
@@ -273,22 +260,16 @@ private fun MessagesSubscriptionBanner(
                 .clip(RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CornerRadius))
                 .drawBehind {
                     drawRect(
-                        brush = Brush.horizontalGradient(
-                            listOf(
-                                Color(0xFFC3D5FB),
-                                Color(0xFFC567F5)
-                            )
-                        )
+                        brush =
+                            Brush.horizontalGradient(listOf(Color(0xFFC3D5FB), Color(0xFFC567F5)))
                     )
                 }
                 .clickable(onClick = onClick)
                 .padding(vertical = 12.dp)
     ) {
-        Column (
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Column(
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = titleText,
@@ -296,15 +277,14 @@ private fun MessagesSubscriptionBanner(
                 color = MaterialTheme.colorScheme.textOnLightSurface,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 12.dp)
+                modifier = Modifier.padding(horizontal = 12.dp),
             )
 
             Spacer(Modifier.height(UiConfigs.Spacing.Small))
 
             Row(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .clip(
                             RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CtaCornerRadius)
@@ -315,7 +295,7 @@ private fun MessagesSubscriptionBanner(
                             vertical = UiConfigs.MessagesPage.PremiumBanner.CtaVerticalPadding,
                         ),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Icon(
                     painter = painterResource(R.drawable.icon_messages_subscription),
@@ -342,9 +322,7 @@ private fun MessagesSubscriptionBannerPreview() {
     IntelliMateTheme() {
         MessagesSubscriptionBanner(
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             titleText = stringResource(R.string.messages_premium_banner_title),
             ctaText = stringResource(R.string.messages_premium_banner_cta),
             onClick = {},
@@ -397,19 +375,14 @@ private fun ConversationList(
         LazyColumn(
             state = listState,
             modifier =
-                Modifier
-                    .matchParentSize()
-                    .onGloballyPositioned { coordinates ->
-                        lazyColumnY =
-                            with(density) { coordinates.positionInParent().y.toDp().value }
-                    },
+                Modifier.matchParentSize().onGloballyPositioned { coordinates ->
+                    lazyColumnY = with(density) { coordinates.positionInParent().y.toDp().value }
+                },
         ) {
             if (uiState.isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
+                        modifier = Modifier.fillMaxWidth().height(80.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -440,8 +413,7 @@ private fun ConversationList(
                             val density = LocalDensity.current
                             Box(
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                                         .onGloballyPositioned { coordinates ->
                                             val itemYInLazyColumn =
                                                 with(density) {
@@ -462,7 +434,7 @@ private fun ConversationList(
                                                     lastClickTime = currentTime
                                                     if (
                                                         IntySetting.isLogin() &&
-                                                        IntySetting.getCurToken().isNotEmpty()
+                                                            IntySetting.getCurToken().isNotEmpty()
                                                     ) {
                                                         viewModel.clearConversationPush(
                                                             conversion.agentId
@@ -475,7 +447,7 @@ private fun ConversationList(
                                                 showMenuForConversationId =
                                                     if (
                                                         showMenuForConversationId ==
-                                                        conversion.agentId
+                                                            conversion.agentId
                                                     ) {
                                                         null
                                                     } else {
@@ -526,10 +498,7 @@ private fun ConversationList(
                     },
                     onDismiss = { showMenuForConversationId = null },
                     showHideOption = !isIntelliMate,
-                    modifier = Modifier
-                        .offset(x = 16.dp, y = menuY)
-                        .width(140.dp)
-                        .zIndex(1000f),
+                    modifier = Modifier.offset(x = 16.dp, y = menuY).width(140.dp).zIndex(1000f),
                 )
             }
         }
@@ -566,9 +535,7 @@ private fun MessagesTabSwitcher(
             if (tabPositions.isNotEmpty()) {
                 TabRowDefaults.Indicator(
                     modifier =
-                        Modifier
-                            .tabIndicatorOffset(tabPositions[selectedIndex])
-                            .height(2.dp),
+                        Modifier.tabIndicatorOffset(tabPositions[selectedIndex]).height(2.dp),
                     color = Color.White,
                 )
             }
@@ -636,8 +603,7 @@ private fun FavoriteAgentItem(agent: AgentInfo, onClick: (AgentInfo) -> Unit) {
     val avatarRes = getCdnImageUrl(agent.avatar, width = 128) ?: R.drawable.img_default_avatar
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 6.dp)
                 .clip(RoundedCornerShape(20.dp))
                 .background(Color.White.copy(alpha = 0.06f))
@@ -646,9 +612,7 @@ private fun FavoriteAgentItem(agent: AgentInfo, onClick: (AgentInfo) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape),
+            modifier = Modifier.size(56.dp).clip(CircleShape),
             model = avatarRes,
             placeholder = painterResource(R.drawable.img_default_avatar),
             contentDescription = null,
@@ -711,9 +675,7 @@ private fun ChatHistoryItem(
             getCdnImageUrl(conversation.agentAvatar, width = 128) ?: R.drawable.img_default_avatar
         Box(modifier = Modifier.size(56.dp)) {
             AsyncImage(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(CircleShape),
+                modifier = Modifier.matchParentSize().clip(CircleShape),
                 model = avatarRes,
                 placeholder = painterResource(placeholderID),
                 contentDescription = null,
@@ -722,9 +684,7 @@ private fun ChatHistoryItem(
             )
             if (showPushIndicator) {
                 HeartRedDot(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-4).dp),
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp),
                     radius = 8,
                 )
             }

@@ -48,9 +48,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -242,22 +242,18 @@ fun ChatInput(
                             Modifier.heightIn(min = minHeight, max = maxHeight).wrapContentHeight()
                         }
                     )
-                    .onSizeChanged {
-                        if (!isVoiceInputMode) lastTextModeHeightPx = it.height
-                    }
+                    .onSizeChanged { if (!isVoiceInputMode) lastTextModeHeightPx = it.height }
         ) {
             val trailingPadding =
                 when {
-                    isVoiceInputMode && showSceneActionButton -> config.VoiceModeTrailingPaddingWithSceneAction
+                    isVoiceInputMode && showSceneActionButton ->
+                        config.VoiceModeTrailingPaddingWithSceneAction
                     isVoiceInputMode -> config.VoiceModeTrailingPadding
                     showSceneActionButton -> config.TrailingControlsPaddingWithSceneAction
                     else -> config.TrailingControlsPadding
                 }
             val inputContentModifier =
-                Modifier.padding(
-                        start = config.LeadingControlsPadding,
-                        end = trailingPadding,
-                    )
+                Modifier.padding(start = config.LeadingControlsPadding, end = trailingPadding)
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
                 if (isVoiceInputMode) {
@@ -271,7 +267,11 @@ fun ChatInput(
                     }
                 } else {
                     if (!ensureVoiceInputReady()) {
-                        if (isSpeechRecognitionAvailable && speechRecognizer != null && !voicePermissionState.status.isGranted) {
+                        if (
+                            isSpeechRecognitionAvailable &&
+                                speechRecognizer != null &&
+                                !voicePermissionState.status.isGranted
+                        ) {
                             pendingSwitchToVoiceMode = true
                         }
                         return@onVoiceToggleClick
@@ -334,12 +334,10 @@ fun ChatInput(
                     onPressCancel = onVoicePressCancel,
                 )
             } else {
-                // 文本输入区左边界与语音“按住说话”按钮左边界对齐（均为 LeadingControlsPadding），两者内部均有 TextFieldHorizontal 内边距，文字起始位置一致
+                // 文本输入区左边界与语音“按住说话”按钮左边界对齐（均为 LeadingControlsPadding），两者内部均有 TextFieldHorizontal
+                // 内边距，文字起始位置一致
                 val textFieldContentModifier =
-                    Modifier.padding(
-                            start = config.LeadingControlsPadding,
-                            end = trailingPadding,
-                        )
+                    Modifier.padding(start = config.LeadingControlsPadding, end = trailingPadding)
                         .align(Alignment.Center)
                 IntySmallTextField(
                     modifier = textFieldContentModifier,
@@ -410,8 +408,7 @@ fun ChatInput(
 
             Row(
                 modifier =
-                    Modifier.align(Alignment.CenterEnd)
-                        .padding(end = config.ButtonRightPadding),
+                    Modifier.align(Alignment.CenterEnd).padding(end = config.ButtonRightPadding),
                 horizontalArrangement = Arrangement.spacedBy(config.SceneActionButtonSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

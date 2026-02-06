@@ -22,9 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -101,8 +99,7 @@ fun ShimmerPlaceholder(
 
                         Box(
                             modifier =
-                                Modifier
-                                    .size(6.dp)
+                                Modifier.size(6.dp)
                                     .background(
                                         color = Color.White.copy(alpha = dotAlpha * 0.7f),
                                         shape = CircleShape,
@@ -122,39 +119,30 @@ fun ShimmerPlaceholder(
 
                 Spacer(Modifier.height(16.dp))
 
-                SpeedUpButton(
-                    onClick = onVipSpeedUpClick
-                )
+                SpeedUpButton(onClick = onVipSpeedUpClick)
             }
         }
     }
 }
 
 @Composable
-private fun SpeedUpButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun SpeedUpButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        border = BorderStroke(
-            width = 1.dp,
-            brush = MaterialTheme.brushes.gradientBrush4
-        ),
+        border = BorderStroke(width = 1.dp, brush = MaterialTheme.brushes.gradientBrush4),
         shape = MaterialTheme.shapes.extraLarge,
         color = Color.Transparent,
-        modifier = modifier
+        modifier = modifier,
     ) {
         Row(
-            modifier = Modifier
-                .padding(vertical = 4.dp, horizontal = 8.dp),
+            modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
                 painter = painterResource(com.ai.intellimate.R.drawable.ic_premium_tag),
                 contentDescription = "vip",
-                modifier = Modifier.size(24.dp, 12.dp)
+                modifier = Modifier.size(24.dp, 12.dp),
             )
 
             Spacer(Modifier.width(8.dp))
@@ -162,7 +150,7 @@ private fun SpeedUpButton(
             Text(
                 text = stringResource(com.ai.intellimate.R.string.speed_up),
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
     }
@@ -171,9 +159,5 @@ private fun SpeedUpButton(
 @Preview
 @Composable
 private fun SpeedUpButtonPreview() {
-    IntelliMateTheme {
-        SpeedUpButton(
-            onClick = {}
-        )
-    }
+    IntelliMateTheme { SpeedUpButton(onClick = {}) }
 }

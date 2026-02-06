@@ -3,8 +3,6 @@ package ai.sxwl.android.design.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
@@ -49,20 +47,10 @@ private val lightScheme =
         surfaceContainerHighest = surfaceContainerHighestLight,
     )
 
+data class Brushes(val gradientBrush4: Brush)
 
-
-data class Brushes(
-    val gradientBrush4: Brush
-)
-
-private val LightBrushes = Brushes(
-    gradientBrush4 = Brush.horizontalGradient(
-        listOf(
-            Color(0xFFFFEECC),
-            Color(0xFFAD9515)
-        )
-    )
-)
+private val LightBrushes =
+    Brushes(gradientBrush4 = Brush.horizontalGradient(listOf(Color(0xFFFFEECC), Color(0xFFAD9515))))
 
 val MaterialTheme.brushes: Brushes
     get() = LightBrushes

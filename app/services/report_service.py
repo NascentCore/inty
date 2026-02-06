@@ -192,9 +192,7 @@ async def get_report(db: AsyncSession, report_id: str) -> Report:
             FEEDBACK_REASON_ID_TO_CODE if is_feedback else REASON_ID_TO_CODE
         )
         report.reason_codes = [
-            id_to_code_map[rid]
-            for rid in report.reason_ids
-            if rid in id_to_code_map
+            id_to_code_map[rid] for rid in report.reason_ids if rid in id_to_code_map
         ] or []
     if report.reason_ids is None:
         report.reason_ids = []

@@ -159,7 +159,9 @@ def _compute_users_to_extract_sync(
 
     candidate_user_ids = list(user_to_chats.keys())
     new_user_ids = [uid for uid in candidate_user_ids if uid not in user_to_last]
-    old_user_items = [(uid, user_to_last[uid]) for uid in candidate_user_ids if uid in user_to_last]
+    old_user_items = [
+        (uid, user_to_last[uid]) for uid in candidate_user_ids if uid in user_to_last
+    ]
     num_users = len(candidate_user_ids)
     logger.info(
         f"[记忆抽取] 筛选待抽取用户: subscription_usage 统计，有会话用户数={num_users} "

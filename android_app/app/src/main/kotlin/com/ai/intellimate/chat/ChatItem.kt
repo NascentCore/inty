@@ -359,7 +359,7 @@ private fun ChatItemAI(
                                 showLoadingDots = true,
                                 onVipSpeedUpClick = {
                                     navController.navigate(Routes.Me.vipCenter("speed up "))
-                                }
+                                },
                             )
                         } else if (imageLoadError) {
                             Box(
