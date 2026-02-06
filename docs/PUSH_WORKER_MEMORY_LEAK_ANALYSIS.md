@@ -71,6 +71,11 @@
 
 - `app/services/push_worker.py`：增加 cache 清理任务的启动与停止；调整退出流程（自建 loop、`_stop_async` 取消任务并限时等待、finally 仅 `loop.close()`）。
 - `app/services/push_scheduler_service.py`：`stop()` 中 `shutdown(wait=False)`。
-- `app/services/cache_service.py`：逻辑未改，仅被 push_worker 在运行期调用 `start_cleanup_task` / `stop_cleanup_task`。
+- `app/services/cache_service.py`：被 push_worker 调用 `start_cleanup_task` / `stop_cleanup_task`；后续增加 `InMemoryCache.max_entries` 兜底（见第 7 节）。
 
-分析完成后已移除为本次调试添加的 NDJSON 埋点（push_scheduler_service、push_notification_service 中的 #region debug instrumentation）。
+## 7. 后续：生产仍涨与兜底上限
+
+- **现象**：修复部署后，部分环境反馈 push_worker RSS 仍随运行时间缓慢上升（例如 5.5 小时内 0.4 GiB → 近 2 GiB）。
+- **本地复现**：在无推送流量（0 用户需推送）的本地运行中，埋点显示 cache `total_entries` 始终为 0、`cleanup_running: true`、`agent_count` 稳定、`task_count` 波动正常，**未能复现增长**；说明在生产有真实推送流量时，cache 或其它结构才可能被大量写入。
+- **兜底**：在 `InMemoryCache` 中增加可选参数 `max_entries`；`CacheService` 为 user_cache / session_cache / agent_cache 分别设置上限（50_000 / 10_000 / 2_000）。在 `set()` 时若已达上限且 key 不在缓存中，先清理过期条目，再按 `created_at` 淘汰最旧条目，保证条目数不超过上限，即使清理任务偶发延迟或写入速率很高也能限制内存。
+- **建议**：生产保留或临时加入 cache_stats / agent_count 等埋点，在 RSS 上升时抓取日志对比 `total_entries` 与 `agent_count`，便于区分是 cache 逼近上限还是其它对象（如 Agent 实例、调度器）导致；若仍涨可考虑进一步限制 Agent 数量或单 Agent 体积。

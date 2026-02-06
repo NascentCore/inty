@@ -8,10 +8,15 @@ logger = logging.getLogger(__name__)
 
 
 class InMemoryCache:
-    """内存缓存实现（线程安全）"""
+    """内存缓存实现（线程安全），支持 max_entries 上限防止无限增长。"""
 
-    def __init__(self, default_ttl: int = 300):  # 默认5分钟过期
+    def __init__(
+        self,
+        default_ttl: int = 300,  # 默认5分钟过期
+        max_entries: Optional[int] = None,
+    ):
         self.default_ttl = default_ttl
+        self.max_entries = max_entries
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._lock = RLock()
 
@@ -32,17 +37,41 @@ class InMemoryCache:
             return None
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
-        """设置缓存值"""
+        """设置缓存值；若启用 max_entries 且已满，先清理过期再按创建时间淘汰最旧条目。"""
         ttl = ttl or self.default_ttl
         expires_at = time.time() + ttl
 
         with self._lock:
+            if (
+                self.max_entries is not None
+                and len(self._cache) >= self.max_entries
+                and key not in self._cache
+            ):
+                self._evict_to_make_room()
             self._cache[key] = {
                 "value": value,
                 "expires_at": expires_at,
                 "created_at": time.time(),
             }
             logger.debug(f"缓存设置: {key}, TTL: {ttl}秒")
+
+    def _evict_to_make_room(self) -> None:
+        """在持有 _lock 下调用：先删过期，再按 created_at 删最旧直到低于 max_entries。"""
+        now = time.time()
+        expired = [k for k, e in self._cache.items() if now >= e["expires_at"]]
+        for k in expired:
+            del self._cache[k]
+        if self.max_entries is None or len(self._cache) < self.max_entries:
+            return
+        by_age = sorted(
+            self._cache.items(),
+            key=lambda x: x[1]["created_at"],
+        )
+        to_remove = len(self._cache) - self.max_entries + 1
+        for k, _ in by_age[:to_remove]:
+            del self._cache[k]
+        if to_remove > 0:
+            logger.debug(f"缓存达到上限，按创建时间淘汰 {to_remove} 条")
 
     def delete(self, key: str) -> bool:
         """删除缓存"""
@@ -98,13 +127,27 @@ class InMemoryCache:
 class CacheService:
     """缓存服务管理器"""
 
+    # 各缓存条目数上限，防止高写入场景下无限增长（清理任务之外的兜底）
+    USER_CACHE_MAX_ENTRIES = 50_000
+    SESSION_CACHE_MAX_ENTRIES = 10_000
+    AGENT_CACHE_MAX_ENTRIES = 2_000
+
     def __init__(self):
         # 用户信息缓存（较长过期时间）
-        self.user_cache = InMemoryCache(default_ttl=600)  # 10分钟
+        self.user_cache = InMemoryCache(
+            default_ttl=600,
+            max_entries=self.USER_CACHE_MAX_ENTRIES,
+        )  # 10分钟
         # 会话信息缓存（较短过期时间）
-        self.session_cache = InMemoryCache(default_ttl=300)  # 5分钟
+        self.session_cache = InMemoryCache(
+            default_ttl=300,
+            max_entries=self.SESSION_CACHE_MAX_ENTRIES,
+        )  # 5分钟
         # Agent配置缓存
-        self.agent_cache = InMemoryCache(default_ttl=1800)  # 30分钟
+        self.agent_cache = InMemoryCache(
+            default_ttl=1800,
+            max_entries=self.AGENT_CACHE_MAX_ENTRIES,
+        )  # 30分钟
 
         self._cleanup_task = None
         self._cleanup_running = False
@@ -122,10 +165,37 @@ class CacheService:
                     # 每2分钟清理一次过期缓存
                     await asyncio.sleep(120)
 
+                    # #region debug instrumentation
+                    try:
+                        import json
+                        import os
+                        import time as _time
+                        _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+                        os.makedirs(os.path.dirname(_path), exist_ok=True)
+                        _before = self.get_cache_stats()
+                        with open(_path, "a") as _f:
+                            _f.write(json.dumps({"timestamp": int(_time.time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A", "location": "cache_service:cleanup_loop", "message": "cache_before_cleanup", "data": _before}, ensure_ascii=False) + "\n")
+                    except Exception:
+                        pass
+                    # #endregion
                     total_cleaned = 0
                     total_cleaned += self.user_cache.cleanup_expired()
                     total_cleaned += self.session_cache.cleanup_expired()
                     total_cleaned += self.agent_cache.cleanup_expired()
+                    # #region debug instrumentation
+                    try:
+                        import json
+                        import os
+                        import time as _time
+                        _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+                        os.makedirs(os.path.dirname(_path), exist_ok=True)
+                        _after = self.get_cache_stats()
+                        with open(_path, "a") as _f:
+                            _f.write(json.dumps({"timestamp": int(_time.time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "C", "location": "cache_service:cleanup_loop", "message": "cleanup_result", "data": {"total_cleaned": total_cleaned}}, ensure_ascii=False) + "\n")
+                            _f.write(json.dumps({"timestamp": int(_time.time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "E", "location": "cache_service:cleanup_loop", "message": "cache_after_cleanup", "data": _after}, ensure_ascii=False) + "\n")
+                    except Exception:
+                        pass
+                    # #endregion
 
                     if total_cleaned > 0:
                         logger.debug(f"定时清理过期缓存，共清理 {total_cleaned} 个条目")

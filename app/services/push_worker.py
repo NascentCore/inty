@@ -149,6 +149,18 @@ class PushWorker:
             from app.services.cache_service import cache_service
 
             await cache_service.start_cleanup_task()
+            # #region debug instrumentation
+            try:
+                import json
+                import os
+                import time as _time
+                _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+                os.makedirs(os.path.dirname(_path), exist_ok=True)
+                with open(_path, "a") as _f:
+                    _f.write(json.dumps({"timestamp": int(_time.time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "C", "location": "push_worker:run", "message": "cleanup_started", "data": {"cleanup_running": cache_service._cleanup_running, "cache_stats": cache_service.get_cache_stats()}}, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            # #endregion
 
             # 创建关闭事件
             self.shutdown_event = asyncio.Event()

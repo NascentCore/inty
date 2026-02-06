@@ -6,8 +6,12 @@
 
 import asyncio
 import datetime
+import json
+import os
+import time
 from typing import Optional
 
+DEBUG_LOG_PATH = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
@@ -62,6 +66,33 @@ class PushSchedulerService:
             # 启动调度器（必须在添加任务之前启动）
             self.scheduler.start()
             self.is_running = True
+
+            # 临时：仅运行记忆抽取并立刻执行（用于排查记忆提取任务内存/规模）
+            MEMORY_EXTRACTION_ONLY_AND_RUN_NOW = True  # 排查完毕后改回 False
+            if MEMORY_EXTRACTION_ONLY_AND_RUN_NOW:
+                mem_cfg = getattr(
+                    global_config_loaded_from_config_yaml,
+                    "memory_extraction",
+                    None,
+                )
+                if mem_cfg and getattr(mem_cfg, "enabled", False):
+                    self.scheduler.add_job(
+                        self._run_memory_extraction,
+                        trigger=IntervalTrigger(hours=24),
+                        id="run_memory_extraction",
+                        name="记忆抽取",
+                        replace_existing=True,
+                        coalesce=True,
+                        max_instances=1,
+                        next_run_time=datetime.datetime.now(),
+                    )
+                    logger.info("已添加记忆抽取任务（仅此任务），并立刻执行一次")
+                else:
+                    logger.warning(
+                        "临时仅运行记忆抽取，但 memory_extraction 未启用，请检查 config"
+                    )
+                logger.info("推送调度器启动成功（当前仅注册记忆抽取任务）")
+                return
 
             # 初始化推送系统（在后台异步执行，不阻塞启动）
             async def init_push_system():
@@ -280,6 +311,22 @@ class PushSchedulerService:
         Args:
             stage: 推送阶段 (10min, 30min, 2h, 24h, 48h)
         """
+        # #region debug instrumentation
+        try:
+            from app.core.agent.agent import agent_manager
+            from app.services.cache_service import cache_service
+            os.makedirs(os.path.dirname(DEBUG_LOG_PATH), exist_ok=True)
+            loop = asyncio.get_running_loop()
+            task_count = len(asyncio.all_tasks(loop)) if loop else 0
+            cache_stats = cache_service.get_cache_stats()
+            agent_count = agent_manager.get_agent_count()
+            with open(DEBUG_LOG_PATH, "a") as _f:
+                _f.write(json.dumps({"timestamp": int(time.time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "A", "location": "push_scheduler:_check_push_stage", "message": "cache_stats", "data": cache_stats}, ensure_ascii=False) + "\n")
+                _f.write(json.dumps({"timestamp": int(time.time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "B", "location": "push_scheduler:_check_push_stage", "message": "agent_count", "data": {"agent_count": agent_count}}, ensure_ascii=False) + "\n")
+                _f.write(json.dumps({"timestamp": int(time.time() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "D", "location": "push_scheduler:_check_push_stage", "message": "task_count", "data": {"stage": stage, "task_count": task_count}}, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+        # #endregion
         try:
             logger.info(f"开始处理推送阶段 {stage}")
 
@@ -373,15 +420,63 @@ class PushSchedulerService:
         """每日记忆抽取：筛选待抽取用户并逐个 extract_and_save。"""
         try:
             logger.info("[记忆抽取] 开始...")
-            async with AsyncSessionLocal() as db:
-                user_ids = await memory_get_users_to_extract(db)
-                logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
-                for uid in user_ids:
-                    try:
+            # 不传 db，避免 to_thread 长时间占用同一连接导致连接被关闭
+            user_ids = await memory_get_users_to_extract()
+            logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
+            # #region debug instrumentation (记忆提取任务)
+            try:
+                os.makedirs(os.path.dirname(DEBUG_LOG_PATH), exist_ok=True)
+                with open(DEBUG_LOG_PATH, "a") as _f:
+                    _f.write(
+                        json.dumps(
+                            {
+                                "timestamp": int(time.time() * 1000),
+                                "sessionId": "debug-session",
+                                "runId": "run1",
+                                "hypothesisId": "M",
+                                "location": "push_scheduler:_run_memory_extraction",
+                                "message": "memory_extraction_start",
+                                "data": {"user_count": len(user_ids)},
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+            # #endregion
+            for idx, uid in enumerate(user_ids):
+                try:
+                    async with AsyncSessionLocal() as db:
                         await memory_extract_and_save(db, uid)
-                    except Exception as e:
-                        await db.rollback()
-                        logger.warning(f"[记忆抽取] user_id={uid} 失败: {e}")
+                except Exception as e:
+                    logger.warning(f"[记忆抽取] user_id={uid} 失败: {e}")
+                # #region debug instrumentation (记忆提取进度，每 50 用户或最后一用户)
+                if (idx + 1) % 50 == 0 or idx + 1 == len(user_ids):
+                    try:
+                        os.makedirs(os.path.dirname(DEBUG_LOG_PATH), exist_ok=True)
+                        with open(DEBUG_LOG_PATH, "a") as _f:
+                            _f.write(
+                                json.dumps(
+                                    {
+                                        "timestamp": int(time.time() * 1000),
+                                        "sessionId": "debug-session",
+                                        "runId": "run1",
+                                        "hypothesisId": "M",
+                                        "location": "push_scheduler:_run_memory_extraction",
+                                        "message": "memory_extraction_progress",
+                                        "data": {
+                                            "processed": idx + 1,
+                                            "total": len(user_ids),
+                                        },
+                                    },
+                                    ensure_ascii=False,
+                                )
+                                + "\n"
+                            )
+                    except Exception:
+                        pass
+                # #endregion
             logger.info("[记忆抽取] 完成")
         except Exception as e:
             logger.error(f"[记忆抽取] 执行失败: {str(e)}")

@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import psycopg
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.db.session import AsyncSessionLocal
 from app.models.memory import Memory, MemoryExtractionLog
 from app.services.chat_history_service import get_chat_history_connection
 from app.services.chat_service import generate_session_id
@@ -222,10 +223,11 @@ def _compute_users_to_extract_sync(
         conn.close()
 
 
-async def get_users_to_extract(db: AsyncSession) -> List[str]:
+async def get_users_to_extract(db: AsyncSession | None = None) -> List[str]:
     """
     筛选本次需抽取记忆的用户：新用户总消息>=trigger_new_user_messages，
     或已提取用户自上次提取后新增>=trigger_incremental_messages。
+    使用短生命周期 session 做查询后即释放，再在 to_thread 中计算，避免长时间占用连接导致连接被关闭。
     """
     cfg = getattr(
         global_config_loaded_from_config_yaml,
@@ -237,24 +239,59 @@ async def get_users_to_extract(db: AsyncSession) -> List[str]:
     thresh_new = cfg.trigger_new_user_messages
     thresh_incr = cfg.trigger_incremental_messages
 
-    # 所有有会话的用户及其 chat_id
-    r = await db.execute(text("SELECT user_id, id FROM chats WHERE is_active = true"))
-    rows = r.fetchall()
-    user_to_chats: dict = {}
-    for uid, cid in rows:
-        user_to_chats.setdefault(uid, []).append(cid)
+    async def _fetch_inputs(session: AsyncSession) -> tuple[dict, dict]:
+        r = await session.execute(
+            text("SELECT user_id, id FROM chats WHERE is_active = true")
+        )
+        rows = r.fetchall()
+        user_to_chats: dict = {}
+        for uid, cid in rows:
+            user_to_chats.setdefault(uid, []).append(cid)
+        r2 = await session.execute(
+            text("""
+                SELECT user_id, MAX(extracted_at) AS last_at
+                FROM memory_extraction_log
+                WHERE memory_type = :mt
+                GROUP BY user_id
+            """),
+            {"mt": MEMORY_TYPE_USER_COMMON},
+        )
+        user_to_last = {r[0]: r[1] for r in r2.fetchall()}
+        return user_to_chats, user_to_last
 
-    # 已提取过的用户及其上次 extracted_at
-    r2 = await db.execute(
-        text("""
-            SELECT user_id, MAX(extracted_at) AS last_at
-            FROM memory_extraction_log
-            WHERE memory_type = :mt
-            GROUP BY user_id
-        """),
-        {"mt": MEMORY_TYPE_USER_COMMON},
-    )
-    user_to_last = {r[0]: r[1] for r in r2.fetchall()}
+    if db is not None:
+        user_to_chats, user_to_last = await _fetch_inputs(db)
+    else:
+        async with AsyncSessionLocal() as session:
+            user_to_chats, user_to_last = await _fetch_inputs(session)
+
+    # #region debug instrumentation (记忆提取规模)
+    try:
+        import os
+        _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+        os.makedirs(os.path.dirname(_path), exist_ok=True)
+        with open(_path, "a") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "timestamp": int(time.time() * 1000),
+                        "sessionId": "debug-session",
+                        "runId": "run1",
+                        "hypothesisId": "M",
+                        "location": "memory_extraction:get_users_to_extract",
+                        "message": "scale_before_compute",
+                        "data": {
+                            "users_with_chats": len(user_to_chats),
+                            "users_with_last_extract": len(user_to_last),
+                        },
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
 
     result = await asyncio.to_thread(
         _compute_users_to_extract_sync,
@@ -263,6 +300,32 @@ async def get_users_to_extract(db: AsyncSession) -> List[str]:
         thresh_new,
         thresh_incr,
     )
+
+    # #region debug instrumentation (记忆提取规模)
+    try:
+        import os
+        _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+        os.makedirs(os.path.dirname(_path), exist_ok=True)
+        with open(_path, "a") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "timestamp": int(time.time() * 1000),
+                        "sessionId": "debug-session",
+                        "runId": "run1",
+                        "hypothesisId": "M",
+                        "location": "memory_extraction:get_users_to_extract",
+                        "message": "users_to_extract_count",
+                        "data": {"count": len(result)},
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
+
     return result
 
 
@@ -285,8 +348,66 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
         logger.debug(f"记忆抽取跳过：user_id={user_id} 无消息")
         return
 
+    # #region debug instrumentation (记忆提取单用户数据规模)
+    try:
+        import os
+        total_chars = sum(len(c) for _, c in messages)
+        _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+        os.makedirs(os.path.dirname(_path), exist_ok=True)
+        with open(_path, "a") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "timestamp": int(time.time() * 1000),
+                        "sessionId": "debug-session",
+                        "runId": "run1",
+                        "hypothesisId": "M",
+                        "location": "memory_extraction:extract_and_save",
+                        "message": "user_messages_loaded",
+                        "data": {
+                            "user_id": user_id,
+                            "msg_count": msg_count,
+                            "total_content_chars": total_chars,
+                        },
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
+
     chat_text = _format_chat_for_prompt(messages)
     full_prompt = f"{prompt}\n\n---\n\n# User chat history\n\n{chat_text}"
+
+    # #region debug instrumentation (记忆提取 prompt 规模)
+    try:
+        import os
+        _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+        os.makedirs(os.path.dirname(_path), exist_ok=True)
+        with open(_path, "a") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "timestamp": int(time.time() * 1000),
+                        "sessionId": "debug-session",
+                        "runId": "run1",
+                        "hypothesisId": "M",
+                        "location": "memory_extraction:extract_and_save",
+                        "message": "prompt_size",
+                        "data": {
+                            "user_id": user_id,
+                            "prompt_chars": len(full_prompt),
+                        },
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
 
     start_time = time.perf_counter()
     try:
@@ -322,6 +443,38 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
 
     duration_seconds = time.perf_counter() - start_time
     extracted_at = datetime.now(timezone.utc)
+
+    # #region debug instrumentation (记忆提取 LLM 调用结果)
+    try:
+        import os
+        _path = "/Users/donggang/Documents/code/inty-backend/.cursor/debug.log"
+        os.makedirs(os.path.dirname(_path), exist_ok=True)
+        with open(_path, "a") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "timestamp": int(time.time() * 1000),
+                        "sessionId": "debug-session",
+                        "runId": "run1",
+                        "hypothesisId": "M",
+                        "location": "memory_extraction:extract_and_save",
+                        "message": "llm_done",
+                        "data": {
+                            "user_id": user_id,
+                            "duration_seconds": round(duration_seconds, 2),
+                            "prompt_tokens": prompt_tokens,
+                            "completion_tokens": completion_tokens,
+                            "msg_count": msg_count,
+                        },
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
+
     # 删除该用户 user_common、agent_id 为 NULL 的旧记忆
     await db.execute(
         delete(Memory).where(
