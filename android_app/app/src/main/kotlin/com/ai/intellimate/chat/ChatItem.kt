@@ -357,6 +357,9 @@ private fun ChatItemAI(
                                 modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                                 showLoadingDots = true,
+                                onVipSpeedUpClick = {
+                                    navController.navigate(Routes.Me.vipCenter("speed up "))
+                                }
                             )
                         } else if (imageLoadError) {
                             Box(
