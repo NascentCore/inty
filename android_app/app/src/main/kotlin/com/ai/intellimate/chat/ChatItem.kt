@@ -90,6 +90,7 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import ai.sxwl.android.data.billing.BillingRepository
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
@@ -353,10 +354,12 @@ private fun ChatItemAI(
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (isImageLoading) {
+                            val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
                             ShimmerPlaceholder(
                                 modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                                 showLoadingDots = true,
+                                showSpeedUpButton = !vipStatus.isSubscribed,
                                 onVipSpeedUpClick = {
                                     navController.navigate(Routes.Me.vipCenter("speed up "))
                                 },
