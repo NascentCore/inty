@@ -40,12 +40,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shimmer 占位符组件 用于图片加载时的占位效果 */
+/**
+ * Shimmer 占位符组件，用于图片加载时的占位效果。
+ * @param showSpeedUpButton 是否显示「Speed Up」按钮；已订阅用户应传 false 以隐藏该按钮。
+ */
 @Composable
 fun ShimmerPlaceholder(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 8.dp,
     showLoadingDots: Boolean = false,
+    showSpeedUpButton: Boolean = true,
     onVipSpeedUpClick: () -> Unit = {},
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
@@ -119,7 +123,9 @@ fun ShimmerPlaceholder(
 
                 Spacer(Modifier.height(16.dp))
 
-                SpeedUpButton(onClick = onVipSpeedUpClick)
+                if (showSpeedUpButton) {
+                    SpeedUpButton(onClick = onVipSpeedUpClick)
+                }
             }
         }
     }
