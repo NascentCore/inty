@@ -153,6 +153,13 @@ async def agent_chat_completions(
 
         last_user_message = user_messages[-1].content
         messages = [HumanMessage(content=last_user_message)]
+        user_time_context = (
+            request.user_time_context.model_dump(exclude_none=True)
+            if request.user_time_context
+            else None
+        )
+        if user_time_context == {}:
+            user_time_context = None
 
         # 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
@@ -198,6 +205,7 @@ async def agent_chat_completions(
                     session_id=session_id,
                     messages=messages,
                     chat_settings=chat_settings,
+                    user_time_context=user_time_context,
                     model_override=model_override,
                 )
 

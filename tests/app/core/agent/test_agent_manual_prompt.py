@@ -93,3 +93,31 @@ def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypa
     assert not any(default_main in c for c in contents)
     assert not any(default_mode in c for c in contents)
     assert any("##IntelliMate User Manual" in c for c in contents)
+
+
+def test_build_system_messages_includes_time_context(monkeypatch):
+    monkeypatch.setattr(
+        agent_module.global_config_loaded_from_config_yaml.app.features,
+        "experimental_enable_chat_with_user_time_context",
+        True,
+    )
+    agent = _build_agent(
+        agent_id="agent_time_context",
+        name="TimeAware",
+        personality="Warm personality.",
+    )
+    user_time_context = {
+        "local_time": "2026-02-05T18:30:00",
+        "timezone": "Asia/Shanghai",
+        "utc_offset_minutes": 480,
+    }
+    contents = _get_contents(
+        agent.build_system_messages("", None, user_time_context=user_time_context)
+    )
+    combined = "\n".join(contents)
+
+    assert "##User Time Context" in combined
+    assert "2026-02-05T18:30:00" in combined
+    assert "Asia/Shanghai" in combined
+    assert "UTC+08:00" in combined
+    assert "Do not claim to need sleep or be offline." in combined
