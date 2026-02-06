@@ -28,11 +28,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import java.io.File
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -123,6 +125,23 @@ fun ChatTopBar(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // #region agent log
+    val tagsList = agentInfo.tags?.filterNotNull() ?: emptyList()
+    fun normTag(t: String) = t.trim().removePrefix("#").lowercase()
+    val isVipByTag = remember(tagsList) { tagsList.any { normTag(it) == "vip" } }
+    LaunchedEffect(agentInfo.id, isVipByTag, tagsList) {
+        val ts = System.currentTimeMillis()
+        val tagsStr = tagsList.joinToString(",") { it.replace("\"", "\\\"") }
+        val payload =
+            """{"sessionId":"debug-session","runId":"run1","hypothesisId":"H1","location":"ChatTopBar.kt:231","message":"VIP badge visibility","data":{"agentId":"${agentInfo.id}","agentName":"${agentInfo.name.replace("\"", "\\\"")}","tagsStr":"$tagsStr","isVipByTag":$isVipByTag},"timestamp":$ts}"""
+        try {
+            File("/Users/yzhao/Workspace/NascentCore/inty/android_app/.cursor/debug.log")
+                .appendText(payload + "\n")
+        } catch (_: Exception) { }
+        android.util.Log.d("ChatTopBarVIP", payload)
+    }
+    // #endregion
 
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // 返回按钮：showBackButton 为 true 时显示，样式与电话/更多按钮一致（半透明圆角背景），图标使用 R.drawable.back 与其他页面统一
@@ -228,31 +247,32 @@ fun ChatTopBar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // VIP 角标：与通话/菜单按钮同尺寸、同圆角，黄色背景，仅展示
-        Box(
-            modifier =
-                Modifier.size(
-                        UiConfigs.ChatTopBar.ActionButtonContainerWidth,
-                        UiConfigs.ChatTopBar.ActionButtonContainerHeight,
-                    )
-                    .background(
-                        color = AppColors.VipHighlighterStrong,
-                        shape =
-                            RoundedCornerShape(
-                                UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
-                            ),
-                    ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.vip_badge_label),
-                color = Color.White,
-                fontWeight = FontWeight.Medium,
-                fontSize = UiConfigs.ChatTopBar.VipBadgeFontSize,
-            )
+        // VIP 角标：仅当角色 tags 含 vip 时展示，与 Explore 页逻辑一致
+        if (isVipByTag) {
+            Box(
+                modifier =
+                    Modifier.size(
+                            UiConfigs.ChatTopBar.ActionButtonContainerWidth,
+                            UiConfigs.ChatTopBar.ActionButtonContainerHeight,
+                        )
+                        .background(
+                            color = AppColors.VipHighlighterStrong,
+                            shape =
+                                RoundedCornerShape(
+                                    UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
+                                ),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.vip_badge_label),
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = UiConfigs.ChatTopBar.VipBadgeFontSize,
+                )
+            }
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ActionButtonSpacing))
         }
-
-        Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ActionButtonSpacing))
 
         Box(
             modifier =
