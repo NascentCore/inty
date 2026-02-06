@@ -24,6 +24,33 @@ def _make_superuser(*, user_id: str = "admin-1") -> UserSchema:
     )
 
 
+def _build_stats() -> dict:
+    return {
+        "total_new_users": 1,
+        "total_chat_initiators": 1,
+        "total_user_messages": 1,
+        "total_active_sessions": 1,
+        "total_voice_requests": 0,
+        "avg_messages_per_user": 1.0,
+        "avg_sessions_per_user": 1.0,
+        "avg_voice_requests_per_user": 0.0,
+        "avg_rounds_per_session": 1.0,
+        "new_user_open_rate": 100.0,
+        "total_image_generation_requests": 0,
+        "total_image_generation_success": 0,
+        "total_image_generation_failures": 0,
+        "image_generation_success_rate": 0.0,
+        "total_image_new_generation": 0,
+        "total_image_fallback_used": 0,
+        "total_live_chat_users": 0,
+        "total_live_chat_sessions": 0,
+        "total_live_chat_duration": 0,
+        "avg_live_chat_sessions_per_user": 0.0,
+        "avg_live_chat_duration_per_user": 0.0,
+        "avg_live_chat_duration_per_session": 0.0,
+    }
+
+
 @pytest.fixture
 def reports_app():
     """提供挂载 evaluation 路由的 FastAPI 应用，用于测试 reports 端点"""
@@ -86,3 +113,45 @@ def test_user_analytics_reports_returns_empty_when_no_data(
     body = resp.json()
     assert "reports" in body
     assert body["reports"] == []
+
+
+def test_user_analytics_reports_can_skip_charts(
+    reports_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+):
+    """显式关闭图表数据时返回空 charts"""
+    from unittest.mock import AsyncMock, MagicMock
+
+    row = MagicMock()
+    row.id = "report-1"
+    row.report_type = "daily"
+    row.report_date = datetime(2026, 2, 5, tzinfo=timezone.utc).date()
+    row.stats = _build_stats()
+    row.charts = {"new_users": [{"date": "2026-02-05", "count": 1}]}
+    row.created_at = None
+
+    async def mock_execute(stmt):
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [row]
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        return mock_result
+
+    mock_db = MagicMock()
+    mock_db.execute = AsyncMock(side_effect=mock_execute)
+
+    async def override_get_async_replica_db():
+        yield mock_db
+
+    reports_app.dependency_overrides[deps.get_async_replica_db] = (
+        override_get_async_replica_db
+    )
+
+    with TestClient(reports_app) as client:
+        resp = client.get(
+            "/api/v1/evaluation/user-analytics/reports",
+            params={"report_type": "daily", "include_charts": "false"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["reports"][0]["charts"] is None

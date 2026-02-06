@@ -2,7 +2,10 @@
  * CREATED_BY_AGENT
  */
 import { describe, it, expect } from "vitest";
-import { buildDailyUsageSeries } from "../utils/userAnalyticsReports";
+import {
+  buildDailyUsageSeries,
+  sortReportsByDateDesc,
+} from "../utils/userAnalyticsReports";
 import type {
   UserAnalyticsReportItem,
   UserAnalyticsStatsResponse,
@@ -94,5 +97,19 @@ describe("buildDailyUsageSeries", () => {
       buildReport({ report_type: "weekly", report_date: "2026-W05" }),
     ]);
     expect(series).toBeNull();
+  });
+});
+
+describe("sortReportsByDateDesc", () => {
+  it("按日期倒序排序报告列表", () => {
+    const reports = [
+      buildReport({ id: "r1", report_date: "2026-02-01" }),
+      buildReport({ id: "r2", report_date: "2026-02-03" }),
+      buildReport({ id: "r3", report_date: "2026-01-31" }),
+    ];
+
+    const sorted = sortReportsByDateDesc(reports);
+
+    expect(sorted.map((report) => report.id)).toEqual(["r2", "r1", "r3"]);
   });
 });

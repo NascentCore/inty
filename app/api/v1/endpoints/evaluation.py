@@ -1722,6 +1722,7 @@ async def get_user_analytics_reports(
         None, description="daily | weekly，不传则返回全部"
     ),
     limit: int = Query(30, ge=1, le=100, description="返回条数"),
+    include_charts: bool = Query(True, description="是否返回图表数据"),
 ) -> Any:
     """获取用户数据分析预计算报告列表（日报/周报）"""
     if not current_user.is_superuser:
@@ -1746,7 +1747,7 @@ async def get_user_analytics_reports(
         reports = []
         for row in rows:
             charts_data = None
-            if row.charts:
+            if include_charts and row.charts:
                 charts_data = schemas.user_analytics.UserAnalyticsReportCharts(
                     new_users=row.charts.get("new_users", []),
                     conversation_rounds=row.charts.get("conversation_rounds", []),

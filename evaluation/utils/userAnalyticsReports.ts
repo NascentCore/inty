@@ -53,3 +53,8 @@ export const buildDailyUsageSeries = (
 
   return { dates, valuesByMetric };
 };
+
+export const sortReportsByDateDesc = (
+  reports: UserAnalyticsReportItem[],
+): UserAnalyticsReportItem[] =>
+  reports.slice().sort((a, b) => b.report_date.localeCompare(a.report_date));
