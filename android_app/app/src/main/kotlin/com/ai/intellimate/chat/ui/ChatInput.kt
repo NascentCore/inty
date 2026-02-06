@@ -238,9 +238,7 @@ fun ChatInput(
             val inputContentModifier =
                 Modifier.padding(
                         start = config.LeadingControlsPadding,
-                        end =
-                            if (isVoiceInputMode) config.VoiceModeTrailingPadding
-                            else config.TrailingControlsPadding,
+                        end = config.TrailingControlsPadding,
                     )
                     .align(Alignment.Center)
             val onVoiceToggleClick: () -> Unit = onVoiceToggleClick@{
@@ -318,8 +316,16 @@ fun ChatInput(
                     onPressCancel = onVoicePressCancel,
                 )
             } else {
+                // 文本输入区左边界与语音“按住说话”按钮左边界对齐：两者与语音切换按钮的间距一致（LeadingControlsPadding 为 hold 按钮起始；TextField 有默认内边距，故将容器 start 左移 TextFieldHorizontal，使文字起始与 hold 按钮内容起始对齐）
+                val textFieldContentModifier =
+                    Modifier.padding(
+                            start =
+                                config.LeadingControlsPadding - UiConfigs.Padding.TextFieldHorizontal,
+                            end = config.TrailingControlsPadding,
+                        )
+                        .align(Alignment.Center)
                 IntySmallTextField(
-                    modifier = inputContentModifier,
+                    modifier = textFieldContentModifier,
                     value = inputData.value,
                     singleLine = false,
                     placeholder =
