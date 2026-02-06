@@ -687,8 +687,8 @@ object UiConfigs {
             /** 场景操作按钮间距 - 场景操作按钮与发送/更多按钮之间的间距 */
             val SceneActionButtonSpacing = 6.dp
 
-            /** 尾部控件内边距 - 文字模式下输入框文本区域与右侧按钮区域的距离，避免文字与 + 按钮重叠 */
-            val TrailingControlsPadding = 104.dp
+            /** 尾部控件内边距 - 文字模式下输入框文本区域与右侧按钮区域的距离，仅预留发送/更多按钮与右侧边距，避免预留过大导致右侧空白过多 */
+            val TrailingControlsPadding = ButtonSize + ButtonRightPadding
 
             /** 语音输入切换按钮大小 */
             val VoiceToggleButtonSize = ButtonSize
@@ -737,9 +737,9 @@ object UiConfigs {
             /** 语音输入切换按钮图标透明度（不可用） */
             const val VoiceToggleDisabledIconAlpha = 0.4f
 
-            /** 显示场景操作 () 按钮时的尾部内边距 - 在 TrailingControlsPadding 基础上增加 () 按钮及间距，避免输入区与 ()、+ 按钮重叠 */
+            /** 显示场景操作 () 按钮时的尾部内边距 - 预留 () 按钮、间距、发送/更多按钮及右侧边距，避免输入区与 ()、+ 按钮重叠 */
             val TrailingControlsPaddingWithSceneAction =
-                TrailingControlsPadding + SceneActionButtonSpacing + ButtonSize
+                ButtonSize + SceneActionButtonSpacing + ButtonSize + ButtonRightPadding
         }
 
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */
