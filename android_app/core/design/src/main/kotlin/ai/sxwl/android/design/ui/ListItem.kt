@@ -186,9 +186,7 @@ fun SettingsSwitchItem(
                 Image(
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(24.dp, 12.dp)
+                    modifier = Modifier.align(Alignment.TopEnd).size(24.dp, 12.dp),
                 )
             }
         }

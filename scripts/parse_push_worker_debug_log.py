@@ -38,7 +38,11 @@ def _relevant(rec: dict) -> bool:
         return True
     if "LOCATE" in (rec.get("hypothesisId") or ""):
         return True
-    if "memory_extraction_sync_entered" in msg or "get_users_to_extract_before_to_thread" in msg or "get_users_to_extract_after_to_thread" in msg:
+    if (
+        "memory_extraction_sync_entered" in msg
+        or "get_users_to_extract_before_to_thread" in msg
+        or "get_users_to_extract_after_to_thread" in msg
+    ):
         return True
     if "memory_extraction_before" in msg:
         return True

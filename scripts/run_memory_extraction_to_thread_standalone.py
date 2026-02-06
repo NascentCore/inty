@@ -42,6 +42,7 @@ from app.services.chat_service import generate_session_id
 def _rss_mb() -> float:
     try:
         import resource
+
         # Linux: ru_maxrss 单位为 KB
         return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
     except Exception:
@@ -77,10 +78,13 @@ def _load_user_to_chats_and_last(db_url: str):
 
 def _write_log(log_path: Path, message: str, data: dict) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(
-        {"ts": time.time(), "message": message, "data": data},
-        ensure_ascii=False,
-    ) + "\n"
+    line = (
+        json.dumps(
+            {"ts": time.time(), "message": message, "data": data},
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(line)
 
@@ -179,7 +183,9 @@ def main() -> int:
             "result_count": len(result),
         },
     )
-    print(f"to_thread 逻辑已返回: 待抽取用户数={len(result)}, 耗时={elapsed:.1f}s, 结束 RSS≈{_rss_mb():.1f} MB")
+    print(
+        f"to_thread 逻辑已返回: 待抽取用户数={len(result)}, 耗时={elapsed:.1f}s, 结束 RSS≈{_rss_mb():.1f} MB"
+    )
     return 0
 
 

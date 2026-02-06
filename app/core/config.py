@@ -327,7 +327,9 @@ class MemoryExtractionConfig:
     )
     cron_hour: int = 3  # UTC 小时，每日执行
     trigger_new_user_messages: int = 30  # 新用户总聊天次数阈值（subscription_usage）
-    trigger_incremental_messages: int = 30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
+    trigger_incremental_messages: int = (
+        30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
+    )
 
 
 @dataclass

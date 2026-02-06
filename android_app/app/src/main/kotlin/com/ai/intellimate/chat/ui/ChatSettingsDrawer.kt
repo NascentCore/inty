@@ -256,8 +256,6 @@ fun ChatSettingsDrawer(
                             },
                         )
 
-
-
                         IntelliMateDivider()
 
                         // Auto-play animated background开关

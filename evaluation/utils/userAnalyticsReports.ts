@@ -8,7 +8,11 @@ import type {
 
 export const DAILY_USAGE_METRICS = [
   { key: "total_user_messages", label: "消息数", color: "#1677ff" },
-  { key: "total_image_generation_requests", label: "生图请求数", color: "#52c41a" },
+  {
+    key: "total_image_generation_requests",
+    label: "生图请求数",
+    color: "#52c41a",
+  },
   { key: "total_live_chat_sessions", label: "语音通话次数", color: "#faad14" },
   { key: "total_voice_requests", label: "语音播报次数", color: "#722ed1" },
 ] as const satisfies ReadonlyArray<{
