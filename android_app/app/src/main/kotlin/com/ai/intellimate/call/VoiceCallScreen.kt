@@ -143,8 +143,8 @@ fun VoiceCallScreen(
                 }
             }
 
-            // 有待播数据时保持 speaking；队列已空且超过保持时间后，再缓冲 TAIL_MS 再关闭
-            LaunchedEffect(lastAudioTimestamp, hasPendingPlaybackData) {
+            // 有待播数据时保持 speaking；队列已空且超过保持时间后，再缓冲 TAIL_MS 再关闭（仅以 hasPendingPlaybackData 为 key，避免每次收到音频重启导致倒计时无法完成）
+            LaunchedEffect(hasPendingPlaybackData) {
                 if (hasPendingPlaybackData) {
                     isSpeakingFromAudio = true
                     return@LaunchedEffect
