@@ -330,7 +330,7 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) {
             combine(VipStatusHelper.vipStatus, agentFlow, messageCount) { vipStatus, agent, count ->
                     when {
-                        agent?.tags?.any { it.lowercase().contains("vip") } != true ||
+                        agent?.let { isVipAgent(it) } != true ||
                             vipStatus.isSubscribed ||
                             agent.lastUnlockByCredits == LocalDate.now().toString() -> {
 
@@ -342,6 +342,31 @@ class ChatViewModel : BaseVM() {
                 }
                 .collect { type -> _uiState.update { it.copy(vipAgentLockType = type) } }
         }
+    }
+
+    private fun isVipAgent(agent: AgentInfo): Boolean {
+        return agent.tags?.any { it.contains("vip", ignoreCase = true) } == true
+    }
+
+    private suspend fun deductVipChatCreditsIfNeeded(agent: AgentInfo): Boolean {
+        if (!isVipAgent(agent)) return true
+
+        val requiredCredits = UiConfigs.Credits.VipChatMessageCost
+        val availableCredits = BoostManager.boostState.value.availablePoints
+        if (availableCredits < requiredCredits) {
+            withContext(Dispatchers.Main) {
+                ToastUtils.showShort(R.string.credits_not_enough)
+            }
+            return false
+        }
+
+        val deducted = BoostManager.deductPoints(requiredCredits)
+        if (!deducted) {
+            withContext(Dispatchers.Main) {
+                ToastUtils.showShort(R.string.credits_not_enough)
+            }
+        }
+        return deducted
     }
 
     fun chatUnlockByCredits() {
@@ -464,6 +489,12 @@ class ChatViewModel : BaseVM() {
         val endToEndStartTime = System.currentTimeMillis()
 
         viewModelScope.launch(Dispatchers.IO) {
+            if (!deductVipChatCreditsIfNeeded(agent)) {
+                _isWaitingForReply.value = false
+                inputData.value = inputMsg
+                inputSelection.value = inputMsg.length
+                return@launch
+            }
             // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
             if (chatMessageRepository.countUserMessages(agentId) > 0) {
                 FirebaseManager.logEvent(
@@ -816,6 +847,10 @@ class ChatViewModel : BaseVM() {
 
             agentInfo.value?.let { agent ->
                 try {
+                    if (!deductVipChatCreditsIfNeeded(agent)) {
+                        _isWaitingForReply.value = false
+                        return@launchBackground
+                    }
                     val aiResponseStartTime = System.currentTimeMillis()
 
                     // ✅ 修复：添加缺失的 MESSAGE_SENT 事件上报（在 API 调用开始时）
@@ -1030,10 +1065,15 @@ class ChatViewModel : BaseVM() {
         }
 
         val agentId = _agentInfo.value?.id ?: return
+        val agent = _agentInfo.value ?: return
         _isWaitingForReply.value = true
 
         launchBackground {
             try {
+                if (!deductVipChatCreditsIfNeeded(agent)) {
+                    _isWaitingForReply.value = false
+                    return@launchBackground
+                }
                 chatMessageRepository.recallLastAssistantMessage(agentId)
                 _isWaitingForReply.value = false
                 enableFlowShowIfAllowed()

@@ -271,6 +271,12 @@ object UiConfigs {
         const val DefaultTextFieldMaxChars = 1000
     }
 
+    /** Credits 配置 - 适用于积分消耗相关的统一入口 */
+    object Credits {
+        /** VIP 角色聊天每条消息消耗的积分 */
+        const val VipChatMessageCost = 1
+    }
+
     /** URL 配置 - 适用于外部链接，如社交媒体邀请链接、帮助中心等 */
     object Urls {
         /** WhatsApp 群组邀请链接 */
