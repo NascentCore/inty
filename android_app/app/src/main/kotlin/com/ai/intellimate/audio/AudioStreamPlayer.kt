@@ -227,8 +227,10 @@ class AudioStreamPlayer private constructor() {
                                 // 使用重试机制写入音频数据
                                 writeAudioDataWithRetry(track, audioData)
                             } else {
-                                if (audioDataQueue.isEmpty()) {
-                                    _hasPendingPlaybackData.value = false
+                                synchronized(audioDataQueue) {
+                                    if (audioDataQueue.isEmpty()) {
+                                        _hasPendingPlaybackData.value = false
+                                    }
                                 }
                                 // 队列为空时，检查 AudioTrack 状态，确保播放不中断
                                 // 如果 AudioTrack 还有数据在播放，继续循环等待新数据
@@ -349,17 +351,19 @@ class AudioStreamPlayer private constructor() {
     fun addAudioData(audioData: ByteArray) {
         if (_playbackState.value == PlaybackState.PLAYING) {
             try {
-                _hasPendingPlaybackData.value = true
-                // 如果队列已满，丢弃最旧的数据以保持实时性
-                if (!audioDataQueue.offer(audioData)) {
-                    // offer 失败说明队列已满，移除最旧的数据
-                    val dropped = audioDataQueue.poll()
-                    if (dropped != null) {
-                        LogUtils.w("播放队列已满，丢弃旧音频数据包，大小: ${dropped.size} bytes")
-                    }
-                    // 再次尝试添加
+                synchronized(audioDataQueue) {
+                    _hasPendingPlaybackData.value = true
+                    // 如果队列已满，丢弃最旧的数据以保持实时性
                     if (!audioDataQueue.offer(audioData)) {
-                        LogUtils.w("添加音频数据失败，队列可能已满")
+                        // offer 失败说明队列已满，移除最旧的数据
+                        val dropped = audioDataQueue.poll()
+                        if (dropped != null) {
+                            LogUtils.w("播放队列已满，丢弃旧音频数据包，大小: ${dropped.size} bytes")
+                        }
+                        // 再次尝试添加
+                        if (!audioDataQueue.offer(audioData)) {
+                            LogUtils.w("添加音频数据失败，队列可能已满")
+                        }
                     }
                 }
 
