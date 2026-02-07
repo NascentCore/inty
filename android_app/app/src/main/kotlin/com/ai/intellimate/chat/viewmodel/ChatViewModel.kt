@@ -32,12 +32,12 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
+import com.ai.intellimate.chat.utils.VipChatCreditPolicy
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
-import ai.sxwl.android.data.character.local.db.CharacterEntity
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -331,7 +331,7 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch(Dispatchers.IO) {
             combine(VipStatusHelper.vipStatus, agentFlow, messageCount) { vipStatus, agent, count ->
                     when {
-                        agent?.let { isVipAgent(it) } != true ||
+                        !VipChatCreditPolicy.hasVipTag(agent?.tags) ||
                             vipStatus.isSubscribed ||
                             agent?.lastUnlockByCredits == LocalDate.now().toString() -> {
 
@@ -345,21 +345,10 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    private fun isVipAgent(agent: AgentInfo): Boolean {
-        return hasVipTag(agent.tags)
-    }
-
-    private fun isVipAgent(agent: CharacterEntity): Boolean {
-        return hasVipTag(agent.tags)
-    }
-
-    private fun hasVipTag(tags: List<String?>?): Boolean {
-        return tags?.any { it?.contains("vip", ignoreCase = true) == true } == true
-    }
-
     private suspend fun deductVipChatCreditsIfNeeded(agent: AgentInfo): Boolean {
-        if (VipStatusHelper.isUserVip()) return true
-        if (!isVipAgent(agent)) return true
+        if (!VipChatCreditPolicy.shouldDeductCredits(VipStatusHelper.isUserVip(), agent.tags)) {
+            return true
+        }
 
         val requiredCredits = UiConfigs.Credits.VipChatMessageCost
         val availableCredits = BoostManager.boostState.value.availablePoints
