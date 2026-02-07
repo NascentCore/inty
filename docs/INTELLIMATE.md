@@ -65,7 +65,7 @@ Click the **Me** or the **right-most** icon
 | Create or edit an agent | Explore → “Create/+” or Profile → My Agents | Guided flow with image upload and text-to-image background (`POST /api/v1/ai/agents/text-to-image`). |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
-| Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. |
+| Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. If notifications were denied and the system no longer prompts, open Android Settings → Apps → IntelliMate → Notifications.（若已拒绝通知权限且系统不再弹窗，请前往系统设置开启通知权限） |
 | Check version info | Settings → About | Version code comes from git commit count. If Play build lags behind, install the QA APK. |
 | Send feedback or report | Chat → ⋮ → Report, or Profile → Feedback | Reports go through the Report Service; attach screenshots when possible. |
 

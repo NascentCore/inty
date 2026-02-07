@@ -616,6 +616,10 @@
     <string name="voice_call_request_permission">Request Permission</string>
     <string name="voice_call_permission_rationale">Voice call requires microphone permission to record audio. Please enable it in Settings.</string>
     <string name="voice_call_open_settings">Open Settings</string>
+    <string name="permission_settings_title">Permission required</string>
+    <string name="permission_settings_notification_description">Notifications are turned off. Open system settings to enable notification permission.</string>
+    <string name="permission_settings_microphone_description">Microphone permission is turned off. Open system settings to enable voice features.</string>
+    <string name="permission_settings_open_settings">Open Settings</string>
     <string name="call">Call</string>
     <string name="end">end</string>
     <string name="mute">mute</string>

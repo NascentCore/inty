@@ -4,7 +4,9 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
+import ai.sxwl.android.utils.PermissionUtils
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.findActivity
 import android.Manifest
 import android.content.Intent
 import android.os.Bundle
@@ -43,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +69,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.IntySmallTextField
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.PermissionSettingsDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -96,11 +100,14 @@ fun ChatInput(
     val scope = rememberCoroutineScope()
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     val context = LocalContext.current
+    val activity = context.findActivity()
     val voicePermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
     val isSpeechRecognitionAvailable =
         remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
     var isVoiceInputMode by remember { mutableStateOf(false) }
     var isVoiceRecording by remember { mutableStateOf(false) }
+    var hasRequestedVoicePermission by rememberSaveable { mutableStateOf(false) }
+    var showVoicePermissionSettingsDialog by rememberSaveable { mutableStateOf(false) }
     /** 点击语音按钮时因无权限而发起了授权请求，授权通过后需切到语音模式 */
     var pendingSwitchToVoiceMode by remember { mutableStateOf(false) }
     val speechRecognizer =
@@ -118,9 +125,20 @@ fun ChatInput(
             return false
         }
         if (!voicePermissionState.status.isGranted) {
+            val isPermanentlyDenied =
+                PermissionUtils.isPermissionPermanentlyDenied(
+                    activity,
+                    Manifest.permission.RECORD_AUDIO,
+                    hasRequestedVoicePermission,
+                )
+            if (isPermanentlyDenied) {
+                showVoicePermissionSettingsDialog = true
+                return false
+            }
             if (voicePermissionState.status.shouldShowRationale) {
                 ToastUtils.showShort(R.string.chat_voice_input_permission_rationale)
             }
+            hasRequestedVoicePermission = true
             voicePermissionState.launchPermissionRequest()
             return false
         }
@@ -137,6 +155,20 @@ fun ChatInput(
     }
 
     val currentOnSendMessage = rememberUpdatedState(onSendMessage)
+
+    if (showVoicePermissionSettingsDialog) {
+        PermissionSettingsDialog(
+            title = stringResource(R.string.permission_settings_title),
+            description = stringResource(R.string.permission_settings_microphone_description),
+            confirmText = stringResource(R.string.permission_settings_open_settings),
+            cancelText = stringResource(R.string.cancel),
+            onConfirm = {
+                showVoicePermissionSettingsDialog = false
+                PermissionUtils.openAppPermissionSettings(context)
+            },
+            onDismiss = { showVoicePermissionSettingsDialog = false },
+        )
+    }
 
     DisposableEffect(speechRecognizer) {
         if (speechRecognizer == null) return@DisposableEffect onDispose {}

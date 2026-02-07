@@ -169,6 +169,76 @@ fun LogoutConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     }
 }
 
+/**
+ * 权限被用户明确拒绝且系统不再弹窗时的引导对话框。
+ *
+ * 使用场景：权限申请返回拒绝，并且系统不再显示授权弹窗（例如勾选“不再询问”）。用于提示用户
+ * 前往系统设置手动开启权限，保证功能正常使用。
+ *
+ * 视觉效果：居中弹窗，标题 + 说明文案 + 主按钮（去设置开启）+ 次按钮（取消/稍后）。
+ *
+ * 可配置项：标题、说明文案、主/次按钮文案，以及点击回调。
+ */
+@Composable
+fun PermissionSettingsDialog(
+    title: String,
+    description: String,
+    confirmText: String,
+    cancelText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(UiConfigs.Shape.Dialog))
+                    .background(color = UiConfigs.Colors.DialogSurface)
+                    .padding(UiConfigs.Padding.DialogInner)
+        ) {
+            Text(
+                text = title,
+                fontSize = UiConfigs.Typography.Title,
+                color = Color.White,
+            )
+
+            Spacer(Modifier.height(UiConfigs.Spacing.Small))
+
+            Text(
+                text = description,
+                fontSize = UiConfigs.Typography.Body,
+                color = Color.White,
+            )
+
+            Spacer(Modifier.height(UiConfigs.Spacing.MediumPlus))
+
+            Button(
+                onClick = onConfirm,
+                modifier =
+                    Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
+                        .align(Alignment.CenterHorizontally),
+            ) {
+                Text(
+                    text = confirmText,
+                    fontSize = UiConfigs.Typography.ButtonLarge,
+                    color = Color.White,
+                )
+            }
+
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Text(
+                    text = cancelText,
+                    fontSize = UiConfigs.Typography.Body,
+                    color = Color.White,
+                )
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun DeleteAccountDialogPreview() {

@@ -5,13 +5,12 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.http.IntyErrorCode
 import ai.sxwl.android.design.isInEditMode
 import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.utils.PermissionUtils
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.findActivity
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.media.AudioFormat
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -74,6 +74,7 @@ import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UnlimitChatDialog
+import com.ai.intellimate.ui.components.PermissionSettingsDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -103,6 +104,33 @@ fun VoiceCallScreen(
         // 权限请求Launcher
         val audioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
         val context = LocalContext.current
+        val activity = context.findActivity()
+        var hasRequestedAudioPermission by rememberSaveable { mutableStateOf(false) }
+        var showAudioPermissionSettingsDialog by rememberSaveable { mutableStateOf(false) }
+        val isPermanentlyDenied =
+            PermissionUtils.isPermissionPermanentlyDenied(
+                activity,
+                Manifest.permission.RECORD_AUDIO,
+                hasRequestedAudioPermission,
+            )
+        val shouldRequestPermission =
+            !audioPermissionState.status.isGranted &&
+                !audioPermissionState.status.shouldShowRationale &&
+                !hasRequestedAudioPermission &&
+                !isPermanentlyDenied
+
+        LaunchedEffect(shouldRequestPermission) {
+            if (shouldRequestPermission) {
+                hasRequestedAudioPermission = true
+                audioPermissionState.launchPermissionRequest()
+            }
+        }
+
+        LaunchedEffect(isPermanentlyDenied) {
+            if (isPermanentlyDenied) {
+                showAudioPermissionSettingsDialog = true
+            }
+        }
 
         if (audioPermissionState.status.isGranted) {
             val uiState by viewModel.uiState.collectAsState()
@@ -226,37 +254,48 @@ fun VoiceCallScreen(
                 }
             }
         } else {
-            if (!audioPermissionState.status.shouldShowRationale) {
-                LaunchedEffect(Unit) { audioPermissionState.launchPermissionRequest() }
-            } else {
-                Column(
-                    modifier = Modifier.padding(contentPadding).fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = stringResource(R.string.voice_call_permission_rationale),
-                        textAlign = TextAlign.Center,
-                        color = Color.White,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            try {
-                                val intent =
-                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.fromParts("package", context.packageName, null)
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                // 如果打开设置失败，回退到权限请求
-                                audioPermissionState.launchPermissionRequest()
-                            }
-                        }
-                    ) {
-                        Text(stringResource(R.string.voice_call_open_settings))
+            if (showAudioPermissionSettingsDialog) {
+                PermissionSettingsDialog(
+                    title = stringResource(R.string.permission_settings_title),
+                    description = stringResource(R.string.permission_settings_microphone_description),
+                    confirmText = stringResource(R.string.permission_settings_open_settings),
+                    cancelText = stringResource(R.string.cancel),
+                    onConfirm = {
+                        showAudioPermissionSettingsDialog = false
+                        PermissionUtils.openAppPermissionSettings(context)
+                    },
+                    onDismiss = { showAudioPermissionSettingsDialog = false },
+                )
+            }
+
+            Column(
+                modifier = Modifier.padding(contentPadding).fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = stringResource(R.string.voice_call_permission_rationale),
+                    textAlign = TextAlign.Center,
+                    color = Color.White,
+                )
+                Spacer(Modifier.height(8.dp))
+                val actionText =
+                    if (isPermanentlyDenied) {
+                        stringResource(R.string.permission_settings_open_settings)
+                    } else {
+                        stringResource(R.string.voice_call_request_permission)
                     }
+                Button(
+                    onClick = {
+                        if (isPermanentlyDenied) {
+                            showAudioPermissionSettingsDialog = true
+                        } else {
+                            hasRequestedAudioPermission = true
+                            audioPermissionState.launchPermissionRequest()
+                        }
+                    }
+                ) {
+                    Text(actionText)
                 }
             }
         }
