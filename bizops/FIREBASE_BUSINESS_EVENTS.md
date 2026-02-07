@@ -43,7 +43,7 @@
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
 | `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等，包含 `page_source` 参数。MainPage/HomePage 还包含 `default_home_tab`、`current_tab` 参数） |
-| `chat_page_view` | ChatPage.kt | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，用于分析用户访问 ChatPage 的来源和配置） |
+| `chat_page_view` | ChatPage.kt | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，含 `from_page`、`page_source`、`agent_id`、`agent_name`、`keep_talking_enabled`、`auto_play_voice_enabled`、`auto_play_animation_enabled`） |
 | `duration` | PageTrackingHelper.kt | 页面停留时长（页面离开时上报，记录 `page_name` 和 `duration`） |
 
 **页面来源参数说明：**
@@ -64,6 +64,8 @@
 ### 订阅与计费
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
+| `subscription_page_view` | VipCenterContent.kt | 订阅页曝光（进入订阅/会员中心页时触发，含 `page_source`） |
+| `subscription_cta_click` | VipCenterContent.kt | 订阅页 CTA 点击（点击订阅相关按钮时触发，通过 `click_type` 区分入口） |
 | `subscription_success` | BillingPurchaseManager.kt | 订阅验证成功（服务端验证成功后触发，包含价格参数：`price`、`currency_code`、`price_micros`） |
 | `subscription_failure` | BillingPurchaseManager.kt | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发，包含价格参数：`price`、`currency_code`、`price_micros`） |
 | `subscription_price_view` | VipCenterContent.kt | 订阅价格查看（在 vipcenter 界面显示订阅产品价格时触发） |
@@ -71,10 +73,23 @@
 ### 用户交互
 | 事件名称 | 使用位置 | 业务含义 |
 |---------|---------|---------|
-| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | 聊天页面点击（通过 `click_type` 区分：`voice_play`、`keep_talking`、`message_like`、`message_dislike`，参数包含：`agent_id`、`agent_name`、`message_id`、`message_length`、`has_generated_image`、`is_opening`、`user_type`、`is_auto_play`、`timestamp`） |
-| `chat_sidebar_click` | ChatSettingsDrawer.kt | 聊天侧边栏点击（通过 `click_type` 区分：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`） |
-| `chat_more_click` | ChatMorePanel.kt | 聊天更多面板点击（通过 `click_type` 区分：`reply_style`、`report`） |
-| `push_notification_click` | ChatActivity.kt | 推送通知点击 |
+| `chat_page_click` | ChatViewModel.kt, ChatPage.kt, ChatItem.kt, AudioManager.kt | 聊天页面点击（通过 `click_type` 区分：`voice_play`、`keep_talking`、`message_like`、`message_dislike`、`message_sent`、`message_to_image`、`image speed up`、`call`、`sidebar`、`more`，参数包含：`agent_id`、`agent_name`、`message_id`、`message_length`、`has_generated_image`、`is_opening`、`user_type`、`is_auto_play`、`timestamp`） |
+| `chat_sidebar_click` | ChatSettingsDrawer.kt | 聊天侧边栏点击（通过 `click_type` 区分：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`toggle_chat_list_full_screen`、`toggle_auto_play_animation`、`toggle_text_streaming`、`toggle_show_scene_action_button`、`open_models_menu`、`select_model`、`open_font_size_slider`、`user_manual`、`feedback`、`report`、`font_size_reset`、`font_size_cancel`、`update_font_size`） |
+| `chat_more_click` | ChatMorePanel.kt | 聊天更多面板点击（通过 `click_type` 区分：`reply_style`、`report`、`reset`、`change_outfit`、`feedback`；语音通话点击使用同一事件名、`click_type` 为 `call`，代码常量 `CHAT_MORE_CALL`） |
+| `conversations_page_click` | MessagesPage.kt | 会话列表页点击（通过 `click_type` 区分：`MessagesSubscriptionBanner` 等） |
+| `push_notification_click` | MainActivity.kt | 推送通知点击 |
+
+### Boost 积分/能量
+| 事件名称 | 使用位置 | 业务含义 |
+|---------|---------|---------|
+| `boost_token_earned` | BoostManager.kt | 获得积分（参数：`source`、`points`、`agent_name`；事件名为字符串，未在 FirebaseManager.Events 中定义） |
+| `boost_month_reward_claimed` | BoostManager.kt | 月度 VIP 奖励领取（参数：`points`） |
+| `boost_daily_login_reward_claimed` | BoostManager.kt | 每日登录奖励领取（参数：`points`、`is_vip`） |
+| `boost_daily_reward_claimed` | BoostManager.kt | 每日奖励领取（参数：`points`） |
+| `boost_invested` | BoostManager.kt | 对角色投入积分（参数：`agent_id`、`agent_name`、`points`） |
+| `boost_synced_to_backend` | BoostManager.kt | 积分同步到后端成功（参数：`agent_id`、`agent_name`、`points`） |
+| `boost_sync_failed` | BoostManager.kt | 积分同步失败（参数：`agent_id`、`agent_name`、`points` 等） |
+| `boost_sync_exception` | BoostManager.kt | 积分同步异常（参数：`agent_id`、`agent_name`、`points` 等） |
 
 ### 错误监控
 | 事件名称 | 使用位置 | 业务含义 |
@@ -131,6 +146,12 @@
 - `sort_seed`：排序种子（用于刷新时改变排序）
 - `response_time`：接口响应时间（API调用时间，毫秒）
 
+### Boost 积分参数
+- `source`：积分来源（boost_token_earned，如 manual、monthly_vip、daily_login 等）
+- `points`：积分数量
+- `agent_id`、`agent_name`：角色信息（投入/同步时）
+- `is_vip`：是否 VIP（boost_daily_login_reward_claimed）
+
 ### 订阅价格参数
 - `product_id`、`product_name`、`plan_type`：订阅商品信息
 - `order_id`、`purchase_token`、`purchase_time`：订阅订单信息（subscription_success/subscription_failure事件）
@@ -145,10 +166,13 @@
 - `user_type`：用户类型（vip/free）
 
 ### 用户交互参数
-- `click_type`：点击类型（chat_page_click/chat_sidebar_click/chat_more_click事件）
-  - chat_page_click：`voice_play`、`keep_talking`、`message_like`、`message_dislike`
-  - chat_sidebar_click：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`
-  - chat_more_click：`reply_style`、`report`
+- `click_type`：点击类型（chat_page_click/chat_sidebar_click/chat_more_click/conversations_page_click 事件）
+  - chat_page_click：`voice_play`、`keep_talking`、`message_like`、`message_dislike`、`message_sent`、`message_to_image`、`image speed up`、`call`、`sidebar`、`more`
+  - chat_sidebar_click：`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`toggle_chat_list_full_screen`、`toggle_auto_play_animation`、`toggle_text_streaming`、`toggle_show_scene_action_button`、`open_models_menu`、`select_model`、`open_font_size_slider`、`user_manual`、`feedback`、`report`、`font_size_reset`、`font_size_cancel`、`update_font_size`
+  - chat_more_click：`reply_style`、`report`、`reset`、`change_outfit`、`feedback`、`call`（语音通话）
+  - conversations_page_click：`MessagesSubscriptionBanner` 等
+- `from_page`：上一页/来源页（chat_page_view 等）
+- `auto_play_animation_enabled`：自动播放动画开关状态（chat_page_view）
 - `agent_id`、`agent_name`：Agent信息
 - `message_id`：消息ID（优先使用服务端id，如果为空则使用本地id作为fallback）
 - `message_length`：消息长度
@@ -196,6 +220,6 @@
 
 ---
 
-*文档更新时间：2025年1月*
+*文档更新时间：2025年2月*
 *版本：dev_1.3.x*
 *基于实际代码分析，确保事件信息的准确性*

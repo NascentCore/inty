@@ -1,6 +1,7 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.R
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.theme.brushes
 import androidx.compose.animation.core.RepeatMode
@@ -26,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
