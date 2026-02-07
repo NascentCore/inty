@@ -1,6 +1,7 @@
 # Inty 长期 AI 陪伴（仓库总入口 AGENTS.md）
 
 - IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
+  - app/（后端）改动不改动[用户手册](docs/INTELLIMATE.md)
 - 本代码库开发人员母语为中文普通话
 - 如有可能、在不影响正确性前提下，使用中文编写各类非代码的文字内容：代码注释、GitHub Pull Request 标题 & 描述等等
 
