@@ -438,20 +438,8 @@ const AppContent: React.FC = () => {
                   <Tooltip
                     title={collapsed ? item.label : ""}
                     placement="right"
-                    styles={{
-                      root: {
-                        fontSize: "12px",
-                        color: "#ffffff",
-                      },
-                    }}
-                    overlayInnerStyle={{
-                      color: "#ffffff",
-                      backgroundColor: "rgba(0, 0, 0, 0.85)",
-                      borderRadius: "6px",
-                      padding: "6px 8px",
-                      border: "none",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                    }}
+                    overlayClassName="collapsed-menu-tooltip"
+                    color="#ffffff"
                   >
                     <div
                       style={{

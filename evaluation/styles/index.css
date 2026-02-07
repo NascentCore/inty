@@ -266,6 +266,24 @@ html {
   display: none;
 }
 
+/* 侧边栏折叠状态提示样式 */
+.collapsed-menu-tooltip .ant-tooltip-inner {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.88);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e6e6e6;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  white-space: nowrap;
+}
+
+.collapsed-menu-tooltip .ant-tooltip-arrow::before {
+  background: #ffffff;
+  box-shadow: -1px -1px 0 #e6e6e6;
+}
+
 /* 头部样式 */
 .ant-layout-header {
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
