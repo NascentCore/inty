@@ -1,4 +1,4 @@
-name: Release - 内测轨道 GPlay 商店构建上传
+name: Release - IntelliMate 内测轨道 GPlay
 
 on:
   # push:
