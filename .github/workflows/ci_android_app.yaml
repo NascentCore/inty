@@ -37,8 +37,7 @@ concurrency:
 
 jobs:
   test:
-    # 一般比较慢，用一个较大的服务器运行，与 android 发布的工作流一样的服务器
-    runs-on: android-builder
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
