@@ -349,6 +349,7 @@ class ChatViewModel : BaseVM() {
     }
 
     private suspend fun deductVipChatCreditsIfNeeded(agent: AgentInfo): Boolean {
+        if (VipStatusHelper.isUserVip()) return true
         if (!isVipAgent(agent)) return true
 
         val requiredCredits = UiConfigs.Credits.VipChatMessageCost

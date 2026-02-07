@@ -83,7 +83,7 @@ Click the **Me** or the **right-most** icon
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
-- VIP-tagged characters deduct **1 credit per message** when you chat with them. If credits are insufficient, sending is blocked.
+- VIP-tagged characters deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/0326fd90-1bbe-4207-9e9f-1c71c4608847" />
 
