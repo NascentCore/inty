@@ -6,5 +6,5 @@ object ProjectConfig {
     const val COMPILER_VERSION = 36 // navigation,emoji等新版本的依赖库，都要求compile 34才行
     const val TARGET_VERSION = 36
     const val MIN_SDK_VERSION = 29
-    const val VERSION_NAME = "0.3.5"
+    const val VERSION_NAME = "0.4"
 }
