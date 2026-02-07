@@ -15,6 +15,7 @@ import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
@@ -195,6 +196,7 @@ class ChatViewModel : BaseVM() {
 
     init {
         checkVipAgentUnlock()
+        observeTextStreamingSetting()
 
         viewModelScope.launch {
             _agentId.filterNotNull().collect {
@@ -415,6 +417,24 @@ class ChatViewModel : BaseVM() {
         _shouldFlowShow.value = false
     }
 
+    private fun observeTextStreamingSetting() {
+        viewModelScope.launch {
+            SettingStateManager.textStreaming.collect { enabled ->
+                if (!enabled && _shouldFlowShow.value) {
+                    _shouldFlowShow.value = false
+                }
+            }
+        }
+    }
+
+    private fun enableFlowShowIfAllowed() {
+        if (!SettingStateManager.textStreaming.value) {
+            _shouldFlowShow.value = false
+            return
+        }
+        _shouldFlowShow.value = true
+    }
+
     /** 发送消息 - 使用新架构 */
     fun sendMsg() {
         // 防抖检查
@@ -557,7 +577,7 @@ class ChatViewModel : BaseVM() {
 
                         result.data.data?.choices?.getOrNull(0)?.let {
                             if (it.message.agentId() == _agentId.value) {
-                                _shouldFlowShow.value = true
+                                enableFlowShowIfAllowed()
                             }
                         }
 
@@ -854,7 +874,7 @@ class ChatViewModel : BaseVM() {
 
                             result.data.data?.choices?.getOrNull(0)?.let {
                                 if (it.message.agentId() == _agentId.value) {
-                                    _shouldFlowShow.value = true
+                                    enableFlowShowIfAllowed()
                                 }
                             }
                         }
@@ -1016,7 +1036,7 @@ class ChatViewModel : BaseVM() {
             try {
                 chatMessageRepository.recallLastAssistantMessage(agentId)
                 _isWaitingForReply.value = false
-                _shouldFlowShow.value = true
+                enableFlowShowIfAllowed()
             } catch (e: Exception) {
                 LogUtils.e("Recall message error: ${e.message}")
                 NetworkErrorHandler.showNetworkAwareError("Failed to recall message: ${e.message}")

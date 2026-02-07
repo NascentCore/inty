@@ -83,6 +83,7 @@ Click the **Me** or the **right-most** icon
 - Every message supports voice playback; audio is cached locally (`AudioCacheManager`).
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
+- **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
 - *Screenshot placeholder:*
   
   ![Chat screenshot placeholder](<ADD_CHAT_SCREENSHOT_URL_HERE>)
