@@ -12,8 +12,17 @@ import android.content.Intent
 import android.media.AudioFormat
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,12 +67,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
@@ -71,8 +83,10 @@ import com.ai.intellimate.audio.AudioParams
 import com.ai.intellimate.audio.AudioRecordManager
 import com.ai.intellimate.audio.AudioStreamPlayer
 import com.ai.intellimate.call.data.ConnectionState
+import com.ai.intellimate.call.data.bean.CallStatus
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.ChatDialogData
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -174,6 +188,10 @@ fun VoiceCallScreen(
                 onEnd = { onBack(viewModel.messageCount) },
                 uiState = uiState,
                 onMuteChange = viewModel::setMuted,
+                onInterrupt = {
+                    audioStreamPlayer.interruptPlayback()
+                    viewModel.interruptSpeaking()
+                },
                 modifier = Modifier.padding(contentPadding).fillMaxSize(),
             )
 
@@ -267,9 +285,18 @@ fun VoiceCallScreen(
 private fun VoiceCallContent(
     onEnd: () -> Unit,
     onMuteChange: (Boolean) -> Unit,
+    onInterrupt: () -> Unit,
     uiState: VoiceCallUiState,
     modifier: Modifier = Modifier,
 ) {
+    val isSpeaking = uiState.callState == CallStatus.SPEAKING
+    val statusTextRes =
+        when (uiState.callState) {
+            CallStatus.SPEAKING -> R.string.voice_call_ai_status_speaking
+            CallStatus.LISTENING -> R.string.voice_call_ai_status_listening
+            else -> R.string.voice_call_ai_status_listening
+        }
+
     Box(modifier = modifier) {
         Column(
             modifier = Modifier.align(Alignment.TopCenter),
@@ -317,7 +344,16 @@ private fun VoiceCallContent(
                 )
             }
 
-            Spacer(Modifier.height(50.dp))
+            Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.StatusToInterruptSpacing))
+
+            VoiceCallInterruptButton(
+                statusText = stringResource(statusTextRes),
+                promptText = stringResource(R.string.voice_call_tap_to_interrupt_ai),
+                isSpeaking = isSpeaking,
+                onInterrupt = onInterrupt,
+            )
+
+            Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.InterruptToTimeSpacing))
 
             uiState.time?.run {
                 Text(
@@ -387,6 +423,135 @@ private fun VoiceCallContent(
     }
 }
 
+/**
+ * 语音通话页“打断 AI”圆形按钮。
+ *
+ * 使用场景：语音通话中展示 AI 当前状态，并提供用户打断 AI 的快捷操作入口。
+ * 预期视觉效果：居中大圆形按钮，顶部展示 listening/speaking 状态，底部展示打断提示；
+ * Speaking 状态时，按钮外侧出现柔和波浪动画以提示 AI 正在讲话。
+ * 可配置项：状态文本、提示文本、是否在讲话、按钮尺寸、波浪尺寸、点击回调。
+ */
+@Composable
+private fun VoiceCallInterruptButton(
+    statusText: String,
+    promptText: String,
+    isSpeaking: Boolean,
+    onInterrupt: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = UiConfigs.VoiceCall.InterruptButton.Size,
+    waveSize: Dp = UiConfigs.VoiceCall.InterruptButton.WaveSize,
+) {
+    val backgroundColor =
+        Color.White.copy(alpha = UiConfigs.VoiceCall.InterruptButton.BackgroundAlpha)
+    val borderColor = Color.White.copy(alpha = UiConfigs.VoiceCall.InterruptButton.BorderAlpha)
+    val statusColor = Color.White.copy(alpha = UiConfigs.VoiceCall.InterruptButton.StatusTextAlpha)
+
+    Box(
+        modifier = modifier.size(waveSize),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (isSpeaking) {
+            VoiceCallSpeakingWaveAnimation(
+                modifier = Modifier.size(waveSize),
+                waveColor = Color.White,
+            )
+        }
+
+        Box(
+            modifier =
+                Modifier.size(size)
+                    .clip(CircleShape)
+                    .border(
+                        width = UiConfigs.VoiceCall.InterruptButton.BorderWidth,
+                        color = borderColor,
+                        shape = CircleShape,
+                    )
+                    .background(backgroundColor)
+                    .clickable(role = Role.Button, onClick = onInterrupt),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.padding(UiConfigs.VoiceCall.InterruptButton.ContentPadding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    style =
+                        MaterialTheme.typography.labelSmall.copy(
+                            fontSize = UiConfigs.Typography.Support,
+                            lineHeight = UiConfigs.LineHeight.Support,
+                        ),
+                    maxLines = 1,
+                )
+                Spacer(Modifier.height(UiConfigs.VoiceCall.InterruptButton.TextSpacing))
+                Text(
+                    text = promptText,
+                    color = Color.White,
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = UiConfigs.Typography.Body,
+                        ),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 语音通话中 AI 讲话时的波浪动画。
+ *
+ * 使用场景：仅在 Speaking 状态显示，用于强化 AI 正在讲话的反馈。
+ * 预期视觉效果：按钮外侧出现多层扩散的圆形波纹，低频、柔和、循环播放。
+ * 可配置项：波浪颜色、数量、时长、错开间隔、缩放范围、线宽。
+ */
+@Composable
+private fun VoiceCallSpeakingWaveAnimation(
+    modifier: Modifier = Modifier,
+    waveColor: Color,
+    waveCount: Int = UiConfigs.VoiceCall.InterruptButton.WaveCount,
+    waveDurationMs: Int = UiConfigs.VoiceCall.InterruptButton.WaveDurationMs,
+    waveDelayMs: Int = UiConfigs.VoiceCall.InterruptButton.WaveDelayMs,
+    minScale: Float = UiConfigs.VoiceCall.InterruptButton.WaveStartScale,
+    maxScale: Float = UiConfigs.VoiceCall.InterruptButton.WaveEndScale,
+    baseAlpha: Float = UiConfigs.VoiceCall.InterruptButton.WaveAlpha,
+    strokeWidth: Dp = UiConfigs.VoiceCall.InterruptButton.WaveStrokeWidth,
+) {
+    val transition = rememberInfiniteTransition(label = "VoiceCallSpeakingWave")
+    val waveScales =
+        List(waveCount) { index ->
+            transition.animateFloat(
+                initialValue = minScale,
+                targetValue = maxScale,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(durationMillis = waveDurationMs, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                        initialStartOffset = StartOffset(index * waveDelayMs),
+                    ),
+                label = "VoiceCallSpeakingWave$index",
+            )
+        }
+
+    Canvas(modifier = modifier) {
+        val baseRadius = size.minDimension / 2f / maxScale
+        waveScales.forEach { scaleState ->
+            val scale = scaleState.value
+            val progress =
+                ((scale - minScale) / (maxScale - minScale)).coerceIn(0f, 1f)
+            val alpha = baseAlpha * (1f - progress)
+            drawCircle(
+                color = waveColor.copy(alpha = alpha),
+                radius = baseRadius * scale,
+                style = Stroke(width = strokeWidth.toPx()),
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VoiceCallScreen(onBack: () -> Unit, content: @Composable (PaddingValues) -> Unit) {
@@ -436,10 +601,12 @@ private fun VoiceCallPreview() {
             VoiceCallContent(
                 onEnd = {},
                 onMuteChange = {},
+                onInterrupt = {},
                 uiState =
                     VoiceCallUiState(
                         agent = AgentInfo(name = "July"),
                         connectionState = ConnectionState.CONNECTING,
+                        callState = CallStatus.SPEAKING,
                         time = VoiceCallUiState.Time(30, 100),
                     ),
                 modifier = Modifier.padding(it).fillMaxSize(),

@@ -394,6 +394,21 @@ class AudioStreamPlayer private constructor() {
         }
     }
 
+    /**
+     * 打断当前播放并重启播放通道。
+     *
+     * 使用场景：语音通话中用户点击“打断 AI”按钮，需要立即清空缓冲并继续接收后续音频。
+     */
+    fun interruptPlayback() {
+        val params = audioParams ?: return
+        if (_playbackState.value != PlaybackState.PLAYING) {
+            return
+        }
+        stopPlayback()
+        releaseAudioTrack()
+        startPlayback(params)
+    }
+
     /** 暂停播放 */
     fun pausePlayback() {
         if (_playbackState.value == PlaybackState.PLAYING) {
