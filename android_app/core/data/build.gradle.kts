@@ -105,3 +105,9 @@ dependencies {
     testImplementation(libs.koin.test.junit)
     testImplementation(libs.koin.test.android)
 }
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    }
+}

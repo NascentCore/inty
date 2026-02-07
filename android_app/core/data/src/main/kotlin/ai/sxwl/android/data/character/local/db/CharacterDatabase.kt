@@ -30,7 +30,7 @@ abstract class CharacterDatabase : RoomDatabase() {
                                 CharacterDatabase::class.java,
                                 DATABASE_NAME,
                             )
-                            .fallbackToDestructiveMigration()
+                            .fallbackToDestructiveMigration(true)
                             .build()
                             .also { instance = it }
                 }

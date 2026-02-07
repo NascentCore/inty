@@ -110,7 +110,7 @@ object AgentService {
                 paramsBuilder.category(agentInfo.category)
             }
             if (agentInfo.prompt.isNotEmpty()) {
-                paramsBuilder.prompt(agentInfo.prompt)
+                paramsBuilder.personality(agentInfo.prompt)
             }
             if (agentInfo.tags != null && agentInfo.tags.isNotEmpty()) {
                 paramsBuilder.tags(agentInfo.tags.filterNotNull())
@@ -162,7 +162,7 @@ object AgentService {
                 paramsBuilder.category(agentInfo.category)
             }
             if (agentInfo.prompt.isNotEmpty()) {
-                paramsBuilder.prompt(agentInfo.prompt)
+                paramsBuilder.personality(agentInfo.prompt)
             }
             if (agentInfo.tags != null && agentInfo.tags.isNotEmpty()) {
                 paramsBuilder.tags(agentInfo.tags.filterNotNull())
