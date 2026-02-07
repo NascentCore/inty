@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    # https://docs.github.com/zh/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore
+    paths-ignore:
+      - "**/*.md"
 
   pull_request:
     branches:

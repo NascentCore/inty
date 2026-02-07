@@ -6,10 +6,10 @@ on:
     branches:
       - main
     paths:
-      - "app/**"
-      - "alembic/**"
-      - "scripts/**"
-      - "evaluation/**"
+      # 后端代码
+      - "app/**/*.py"
+      - "alembic/**/*.py"
+      - "scripts/**/*.py"
       - "docker/Dockerfile.push-worker"
       - "start_push_worker.sh"
       - "devops/config.yaml.dev"
