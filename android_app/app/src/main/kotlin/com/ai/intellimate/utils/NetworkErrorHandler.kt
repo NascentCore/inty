@@ -13,7 +13,11 @@ object NetworkErrorHandler {
         !message.isNullOrBlank() && message.contains("TLS", ignoreCase = true)
 
     /** 用户端无法复现时：将 TLS 相关错误上报 Crashlytics（非致命），便于在 Firebase 控制台查看 hypothesisId、location、设备等 */
-    private fun reportTlsParseToFirebase(hypothesisId: String, location: String, errorMessage: String) {
+    private fun reportTlsParseToFirebase(
+        hypothesisId: String,
+        location: String,
+        errorMessage: String,
+    ) {
         try {
             val safeMsg = errorMessage.take(200).replace("\"", "'")
             FirebaseManager.recordException(
@@ -24,19 +28,28 @@ object NetworkErrorHandler {
                     "tls_parse_message" to safeMsg,
                 ),
             )
-        } catch (_: Exception) { }
+        } catch (_: Exception) {}
     }
 
-    private fun reportTlsParseIfRelevant(hypothesisId: String, source: String, errorMessage: String) {
+    private fun reportTlsParseIfRelevant(
+        hypothesisId: String,
+        source: String,
+        errorMessage: String,
+    ) {
         if (!isTlsRelatedMessage(errorMessage)) return
         reportTlsParseToFirebase(hypothesisId, "NetworkErrorHandler.kt:$source", errorMessage)
     }
 
     /** 供其他模块埋点：当 message 含 TLS 时上报 Crashlytics（hypothesisId C/D/E/F/G/H） */
-    fun reportTlsParseToCrashlyticsIfRelevant(hypothesisId: String, location: String, message: String?) {
+    fun reportTlsParseToCrashlyticsIfRelevant(
+        hypothesisId: String,
+        location: String,
+        message: String?,
+    ) {
         if (!isTlsRelatedMessage(message)) return
         reportTlsParseToFirebase(hypothesisId, location, message!!)
     }
+
     // #endregion
 
     /**

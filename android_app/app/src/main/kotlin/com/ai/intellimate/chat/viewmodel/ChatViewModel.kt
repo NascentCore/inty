@@ -32,8 +32,8 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
-import com.ai.intellimate.chat.utils.VipChatCreditPolicy
 import com.ai.intellimate.chat.uistate.ChatUIState
+import com.ai.intellimate.chat.utils.VipChatCreditPolicy
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
@@ -353,17 +353,13 @@ class ChatViewModel : BaseVM() {
         val requiredCredits = UiConfigs.Credits.VipChatMessageCost
         val availableCredits = BoostManager.boostState.value.availablePoints
         if (availableCredits < requiredCredits) {
-            withContext(Dispatchers.Main) {
-                ToastUtils.showShort(R.string.credits_not_enough)
-            }
+            withContext(Dispatchers.Main) { ToastUtils.showShort(R.string.credits_not_enough) }
             return false
         }
 
         val deducted = BoostManager.deductPoints(requiredCredits)
         if (!deducted) {
-            withContext(Dispatchers.Main) {
-                ToastUtils.showShort(R.string.credits_not_enough)
-            }
+            withContext(Dispatchers.Main) { ToastUtils.showShort(R.string.credits_not_enough) }
         }
         return deducted
     }

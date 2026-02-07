@@ -1,6 +1,7 @@
 package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.getCdnImageUrl
+import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
@@ -92,7 +93,6 @@ import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import ai.sxwl.android.data.billing.BillingRepository
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter

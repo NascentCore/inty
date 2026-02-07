@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import type { Agent } from "../types";
 import { filterAgentsByName } from "../utils/agentFilters";
 
-const buildAgent = (name: string): Agent => ({ id: name, name } as Agent);
+const buildAgent = (name: string): Agent => ({ id: name, name }) as Agent;
 
 describe("filterAgentsByName", () => {
   it("returns all agents when query is empty", () => {

@@ -5,7 +5,6 @@ import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
-import com.ai.intellimate.utils.NetworkErrorHandler
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -50,6 +49,7 @@ import androidx.navigation.compose.composable
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.NetworkErrorHandler
 import java.io.File
 import kotlinx.serialization.Serializable
 
@@ -106,7 +106,11 @@ fun UploadSelfieScreen(onBack: () -> Unit, viewModel: ModifyProfileViewModel = v
             } catch (error: Throwable) {
                 // #region agent log
                 val msg = error.localizedMessage.orEmpty()
-                NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant("F", "UploadSelfieScreen.kt:onTakeSelfie", msg)
+                NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                    "F",
+                    "UploadSelfieScreen.kt:onTakeSelfie",
+                    msg,
+                )
                 // #endregion
                 LogUtils.e(error.localizedMessage)
                 ToastUtils.showShort(msg)

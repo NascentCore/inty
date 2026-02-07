@@ -1,7 +1,6 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.R
-import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.theme.brushes
 import androidx.compose.animation.core.RepeatMode
@@ -27,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +42,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Shimmer 占位符组件，用于图片加载时的占位效果。
+ *
  * @param showSpeedUpButton 是否显示「Speed Up」按钮；已订阅用户应传 false 以隐藏该按钮。
  */
 @Composable
