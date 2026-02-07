@@ -24,7 +24,7 @@ on:
       - "evaluation/index.html"
       - "evaluation/build.sh"
       # 容器
-      - "docker/Dockerfile"
+      - "devops/docker/Dockerfile"
       # 工作流文件
       - ".github/workflows/build_and_deploy_backend.yml"
 
@@ -85,7 +85,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./docker/Dockerfile
+          file: ./devops/docker/Dockerfile
           push: true
           tags: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}
           # https://docs.docker.com/build/ci/github-actions/cache/#cache-backend-api

@@ -1,3 +1,4 @@
+# CREATED_BY_AGENT
 # 第一阶段：构建前端
 FROM node:18-slim AS frontend-builder
 
