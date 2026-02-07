@@ -296,6 +296,9 @@ object UiConfigs {
         /** 队列大小警告阈值（百分比） - 当队列使用率超过此值时记录警告日志 */
         const val QUEUE_WARNING_THRESHOLD = 0.8f // 80%
 
+        /** Speaking 状态的最低保留时长（毫秒），用于补偿状态与音频流的不同步 */
+        const val SPEAKING_INDICATOR_HOLD_MS = 1200L
+
         /** 语音通话打断按钮配置 */
         object InterruptButton {
             /** 按钮直径 */

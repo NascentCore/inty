@@ -11,6 +11,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.media.AudioFormat
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -93,6 +94,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -123,6 +125,8 @@ fun VoiceCallScreen(
             val audioStreamPlayer = AudioStreamPlayer.getInstance()
             val audioRecordManager = AudioRecordManager.getInstance(context)
             var error by remember { mutableStateOf<Pair<IntyErrorCode, String>?>(null) }
+            var lastAudioTimestamp by remember { mutableStateOf(0L) }
+            var isSpeakingFromAudio by remember { mutableStateOf(false) }
 
             // 启动通话连接
             LaunchedEffect(agentId) { viewModel.startCalling(agentId) }
@@ -134,6 +138,21 @@ fun VoiceCallScreen(
                 viewModel.audioResponse.collect { audioData ->
                     // 播放音频
                     audioStreamPlayer.addAudioData(audioData)
+                    lastAudioTimestamp = SystemClock.elapsedRealtime()
+                    isSpeakingFromAudio = true
+                }
+            }
+
+            LaunchedEffect(lastAudioTimestamp) {
+                if (lastAudioTimestamp == 0L) {
+                    return@LaunchedEffect
+                }
+                delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS)
+                if (
+                    SystemClock.elapsedRealtime() - lastAudioTimestamp >=
+                        UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS
+                ) {
+                    isSpeakingFromAudio = false
                 }
             }
 
@@ -192,6 +211,7 @@ fun VoiceCallScreen(
                     audioStreamPlayer.interruptPlayback()
                     viewModel.interruptSpeaking()
                 },
+                isSpeakingFromAudio = isSpeakingFromAudio,
                 modifier = Modifier.padding(contentPadding).fillMaxSize(),
             )
 
@@ -286,14 +306,15 @@ private fun VoiceCallContent(
     onEnd: () -> Unit,
     onMuteChange: (Boolean) -> Unit,
     onInterrupt: () -> Unit,
+    isSpeakingFromAudio: Boolean,
     uiState: VoiceCallUiState,
     modifier: Modifier = Modifier,
 ) {
-    val isSpeaking = uiState.callState == CallStatus.SPEAKING
+    val isSpeaking = isSpeakingFromAudio || uiState.callState == CallStatus.SPEAKING
     val statusTextRes =
-        when (uiState.callState) {
-            CallStatus.SPEAKING -> R.string.voice_call_ai_status_speaking
-            CallStatus.LISTENING -> R.string.voice_call_ai_status_listening
+        when {
+            isSpeaking -> R.string.voice_call_ai_status_speaking
+            uiState.callState == CallStatus.LISTENING -> R.string.voice_call_ai_status_listening
             else -> R.string.voice_call_ai_status_listening
         }
 
@@ -602,6 +623,7 @@ private fun VoiceCallPreview() {
                 onEnd = {},
                 onMuteChange = {},
                 onInterrupt = {},
+                isSpeakingFromAudio = true,
                 uiState =
                     VoiceCallUiState(
                         agent = AgentInfo(name = "July"),
