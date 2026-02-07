@@ -121,7 +121,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             repository
                 .call(agentId)
                 .catch { error ->
-                    // #region agent log（写 debug.log + 上报 Crashlytics）
+                    // #region agent log（上报 Crashlytics）
                     com.ai.intellimate.utils.NetworkErrorHandler.writeTlsParseDebugLogIfRelevant(
                         "C",
                         "VoiceCallViewModel.kt:call.catch",

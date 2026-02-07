@@ -4,15 +4,11 @@ import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import kotlinx.coroutines.CancellationException
-import org.json.JSONObject
-import java.io.File
 
 /** 网络错误处理器 负责处理网络相关的错误提示和异常处理 */
 object NetworkErrorHandler {
 
-    // #region agent log
-    private const val DEBUG_LOG_PATH = "/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug.log"
-
+    // #region agent log（仅上报 Crashlytics，便于用户端复现时在 Firebase 查看）
     /** 用户端无法复现时：将 TLS/parse 错误上报 Crashlytics（非致命），便于在 Firebase 控制台查看 hypothesisId、location、设备等 */
     private fun reportTlsParseToFirebase(hypothesisId: String, location: String, errorMessage: String) {
         try {
@@ -28,44 +24,16 @@ object NetworkErrorHandler {
         } catch (_: Exception) { }
     }
 
-    private fun writeTlsParseDebugLog(hypothesisId: String, source: String, errorMessage: String) {
+    private fun reportTlsParseIfRelevant(hypothesisId: String, source: String, errorMessage: String) {
         if (!errorMessage.contains("TLS", ignoreCase = true) && !errorMessage.contains("parse", ignoreCase = true)) return
         reportTlsParseToFirebase(hypothesisId, "NetworkErrorHandler.kt:$source", errorMessage)
-        try {
-            val caller = Thread.currentThread().stackTrace.getOrNull(2)?.toString() ?: "unknown"
-            val safeMsg = errorMessage.take(200).replace("\"", "'")
-            val payload = JSONObject().apply {
-                put("sessionId", "debug-session")
-                put("hypothesisId", hypothesisId)
-                put("location", "NetworkErrorHandler.kt:$source")
-                put("message", "TLS/parse error path")
-                put("data", JSONObject().apply {
-                    put("errorMessage", safeMsg)
-                    put("caller", caller)
-                })
-                put("timestamp", System.currentTimeMillis())
-            }.toString()
-            File(DEBUG_LOG_PATH).appendText("$payload\n")
-        } catch (_: Exception) { }
     }
 
-    /** 供其他模块埋点：当 message 含 TLS/parse 时写 debug.log 并上报 Crashlytics（hypothesisId C/D/E/F/G/H） */
+    /** 供其他模块埋点：当 message 含 TLS/parse 时上报 Crashlytics（hypothesisId C/D/E/F/G/H） */
     fun writeTlsParseDebugLogIfRelevant(hypothesisId: String, location: String, message: String?) {
         if (message.isNullOrBlank()) return
         if (!message.contains("TLS", ignoreCase = true) && !message.contains("parse", ignoreCase = true)) return
         reportTlsParseToFirebase(hypothesisId, location, message)
-        try {
-            val safeMsg = message.take(200).replace("\"", "'")
-            val payload = JSONObject().apply {
-                put("sessionId", "debug-session")
-                put("hypothesisId", hypothesisId)
-                put("location", location)
-                put("message", "TLS/parse error path")
-                put("data", JSONObject().apply { put("errorMessage", safeMsg) })
-                put("timestamp", System.currentTimeMillis())
-            }.toString()
-            File(DEBUG_LOG_PATH).appendText("$payload\n")
-        } catch (_: Exception) { }
     }
     // #endregion
 
@@ -84,7 +52,7 @@ object NetworkErrorHandler {
         statusCode: Int? = null,
     ) {
         // #region agent log
-        writeTlsParseDebugLog("A", "showNetworkAwareError", errorMessage)
+        reportTlsParseIfRelevant("A", "showNetworkAwareError", errorMessage)
         // #endregion
         // 检查是否为取消操作，如果是则不显示toast
         if (
@@ -123,7 +91,7 @@ object NetworkErrorHandler {
         val errorMessage = exception.message ?: "Network error occurred"
 
         // #region agent log
-        writeTlsParseDebugLog("B", "handleNetworkException", errorMessage)
+        reportTlsParseIfRelevant("B", "handleNetworkException", errorMessage)
         // #endregion
         // 检查错误消息是否包含取消相关词汇
         if (

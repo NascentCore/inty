@@ -46,7 +46,7 @@
 
 开发环境无法复现时，可在**用户设备发生** TLS/parse 错误时自动上报到 **Firebase Crashlytics**（非致命异常），便于在控制台看到设备、系统版本、发生路径等。
 
-- **实现方式**：在检测到错误文案含 "TLS" 或 "parse" 的路径中，除写本地 debug.log 外，会调用 `FirebaseManager.recordException(...)`，并附带自定义键：
+- **实现方式**：在检测到错误文案含 "TLS" 或 "parse" 的路径中，会调用 `FirebaseManager.recordException(...)`，并附带自定义键：
   - `tls_parse_hypothesis_id`：假设 ID（A–H），对应下表路径
   - `tls_parse_location`：代码位置
   - `tls_parse_message`：错误文案截断（前 200 字符，不包含敏感信息）
@@ -65,7 +65,7 @@
 
 ## 调试埋点与假设 ID（hypothesisId）
 
-复现时若 `.cursor/debug.log` 或 logcat 中出现下列 ID，可对应到具体路径；同一 ID 也会出现在 Crashlytics 的 `tls_parse_hypothesis_id` 中：
+下列 ID 会出现在 Crashlytics 的 `tls_parse_hypothesis_id` 自定义键中，用于对应具体路径：
 
 | hypothesisId | 含义 | 位置 |
 |--------------|------|------|
@@ -93,25 +93,21 @@
 | 类型 | 文件 | 改动说明 |
 |------|------|----------|
 | **文档** | `docs/ANDROID_TLS_PARSE_ERROR.md` | 新增：错误成因、Toast 代码路径、假设 ID 表、Crashlytics 收集说明、本总结与后续流程。 |
-| **埋点 + 上报** | `app/.../utils/NetworkErrorHandler.kt` | 新增 `reportTlsParseToFirebase`、`writeTlsParseDebugLog`、`writeTlsParseDebugLogIfRelevant`：当错误文案含 "TLS" 或 "parse" 时写本地 `debug.log` 并上报 Crashlytics（非致命），带 hypothesisId A/B。在 `showNetworkAwareError` / `handleNetworkException` 入口处调用上述埋点。 |
-| **埋点 + 上报** | `app/.../utils/HttpErrorHandler.kt` | 在 `handleGeneralException` 的 else 分支中调用 `NetworkErrorHandler.writeTlsParseDebugLogIfRelevant("E", ...)`，对含 TLS/parse 的异常做写 log + Crashlytics。 |
+| **埋点 + 上报** | `app/.../utils/NetworkErrorHandler.kt` | 新增 `reportTlsParseToFirebase`、`reportTlsParseIfRelevant`、`writeTlsParseDebugLogIfRelevant`：当错误文案含 "TLS" 或 "parse" 时上报 Crashlytics（非致命），带 hypothesisId A/B。在 `showNetworkAwareError` / `handleNetworkException` 入口处调用。 |
+| **埋点 + 上报** | `app/.../utils/HttpErrorHandler.kt` | 在 `handleGeneralException` 的 else 分支中调用 `NetworkErrorHandler.writeTlsParseDebugLogIfRelevant("E", ...)`，对含 TLS/parse 的异常上报 Crashlytics。 |
 | **埋点 + 上报** | `app/.../call/VoiceCallViewModel.kt` | 在 `call(agentId).catch` 中调用 `writeTlsParseDebugLogIfRelevant("C", ...)`，覆盖 WebSocket 连接失败路径。 |
 | **埋点 + 上报** | `app/.../call/VoiceCallScreen.kt` | 在语音错误 Toast 的 else 分支中调用 `writeTlsParseDebugLogIfRelevant("D", ...)`。 |
 | **埋点 + 上报** | `app/.../profile/UploadSelfieScreen.kt` | 在 catch 中调用 `writeTlsParseDebugLogIfRelevant("F", ...)`。 |
 | **埋点 + 上报** | `app/.../ui/components/ImagePickerBottomSheet.kt` | 在 catch 中调用 `writeTlsParseDebugLogIfRelevant("G", ...)`。 |
 | **埋点 + 上报** | `app/.../chat/ui/ChatMessageItems.kt` | 在 catch 中调用 `writeTlsParseDebugLogIfRelevant("H", ...)`。 |
 
-逻辑约定：**仅当**错误文案中包含 "TLS" 或 "parse"（不区分大小写）时才写 log 并上报，避免无关错误刷屏。
+逻辑约定：**仅当**错误文案中包含 "TLS" 或 "parse"（不区分大小写）时才上报 Crashlytics，避免无关错误刷屏。
 
 ---
 
 ### 二、后续如何收集数据
 
-- **本地/自测能复现时**
-  - 看本机 ` .cursor/debug.log`（NDJSON，一行一条），根据 `hypothesisId`、`location`、`data.errorMessage` 定位是 A–H 中哪条路径。
-  - 或看 logcat 中 "连接语音通话失败" 等已有日志，配合路径判断。
-
-- **用户端无法复现时（主要场景）**
+- **用户端复现时（主要场景）**
   - 发版后依赖 **Firebase Crashlytics** 自动收集：
     1. 打开 Firebase Console → 项目 → **Crashlytics**。
     2. 切到 **非致命异常**（Non-fatal issues）。
@@ -139,5 +135,5 @@
    - **用户体验**：无论根因是否短期可修，都建议对 **含 "TLS" 或 "parse" 的异常** 在展示前做统一映射（如 "Network error, please try again"），避免原始 Conscrypt/OkHttp 文案直接 Toast；Crashlytics 仍保留完整信息用于排查。
 
 3. **修复后的验证**
-   - 若做了文案映射或环境修复：继续保留当前埋点与 Crashlytics 上报一段时间，通过 Crashlytics 中 `TLS_PARSE_ERROR` 是否减少、以及是否仍有相同 hypothesisId 的反馈，验证是否生效。
-   - 确认无新反馈后，再视需要移除或收缩埋点（例如仅保留 Crashlytics 上报、关闭写 debug.log）。
+   - 若做了文案映射或环境修复：继续保留当前 Crashlytics 埋点一段时间，通过 Crashlytics 中 `TLS_PARSE_ERROR` 是否减少、以及是否仍有相同 hypothesisId 的反馈，验证是否生效。
+   - 确认无新反馈后，再视需要移除或收缩埋点。

@@ -59,7 +59,7 @@ object HttpErrorHandler {
                         else -> "Operation"
                     }
                 val errorMessage = e.message ?: "Unknown error"
-                // #region agent log（写 debug.log + 上报 Crashlytics，便于用户端复现时收集）
+                // #region agent log（上报 Crashlytics，便于用户端复现时收集）
                 NetworkErrorHandler.writeTlsParseDebugLogIfRelevant(
                     "E",
                     "HttpErrorHandler.kt:handleGeneralException",
