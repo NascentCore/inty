@@ -3,7 +3,7 @@
  * 提供与单个智能体的实时聊天功能
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Layout,
   Card,
@@ -45,6 +45,7 @@ import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
 import { MessageToImageIcon } from "../components/MessageToImageIcon";
+import { filterAgentsByName } from "../utils/agentFilters";
 import {
   formatUtcTimeOnly,
   formatUtcTimeRaw,
@@ -53,7 +54,7 @@ import {
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
-const { TextArea } = Input;
+const { TextArea, Search } = Input;
 
 interface ChatSession {
   id: string;
@@ -97,6 +98,7 @@ export const ChatPage: React.FC = () => {
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [agentSearch, setAgentSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -107,7 +109,6 @@ export const ChatPage: React.FC = () => {
   const backgroundImageUrl = selectedAgent?.background;
   const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
-
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -122,6 +123,15 @@ export const ChatPage: React.FC = () => {
     type: "all", // 获取所有角色（包括公开和私有）
     autoLoad: true,
   });
+  const normalizedAgentSearch = agentSearch.trim();
+  const filteredAgents = useMemo(
+    () => filterAgentsByName(agents, normalizedAgentSearch),
+    [agents, normalizedAgentSearch],
+  );
+  const showSearchEmpty =
+    agents.length > 0 &&
+    normalizedAgentSearch.length > 0 &&
+    filteredAgents.length === 0;
 
   // 从localStorage加载已生成的图片
   useEffect(() => {
@@ -1068,100 +1078,127 @@ export const ChatPage: React.FC = () => {
                 />
               }
             >
-              {agentsError ? (
-                <Alert
-                  message="加载失败"
-                  description={agentsError}
-                  type="error"
-                  showIcon
+              <div
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Search
+                  allowClear
+                  value={agentSearch}
+                  placeholder="搜索智能体名称"
+                  onChange={(event) => setAgentSearch(event.target.value)}
                 />
-              ) : agents.length === 0 ? (
-                <Empty
-                  description="暂无可用智能体"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              ) : (
-                <div style={{ height: "100%", overflowY: "auto" }}>
-                  <List
-                    loading={agentsLoading}
-                    dataSource={agents}
-                    renderItem={(agent) => (
-                      <List.Item
-                        className={`agent-item ${selectedAgent?.id === agent.id ? "selected" : ""}`}
-                        style={{
-                          cursor: "pointer",
-                          padding: "12px",
-                          border:
-                            selectedAgent?.id === agent.id
-                              ? "2px solid #1890ff"
-                              : "1px solid #f0f0f0",
-                          borderRadius: "8px",
-                          marginBottom: "8px",
-                          backgroundColor:
-                            selectedAgent?.id === agent.id ? "#f6ffed" : "#fff",
-                          transition: "all 0.2s ease",
-                        }}
-                        onClick={() => handleSelectAgent(agent)}
-                      >
-                        <List.Item.Meta
-                          avatar={<AvatarDisplay agent={agent} size={40} />}
-                          title={
-                            <Text strong style={{ fontSize: "14px" }}>
-                              {agent.name}
-                            </Text>
-                          }
-                          description={
-                            <div>
-                              <Text
-                                type="secondary"
-                                style={{
-                                  fontSize: "12px",
-                                  lineHeight: "1.4",
-                                  whiteSpace: "pre-wrap",
-                                  wordBreak: "break-word",
-                                  display: "block",
-                                }}
-                              >
-                                {agent.intro}
+                <div
+                  style={{
+                    marginTop: 12,
+                    flex: 1,
+                    overflowY: "auto",
+                  }}
+                >
+                  {agentsError ? (
+                    <Alert
+                      message="加载失败"
+                      description={agentsError}
+                      type="error"
+                      showIcon
+                    />
+                  ) : agents.length === 0 ? (
+                    <Empty
+                      description="暂无可用智能体"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ) : showSearchEmpty ? (
+                    <Empty
+                      description="未找到匹配的智能体"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ) : (
+                    <List
+                      loading={agentsLoading}
+                      dataSource={filteredAgents}
+                      renderItem={(agent) => (
+                        <List.Item
+                          className={`agent-item ${selectedAgent?.id === agent.id ? "selected" : ""}`}
+                          style={{
+                            cursor: "pointer",
+                            padding: "12px",
+                            border:
+                              selectedAgent?.id === agent.id
+                                ? "2px solid #1890ff"
+                                : "1px solid #f0f0f0",
+                            borderRadius: "8px",
+                            marginBottom: "8px",
+                            backgroundColor:
+                              selectedAgent?.id === agent.id
+                                ? "#f6ffed"
+                                : "#fff",
+                            transition: "all 0.2s ease",
+                          }}
+                          onClick={() => handleSelectAgent(agent)}
+                        >
+                          <List.Item.Meta
+                            avatar={<AvatarDisplay agent={agent} size={40} />}
+                            title={
+                              <Text strong style={{ fontSize: "14px" }}>
+                                {agent.name}
                               </Text>
-                              <div style={{ marginTop: 4 }}>
-                                {agent.gender && (
+                            }
+                            description={
+                              <div>
+                                <Text
+                                  type="secondary"
+                                  style={{
+                                    fontSize: "12px",
+                                    lineHeight: "1.4",
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                    display: "block",
+                                  }}
+                                >
+                                  {agent.intro}
+                                </Text>
+                                <div style={{ marginTop: 4 }}>
+                                  {agent.gender && (
+                                    <Tag
+                                      color={
+                                        agent.gender === "MALE"
+                                          ? "blue"
+                                          : agent.gender === "FEMALE"
+                                            ? "pink"
+                                            : "default"
+                                      }
+                                    >
+                                      {agent.gender === "MALE"
+                                        ? "男"
+                                        : agent.gender === "FEMALE"
+                                          ? "女"
+                                          : "其他"}
+                                    </Tag>
+                                  )}
                                   <Tag
                                     color={
-                                      agent.gender === "MALE"
-                                        ? "blue"
-                                        : agent.gender === "FEMALE"
-                                          ? "pink"
-                                          : "default"
+                                      agent.visibility === "PUBLIC"
+                                        ? "green"
+                                        : "orange"
                                     }
                                   >
-                                    {agent.gender === "MALE"
-                                      ? "男"
-                                      : agent.gender === "FEMALE"
-                                        ? "女"
-                                        : "其他"}
+                                    {agent.visibility === "PUBLIC"
+                                      ? "公开"
+                                      : "私有"}
                                   </Tag>
-                                )}
-                                <Tag
-                                  color={
-                                    agent.visibility === "PUBLIC"
-                                      ? "green"
-                                      : "orange"
-                                  }
-                                >
-                                  {agent.visibility === "PUBLIC"
-                                    ? "公开"
-                                    : "私有"}
-                                </Tag>
+                                </div>
                               </div>
-                            </div>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )}
                 </div>
-              )}
+              </div>
             </Card>
           </Col>
 
