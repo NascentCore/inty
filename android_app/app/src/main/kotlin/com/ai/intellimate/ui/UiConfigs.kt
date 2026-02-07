@@ -299,6 +299,9 @@ object UiConfigs {
         /** Speaking 状态的最低保留时长（毫秒），用于补偿状态与音频流的不同步 */
         const val SPEAKING_INDICATOR_HOLD_MS = 1200L
 
+        /** 播放队列排空后，再保留 speaking 状态的缓冲时间（毫秒），使切到 listening 更自然 */
+        const val SPEAKING_INDICATOR_TAIL_MS = 300L
+
         /** 语音通话打断按钮配置 */
         object InterruptButton {
             /** 按钮直径 */

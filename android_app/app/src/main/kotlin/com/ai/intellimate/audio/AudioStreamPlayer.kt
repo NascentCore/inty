@@ -36,6 +36,10 @@ class AudioStreamPlayer private constructor() {
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
+    /** 是否仍有待播数据（队列非空）。用于 UI 在音频播完前保持「speaking」状态。 */
+    private val _hasPendingPlaybackData = MutableStateFlow(false)
+    val hasPendingPlaybackData: StateFlow<Boolean> = _hasPendingPlaybackData.asStateFlow()
+
     // 错误信息
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -168,6 +172,7 @@ class AudioStreamPlayer private constructor() {
 
         // 清空队列
         audioDataQueue.clear()
+        _hasPendingPlaybackData.value = false
         _error.value = null
         _playbackState.value = PlaybackState.PLAYING
 
@@ -222,6 +227,9 @@ class AudioStreamPlayer private constructor() {
                                 // 使用重试机制写入音频数据
                                 writeAudioDataWithRetry(track, audioData)
                             } else {
+                                if (audioDataQueue.isEmpty()) {
+                                    _hasPendingPlaybackData.value = false
+                                }
                                 // 队列为空时，检查 AudioTrack 状态，确保播放不中断
                                 // 如果 AudioTrack 还有数据在播放，继续循环等待新数据
                                 if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
@@ -341,6 +349,7 @@ class AudioStreamPlayer private constructor() {
     fun addAudioData(audioData: ByteArray) {
         if (_playbackState.value == PlaybackState.PLAYING) {
             try {
+                _hasPendingPlaybackData.value = true
                 // 如果队列已满，丢弃最旧的数据以保持实时性
                 if (!audioDataQueue.offer(audioData)) {
                     // offer 失败说明队列已满，移除最旧的数据
@@ -380,6 +389,7 @@ class AudioStreamPlayer private constructor() {
         }
 
         _playbackState.value = PlaybackState.IDLE
+        _hasPendingPlaybackData.value = false
         playbackJob?.cancel()
         playbackJob = null
 

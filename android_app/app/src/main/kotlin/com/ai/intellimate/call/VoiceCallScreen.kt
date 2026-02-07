@@ -123,6 +123,7 @@ fun VoiceCallScreen(
         if (audioPermissionState.status.isGranted) {
             val uiState by viewModel.uiState.collectAsState()
             val audioStreamPlayer = AudioStreamPlayer.getInstance()
+            val hasPendingPlaybackData by audioStreamPlayer.hasPendingPlaybackData.collectAsState(initial = false)
             val audioRecordManager = AudioRecordManager.getInstance(context)
             var error by remember { mutableStateOf<Pair<IntyErrorCode, String>?>(null) }
             var lastAudioTimestamp by remember { mutableStateOf(0L) }
@@ -136,22 +137,25 @@ fun VoiceCallScreen(
             // 播放接收的音频数据
             LaunchedEffect(Unit) {
                 viewModel.audioResponse.collect { audioData ->
-                    // 播放音频
                     audioStreamPlayer.addAudioData(audioData)
                     lastAudioTimestamp = SystemClock.elapsedRealtime()
                     isSpeakingFromAudio = true
                 }
             }
 
-            LaunchedEffect(lastAudioTimestamp) {
-                if (lastAudioTimestamp == 0L) {
+            // 有待播数据时保持 speaking；队列已空且超过保持时间后，再缓冲 TAIL_MS 再关闭
+            LaunchedEffect(lastAudioTimestamp, hasPendingPlaybackData) {
+                if (hasPendingPlaybackData) {
+                    isSpeakingFromAudio = true
                     return@LaunchedEffect
                 }
-                delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS)
-                if (
-                    SystemClock.elapsedRealtime() - lastAudioTimestamp >=
-                        UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS
-                ) {
+                if (lastAudioTimestamp == 0L) return@LaunchedEffect
+                val elapsed = SystemClock.elapsedRealtime() - lastAudioTimestamp
+                if (elapsed < UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS) {
+                    delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS - elapsed)
+                }
+                delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_TAIL_MS)
+                if (!hasPendingPlaybackData) {
                     isSpeakingFromAudio = false
                 }
             }
