@@ -37,6 +37,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
+import ai.sxwl.android.data.character.local.db.CharacterEntity
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -332,7 +333,7 @@ class ChatViewModel : BaseVM() {
                     when {
                         agent?.let { isVipAgent(it) } != true ||
                             vipStatus.isSubscribed ||
-                            agent.lastUnlockByCredits == LocalDate.now().toString() -> {
+                            agent?.lastUnlockByCredits == LocalDate.now().toString() -> {
 
                             ChatUIState.VipAgentLockType.NONE
                         }
@@ -345,7 +346,15 @@ class ChatViewModel : BaseVM() {
     }
 
     private fun isVipAgent(agent: AgentInfo): Boolean {
-        return agent.tags?.any { it.contains("vip", ignoreCase = true) } == true
+        return hasVipTag(agent.tags)
+    }
+
+    private fun isVipAgent(agent: CharacterEntity): Boolean {
+        return hasVipTag(agent.tags)
+    }
+
+    private fun hasVipTag(tags: List<String?>?): Boolean {
+        return tags?.any { it?.contains("vip", ignoreCase = true) == true } == true
     }
 
     private suspend fun deductVipChatCreditsIfNeeded(agent: AgentInfo): Boolean {
