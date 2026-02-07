@@ -83,7 +83,9 @@ Click the **Me** or the **right-most** icon
 - Every message supports voice playback; audio is cached locally (`AudioCacheManager`).
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
-- 语音通话界面新增 “tap to interrupt AI” 按钮：AI 正在讲话时显示波浪动画，轻点可打断播报。
+
+**Voice call** (from Chat): Voice calls require microphone permission. The centre circle shows connection status (e.g. Connecting / Connected), **listening** when the AI is waiting for you, or **speaking** when the AI is talking—then you see “tap to interrupt AI” and a wave animation; tap the circle to interrupt and speak. Use mute and end-call as needed. If the voice call screen stays blank, grant microphone permission when prompted or in system Settings → App → IntelliMate → Permissions.
+
 - *Screenshot placeholder:*
   
   ![Chat screenshot placeholder](<ADD_CHAT_SCREENSHOT_URL_HERE>)
@@ -111,6 +113,7 @@ Click the **Me** or the **right-most** icon
 
 ### Chat & Media
 - **Voice playback issues**: Check system volume. If playback keeps failing, clear cache or restart the app; audio will re-cache automatically.
+- **Voice call screen stays blank**: Allow microphone permission when the app asks, or open Settings → Apps → IntelliMate → Permissions and enable Microphone.
 - **Image generation errors**: `IMAGE_GENERATION_LIMIT_REACHED` means you hit the quota. Try again later.
 
 ### Subscription
