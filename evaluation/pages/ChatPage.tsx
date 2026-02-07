@@ -109,16 +109,6 @@ export const ChatPage: React.FC = () => {
   const backgroundImageUrl = selectedAgent?.background;
   const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
-  const normalizedAgentSearch = agentSearch.trim();
-  const filteredAgents = useMemo(
-    () => filterAgentsByName(agents, normalizedAgentSearch),
-    [agents, normalizedAgentSearch],
-  );
-  const showSearchEmpty =
-    agents.length > 0 &&
-    normalizedAgentSearch.length > 0 &&
-    filteredAgents.length === 0;
-
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -133,6 +123,15 @@ export const ChatPage: React.FC = () => {
     type: "all", // 获取所有角色（包括公开和私有）
     autoLoad: true,
   });
+  const normalizedAgentSearch = agentSearch.trim();
+  const filteredAgents = useMemo(
+    () => filterAgentsByName(agents, normalizedAgentSearch),
+    [agents, normalizedAgentSearch],
+  );
+  const showSearchEmpty =
+    agents.length > 0 &&
+    normalizedAgentSearch.length > 0 &&
+    filteredAgents.length === 0;
 
   // 从localStorage加载已生成的图片
   useEffect(() => {
