@@ -9,6 +9,8 @@ import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.theme.brushes
 import ai.sxwl.android.design.theme.textOnLightSurface
 import ai.sxwl.android.design.ui.HeartRedDot
+import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.TimeUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -185,7 +187,13 @@ private fun MessageTabContent(
                 Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             titleText = stringResource(R.string.messages_premium_banner_title),
             ctaText = stringResource(R.string.messages_premium_banner_cta),
-            onClick = onOpenSubscription,
+            onClick = {
+                onOpenSubscription()
+
+                FirebaseManager.Events.CONVERSATIONS_PAGE_CLICK.logEvent(
+                    "click_type" to "MessagesSubscriptionBanner"
+                )
+            },
         )
         Spacer(Modifier.height(UiConfigs.Spacing.Medium))
         MessagesTabSwitcher(

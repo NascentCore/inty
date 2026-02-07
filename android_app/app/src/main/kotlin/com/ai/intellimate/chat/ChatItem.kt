@@ -5,6 +5,8 @@ import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -361,6 +363,9 @@ private fun ChatItemAI(
                                 showLoadingDots = true,
                                 showSpeedUpButton = !vipStatus.isSubscribed,
                                 onVipSpeedUpClick = {
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "image speed up"
+                                    )
                                     navController.navigate(Routes.Me.vipCenter("speed up "))
                                 },
                             )

@@ -58,7 +58,7 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `SCREEN_VIEW` | PageTrackingHelper.kt, ExploreViewModel.kt | `page_name`, `page_class`, `timestamp`, `page_source` (可选), `default_home_tab` (可选，MainPage/HomePage，值为 "chat"/"explore"/"other"), `current_tab` (可选，HomePage，值为 "chat"/"conversation"/"create"/"explore"/"profile"), 其他自定义参数 | 页面访问（Firebase内置事件，通过 `trackPageView()` 自动记录，`page_name` 统一为 xxxPage 格式，如 ChatPage、ExplorePage、subscriptionPage 等） | 🔴 100% |
-| `chat_page_view` | ChatPage.kt | `page_source`, `agent_id`, `agent_name`, `keep_talking_enabled`, `auto_play_voice_enabled` | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，用于分析用户访问 ChatPage 的来源和配置） | 🔴 100% |
+| `chat_page_view` | ChatPage.kt | `from_page`（可选）, `page_source`, `agent_id`, `agent_name`, `keep_talking_enabled`, `auto_play_voice_enabled`, `auto_play_animation_enabled` | ChatPage 页面曝光（页面真正可见且成为当前页面时触发，用于分析用户访问 ChatPage 的来源和配置） | 🔴 100% |
 | `duration` | PageTrackingHelper.kt | `page_name`, `duration`, `timestamp` | 页面停留时长（页面离开时上报） | 🔴 100% |
 | `page_visible` | PageTrackingHelper.kt | `page_name`, `page_class`, `timestamp` | 页面变为可见 | ⚪ 禁用 |
 | `page_hidden` | PageTrackingHelper.kt | `page_name`, `page_class`, `visible_time_spent`, `timestamp` | 页面变为不可见 | ⚪ 禁用 |
@@ -94,20 +94,38 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `agent_switch` | ChatViewModel.kt | `from_agent_id`, `from_agent_name`, `to_agent_id`, `to_agent_name`, `switch_method`, `user_type`, `timestamp` | Agent切换 | 🔴 100% |
-| `chat_page_click` | ChatViewModel.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `has_generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
-| `chat_sidebar_click` | ChatSettingsDrawer.kt | `click_type`（`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`report`）, `agent_id`（可选）, `enabled`（可选，开关操作时）, `timestamp` | 聊天侧边栏点击 | 🔴 100% |
-| `chat_more_click` | ChatMorePanel.kt | `click_type`（`reply_style`、`report`）, `agent_id`, `timestamp` | 聊天更多面板点击 | 🔴 100% |
-| `push_notification_click` | ChatActivity.kt | 推送通知点击 | 🔴 100% |
+| `chat_page_click` | ChatViewModel.kt, ChatPage.kt, ChatItem.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`、`message_sent`、`message_to_image`、`image speed up`、`call`、`sidebar`、`more`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `has_generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
+| `chat_sidebar_click` | ChatSettingsDrawer.kt | `click_type`（`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`toggle_chat_list_full_screen`、`toggle_auto_play_animation`、`toggle_text_streaming`、`toggle_show_scene_action_button`、`open_models_menu`、`select_model`、`open_font_size_slider`、`user_manual`、`feedback`、`report`、`font_size_reset`、`font_size_cancel`、`update_font_size`）, `agent_id`（可选）, `enabled`（可选，开关操作时）, `timestamp` | 聊天侧边栏点击 | 🔴 100% |
+| `chat_more_click` | ChatMorePanel.kt | `click_type`（`reply_style`、`report`、`reset`、`change_outfit`、`feedback`、`call`（语音通话，代码常量 CHAT_MORE_CALL））, `agent_id`, `timestamp` | 聊天更多面板点击 | 🔴 100% |
+| `conversations_page_click` | MessagesPage.kt | `click_type`（`MessagesSubscriptionBanner` 等）, `timestamp`（可选） | 会话列表页点击 | 🔴 100% |
+| `push_notification_click` | MainActivity.kt | 推送通知点击 | 🔴 100% |
 
 ### 1.9 订阅与计费事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
+| `subscription_page_view` | VipCenterContent.kt | `page_source`（可选） | 订阅页曝光（进入订阅/会员中心页时触发） | 🔴 100% |
+| `subscription_cta_click` | VipCenterContent.kt | `click_type`（按入口区分）, 其他可选参数 | 订阅页 CTA 点击（点击订阅相关按钮时触发） | 🔴 100% |
 | `subscription_success` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `purchase_time`, `user_type`, `price`（可选）, `currency_code`（可选）, `price_micros`（可选）, `timestamp` | 订阅验证成功（服务端验证成功后触发，包含价格参数） | 🔴 100% |
 | `subscription_failure` | BillingPurchaseManager.kt | `product_id`, `order_id`, `purchase_token`, `error_code`（可选）, `error_message`, `purchase_time`, `user_type`, `price`（可选）, `currency_code`（可选）, `price_micros`（可选）, `timestamp` | 订阅验证失败（服务端验证失败、网络请求失败或异常时触发，包含价格参数） | 🔴 100% |
 | `subscription_price_view` | VipCenterContent.kt | `product_id`, `product_name`, `plan_type`, `price`, `currency_code`, `price_micros`, `timestamp` | 订阅价格查看（在 vipcenter 界面显示订阅产品价格时触发） | 🔴 100% |
 
-### 1.10 网络请求事件
+### 1.10 Boost 积分/能量事件
+
+以下事件在 BoostManager.kt 中通过字符串直接上报，未在 FirebaseManager.Events 中定义。
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `boost_token_earned` | BoostManager.kt | `source`, `points`, `agent_name` | 获得积分（如手动发放、月度/每日奖励等） | 🔴 100% |
+| `boost_month_reward_claimed` | BoostManager.kt | `points` | 月度 VIP 奖励领取 | 🔴 100% |
+| `boost_daily_login_reward_claimed` | BoostManager.kt | `points`, `is_vip` | 每日登录奖励领取 | 🔴 100% |
+| `boost_daily_reward_claimed` | BoostManager.kt | `points` | 每日奖励领取 | 🔴 100% |
+| `boost_invested` | BoostManager.kt | `agent_id`, `agent_name`, `points` | 对角色投入积分 | 🔴 100% |
+| `boost_synced_to_backend` | BoostManager.kt | `agent_id`, `agent_name`, `points` | 积分同步到后端成功 | 🔴 100% |
+| `boost_sync_failed` | BoostManager.kt | `agent_id`, `agent_name`, `points` 等 | 积分同步失败 | 🔴 100% |
+| `boost_sync_exception` | BoostManager.kt | `agent_id`, `agent_name`, `points` 等 | 积分同步异常 | 🔴 100% |
+
+### 1.11 网络请求事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -115,7 +133,7 @@
 | `very_slow_request` | UnifiedOkHttpClient.kt | `duration_ms` | 极慢请求（>10秒） | 🔴 100% |
 | `request_failure` | UnifiedOkHttpClient.kt | `duration_ms`, `error_message`（包含异常类型信息，格式：`exception: ClassName, ...`） | 请求失败（网络请求失败时触发，异常类型信息在 `error_message` 中） | 🔴 100% |
 
-### 1.11 错误监控事件
+### 1.12 错误监控事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
@@ -250,7 +268,9 @@
 - `default_home_tab`：默认首页 tab 名称（MainPage/HomePage 事件，值为 "chat"/"explore"/"other"），用于分析用户默认进入的 tab
 - `current_tab`：当前选中的 tab 名称（HomePage 事件，值为 "chat"/"conversation"/"create"/"explore"/"profile"），用于分析用户实际访问的 tab
 - `remote_config_auto_enable_keep_talking`、`remote_config_auto_play_opening_voice`、`remote_config_home_page_default_tab_index`：Remote Config 配置参数（APP_OPEN 事件），用于分析 Remote Config 配置对用户行为的影响
-- `keep_talking_enabled`、`auto_play_voice_enabled`：ChatPage 功能开关状态，用于分析不同配置下的用户行为（chat_page_view 事件）
+- `keep_talking_enabled`、`auto_play_voice_enabled`、`auto_play_animation_enabled`：ChatPage 功能开关状态，用于分析不同配置下的用户行为（chat_page_view 事件）
+- `from_page`：上一页/来源页（chat_page_view 等，可选）
+- `source`、`points`、`agent_name`、`is_vip`：Boost 积分相关参数（boost_token_earned、boost_*_claimed、boost_invested 等）
 - `page`、`page_size`：分页信息（Explore接口的分页参数）
 - `agents_count`：本次接口返回的agents数量（单次请求的数量）
 - `current_ui_agents_count`：当前UI中所有已加载的agents总数（累计数量，用于统计界面总agent数）
@@ -309,7 +329,7 @@
 
 ---
 
-*文档更新时间：2025年1月*
+*文档更新时间：2025年2月*
 *版本：dev_1.3.x*
 *基于实际代码分析，确保事件信息的准确性和实用性*
 *配置更新：业务数据点100%采样，性能事件保持现有配置*

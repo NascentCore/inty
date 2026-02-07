@@ -542,6 +542,7 @@ object FirebaseManager {
             "vip_agent_unlock" // 聊天页解锁 VIP 角色（含解锁方式、角色 id，credits 解锁时含当前积分）
 
         // 用户交互事件
+        const val CONVERSATIONS_PAGE_CLICK = "conversations_page_click"
         const val CHAT_PAGE_CLICK = "chat_page_click" // 聊天页面点击
         const val CHAT_SIDEBAR_CLICK = "chat_sidebar_click" // 聊天侧边栏点击
         const val CHAT_MORE_CLICK = "chat_more_click" // 聊天更多面板点击
