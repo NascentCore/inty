@@ -1,0 +1,15 @@
+{
+  "CREATED_BY_AGENT": "gpt-5.2-codex-high",
+  "schema_version": 1,
+  "logs": [
+    {
+      "id": "2026.02.07",
+      "version_name": "1.0.0",
+      "release_date": "2026-02-07",
+      "highlights": [
+        "Added the change logs entry point on the Me page.",
+        "Prepared the release notes structure for future updates."
+      ]
+    }
+  ]
+}
