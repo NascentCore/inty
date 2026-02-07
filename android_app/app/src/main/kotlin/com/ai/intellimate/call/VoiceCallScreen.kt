@@ -219,7 +219,7 @@ fun VoiceCallScreen(
                         }
                         else -> {
                             // #region agent log（上报 Crashlytics）
-                            com.ai.intellimate.utils.NetworkErrorHandler.writeTlsParseDebugLogIfRelevant(
+                            com.ai.intellimate.utils.NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
                                 "D",
                                 "VoiceCallScreen.kt:error Toast",
                                 it.second,

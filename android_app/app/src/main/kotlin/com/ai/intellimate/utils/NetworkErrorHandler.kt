@@ -9,7 +9,10 @@ import kotlinx.coroutines.CancellationException
 object NetworkErrorHandler {
 
     // #region agent log（仅上报 Crashlytics，便于用户端复现时在 Firebase 查看）
-    /** 用户端无法复现时：将 TLS/parse 错误上报 Crashlytics（非致命），便于在 Firebase 控制台查看 hypothesisId、location、设备等 */
+    private fun isTlsRelatedMessage(message: String?): Boolean =
+        !message.isNullOrBlank() && message.contains("TLS", ignoreCase = true)
+
+    /** 用户端无法复现时：将 TLS 相关错误上报 Crashlytics（非致命），便于在 Firebase 控制台查看 hypothesisId、location、设备等 */
     private fun reportTlsParseToFirebase(hypothesisId: String, location: String, errorMessage: String) {
         try {
             val safeMsg = errorMessage.take(200).replace("\"", "'")
@@ -25,15 +28,14 @@ object NetworkErrorHandler {
     }
 
     private fun reportTlsParseIfRelevant(hypothesisId: String, source: String, errorMessage: String) {
-        if (!errorMessage.contains("TLS", ignoreCase = true) && !errorMessage.contains("parse", ignoreCase = true)) return
+        if (!isTlsRelatedMessage(errorMessage)) return
         reportTlsParseToFirebase(hypothesisId, "NetworkErrorHandler.kt:$source", errorMessage)
     }
 
-    /** 供其他模块埋点：当 message 含 TLS/parse 时上报 Crashlytics（hypothesisId C/D/E/F/G/H） */
-    fun writeTlsParseDebugLogIfRelevant(hypothesisId: String, location: String, message: String?) {
-        if (message.isNullOrBlank()) return
-        if (!message.contains("TLS", ignoreCase = true) && !message.contains("parse", ignoreCase = true)) return
-        reportTlsParseToFirebase(hypothesisId, location, message)
+    /** 供其他模块埋点：当 message 含 TLS 时上报 Crashlytics（hypothesisId C/D/E/F/G/H） */
+    fun reportTlsParseToCrashlyticsIfRelevant(hypothesisId: String, location: String, message: String?) {
+        if (!isTlsRelatedMessage(message)) return
+        reportTlsParseToFirebase(hypothesisId, location, message!!)
     }
     // #endregion
 

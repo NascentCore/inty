@@ -106,7 +106,7 @@ fun UploadSelfieScreen(onBack: () -> Unit, viewModel: ModifyProfileViewModel = v
             } catch (error: Throwable) {
                 // #region agent log
                 val msg = error.localizedMessage.orEmpty()
-                NetworkErrorHandler.writeTlsParseDebugLogIfRelevant("F", "UploadSelfieScreen.kt:onTakeSelfie", msg)
+                NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant("F", "UploadSelfieScreen.kt:onTakeSelfie", msg)
                 // #endregion
                 LogUtils.e(error.localizedMessage)
                 ToastUtils.showShort(msg)

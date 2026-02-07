@@ -160,7 +160,7 @@ fun ImagePickerBottomSheet(
                     } catch (error: Throwable) {
                         // #region agent log
                         val msg = error.localizedMessage.orEmpty()
-                        NetworkErrorHandler.writeTlsParseDebugLogIfRelevant("G", "ImagePickerBottomSheet.kt:camera", msg)
+                        NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant("G", "ImagePickerBottomSheet.kt:camera", msg)
                         // #endregion
                         LogUtils.e(error.localizedMessage)
                         ToastUtils.showShort(msg)

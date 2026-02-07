@@ -159,7 +159,7 @@ fun ImagePickItem(
                         } catch (error: Throwable) {
                             // #region agent log
                             val msg = error.localizedMessage.orEmpty()
-                            NetworkErrorHandler.writeTlsParseDebugLogIfRelevant("H", "ChatMessageItems.kt:camera", msg)
+                            NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant("H", "ChatMessageItems.kt:camera", msg)
                             // #endregion
                             LogUtils.e(error.localizedMessage)
                             ToastUtils.showShort(msg)

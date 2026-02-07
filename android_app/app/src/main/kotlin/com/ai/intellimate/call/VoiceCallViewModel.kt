@@ -122,7 +122,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 .call(agentId)
                 .catch { error ->
                     // #region agent log（上报 Crashlytics）
-                    com.ai.intellimate.utils.NetworkErrorHandler.writeTlsParseDebugLogIfRelevant(
+                    com.ai.intellimate.utils.NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
                         "C",
                         "VoiceCallViewModel.kt:call.catch",
                         error.message,
