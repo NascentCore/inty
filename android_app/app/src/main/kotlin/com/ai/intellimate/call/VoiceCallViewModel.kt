@@ -12,6 +12,7 @@ import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.NetworkErrorHandler
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -121,6 +122,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             repository
                 .call(agentId)
                 .catch { error ->
+                    // #region agent log（上报 Crashlytics）
+                    NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                        "C",
+                        "VoiceCallViewModel.kt:call.catch",
+                        error.message,
+                    )
+                    // #endregion
                     LogUtils.e("连接语音通话失败: ${error.message}")
                     _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
                 }

@@ -5,6 +5,7 @@ import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import com.ai.intellimate.utils.NetworkErrorHandler
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -103,8 +104,12 @@ fun UploadSelfieScreen(onBack: () -> Unit, viewModel: ModifyProfileViewModel = v
                     FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
                         .also { cameraLauncher.launch(it) }
             } catch (error: Throwable) {
+                // #region agent log
+                val msg = error.localizedMessage.orEmpty()
+                NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant("F", "UploadSelfieScreen.kt:onTakeSelfie", msg)
+                // #endregion
                 LogUtils.e(error.localizedMessage)
-                ToastUtils.showShort(error.localizedMessage.orEmpty())
+                ToastUtils.showShort(msg)
             }
         },
         onBack = onBack,
