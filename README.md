@@ -1,5 +1,7 @@
 # InTy - 长期 AI 情感陪伴
 
+**InTy 是基于 AI 的情感伴侣系统，包含后端服务、Android 应用和 Web 应用。**
+
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
 [![Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
 
@@ -11,8 +13,6 @@
 ![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=flat&theme=default&responseTime=true)
 ![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=flat&theme=default&responseTime=true)
 ![](https://api.checklyhq.com/v1/badges/checks/f2988f0a-f58a-4e75-87bc-e5700869ba68?style=flat&theme=default&responseTime=true)
-
-InTy 是基于 AI 的情感伴侣系统，包含后端服务、Android 应用和 Web 应用。
 
 ## IntelliMate 2026 Q1 目标
 
