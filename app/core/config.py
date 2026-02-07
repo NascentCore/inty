@@ -223,6 +223,8 @@ class AgentConfig:
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
     image_generation_default_history_count: int = 10
+    # 消息生图失败时是否匹配已生成图片作为兜底
+    enable_chat_image_match_fallback: bool = False
     # 消息生图（chat image）模型配置
     # "gemini" 表示使用 Gemini，其他值为 fal.ai 模型名
     free_user_chat_image_model: str = "gemini"
