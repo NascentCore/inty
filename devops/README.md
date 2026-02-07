@@ -4,7 +4,8 @@
 
 ## 链接
 
-[prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
+- [prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
+- [dev push worker logs](https://cloudlogging.app.goo.gl/xhWv88U4bH7v7UNd9)
 
 ## 常用文档入口
 
