@@ -352,18 +352,18 @@ class AudioStreamPlayer private constructor() {
         if (_playbackState.value == PlaybackState.PLAYING) {
             try {
                 synchronized(audioDataQueue) {
-                    _hasPendingPlaybackData.value = true
-                    // 如果队列已满，丢弃最旧的数据以保持实时性
-                    if (!audioDataQueue.offer(audioData)) {
-                        // offer 失败说明队列已满，移除最旧的数据
-                        val dropped = audioDataQueue.poll()
-                        if (dropped != null) {
-                            LogUtils.w("播放队列已满，丢弃旧音频数据包，大小: ${dropped.size} bytes")
+                    val added =
+                        if (audioDataQueue.offer(audioData)) {
+                            true
+                        } else {
+                            val dropped = audioDataQueue.poll()
+                            if (dropped != null) {
+                                LogUtils.w("播放队列已满，丢弃旧音频数据包，大小: ${dropped.size} bytes")
+                            }
+                            audioDataQueue.offer(audioData)
                         }
-                        // 再次尝试添加
-                        if (!audioDataQueue.offer(audioData)) {
-                            LogUtils.w("添加音频数据失败，队列可能已满")
-                        }
+                    if (added) {
+                        _hasPendingPlaybackData.value = true
                     }
                 }
 
