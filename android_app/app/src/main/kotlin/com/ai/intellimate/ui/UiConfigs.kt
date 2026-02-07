@@ -355,11 +355,35 @@ object UiConfigs {
 
         /** 语音通话布局间距配置 */
         object Layout {
+            /** 顶部占位高度（头像上方） */
+            val TopSpacerHeight = 160.dp
+
+            /** 头像直径 */
+            val AvatarSize = 120.dp
+
+            /** 头像边框宽度 */
+            val AvatarBorderWidth = 1.dp
+
+            /** 头像与名字之间的间距 */
+            val AvatarToNameSpacing = 16.dp
+
+            /** 名字与打断按钮区域之间的间距 */
+            val NameToStatusSpacing = 8.dp
+
             /** 连接状态与打断按钮之间的间距 */
             val StatusToInterruptSpacing = UiConfigs.Spacing.Large
 
             /** 打断按钮与通话时长之间的间距 */
             val InterruptToTimeSpacing = UiConfigs.Spacing.HeroGap
+
+            /** 通话时长区块内小间距（标签与数值之间等） */
+            val TimeBlockSpacing = 6.dp
+
+            /** 通话时长区块内大间距（时长与剩余时间之间） */
+            val TimeSectionSpacing = 16.dp
+
+            /** 底部操作栏与屏幕底边的间距 */
+            val BottomBarPadding = 50.dp
         }
     }
 

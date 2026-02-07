@@ -95,6 +95,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -126,39 +127,17 @@ fun VoiceCallScreen(
             val hasPendingPlaybackData by audioStreamPlayer.hasPendingPlaybackData.collectAsState(initial = false)
             val audioRecordManager = AudioRecordManager.getInstance(context)
             var error by remember { mutableStateOf<Pair<IntyErrorCode, String>?>(null) }
-            var lastAudioTimestamp by remember { mutableStateOf(0L) }
-            var isSpeakingFromAudio by remember { mutableStateOf(false) }
+            val isSpeakingFromAudio =
+                rememberVoiceCallSpeakingFromAudio(
+                    hasPendingPlaybackData = hasPendingPlaybackData,
+                    audioResponse = viewModel.audioResponse,
+                    onAudioData = { audioStreamPlayer.addAudioData(it) },
+                )
 
             // 启动通话连接
             LaunchedEffect(agentId) { viewModel.startCalling(agentId) }
 
             LaunchedEffect(viewModel) { viewModel.error.collect { error = it } }
-
-            // 播放接收的音频数据
-            LaunchedEffect(Unit) {
-                viewModel.audioResponse.collect { audioData ->
-                    audioStreamPlayer.addAudioData(audioData)
-                    lastAudioTimestamp = SystemClock.elapsedRealtime()
-                    isSpeakingFromAudio = true
-                }
-            }
-
-            // 有待播数据时保持 speaking；队列已空且超过保持时间后，再缓冲 TAIL_MS 再关闭（仅以 hasPendingPlaybackData 为 key，避免每次收到音频重启导致倒计时无法完成）
-            LaunchedEffect(hasPendingPlaybackData) {
-                if (hasPendingPlaybackData) {
-                    isSpeakingFromAudio = true
-                    return@LaunchedEffect
-                }
-                if (lastAudioTimestamp == 0L) return@LaunchedEffect
-                val elapsed = SystemClock.elapsedRealtime() - lastAudioTimestamp
-                if (elapsed < UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS) {
-                    delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS - elapsed)
-                }
-                delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_TAIL_MS)
-                if (!hasPendingPlaybackData) {
-                    isSpeakingFromAudio = false
-                }
-            }
 
             // 管理播放器生命周期
             LaunchedEffect(uiState.connectionState) {
@@ -316,6 +295,49 @@ fun VoiceCallScreen(
     }
 }
 
+/**
+ * 根据待播队列与最近收到音频的时间，推导「来自音频的 speaking」状态。
+ *
+ * 使用场景：语音通话中 UI 需要在不依赖服务端 STATUS 的情况下，用本地播放缓冲与 HOLD/TAIL 时间保持 speaking 显示。
+ * 入参：hasPendingPlaybackData（播放器队列是否非空）、音频流、以及收到每帧时调用的 onAudioData。
+ * 返回：是否应显示为 speaking（true 时与 callState 合并后显示“tap to interrupt”等）。
+ */
+@Composable
+private fun rememberVoiceCallSpeakingFromAudio(
+    hasPendingPlaybackData: Boolean,
+    audioResponse: Flow<ByteArray>,
+    onAudioData: (ByteArray) -> Unit,
+): Boolean {
+    var lastAudioTimestamp by remember { mutableStateOf(0L) }
+    var isSpeakingFromAudio by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        audioResponse.collect { audioData ->
+            onAudioData(audioData)
+            lastAudioTimestamp = SystemClock.elapsedRealtime()
+            isSpeakingFromAudio = true
+        }
+    }
+
+    LaunchedEffect(hasPendingPlaybackData) {
+        if (hasPendingPlaybackData) {
+            isSpeakingFromAudio = true
+            return@LaunchedEffect
+        }
+        if (lastAudioTimestamp == 0L) return@LaunchedEffect
+        val elapsed = SystemClock.elapsedRealtime() - lastAudioTimestamp
+        if (elapsed < UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS) {
+            delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_HOLD_MS - elapsed)
+        }
+        delay(UiConfigs.VoiceCall.SPEAKING_INDICATOR_TAIL_MS)
+        if (!hasPendingPlaybackData) {
+            isSpeakingFromAudio = false
+        }
+    }
+
+    return isSpeakingFromAudio
+}
+
 @Composable
 private fun VoiceCallContent(
     onEnd: () -> Unit,
@@ -340,11 +362,15 @@ private fun VoiceCallContent(
             modifier = Modifier.align(Alignment.TopCenter),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(160.dp))
+            Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.TopSpacerHeight))
             uiState.agent?.run {
                 val avatarModifier =
-                    Modifier.size(120.dp)
-                        .border(width = 1.dp, color = Color.White, shape = CircleShape)
+                    Modifier.size(UiConfigs.VoiceCall.Layout.AvatarSize)
+                        .border(
+                            width = UiConfigs.VoiceCall.Layout.AvatarBorderWidth,
+                            color = Color.White,
+                            shape = CircleShape,
+                        )
                         .clip(CircleShape)
 
                 // 头像
@@ -359,7 +385,7 @@ private fun VoiceCallContent(
                     )
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.AvatarToNameSpacing))
 
                 // 名字
                 Text(
@@ -370,7 +396,7 @@ private fun VoiceCallContent(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.NameToStatusSpacing))
             }
 
             Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.StatusToInterruptSpacing))
@@ -390,19 +416,19 @@ private fun VoiceCallContent(
                     style = MaterialTheme.typography.titleSmall,
                     color = Color.White.copy(0.8f),
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.TimeBlockSpacing))
                 Text(
                     text = "${duration.seconds}",
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.TimeSectionSpacing))
                 Text(
                     text = stringResource(R.string.voice_call_remaining_time),
                     style = MaterialTheme.typography.titleSmall,
                     color = Color.White.copy(0.8f),
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.TimeBlockSpacing))
                 Text(
                     text = "${remaining.seconds}",
                     style = MaterialTheme.typography.titleLarge,
@@ -413,7 +439,7 @@ private fun VoiceCallContent(
 
         Row(
             modifier =
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 50.dp),
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = UiConfigs.VoiceCall.Layout.BottomBarPadding),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             MenuItem(
