@@ -1499,27 +1499,34 @@ async def generate_chat_image(
     failure_reason = None
     failure_type = None
 
-    # 预先构建提示词，用于匹配已生成图片
+    enable_chat_image_match_fallback = (
+        global_config_loaded_from_config_yaml.agent.enable_chat_image_match_fallback
+    )
+
+    # 预先构建提示词，用于匹配已生成图片（可按配置禁用）
     current_prompt = None
-    try:
-        # 获取聊天历史以构建提示词
-        messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id,
-            limit=history_count
-            or global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
-            offset=0,
-        )
-        chat_history = messages_data.get("messages", [])
-        # 获取用户信息（与 generate_chat_image_with_gemini 保持一致）
-        user_info = await build_user_info_prompt_block(db, user_id) if user_id else ""
-        current_prompt = image_generation_service.build_image_prompt(
-            agent_data=agent_data,
-            chat_history=chat_history,
-            user_message=message_content,
-            user_info=user_info,
-        )
-    except Exception as e:
-        logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
+    if enable_chat_image_match_fallback:
+        try:
+            # 获取聊天历史以构建提示词
+            messages_data = chat_history_service.get_messages_paginated(
+                session_id=session_id,
+                limit=history_count
+                or global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
+                offset=0,
+            )
+            chat_history = messages_data.get("messages", [])
+            # 获取用户信息（与 generate_chat_image_with_gemini 保持一致）
+            user_info = (
+                await build_user_info_prompt_block(db, user_id) if user_id else ""
+            )
+            current_prompt = image_generation_service.build_image_prompt(
+                agent_data=agent_data,
+                chat_history=chat_history,
+                user_message=message_content,
+                user_info=user_info,
+            )
+        except Exception as e:
+            logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
 
     import time
 
@@ -1566,8 +1573,8 @@ async def generate_chat_image(
         error_message = str(e)
         is_network_error = _is_network_error(error_message, type(e).__name__)
 
-        # 所有生图失败都尝试匹配已生成图片（不需要判断原因）
-        if current_prompt:
+        # 若启用兜底，生图失败时尝试匹配已生成图片
+        if enable_chat_image_match_fallback and current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
                 agent_id=agent_id,
@@ -1647,8 +1654,8 @@ async def generate_chat_image(
         failure_type = type(e).__name__.lower()
         is_network_error = _is_network_error(error_message, failure_type)
 
-        # 所有生图失败都尝试匹配已生成图片（不需要判断原因）
-        if current_prompt:
+        # 若启用兜底，生图失败时尝试匹配已生成图片
+        if enable_chat_image_match_fallback and current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
                 agent_id=agent_id,

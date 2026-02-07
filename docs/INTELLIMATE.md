@@ -111,7 +111,7 @@ Click the **Me** or the **right-most** icon
 ### Chat & Media
 - **Voice playback issues**: Check system volume. If playback keeps failing, clear cache or restart the app; audio will re-cache automatically.
 - **Voice call screen stays blank**: Allow microphone permission when the app asks, or open Settings → Apps → IntelliMate → Permissions and enable Microphone.
-- **Image generation errors**: `IMAGE_GENERATION_LIMIT_REACHED` means you hit the quota. Try again later.
+- **Image generation errors**: `IMAGE_GENERATION_LIMIT_REACHED` means you hit the quota. Try again later. When a message-to-image request fails, the app does not substitute images from other chats; retry after fixing the cause.
 
 ### Subscription
 - **Charged but perks locked**:
