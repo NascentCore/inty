@@ -21,6 +21,12 @@ from app.schemas.chat import ChatImageGenerationResponse
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import chat_history_service, chat_service
 from app.services.cache_service import cache_service
+from app.services.image_generation_service import image_generation_service
+from app.services.image_transform_service import image_transform_service
+
+
+FALLBACK_PROMPT = "fallback prompt"
+FALLBACK_CDN_URL = "https://cdn.example.com/matched.jpg"
 
 
 @pytest.fixture
@@ -41,6 +47,142 @@ async def db_session():
         yield session
 
     await engine.dispose()
+
+
+async def _create_test_user(
+    db_session: AsyncSession, auth_type: AuthType = AuthType.PHONE
+) -> models.User:
+    user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+    test_user = models.User(
+        id=user_id,
+        readable_id=str(uuid.uuid4().int)[:8],
+        auth_type=auth_type,
+        nickname="Test User",
+        email="test@example.com" if auth_type != AuthType.GUEST else None,
+        system_language="en",
+    )
+    db_session.add(test_user)
+    await db_session.commit()
+    await db_session.refresh(test_user)
+    return test_user
+
+
+async def _create_test_agent(
+    db_session: AsyncSession, creator_id: str
+) -> models.Agent:
+    agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+    test_agent = models.Agent(
+        id=agent_id,
+        readable_id=str(uuid.uuid4().int)[:8],
+        name="Test Agent",
+        gender=Gender.FEMALE,
+        avatar="https://example.com/avatar.jpg",
+        background="https://example.com/background.jpg",
+        personality="温柔善良的女孩",
+        scenario="在咖啡厅里与用户聊天",
+        intro="一个可爱的AI助手",
+        opening="你好！",
+        visibility=AgentVisibility.PUBLIC,
+        status=AgentStatus.APPROVED,
+        creator_id=creator_id,
+    )
+    db_session.add(test_agent)
+    await db_session.commit()
+    await db_session.refresh(test_agent)
+    return test_agent
+
+
+async def _prepare_chat_image_context(db_session: AsyncSession):
+    test_user = await _create_test_user(db_session)
+    test_agent = await _create_test_agent(db_session, creator_id=test_user.id)
+    chat = await chat_service.get_or_create_chat_by_agent(
+        db=db_session, user_id=test_user.id, agent_id=test_agent.id
+    )
+    session_id = chat_service.generate_session_id(chat.id)
+    user_message = models.ChatHistory(
+        session_id=session_id,
+        message={"type": "human", "data": {"content": "你好"}},
+        meta_data={},
+    )
+    ai_message_content = "给我画一张你在咖啡厅的图片"
+    ai_message = models.ChatHistory(
+        session_id=session_id,
+        message={"type": "ai", "data": {"content": ai_message_content}},
+        meta_data={},
+    )
+    db_session.add(user_message)
+    db_session.add(ai_message)
+    await db_session.commit()
+    await db_session.refresh(ai_message)
+    return (
+        test_user,
+        test_agent,
+        chat,
+        user_message,
+        ai_message,
+        session_id,
+        ai_message_content,
+    )
+
+
+async def _cleanup_chat_image_context(
+    db_session: AsyncSession,
+    test_user: models.User,
+    test_agent: models.Agent,
+    chat: models.Chat,
+    user_message: models.ChatHistory,
+    ai_message: models.ChatHistory,
+):
+    for item in (ai_message, user_message, chat, test_agent, test_user):
+        await db_session.delete(item)
+    await db_session.commit()
+
+
+def _set_image_generation_failure_mocks(
+    monkeypatch: pytest.MonkeyPatch, find_similar_return: dict | None = None
+) -> AsyncMock:
+    mock_check_limit = AsyncMock(return_value=(True, 0, 10))
+    mock_generate = AsyncMock(side_effect=ValueError("gen failed"))
+    mock_find_similar = AsyncMock(return_value=find_similar_return)
+    monkeypatch.setattr(
+        chat_service.subscription_service, "check_image_gen_limit", mock_check_limit
+    )
+    monkeypatch.setattr(
+        image_generation_service, "generate_chat_image_with_gemini", mock_generate
+    )
+    monkeypatch.setattr(
+        image_generation_service, "find_most_similar_image", mock_find_similar
+    )
+    return mock_find_similar
+
+
+def _setup_fallback_dependencies(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_messages_paginated",
+        lambda *args, **kwargs: {"messages": [{"content": "hi"}]},
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "build_user_info_prompt_block",
+        AsyncMock(return_value="user_info"),
+    )
+    monkeypatch.setattr(
+        image_generation_service,
+        "build_image_prompt",
+        lambda *args, **kwargs: FALLBACK_PROMPT,
+    )
+    monkeypatch.setattr(
+        chat_service.subscription_service, "record_usage", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        image_transform_service, "transform_desktop", lambda url: FALLBACK_CDN_URL
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "update_message_metadata",
+        AsyncMock(return_value=None),
+    )
 
 
 class TestChatService:
@@ -198,6 +340,97 @@ class TestChatService:
         await db_session.delete(test_agent)
         await db_session.delete(test_user)
         await db_session.commit()
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_no_fallback_when_disabled(
+        self,
+        db_session: AsyncSession,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """禁用兜底时，生图失败不匹配历史图片"""
+        (
+            test_user,
+            test_agent,
+            chat,
+            user_message,
+            ai_message,
+            _,
+            _,
+        ) = await _prepare_chat_image_context(db_session)
+        monkeypatch.setattr(
+            global_config_loaded_from_config_yaml.agent,
+            "enable_chat_image_match_fallback",
+            False,
+        )
+        mock_find_similar = _set_image_generation_failure_mocks(
+            monkeypatch, find_similar_return={"image_url": "gs://dummy"}
+        )
+
+        with pytest.raises(ValueError):
+            await chat_service.generate_chat_image(
+                db=db_session,
+                agent_id=test_agent.id,
+                user_id=test_user.id,
+                message_id=ai_message.id,
+                model="gemini",
+            )
+
+        mock_find_similar.assert_not_called()
+        await _cleanup_chat_image_context(
+            db_session, test_user, test_agent, chat, user_message, ai_message
+        )
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_fallback_match(
+        self,
+        db_session: AsyncSession,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """开启兜底时，生图失败返回匹配的历史图片"""
+        (
+            test_user,
+            test_agent,
+            chat,
+            user_message,
+            ai_message,
+            _,
+            _,
+        ) = await _prepare_chat_image_context(db_session)
+        monkeypatch.setattr(
+            global_config_loaded_from_config_yaml.agent,
+            "enable_chat_image_match_fallback",
+            True,
+        )
+        _setup_fallback_dependencies(monkeypatch)
+        mock_find_similar = _set_image_generation_failure_mocks(
+            monkeypatch,
+            find_similar_return={
+                "user_id": "other_user",
+                "image_url": "gs://bucket/matched.jpg",
+                "width": 512,
+                "height": 512,
+                "format": "jpeg",
+                "similarity": 0.92,
+            },
+        )
+
+        result = await chat_service.generate_chat_image(
+            db=db_session,
+            agent_id=test_agent.id,
+            user_id=test_user.id,
+            message_id=ai_message.id,
+            model="gemini",
+        )
+
+        assert isinstance(result, ChatImageGenerationResponse)
+        assert result.image_url == FALLBACK_CDN_URL
+        assert result.image_metadata["is_matched"] is True
+        assert result.image_metadata["similarity"] == 0.92
+        assert result.prompt == FALLBACK_PROMPT
+        mock_find_similar.assert_called_once()
+        await _cleanup_chat_image_context(
+            db_session, test_user, test_agent, chat, user_message, ai_message
+        )
 
     @pytest.mark.asyncio
     @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
