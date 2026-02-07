@@ -266,6 +266,17 @@ fun VoiceCallScreen(
         } else {
             if (!audioPermissionState.status.shouldShowRationale) {
                 LaunchedEffect(Unit) { audioPermissionState.launchPermissionRequest() }
+                Column(
+                    modifier = Modifier.padding(contentPadding).fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = stringResource(R.string.voice_call_requesting_permission),
+                        textAlign = TextAlign.Center,
+                        color = Color.White,
+                    )
+                }
             } else {
                 Column(
                     modifier = Modifier.padding(contentPadding).fillMaxSize(),
