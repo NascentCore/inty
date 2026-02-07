@@ -5,9 +5,11 @@ on:
     branches:
       - main
     paths:
+      # 仅当以下路径有变更时触发；PR 仅含 markdown 等未列路径时不会触发
       # 后端代码
       - "app/**/*.py"
       - "alembic/**/*.py"
+      - "scripts/**/*.py"
       # 开发环境配置文件
       - "devops/config.yaml.dev"
       - "devops/config.yaml.prod"
