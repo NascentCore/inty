@@ -12,6 +12,7 @@ import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.NetworkErrorHandler
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -122,7 +123,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 .call(agentId)
                 .catch { error ->
                     // #region agent log（上报 Crashlytics）
-                    com.ai.intellimate.utils.NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                    NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
                         "C",
                         "VoiceCallViewModel.kt:call.catch",
                         error.message,

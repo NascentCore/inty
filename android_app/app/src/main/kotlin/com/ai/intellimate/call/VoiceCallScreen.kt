@@ -89,6 +89,7 @@ import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
+import com.ai.intellimate.utils.NetworkErrorHandler
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -219,7 +220,7 @@ fun VoiceCallScreen(
                         }
                         else -> {
                             // #region agent log（上报 Crashlytics）
-                            com.ai.intellimate.utils.NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                            NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
                                 "D",
                                 "VoiceCallScreen.kt:error Toast",
                                 it.second,
