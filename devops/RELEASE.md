@@ -50,7 +50,7 @@ git tag $GIT_TAG && git push --tags
 - **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
 - **镜像名称**：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
 - **容器名称**：`inty-push-worker-{environment}`（如 `inty-push-worker-dev`、`inty-push-worker-prod`）
-- **Dockerfile**：`docker/Dockerfile.push-worker`
+- **Dockerfile**：`devops/docker/Dockerfile.push-worker`
 - **启动脚本**：`start_push_worker.sh`
 - **配置文件**：使用与后端服务一致的 `devops/config.yaml.{environment}`（构建期注入进镜像，见下文「配置文件如何进入 Docker 镜像」）
 - **挂载卷**：
@@ -112,8 +112,8 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 在 GitHub Actions 部署工作流中，通过 `CONFIG_FILE` build-arg 选择并注入配置：
 
 - **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
-- **Backend Dockerfile**：`docker/Dockerfile`
-- **Push worker Dockerfile**：`docker/Dockerfile.push-worker`
+- **Backend Dockerfile**：`devops/docker/Dockerfile`
+- **Push worker Dockerfile**：`devops/docker/Dockerfile.push-worker`
 
 工作流会按环境（`dev`/`prod`）计算出：
 

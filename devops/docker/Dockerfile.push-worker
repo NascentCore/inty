@@ -1,3 +1,4 @@
+# CREATED_BY_AGENT
 # 第一阶段：构建前端（推送服务不需要前端，但保留以保持一致性）
 FROM node:18-slim AS frontend-builder
 

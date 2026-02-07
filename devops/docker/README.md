@@ -1,4 +1,5 @@
 # Docker 构建文件
+<!-- CREATED_BY_AGENT -->
 
 本目录包含用于构建 Inty 后端服务的 Dockerfile。
 
@@ -22,7 +23,7 @@
 # 从项目根目录构建
 docker build \
   --build-arg CONFIG_FILE=devops/config.yaml.prod \
-  -f docker/Dockerfile \
+  -f devops/docker/Dockerfile \
   -t inty-backend:latest \
   .
 ```
@@ -52,7 +53,7 @@ docker run -d \
 # 从项目根目录构建
 docker build \
   --build-arg CONFIG_FILE=devops/config.yaml.prod \
-  -f docker/Dockerfile.push-worker \
+  -f devops/docker/Dockerfile.push-worker \
   -t inty-push-worker:latest \
   .
 ```
@@ -69,15 +70,15 @@ docker run -d \
 
 ## 构建上下文
 
-**重要**：所有 Dockerfile 的构建上下文应为**项目根目录**，而不是 `docker/` 目录。构建时使用 `-f` 参数指定 Dockerfile 路径。
+**重要**：所有 Dockerfile 的构建上下文应为**项目根目录**，而不是 `devops/docker/` 目录。构建时使用 `-f` 参数指定 Dockerfile 路径。
 
 ```bash
 # 正确：从项目根目录构建
 cd /path/to/inty
-docker build -f docker/Dockerfile -t inty-backend .
+docker build -f devops/docker/Dockerfile -t inty-backend .
 
-# 错误：从 docker/ 目录构建
-cd /path/to/inty/docker
+# 错误：从 devops/docker/ 目录构建
+cd /path/to/inty/devops/docker
 docker build -f Dockerfile -t inty-backend .
 ```
 

@@ -10,7 +10,7 @@ on:
       - "app/**/*.py"
       - "alembic/**/*.py"
       - "scripts/**/*.py"
-      - "docker/Dockerfile.push-worker"
+      - "devops/docker/Dockerfile.push-worker"
       - "start_push_worker.sh"
       - "devops/config.yaml.dev"
       - "devops/config.yaml.prod"
@@ -70,7 +70,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./docker/Dockerfile.push-worker
+          file: ./devops/docker/Dockerfile.push-worker
           push: true
           tags: ${{ env.INTY_PUSH_WORKER_IMAGE }}:${{ steps.prep.outputs.image_tag }}
           cache-from: type=gha
