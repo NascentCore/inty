@@ -1,5 +1,5 @@
 # CREATED_BY_AGENT
-name: Release - 构建部署 Inty Push Worker
+name: Release - Inty Push Worker
 
 on:
   push:
