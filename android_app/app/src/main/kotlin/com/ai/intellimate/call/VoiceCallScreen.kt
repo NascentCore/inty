@@ -326,12 +326,14 @@ private fun VoiceCallContent(
     modifier: Modifier = Modifier,
 ) {
     val isSpeaking = isSpeakingFromAudio || uiState.callState == CallStatus.SPEAKING
-    val statusTextRes =
+    val statusText: String? =
         when {
-            isSpeaking -> R.string.voice_call_ai_status_speaking
-            uiState.callState == CallStatus.LISTENING -> R.string.voice_call_ai_status_listening
-            else -> R.string.voice_call_ai_status_listening
+            isSpeaking -> null
+            uiState.callState == CallStatus.LISTENING -> stringResource(R.string.voice_call_ai_status_listening)
+            uiState.connectionState == ConnectionState.CONNECTED -> stringResource(R.string.voice_call_ai_status_listening)
+            else -> uiState.connectionState.textRes?.let { stringResource(it) }
         }
+    val promptText: String? = if (isSpeaking) stringResource(R.string.voice_call_tap_to_interrupt_ai) else null
 
     Box(modifier = modifier) {
         Column(
@@ -371,20 +373,11 @@ private fun VoiceCallContent(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // 连接状态
-            uiState.connectionState.textRes?.let {
-                Text(
-                    text = stringResource(it),
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
             Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.StatusToInterruptSpacing))
 
             VoiceCallInterruptButton(
-                statusText = stringResource(statusTextRes),
-                promptText = stringResource(R.string.voice_call_tap_to_interrupt_ai),
+                statusText = statusText,
+                promptText = promptText,
                 isSpeaking = isSpeaking,
                 onInterrupt = onInterrupt,
             )
@@ -463,14 +456,13 @@ private fun VoiceCallContent(
  * 语音通话页“打断 AI”圆形按钮。
  *
  * 使用场景：语音通话中展示 AI 当前状态，并提供用户打断 AI 的快捷操作入口。
- * 预期视觉效果：居中大圆形按钮，顶部展示 listening/speaking 状态，底部展示打断提示；
- * Speaking 状态时，按钮外侧出现柔和波浪动画以提示 AI 正在讲话。
- * 可配置项：状态文本、提示文本、是否在讲话、按钮尺寸、波浪尺寸、点击回调。
+ * 预期视觉效果：Listening 时仅展示状态文案；Speaking 时仅展示“tap to interrupt”提示，按钮外侧有波浪动画。
+ * 可配置项：状态文本（可选）、提示文本（可选）、是否在讲话、按钮尺寸、波浪尺寸、点击回调。
  */
 @Composable
 private fun VoiceCallInterruptButton(
-    statusText: String,
-    promptText: String,
+    statusText: String?,
+    promptText: String?,
     isSpeaking: Boolean,
     onInterrupt: () -> Unit,
     modifier: Modifier = Modifier,
@@ -511,27 +503,33 @@ private fun VoiceCallInterruptButton(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    text = statusText,
-                    color = statusColor,
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize = UiConfigs.Typography.Support,
-                            lineHeight = UiConfigs.LineHeight.Support,
-                        ),
-                    maxLines = 1,
-                )
-                Spacer(Modifier.height(UiConfigs.VoiceCall.InterruptButton.TextSpacing))
-                Text(
-                    text = promptText,
-                    color = Color.White,
-                    style =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = UiConfigs.Typography.Body,
-                        ),
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                )
+                if (statusText != null) {
+                    Text(
+                        text = statusText,
+                        color = statusColor,
+                        style =
+                            MaterialTheme.typography.labelSmall.copy(
+                                fontSize = UiConfigs.Typography.Support,
+                                lineHeight = UiConfigs.LineHeight.Support,
+                            ),
+                        maxLines = 1,
+                    )
+                    if (promptText != null) {
+                        Spacer(Modifier.height(UiConfigs.VoiceCall.InterruptButton.TextSpacing))
+                    }
+                }
+                if (promptText != null) {
+                    Text(
+                        text = promptText,
+                        color = Color.White,
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = UiConfigs.Typography.Body,
+                            ),
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                    )
+                }
             }
         }
     }
