@@ -2,6 +2,7 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import com.ai.intellimate.utils.NetworkErrorHandler
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -157,8 +158,12 @@ fun ImagePickerBottomSheet(
                                 )
                                 .also { cameraLauncher.launch(it) }
                     } catch (error: Throwable) {
+                        // #region agent log
+                        val msg = error.localizedMessage.orEmpty()
+                        NetworkErrorHandler.writeTlsParseDebugLogIfRelevant("G", "ImagePickerBottomSheet.kt:camera", msg)
+                        // #endregion
                         LogUtils.e(error.localizedMessage)
-                        ToastUtils.showShort(error.localizedMessage.orEmpty())
+                        ToastUtils.showShort(msg)
                     }
                 },
             )

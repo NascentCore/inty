@@ -3,6 +3,7 @@ package com.ai.intellimate.chat.ui
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
+import com.ai.intellimate.utils.NetworkErrorHandler
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -156,8 +157,12 @@ fun ImagePickItem(
                                     )
                                     .also { cameraLauncher.launch(it) }
                         } catch (error: Throwable) {
+                            // #region agent log
+                            val msg = error.localizedMessage.orEmpty()
+                            NetworkErrorHandler.writeTlsParseDebugLogIfRelevant("H", "ChatMessageItems.kt:camera", msg)
+                            // #endregion
                             LogUtils.e(error.localizedMessage)
-                            ToastUtils.showShort(error.localizedMessage.orEmpty())
+                            ToastUtils.showShort(msg)
                         }
                     },
                     colors =
