@@ -2,6 +2,10 @@
 
 本 README 仅作为 `devops/` 目录的索引与文件概述；具体操作流程请查看相应专题文档。
 
+## 链接
+
+[prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
+
 ## 常用文档入口
 
 - 发布流程：`RELEASE.md`
