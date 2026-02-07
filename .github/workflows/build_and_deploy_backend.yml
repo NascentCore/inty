@@ -67,10 +67,12 @@ jobs:
           echo "environment=${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
           echo "image_tag=${{ github.ref_name }}-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
 
-      - name: Check prep output
+      - name: Write step summary
         run: |
-          echo "environment=${{ steps.prep.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "image_tag=${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Build and deploy backend" >> $GITHUB_STEP_SUMMARY
+          echo "GitHub ref: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "Deployed to ${{ steps.prep.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "Backend image: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/checkout@v4
         with:
