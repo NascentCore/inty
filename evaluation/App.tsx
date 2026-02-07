@@ -419,7 +419,9 @@ const AppContent: React.FC = () => {
           <div
             style={{
               flex: 1,
-              overflow: "auto",
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: "hidden",
               paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
             }}
           >
