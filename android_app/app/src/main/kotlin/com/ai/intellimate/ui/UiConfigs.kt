@@ -295,6 +295,96 @@ object UiConfigs {
 
         /** 队列大小警告阈值（百分比） - 当队列使用率超过此值时记录警告日志 */
         const val QUEUE_WARNING_THRESHOLD = 0.8f // 80%
+
+        /** Speaking 状态的最低保留时长（毫秒），用于补偿状态与音频流的不同步 */
+        const val SPEAKING_INDICATOR_HOLD_MS = 1200L
+
+        /** 播放队列排空后，再保留 speaking 状态的缓冲时间（毫秒），使切到 listening 更自然 */
+        const val SPEAKING_INDICATOR_TAIL_MS = 300L
+
+        /** 语音通话打断按钮配置 */
+        object InterruptButton {
+            /** 按钮直径 */
+            val Size = 180.dp
+
+            /** 波浪动画外圈额外尺寸 */
+            val WaveExtraSize = 40.dp
+
+            /** 波浪动画整体尺寸 */
+            val WaveSize = Size + WaveExtraSize
+
+            /** 按钮内部内容内边距 */
+            val ContentPadding = 16.dp
+
+            /** 状态文本与提示文本间距 */
+            val TextSpacing = UiConfigs.Spacing.Tiny
+
+            /** 按钮边框宽度 */
+            val BorderWidth = 1.dp
+
+            /** 按钮背景透明度 */
+            const val BackgroundAlpha = 0.18f
+
+            /** 按钮边框透明度 */
+            const val BorderAlpha = 0.35f
+
+            /** 状态文本透明度 */
+            const val StatusTextAlpha = 0.8f
+
+            /** 波浪动画基础透明度 */
+            const val WaveAlpha = 0.35f
+
+            /** 波浪线宽 */
+            val WaveStrokeWidth = 2.dp
+
+            /** 波浪数量 */
+            const val WaveCount = 3
+
+            /** 波浪动画时长（毫秒） */
+            const val WaveDurationMs = 1500
+
+            /** 波浪动画错开间隔（毫秒） */
+            const val WaveDelayMs = 300
+
+            /** 波浪最小缩放 */
+            const val WaveStartScale = 0.85f
+
+            /** 波浪最大缩放 */
+            const val WaveEndScale = 1.25f
+        }
+
+        /** 语音通话布局间距配置 */
+        object Layout {
+            /** 顶部占位高度（头像上方） */
+            val TopSpacerHeight = 160.dp
+
+            /** 头像直径 */
+            val AvatarSize = 120.dp
+
+            /** 头像边框宽度 */
+            val AvatarBorderWidth = 1.dp
+
+            /** 头像与名字之间的间距 */
+            val AvatarToNameSpacing = 16.dp
+
+            /** 名字与打断按钮区域之间的间距 */
+            val NameToStatusSpacing = 8.dp
+
+            /** 连接状态与打断按钮之间的间距 */
+            val StatusToInterruptSpacing = UiConfigs.Spacing.Large
+
+            /** 打断按钮与通话时长之间的间距 */
+            val InterruptToTimeSpacing = UiConfigs.Spacing.HeroGap
+
+            /** 通话时长区块内小间距（标签与数值之间等） */
+            val TimeBlockSpacing = 6.dp
+
+            /** 通话时长区块内大间距（时长与剩余时间之间） */
+            val TimeSectionSpacing = 16.dp
+
+            /** 底部操作栏与屏幕底边的间距 */
+            val BottomBarPadding = 50.dp
+        }
     }
 
     /** Explore 页面配置 - 适用于发现页面的分页、预加载、滚动行为等设置 */

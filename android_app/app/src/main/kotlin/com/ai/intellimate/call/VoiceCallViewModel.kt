@@ -149,7 +149,11 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             }
                         }
 
-                        CallType.STATUS -> {}
+                        CallType.STATUS -> {
+                            packet.statusEnum?.let { status ->
+                                _uiState.update { it.copy(callState = status) }
+                            }
+                        }
 
                         CallType.SESSION_INFO -> {
                             _uiState.update {
@@ -169,6 +173,17 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         else -> {}
                     }
                 }
+        }
+    }
+
+    fun interruptSpeaking() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.sendActivityStart()
+                repository.sendActivityEnd()
+            } catch (e: Exception) {
+                LogUtils.e("发送打断信号失败: ${e.message}")
+            }
         }
     }
 

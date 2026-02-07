@@ -49,6 +49,12 @@ enum class CallType {
     /** 文本输入 */
     @SerialName("text") TEXT,
 
+    /** 用户活动开始（用于打断/提示） */
+    @SerialName("activity_start") ACTIVITY_START,
+
+    /** 用户活动结束（用于打断/提示） */
+    @SerialName("activity_end") ACTIVITY_END,
+
     /** 结束通话 */
     @SerialName("end") END,
 

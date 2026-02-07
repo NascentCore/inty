@@ -84,12 +84,14 @@ Click the **Me** or the **right-most** icon
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
+
 - *Screenshot placeholder:*
   
   ![Chat screenshot placeholder](<ADD_CHAT_SCREENSHOT_URL_HERE>)
 
+**Voice call** (from Chat): Voice calls require microphone permission. The centre circle shows connection status (e.g. Connecting / Connected), **listening** when the AI is waiting for you, or **speaking** when the AI is talking—then you see “tap to interrupt AI” and a wave animation; tap the circle to interrupt and speak. Use mute and end-call as needed. If the voice call screen stays blank, grant microphone permission when prompted or in system Settings → App → IntelliMate → Permissions.
+
 ### 3. Agents
-- Follow/unfollow directly on Explore cards.
 - Creation/editing supports uploads plus AI-generated art; failures surface clear error states (`AvatarManager`).
 - Agent detail pages show AI-Generated media pulled from recent chats, with explicit labeling.
 
@@ -111,6 +113,7 @@ Click the **Me** or the **right-most** icon
 
 ### Chat & Media
 - **Voice playback issues**: Check system volume. If playback keeps failing, clear cache or restart the app; audio will re-cache automatically.
+- **Voice call screen stays blank**: Allow microphone permission when the app asks, or open Settings → Apps → IntelliMate → Permissions and enable Microphone.
 - **Image generation errors**: `IMAGE_GENERATION_LIMIT_REACHED` means you hit the quota. Try again later.
 
 ### Subscription
