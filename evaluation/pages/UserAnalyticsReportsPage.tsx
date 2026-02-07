@@ -602,7 +602,9 @@ function StatsCards({ stats }: { stats: UserAnalyticsStatsResponse }) {
 export const UserAnalyticsReportsPage: React.FC = () => {
   const [reportType, setReportType] = useState<ReportType>("daily");
   const [reports, setReports] = useState<UserAnalyticsReportItem[]>([]);
-  const [usageReports, setUsageReports] = useState<UserAnalyticsReportItem[]>([]);
+  const [usageReports, setUsageReports] = useState<UserAnalyticsReportItem[]>(
+    [],
+  );
   const [loadingReports, setLoadingReports] = useState(false);
   const [loadingUsage, setLoadingUsage] = useState(false);
   const requestIdRef = useRef(0);
@@ -821,12 +823,11 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       )}
       <Spin spinning={loadingReports}>
         {sortedReports.length === 0 ? (
-          loadingReports ? null : <Empty description="暂无预计算报告数据" />
+          loadingReports ? null : (
+            <Empty description="暂无预计算报告数据" />
+          )
         ) : (
-          <Collapse
-            items={items}
-            defaultActiveKey={sortedReports[0]?.id}
-          />
+          <Collapse items={items} defaultActiveKey={sortedReports[0]?.id} />
         )}
       </Spin>
     </div>

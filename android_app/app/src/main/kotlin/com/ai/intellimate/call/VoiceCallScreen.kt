@@ -125,7 +125,8 @@ fun VoiceCallScreen(
         if (audioPermissionState.status.isGranted) {
             val uiState by viewModel.uiState.collectAsState()
             val audioStreamPlayer = AudioStreamPlayer.getInstance()
-            val hasPendingPlaybackData by audioStreamPlayer.hasPendingPlaybackData.collectAsState(initial = false)
+            val hasPendingPlaybackData by
+                audioStreamPlayer.hasPendingPlaybackData.collectAsState(initial = false)
             val audioRecordManager = AudioRecordManager.getInstance(context)
             var error by remember { mutableStateOf<Pair<IntyErrorCode, String>?>(null) }
             val isSpeakingFromAudio =
@@ -307,8 +308,8 @@ fun VoiceCallScreen(
  * 根据待播队列与最近收到音频的时间，推导「来自音频的 speaking」状态。
  *
  * 使用场景：语音通话中 UI 需要在不依赖服务端 STATUS 的情况下，用本地播放缓冲与 HOLD/TAIL 时间保持 speaking 显示。
- * 入参：hasPendingPlaybackData（播放器队列是否非空）、音频流、以及收到每帧时调用的 onAudioData。
- * 返回：是否应显示为 speaking（true 时与 callState 合并后显示“tap to interrupt”等）。
+ * 入参：hasPendingPlaybackData（播放器队列是否非空）、音频流、以及收到每帧时调用的 onAudioData。 返回：是否应显示为 speaking（true 时与
+ * callState 合并后显示“tap to interrupt”等）。
  */
 @Composable
 private fun rememberVoiceCallSpeakingFromAudio(
@@ -359,11 +360,14 @@ private fun VoiceCallContent(
     val statusText: String? =
         when {
             isSpeaking -> null
-            uiState.callState == CallStatus.LISTENING -> stringResource(R.string.voice_call_ai_status_listening)
-            uiState.connectionState == ConnectionState.CONNECTED -> stringResource(R.string.voice_call_ai_status_listening)
+            uiState.callState == CallStatus.LISTENING ->
+                stringResource(R.string.voice_call_ai_status_listening)
+            uiState.connectionState == ConnectionState.CONNECTED ->
+                stringResource(R.string.voice_call_ai_status_listening)
             else -> uiState.connectionState.textRes?.let { stringResource(it) }
         }
-    val promptText: String? = if (isSpeaking) stringResource(R.string.voice_call_tap_to_interrupt_ai) else null
+    val promptText: String? =
+        if (isSpeaking) stringResource(R.string.voice_call_tap_to_interrupt_ai) else null
 
     Box(modifier = modifier) {
         Column(
@@ -447,7 +451,9 @@ private fun VoiceCallContent(
 
         Row(
             modifier =
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = UiConfigs.VoiceCall.Layout.BottomBarPadding),
+                Modifier.align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = UiConfigs.VoiceCall.Layout.BottomBarPadding),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             MenuItem(
@@ -489,9 +495,8 @@ private fun VoiceCallContent(
 /**
  * 语音通话页“打断 AI”圆形按钮。
  *
- * 使用场景：语音通话中展示 AI 当前状态，并提供用户打断 AI 的快捷操作入口。
- * 预期视觉效果：Listening 时仅展示状态文案；Speaking 时仅展示“tap to interrupt”提示，按钮外侧有波浪动画。
- * 可配置项：状态文本（可选）、提示文本（可选）、是否在讲话、按钮尺寸、波浪尺寸、点击回调。
+ * 使用场景：语音通话中展示 AI 当前状态，并提供用户打断 AI 的快捷操作入口。 预期视觉效果：Listening 时仅展示状态文案；Speaking 时仅展示“tap to
+ * interrupt”提示，按钮外侧有波浪动画。 可配置项：状态文本（可选）、提示文本（可选）、是否在讲话、按钮尺寸、波浪尺寸、点击回调。
  */
 @Composable
 private fun VoiceCallInterruptButton(
@@ -508,10 +513,7 @@ private fun VoiceCallInterruptButton(
     val borderColor = Color.White.copy(alpha = UiConfigs.VoiceCall.InterruptButton.BorderAlpha)
     val statusColor = Color.White.copy(alpha = UiConfigs.VoiceCall.InterruptButton.StatusTextAlpha)
 
-    Box(
-        modifier = modifier.size(waveSize),
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier = modifier.size(waveSize), contentAlignment = Alignment.Center) {
         if (isSpeaking) {
             VoiceCallSpeakingWaveAnimation(
                 modifier = Modifier.size(waveSize),
@@ -558,7 +560,7 @@ private fun VoiceCallInterruptButton(
                         color = Color.White,
                         style =
                             MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = UiConfigs.Typography.Body,
+                                fontSize = UiConfigs.Typography.Body
                             ),
                         textAlign = TextAlign.Center,
                         maxLines = 2,
@@ -572,8 +574,7 @@ private fun VoiceCallInterruptButton(
 /**
  * 语音通话中 AI 讲话时的波浪动画。
  *
- * 使用场景：仅在 Speaking 状态显示，用于强化 AI 正在讲话的反馈。
- * 预期视觉效果：按钮外侧出现多层扩散的圆形波纹，低频、柔和、循环播放。
+ * 使用场景：仅在 Speaking 状态显示，用于强化 AI 正在讲话的反馈。 预期视觉效果：按钮外侧出现多层扩散的圆形波纹，低频、柔和、循环播放。
  * 可配置项：波浪颜色、数量、时长、错开间隔、缩放范围、线宽。
  */
 @Composable
@@ -608,8 +609,7 @@ private fun VoiceCallSpeakingWaveAnimation(
         val baseRadius = size.minDimension / 2f / maxScale
         waveScales.forEach { scaleState ->
             val scale = scaleState.value
-            val progress =
-                ((scale - minScale) / (maxScale - minScale)).coerceIn(0f, 1f)
+            val progress = ((scale - minScale) / (maxScale - minScale)).coerceIn(0f, 1f)
             val alpha = baseAlpha * (1f - progress)
             drawCircle(
                 color = waveColor.copy(alpha = alpha),

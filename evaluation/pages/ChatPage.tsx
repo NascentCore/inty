@@ -3,7 +3,13 @@
  * 提供与单个智能体的实时聊天功能
  */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   Layout,
   Card,

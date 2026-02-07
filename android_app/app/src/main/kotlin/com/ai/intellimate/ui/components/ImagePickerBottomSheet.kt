@@ -2,7 +2,6 @@ package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
-import com.ai.intellimate.utils.NetworkErrorHandler
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.NetworkErrorHandler
 import java.io.File
 import kotlin.io.path.createTempFile
 import kotlinx.coroutines.launch
@@ -160,7 +160,11 @@ fun ImagePickerBottomSheet(
                     } catch (error: Throwable) {
                         // #region agent log
                         val msg = error.localizedMessage.orEmpty()
-                        NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant("G", "ImagePickerBottomSheet.kt:camera", msg)
+                        NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                            "G",
+                            "ImagePickerBottomSheet.kt:camera",
+                            msg,
+                        )
                         // #endregion
                         LogUtils.e(error.localizedMessage)
                         ToastUtils.showShort(msg)

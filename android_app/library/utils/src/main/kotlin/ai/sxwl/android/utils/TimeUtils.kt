@@ -107,9 +107,7 @@ object TimeUtils {
                 val instant = Instant.parse(utcString)
                 val systemZone = ZoneId.systemDefault()
                 val localDateTime = instant.atZone(systemZone)
-                localDateTime.format(
-                    DateTimeFormatter.ofPattern("MM/dd/yyyy h:mm a", Locale.US),
-                )
+                localDateTime.format(DateTimeFormatter.ofPattern("MM/dd/yyyy h:mm a", Locale.US))
             }
             .getOrNull() ?: ""
     }

@@ -117,9 +117,7 @@ def _build_user_time_context_prompt(
 
     utc_offset_minutes = user_time_context.get("utc_offset_minutes")
     if isinstance(utc_offset_minutes, int):
-        lines.append(
-            f"- UTC offset: {_format_utc_offset_minutes(utc_offset_minutes)}"
-        )
+        lines.append(f"- UTC offset: {_format_utc_offset_minutes(utc_offset_minutes)}")
 
     if len(lines) == 1:
         return None
