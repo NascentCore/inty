@@ -293,7 +293,7 @@ private fun ProfileHeader(
     var showSubscribeDialog by remember { mutableStateOf(false) }
     var showChangeLogDialog by remember { mutableStateOf(false) }
     var changeLogs by remember { mutableStateOf<List<ChangeLogEntry>>(emptyList()) }
-    var isChangeLogLoading by remember { mutableStateOf(false) }
+    var isChangeLogLoading by remember { mutableStateOf(true) }
     var changeLogsLoaded by remember { mutableStateOf(false) }
 
     if (showSubscribeDialog) {
