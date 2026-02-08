@@ -4,6 +4,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildDailyUsageSeries,
+  buildDailyUsageTickText,
   sortReportsByDateDesc,
 } from "../utils/userAnalyticsReports";
 import type {
@@ -97,6 +98,21 @@ describe("buildDailyUsageSeries", () => {
       buildReport({ report_type: "weekly", report_date: "2026-W05" }),
     ]);
     expect(series).toBeNull();
+  });
+});
+
+describe("buildDailyUsageTickText", () => {
+  it("为日期补充周1-7标注", () => {
+    const tickText = buildDailyUsageTickText([
+      "2026-02-01",
+      "2026-02-02",
+    ]);
+    expect(tickText).toEqual(["2026-02-01\n周7", "2026-02-02\n周1"]);
+  });
+
+  it("非 ISO 日期保持原样", () => {
+    const tickText = buildDailyUsageTickText(["2026-W05"]);
+    expect(tickText).toEqual(["2026-W05"]);
   });
 });
 
