@@ -114,6 +114,11 @@ describe("buildDailyUsageTickText", () => {
     const tickText = buildDailyUsageTickText(["2026-W05"]);
     expect(tickText).toEqual(["2026-W05"]);
   });
+
+  it("非法日期保持原样", () => {
+    const tickText = buildDailyUsageTickText(["2026-02-30"]);
+    expect(tickText).toEqual(["2026-02-30"]);
+  });
 });
 
 describe("sortReportsByDateDesc", () => {

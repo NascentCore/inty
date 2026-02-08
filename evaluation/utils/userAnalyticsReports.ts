@@ -32,6 +32,26 @@ const WEEKDAY_LABELS = [
   "周6",
 ] as const;
 
+const toValidUtcDate = (
+  year: number,
+  month: number,
+  day: number,
+): Date | null => {
+  const utcTime = Date.UTC(year, month - 1, day);
+  if (Number.isNaN(utcTime)) {
+    return null;
+  }
+  const dateValue = new Date(utcTime);
+  if (
+    dateValue.getUTCFullYear() !== year ||
+    dateValue.getUTCMonth() !== month - 1 ||
+    dateValue.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return dateValue;
+};
+
 export type DailyUsageMetricKey = (typeof DAILY_USAGE_METRICS)[number]["key"];
 
 export interface DailyUsageSeries {
@@ -73,11 +93,11 @@ const formatDateWithWeekday = (date: string): string => {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  const dateValue = new Date(year, month - 1, day);
-  if (Number.isNaN(dateValue.getTime())) {
+  const dateValue = toValidUtcDate(year, month, day);
+  if (!dateValue) {
     return date;
   }
-  const weekdayLabel = WEEKDAY_LABELS[dateValue.getDay()] ?? "";
+  const weekdayLabel = WEEKDAY_LABELS[dateValue.getUTCDay()] ?? "";
   if (!weekdayLabel) {
     return date;
   }
