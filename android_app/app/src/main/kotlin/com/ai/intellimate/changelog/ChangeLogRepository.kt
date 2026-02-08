@@ -25,10 +25,10 @@ object ChangeLogRepository {
     private val adapter = moshi.adapter(ChangeLogFile::class.java)
 
     @Volatile private var cachedLogs: List<ChangeLogEntry> = emptyList()
+    @Volatile private var hasLoaded: Boolean = false
 
     suspend fun getChangeLogs(context: Context): List<ChangeLogEntry> {
-        val current = cachedLogs
-        if (current.isNotEmpty()) return current
+        if (hasLoaded) return cachedLogs
         return loadChangeLogs(context)
     }
 
@@ -36,6 +36,7 @@ object ChangeLogRepository {
         return withContext(Dispatchers.IO) {
             val loaded = readChangeLogs(context)
             cachedLogs = loaded
+            hasLoaded = true
             loaded
         }
     }

@@ -294,6 +294,7 @@ private fun ProfileHeader(
     var showChangeLogDialog by remember { mutableStateOf(false) }
     var changeLogs by remember { mutableStateOf<List<ChangeLogEntry>>(emptyList()) }
     var isChangeLogLoading by remember { mutableStateOf(false) }
+    var changeLogsLoaded by remember { mutableStateOf(false) }
 
     if (showSubscribeDialog) {
         val dialogData =
@@ -322,10 +323,11 @@ private fun ProfileHeader(
     }
 
     LaunchedEffect(showChangeLogDialog) {
-        if (!showChangeLogDialog || changeLogs.isNotEmpty()) return@LaunchedEffect
+        if (!showChangeLogDialog || changeLogsLoaded) return@LaunchedEffect
         isChangeLogLoading = true
         changeLogs = ChangeLogRepository.getChangeLogs(context)
         isChangeLogLoading = false
+        changeLogsLoaded = true
     }
 
     if (showChangeLogDialog) {
