@@ -42,6 +42,7 @@ import type {
 import {
   DAILY_USAGE_METRICS,
   buildDailyUsageSeries,
+  buildDailyUsageTickText,
   sortReportsByDateDesc,
 } from "../utils/userAnalyticsReports";
 
@@ -762,6 +763,12 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       line: { color: metric.color },
     }));
   }, [dailyUsageSeries]);
+  const dailyUsageXAxisTickText = useMemo(() => {
+    if (!dailyUsageSeries) {
+      return [];
+    }
+    return buildDailyUsageTickText(dailyUsageSeries.dates);
+  }, [dailyUsageSeries]);
 
   const items = useMemo(
     () =>
@@ -807,7 +814,12 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                 layout={{
                   height: USAGE_CHART_HEIGHT,
                   hovermode: "x unified",
-                  xaxis: { title: "日期" },
+                  xaxis: {
+                    title: "日期",
+                    tickmode: "array",
+                    tickvals: dailyUsageSeries.dates,
+                    ticktext: dailyUsageXAxisTickText,
+                  },
                   yaxis: { title: "用量" },
                   legend: { orientation: "h" },
                 }}
