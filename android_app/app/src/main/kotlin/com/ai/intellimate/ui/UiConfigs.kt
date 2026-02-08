@@ -73,6 +73,48 @@ object UiConfigs {
         val VipHeroPlaceholder = 170.dp
     }
 
+    /** 4/8 栅格间距 - 全部为 4pt 的整数倍，便于统一节奏 */
+    object SpacingGrid {
+        /** 4pt */
+        val Space4 = 4.dp
+
+        /** 8pt */
+        val Space8 = 8.dp
+
+        /** 12pt */
+        val Space12 = 12.dp
+
+        /** 16pt */
+        val Space16 = 16.dp
+
+        /** 20pt */
+        val Space20 = 20.dp
+
+        /** 24pt */
+        val Space24 = 24.dp
+
+        /** 28pt */
+        val Space28 = 28.dp
+
+        /** 32pt */
+        val Space32 = 32.dp
+
+        /** 36pt */
+        val Space36 = 36.dp
+
+        /** 40pt */
+        val Space40 = 40.dp
+
+        /** 48pt */
+        val Space48 = 48.dp
+
+        /** 56pt */
+        val Space56 = 56.dp
+
+        /** 64pt */
+        val Space64 = 64.dp
+    }
+
     /** 尺寸配置 - 适用于按钮、对话框、编辑器等组件的高度和宽度设置 */
     object Size {
         /** 主要按钮高度 */
