@@ -108,8 +108,12 @@ fun ChangeLogDialog(
                             Modifier.fillMaxWidth().heightIn(max = UiConfigs.Size.ChatDialogMinHeight),
                         verticalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.Medium),
                     ) {
-                        itemsIndexed(logs, key = { _, entry -> entry.id ?: entry.versionName }) {
-                            _, entry ->
+                        itemsIndexed(
+                            logs,
+                            key = { index, entry ->
+                                "${entry.id ?: entry.versionName}-$index"
+                            },
+                        ) { _, entry ->
                             ChangeLogEntryBlock(entry = entry)
                         }
                     }
