@@ -379,10 +379,12 @@ class ImageGenerationService:
             test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
             if test_fail_mode == "safety_filter":
                 logger.warning("测试模式：模拟安全过滤器阻止")
-                raise ValueError("图片生成被安全过滤器阻止: 测试模式触发")
+                raise ValueError(
+                    "Image generation blocked by safety filter: test mode trigger"
+                )
             elif test_fail_mode == "network_error":
                 logger.warning("测试模式：模拟网络错误")
-                raise ConnectionError("Connection timeout: 测试模式触发")
+                raise ConnectionError("Connection timeout: test mode trigger")
 
             # 确定历史消息数量
             if history_count is None:
@@ -422,7 +424,9 @@ class ImageGenerationService:
             # 获取Agent参考图（优先使用背景图，如果不存在则使用头像）
             reference_url = agent_data.get("background") or agent_data.get("avatar")
             if not reference_url:
-                raise ValueError("Agent 没有背景图或头像，无法生成图片")
+                raise ValueError(
+                    "Agent has no background or avatar; cannot generate image"
+                )
 
             # 确保参考图是完整URL
             if not reference_url.startswith("http"):
@@ -432,7 +436,7 @@ class ImageGenerationService:
                         "gs://", "https://storage.googleapis.com/"
                     )
                 else:
-                    raise ValueError(f"无效的参考图路径: {reference_url}")
+                    raise ValueError(f"Invalid reference image path: {reference_url}")
 
             # 记录使用的参考图类型
             reference_type = "背景图" if agent_data.get("background") else "头像"
@@ -520,12 +524,14 @@ class ImageGenerationService:
                 if hasattr(prompt_feedback, "block_reason"):
                     block_reason = prompt_feedback.block_reason
                     logger.warning(f"请求被阻止，原因: {block_reason}")
-                    raise ValueError(f"图片生成请求被安全过滤器阻止: {block_reason}")
+                    raise ValueError(
+                        f"Image generation request blocked by safety filter: {block_reason}"
+                    )
 
             # 提取图片数据
             if not response.candidates or len(response.candidates) == 0:
                 logger.error("Gemini 未返回任何候选结果")
-                raise ValueError("Gemini 未返回任何候选结果")
+                raise ValueError("Gemini returned no candidates")
 
             candidate = response.candidates[0]
 
@@ -545,9 +551,9 @@ class ImageGenerationService:
                             safety_details.append(
                                 f"{category}={probability}(blocked={severity})"
                             )
-                    error_msg = "图片生成被安全过滤器阻止"
+                    error_msg = "Image generation blocked by safety filter"
                     if safety_details:
-                        error_msg += f"，原因: {', '.join(safety_details)}"
+                        error_msg += f"; details: {', '.join(safety_details)}"
                     logger.error(error_msg)
                     raise ValueError(error_msg)
                 elif finish_reason not in ("STOP", None):
@@ -563,7 +569,7 @@ class ImageGenerationService:
                         blocked_ratings.append(f"{category}={probability}")
                 if blocked_ratings:
                     error_msg = (
-                        f"图片生成被安全过滤器阻止: {', '.join(blocked_ratings)}"
+                        f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
                     )
                     logger.error(error_msg)
                     raise ValueError(error_msg)
@@ -571,9 +577,9 @@ class ImageGenerationService:
             # 检查 content 和 parts
             if not candidate.content or not candidate.content.parts:
                 logger.error(f"候选结果中没有内容，finish_reason={finish_reason}")
-                error_msg = "候选结果中没有内容"
+                error_msg = "No content in candidates"
                 if finish_reason:
-                    error_msg += f"（完成原因: {finish_reason}）"
+                    error_msg += f" (finish_reason: {finish_reason})"
                 raise ValueError(error_msg)
 
             # 查找图片部分
@@ -584,7 +590,7 @@ class ImageGenerationService:
                     break
 
             if not image_part:
-                raise ValueError("响应中没有找到图片数据")
+                raise ValueError("No image data found in response")
 
             # 获取图片数据
             import base64
@@ -611,13 +617,13 @@ class ImageGenerationService:
                 logger.debug("数据已经是 bytes，直接使用")
             else:
                 logger.error(f"未知的数据类型: {type(raw_data)}")
-                raise ValueError(f"不支持的图片数据类型: {type(raw_data)}")
+                raise ValueError(f"Unsupported image data type: {type(raw_data)}")
 
             logger.info(f"成功提取图片数据，大小: {len(image_data)} bytes")
 
             # 调试：打印前几个字节来识别格式
             if len(image_data) == 0:
-                raise ValueError("图片数据为空")
+                raise ValueError("Image data is empty")
 
             header = image_data[:20] if len(image_data) >= 20 else image_data
             logger.debug(f"图片数据头部（hex）: {header.hex()}")
@@ -654,12 +660,12 @@ class ImageGenerationService:
                     logger.error(f"数据可能是文本: {text_content}")
                 except:
                     pass
-                raise ValueError(f"无法解析图片数据: {str(e)}")
+                raise ValueError(f"Unable to parse image data: {str(e)}")
 
             # 生成GCS路径（以角色组织）
             agent_id = agent_data.get("id")
             if not agent_id:
-                raise ValueError("Agent数据缺少ID，无法生成图片路径")
+                raise ValueError("Agent data missing ID; cannot generate image path")
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             gcs_path = f"chat_images/{agent_id}/{timestamp}_{uuid.uuid4().hex[:8]}.jpg"
 
@@ -707,7 +713,7 @@ class ImageGenerationService:
             )
 
             if not success:
-                raise ValueError(f"更新消息 {message_id} 的 meta_data 失败")
+                raise ValueError(f"Failed to update meta_data for message {message_id}")
 
             # agent_id 已在上面获取
             if agent_id:
@@ -852,7 +858,9 @@ class ImageGenerationService:
             # 获取Agent参考图（优先使用背景图，如果不存在则使用头像）
             reference_url = agent_data.get("background") or agent_data.get("avatar")
             if not reference_url:
-                raise ValueError("Agent 没有背景图或头像，无法生成图片")
+                raise ValueError(
+                    "Agent has no background or avatar; cannot generate image"
+                )
 
             # 确保参考图是完整URL
             if not reference_url.startswith("http"):
@@ -861,7 +869,7 @@ class ImageGenerationService:
                         "gs://", "https://storage.googleapis.com/"
                     )
                 else:
-                    raise ValueError(f"无效的参考图路径: {reference_url}")
+                    raise ValueError(f"Invalid reference image path: {reference_url}")
 
             reference_type = "背景图" if agent_data.get("background") else "头像"
             logger.info(
@@ -881,7 +889,7 @@ class ImageGenerationService:
             )
 
             if not fal_result.images:
-                raise ValueError("fal.ai 未返回任何图片")
+                raise ValueError("fal.ai returned no images")
 
             fal_image = fal_result.images[0]
             image_url = fal_image.url
@@ -905,7 +913,7 @@ class ImageGenerationService:
             # 生成GCS路径
             agent_id = agent_data.get("id")
             if not agent_id:
-                raise ValueError("Agent数据缺少ID，无法生成图片路径")
+                raise ValueError("Agent data missing ID; cannot generate image path")
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             gcs_path = f"chat_images/{agent_id}/{timestamp}_{uuid.uuid4().hex[:8]}.jpg"
 
@@ -946,7 +954,7 @@ class ImageGenerationService:
             )
 
             if not success:
-                raise ValueError(f"更新消息 {message_id} 的 meta_data 失败")
+                raise ValueError(f"Failed to update meta_data for message {message_id}")
 
             # 追加到 Agent 背景图历史
             if agent_id:

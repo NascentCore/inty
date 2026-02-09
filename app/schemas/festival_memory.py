@@ -28,7 +28,7 @@ class FestivalMemoryConfigCreate(BaseModel):
     @model_validator(mode="after")
     def run_at_not_before_festival(self) -> "FestivalMemoryConfigCreate":
         if self.run_at_date < self.festival_date:
-            raise ValueError("执行日期不能早于节日日期")
+            raise ValueError("Run date cannot be earlier than the festival date")
         return self
 
 
@@ -52,7 +52,7 @@ class FestivalMemoryConfigUpdate(BaseModel):
         run_at = self.run_at_date
         festival = self.festival_date
         if run_at is not None and festival is not None and run_at < festival:
-            raise ValueError("执行日期不能早于节日日期")
+            raise ValueError("Run date cannot be earlier than the festival date")
         return self
 
 

@@ -223,7 +223,7 @@ async def extract_festival_and_save(
             temperature=0.3,
         )
         if not summary or len(summary.strip()) < 10:
-            raise ValueError("抽取结果过短或为空")
+            raise ValueError("Extraction result is too short or empty")
         summary = summary.strip()
     except Exception as e:
         logger.warning(

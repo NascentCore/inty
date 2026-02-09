@@ -306,11 +306,11 @@ async def update_chat(
     """
     try:
         if not db_chat:
-            raise HTTPException(status_code=404, detail="聊天不存在")
+            raise HTTPException(status_code=404, detail="Chat not found")
 
         update_data = chat_in.model_dump(exclude_unset=True)
         if not update_data:
-            raise HTTPException(status_code=400, detail="没有提供要更新的数据")
+            raise HTTPException(status_code=400, detail="No data provided to update")
 
         for field, value in update_data.items():
             setattr(db_chat, field, value)
@@ -326,19 +326,19 @@ async def update_chat(
         logger.error(
             f"数据完整性错误 - 更新聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=400, detail="数据完整性约束违反")
+        raise HTTPException(status_code=400, detail="Data integrity constraint violated")
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(
             f"数据库错误 - 更新聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(
             f"未知错误 - 更新聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
@@ -347,7 +347,7 @@ async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
     """
     try:
         if not db_chat:
-            raise HTTPException(status_code=404, detail="聊天不存在")
+            raise HTTPException(status_code=404, detail="Chat not found")
 
         await db.delete(db_chat)
         await db.commit()
@@ -360,19 +360,21 @@ async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
         logger.error(
             f"数据完整性错误 - 删除聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=400, detail="无法删除聊天，存在关联数据")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete chat due to related data"
+        )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(
             f"数据库错误 - 删除聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(
             f"未知错误 - 删除聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_or_create_chat_by_agent(
@@ -432,7 +434,10 @@ async def get_or_create_chat_by_agent(
                 )
                 raise HTTPException(
                     status_code=500,
-                    detail=f"聊天会话数据不一致: 期望Agent ID {agent_id}, 实际 {existing_chat.agent_id}",
+                    detail=(
+                        "Chat session data mismatch: expected agent ID "
+                        f"{agent_id}, got {existing_chat.agent_id}"
+                    ),
                 )
 
             # 3. 并行获取Agent信息（如果未缓存）
@@ -646,7 +651,7 @@ async def get_or_create_chat_by_agent(
             agent_info = agent_result.first()
             if not agent_info:
                 logger.error(f"Agent不存在: {agent_id}")
-                raise HTTPException(status_code=404, detail="Agent不存在")
+                raise HTTPException(status_code=404, detail="Agent not found")
 
             (
                 agent_name,
@@ -689,7 +694,7 @@ async def get_or_create_chat_by_agent(
                 f"创建聊天会话后Agent ID不匹配！期望: {agent_id}, 实际: {db_chat.agent_id}"
             )
             raise HTTPException(
-                status_code=500, detail=f"创建聊天会话失败: Agent ID不匹配"
+                status_code=500, detail="Failed to create chat session: agent ID mismatch"
             )
 
         # 9. 异步添加Agent开场白（避免阻塞）
@@ -816,15 +821,15 @@ async def get_or_create_chat_by_agent(
         except Exception as retry_e:
             logger.error(f"重试查询失败: {str(retry_e)}")
             pass
-        raise HTTPException(status_code=500, detail="创建聊天会话失败")
+        raise HTTPException(status_code=500, detail="Failed to create chat session")
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 获取或创建聊天: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 获取或创建聊天: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_or_create_chat_settings(
@@ -853,7 +858,7 @@ async def get_or_create_chat_settings(
 
         if not chat:
             logger.error(f"Chat记录不存在，无法创建设置 - chat_id: {chat_id}")
-            raise HTTPException(status_code=404, detail="聊天记录不存在")
+            raise HTTPException(status_code=404, detail="Chat history not found")
 
         # 如果不存在，创建新的设置
         settings_id = str(uuid.uuid4())
@@ -899,11 +904,11 @@ async def get_or_create_chat_settings(
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 获取或创建聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 获取或创建聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def update_chat_settings(
@@ -922,12 +927,12 @@ async def update_chat_settings(
         settings = result.scalar_one_or_none()
 
         if not settings:
-            raise HTTPException(status_code=404, detail="聊天设置不存在")
+            raise HTTPException(status_code=404, detail="Chat settings not found")
 
         # 更新设置
         update_data = settings_update.model_dump(exclude_unset=True)
         if not update_data:
-            raise HTTPException(status_code=400, detail="没有提供要更新的数据")
+            raise HTTPException(status_code=400, detail="No data provided to update")
 
         for field, value in update_data.items():
             setattr(settings, field, value)
@@ -950,11 +955,11 @@ async def update_chat_settings(
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 更新聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 更新聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_chat_by_agent_and_user(
@@ -981,12 +986,12 @@ async def get_chat_by_agent_and_user(
         logger.error(
             f"数据库查询错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(
             f"未知错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_chat_by_user_and_agent(
@@ -1096,7 +1101,9 @@ async def delete_chats_by_agent_id(
         logger.error(
             f"删除聊天记录失败 - Agent ID: {agent_id}, User ID: {user_id}, Error: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail=f"删除聊天记录失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete chat history: {str(e)}"
+        )
 
 
 async def save_debug_messages(
@@ -1454,7 +1461,10 @@ async def generate_chat_image(
             f"只能对最后一条AI回复生成图片: latest={latest_ai_message_id}, "
             f"requested={message_id}"
         )
-        raise HTTPException(status_code=400, detail="只能对最后一条AI回复生成图片")
+        raise HTTPException(
+            status_code=400,
+            detail="Only the latest AI reply can be used to generate an image",
+        )
 
     # 确定使用的模型：订阅用户和超级用户强制使用 gemini，免费用户使用配置或请求指定的模型
     from app.core.model_selection import select_chat_image_model

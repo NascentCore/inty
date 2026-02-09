@@ -59,7 +59,7 @@ async def get_current_superuser(
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
-            detail="只有超级用户才能访问此接口",
+            detail="Only superusers can access this endpoint",
         )
     return current_user
 
@@ -103,7 +103,9 @@ async def admin_list_all_agents(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
     if not is_superuser(current_user):
-        raise HTTPException(status_code=403, detail="只有超级用户才能访问此接口")
+        raise HTTPException(
+            status_code=403, detail="Only superusers can access this endpoint"
+        )
 
     agents = await agent_service.get_all_agents_for_admin(db, skip=skip, limit=limit)
     return schemas.APIResponse.success(data=agents)
@@ -365,7 +367,9 @@ async def generate_background_animated(
 
     # 验证背景图是否存在
     if not agent.background:
-        raise HTTPException(status_code=400, detail="请先上传背景图")
+        raise HTTPException(
+            status_code=400, detail="Please upload a background image first"
+        )
 
     try:
         from app.services.image_transform_service import image_transform_service
@@ -463,7 +467,7 @@ async def generate_background_animated(
         logger.error(f"Veo3 API 调用失败: {str(e)}")
         raise HTTPException(
             status_code=501,
-            detail=f"视频生成功能暂未实现或 API 配置错误: {str(e)}",
+            detail=f"Video generation not implemented or API configuration error: {str(e)}",
         )
     except ValueError as e:
         logger.error(f"参数验证失败: {str(e)}")
@@ -475,8 +479,10 @@ async def generate_background_animated(
             logger.error(f"FFmpeg 相关错误: {error_msg}")
             raise HTTPException(
                 status_code=500,
-                detail=f"视频转换失败: {error_msg}。"
-                "请参考文档 backend/docs/FFMPEG_INSTALLATION.md 了解安装方法。",
+                detail=(
+                    f"Video conversion failed: {error_msg}. "
+                    "See backend/docs/FFMPEG_INSTALLATION.md for installation steps."
+                ),
             )
         raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
@@ -486,7 +492,7 @@ async def generate_background_animated(
         logger.error(f"生成背景动图失败: {str(e)}\n{error_trace}")
         raise HTTPException(
             status_code=500,
-            detail=f"生成背景动图失败: {str(e)}",
+            detail=f"Failed to generate animated background: {str(e)}",
         )
 
 
@@ -1121,7 +1127,9 @@ async def get_openrouter_models(
 
     except Exception as e:
         logger.error(f"获取OpenRouter模型失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取OpenRouter模型失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch OpenRouter models: {str(e)}"
+        )
 
 
 @router.get(
@@ -1150,7 +1158,9 @@ async def get_image_generation_config(
 
     except Exception as e:
         logger.error(f"获取图片生成配置失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取图片生成配置失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch image generation config: {str(e)}"
+        )
 
 
 @router.get(
@@ -1202,7 +1212,9 @@ async def get_available_prompts(
 
     except Exception as e:
         logger.error(f"获取可用 prompt 列表失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取可用 prompt 列表失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch available prompt list: {str(e)}"
+        )
 
 
 @router.put(
@@ -1268,4 +1280,6 @@ async def update_image_generation_config(
 
     except Exception as e:
         logger.error(f"更新图片生成配置失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"更新图片生成配置失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to update image generation config: {str(e)}"
+        )

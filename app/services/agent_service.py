@@ -789,10 +789,10 @@ async def get_recommended_agents_paginated(
         raise
     except SQLAlchemyError as e:
         logger.error(f"数据库查询错误 - 获取推荐角色分页列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"未知错误 - 获取推荐角色分页列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def create_agent(
@@ -914,17 +914,19 @@ async def create_agent(
         await db.rollback()
         logger.error(f"数据完整性错误 - 创建角色: {str(e)}")
         if "creator_id" in str(e):
-            raise HTTPException(status_code=400, detail="无效的创建者ID")
+            raise HTTPException(status_code=400, detail="Invalid creator ID")
         else:
-            raise HTTPException(status_code=400, detail="数据完整性约束违反")
+            raise HTTPException(
+                status_code=400, detail="Data integrity constraint violated"
+            )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 创建角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 创建角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @dataclass
@@ -949,7 +951,7 @@ async def _crop_avatar_from_background(
     background_data = download_from_gcs(background_url)
     if not background_data:
         logger.warning(f"无法下载background图片: {background_url}")
-        raise RuntimeError(f"无法下载background图片: {background_url}")
+        raise RuntimeError(f"Failed to download background image: {background_url}")
 
     crop_avatar_result = crop_avatar(background_data)
     cropped_avatar = crop_avatar_result.image
@@ -1097,7 +1099,7 @@ async def update_agent(
     """
     try:
         if not db_agent:
-            raise HTTPException(status_code=404, detail="角色不存在")
+            raise HTTPException(status_code=404, detail="Agent not found")
 
         # 检查是否需要重新生成开场白语音
         update_data = agent_in.model_dump(exclude_unset=True)
@@ -1209,19 +1211,19 @@ async def update_agent(
         logger.error(
             f"数据完整性错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=400, detail="数据完整性约束违反")
+        raise HTTPException(status_code=400, detail="Data integrity constraint violated")
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(
             f"数据库错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(
             f"未知错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent:
@@ -1231,11 +1233,11 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
     """
     try:
         if not db_agent:
-            raise HTTPException(status_code=404, detail="角色不存在")
+            raise HTTPException(status_code=404, detail="Agent not found")
 
         # 检查是否已经被删除
         if db_agent.deleted_at:
-            raise HTTPException(status_code=400, detail="角色已被删除")
+            raise HTTPException(status_code=400, detail="Agent has been deleted")
 
         agent_id = db_agent.id
         logger.info(f"开始逻辑删除agent {agent_id}")
@@ -1263,13 +1265,13 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
         logger.error(
             f"数据库错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(
             f"未知错误 - 逻辑删除角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 def process_agent_image_urls(agent_data: dict) -> dict:
@@ -1416,7 +1418,9 @@ async def follow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
         )
         result = await db.execute(follow_query)
         if result.first():
-            raise HTTPException(status_code=400, detail="已经关注了这个AI角色")
+            raise HTTPException(
+                status_code=400, detail="Already following this AI character"
+            )
 
         # 插入关注记录
         insert_query = agent_followers.insert().values(
@@ -1432,17 +1436,21 @@ async def follow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
         await db.rollback()
         logger.error(f"数据完整性错误 - 关注角色: {str(e)}")
         if "user_id" in str(e) or "agent_id" in str(e):
-            raise HTTPException(status_code=400, detail="用户或AI角色不存在")
+            raise HTTPException(
+                status_code=400, detail="User or AI character not found"
+            )
         else:
-            raise HTTPException(status_code=400, detail="已经关注了这个AI角色")
+            raise HTTPException(
+                status_code=400, detail="Already following this AI character"
+            )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 关注角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 关注角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def unfollow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
@@ -1479,11 +1487,11 @@ async def unfollow_agent(db: AsyncSession, agent_id: str, user_id: str) -> bool:
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 取消关注角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 取消关注角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_user_followed_agents(
@@ -1495,9 +1503,11 @@ async def get_user_followed_agents(
     try:
         # 验证参数
         if page <= 0:
-            raise HTTPException(status_code=400, detail="page参数必须大于0")
+            raise HTTPException(status_code=400, detail="page must be greater than 0")
         if page_size <= 0 or page_size > 100:
-            raise HTTPException(status_code=400, detail="page_size参数必须在1-100之间")
+            raise HTTPException(
+                status_code=400, detail="page_size must be between 1 and 100"
+            )
 
         # 计算偏移量
         skip = (page - 1) * page_size
@@ -1578,10 +1588,10 @@ async def get_user_followed_agents(
         raise
     except SQLAlchemyError as e:
         logger.error(f"数据库查询错误 - 获取用户关注列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"未知错误 - 获取用户关注列表: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def search_agents(
@@ -1598,9 +1608,11 @@ async def search_agents(
     try:
         # 验证参数
         if page <= 0:
-            raise HTTPException(status_code=400, detail="page参数必须大于0")
+            raise HTTPException(status_code=400, detail="page must be greater than 0")
         if page_size <= 0 or page_size > 100:
-            raise HTTPException(status_code=400, detail="page_size参数必须在1-100之间")
+            raise HTTPException(
+                status_code=400, detail="page_size must be between 1 and 100"
+            )
         if not keyword or not keyword.strip():
             raise HTTPException(
                 status_code=400, detail="Search keyword cannot be empty"
@@ -1699,10 +1711,10 @@ async def search_agents(
         raise
     except SQLAlchemyError as e:
         logger.error(f"数据库查询错误 - 搜索角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"未知错误 - 搜索角色: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_creator_agent_stats(
@@ -1752,7 +1764,7 @@ async def get_creator_agent_stats(
 
     except SQLAlchemyError as e:
         logger.error(f"数据库查询错误 - 获取创建者角色统计: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(f"未知错误 - 获取创建者角色统计: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")

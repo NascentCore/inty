@@ -33,7 +33,9 @@ async def get_current_superuser(
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> schemas.User:
     if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="只有超级用户才能访问此接口")
+        raise HTTPException(
+            status_code=403, detail="Only superusers can access this endpoint"
+        )
     return current_user
 
 
@@ -101,7 +103,7 @@ async def delete_festival_memory_config(
     )
     config = result.scalar_one_or_none()
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise HTTPException(status_code=404, detail="Configuration not found")
     await db.delete(config)
     await db.commit()
     return schemas.APIResponse.success(data=None)
@@ -123,7 +125,7 @@ async def update_festival_memory_config(
     )
     config = result.scalar_one_or_none()
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise HTTPException(status_code=404, detail="Configuration not found")
     if body.festival_name is not None:
         config.festival_name = body.festival_name
     if body.festival_date is not None:
@@ -141,7 +143,10 @@ async def update_festival_memory_config(
         and config.festival_date is not None
         and config.run_at_date < config.festival_date
     ):
-        raise HTTPException(status_code=400, detail="执行日期不能早于节日日期")
+        raise HTTPException(
+            status_code=400,
+            detail="Run date cannot be earlier than the festival date",
+        )
     await db.commit()
     await db.refresh(config)
     return schemas.APIResponse.success(
@@ -167,7 +172,7 @@ async def run_festival_memory_extraction(
         )
         config = result.scalar_one_or_none()
         if not config:
-            raise HTTPException(status_code=404, detail="配置不存在")
+            raise HTTPException(status_code=404, detail="Configuration not found")
         festival_name = config.festival_name
         festival_date = config.festival_date
         prompt = config.prompt
@@ -179,7 +184,10 @@ async def run_festival_memory_extraction(
         ):
             raise HTTPException(
                 status_code=400,
-                detail="未指定 config_id 时需提供 festival_name、festival_date、prompt",
+                detail=(
+                    "festival_name, festival_date, and prompt are required when "
+                    "config_id is not provided"
+                ),
             )
         festival_name = body.festival_name
         festival_date = body.festival_date

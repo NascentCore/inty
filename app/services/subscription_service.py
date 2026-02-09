@@ -342,7 +342,7 @@ class SubscriptionService:
                 return PurchaseVerificationResponse(
                     is_verified=False,
                     subscription=None,
-                    message="未找到对应的订阅计划",
+                    message="Subscription plan not found",
                     error_code="PLAN_NOT_FOUND",
                 )
 
@@ -357,7 +357,7 @@ class SubscriptionService:
                 return PurchaseVerificationResponse(
                     is_verified=False,
                     subscription=None,
-                    message="Google Play购买验证失败",
+                    message="Google Play purchase verification failed",
                     error_code="GOOGLE_PLAY_VERIFICATION_FAILED",
                 )
 
@@ -385,7 +385,7 @@ class SubscriptionService:
                     return PurchaseVerificationResponse(
                         is_verified=True,
                         subscription=subscription_schema,
-                        message="订阅已验证（已存在）",
+                        message="Subscription already verified",
                     )
                 else:
                     # 不属于当前用户，返回错误（安全考虑）
@@ -397,7 +397,7 @@ class SubscriptionService:
                     return PurchaseVerificationResponse(
                         is_verified=False,
                         subscription=None,
-                        message="该购买令牌已被其他用户使用",
+                        message="Purchase token has already been used by another user",
                         error_code="DUPLICATE_PURCHASE_TOKEN_DIFFERENT_USER",
                     )
 
@@ -532,7 +532,7 @@ class SubscriptionService:
             return PurchaseVerificationResponse(
                 is_verified=True,
                 subscription=subscription_schema,
-                message="订阅验证成功",
+                message="Subscription verified successfully",
             )
 
         except Exception as e:
@@ -541,7 +541,7 @@ class SubscriptionService:
             return PurchaseVerificationResponse(
                 is_verified=False,
                 subscription=None,
-                message="服务器内部错误",
+                message="Internal server error",
                 error_code="INTERNAL_ERROR",
             )
 
@@ -1722,7 +1722,7 @@ class SubscriptionService:
                     logger.error(
                         f"更新订阅状态失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
                     )
-                    raise ValueError(f"找不到订阅计划: {subscription.plan_id}")
+                    raise ValueError(f"Subscription plan not found: {subscription.plan_id}")
 
             # Google Play通知类型映射
             # 1: SUBSCRIPTION_RECOVERED (订阅恢复)
@@ -1829,7 +1829,7 @@ class SubscriptionService:
                     logger.error(
                         f"创建续费交易记录失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
                     )
-                    raise ValueError(f"找不到订阅计划: {subscription.plan_id}")
+                    raise ValueError(f"Subscription plan not found: {subscription.plan_id}")
 
             transaction = SubscriptionTransaction(
                 id=str(uuid.uuid4()),
@@ -1872,7 +1872,7 @@ class SubscriptionService:
                     logger.error(
                         f"退款处理失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
                     )
-                    raise ValueError(f"找不到订阅计划: {subscription.plan_id}")
+                    raise ValueError(f"Subscription plan not found: {subscription.plan_id}")
 
             # 更新订阅状态为退款
             subscription.status = SubscriptionStatus.REFUNDED

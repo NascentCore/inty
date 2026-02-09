@@ -40,7 +40,9 @@ _PROMPT_PATH = (
 
 def _load_prompt() -> str:
     if not _PROMPT_PATH.exists():
-        raise FileNotFoundError(f"记忆提取提示词文件不存在: {_PROMPT_PATH}")
+        raise FileNotFoundError(
+            f"Memory extraction prompt file not found: {_PROMPT_PATH}"
+        )
     return _PROMPT_PATH.read_text(encoding="utf-8")
 
 
@@ -298,7 +300,7 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
             )
         )
         if not full_analysis or len(full_analysis.strip()) < 10:
-            raise ValueError("无法从响应中提取文本或内容过短")
+            raise ValueError("Unable to extract text from response or content too short")
         part1 = _extract_part1_summary(full_analysis)
     except Exception as e:
         logger.warning(f"记忆抽取 LLM 调用失败 user_id={user_id}: {e}")

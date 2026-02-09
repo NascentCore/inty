@@ -143,7 +143,9 @@ class VideoGenerationService:
             while not operation.done:
                 elapsed_time = time.time() - start_time
                 if elapsed_time > max_wait_time:
-                    raise TimeoutError(f"视频生成超时（超过 {max_wait_time} 秒）")
+                    raise TimeoutError(
+                        f"Video generation timed out (exceeded {max_wait_time} seconds)"
+                    )
 
                 logger.debug(f"等待视频生成完成... (已等待 {elapsed_time:.0f} 秒)")
                 await asyncio.sleep(poll_interval)
@@ -153,7 +155,7 @@ class VideoGenerationService:
 
             # 检查操作是否成功
             if not operation.done:
-                raise RuntimeError("视频生成操作未完成")
+                raise RuntimeError("Video generation operation did not complete")
 
             # 提取生成的视频 URL
             if hasattr(operation, "response") and operation.response:
@@ -173,7 +175,7 @@ class VideoGenerationService:
                             return video_uri
 
             logger.error(f"无法从操作响应中提取视频 URL: {operation}")
-            raise ValueError("无法从 API 响应中提取视频 URL")
+            raise ValueError("Unable to extract video URL from API response")
 
         except Exception as e:
             logger.error(f"视频生成失败: {str(e)}")

@@ -229,12 +229,14 @@ def generate_image_description(image_uri: str) -> str:
             if hasattr(prompt_feedback, "block_reason"):
                 block_reason = prompt_feedback.block_reason
                 logger.warning(f"请求被阻止，原因: {block_reason}")
-                raise ValueError(f"图片描述生成请求被安全过滤器阻止: {block_reason}")
+                raise ValueError(
+                    f"Image description request blocked by safety filter: {block_reason}"
+                )
 
         # 提取文本描述
         if not response.candidates or len(response.candidates) == 0:
             logger.error("Gemini 未返回任何候选结果")
-            raise ValueError("Gemini 未返回任何候选结果")
+            raise ValueError("Gemini returned no candidates")
 
         candidate = response.candidates[0]
 
@@ -243,12 +245,12 @@ def generate_image_description(image_uri: str) -> str:
         if finish_reason and finish_reason != "STOP":
             logger.warning(f"候选结果完成原因: {finish_reason}")
             if finish_reason == "SAFETY":
-                raise ValueError("图片描述生成被安全过滤器阻止")
+                raise ValueError("Image description generation blocked by safety filter")
 
         # 提取文本内容
         if not candidate.content or not candidate.content.parts:
             logger.error("候选结果中没有内容")
-            raise ValueError("候选结果中没有内容")
+            raise ValueError("No content in candidates")
 
         description_text = ""
         for part in candidate.content.parts:
@@ -257,7 +259,7 @@ def generate_image_description(image_uri: str) -> str:
 
         if not description_text:
             logger.error("无法从响应中提取文本描述")
-            raise ValueError("无法从响应中提取文本描述")
+            raise ValueError("Unable to extract text description from response")
 
         logger.info(f"图片描述生成成功: {description_text}")
         return description_text.strip()

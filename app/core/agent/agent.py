@@ -1576,7 +1576,7 @@ class AgentManager:
 
         agent_id = agent_data.get("id")
         if not agent_id:
-            raise ValueError("agent_data必须包含'id'字段")
+            raise ValueError("agent_data must include the 'id' field")
         logger.debug(f"请求获取Agent实例 - Agent ID: {agent_id}")
 
         # 首先尝试读取现有Agent（使用读锁）
@@ -1660,7 +1660,7 @@ class AgentManager:
                         logger.error(
                             f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}"
                         )
-                        raise ValueError(f"Agent实例创建失败: ID不匹配")
+                        raise ValueError("Agent instance creation failed: ID mismatch")
 
                     self.agents[agent_id] = agent
                     logger.info(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}")
