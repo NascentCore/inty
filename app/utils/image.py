@@ -70,7 +70,9 @@ def check_aspect_ratio_9_16(image_or_size) -> bool:
     elif isinstance(image_or_size, tuple) and len(image_or_size) == 2:
         width, height = image_or_size
     else:
-        raise ValueError("参数必须是 PIL Image 对象或 (width, height) 元组")
+        raise ValueError(
+            "Parameter must be a PIL Image object or a (width, height) tuple"
+        )
 
     target_aspect_ratio = 9 / 16  # 0.5625
     current_aspect_ratio = width / height

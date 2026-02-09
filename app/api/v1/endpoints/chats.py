@@ -926,7 +926,7 @@ async def clear_agent_chat_messages(
         if request.message_id and request.timestamp:
             raise HTTPException(
                 status_code=400,
-                detail="只能提供 message_id 或 timestamp 中的一个参数，不能同时提供",
+                detail="Provide either message_id or timestamp, not both",
             )
 
         # 验证Agent是否存在
@@ -940,7 +940,9 @@ async def clear_agent_chat_messages(
         )
 
         if not chat:
-            raise HTTPException(status_code=404, detail="未找到与该Agent的聊天会话")
+            raise HTTPException(
+                status_code=404, detail="Chat session for this agent was not found"
+            )
 
         # 生成session_id
         session_id = generate_session_id(chat.id)

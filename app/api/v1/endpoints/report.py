@@ -30,7 +30,7 @@ async def get_current_superuser(
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
-            detail="举报与反馈相关接口仅对超级用户开放",
+            detail="Report and feedback endpoints are restricted to superusers",
         )
     return current_user
 
@@ -100,9 +100,9 @@ async def delete_report(
         )
         return APIResponse.success()
     except PermissionError:
-        return APIResponse.error(message="无权限删除该记录", code=403)
+        return APIResponse.error(message="Not authorized to delete this record", code=403)
     except ValueError:
-        return APIResponse.error(message="记录不存在", code=404)
+        return APIResponse.error(message="Record not found", code=404)
     except SQLAlchemyError as e:
         logger.error(f"Failed to delete report: {str(e)}")
-        return APIResponse.error(message="删除失败", code=500)
+        return APIResponse.error(message="Delete failed", code=500)

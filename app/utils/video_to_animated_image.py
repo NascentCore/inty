@@ -66,7 +66,7 @@ def convert_video_to_animated_image(
                     temp_video.write(response.content)
                 except ImportError:
                     logger.error("requests 库未安装，无法下载 HTTP URL 的视频")
-                    raise RuntimeError("requests 库未安装")
+                    raise RuntimeError("requests library is not installed")
 
             temp_video.flush()
 
@@ -191,7 +191,7 @@ def convert_video_to_animated_image(
 
                     if result.returncode != 0:
                         logger.error(f"ffmpeg 转换失败: {result.stderr}")
-                        raise RuntimeError(f"视频转换失败: {result.stderr}")
+                        raise RuntimeError(f"Video conversion failed: {result.stderr}")
 
                     # 读取生成的动图文件
                     with open(output_path, "rb") as f:
@@ -211,7 +211,7 @@ def convert_video_to_animated_image(
                     )
                 except subprocess.TimeoutExpired:
                     logger.error("视频转换超时")
-                    raise RuntimeError("视频转换超时")
+                    raise RuntimeError("Video conversion timed out")
                 finally:
                     # 清理临时输出文件
                     try:

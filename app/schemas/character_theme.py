@@ -23,9 +23,9 @@ class CharacterThemeBase(BaseModel):
     @classmethod
     def validate_name(cls, v: str) -> str:
         if not v or not v.strip():
-            raise ValueError("专区名称不能为空")
+            raise ValueError("Theme section name cannot be empty")
         if len(v) > 255:
-            raise ValueError("专区名称长度不能超过255个字符")
+            raise ValueError("Theme section name must not exceed 255 characters")
         return v.strip()
 
 
@@ -53,9 +53,9 @@ class CharacterThemeUpdate(BaseModel):
     def validate_name(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             if not v.strip():
-                raise ValueError("专区名称不能为空")
+                raise ValueError("Theme section name cannot be empty")
             if len(v) > 255:
-                raise ValueError("专区名称长度不能超过255个字符")
+                raise ValueError("Theme section name must not exceed 255 characters")
             return v.strip()
         return v
 
@@ -103,7 +103,7 @@ class ReorderAgentsRequest(BaseModel):
     @classmethod
     def validate_agent_ids(cls, v: List[str]) -> List[str]:
         if not v:
-            raise ValueError("角色ID列表不能为空")
+            raise ValueError("Agent ID list cannot be empty")
         if len(v) != len(set(v)):
-            raise ValueError("角色ID列表不能包含重复项")
+            raise ValueError("Agent ID list must not contain duplicates")
         return v

@@ -206,14 +206,14 @@ async def add_agent_to_theme(
     # 检查专区是否存在
     theme = await get_theme(db, theme_id)
     if not theme:
-        raise HTTPException(status_code=404, detail="专区不存在")
+        raise HTTPException(status_code=404, detail="Theme section not found")
 
     # 检查角色是否存在
     agent_stmt = select(models.Agent).where(models.Agent.id == agent_id)
     agent_result = await db.execute(agent_stmt)
     agent = agent_result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=404, detail="角色不存在")
+        raise HTTPException(status_code=404, detail="Agent not found")
 
     # 检查角色是否已在专区中
     existing_stmt = select(models.CharacterThemeAgent).where(
@@ -223,7 +223,9 @@ async def add_agent_to_theme(
     existing_result = await db.execute(existing_stmt)
     existing = existing_result.scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=400, detail="角色已在该专区中")
+        raise HTTPException(
+            status_code=400, detail="Agent is already in this theme section"
+        )
 
     # 获取当前最大 order_index
     from sqlalchemy import func
@@ -289,7 +291,7 @@ async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) 
     # 检查专区是否存在
     theme = await get_theme(db, theme_id)
     if not theme:
-        raise HTTPException(status_code=404, detail="专区不存在")
+        raise HTTPException(status_code=404, detail="Theme section not found")
 
     # 获取专区中所有角色关联记录
     stmt = select(models.CharacterThemeAgent).where(
@@ -303,7 +305,7 @@ async def reorder_agents(db: AsyncSession, theme_id: str, agent_ids: List[str]) 
     if set(agent_ids) != existing_agent_ids:
         raise HTTPException(
             status_code=400,
-            detail="角色ID列表与专区中的角色不匹配",
+            detail="Agent ID list does not match agents in the theme section",
         )
 
     # 创建 agent_id 到 theme_agent 的映射

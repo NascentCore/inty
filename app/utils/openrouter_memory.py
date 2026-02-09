@@ -26,7 +26,7 @@ async def call_openrouter_for_extraction(
     base_url = cfg.base_url.rstrip("/")
     api_key = cfg.api_key
     if not api_key:
-        raise ValueError("agent.api_key 未配置，无法调用 OpenRouter")
+        raise ValueError("agent.api_key is not configured; cannot call OpenRouter")
     url = f"{base_url}/chat/completions"
     app_cfg = global_config_loaded_from_config_yaml.app
     referer = app_cfg.name_for_openrouter

@@ -386,7 +386,7 @@ async def live_chat_session(
 
                 except json.JSONDecodeError as e:
                     logger.warning(f"无效的 JSON 消息: {str(e)}")
-                    await on_error("INVALID_JSON", "无效的消息格式")
+                    await on_error("INVALID_JSON", "Invalid message format")
 
         except WebSocketDisconnect:
             logger.info(f"WebSocket 断开连接 - user_id: {current_user.id}")

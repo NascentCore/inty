@@ -139,14 +139,14 @@ class LiveChatService:
         3. 构建 system instruction
         """
         if not self._config.enabled:
-            raise ValueError("实时语音通话功能未启用")
+            raise ValueError("Live voice chat is not enabled")
 
         chat = await get_or_create_chat_by_agent(db, user_id, agent_id)
         session_id = generate_session_id(chat.id)
 
         agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
         if not agent_data:
-            raise ValueError(f"Agent 未找到: {agent_id}")
+            raise ValueError(f"Agent not found: {agent_id}")
 
         agent = await agent_manager.get_agent(agent_data)
 
@@ -548,7 +548,9 @@ class LiveChatService:
                 db, agent_id=session.agent_id
             )
             if not agent_data:
-                await on_error("AGENT_NOT_FOUND", f"Agent 未找到: {session.agent_id}")
+                await on_error(
+                    "AGENT_NOT_FOUND", f"Agent not found: {session.agent_id}"
+                )
                 return
 
             history_messages = chat_history_service.get_history_messages(
@@ -1023,7 +1025,7 @@ class LiveChatService:
         """发送音频数据到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
 
         await session.gemini_session.send_realtime_input(
             audio=types.Blob(
@@ -1035,7 +1037,7 @@ class LiveChatService:
     async def send_activity_start(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
         await session.gemini_session.send_realtime_input(
             activity_start=types.ActivityStart()
         )
@@ -1043,7 +1045,7 @@ class LiveChatService:
     async def send_activity_end(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
         await session.gemini_session.send_realtime_input(
             activity_end=types.ActivityEnd()
         )
@@ -1056,7 +1058,7 @@ class LiveChatService:
         """发送文本消息到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
 
         await session.gemini_session.send(
             input=types.Content(
