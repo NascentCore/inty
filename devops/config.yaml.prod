@@ -29,7 +29,7 @@ database:
   password: "sxwl666A!"
   db: "inty"
   pool_size: 200
-  max_overflow: 20
+  max_overflow: 100
   pool_timeout: 10
   pool_recycle: 3600
   pool_pre_ping: true
