@@ -6,7 +6,7 @@
 import asyncio
 import json
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from loguru import logger
 from sqlalchemy import delete
@@ -16,6 +16,7 @@ import psycopg
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
+from app.services import chat_history_service
 from app.services.chat_history_service import get_chat_history_connection
 from app.services.chat_service import generate_session_id
 from app.services.memory_service import MEMORY_TYPE_FESTIVAL
@@ -149,6 +150,20 @@ def get_messages_for_user_agent_sync(
     return out
 
 
+def get_session_id_for_user_agent_sync(user_id: str, agent_id: str) -> Optional[str]:
+    """根据 (user_id, agent_id) 获取该会话的 session_id，无会话则返回 None。"""
+    conn = get_chat_history_connection()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true LIMIT 1",
+            (user_id, agent_id),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    return generate_session_id(row[0])
+
+
 def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     lines = []
     for role, content in messages:
@@ -241,4 +256,13 @@ async def extract_festival_and_save(
     logger.debug(
         f"节日记忆写入完成 user_id={user_id} agent_id={agent_id} festival={festival_name}"
     )
+    session_id = await asyncio.to_thread(
+        get_session_id_for_user_agent_sync, user_id, agent_id
+    )
+    if session_id:
+        await asyncio.to_thread(
+            chat_history_service.add_festival_memory_prompt_message_sync,
+            session_id,
+            agent_id,
+        )
     return True

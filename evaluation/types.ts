@@ -6,12 +6,25 @@ import type {
   AgentVisibility,
 } from "inty_sdk/src/resources/api/v1/ai/agents";
 
+/** 角色详情中的单条节日记忆（features.festival_memories） */
+export interface FestivalMemoryItem {
+  festival_date: string;
+  festival_name: string;
+  memory: string;
+}
+
+/** 角色可扩展功能数据，如节日记忆/心跳日记 */
+export interface AgentFeatures {
+  festival_memories?: FestivalMemoryItem[];
+}
+
 // 扩展 Agent 类型以包含 meta_data 和 background_animated 字段
 export interface Agent extends BaseAgent {
   meta_data?: AgentMetaData;
   background_animated?: string; // webp 动图 URL
   description?: string; // 描述字段
   source?: AgentSource; // 角色来源
+  features?: AgentFeatures;
 }
 
 export type { AgentVisibility };

@@ -338,6 +338,51 @@ def add_ai_message_sync(
         raise
 
 
+FESTIVAL_MEMORY_PROMPT_CONTENT = "{char} 为你写了一份秘密心跳日记。静静查看"
+META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
+
+
+def add_festival_memory_prompt_message_sync(
+    session_id: str, agent_id: str
+) -> Optional[int]:
+    """
+    向 chat_history 插入一条「节日记忆/心跳日记」提示类 AI 消息。
+    前端通过 meta_data.messageType === festival_memory_prompt 识别，并将 content 中的 {char} 替换为角色名。
+    返回插入的消息 ID，失败返回 None。
+    """
+    try:
+        conn = get_chat_history_connection()
+        message_data = {
+            "type": "ai",
+            "data": {"content": FESTIVAL_MEMORY_PROMPT_CONTENT},
+        }
+        meta_data = {
+            "agentId": agent_id,
+            "messageType": META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+        }
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                insert_query,
+                (session_id, json.dumps(message_data), json.dumps(meta_data)),
+            )
+            result = cur.fetchone()
+            message_id = result[0] if result else None
+        logger.debug(
+            f"添加节日记忆提示消息到会话 {session_id} agent_id={agent_id}, ID={message_id}"
+        )
+        return message_id
+    except Exception as e:
+        logger.error(
+            f"添加节日记忆提示消息失败 session_id={session_id}: {str(e)}"
+        )
+        return None
+
+
 async def add_ai_message(
     db: AsyncSession,
     session_id: str,
@@ -897,6 +942,13 @@ def get_messages_paginated(
                             message_obj["image_url"] = None
 
                         # 不返回 image_metadata 和 prompt 字段
+                    elif (
+                        message_type == "ai"
+                        and meta_data
+                        and meta_data.get("messageType")
+                        == META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
+                    ):
+                        message_obj["type"] = META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
                     else:
                         message_obj["type"] = "text"
 
