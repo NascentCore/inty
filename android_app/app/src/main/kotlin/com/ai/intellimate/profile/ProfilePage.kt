@@ -46,7 +46,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpCenter
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.ViewTimeline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -95,14 +94,11 @@ import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleDraft
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostManager
-import com.ai.intellimate.changelog.ChangeLogEntry
-import com.ai.intellimate.changelog.ChangeLogRepository
 import com.ai.intellimate.settings.check.getCurrentMonthInfo
 import com.ai.intellimate.settings.playStoreUrl
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
-import com.ai.intellimate.ui.components.ChangeLogDialog
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.xb.helper.UserProfileStore
 import com.ai.intellimate.xb.navigation.Routes
@@ -291,10 +287,6 @@ private fun ProfileHeader(
     val currentVipStatus = vipStatus ?: vipStatusFromFlow
     val isSubscribed = currentVipStatus.isSubscribed
     var showSubscribeDialog by remember { mutableStateOf(false) }
-    var showChangeLogDialog by remember { mutableStateOf(false) }
-    var changeLogs by remember { mutableStateOf<List<ChangeLogEntry>>(emptyList()) }
-    var isChangeLogLoading by remember { mutableStateOf(true) }
-    var changeLogsLoaded by remember { mutableStateOf(false) }
 
     if (showSubscribeDialog) {
         val dialogData =
@@ -319,22 +311,6 @@ private fun ProfileHeader(
                 }
                 showSubscribeDialog = false
             },
-        )
-    }
-
-    LaunchedEffect(showChangeLogDialog) {
-        if (!showChangeLogDialog || changeLogsLoaded) return@LaunchedEffect
-        isChangeLogLoading = true
-        changeLogs = ChangeLogRepository.getChangeLogs(context)
-        isChangeLogLoading = false
-        changeLogsLoaded = true
-    }
-
-    if (showChangeLogDialog) {
-        ChangeLogDialog(
-            logs = changeLogs,
-            isLoading = isChangeLogLoading,
-            onDismiss = { showChangeLogDialog = false },
         )
     }
 
@@ -429,21 +405,6 @@ private fun ProfileHeader(
                     },
                 imageVector = Icons.Filled.EventAvailable,
                 contentDescription = null,
-                tint = Color.White,
-            )
-            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
-
-            Icon(
-                modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            showChangeLogDialog = true
-                        }
-                    },
-                imageVector = Icons.Outlined.ViewTimeline,
-                contentDescription = stringResource(R.string.me_icons_row_change_logs),
                 tint = Color.White,
             )
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))

@@ -21,12 +21,7 @@
     <string name="me_icons_row_help">Help Center</string>
     <string name="me_icons_row_discord">Discord</string>
     <string name="me_icons_row_whatsapp">Whatsapp</string>
-    <string name="me_icons_row_change_logs">Change Logs</string>
     <string name="me_icons_row_settings">Settings</string>
-    <string name="change_logs_title">Change Logs</string>
-    <string name="change_logs_empty">No updates yet</string>
-    <string name="change_logs_release_date">Released %s</string>
-    <string name="change_logs_item_prefix">- %s</string>
     <string name="settings">Settings</string>
     <string name="settings_help">Help Center</string>
     <string name="settings_email_support">Email Support</string>

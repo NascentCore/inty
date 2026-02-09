@@ -54,7 +54,6 @@ Click the **Explore** icon to open the Explore IntelliMates page.
 ### Me page
 
 Click the **Me** or the **right-most** icon
-Top bar shortcuts include Help Center, community links, daily check-in, **Change Logs**, and Settings.
 
 ## Where do I go to…?
 
@@ -65,7 +64,6 @@ Top bar shortcuts include Help Center, community links, daily check-in, **Change
 | Chat with an agent | Tap any agent card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
 | Create or edit an agent | Explore → “Create/+” or Profile → My Agents | Guided flow with image upload and text-to-image background (`POST /api/v1/ai/agents/text-to-image`). |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
-| View recent change logs | Me → top bar → Change Logs | Release notes are bundled with the app and updated every release. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
 | Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. |
 | Check version info | Settings → About | Version code comes from git commit count. If Play build lags behind, install the QA APK. |
