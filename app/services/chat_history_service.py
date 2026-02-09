@@ -347,14 +347,24 @@ def add_festival_memory_prompt_message_sync(
 ) -> Optional[int]:
     """
     向 chat_history 插入一条「节日记忆/心跳日记」提示类 AI 消息。
-    前端通过 meta_data.messageType === festival_memory_prompt 识别，并将 content 中的 {char} 替换为角色名。
+    写入时用该会话的角色名称替换模板中的 {char}，落库即为最终文案。
     返回插入的消息 ID，失败返回 None。
     """
     try:
         conn = get_chat_history_connection()
+        agent_name = "角色"
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name FROM agents WHERE id = %s LIMIT 1",
+                (agent_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                agent_name = str(row[0]).strip() or agent_name
+        content = FESTIVAL_MEMORY_PROMPT_CONTENT.replace("{char}", agent_name)
         message_data = {
             "type": "ai",
-            "data": {"content": FESTIVAL_MEMORY_PROMPT_CONTENT},
+            "data": {"content": content},
         }
         meta_data = {
             "agentId": agent_id,
