@@ -61,14 +61,13 @@ class VoiceCacheService:
                     VoiceCache.is_active == True,
                 )
             )
-            cache_entry = result.scalar_one_or_none()
+            # 两列时须用 one_or_none() 取行；scalar_one_or_none() 只返回第一列（str），会导致 .audio_url 报错
+            cache_entry = result.one_or_none()
 
             if cache_entry:
                 # 检查文件是否还存在
                 if self.gcs_service.check_voice_file_exists(cache_entry.audio_url):
-                    logger.debug(
-                        f"语音缓存命中: {content_hash}, 命中次数: {cache_entry.hit_count}"
-                    )
+                    logger.debug(f"语音缓存命中: {content_hash}")
 
                     # 异步更新访问统计，不阻塞主流程
                     import asyncio
