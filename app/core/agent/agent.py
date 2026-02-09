@@ -471,7 +471,10 @@ class Agent:
 
         if self.intro:
             system_messages.append(
-                SystemMessage(content="##Introduction\n" + self.intro)
+                SystemMessage(
+                    content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
+                    + self.intro
+                )
             )
 
         if self._is_intellimate_official():
@@ -587,11 +590,13 @@ class Agent:
             try:
                 sync_engine = get_sync_engine()
                 with sync_engine.connect() as conn:
-                    query = text("""
+                    query = text(
+                        """
                         SELECT nickname, gender, age_group, description, system_language 
                         FROM users 
                         WHERE id = :user_id
-                    """)
+                    """
+                    )
                     result = conn.execute(query, {"user_id": user_id})
                     row = result.fetchone()
 
