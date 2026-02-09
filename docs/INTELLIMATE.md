@@ -125,6 +125,13 @@ Top bar shortcuts include Help Center, community links, daily check-in, **Change
 ### Crashes & Performance
 - Crash reports flow into Firebase Crashlytics automatically. To speed up investigations, provide device model, OS version, and the steps leading to the crash.
 
+## Change Logs
+> Source: docs/CHANGE_LOGS.md. Keep this section in sync.
+
+### 1.0.0 (2026-02-07)
+- Added the change logs entry point on the Me page.
+- Prepared the release notes structure for future updates.
+
 ## Reference Library
 
 - **Release & rollout**
