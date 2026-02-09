@@ -2,6 +2,8 @@
 
 This directory contains utility scripts for the Inty backend.
 
+- **delete_festival_memories_and_prompts.py**：删除所有节日记忆（memory 表 `memory_type=festival`）及对应的「节日记忆提示」类 chat_history。默认 dry-run；实际执行请使用 `--no-dry-run`，可选 `--yes` 跳过交互确认。
+
 ## compress_agent_avatar_image.py
 
 Compresses PNG avatar images to JPEG format and updates the database records.

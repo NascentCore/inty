@@ -2039,7 +2039,7 @@ export const ChatPage: React.FC = () => {
               <div style={{ marginBottom: 16 }}>
                 <Text strong>当前智能体: {selectedAgent?.name}</Text>
                 <br />
-                <Text type="secondary">共 {messages.length} 条消息</Text>
+                <Text type="secondary">共 {messages.filter((m) => m.type !== "festival_memory_prompt").length} 条消息</Text>
               </div>
 
               {/* 消息列表 */}

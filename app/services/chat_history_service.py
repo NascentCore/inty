@@ -959,6 +959,18 @@ def get_messages_paginated(
                         == META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
                     ):
                         message_obj["type"] = META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
+                        agent_id_from_meta = meta_data.get("agentId") if meta_data else None
+                        if user_id and agent_id_from_meta:
+                            with conn.cursor() as cur_mem:
+                                cur_mem.execute(
+                                    "SELECT id FROM memory WHERE user_id = %s AND agent_id = %s AND memory_type = %s ORDER BY id",
+                                    (user_id, agent_id_from_meta, "festival"),
+                                )
+                                message_obj["festival_memory_ids"] = [
+                                    r[0] for r in cur_mem.fetchall()
+                                ]
+                        else:
+                            message_obj["festival_memory_ids"] = []
                     else:
                         message_obj["type"] = "text"
 
