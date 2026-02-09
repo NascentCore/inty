@@ -32,6 +32,16 @@ CREATED_BY_AGENT
 2. **拉取**：按 (user_id, agent_id) 拉取该用户与该角色的单会话消息，格式与现有记忆抽取一致。
 3. **LLM**：使用配置的提示词 + 节日名称、日期作为上下文，调用 OpenRouter（默认模型 `mistralai/devstral-2512`）抽取该节日相关回忆摘要。
 4. **写入**：同一 (user_id, agent_id, festival_name, festival_date) 先 DELETE 再 INSERT 一条 `memory`（整批替换）。
+5. **提示消息**：抽取成功后，在该 (user_id, agent_id) 对应会话的 `chat_history` 中追加一条特殊 AI 消息，用于提示 App/Evaluation「心跳日记已写好，可点击查看」。详见下文「chat_history 提示消息约定」。
+
+## chat_history 提示消息约定
+
+- **写入时机**：每次 `extract_festival_and_save` 成功提交 memory 后，向该会话插入一条提示消息（由 `chat_history_service.add_festival_memory_prompt_message_sync` 写入）。
+- **消息结构**：
+  - `message.type`：`"ai"`（与现有 AI 消息一致，role 为 assistant）。
+  - `message.data.content`：固定模板，当前为 `"{char} 为你写了一份秘密心跳日记。静静查看"`。前端/App 展示时需将 `{char}` 替换为当前角色名。
+  - `meta_data`：`agentId` 为角色 ID；`messageType` 为 `"festival_memory_prompt"`，用于识别该条为「节日记忆/心跳日记」提示，从而分支渲染与点击行为。
+- **消息列表 API**：`GET /api/v1/chats/agents/{agent_id}/messages` 返回的每条消息中，若为上述提示消息，则 `type` 字段为 `"festival_memory_prompt"`（由 `get_messages_paginated` 根据 `meta_data.messageType` 设置）。App 与 Evaluation 据此展示「{char} 为你写了一份秘密心跳日记。静静查看」，并将「静静查看」作为可点击入口，跳转或弹窗展示该用户与该角色的节日记忆（即 `GET /api/v1/ai/agents/{agent_id}` 的 `features.festival_memories`）。
 
 ## 定时任务
 
@@ -49,7 +59,8 @@ CREATED_BY_AGENT
 |------------|------|
 | 模型       | `app/models/memory.py`（Memory 扩展、FestivalMemoryConfig） |
 | 迁移       | `alembic/versions/20260204_120000_add_festival_memory_fields_and_config.py` |
-| 抽取/筛选  | `app/services/festival_memory_service.py` |
+| 抽取/筛选  | `app/services/festival_memory_service.py`（含抽取成功后写入 chat_history 提示消息） |
+| 聊天历史   | `app/services/chat_history_service.py`（add_festival_memory_prompt_message_sync、get_messages_paginated 返回 type festival_memory_prompt） |
 | 记忆读取   | `app/services/memory_service.py`（get_festival_memories_for_user_agent） |
 | 角色详情   | `app/api/v1/endpoints/agents.py`（GET /{agent_id} 附加 features） |
 | Schema     | `app/schemas/agent.py`（AgentFeatures、FestivalMemoryItem）、`app/schemas/festival_memory.py` |

@@ -46,7 +46,7 @@ import {
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
 import api from "../services/api";
-import type { Agent } from "../types";
+import type { Agent, FestivalMemoryItem } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
@@ -76,10 +76,12 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
-  type?: "text" | "image"; // 消息类型：文本或图片
+  type?: "text" | "image" | "festival_memory_prompt"; // 消息类型：文本、图片、节日记忆提示
   image_url?: string; // 图片URL（仅图片消息）
   user_vote?: "like" | "dislike" | null; // 用户投票：点赞/点踩
   meta_data?: {
+    messageType?: string;
+    agentId?: string;
     generated_image?: {
       image_url: string;
       width: number;
@@ -112,6 +114,11 @@ export const ChatPage: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(
     new Map(),
   );
+  const [festivalMemoryModalOpen, setFestivalMemoryModalOpen] = useState(false);
+  const [agentWithFestivalMemories, setAgentWithFestivalMemories] =
+    useState<Agent | null>(null);
+  const [festivalMemoriesLoading, setFestivalMemoriesLoading] =
+    useState(false);
   const backgroundImageUrl = selectedAgent?.background;
   const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
@@ -151,6 +158,23 @@ export const ChatPage: React.FC = () => {
       }
     }
   }, []);
+
+  // 打开心跳日记弹窗时拉取该角色的节日记忆
+  useEffect(() => {
+    if (!festivalMemoryModalOpen || !selectedAgent?.id) {
+      setAgentWithFestivalMemories(null);
+      return;
+    }
+    setFestivalMemoriesLoading(true);
+    api.agents
+      .get(selectedAgent.id)
+      .then((agent) => {
+        setAgentWithFestivalMemories(agent);
+      })
+      .finally(() => {
+        setFestivalMemoriesLoading(false);
+      });
+  }, [festivalMemoryModalOpen, selectedAgent?.id]);
 
   // 重新发送和删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
@@ -1524,10 +1548,36 @@ export const ChatPage: React.FC = () => {
                                       wordBreak: "break-word",
                                     }}
                                   >
-                                    {message.content &&
-                                    message.role === "assistant"
-                                      ? formatMessageContent(message.content)
-                                      : message.content || ""}
+                                    {message.type ===
+                                    "festival_memory_prompt" ? (
+                                      <>
+                                        {(message.content || "")
+                                          .replace(
+                                            /\{char\}/g,
+                                            selectedAgent?.name ?? "角色",
+                                          )
+                                          .replace("静静查看", "")
+                                          .trim()}
+                                        {" "}
+                                        <a
+                                          onClick={() =>
+                                            setFestivalMemoryModalOpen(true)
+                                          }
+                                          style={{
+                                            color: "#722ed1",
+                                            textDecoration: "underline",
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          静静查看
+                                        </a>
+                                      </>
+                                    ) : message.content &&
+                                      message.role === "assistant" ? (
+                                      formatMessageContent(message.content)
+                                    ) : (
+                                      message.content || ""
+                                    )}
                                   </Paragraph>
 
                                   {/* 如果有生成的图片，在文本下方显示 */}
@@ -1633,8 +1683,10 @@ export const ChatPage: React.FC = () => {
                                         alignItems: "center",
                                       }}
                                     >
-                                      {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
+                                      {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示（排除节日记忆提示） */}
                                       {message.role === "assistant" &&
+                                        message.type !==
+                                          "festival_memory_prompt" &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",
@@ -1661,9 +1713,11 @@ export const ChatPage: React.FC = () => {
                                           />
                                         )}
 
-                                      {/* 图片生成按钮 - 只在最后一条AI文本消息显示 */}
+                                      {/* 图片生成按钮 - 只在最后一条AI文本消息显示（排除节日记忆提示） */}
                                       {message.role === "assistant" &&
                                         message.type !== "image" &&
+                                        message.type !==
+                                          "festival_memory_prompt" &&
                                         message.remoteId &&
                                         typeof message.remoteId === "string" &&
                                         !message.remoteId.startsWith(
@@ -1730,8 +1784,10 @@ export const ChatPage: React.FC = () => {
                                           />
                                         )}
 
-                                      {/* 点赞/点踩按钮 - 仅对 AI 消息显示 */}
+                                      {/* 点赞/点踩按钮 - 仅对 AI 消息显示（排除节日记忆提示） */}
                                       {message.role === "assistant" &&
+                                        message.type !==
+                                          "festival_memory_prompt" &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",
@@ -2113,6 +2169,58 @@ export const ChatPage: React.FC = () => {
                   {JSON.stringify(messages, null, 2)}
                 </div>
               </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* 心跳日记/节日记忆弹窗 */}
+        <Modal
+          title="心跳日记"
+          open={festivalMemoryModalOpen}
+          onCancel={() => setFestivalMemoryModalOpen(false)}
+          footer={null}
+          width={640}
+          destroyOnClose
+        >
+          {festivalMemoriesLoading ? (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <Spin />
+            </div>
+          ) : (
+            <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+              {agentWithFestivalMemories?.features?.festival_memories &&
+              agentWithFestivalMemories.features.festival_memories.length > 0 ? (
+                <Row gutter={[12, 12]}>
+                  {(
+                    agentWithFestivalMemories.features
+                      .festival_memories as FestivalMemoryItem[]
+                  ).map((item, idx) => (
+                    <Col span={12} key={`${item.festival_date}-${idx}`}>
+                      <Card
+                        size="small"
+                        title={
+                          item.festival_name ||
+                          item.festival_date ||
+                          "节日记忆"
+                        }
+                        style={{ height: "100%" }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: "13px",
+                            lineHeight: 1.6,
+                            color: "#333",
+                          }}
+                        >
+                          {item.memory}
+                        </Text>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              ) : (
+                <Empty description="暂无节日记忆" />
+              )}
             </div>
           )}
         </Modal>
