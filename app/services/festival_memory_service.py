@@ -241,17 +241,16 @@ async def extract_festival_and_save(
             Memory.festival_date == festival_date,
         )
     )
-    db.add(
-        Memory(
-            user_id=user_id,
-            memory_type=MEMORY_TYPE_FESTIVAL,
-            agent_id=agent_id,
-            content=summary,
-            extracted_at=extracted_at,
-            festival_name=festival_name,
-            festival_date=festival_date,
-        )
+    memory_row = Memory(
+        user_id=user_id,
+        memory_type=MEMORY_TYPE_FESTIVAL,
+        agent_id=agent_id,
+        content=summary,
+        extracted_at=extracted_at,
+        festival_name=festival_name,
+        festival_date=festival_date,
     )
+    db.add(memory_row)
     await db.commit()
     logger.debug(
         f"节日记忆写入完成 user_id={user_id} agent_id={agent_id} festival={festival_name}"
@@ -264,5 +263,6 @@ async def extract_festival_and_save(
             chat_history_service.add_festival_memory_prompt_message_sync,
             session_id,
             agent_id,
+            memory_row.id,
         )
     return True

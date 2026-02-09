@@ -77,6 +77,7 @@ interface ChatMessage {
   timestamp: string;
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
   type?: "text" | "image" | "festival_memory_prompt"; // 消息类型：文本、图片、节日记忆提示
+  festival_memory_id?: number; // 节日记忆提示消息对应的 memory 记录 id（仅 type=festival_memory_prompt 时）
   image_url?: string; // 图片URL（仅图片消息）
   user_vote?: "like" | "dislike" | null; // 用户投票：点赞/点踩
   meta_data?: {
@@ -260,6 +261,7 @@ export const ChatPage: React.FC = () => {
             timestamp: msg.timestamp,
             remoteId: msg.id.toString(),
             type: msg.type || "text",
+            festival_memory_id: msg.festival_memory_id,
             image_url: msg.image_url,
             user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
@@ -455,6 +457,7 @@ export const ChatPage: React.FC = () => {
               msg.timestamp || msg.created_at || new Date().toISOString(),
             remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
             type: msg.type || "text",
+            festival_memory_id: msg.festival_memory_id,
             image_url: msg.image_url,
             user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
@@ -554,6 +557,7 @@ export const ChatPage: React.FC = () => {
                 timestamp: msg.timestamp,
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
                 type: msg.type || "text",
+                festival_memory_id: msg.festival_memory_id,
                 image_url: msg.image_url,
                 user_vote: msg.user_vote || null,
                 meta_data: msg.meta_data,
@@ -651,6 +655,7 @@ export const ChatPage: React.FC = () => {
               timestamp: msg.timestamp,
               remoteId: msg.id ? String(msg.id) : `remote_${index}`,
               type: msg.type || "text",
+              festival_memory_id: msg.festival_memory_id,
               image_url: msg.image_url,
               user_vote: msg.user_vote || null,
               meta_data: msg.meta_data,
@@ -776,6 +781,7 @@ export const ChatPage: React.FC = () => {
             timestamp: msg.timestamp,
             remoteId: msg.id.toString(), // 添加remoteId
             type: msg.type || "text",
+            festival_memory_id: msg.festival_memory_id,
             image_url: msg.image_url,
             user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,

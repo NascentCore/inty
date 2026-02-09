@@ -40,8 +40,8 @@ CREATED_BY_AGENT
 - **消息结构**：
   - `message.type`：`"ai"`（与现有 AI 消息一致，role 为 assistant）。
   - `message.data.content`：固定模板，当前为 `"{char} 为你写了一份秘密心跳日记。静静查看"`。前端/App 展示时需将 `{char}` 替换为当前角色名。
-  - `meta_data`：`agentId` 为角色 ID；`messageType` 为 `"festival_memory_prompt"`，用于识别该条为「节日记忆/心跳日记」提示，从而分支渲染与点击行为。
-- **消息列表 API**：`GET /api/v1/chats/agents/{agent_id}/messages` 返回的每条消息中，若为上述提示消息，则 `type` 字段为 `"festival_memory_prompt"`（由 `get_messages_paginated` 根据 `meta_data.messageType` 设置），并附带 `festival_memory_ids`：当前用户、该角色在 `memory` 表中的节日记忆记录 id 列表，便于客户端按 id 引用或跳转。App 与 Evaluation 据此展示「{char} 为你写了一份秘密心跳日记。静静查看」，并将「静静查看」作为可点击入口，跳转或弹窗展示该用户与该角色的节日记忆（即 `GET /api/v1/ai/agents/{agent_id}` 的 `features.festival_memories`）。
+  - `meta_data`：`agentId` 为角色 ID；`messageType` 为 `"festival_memory_prompt"`；`festivalMemoryId` 为该条提示消息对应的 memory 记录主键 id（写入时由 `add_festival_memory_prompt_message_sync` 写入），用于识别该条为「节日记忆/心跳日记」提示，从而分支渲染与点击行为。
+- **消息列表 API**：`GET /api/v1/chats/agents/{agent_id}/messages` 返回的每条消息中，若为上述提示消息，则 `type` 字段为 `"festival_memory_prompt"`（由 `get_messages_paginated` 根据 `meta_data.messageType` 设置），并附带 `festival_memory_id`：该条提示消息对应的 memory 记录 id（整型），来自 meta_data.festivalMemoryId，便于客户端按 id 引用或跳转。App 与 Evaluation 据此展示「{char} 为你写了一份秘密心跳日记。静静查看」，并将「静静查看」作为可点击入口，跳转或弹窗展示对应节日记忆。
 - **统计口径**：与统计相关的指标（对话轮数、消息数、会话消息条数等）在计数时**排除**此类记忆提取型消息（即 `meta_data.messageType === 'festival_memory_prompt'` 的 chat_history 记录），后端统计查询与 evaluation 前端展示的条数均不包含该类型消息。
 
 ## 定时任务

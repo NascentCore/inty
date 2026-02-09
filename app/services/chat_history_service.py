@@ -343,11 +343,12 @@ META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
 
 
 def add_festival_memory_prompt_message_sync(
-    session_id: str, agent_id: str
+    session_id: str, agent_id: str, memory_id: int
 ) -> Optional[int]:
     """
     向 chat_history 插入一条「节日记忆/心跳日记」提示类 AI 消息。
-    写入时用该会话的角色名称替换模板中的 {char}，落库即为最终文案。
+    写入时用该会话的角色名称替换模板中的 {char}，落库即为最终文案；
+    meta_data 中记录该条消息对应的 memory 主键 festivalMemoryId。
     返回插入的消息 ID，失败返回 None。
     """
     try:
@@ -369,6 +370,7 @@ def add_festival_memory_prompt_message_sync(
         meta_data = {
             "agentId": agent_id,
             "messageType": META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+            "festivalMemoryId": memory_id,
         }
         insert_query = """
             INSERT INTO chat_history (session_id, message, meta_data)
@@ -959,18 +961,12 @@ def get_messages_paginated(
                         == META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
                     ):
                         message_obj["type"] = META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
-                        agent_id_from_meta = meta_data.get("agentId") if meta_data else None
-                        if user_id and agent_id_from_meta:
-                            with conn.cursor() as cur_mem:
-                                cur_mem.execute(
-                                    "SELECT id FROM memory WHERE user_id = %s AND agent_id = %s AND memory_type = %s ORDER BY id",
-                                    (user_id, agent_id_from_meta, "festival"),
-                                )
-                                message_obj["festival_memory_ids"] = [
-                                    r[0] for r in cur_mem.fetchall()
-                                ]
-                        else:
-                            message_obj["festival_memory_ids"] = []
+                        raw_id = meta_data.get("festivalMemoryId")
+                        if raw_id is not None:
+                            try:
+                                message_obj["festival_memory_id"] = int(raw_id)
+                            except (TypeError, ValueError):
+                                pass
                     else:
                         message_obj["type"] = "text"
 
