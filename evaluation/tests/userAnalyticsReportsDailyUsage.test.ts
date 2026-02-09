@@ -99,6 +99,11 @@ describe("buildDailyUsageSeries", () => {
     ]);
     expect(series).toBeNull();
   });
+
+  it("空列表时返回空值", () => {
+    const series = buildDailyUsageSeries([]);
+    expect(series).toBeNull();
+  });
 });
 
 describe("buildDailyUsageTickText", () => {

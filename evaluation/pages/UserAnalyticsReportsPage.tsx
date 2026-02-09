@@ -704,7 +704,8 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     setReports([]);
     setUsageReports([]);
     setLoadingReports(true);
-    setLoadingUsage(false);
+    setLoadingUsage(true);
+    loadDailyUsageReports(requestId);
 
     userAnalyticsApi
       .getReports({
@@ -725,7 +726,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
         if (isStaleRequest(requestId)) return;
         setLoadingReports(false);
       });
-  }, [isStaleRequest]);
+  }, [isStaleRequest, loadDailyUsageReports]);
 
   const loadReports = useCallback(() => {
     if (reportType === "daily") {
@@ -743,12 +744,10 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     () => sortReportsByDateDesc(reports),
     [reports],
   );
-  const dailyUsageSeries = useMemo(() => {
-    if (reportType !== "daily") {
-      return null;
-    }
-    return buildDailyUsageSeries(usageReports);
-  }, [reportType, usageReports]);
+  const dailyUsageSeries = useMemo(
+    () => buildDailyUsageSeries(usageReports),
+    [usageReports],
+  );
   const dailyUsagePlotData = useMemo(() => {
     if (!dailyUsageSeries) {
       return [];
@@ -805,34 +804,32 @@ export const UserAnalyticsReportsPage: React.FC = () => {
         </Space>
       </Card>
 
-      {reportType === "daily" && (
-        <Card title="每日用量曲线" style={{ marginBottom: "24px" }}>
-          <Spin spinning={loadingUsage}>
-            {dailyUsageSeries ? (
-              <Plot
-                data={dailyUsagePlotData}
-                layout={{
-                  height: USAGE_CHART_HEIGHT,
-                  hovermode: "x unified",
-                  xaxis: {
-                    title: "日期",
-                    tickmode: "array",
-                    tickvals: dailyUsageSeries.dates,
-                    ticktext: dailyUsageXAxisTickText,
-                  },
-                  yaxis: { title: "用量" },
-                  legend: { orientation: "h" },
-                }}
-                style={{ width: "100%", height: "100%" }}
-              />
-            ) : loadingUsage ? (
-              <div style={{ height: USAGE_CHART_HEIGHT }} />
-            ) : (
-              <Empty description="暂无日报数据" />
-            )}
-          </Spin>
-        </Card>
-      )}
+      <Card title="每日用量曲线" style={{ marginBottom: "24px" }}>
+        <Spin spinning={loadingUsage}>
+          {dailyUsageSeries ? (
+            <Plot
+              data={dailyUsagePlotData}
+              layout={{
+                height: USAGE_CHART_HEIGHT,
+                hovermode: "x unified",
+                xaxis: {
+                  title: "日期",
+                  tickmode: "array",
+                  tickvals: dailyUsageSeries.dates,
+                  ticktext: dailyUsageXAxisTickText,
+                },
+                yaxis: { title: "用量" },
+                legend: { orientation: "h" },
+              }}
+              style={{ width: "100%", height: "100%" }}
+            />
+          ) : loadingUsage ? (
+            <div style={{ height: USAGE_CHART_HEIGHT }} />
+          ) : (
+            <Empty description="暂无日报数据" />
+          )}
+        </Spin>
+      </Card>
       <Spin spinning={loadingReports}>
         {sortedReports.length === 0 ? (
           loadingReports ? null : (
