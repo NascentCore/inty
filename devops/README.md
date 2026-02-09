@@ -4,6 +4,7 @@
 
 - [prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
 - [dev push worker logs](https://cloudlogging.app.goo.gl/xhWv88U4bH7v7UNd9)
+- [prod inty backend logs](https://cloudlogging.app.goo.gl/9fr7rxgrwbas68En9)
 
 ## 非 .md 文件与子目录概述
 
