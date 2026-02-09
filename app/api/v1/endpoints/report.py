@@ -74,9 +74,9 @@ async def get_report(
 async def create_report(
     report_in: ReportCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(deps.get_current_active_user),
 ):
-    """Submit report"""
+    """提交举报或反馈，任意已登录用户可调用"""
     try:
         report = await report_service.create_report(db, report_in, current_user.id)
         return APIResponse.success()
