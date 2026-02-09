@@ -3,6 +3,8 @@ package com.ai.intellimate.messages
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
+import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.theme.IntelliMateTheme
@@ -180,21 +182,25 @@ private fun MessageTabContent(
     onOpenSubscription: () -> Unit,
 ) {
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val vipStatus by VipStatusHelper.vipStatus.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        MessagesSubscriptionBanner(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-            titleText = stringResource(R.string.messages_premium_banner_title),
-            ctaText = stringResource(R.string.messages_premium_banner_cta),
-            onClick = {
-                onOpenSubscription()
+        if (!vipStatus.isSubscribed) {
+            MessagesSubscriptionBanner(
+                modifier =
+                    Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                titleText = stringResource(R.string.messages_premium_banner_title),
+                ctaText = stringResource(R.string.messages_premium_banner_cta),
+                onClick = {
+                    onOpenSubscription()
 
-                FirebaseManager.Events.CONVERSATIONS_PAGE_CLICK.logEvent(
-                    "click_type" to "MessagesSubscriptionBanner"
-                )
-            },
-        )
+                    FirebaseManager.Events.CONVERSATIONS_PAGE_CLICK.logEvent(
+                        "click_type" to "MessagesSubscriptionBanner"
+                    )
+                },
+            )
+        }
+
         Spacer(Modifier.height(UiConfigs.Spacing.Medium))
         MessagesTabSwitcher(
             selectedTab = selectedTab,

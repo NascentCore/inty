@@ -254,8 +254,8 @@ internal fun ChatPage(
     }
 
     // 获取开关状态用于页面曝光事件和 UI 显示
-    val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
-    val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
+    val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState(false)
+    val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState(false)
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
     val chatFontSizeSp by SettingStateManager.chatFontSizeFlow.collectAsState()
     val chatListFullScreen by SettingStateManager.chatListFullScreenFlow.collectAsState()
