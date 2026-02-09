@@ -108,7 +108,7 @@ def test_create_report_as_non_superuser(integration_client, db_session):
     _ensure_user_is_not_superuser(integration_client, db_session)
 
     agent_id = integration_client.create_agent(
-        name="Test Report Non-Superuser Agent",
+        name="Test Report Non-Admin Agent",  # agents.name 限制 30 字符
         visibility="PUBLIC",
     )
     report_payload = {
