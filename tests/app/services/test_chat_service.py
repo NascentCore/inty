@@ -861,7 +861,7 @@ class TestGetOrCreateChatByAgent:
             )
 
         assert exc_info.value.status_code == 404
-        assert "Agent不存在" in exc_info.value.detail
+        assert "Agent not found" in exc_info.value.detail
 
         await self._cleanup_test_data(db_session, user)
 
