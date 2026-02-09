@@ -1,7 +1,7 @@
 # AGENTS.md · app/（后端服务）
 
-- 本文件覆盖并补充仓库根 `AGENTS.md`，仅适用于 `app/`
 - 不要编辑 `stainless.yml` `openapi.json` 这两个自动生成的配置文件
+- API endpoints 返回给调用方的信息必须用英文，因为用户都是美国用户
 
 ## 超级用户权限
 
