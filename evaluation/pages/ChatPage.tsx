@@ -159,7 +159,7 @@ export const ChatPage: React.FC = () => {
     }
   }, []);
 
-  // 打开心跳日记弹窗时拉取该角色的节日记忆
+  // 点开特殊消息（静静查看）时调用 agent info（GET /ai/agents/:id）获取 features 并展示节日记忆
   useEffect(() => {
     if (!festivalMemoryModalOpen || !selectedAgent?.id) {
       setAgentWithFestivalMemories(null);
@@ -2173,7 +2173,7 @@ export const ChatPage: React.FC = () => {
           )}
         </Modal>
 
-        {/* 心跳日记/节日记忆弹窗 */}
+        {/* 心跳日记弹窗：通过 agent info 接口返回的 features.festival_memories 展示节日记忆 */}
         <Modal
           title="心跳日记"
           open={festivalMemoryModalOpen}
