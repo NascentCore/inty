@@ -4,16 +4,20 @@
 
 > Content should be copied to https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322
 
-> 这里的内容被拷贝到 IntelliMate 官方助手角色系统消息（称为提示词的一部分）
+> 这里的内容被拷贝到 IntelliMate 官方助手 iMate 系统消息（称为提示词的一部分）
 > 拷贝时，以 > 开头的文本行会被删除掉
 
 This guide gives IntelliMate users a clear, plain-language map of where to find help when they feel lost. It consolidates the Android client documentation and reorganizes it for non-technical readers.
+
+Terminology used in this guide:
+- **IntelliMate** = the app product
+- **iMate** = an AI character in the IntelliMate app
 
 ## TL;DR
 
 - **Install or update**: Prefer the [Google Play internal testing channel](https://play.google.com/store/apps/details?id=com.ai.intellimate&hl=en-US&ah=EmlT1IB-9hWsv_1I4B8Go9FEIFc). For the very latest QA builds, grab the APK from the [daily release page](https://github.com/NascentCore/inty-app/releases).
 - **Sign in**: You can explore as a guest, but linking your Google account keeps chats and VIP benefits synced across devices. (Phones in China must install Google services first.)
-- **Main flow**: Discover agents on Explore → open a Chat → use extras like voice playback, image generation, or Keep Talking → adjust Profile or Settings as needed.
+- **Main flow**: Discover iMates on Explore → open a Chat → use extras like voice playback, image generation, or Keep Talking → adjust Profile or Settings as needed.
 - **Need help?**
   - In-app: Settings → Help & Feedback (placeholder entry; use tester channels for now).
   - Test/ops escalation: see “Contact & Escalation” near the end of this doc.
@@ -23,10 +27,10 @@ This guide gives IntelliMate users a clear, plain-language map of where to find 
 ### Bottom navigation bar
 
 Bottom navigation bar host entry points of IntelliMate App's primary features. The icons are (from left to right):
-- **Chats** for you to chat and interact with IntelliMate, and the main portal to IntelliMate's long-term AI companionship experience
-- **Messages** for you to return to your IntelliMate AI companions
-- **Create IntelliMate** for you to create your own IntelliMate for long-term AI companionship
-- **Explore IntelliMates** for you to explore and find your desired IntelliMates
+- **Chats** for you to chat and interact with your iMates, and the main portal to IntelliMate's long-term AI companionship experience
+- **Messages** for you to return to your iMates
+- **Create iMate** for you to create your own iMate for long-term AI companionship
+- **Explore iMates** for you to explore and find your desired iMate
 - **Me** for managing your **Premium subscription** and general settings of the app
 
 <img width="480" height="96" alt="image" src="https://github.com/user-attachments/assets/349658de-d749-40af-a3cc-4e9613fcf6ac" />
@@ -43,13 +47,13 @@ Click the **Chats** or the **left-most** icon to open the chat page. Below is an
 
 Click the **Messages** or the **2nd** icon from the left
 
-### Create IntelliMate page
+### Create iMate page
 
-Click the **Create** or the **middle** to open the Create IntelliMate page.
+Click the **Create** or the **middle** to open the Create iMate page.
 
-### Explore IntelliMate page
+### Explore iMates page
 
-Click the **Explore** icon to open the Explore IntelliMates page.
+Click the **Explore** icon to open the Explore iMates page.
 
 ### Me page
 
@@ -60,9 +64,9 @@ Click the **Me** or the **right-most** icon
 | Task | App path | Tips & references |
 | --- | --- | --- |
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
-| Find or follow agents | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
-| Chat with an agent | Tap any agent card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
-| Create or edit an agent | Explore → “Create/+” or Profile → My Agents | Guided flow with image upload and text-to-image background (`POST /api/v1/ai/agents/text-to-image`). |
+| Find or follow iMates | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
+| Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
+| Create or edit an iMate | Explore → “Create/+” or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
 | Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. |
@@ -83,15 +87,15 @@ Click the **Me** or the **right-most** icon
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
-- VIP-tagged characters deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
+- VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/0326fd90-1bbe-4207-9e9f-1c71c4608847" />
 
 **Voice call** (from Chat): Voice calls require microphone permission. The centre circle shows connection status (e.g. Connecting / Connected), **listening** when the AI is waiting for you, or **speaking** when the AI is talking—then you see “tap to interrupt AI” and a wave animation; tap the circle to interrupt and speak. Use mute and end-call as needed. If the voice call screen stays blank, grant microphone permission when prompted or in system Settings → App → IntelliMate → Permissions.
 
-### 3. Agents
-- Creation/editing supports uploads plus AI-generated art; failures surface clear error states (`AvatarManager`).
-- Agent detail pages show AI-Generated media pulled from recent chats, with explicit labeling.
+### 3. iMates
+- iMate creation/editing supports uploads plus AI-generated art; failures surface clear error states (`AvatarManager`).
+- iMate detail pages show AI-generated media pulled from recent chats, with explicit labeling.
 
 ### 4. VIP / Subscription
 - Plans run through Google Play Billing; benefits refresh automatically after purchase.
