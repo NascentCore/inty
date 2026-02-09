@@ -76,20 +76,31 @@ class UserTimeContext(TypedDict, total=False):
 
 
 INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX = "##IntelliMate User Manual\n"
+INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX = "##IntelliMate Change Logs\n"
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
+INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "docs" / "CHANGE_LOGS.md"
 
 
-@lru_cache(maxsize=1)
-def _load_intellimate_user_manual() -> str:
+def _load_prompt_markdown_content(path: Path) -> str:
     # 如果失败，则希望立即失败，这属于编码中的逻辑错误，不应该隐藏掉。
-    # docs/INTELLIMATE.md 约定：拷贝时，以 ">" 开头的文本行会被删除掉。
-    raw = INTELLIMATE_USER_MANUAL_PATH.read_text(encoding="utf-8")
+    # 约定：拷贝时，以 ">" 开头的文本行会被删除掉。
+    raw = path.read_text(encoding="utf-8")
     filtered_lines = [
         line for line in raw.splitlines() if not line.lstrip().startswith(">")
     ]
     return "\n".join(filtered_lines).strip()
+
+
+@lru_cache(maxsize=1)
+def _load_intellimate_user_manual() -> str:
+    return _load_prompt_markdown_content(INTELLIMATE_USER_MANUAL_PATH)
+
+
+@lru_cache(maxsize=1)
+def _load_intellimate_change_logs() -> str:
+    return _load_prompt_markdown_content(INTELLIMATE_CHANGE_LOGS_PATH)
 
 
 def _format_utc_offset_minutes(offset_minutes: int) -> str:
@@ -482,6 +493,12 @@ class Agent:
             system_messages.append(
                 SystemMessage(
                     content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + user_manual
+                )
+            )
+            change_logs = _load_intellimate_change_logs()
+            system_messages.append(
+                SystemMessage(
+                    content=INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + change_logs
                 )
             )
 
