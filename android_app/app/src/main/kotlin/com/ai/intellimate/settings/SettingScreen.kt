@@ -1,6 +1,8 @@
 package com.ai.intellimate.settings
 
 // import com.ai.intellimate.vip.VipCenterActivity
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -13,18 +15,31 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -42,6 +57,7 @@ import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
+import java.util.logging.Filter
 
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
@@ -109,7 +125,10 @@ fun SettingScreen(
     ) { innerPadding ->
         val scrollState = rememberScrollState()
         Column(
-            modifier = Modifier.verticalScroll(scrollState).padding(innerPadding).padding(16.dp)
+            modifier = Modifier
+                .verticalScroll(scrollState)
+                .padding(innerPadding)
+                .padding(16.dp)
         ) {
             AccountInfoSection(userId = state.userId, userEmail = state.userEmail)
 
@@ -138,6 +157,9 @@ fun SettingScreen(
 
                 Spacer(Modifier.height(16.dp))
                 DebugBoostPointsEntry()
+
+                Spacer(Modifier.height(16.dp))
+                DebugVipStatus()
             }
 
             // 对话框
@@ -152,6 +174,49 @@ fun SettingScreen(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun DebugVipStatus() {
+    SettingsItemGroup(
+        modifier = Modifier
+            .padding(12.dp)
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            val vipStatus by BillingRepository.debugVipStatus.collectAsState()
+
+            Text(
+                text = "Vip订阅状态",
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    onClick = { BillingRepository.setDebugVipStatus(null)},
+                    selected = vipStatus == null,
+                    label = { Text("同步后端")}
+                )
+
+                FilterChip(
+                    onClick = { BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = true))},
+                    selected = vipStatus?.isSubscribed == true,
+                    label = { Text("订阅")}
+                )
+
+                FilterChip(
+                    onClick = { BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false))},
+                    selected = vipStatus?.isSubscribed == false,
+                    label = { Text("非订阅")}
+                )
+            }
+        }
+
     }
 }
 

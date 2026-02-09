@@ -108,10 +108,10 @@ fun ChatSettingsDrawer(
     // 订阅状态检查
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
-    val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
+    val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState(false)
 
     // Auto-play voice messages全局设置 - 使用SettingStateManager的Flow来监听设置变化
-    val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
+    val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState(false)
 
     // Auto-play animated background全局设置
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()

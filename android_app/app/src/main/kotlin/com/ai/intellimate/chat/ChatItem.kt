@@ -169,6 +169,7 @@ private fun ChatItemAI(
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
                 val isImageLoading = generatedImageUrl == "loading"
+                val autoPlayAudioSetting by SettingStateManager.autoPlayAudioFlow.collectAsState(false)
 
                 if (item.content.isNotEmpty() && item.content != "loading_animation") {
                     val vmAgentId = agentInfo?.id
@@ -194,7 +195,7 @@ private fun ChatItemAI(
                             isCurrentPage &&
                             safeAgentId.isNotEmpty() &&
                             audioInfo.url.isNotEmpty() &&
-                            IntySetting.isAutoPlayAudio() &&
+                            autoPlayAudioSetting &&
                             !isGuideVisible // 未出现引导手势时
 
                     // 消息气泡上方的辅助内容条
