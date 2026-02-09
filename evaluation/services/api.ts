@@ -1020,7 +1020,8 @@ export const chatApi = {
       content: string;
       created_at: string;
       timestamp: string;
-      type?: "text" | "image";
+      type?: "text" | "image" | "festival_memory_prompt";
+      festival_memory_id?: number;
       image_url?: string;
       user_vote?: "like" | "dislike" | null;
       meta_data?: {
@@ -1060,7 +1061,8 @@ export const chatApi = {
       role: "user" | "assistant";
       content: string;
       timestamp: string;
-      type?: "text" | "image";
+      type?: "text" | "image" | "festival_memory_prompt";
+      festival_memory_id?: number;
       image_url?: string;
       user_vote?: "like" | "dislike" | null;
       meta_data?: {
