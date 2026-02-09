@@ -5,7 +5,10 @@
 
 ## Design
 
-- 彩色从 android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt 中提取
+- 主题主要分文颜色、字体、形状三大类，定义在 `android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Theme.kt`
+- 颜色：使用MaterialTheme.colorScheme获取颜色，如MaterialTheme.colorScheme.primary获取主题色
+- 字体：使用MaterialTheme.typography获取字体style，如Text(style = MaterialTheme.typography.titleMedium)
+- 形状：使用MaterialTheme.shapes获取组件形状，如Surface(shape = MaterialTheme.shapes.medium)
 
 ## 功能
 
@@ -14,8 +17,8 @@
 
 ## 一般指示
 
-- 颜色常亮写入 `android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，不要直接使用 Hex 值、如 `0xFAB...` 之类的 RGB 颜色值
-- 界面元素尺寸、大小写入 `android_app/app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`，不要直接使用数字值、如 `10.sp` `10.dp` 之类的
+- 颜色从MaterialTheme.colorScheme中根据具体作用取值，不应该直接使用具体颜色数值
+- 界面元素尺寸、大小写入 `android_app/app/src/main/res/values/dimens.xml`，不要直接使用数字值、如 `10.sp` `10.dp` 之类的
 - URL 定义为常量写入 `app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`
 - 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
   并以资源 ID 的形式在代码中使用
