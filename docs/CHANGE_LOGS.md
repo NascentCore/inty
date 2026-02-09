@@ -1,0 +1,3 @@
+# IntelliMate Change Logs
+
+## TBA
