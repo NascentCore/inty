@@ -41,7 +41,7 @@ on:
     - cron: "0 11 * * *"
 
 concurrency:
-  group: inty-deploy-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
+  group: inty-deploy-backend-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
   cancel-in-progress: false
 
 env:

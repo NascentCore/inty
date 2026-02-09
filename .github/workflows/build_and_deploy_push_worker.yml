@@ -25,7 +25,7 @@ on:
         default: dev
 
 concurrency:
-  group: inty-deploy-${{ inputs.environment || 'dev' }}
+  group: inty-deploy-push-worker-${{ inputs.environment || 'dev' }}
   cancel-in-progress: false
 
 env:
