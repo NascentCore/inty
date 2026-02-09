@@ -389,9 +389,7 @@ def add_festival_memory_prompt_message_sync(
         )
         return message_id
     except Exception as e:
-        logger.error(
-            f"添加节日记忆提示消息失败 session_id={session_id}: {str(e)}"
-        )
+        logger.error(f"添加节日记忆提示消息失败 session_id={session_id}: {str(e)}")
         return None
 
 
@@ -961,6 +959,8 @@ def get_messages_paginated(
                         == META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
                     ):
                         message_obj["type"] = META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
+                        message_obj["role"] = None
+                        message_obj["sender_type"] = None
                         raw_id = meta_data.get("festivalMemoryId")
                         if raw_id is not None:
                             try:

@@ -1015,8 +1015,8 @@ export const chatApi = {
     };
     messages: Array<{
       id?: number;
-      role: "user" | "assistant";
-      sender_type: "USER" | "AI";
+      role: "user" | "assistant" | null;
+      sender_type: "USER" | "AI" | null;
       content: string;
       created_at: string;
       timestamp: string;
@@ -1058,7 +1058,7 @@ export const chatApi = {
   ): Promise<{
     messages: Array<{
       id: number;
-      role: "user" | "assistant";
+      role: "user" | "assistant" | null;
       content: string;
       timestamp: string;
       type?: "text" | "image" | "festival_memory_prompt";

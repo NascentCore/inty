@@ -12,7 +12,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
-
 from sqlalchemy import select
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -21,17 +20,21 @@ from app.models.memory import FestivalMemoryConfig
 from app.services import festival_memory_service
 from app.services.memory_extraction_service import (
     extract_and_save as memory_extract_and_save,
-    get_users_to_extract as memory_get_users_to_extract,
 )
-from app.services.user_analytics_report_service import (
-    compute_and_save_daily_report as user_analytics_compute_daily,
-    compute_and_save_weekly_report as user_analytics_compute_weekly,
+from app.services.memory_extraction_service import (
+    get_users_to_extract as memory_get_users_to_extract,
 )
 from app.services.push_notification_service import (
     discover_new_users_for_push,
     discover_users_with_updated_tokens,
     initialize_push_system,
     process_push_batch,
+)
+from app.services.user_analytics_report_service import (
+    compute_and_save_daily_report as user_analytics_compute_daily,
+)
+from app.services.user_analytics_report_service import (
+    compute_and_save_weekly_report as user_analytics_compute_weekly,
 )
 
 

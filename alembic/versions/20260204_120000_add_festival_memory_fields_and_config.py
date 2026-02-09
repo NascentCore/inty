@@ -6,9 +6,11 @@ Create Date: 2026-02-04 12:00:00.000000+00:00
 
 CREATED_BY_AGENT
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "e1f2a3b4c5d6"
