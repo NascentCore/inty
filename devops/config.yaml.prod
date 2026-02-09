@@ -28,7 +28,7 @@ database:
   user: "postgres"
   password: "sxwl666A!"
   db: "inty"
-  pool_size: 50
+  pool_size: 200
   max_overflow: 20
   pool_timeout: 10
   pool_recycle: 3600
