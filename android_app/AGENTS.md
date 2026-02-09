@@ -3,6 +3,10 @@
 - 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
   [MMKV](https://github.com/Tencent/MMKV) 已计划废弃
 
+## Design
+
+- 彩色从 android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt 中提取
+
 ## 功能
 
 - [intellimate_tips.json](app/src/main/assets/intellimate_tips.json) 可以添加用户指南让用户看到
