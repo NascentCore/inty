@@ -2,12 +2,13 @@
 端到端测试：Report API
 
 测试后端服务的举报功能，包括：
+- 非管理员用户可提交举报/反馈（POST /api/v1/report/ 对任意已登录用户开放）
 - 使用 reason_codes 创建举报（新 API）
 - 使用 reason_ids 创建举报（向后兼容，旧 API）
 - 使用 reason_codes 创建反馈（新 API）
 - 使用 reason_ids 创建反馈（向后兼容，旧 API）
 
-Report 相关接口仅对超级用户开放，测试前需将当前用户临时提升为超级用户。
+列表/详情/删除等管理接口仅对超级用户开放，相关测试通过 report_superuser fixture 临时提升权限。
 """
 
 import pytest
@@ -61,6 +62,20 @@ def report_superuser(integration_client, db_session):
             db_session.commit()
 
 
+def _ensure_user_is_not_superuser(integration_client, db_session) -> None:
+    """确保当前集成测试用户不是超级用户（用于验证非管理员可调用的接口）。"""
+    user_response = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me"
+    )
+    assert user_response.status_code == 200, user_response.text
+    user_id = user_response.json()["data"]["id"]
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+    if db_user.is_superuser:
+        db_user.is_superuser = False
+        db_session.commit()
+
+
 def _find_report(db_session, agent_id, reporter_id):
     """查找举报记录的辅助函数"""
     return (
@@ -86,6 +101,38 @@ def _find_feedback(db_session, reporter_id):
         .order_by(Report.created_at.desc())
         .first()
     )
+
+
+def test_create_report_as_non_superuser(integration_client, db_session):
+    """验证非管理员（已登录）用户可以成功提交举报。"""
+    _ensure_user_is_not_superuser(integration_client, db_session)
+
+    agent_id = integration_client.create_agent(
+        name="Test Report Non-Admin Agent",  # agents.name 限制 30 字符
+        visibility="PUBLIC",
+    )
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["SENSITIVE_CONTENT"],
+        "description": "Report from non-admin user",
+        "image_urls": [],
+    }
+
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+
+    assert response.status_code == 200, f"Report creation failed: {response.text}"
+    response_data = response.json()
+    assert response_data.get("code") == 200, f"Report creation returned error: {response_data}"
+
+    reporter_id = _get_reporter_id(integration_client)
+    report = _find_report(db_session, agent_id, reporter_id)
+    assert report is not None, "Report should be created in database"
+    assert report.reason_codes == ["SENSITIVE_CONTENT"]
+    assert report.description == "Report from non-admin user"
 
 
 def test_create_report_with_reason_codes(integration_client, db_session, report_superuser):
