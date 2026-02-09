@@ -27,6 +27,60 @@ from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 
 
+def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
+    """将 Gemini generate_content 的返回序列化为可安全写入日志的字典（不含图片二进制）。"""
+    out: Dict[str, Any] = {}
+    if response is None:
+        return out
+    if hasattr(response, "prompt_feedback") and response.prompt_feedback:
+        pf = response.prompt_feedback
+        out["prompt_feedback"] = {
+            "block_reason": getattr(pf, "block_reason", None),
+        }
+    if hasattr(response, "candidates") and response.candidates:
+        candidates = []
+        for i, c in enumerate(response.candidates):
+            entry: Dict[str, Any] = {
+                "index": i,
+                "finish_reason": getattr(c, "finish_reason", None),
+            }
+            if hasattr(c, "safety_ratings") and c.safety_ratings:
+                entry["safety_ratings"] = [
+                    {
+                        "category": getattr(r, "category", None),
+                        "probability": getattr(r, "probability", None),
+                        "blocked": getattr(r, "blocked", None),
+                    }
+                    for r in c.safety_ratings
+                ]
+            if hasattr(c, "content") and c.content and hasattr(c.content, "parts"):
+                parts_info = []
+                for p in c.content.parts:
+                    if hasattr(p, "inline_data") and p.inline_data:
+                        parts_info.append({"kind": "inline_data", "size_bytes": len(getattr(p.inline_data, "data", b""))})
+                    elif hasattr(p, "text") and p.text:
+                        parts_info.append({"kind": "text", "length": len(p.text)})
+                    else:
+                        parts_info.append({"kind": "other"})
+                entry["content_parts"] = parts_info
+            else:
+                entry["content"] = None
+            candidates.append(entry)
+        out["candidates"] = candidates
+    else:
+        out["candidates"] = []
+    return out
+
+
+def _log_image_generation_failure(prompt: Optional[str], response: Any) -> None:
+    """生图失败时在日志中记录完整提示词与 Gemini 返回结果。"""
+    logger.error("生图失败 - 完整提示词: %s", prompt if prompt is not None else "(无)")
+    logger.error(
+        "生图失败 - Gemini 返回: %s",
+        _serialize_gemini_response_for_log(response),
+    )
+
+
 class ImageGenerationService:
     """图片生成服务 - 使用 Gemini 2.5 Flash Image"""
 
@@ -371,6 +425,9 @@ class ImageGenerationService:
         Returns:
             包含图片信息的字典
         """
+        # 提前定义 2 个变量，在后续代码中赋值，并用于记录日志
+        prompt: Optional[str] = None
+        response: Any = None
         try:
             # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
             # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
@@ -524,6 +581,7 @@ class ImageGenerationService:
                 if hasattr(prompt_feedback, "block_reason"):
                     block_reason = prompt_feedback.block_reason
                     logger.warning(f"请求被阻止，原因: {block_reason}")
+                    _log_image_generation_failure(prompt, response)
                     raise ValueError(
                         f"Image generation request blocked by safety filter: {block_reason}"
                     )
@@ -531,6 +589,7 @@ class ImageGenerationService:
             # 提取图片数据
             if not response.candidates or len(response.candidates) == 0:
                 logger.error("Gemini 未返回任何候选结果")
+                _log_image_generation_failure(prompt, response)
                 raise ValueError("Gemini returned no candidates")
 
             candidate = response.candidates[0]
@@ -555,6 +614,7 @@ class ImageGenerationService:
                     if safety_details:
                         error_msg += f"; details: {', '.join(safety_details)}"
                     logger.error(error_msg)
+                    _log_image_generation_failure(prompt, response)
                     raise ValueError(error_msg)
                 elif finish_reason not in ("STOP", None):
                     logger.warning(f"候选结果以非正常原因结束: {finish_reason}")
@@ -572,6 +632,7 @@ class ImageGenerationService:
                         f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
                     )
                     logger.error(error_msg)
+                    _log_image_generation_failure(prompt, response)
                     raise ValueError(error_msg)
 
             # 检查 content 和 parts
@@ -580,6 +641,7 @@ class ImageGenerationService:
                 error_msg = "No content in candidates"
                 if finish_reason:
                     error_msg += f" (finish_reason: {finish_reason})"
+                _log_image_generation_failure(prompt, response)
                 raise ValueError(error_msg)
 
             # 查找图片部分
@@ -590,6 +652,7 @@ class ImageGenerationService:
                     break
 
             if not image_part:
+                _log_image_generation_failure(prompt, response)
                 raise ValueError("No image data found in response")
 
             # 获取图片数据
@@ -791,6 +854,7 @@ class ImageGenerationService:
 
         except Exception as e:
             logger.error(f"使用 Gemini 生成聊天图片失败: {str(e)}")
+            _log_image_generation_failure(prompt, response)
             import traceback
 
             traceback.print_exc()
