@@ -1,9 +1,3 @@
-"""
-最小化 Role Play 示例：仅用 app/core/agent/prompts + prompt_template 组装系统消息，OpenAI SDK 多轮对话。
-与 Agent.build_system_messages 的组装方式一致，不依赖 Agent/DB/config。
-CREATED_BY_AGENT
-"""
-
 from __future__ import annotations
 
 import os
@@ -31,10 +25,6 @@ USER_NAME = "User"
 assert os.getenv("OPENROUTER_API_KEY") is not None, "OPENROUTER_API_KEY 未设置"
 
 def build_system_messages_openai(char_name: str, user_name: str) -> list[dict[str, str]]:
-    """
-    使用 prompts.py 的主/模式提示词与 prompt_template 渲染，组装 OpenAI 格式的系统消息列表。
-    与 Agent.build_system_messages 的组装方式一致（仅 main + mode，无角色卡/时间等）。
-    """
     main_prompt = prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
     mode_prompt = prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
     rendered_main = prompt_template.render_prompt_jinja2_template(
@@ -50,12 +40,7 @@ def build_system_messages_openai(char_name: str, user_name: str) -> list[dict[st
 
 
 def create_openai_client() -> OpenAI:
-    """优先使用 OPENROUTER_API_KEY，否则使用 OPENAI_API_KEY。"""
     return OpenAI(base_url=OPENROUTER_BASE_URL, api_key=os.getenv("OPENROUTER_API_KEY"))
-
-
-def get_default_model() -> str:
-    return OPENROUTER_MODEL
 
 
 def run_repl(
@@ -63,7 +48,6 @@ def run_repl(
     user_name: str = USER_NAME,
     model: str = OPENROUTER_MODEL,
 ) -> None:
-    """终端内多轮 role play：读用户输入 → 调用 API → 打印助手回复。"""
     system_messages = build_system_messages_openai(char_name, user_name)
     client = create_openai_client()
     messages: list[dict[str, str]] = [*system_messages]
@@ -85,7 +69,3 @@ def run_repl(
 
 def main() -> None:
     run_repl()
-
-
-if __name__ == "__main__":
-    main()
