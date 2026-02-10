@@ -17,3 +17,7 @@
   - `nginx/conf.d/sxwl.ai.conf`：站点配置
   - `nginx/validate.sh`：配置校验
 - **docker/**：运维侧的 Docker 相关材料（如有）
+
+## 参考资料
+
+[Google GenAI pricing](https://cloud.google.com/vertex-ai/generative-ai/pricing#modality-based-pricing)
