@@ -56,7 +56,6 @@
 - 你应该维护的 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
 - Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
 - 修改后务必回看 diff，确认无误再提交/交付。
-- 新建任意文件时，需在适当格式中加入 `CREATED_BY_AGENT` 标记，用于记录创建者身份。
 - 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
 
