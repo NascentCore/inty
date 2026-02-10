@@ -10,6 +10,8 @@ import cyclopts
 
 from pydantic import BaseModel, ConfigDict, Field
 
+EMPTY_RESPONSE = "(E.M.P.T.Y.)"
+
 # 尽早加载 .env（显式路径，避免工作目录影响）
 _THIS_DIR = Path(__file__).resolve().parent
 _ENV_PATH = _THIS_DIR / ".env"
@@ -70,9 +72,10 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_MODEL = "google/gemini-2.5-flash"
 
 CHAR_NAME = "AI Companion"
-USER_NAME = "User"
+USER_NAME = "Yaxiong Zhao"
 
 APP_ICON_PATH = _THIS_DIR / "app_icon.png"
+ZUN_LONG_PHOTO_PATH = _THIS_DIR / "尊龙.png"
 
 assert os.getenv("OPENROUTER_API_KEY") is not None, "OPENROUTER_API_KEY 未设置"
 
@@ -118,6 +121,22 @@ def execute_send_app_icon() -> tuple[str, str | None]:
     return ("已发送图片。", path_str)
 
 
+def execute_send_zun_long_photo() -> tuple[str, str | None]:
+    """执行发送尊龙照片：校验 尊龙.png 存在。返回 (供 API 的结果字符串, 成功时为可点击的绝对路径否则 None)。"""
+    logger.info("执行 send_zun_long_photo 工具，图片路径: %s", ZUN_LONG_PHOTO_PATH)
+    if not ZUN_LONG_PHOTO_PATH.exists():
+        logger.warning("send_zun_long_photo 失败: 图片文件不存在")
+        return ("发送失败：图片文件不存在。", None)
+    try:
+        ZUN_LONG_PHOTO_PATH.read_bytes()
+    except OSError as e:
+        logger.warning("send_zun_long_photo 失败: 无法读取图片, error=%s", e)
+        return (f"发送失败：无法读取图片（{e!s}）。", None)
+    path_str = str(ZUN_LONG_PHOTO_PATH.resolve())
+    logger.info("send_zun_long_photo 成功，已返回路径: %s", path_str)
+    return ("已发送图片。", path_str)
+
+
 TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="send_app_icon",
@@ -126,9 +145,16 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         type=ToolType.TERMINAL,
         executor=execute_send_app_icon,
     ),
+    ToolDefinition(
+        name="send_zun_long_photo",
+        description="向用户发送尊龙照片（固定为 尊龙.png）。当用户要求看尊龙、尊龙照片或类似内容时，必须调用本工具，仅用文字回复无法真正发出图片。",
+        parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        type=ToolType.TERMINAL,
+        executor=execute_send_zun_long_photo,
+    ),
 ]
 
-SEND_IMAGE_TOOLS = [
+TOOLS = [
     {"type": "function", "function": {"name": d.name, "description": d.description, "parameters": d.parameters}}
     for d in TOOL_DEFINITIONS
 ]
@@ -237,9 +263,11 @@ def run_repl(
             resp = client.chat.completions.create(
                 model=model,
                 messages=messages,
-                tools=SEND_IMAGE_TOOLS,
+                tools=TOOLS,
                 parallel_tool_calls=False,
             )
+            _raw = resp.model_dump() if hasattr(resp, "model_dump") else repr(resp)
+            logger.info("API raw response: %s", _raw)
             msg = resp.choices[0].message
             has_tool_calls = bool(getattr(msg, "tool_calls", None))
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tool_calls)
@@ -250,14 +278,11 @@ def run_repl(
             if out.done:
                 assert out.content is not None
                 messages.append({"role": "assistant", "content": out.content})
-                if out.content:
-                    display = out.content
-                elif pending_image_path:
-                    display = "（已通过 send_app_icon 发送图片。）"
-                else:
-                    display = "（无回复内容。）"
+                # 终端只展示「LLM 输出」：助手文案 + 若有工具调用则包含工具效果（如可点击路径），不追加 REPL 自拟文案
                 if pending_image_path:
-                    display = f"{display}\n点击打开: {pending_image_path}"
+                    display = pending_image_path
+                else:
+                    display = out.content or EMPTY_RESPONSE
                 logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
                 print(f"{char_name}> {display}\n")
                 break

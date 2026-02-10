@@ -96,3 +96,10 @@ python -m experimental.agentic_ai_companion.role_play_minimal
 
 - **parallel_tool_calls=False**：`client.chat.completions.create` 传入 `parallel_tool_calls=False`，请求模型每轮只返回至多一个 tool_call。
 - **仅处理单次工具调用**：`process_response_with_tools` 内对 `tool_calls` 只取首项（`tool_calls = raw_tool_calls[:1]`），不处理同一响应中的多个工具调用，降低原型复杂度。
+
+## send_zun_long_photo 工具（近期）
+
+### 变更摘要
+
+- **新增工具**：`send_zun_long_photo`，固定发送 `尊龙.png`，类型 TERMINAL，行为与 send_app_icon 一致；用于多工具调用测试（模型可在不同轮选择 send_app_icon 或 send_zun_long_photo）。
+- **REPL fallback**：当 content 为空且附带图片路径时，展示文案由「（已通过 send_app_icon 发送图片。）」改为「（已发送图片。）」，与具体工具解耦。
