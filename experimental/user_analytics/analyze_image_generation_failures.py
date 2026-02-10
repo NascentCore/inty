@@ -62,6 +62,44 @@ class ImageGenerationAnalytics:
         finally:
             cursor.close()
 
+    def get_fallback_stats(
+        self, start_date: datetime, end_date: datetime
+    ) -> pd.DataFrame:
+        """获取兜底占比统计（新生成 vs 兜底 vs 失败，与日报口径一致）"""
+        query = """
+            SELECT
+                COUNT(*) as total_requests,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND (extra_data->>'is_matched' IS NULL OR extra_data->>'is_matched' = 'false')) as new_generation,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND extra_data->>'is_matched' = 'true') as fallback_used,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'false' OR extra_data->>'success' IS NULL) as failures
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= %s
+              AND usage_date < %s
+        """
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(query, (start_date, end_date))
+            columns = [desc[0] for desc in cursor.description]
+            data = cursor.fetchall()
+            df = pd.DataFrame(data, columns=columns)
+            if not df.empty:
+                row = df.iloc[0]
+                total = row["total_requests"]
+                new_gen = row["new_generation"]
+                fallback = row["fallback_used"]
+                success_total = new_gen + fallback
+                df["total_success"] = success_total
+                df["fallback_ratio_of_success_pct"] = (
+                    (fallback / success_total * 100) if success_total > 0 else 0.0
+                )
+                df["fallback_ratio_of_requests_pct"] = (
+                    (fallback / total * 100) if total > 0 else 0.0
+                )
+            return df
+        finally:
+            cursor.close()
+
     def get_failures_by_type(
         self, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
@@ -468,6 +506,8 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
                     "user": db_section.get("user"),
                     "password": db_section.get("password"),
                     "dbname": db_section.get("db"),
+                    "replica_host": db_section.get("replica_host"),
+                    "replica_port": db_section.get("replica_port"),
                 }
                 logger.info(f"从配置文件加载数据库配置: {config_path}")
         except Exception as e:
@@ -479,6 +519,15 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
     db_config["user"] = os.getenv("DB_USER", db_config.get("user", "postgres"))
     db_config["password"] = os.getenv("DB_PASSWORD", db_config.get("password", ""))
     db_config["dbname"] = os.getenv("DB_NAME", db_config.get("dbname", "inty"))
+    if "replica_host" not in db_config:
+        db_config["replica_host"] = None
+    if "replica_port" not in db_config:
+        db_config["replica_port"] = None
+    db_config["replica_host"] = os.getenv("DB_REPLICA_HOST", db_config.get("replica_host"))
+    if db_config.get("replica_port") is not None:
+        db_config["replica_port"] = int(db_config["replica_port"])
+    elif os.getenv("DB_REPLICA_PORT"):
+        db_config["replica_port"] = int(os.getenv("DB_REPLICA_PORT"))
 
     return db_config
 
@@ -513,7 +562,12 @@ def parse_arguments() -> argparse.Namespace:
 
     # 数据库配置参数
     parser.add_argument("--config", type=str, help="配置文件路径")
-    parser.add_argument("--db-host", type=str, help="数据库主机")
+    parser.add_argument(
+        "--replica",
+        action="store_true",
+        help="使用只读副本（config 中 database.replica_host）；未配置时回退到主库",
+    )
+    parser.add_argument("--db-host", type=str, help="数据库主机（显式指定时覆盖 config 与 --replica）")
     parser.add_argument("--db-port", type=int, help="数据库端口")
     parser.add_argument("--db-user", type=str, help="数据库用户名")
     parser.add_argument("--db-password", type=str, help="数据库密码")
@@ -565,6 +619,15 @@ def main():
     # 加载数据库配置
     db_config = load_database_config(args.config)
 
+    # 若指定 --replica 且配置了 replica_host，则连接只读副本
+    if args.replica and db_config.get("replica_host"):
+        db_config["host"] = db_config["replica_host"]
+        if db_config.get("replica_port") is not None:
+            db_config["port"] = db_config["replica_port"]
+        logger.info(f"使用只读副本: {db_config['host']}:{db_config['port']}")
+    elif args.replica:
+        logger.warning("未配置 replica_host，使用主库连接")
+
     # 命令行参数覆盖配置文件
     if args.db_host:
         db_config["host"] = args.db_host
@@ -577,9 +640,14 @@ def main():
     if args.db_name:
         db_config["dbname"] = args.db_name
 
-    # 连接数据库
+    # 连接数据库（仅传入 psycopg2 接受的参数）
+    connect_params = {
+        k: v
+        for k, v in db_config.items()
+        if k in ("host", "port", "user", "password", "dbname") and v is not None
+    }
     try:
-        conn = psycopg2.connect(**db_config)
+        conn = psycopg2.connect(**connect_params)
         logger.info(
             f"数据库连接成功: {db_config['user']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
         )
@@ -594,6 +662,9 @@ def main():
 
         logger.info("查询总体统计...")
         summary_df = analytics.get_summary_stats(start_date, end_date)
+
+        logger.info("查询兜底占比统计...")
+        fallback_df = analytics.get_fallback_stats(start_date, end_date)
 
         logger.info("查询失败类型统计...")
         failures_by_type_df = analytics.get_failures_by_type(start_date, end_date)
@@ -625,6 +696,19 @@ def main():
             logger.info(f"  失败率: {summary.get('failure_rate', 0):.2f}%")
             logger.info(f"  未知状态率: {summary.get('unknown_rate', 0):.2f}%")
             logger.info("=" * 60)
+        if not fallback_df.empty:
+            fb = fallback_df.iloc[0]
+            logger.info("兜底占比（与日报口径一致）:")
+            logger.info(f"  新生成次数: {fb.get('new_generation', 0)}")
+            logger.info(f"  兜底图片次数: {fb.get('fallback_used', 0)}")
+            logger.info(f"  失败次数: {fb.get('failures', 0)}")
+            logger.info(
+                f"  兜底占成功比例: {fb.get('fallback_ratio_of_success_pct', 0):.2f}%"
+            )
+            logger.info(
+                f"  兜底占请求比例: {fb.get('fallback_ratio_of_requests_pct', 0):.2f}%"
+            )
+            logger.info("=" * 60)
 
         if args.dry_run:
             logger.info("Dry-Run 模式，不生成报告文件")
@@ -638,6 +722,7 @@ def main():
 
         # 保存 CSV 文件
         generator.save_csv(summary_df, "image_generation_summary.csv")
+        generator.save_csv(fallback_df, "image_generation_fallback_stats.csv")
         generator.save_csv(failures_by_type_df, "image_generation_failures_by_type.csv")
         generator.save_csv(
             failures_by_reason_df, "image_generation_failures_by_reason.csv"
