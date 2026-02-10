@@ -192,16 +192,10 @@ private fun ChatItemFestivalMemory(
         Text(
             text = buildAnnotatedString {
                 append(stringResource(R.string.chat_festival_memory_notify, agentName))
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                ) {
-                    append(stringResource(R.string.take_a_look))
-                }
+                append(stringResource(R.string.take_a_look))
             },
             textAlign = TextAlign.Center,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
