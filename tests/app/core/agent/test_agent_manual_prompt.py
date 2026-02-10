@@ -62,6 +62,42 @@ def _patch_manual_and_change_logs(
     agent_module._load_intellimate_change_logs.cache_clear()
 
 
+def test_intellimate_change_logs_default_path_points_to_android_app_docs():
+    expected_path = agent_module.REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
+    assert agent_module.INTELLIMATE_CHANGE_LOGS_PATH == expected_path
+
+
+def test_intellimate_official_injects_repo_change_logs_content(tmp_path, monkeypatch):
+    manual_path = tmp_path / "INTELLIMATE.md"
+    manual_path.write_text(MINIMAL_MANUAL_CONTENT, encoding="utf-8")
+    _patch_manual_and_change_logs(
+        monkeypatch, manual_path, agent_module.INTELLIMATE_CHANGE_LOGS_PATH
+    )
+
+    expected_change_logs = "\n".join(
+        line
+        for line in agent_module.INTELLIMATE_CHANGE_LOGS_PATH.read_text(
+            encoding="utf-8"
+        ).splitlines()
+        if not line.lstrip().startswith(">")
+    ).strip()
+
+    agent = _build_agent(
+        agent_id=INTELLIMATE_AGENT_ID,
+        name=INTELLIMATE_AGENT_NAME,
+        personality="Warm personality.",
+    )
+    contents = _get_contents(agent.build_system_messages("", None))
+    change_logs_message = _find_message_by_prefix(
+        contents, "##IntelliMate Change Logs\n"
+    )
+
+    assert change_logs_message == (
+        "##IntelliMate Change Logs\n" + expected_change_logs
+    )
+    assert "CREATED_BY_AGENT" not in change_logs_message
+
+
 def test_intellimate_official_injects_manual_prompt(tmp_path, monkeypatch):
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MANUAL_PROMPT_CONTENT, encoding="utf-8")
