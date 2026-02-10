@@ -56,8 +56,6 @@ class AgentInfoViewModel : BaseVM() {
                     .distinctBy { it.imageUrl }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
-    private val chatRepository: ChatRepository = DataModule.getChatRepository()
-    private val roomDataSource: RoomDataSource = DataModule.getRoomDataSource()
     private val chatMessageRepository: ChatMessageRepository = ChatMessageRepository()
 
     private var galleryAgentId: String? = null

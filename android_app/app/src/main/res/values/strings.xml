@@ -633,6 +633,12 @@
     <string name="credits_not_enough">Not enough credits.</string>
     <string name="credits_deducted">%1$d credits deducted.</string>
     <string name="speed_up">Speed Up</string>
+    <string name="heartbeat_journal">Heartbeat Journal</string>
+    <string name="hb_journal">HB Journal</string>
+    <string name="take_a_look">Take a look</string>
+    <string name="chat_festival_memory_notify">%1$s wrote a secret Heartbeat Journal about you.</string>
+    <string name="heartbeat_subtitle">%1$d Heartbeat Journals about you</string>
+    <string name="heartbeat_empty">No Heartbeat Journal yet</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A relationship to explore</item>

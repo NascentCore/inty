@@ -722,6 +722,7 @@ internal fun ChatPage(
                                         ChatItem(
                                             navController,
                                             item = message,
+                                            agentName = agent?.name,
                                             isOnlyOpeningMessage = false,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,

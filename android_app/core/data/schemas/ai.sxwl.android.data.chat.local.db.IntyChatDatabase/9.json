@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 8,
-    "identityHash": "ce8698327a4fd0d0e87b59822e1364b6",
+    "version": 9,
+    "identityHash": "64be3c21e55492d71840a72063cb363c",
     "entities": [
       {
         "tableName": "message",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `indexId` TEXT NOT NULL, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `isSending` INTEGER NOT NULL, `type` TEXT, `agentId` TEXT NOT NULL, `isVoice` INTEGER NOT NULL, `isOpening` INTEGER NOT NULL, `voiceSessionId` TEXT, `generate_image_imageUrl` TEXT, `generate_image_width` INTEGER, `generate_image_height` INTEGER, PRIMARY KEY(`id`, `agentId`, `indexId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `indexId` TEXT NOT NULL, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `isSending` INTEGER NOT NULL, `type` TEXT, `festivalMemoryId` INTEGER, `agentId` TEXT NOT NULL, `isVoice` INTEGER NOT NULL, `isOpening` INTEGER NOT NULL, `voiceSessionId` TEXT, `generate_image_imageUrl` TEXT, `generate_image_width` INTEGER, `generate_image_height` INTEGER, PRIMARY KEY(`id`, `agentId`, `indexId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -57,6 +57,11 @@
             "fieldPath": "type",
             "columnName": "type",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "festivalMemoryId",
+            "columnName": "festivalMemoryId",
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "metaData.agentId",
@@ -129,7 +134,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ce8698327a4fd0d0e87b59822e1364b6')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '64be3c21e55492d71840a72063cb363c')"
     ]
   }
 }
