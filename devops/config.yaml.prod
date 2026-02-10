@@ -1,5 +1,7 @@
 app:
   environment: prod
+  # 仅当请求头 appVersionCode >= 此值时返回记忆提醒；0 表示不按版本限制。不配则默认 0。
+  # min_app_version_code_for_festival_memory: 0
   limits:
     guest_user_chat_24h_limit: 10
     free_user_chat_24h_limit: 100

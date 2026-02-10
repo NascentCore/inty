@@ -64,10 +64,11 @@ async def get_festival_memories_for_user_agent(
 ) -> list[dict]:
     """
     获取指定用户与指定角色的节日记忆列表，供角色详情 features.festival_memories 使用。
-    返回列表元素：{"festival_date": "YYYY-MM-DD", "festival_name": str, "memory": str}
+    返回列表元素：{"memory_id": int, "festival_date": "YYYY-MM-DD", "festival_name": str, "memory": str}
     """
     stmt = (
         select(
+            Memory.id,
             Memory.festival_date,
             Memory.festival_name,
             Memory.content,
@@ -83,11 +84,12 @@ async def get_festival_memories_for_user_agent(
     rows = result.fetchall()
     out = []
     for row in rows:
-        festival_date, festival_name, content = row
+        memory_id, festival_date, festival_name, content = row
         if festival_date is None or festival_name is None or content is None:
             continue
         out.append(
             {
+                "memory_id": memory_id,
                 "festival_date": (
                     festival_date.isoformat()
                     if hasattr(festival_date, "isoformat")

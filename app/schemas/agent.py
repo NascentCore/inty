@@ -319,6 +319,7 @@ class AgentInDB(AgentBase):
 class FestivalMemoryItem(BaseModel):
     """角色详情 features 中的单条节日记忆"""
 
+    memory_id: int = Field(..., description="memory 表主键 id")
     festival_date: str = Field(..., description="节日日期，如 YYYY-MM-DD")
     festival_name: str = Field(..., description="节日名称")
     memory: str = Field(..., description="用户与该角色在此节日下的回忆摘要")

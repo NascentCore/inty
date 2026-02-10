@@ -147,6 +147,8 @@ class AppConfig:
     environment: Environment = Environment.DEV
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
     api_v1_prefix: str = "/api/v1"
+    # 仅当请求头 appVersionCode >= 此值时返回记忆提醒（消息列表 festival_memory_prompt、角色详情 festival_memories）；小于此值按旧版不返回。0 表示不按版本限制。
+    min_app_version_code_for_festival_memory: int = 0
 
     api_endpoints: APIEndpointsConfig = field(default_factory=APIEndpointsConfig)
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
