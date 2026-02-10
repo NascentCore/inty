@@ -40,7 +40,8 @@ python -m experimental.agentic_ai_companion.role_play_minimal
 - 启动时：`load_dotenv(_ENV_PATH)`，且 `assert _ENV_PATH.exists()`、`assert os.getenv("OPENROUTER_API_KEY") is not None`。
 - 系统消息：`build_system_messages_openai(char_name, user_name)` 返回 2 条 `{"role": "system", "content": "..."}`，供脚本与测试共用。
 - 客户端：`OpenAI(base_url=OPENROUTER_BASE_URL, api_key=...)`，模型为 `OPENROUTER_MODEL`（如 `google/gemini-2.5-flash-lite`），角色名/用户名有默认常量（如 `CHAR_NAME` / `USER_NAME`）。
-- REPL：读用户输入 → 拼消息 → `client.chat.completions.create` → 打印助手回复并继续循环。
+- REPL：读用户输入 → 拼消息 → `client.chat.completions.create`（带 `tools=[send_image]`）→ 若有 tool_calls 则执行工具、追加 assistant + tool 消息并继续请求直到无 tool_calls → 打印助手回复并继续循环。
+- **send_image 工具**：无参数，固定发送 `app_icon.png`；执行时在终端打印 `[已发送图片: app_icon.png]`，向 API 返回「已发送图片。」等结果字符串。
 
 ### 测试
 
