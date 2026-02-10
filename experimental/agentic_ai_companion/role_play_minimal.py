@@ -216,7 +216,7 @@ def run_repl(
     client = create_openai_client()
     messages: list[dict[str, Any]] = [*system_messages]
     print(f"角色: {char_name} | 用户: {user_name} | 模型: {model}")
-    print("输入内容后回车发送，空行或 Ctrl+C 退出。\n")
+    print("输入内容后回车发送，空行跳过，Ctrl+C 退出。\n")
     turn = 0
     while True:
         try:
@@ -225,8 +225,7 @@ def run_repl(
             logger.info("用户中断或 EOF，退出 REPL")
             break
         if not line:
-            logger.info("用户输入空行，退出 REPL")
-            break
+            continue
         turn += 1
         logger.info("第 %d 轮对话，用户输入长度=%d: %s", turn, len(line), line[:80] + ("..." if len(line) > 80 else ""))
         messages.append({"role": "user", "content": line})
