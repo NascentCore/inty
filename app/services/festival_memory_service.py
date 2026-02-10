@@ -7,6 +7,7 @@ import asyncio
 import json
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 from sqlalchemy import delete
@@ -29,30 +30,36 @@ _MAX_IN_PARAMS = 5000
 FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW = 30
 
 
-def _window_for_festival_date(festival_date: date) -> Tuple[datetime, datetime]:
-    """节日当天 00:00 UTC 至次日 04:00 UTC，共 28 小时。返回 (window_start, window_end) 左闭右开。"""
-    window_start = datetime(
+def _window_for_festival_date(
+    festival_date: date, timezone_str: str = "UTC"
+) -> Tuple[datetime, datetime]:
+    """该时区下节日自然日 00:00 至次日 04:00（共 28 小时）换算为 UTC。返回 (window_start, window_end) 左闭右开。"""
+    tz = ZoneInfo(timezone_str)
+    local_start = datetime(
         festival_date.year,
         festival_date.month,
         festival_date.day,
         0,
         0,
         0,
-        tzinfo=timezone.utc,
+        tzinfo=tz,
     )
-    window_end = window_start + timedelta(days=1) + timedelta(hours=4)
+    local_end = local_start + timedelta(hours=28)
+    window_start = local_start.astimezone(timezone.utc)
+    window_end = local_end.astimezone(timezone.utc)
     return (window_start, window_end)
 
 
 def get_pairs_with_min_rounds_in_window_sync(
     festival_date: date,
     min_rounds: int = FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
+    timezone_str: str = "UTC",
 ) -> List[Tuple[str, str]]:
     """
-    同步筛选 (user_id, agent_id)：仅包含在「节日当天 00:00 至次日 04:00 UTC」28 小时内，
-    该会话用户消息数（排除开场白）>= min_rounds 的组合。
+    同步筛选 (user_id, agent_id)：仅包含在「该时区下节日自然日 00:00 至次日 04:00」28 小时
+    （换算为 UTC）内，该会话用户消息数（排除开场白）>= min_rounds 的组合。
     """
-    window_start, window_end = _window_for_festival_date(festival_date)
+    window_start, window_end = _window_for_festival_date(festival_date, timezone_str)
     db_url = global_config_loaded_from_config_yaml.database.url
     conn = psycopg.connect(db_url, autocommit=True)
     try:

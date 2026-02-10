@@ -90,11 +90,17 @@ class FestivalMemoryConfig(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     festival_name = Column(String, nullable=False, comment="节日名称")
-    festival_date = Column(Date, nullable=False, comment="节日日期")
+    festival_date = Column(Date, nullable=False, comment="节日日期（该时区下的自然日）")
     prompt = Column(Text, nullable=False, comment="抽取提示词")
     enabled = Column(Boolean, nullable=False, default=True, comment="是否启用")
-    run_at_date = Column(Date, nullable=True, comment="执行日期，须 >= festival_date")
-    run_at_hour = Column(Integer, nullable=True, comment="执行时刻 UTC 小时，0-23")
+    timezone = Column(
+        String,
+        nullable=False,
+        default="UTC",
+        comment="节日日期与执行时间所属时区，IANA 名如 Asia/Shanghai",
+    )
+    run_at_date = Column(Date, nullable=True, comment="执行日期（该时区下），须 >= festival_date")
+    run_at_hour = Column(Integer, nullable=True, comment="执行时刻（该时区下本地小时），0-23")
     last_run_at = Column(
         DateTime(timezone=True),
         nullable=True,
