@@ -200,8 +200,7 @@ def process_response_with_tools(
     new_messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
     logger.info("工具 %s 执行完毕，result 长度=%d", name, len(result))
 
-    any_terminal = TOOL_TYPES.get(name, ToolType.UNSPECIFIED) == ToolType.TERMINAL
-    if any_terminal:
+    if TOOL_TYPES[name] == ToolType.TERMINAL:
         content = (assistant_content + "\n" + result).strip()
         return ProcessedResponse(messages=new_messages, content=content, done=True, assistant_text=assistant_content, image_path=image_path_sent)
     return ProcessedResponse(messages=new_messages, content=None, done=False, assistant_text=assistant_content, image_path=image_path_sent)
