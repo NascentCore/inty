@@ -29,13 +29,9 @@
 - **范围**：暂不接入 Android，仅验证“从被动到主动”的逻辑转移。
 - **目标**：识别“状态切换 + 主动时机”的未知点与不确定性。
 
-## Python 类结构（Layer 1：状态机）
+## 快速开始
 
-实现见代码：`state.py`、`policies.py`、`engine.py`；状态切换记录与主动触发随机化见 `transition_logger.py`、`randomized_initiative.py`。
-
-### 终端内最小测试方式
-
-在仓库根目录执行：
+在仓库根目录执行（当前入口为 `main.py`，最小化 role play 示例）：
 
 ```bash
 python -m experimental.agentic_ai_companion
