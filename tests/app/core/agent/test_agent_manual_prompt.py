@@ -62,6 +62,11 @@ def _patch_manual_and_change_logs(
     agent_module._load_intellimate_change_logs.cache_clear()
 
 
+def test_intellimate_change_logs_default_path_points_to_android_app_docs():
+    expected_path = agent_module.REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
+    assert agent_module.INTELLIMATE_CHANGE_LOGS_PATH == expected_path
+
+
 def test_intellimate_official_injects_manual_prompt(tmp_path, monkeypatch):
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MANUAL_PROMPT_CONTENT, encoding="utf-8")
