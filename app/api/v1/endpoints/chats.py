@@ -1,8 +1,8 @@
 import json
 import uuid
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from loguru import logger
@@ -195,6 +195,7 @@ async def get_chat_detail(
     current_user: schemas.User = Depends(deps.get_current_active_user),
     limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
     offset: int = Query(0, ge=0, description="Offset (number of messages to skip)"),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ) -> Any:
     """
     Get chat details with paginated message records
@@ -217,6 +218,13 @@ async def get_chat_detail(
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
+
+        min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        if app_version_code is not None and app_version_code < min_ver:
+            messages_data["messages"] = [
+                m for m in messages_data["messages"]
+                if m.get("type") != "festival_memory_prompt"
+            ]
 
         # Assemble return data
         return {
@@ -263,6 +271,7 @@ async def get_agent_chat_detail(
     current_user: schemas.User = Depends(deps.get_current_active_user),
     limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
     offset: int = Query(0, ge=0, description="Offset (number of messages to skip)"),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ) -> Any:
     """
     Get chat details by Agent ID with paginated message records
@@ -292,6 +301,13 @@ async def get_agent_chat_detail(
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
+
+        min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        if app_version_code is not None and app_version_code < min_ver:
+            messages_data["messages"] = [
+                m for m in messages_data["messages"]
+                if m.get("type") != "festival_memory_prompt"
+            ]
 
         # Assemble return data
         data = {
@@ -342,6 +358,7 @@ async def get_agent_chat_messages(
         regex="^(asc|desc)$",
         description="Sort order: asc=old messages first, desc=new messages first",
     ),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ) -> Any:
     """
     Get only chat message records by Agent ID (lighter interface)
@@ -371,6 +388,13 @@ async def get_agent_chat_messages(
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
+
+        min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        if app_version_code is not None and app_version_code < min_ver:
+            messages_data["messages"] = [
+                m for m in messages_data["messages"]
+                if m.get("type") != "festival_memory_prompt"
+            ]
 
         # 如果要求升序（旧消息在前），则不反转
         # 如果要求降序（新消息在前），则反转消息列表

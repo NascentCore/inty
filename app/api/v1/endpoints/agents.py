@@ -4,9 +4,9 @@ Agents endpoints for accessing agents for interactions.
 
 import traceback
 import uuid
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -261,6 +261,7 @@ async def get_agent(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ) -> Any:
     """
     Get AI agent by ID
@@ -271,15 +272,17 @@ async def get_agent(
     if not agent_orm:
         raise HTTPException(status_code=404, detail="Agent not found")
     agent_schema = schemas.Agent.model_validate(agent_orm)
-    festival_list = await memory_service.get_festival_memories_for_user_agent(
-        db, current_user.id, agent_id
-    )
-    if festival_list:
-        agent_schema.features = schemas.AgentFeatures(
-            festival_memories=[
-                schemas.FestivalMemoryItem(**item) for item in festival_list
-            ]
+    min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+    if app_version_code is None or app_version_code >= min_ver:
+        festival_list = await memory_service.get_festival_memories_for_user_agent(
+            db, current_user.id, agent_id
         )
+        if festival_list:
+            agent_schema.features = schemas.AgentFeatures(
+                festival_memories=[
+                    schemas.FestivalMemoryItem(**item) for item in festival_list
+                ]
+            )
     return agent_schema
 
 

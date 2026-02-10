@@ -24,12 +24,13 @@ class TestGetFestivalMemoriesForUserAgent:
     @pytest.mark.asyncio
     async def test_returns_list_with_festival_date_name_memory(self):
         mock_db = AsyncMock()
-        mock_row = (date(2026, 2, 10), "春节", "用户与角色在春节相关的回忆摘要")
+        mock_row = (42, date(2026, 2, 10), "春节", "用户与角色在春节相关的回忆摘要")
         mock_result = MagicMock()
         mock_result.fetchall.return_value = [mock_row]
         mock_db.execute = AsyncMock(return_value=mock_result)
         out = await get_festival_memories_for_user_agent(mock_db, "user-1", "agent-1")
         assert len(out) == 1
+        assert out[0]["memory_id"] == 42
         assert out[0]["festival_date"] == "2026-02-10"
         assert out[0]["festival_name"] == "春节"
         assert out[0]["memory"] == "用户与角色在春节相关的回忆摘要"
