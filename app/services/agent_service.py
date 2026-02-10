@@ -1211,7 +1211,9 @@ async def update_agent(
         logger.error(
             f"数据完整性错误 - 更新角色 {db_agent.id if db_agent else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=400, detail="Data integrity constraint violated")
+        raise HTTPException(
+            status_code=400, detail="Data integrity constraint violated"
+        )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(

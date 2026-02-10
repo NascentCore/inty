@@ -18,26 +18,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -57,7 +52,6 @@ import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
-import java.util.logging.Filter
 
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
@@ -125,10 +119,7 @@ fun SettingScreen(
     ) { innerPadding ->
         val scrollState = rememberScrollState()
         Column(
-            modifier = Modifier
-                .verticalScroll(scrollState)
-                .padding(innerPadding)
-                .padding(16.dp)
+            modifier = Modifier.verticalScroll(scrollState).padding(innerPadding).padding(16.dp)
         ) {
             AccountInfoSection(userId = state.userId, userEmail = state.userEmail)
 
@@ -179,10 +170,7 @@ fun SettingScreen(
 
 @Composable
 private fun DebugVipStatus() {
-    SettingsItemGroup(
-        modifier = Modifier
-            .padding(12.dp)
-    ) {
+    SettingsItemGroup(modifier = Modifier.padding(12.dp)) {
         Column(Modifier.fillMaxWidth()) {
             val vipStatus by BillingRepository.debugVipStatus.collectAsState()
 
@@ -198,25 +186,28 @@ private fun DebugVipStatus() {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
-                    onClick = { BillingRepository.setDebugVipStatus(null)},
+                    onClick = { BillingRepository.setDebugVipStatus(null) },
                     selected = vipStatus == null,
-                    label = { Text("同步后端")}
+                    label = { Text("同步后端") },
                 )
 
                 FilterChip(
-                    onClick = { BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = true))},
+                    onClick = {
+                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = true))
+                    },
                     selected = vipStatus?.isSubscribed == true,
-                    label = { Text("订阅")}
+                    label = { Text("订阅") },
                 )
 
                 FilterChip(
-                    onClick = { BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false))},
+                    onClick = {
+                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false))
+                    },
                     selected = vipStatus?.isSubscribed == false,
-                    label = { Text("非订阅")}
+                    label = { Text("非订阅") },
                 )
             }
         }
-
     }
 }
 

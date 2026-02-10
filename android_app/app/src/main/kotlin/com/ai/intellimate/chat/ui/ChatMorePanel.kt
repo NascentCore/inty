@@ -122,17 +122,14 @@ fun ChatMorePanel(
             BackHandler(onBack = { showContent = false })
 
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .noRippleClickable { showContent = false },
+                modifier = Modifier.fillMaxSize().noRippleClickable { showContent = false },
                 contentAlignment = Alignment.BottomCenter,
             ) {
                 val density = LocalDensity.current
                 val keyboardHeight by SettingStateManager.keyboardHeight.collectAsState()
 
                 BoxWithConstraints(
-                    Modifier
-                        .fillMaxWidth()
+                    Modifier.fillMaxWidth()
                         .height(if (keyboardHeight > 0) keyboardHeight.dp else 300.dp)
                 ) {
                     val transY = remember { Animatable(maxHeight, Dp.VectorConverter) }
@@ -152,8 +149,7 @@ fun ChatMorePanel(
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
                         modifier =
-                            Modifier
-                                .fillMaxSize()
+                            Modifier.fillMaxSize()
                                 .graphicsLayer {
                                     translationY = with(density) { transY.value.toPx() }
 
@@ -216,7 +212,7 @@ fun ChatMorePanel(
                                     // 检查是否已登录
                                     if (
                                         IntySetting.isLogin() &&
-                                        IntySetting.getCurToken().isNotEmpty()
+                                            IntySetting.getCurToken().isNotEmpty()
                                     ) {
                                         FirebaseManager.logEvent(
                                             FirebaseManager.Events.CHAT_MORE_CLICK,
@@ -227,7 +223,9 @@ fun ChatMorePanel(
                                             ),
                                         )
                                         onDismiss()
-                                        agentInfo?.id?.let { navController.toHeartbeat(it, pageSource = "more_panel") }
+                                        agentInfo?.id?.let {
+                                            navController.toHeartbeat(it, pageSource = "more_panel")
+                                        }
                                     }
                                 },
                                 icon = {
@@ -244,11 +242,9 @@ fun ChatMorePanel(
                         item("Reset") {
                             Box(
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .graphicsLayer {
-                                            alpha = if (hasUserMessages) 1f else 0.4f
-                                        }
+                                    Modifier.fillMaxWidth().graphicsLayer {
+                                        alpha = if (hasUserMessages) 1f else 0.4f
+                                    }
                             ) {
                                 MorePanelItem(
                                     modifier = Modifier.fillMaxWidth(),
@@ -456,19 +452,14 @@ private fun MorePanelItem(
     ) {
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
-            Box(modifier = Modifier
-                .align(Alignment.Center)
-                .size(36.dp)) { icon() }
+            Box(modifier = Modifier.align(Alignment.Center).size(36.dp)) { icon() }
 
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -490,22 +481,17 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
     ) {
         Box(
             modifier =
-                Modifier
-                    .size(64.dp)
+                Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
             Image(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
+                modifier = Modifier.size(36.dp).align(Alignment.Center),
                 painter = painterResource(id = icon),
                 contentDescription = null,
             )
             if (isVip) {
                 Image(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 5.dp, end = 2.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 2.dp),
                     painter = painterResource(R.drawable.ic_vip_badge),
                     contentDescription = null,
                 )
@@ -520,8 +506,7 @@ private fun MorePanelItem(icon: Int, text: String, isVip: Boolean = false, onCli
 private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Box(
-            Modifier
-                .clip(RoundedCornerShape(24.dp))
+            Modifier.clip(RoundedCornerShape(24.dp))
                 .background(
                     brush =
                         Brush.verticalGradient(
@@ -558,9 +543,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onDismiss,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             fontSize = 16.sp,
@@ -572,9 +555,7 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                     TextButton(
                         onClick = onReset,
                         shape = RectangleShape,
-                        modifier = Modifier
-                            .height(40.dp)
-                            .weight(1f),
+                        modifier = Modifier.height(40.dp).weight(1f),
                     ) {
                         Text(
                             text = stringResource(R.string.reset),

@@ -52,6 +52,5 @@ interface CharacterDao {
     @Query("DELETE FROM festival_memory WHERE agentId = :agentId")
     suspend fun clearMemories(agentId: String)
 
-    @Upsert
-    suspend fun upsert(memories: List<FestivalMemory>)
+    @Upsert suspend fun upsert(memories: List<FestivalMemory>)
 }

@@ -71,14 +71,12 @@ def _fill_serialized_gemini_response(out: Dict[str, Any], response: Any) -> None
             )
             if parts is not None:
                 parts_info = []
-                for p in (parts or []):
+                for p in parts or []:
                     if hasattr(p, "inline_data") and p.inline_data:
                         parts_info.append(
                             {
                                 "kind": "inline_data",
-                                "size_bytes": len(
-                                    getattr(p.inline_data, "data", b"")
-                                ),
+                                "size_bytes": len(getattr(p.inline_data, "data", b"")),
                             }
                         )
                     elif hasattr(p, "text") and p.text:
@@ -622,9 +620,7 @@ class ImageGenerationService:
                 logger.warning(f"候选结果完成原因: {finish_reason}")
                 if finish_reason == "SAFETY":
                     # 检查安全评级以获取详细信息
-                    safety_ratings = (
-                        getattr(candidate, "safety_ratings", None) or []
-                    )
+                    safety_ratings = getattr(candidate, "safety_ratings", None) or []
                     safety_details = []
                     if safety_ratings:
                         for rating in safety_ratings:
@@ -644,9 +640,7 @@ class ImageGenerationService:
                     logger.warning(f"候选结果以非正常原因结束: {finish_reason}")
 
             # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
-            candidate_safety_ratings = (
-                getattr(candidate, "safety_ratings", None) or []
-            )
+            candidate_safety_ratings = getattr(candidate, "safety_ratings", None) or []
             if candidate_safety_ratings:
                 blocked_ratings = []
                 for rating in candidate_safety_ratings:
@@ -655,9 +649,7 @@ class ImageGenerationService:
                         probability = getattr(rating, "probability", "UNKNOWN")
                         blocked_ratings.append(f"{category}={probability}")
                 if blocked_ratings:
-                    error_msg = (
-                        f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
-                    )
+                    error_msg = f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
                     logger.error(error_msg)
                     _log_image_generation_failure(prompt, response)
                     raise ValueError(error_msg)

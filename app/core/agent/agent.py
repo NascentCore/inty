@@ -607,13 +607,11 @@ class Agent:
             try:
                 sync_engine = get_sync_engine()
                 with sync_engine.connect() as conn:
-                    query = text(
-                        """
+                    query = text("""
                         SELECT nickname, gender, age_group, description, system_language 
                         FROM users 
                         WHERE id = :user_id
-                    """
-                    )
+                    """)
                     result = conn.execute(query, {"user_id": user_id})
                     row = result.fetchone()
 

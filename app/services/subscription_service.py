@@ -1722,7 +1722,9 @@ class SubscriptionService:
                     logger.error(
                         f"更新订阅状态失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
                     )
-                    raise ValueError(f"Subscription plan not found: {subscription.plan_id}")
+                    raise ValueError(
+                        f"Subscription plan not found: {subscription.plan_id}"
+                    )
 
             # Google Play通知类型映射
             # 1: SUBSCRIPTION_RECOVERED (订阅恢复)
@@ -1829,7 +1831,9 @@ class SubscriptionService:
                     logger.error(
                         f"创建续费交易记录失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
                     )
-                    raise ValueError(f"Subscription plan not found: {subscription.plan_id}")
+                    raise ValueError(
+                        f"Subscription plan not found: {subscription.plan_id}"
+                    )
 
             transaction = SubscriptionTransaction(
                 id=str(uuid.uuid4()),
@@ -1872,7 +1876,9 @@ class SubscriptionService:
                     logger.error(
                         f"退款处理失败 - 找不到订阅计划: plan_id={subscription.plan_id}"
                     )
-                    raise ValueError(f"Subscription plan not found: {subscription.plan_id}")
+                    raise ValueError(
+                        f"Subscription plan not found: {subscription.plan_id}"
+                    )
 
             # 更新订阅状态为退款
             subscription.status = SubscriptionStatus.REFUNDED

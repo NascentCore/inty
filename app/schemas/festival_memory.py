@@ -54,14 +54,18 @@ class FestivalMemoryConfigUpdate(BaseModel):
     """更新节日记忆配置"""
 
     festival_name: Optional[str] = Field(None, description="节日名称")
-    festival_date: Optional[date] = Field(None, description="节日日期（该时区下的自然日）")
+    festival_date: Optional[date] = Field(
+        None, description="节日日期（该时区下的自然日）"
+    )
     prompt: Optional[str] = Field(None, description="抽取提示词")
     enabled: Optional[bool] = Field(None, description="是否启用")
     timezone: Optional[str] = Field(
         None,
         description="节日日期与执行时间所属时区，IANA 名如 Asia/Shanghai",
     )
-    run_at_date: Optional[date] = Field(None, description="执行日期（该时区下），须不早于节日日期")
+    run_at_date: Optional[date] = Field(
+        None, description="执行日期（该时区下），须不早于节日日期"
+    )
     run_at_hour: Optional[int] = Field(
         None,
         ge=RUN_AT_HOUR_MIN,
@@ -90,7 +94,9 @@ class FestivalMemoryConfigInDB(BaseModel):
     enabled: bool
     timezone: str = Field(..., description="节日与执行时间所属时区，IANA 名")
     run_at_date: Optional[date] = Field(None, description="执行日期（该时区下）")
-    run_at_hour: Optional[int] = Field(None, description="执行时刻（该时区下本地小时）0-23")
+    run_at_hour: Optional[int] = Field(
+        None, description="执行时刻（该时区下本地小时）0-23"
+    )
     last_run_at: Optional[datetime] = Field(
         None, description="最近一次被定时任务执行的时间"
     )

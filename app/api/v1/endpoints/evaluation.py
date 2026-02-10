@@ -1323,7 +1323,9 @@ async def get_conversation_rounds(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取对话轮数失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch conversation turns")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch conversation turns"
+        )
 
 
 @router.get(
@@ -2256,7 +2258,9 @@ async def get_user_today_stats(
         raise
     except Exception as e:
         logger.error(f"获取用户当日统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch today's user stats")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch today's user stats"
+        )
 
 
 @router.get(
@@ -2504,7 +2508,9 @@ async def get_all_agents_image_counts(
 
     except Exception as e:
         logger.error(f"获取角色图片数量失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch agent image counts")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch agent image counts"
+        )
 
 
 @router.get(

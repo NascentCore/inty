@@ -1799,7 +1799,9 @@ class UserAnalyticsService:
         unknown_status = row[3] or 0
         new_generation = row[4] or 0
         fallback_used = row[5] or 0
-        success_rate = (total_success / total_requests * 100) if total_requests > 0 else 0.0
+        success_rate = (
+            (total_success / total_requests * 100) if total_requests > 0 else 0.0
+        )
         fallback_ratio_success = (
             (fallback_used / total_success * 100) if total_success > 0 else 0.0
         )
@@ -1813,9 +1815,11 @@ class UserAnalyticsService:
             "total_failures": total_failures,
             "unknown_status": unknown_status,
             "success_rate": round(success_rate, 2),
-            "failure_rate": round((total_failures / total_requests * 100), 2)
-            if total_requests > 0
-            else 0.0,
+            "failure_rate": (
+                round((total_failures / total_requests * 100), 2)
+                if total_requests > 0
+                else 0.0
+            ),
         }
         fallback_stats = {
             "new_generation": new_generation,
@@ -1893,15 +1897,19 @@ class UserAnalyticsService:
         daily_trend = []
         for row in r.fetchall():
             total = row[1] or 0
-            daily_trend.append({
-                "date": row[0].isoformat() if row[0] else None,
-                "total_requests": total,
-                "total_success": row[2] or 0,
-                "total_failures": row[3] or 0,
-                "new_generation": row[4] or 0,
-                "fallback_used": row[5] or 0,
-                "success_rate": round((row[2] or 0) / total * 100, 2) if total > 0 else 0.0,
-            })
+            daily_trend.append(
+                {
+                    "date": row[0].isoformat() if row[0] else None,
+                    "total_requests": total,
+                    "total_success": row[2] or 0,
+                    "total_failures": row[3] or 0,
+                    "new_generation": row[4] or 0,
+                    "fallback_used": row[5] or 0,
+                    "success_rate": (
+                        round((row[2] or 0) / total * 100, 2) if total > 0 else 0.0
+                    ),
+                }
+            )
 
         # 5) 按 Agent 失败率（请求数>=5）
         agent_query = text("""
@@ -1925,14 +1933,18 @@ class UserAnalyticsService:
         failures_by_agent = []
         for row in r.fetchall():
             total = row[2] or 0
-            failures_by_agent.append({
-                "agent_id": row[0],
-                "agent_name": row[1] or "Unknown",
-                "total_requests": total,
-                "total_success": row[3] or 0,
-                "total_failures": row[4] or 0,
-                "failure_rate": round((row[4] or 0) / total * 100, 2) if total > 0 else 0.0,
-            })
+            failures_by_agent.append(
+                {
+                    "agent_id": row[0],
+                    "agent_name": row[1] or "Unknown",
+                    "total_requests": total,
+                    "total_success": row[3] or 0,
+                    "total_failures": row[4] or 0,
+                    "failure_rate": (
+                        round((row[4] or 0) / total * 100, 2) if total > 0 else 0.0
+                    ),
+                }
+            )
 
         return {
             "summary": summary,

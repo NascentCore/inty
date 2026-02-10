@@ -7,11 +7,11 @@ import androidx.room.PrimaryKey
 data class FestivalMemory(
     @PrimaryKey val id: Long,
     val agentId: String,
-    //日期
+    // 日期
     val festivalDate: String = "",
-    //节日名称
+    // 节日名称
     val festivalName: String? = null,
-    val memory: String = ""
+    val memory: String = "",
 ) {
     val title: String
         get() = festivalName?.let { "$it ${festivalDate.split("-").firstOrNull()}" } ?: festivalDate

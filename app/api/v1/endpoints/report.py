@@ -100,7 +100,9 @@ async def delete_report(
         )
         return APIResponse.success()
     except PermissionError:
-        return APIResponse.error(message="Not authorized to delete this record", code=403)
+        return APIResponse.error(
+            message="Not authorized to delete this record", code=403
+        )
     except ValueError:
         return APIResponse.error(message="Record not found", code=404)
     except SQLAlchemyError as e:

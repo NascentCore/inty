@@ -3,10 +3,7 @@ package com.ai.intellimate.agent.info
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.chat.data.RoomDataSource
-import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.chat.local.db.MessageEntity
-import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.agent.info.AgentInfoViewModel.Companion.DEFAULT_GALLERY_DIMENSION

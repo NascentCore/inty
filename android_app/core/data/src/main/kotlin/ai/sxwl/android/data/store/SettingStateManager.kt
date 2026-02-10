@@ -18,15 +18,15 @@ object SettingStateManager {
 
     // Keep Talking按钮显示状态
     private val _showKeepTalkingFlow = MutableStateFlow(IntySetting.isShowKeepTalking())
-    val showKeepTalkingFlow: Flow<Boolean> = _showKeepTalkingFlow
-        .combine(VipStatusHelper.vipStatus) { isShow, vipStatus ->
+    val showKeepTalkingFlow: Flow<Boolean> =
+        _showKeepTalkingFlow.combine(VipStatusHelper.vipStatus) { isShow, vipStatus ->
             isShow && vipStatus.isSubscribed
         }
 
     // 自动播放语音消息状态
     private val _autoPlayAudioFlow = MutableStateFlow(IntySetting.isAutoPlayAudio())
-    val autoPlayAudioFlow: Flow<Boolean> = _autoPlayAudioFlow
-        .combine(VipStatusHelper.vipStatus) { autoPlay, vipStatus ->
+    val autoPlayAudioFlow: Flow<Boolean> =
+        _autoPlayAudioFlow.combine(VipStatusHelper.vipStatus) { autoPlay, vipStatus ->
             autoPlay && vipStatus.isSubscribed
         }
 

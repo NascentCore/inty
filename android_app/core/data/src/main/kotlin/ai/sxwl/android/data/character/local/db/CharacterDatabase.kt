@@ -10,7 +10,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [CharacterEntity::class, FestivalMemory::class], version = 5, exportSchema = true)
+@Database(
+    entities = [CharacterEntity::class, FestivalMemory::class],
+    version = 5,
+    exportSchema = true,
+)
 @TypeConverters(CharacterTypeConverters::class)
 abstract class CharacterDatabase : RoomDatabase() {
 

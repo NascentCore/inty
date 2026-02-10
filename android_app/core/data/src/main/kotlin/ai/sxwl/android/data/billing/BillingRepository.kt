@@ -410,7 +410,9 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
                             "订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}",
                             LogUtils.I,
                         )
-                        _eventFlow.emit(BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus))
+                        _eventFlow.emit(
+                            BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus)
+                        )
 
                         // 自动更新Firebase用户属性
                         VipStatusHelper.updateFirebaseUserProperties()
