@@ -407,6 +407,7 @@ class ChatImageGenerationResponse(BaseModel):
     message_id: int
     model: Optional[str] = None  # 使用的生图模型
     generation_time_ms: Optional[int] = None  # 模型调用耗时（毫秒）
+    model_fallback_due_to_429: Optional[bool] = None  # 是否因 429 使用了备用模型
 
 
 class MessageVoteRequest(BaseModel):

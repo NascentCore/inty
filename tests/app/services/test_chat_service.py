@@ -131,7 +131,7 @@ class TestChatService:
         # Mock 限额检查 - 允许生成
         mock_check_limit.return_value = (True, 2, 10)  # (is_allowed, used_count, daily_limit)
 
-        # Mock 图片生成结果
+        # Mock 图片生成结果（model/generation_time_ms/model_fallback_due_to_429 由 generate_chat_image 成功路径写入）
         mock_image_result = {
             "message_id": message_id,
             "image_url": "https://cdn.example.com/test_image.jpg",
@@ -156,9 +156,16 @@ class TestChatService:
             history_count=history_count,
         )
 
-        # 验证结果
+        # 验证结果（含服务端写入的 model、generation_time_ms、model_fallback_due_to_429）
         assert isinstance(result, ChatImageGenerationResponse)
-        assert result.model_dump() == mock_image_result
+        actual = result.model_dump()
+        assert actual["message_id"] == mock_image_result["message_id"]
+        assert actual["image_url"] == mock_image_result["image_url"]
+        assert actual["image_metadata"] == mock_image_result["image_metadata"]
+        assert actual["prompt"] == mock_image_result["prompt"]
+        assert "model" in actual
+        assert "generation_time_ms" in actual
+        assert actual.get("model_fallback_due_to_429") is False
         assert result.message_id == message_id
         assert result.image_url == mock_image_result["image_url"]
         assert result.image_metadata == mock_image_result["image_metadata"]
