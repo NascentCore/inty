@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
+import time
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any, Callable
@@ -102,7 +104,7 @@ class ToolDefinition(BaseModel):
     description: str
     parameters: dict[str, Any]
     type: ToolType = ToolType.UNSPECIFIED
-    executor: Callable[[], tuple[str, str | None]] = Field(exclude=True)
+    executor: Callable[..., tuple[str, str | None]] = Field(exclude=True)
 
 
 def execute_send_app_icon() -> tuple[str, str | None]:
@@ -137,6 +139,35 @@ def execute_send_zun_long_photo() -> tuple[str, str | None]:
     return ("已发送图片。", path_str)
 
 
+RECENT_MESSAGES_FOR_IMAGE = 10
+
+
+def execute_generate_image(
+    *,
+    messages: list[dict[str, Any]],
+    **kwargs: Any,
+) -> tuple[str, str | None]:
+    """根据当前对话上下文（最近 N 条消息）生成图片并写入本地文件，返回 (结果文案, 可点击绝对路径或 None)。"""
+    from .image_gen import generate_image_from_messages
+
+    recent = messages[-RECENT_MESSAGES_FOR_IMAGE:] if len(messages) > RECENT_MESSAGES_FOR_IMAGE else messages
+    try:
+        image_bytes = generate_image_from_messages(recent)
+    except Exception as e:
+        logger.warning("generate_image 失败: %s", e)
+        return (f"生成失败：{e}", None)
+    suffix = ".jpg"
+    if image_bytes[:2] == b"\xff\xd8":
+        suffix = ".jpg"
+    elif image_bytes[:8] == b"\x89PNG\r\n\x1a\n":
+        suffix = ".png"
+    out_path = _THIS_DIR / f"generated_{int(time.time() * 1000)}{suffix}"
+    out_path.write_bytes(image_bytes)
+    path_str = str(out_path.resolve())
+    logger.info("generate_image 成功，已写入: %s", path_str)
+    return ("已根据对话上下文生成图片。", path_str)
+
+
 TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="send_app_icon",
@@ -151,6 +182,13 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         parameters={"type": "object", "properties": {}, "additionalProperties": False},
         type=ToolType.TERMINAL,
         executor=execute_send_zun_long_photo,
+    ),
+    ToolDefinition(
+        name="generate_image",
+        description="根据当前对话上下文生成一张图片。当用户希望根据当前对话内容生成图片时调用此工具；调用时无需参数，系统会使用当前聊天 session 中最近的 10 条消息作为上下文生成图片；仅用文字回复无法真正发出图片。",
+        parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        type=ToolType.TERMINAL,
+        executor=execute_generate_image,
     ),
 ]
 
@@ -216,9 +254,18 @@ def process_response_with_tools(
     new_messages = [*messages, assistant_msg]
 
     name = tool_call.function.name
+    raw_args = tool_call.function.arguments or ""
+    try:
+        parsed_args = json.loads(raw_args) if raw_args.strip() else {}
+    except json.JSONDecodeError:
+        parsed_args = {}
+    context_kwargs: dict[str, Any] = {}
+    if name == "generate_image":
+        context_kwargs["messages"] = new_messages[-RECENT_MESSAGES_FOR_IMAGE:]
+
     executor = TOOL_EXECUTORS.get(name)
     if executor:
-        result, path = executor()
+        result, path = executor(**parsed_args, **context_kwargs)
         image_path_sent = path
     else:
         result = f"未知工具: {name}"

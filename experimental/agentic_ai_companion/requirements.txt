@@ -1,4 +1,5 @@
 cyclopts
-python-dotenv
+google-genai
 openai
 pydantic
+python-dotenv
