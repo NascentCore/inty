@@ -70,6 +70,6 @@ python -m experimental.agentic_ai_companion.role_play_minimal
 
 ### 架构微调（role_play_minimal.py）
 
-- **工具执行器注册表**：`TOOL_EXECUTORS: dict[str, Callable[[], tuple[str, str | None]]]`，由 `_register_tools()` 注册 `send_image`。`process_response_with_tools` 按工具名查找并调用，新增工具只需实现「无参、返回 (API 结果字符串, 路径或 None)」并注册，无需改处理逻辑。
+- **工具定义与执行器统一**：引入 Pydantic 模型 `ToolDefinition`（name, description, parameters, executor），`executor` 使用 `Field(exclude=True)` 仅运行时使用、不序列化。单一列表 `TOOL_DEFINITIONS` 维护所有工具，从中推导 `SEND_IMAGE_TOOLS`（OpenRouter schema）与 `TOOL_EXECUTORS`（name → executor）；删除 `_register_tools()`，新增/修改工具只改 `TOOL_DEFINITIONS` 一处即可保持 schema 与执行器一致。
 - **ProcessedResponse（Pydantic 模型）**：单轮 API 响应处理结果由 5 元组改为不可变 Pydantic `BaseModel`（messages, content, done, assistant_text, image_path），REPL 使用 `out.messages`、`out.done`、`out.content` 等，可读性更好；依赖 `pydantic>=2`。
 - 移除废弃注释（如原 `OPENROUTER_MODEL` 的 lite 备选）。

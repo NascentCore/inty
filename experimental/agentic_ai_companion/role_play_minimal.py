@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 # 尽早加载 .env（显式路径，避免工作目录影响）
 _THIS_DIR = Path(__file__).resolve().parent
@@ -33,18 +33,6 @@ USER_NAME = "User"
 
 APP_ICON_PATH = _THIS_DIR / "app_icon.png"
 
-SEND_IMAGE_TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "send_image",
-            "description": "向用户发送应用图标图片（固定为 app_icon.png）。当用户明确要求发送图片、图标或 app icon 时，必须调用本工具，仅用文字回复无法真正发出图片。",
-            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
-        },
-    },
-]
-
-
 assert os.getenv("OPENROUTER_API_KEY") is not None, "OPENROUTER_API_KEY 未设置"
 
 
@@ -59,8 +47,12 @@ class ProcessedResponse(BaseModel):
     image_path: str | None
 
 
-# 工具名 -> 执行函数 (无参，返回 (供 API 的字符串, 成功时路径或 None))
-TOOL_EXECUTORS: dict[str, Callable[[], tuple[str, str | None]]] = {}
+class ToolDefinition(BaseModel):
+    """单条工具定义：API schema 与执行函数，由 TOOL_DEFINITIONS 统一维护。executor 仅运行时使用，不参与序列化。"""
+    name: str
+    description: str
+    parameters: dict[str, Any]
+    executor: Callable[[], tuple[str, str | None]] = Field(exclude=True)
 
 
 def execute_send_image() -> tuple[str, str | None]:
@@ -79,11 +71,20 @@ def execute_send_image() -> tuple[str, str | None]:
     return ("已发送图片。", path_str)
 
 
-def _register_tools() -> None:
-    TOOL_EXECUTORS["send_image"] = execute_send_image
+TOOL_DEFINITIONS: list[ToolDefinition] = [
+    ToolDefinition(
+        name="send_image",
+        description="向用户发送应用图标图片（固定为 app_icon.png）。当用户明确要求发送图片、图标或 app icon 时，必须调用本工具，仅用文字回复无法真正发出图片。",
+        parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        executor=execute_send_image,
+    ),
+]
 
-
-_register_tools()
+SEND_IMAGE_TOOLS = [
+    {"type": "function", "function": {"name": d.name, "description": d.description, "parameters": d.parameters}}
+    for d in TOOL_DEFINITIONS
+]
+TOOL_EXECUTORS = {d.name: d.executor for d in TOOL_DEFINITIONS}
 
 
 def build_system_messages_openai(char_name: str, user_name: str) -> list[dict[str, str]]:
