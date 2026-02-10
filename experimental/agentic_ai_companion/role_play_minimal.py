@@ -55,28 +55,28 @@ class ToolDefinition(BaseModel):
     executor: Callable[[], tuple[str, str | None]] = Field(exclude=True)
 
 
-def execute_send_image() -> tuple[str, str | None]:
+def execute_send_app_icon() -> tuple[str, str | None]:
     """执行发送图片：校验 app_icon.png 存在。返回 (供 API 的结果字符串, 成功时为可点击的绝对路径否则 None)。"""
-    logger.info("执行 send_image 工具，图片路径: %s", APP_ICON_PATH)
+    logger.info("执行 send_app_icon 工具，图片路径: %s", APP_ICON_PATH)
     if not APP_ICON_PATH.exists():
-        logger.warning("send_image 失败: 图片文件不存在")
+        logger.warning("send_app_icon 失败: 图片文件不存在")
         return ("发送失败：图片文件不存在。", None)
     try:
         APP_ICON_PATH.read_bytes()
     except OSError as e:
-        logger.warning("send_image 失败: 无法读取图片, error=%s", e)
+        logger.warning("send_app_icon 失败: 无法读取图片, error=%s", e)
         return (f"发送失败：无法读取图片（{e!s}）。", None)
     path_str = str(APP_ICON_PATH.resolve())
-    logger.info("send_image 成功，已返回路径: %s", path_str)
+    logger.info("send_app_icon 成功，已返回路径: %s", path_str)
     return ("已发送图片。", path_str)
 
 
 TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
-        name="send_image",
+        name="send_app_icon",
         description="向用户发送应用图标图片（固定为 app_icon.png）。当用户明确要求发送图片、图标或 app icon 时，必须调用本工具，仅用文字回复无法真正发出图片。",
         parameters={"type": "object", "properties": {}, "additionalProperties": False},
-        executor=execute_send_image,
+        executor=execute_send_app_icon,
     ),
 ]
 
@@ -196,7 +196,12 @@ def run_repl(
             if out.done:
                 assert out.content is not None
                 messages.append({"role": "assistant", "content": out.content})
-                display = out.content if out.content else "（已通过 send_image 发送图片。）"
+                if out.content:
+                    display = out.content
+                elif pending_image_path:
+                    display = "（已通过 send_app_icon 发送图片。）"
+                else:
+                    display = "（无回复内容。）"
                 if pending_image_path:
                     display = f"{display}\n点击打开: {pending_image_path}"
                 logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
