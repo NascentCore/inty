@@ -1,3 +1,4 @@
+cyclopts
 python-dotenv
 openai
 pydantic

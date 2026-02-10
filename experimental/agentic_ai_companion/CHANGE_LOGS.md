@@ -73,3 +73,26 @@ python -m experimental.agentic_ai_companion.role_play_minimal
 - **工具定义与执行器统一**：引入 Pydantic 模型 `ToolDefinition`（name, description, parameters, executor），`executor` 使用 `Field(exclude=True)` 仅运行时使用、不序列化。单一列表 `TOOL_DEFINITIONS` 维护所有工具，从中推导 `SEND_IMAGE_TOOLS`（OpenRouter schema）与 `TOOL_EXECUTORS`（name → executor）；删除 `_register_tools()`，新增/修改工具只改 `TOOL_DEFINITIONS` 一处即可保持 schema 与执行器一致。
 - **ProcessedResponse（Pydantic 模型）**：单轮 API 响应处理结果由 5 元组改为不可变 Pydantic `BaseModel`（messages, content, done, assistant_text, image_path），REPL 使用 `out.messages`、`out.done`、`out.content` 等，可读性更好；依赖 `pydantic>=2`。
 - 移除废弃注释（如原 `OPENROUTER_MODEL` 的 lite 备选）。
+
+## Logger 包装与 --debug 开关（近期）
+
+### 变更摘要
+
+- **Logger 包装器**：引入 `_LoggerWrapper`，包装标准 `logging.Logger`；当 `enabled=False` 时，所有 `logger.debug/info/warning/error/critical/exception` 调用不输出，用于默认减少屏幕干扰。
+- **命令行 `--debug`**：入口改为通过 cyclopts 解析参数；`main(debug=False)` 为默认，即默认不输出 logger；传入 `--debug` 时开启 logger 输出，便于排查。
+- **依赖**：`experimental/agentic_ai_companion/requirements.txt` 增加 `cyclopts`。
+
+## ToolType（UNSPECIFIED / TERMINAL）与跳过第二次 LLM 调用（近期）
+
+### 变更摘要
+
+- **ToolDefinition.type**：新增枚举 `ToolType`（`UNSPECIFIED`、`TERMINAL`），`ToolDefinition` 增加字段 `type: ToolType = ToolType.UNSPECIFIED`；不参与发给 API 的 schema（`SEND_IMAGE_TOOLS` 仍仅含 name/description/parameters）。
+- **TERMINAL 行为**：当本轮执行的工具中**任一**为 `TERMINAL` 时，不再发起第二次 LLM 请求；直接以首轮助手文案 + 工具返回结果拼接为当轮回复并结束。
+- **send_app_icon**：定义为 `type=ToolType.TERMINAL`，用户索图后执行完即结束当轮，终端展示助手语 +「已发送图片。」及「点击打开: \<path\>」。
+
+## 禁用并行工具调用（原型阶段简化）
+
+### 变更摘要
+
+- **parallel_tool_calls=False**：`client.chat.completions.create` 传入 `parallel_tool_calls=False`，请求模型每轮只返回至多一个 tool_call。
+- **仅处理单次工具调用**：`process_response_with_tools` 内对 `tool_calls` 只取首项（`tool_calls = raw_tool_calls[:1]`），不处理同一响应中的多个工具调用，降低原型复杂度。

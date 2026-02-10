@@ -51,6 +51,4 @@ python -m experimental.agentic_ai_companion.main
 ## 参考资料
 
 [OpenRouter 工具调用](https://openrouter.ai/docs/guides/features/tool-calling#best-practices-and-advanced-patterns)
-[OpenAI SDK 函数调用](https://developers.openai.com/api/docs/guides/function-calling)
 [OpenAI SDK 工具调用](https://developers.openai.com/api/docs/guides/tools)
-[Google GenAI SDK](https://googleapis.github.io/python-genai/)
