@@ -187,7 +187,7 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         name="generate_image",
         description="根据当前对话上下文生成一张图片。当用户希望根据当前对话内容生成图片时调用此工具；调用时无需参数，系统会使用当前聊天 session 中最近的 10 条消息作为上下文生成图片；仅用文字回复无法真正发出图片。",
         parameters={"type": "object", "properties": {}, "additionalProperties": False},
-        type=ToolType.TERMINAL,
+        # type=ToolType.TERMINAL,
         executor=execute_generate_image,
     ),
 ]
@@ -273,6 +273,7 @@ def process_response_with_tools(
     new_messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
     logger.info("工具 %s 执行完毕，result 长度=%d", name, len(result))
 
+    # 按 OpenRouter/OpenAI 约定，响应中的 tool name 来自本次请求的 tools 列表（Tool Validation: name matching tool definition），故可直接用 TOOL_TYPES[name]。
     if TOOL_TYPES[name] == ToolType.TERMINAL:
         content = (assistant_content + "\n" + result).strip()
         return ProcessedResponse(messages=new_messages, content=content, done=True, assistant_text=assistant_content, image_path=image_path_sent)
@@ -318,13 +319,24 @@ def run_repl(
             msg = resp.choices[0].message
             has_tool_calls = bool(getattr(msg, "tool_calls", None))
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tool_calls)
+            # 
+            printed_assistant_before_tool = False
+            if has_tool_calls:
+                tool_name = msg.tool_calls[0].function.name
+                if TOOL_TYPES.get(tool_name, ToolType.UNSPECIFIED) != ToolType.TERMINAL:
+                    assistant_content = (msg.content or "").strip()
+                    if assistant_content:
+                        print(f"{char_name}> {assistant_content}\n")
+                        printed_assistant_before_tool = True
             out = process_response_with_tools(messages, msg)
             messages = out.messages
             if out.image_path is not None:
                 pending_image_path = out.image_path
             if out.done:
                 assert out.content is not None
-                messages.append({"role": "assistant", "content": out.content})
+                # 无 tool_calls 时 out.messages 以 user 结尾，需追加 assistant；有 tool_calls 时已含 assistant+tool，不再追加。见 tests/test_role_play_append_assistant.py。
+                if messages[-1]["role"] == "user":
+                    messages.append({"role": "assistant", "content": out.content})
                 # 终端只展示「LLM 输出」：助手文案 + 若有工具调用则包含工具效果（如可点击路径），不追加 REPL 自拟文案
                 if pending_image_path:
                     display = pending_image_path
@@ -333,7 +345,7 @@ def run_repl(
                 logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
                 print(f"{char_name}> {display}\n")
                 break
-            if out.assistant_text:
+            if out.assistant_text and not printed_assistant_before_tool:
                 print(f"{char_name}> {out.assistant_text}")
             logger.debug("继续本轮 API 请求，messages 已追加 assistant + tool")
 
