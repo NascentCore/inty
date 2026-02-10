@@ -19,6 +19,7 @@ from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.schemas.chat import ChatImageGenerationResponse
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
+from app.schemas.subscription import SubscriptionStatusResponse
 from app.services import chat_history_service, chat_service
 from app.services.cache_service import cache_service
 
@@ -370,6 +371,168 @@ class TestChatService:
         await db_session.delete(test_agent)
         await db_session.delete(test_user)
         await db_session.commit()
+
+    @pytest.mark.asyncio
+    @patch("app.services.chat_service.chat_history_service.update_message_metadata")
+    @patch("app.services.chat_service.subscription_service.record_usage")
+    @patch(
+        "app.services.image_generation_service.image_generation_service.generate_chat_image_with_gemini"
+    )
+    @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
+    @patch(
+        "app.services.chat_service.subscription_service.get_user_subscription_status"
+    )
+    async def test_generate_chat_image_429_fallback_success(
+        self,
+        mock_get_subscription: AsyncMock,
+        mock_check_limit: AsyncMock,
+        mock_generate_image: AsyncMock,
+        mock_record_usage: AsyncMock,
+        mock_update_metadata: AsyncMock,
+        db_session: AsyncSession,
+    ):
+        """订阅用户首轮 429 时用备用模型重试成功，meta 与 extra_data 含 model_fallback_due_to_429"""
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+        history_count = 10
+
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Test User",
+            email="test@example.com",
+            system_language="en",
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔",
+            scenario="咖啡厅",
+            intro="AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+        session_id = chat_service.generate_session_id(chat.id)
+
+        user_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "human", "data": {"content": "你好"}},
+            meta_data={},
+        )
+        db_session.add(user_message)
+        await db_session.flush()
+        ai_message_content = "画一张图"
+        ai_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "ai", "data": {"content": ai_message_content}},
+            meta_data={},
+        )
+        db_session.add(ai_message)
+        await db_session.commit()
+        await db_session.refresh(ai_message)
+        message_id = ai_message.id
+
+        mock_get_subscription.return_value = SubscriptionStatusResponse(
+            is_subscribed=True,
+            subscription_status="subscribed",
+        )
+        mock_check_limit.return_value = (True, 2, 10)
+
+        class Err429(Exception):
+            status_code = 429
+
+        mock_image_result = {
+            "message_id": message_id,
+            "image_url": "https://cdn.example.com/fallback.jpg",
+            "image_metadata": {"width": 1024, "height": 1024, "format": "jpeg"},
+            "prompt": "构建的提示词",
+        }
+        mock_generate_image.side_effect = [Err429("429 RESOURCE_EXHAUSTED"), mock_image_result]
+        mock_record_usage.return_value = None
+        mock_update_metadata.return_value = None
+
+        result = await chat_service.generate_chat_image(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=message_id,
+            history_count=history_count,
+        )
+
+        assert isinstance(result, ChatImageGenerationResponse)
+        assert result.message_id == message_id
+        assert mock_generate_image.call_count == 2
+        fallback_model = (
+            global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
+        )
+        assert mock_generate_image.call_args_list[1][1]["model"] == fallback_model
+
+        record_kw = mock_record_usage.call_args[1]
+        assert record_kw["extra_data"]["model"] == fallback_model
+        assert record_kw["extra_data"]["model_fallback_due_to_429"] is True
+
+        meta_update = mock_update_metadata.call_args[1]["metadata_update"]
+        assert meta_update["generated_image"]["model"] == fallback_model
+        assert meta_update["generated_image"]["model_fallback_due_to_429"] is True
+
+        await db_session.delete(ai_message)
+        await db_session.delete(user_message)
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+
+class TestIs429ResourceExhausted:
+    """测试 _is_429_resource_exhausted 辅助函数"""
+
+    def test_returns_true_when_status_code_429(self):
+        class E429(Exception):
+            status_code = 429
+
+        assert chat_service._is_429_resource_exhausted(E429()) is True
+
+    def test_returns_true_when_message_contains_429_and_resource_exhausted(self):
+        assert (
+            chat_service._is_429_resource_exhausted(
+                ValueError("Error 429 RESOURCE_EXHAUSTED quota")
+            )
+            is True
+        )
+        assert (
+            chat_service._is_429_resource_exhausted(
+                RuntimeError("status 429 resource_exhausted")
+            )
+            is True
+        )
+
+    def test_returns_false_for_other_errors(self):
+        assert chat_service._is_429_resource_exhausted(ValueError("bad request")) is False
+        assert chat_service._is_429_resource_exhausted(RuntimeError("500")) is False
+
+        class E404(Exception):
+            status_code = 404
+
+        assert chat_service._is_429_resource_exhausted(E404()) is False
 
 
 class TestGetOrCreateChatByAgent:

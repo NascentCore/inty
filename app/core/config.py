@@ -234,6 +234,8 @@ class AgentConfig:
     # 当 chat_image_model 为 "gemini" 时，使用的 Vertex AI 模型 ID
     sub_user_chat_image_gemini_model: str = "gemini-2.5-flash-image"
     free_user_chat_image_gemini_model: str = "gemini-2.5-flash-image"
+    # 订阅/管理员用户首轮生图遇 429 时重试使用的 Vertex 模型 ID
+    sub_user_chat_image_gemini_fallback_model: str = "gemini-2.5-flash-image"
     # Vertex AI 区域，用于 get_genai_client（消息生图、记忆抽取等）
     # 设为 "global" 可改善 gemini-3-pro-image-preview 等 Preview 模型的可用性
     vertex_ai_location: str = "us-central1"

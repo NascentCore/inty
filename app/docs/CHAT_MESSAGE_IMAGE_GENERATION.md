@@ -211,7 +211,10 @@ async def generate_chat_image_with_gemini(
         "height": 1024,
         "format": "jpeg",
         "prompt": "构建的提示词",
-        "generated_at": "2024-01-01T00:00:00"
+        "generated_at": "2024-01-01T00:00:00",
+        "model": "实际使用的模型 ID",
+        "generation_time_ms": 1234,
+        "model_fallback_due_to_429": false
       }
       ```
 
@@ -284,6 +287,7 @@ async def generate_chat_image_with_gemini(
 - 默认历史消息数量：`agent.image_generation_default_history_count`（`config.yaml` 中配置，默认 10）
 - 消息生图模型：`free_user_chat_image_model`、`sub_user_chat_image_model`（"gemini" 或 fal 模型名）
 - Gemini 模型 ID：`sub_user_chat_image_gemini_model`、`free_user_chat_image_gemini_model`（默认均为 `gemini-2.5-flash-image`）
+- 订阅用户 429 备用模型：`sub_user_chat_image_gemini_fallback_model`（默认 `gemini-2.5-flash-image`）；仅当订阅/管理员用户首轮生图遇 429 时用于重试一次，见下文「429 重试」
 - Vertex AI 区域：`agent.vertex_ai_location`（默认 `us-central1`，设为 `global` 可改善 Preview 模型可用性）
 - 应用限额：`app.limits.free_user_image_gen_24h_limit`、`app.limits.subscribed_user_image_gen_24h_limit`
 - GCS 配置：`gcs.bucket`
@@ -302,6 +306,8 @@ async def generate_chat_image_with_gemini(
 5. **存储策略**: 图片上传到 GCS 存储为 `gs://` URI，通过 CDN 加速访问，图片信息存储在消息 `meta_data` 中。
 
 6. **重复生成**: 重复生成会直接覆盖 `meta_data.generated_image` 字段。
+
+7. **429 重试（仅订阅/管理员 + Gemini）**：首轮使用主模型（如 `gemini-3-pro-image-preview`）生图时，若 API 返回 429（RESOURCE_EXHAUSTED），则自动用备用模型（`sub_user_chat_image_gemini_fallback_model`，默认 `gemini-2.5-flash-image`）再试一次；仅重试一次，第二次失败则按现有错误与兜底逻辑处理。成功时会在 `generated_image` 与用量 `extra_data` 中记录实际使用的模型及 `model_fallback_due_to_429`（是否因 429 使用了备用模型）。
 
 ## 错误处理
 
