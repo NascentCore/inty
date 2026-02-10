@@ -10,7 +10,6 @@ import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
 import ai.sxwl.android.data.character.local.db.FestivalMemory
 import ai.sxwl.android.utils.LogUtils
-import androidx.compose.animation.core.DecayAnimation
 import androidx.room.withTransaction
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
@@ -60,20 +59,20 @@ class CharacterRepository(
     suspend fun refreshAgent(agentId: String): HttpResult<AgentInfo> {
         return runCatching { NetServiceMgr.getChatApi().getAgentInfo(agentId) }
             .onSuccess {
-
                 val existing = dao.getCharacter(agentId)
                 if (it is HttpResult.Success) {
                     dao.upsert(it.data.toCharacterEntity(existing))
 
-                    val memories = it.data.features?.festivalMemories?.map { memory ->
-                        FestivalMemory(
-                            id = memory.memoryId ?: 0,
-                            agentId = agentId,
-                            festivalDate = memory.festivalDate,
-                            festivalName = memory.festivalName,
-                            memory = memory.memory
-                        )
-                    }
+                    val memories =
+                        it.data.features?.festivalMemories?.map { memory ->
+                            FestivalMemory(
+                                id = memory.memoryId ?: 0,
+                                agentId = agentId,
+                                festivalDate = memory.festivalDate,
+                                festivalName = memory.festivalName,
+                                memory = memory.memory,
+                            )
+                        }
 
                     if (!memories.isNullOrEmpty()) {
                         CharacterDatabase.getInstance().withTransaction {

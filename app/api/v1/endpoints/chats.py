@@ -219,10 +219,13 @@ async def get_chat_detail(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
-        min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        min_ver = (
+            global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        )
         if app_version_code is not None and app_version_code < min_ver:
             messages_data["messages"] = [
-                m for m in messages_data["messages"]
+                m
+                for m in messages_data["messages"]
                 if m.get("type") != "festival_memory_prompt"
             ]
 
@@ -302,10 +305,13 @@ async def get_agent_chat_detail(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
-        min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        min_ver = (
+            global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        )
         if app_version_code is not None and app_version_code < min_ver:
             messages_data["messages"] = [
-                m for m in messages_data["messages"]
+                m
+                for m in messages_data["messages"]
                 if m.get("type") != "festival_memory_prompt"
             ]
 
@@ -389,10 +395,13 @@ async def get_agent_chat_messages(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
-        min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        min_ver = (
+            global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        )
         if app_version_code is not None and app_version_code < min_ver:
             messages_data["messages"] = [
-                m for m in messages_data["messages"]
+                m
+                for m in messages_data["messages"]
                 if m.get("type") != "festival_memory_prompt"
             ]
 

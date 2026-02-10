@@ -272,7 +272,9 @@ async def get_agent(
     if not agent_orm:
         raise HTTPException(status_code=404, detail="Agent not found")
     agent_schema = schemas.Agent.model_validate(agent_orm)
-    min_ver = global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+    min_ver = (
+        global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+    )
     if app_version_code is None or app_version_code >= min_ver:
         festival_list = await memory_service.get_festival_memories_for_user_agent(
             db, current_user.id, agent_id

@@ -326,7 +326,9 @@ async def update_chat(
         logger.error(
             f"数据完整性错误 - 更新聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=400, detail="Data integrity constraint violated")
+        raise HTTPException(
+            status_code=400, detail="Data integrity constraint violated"
+        )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(
@@ -694,7 +696,8 @@ async def get_or_create_chat_by_agent(
                 f"创建聊天会话后Agent ID不匹配！期望: {agent_id}, 实际: {db_chat.agent_id}"
             )
             raise HTTPException(
-                status_code=500, detail="Failed to create chat session: agent ID mismatch"
+                status_code=500,
+                detail="Failed to create chat session: agent ID mismatch",
             )
 
         # 9. 异步添加Agent开场白（避免阻塞）
@@ -1583,17 +1586,15 @@ async def generate_chat_image(
                             primary_model,
                             fallback_model,
                         )
-                        image_generation_result = (
-                            await image_generation_service.generate_chat_image_with_gemini(
-                                db=db,
-                                session_id=session_id,
-                                message_id=message_id,
-                                agent_data=agent_data,
-                                message_content=message_content,
-                                user_id=user_id,
-                                history_count=history_count,
-                                model=fallback_model,
-                            )
+                        image_generation_result = await image_generation_service.generate_chat_image_with_gemini(
+                            db=db,
+                            session_id=session_id,
+                            message_id=message_id,
+                            agent_data=agent_data,
+                            message_content=message_content,
+                            user_id=user_id,
+                            history_count=history_count,
+                            model=fallback_model,
                         )
                         actual_model = fallback_model
                         model_fallback_due_to_429 = True
@@ -1631,9 +1632,7 @@ async def generate_chat_image(
         generation_time_ms = int((time.time() - generation_start_time) * 1000)
         image_generation_result["model"] = actual_model
         image_generation_result["generation_time_ms"] = generation_time_ms
-        image_generation_result["model_fallback_due_to_429"] = (
-            model_fallback_due_to_429
-        )
+        image_generation_result["model_fallback_due_to_429"] = model_fallback_due_to_429
         logger.info(
             f"图片生成完成 - 模型: {actual_model}, 耗时: {generation_time_ms}ms"
             + (", 因429使用备用模型" if model_fallback_due_to_429 else "")

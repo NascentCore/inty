@@ -323,7 +323,8 @@ export const FestivalMemoryPage: React.FC = () => {
         }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          按配置的时区：节日为「该时区下的自然日」，28 小时窗口为该自然日 0 点至次日 4
+          按配置的时区：节日为「该时区下的自然日」，28 小时窗口为该自然日 0
+          点至次日 4
           点；执行时间为该时区下的本地日期与时刻。仅对窗口内用户消息达 30
           条以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
           表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。
@@ -355,7 +356,10 @@ export const FestivalMemoryPage: React.FC = () => {
               options={FESTIVAL_TIMEZONE_OPTIONS}
               style={{ width: "100%", marginTop: 4 }}
             />
-            <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: 12, marginTop: 4, display: "block" }}
+            >
               节日日期与执行日期/时刻均按此时区下的本地值
             </Text>
           </div>
@@ -396,7 +400,8 @@ export const FestivalMemoryPage: React.FC = () => {
                       hour12: false,
                     });
                     const parts = fmt.formatToParts(now);
-                    const part = (k: string) => parts.find((p) => p.type === k)?.value ?? "0";
+                    const part = (k: string) =>
+                      parts.find((p) => p.type === k)?.value ?? "0";
                     const y = part("year");
                     const m = part("month").padStart(2, "0");
                     const d = part("day").padStart(2, "0");
@@ -477,31 +482,36 @@ export const FestivalMemoryPage: React.FC = () => {
           <div>
             <Title level={5}>功能概述</Title>
             <Text>
-              本页用于配置「节日记忆」抽取：在指定节日时间窗口内，对用户与角色的对话达到一定条数的 (用户,
-              角色) 组合，通过 LLM 抽取该节日相关回忆摘要并写入 memory
-              表。抽取结果会在角色详情接口的 features.festival_memories 中返回，供 App / Evaluation 展示（如「心跳日记」）。
+              本页用于配置「节日记忆」抽取：在指定节日时间窗口内，对用户与角色的对话达到一定条数的
+              (用户, 角色) 组合，通过 LLM 抽取该节日相关回忆摘要并写入 memory
+              表。抽取结果会在角色详情接口的 features.festival_memories
+              中返回，供 App / Evaluation 展示（如「心跳日记」）。
             </Text>
           </div>
           <div>
             <Title level={5}>时区与日期</Title>
             <Text>
               每条配置需选择「时区」。节日日期、执行日期与执行时刻均为该时区下的本地值：节日日期表示「该时区下的自然日」；执行日期与执行时刻（0–23
-              点）表示定时任务到点的本地日期与小时，系统会将其换算为 UTC 后与当前时间比较。
+              点）表示定时任务到点的本地日期与小时，系统会将其换算为 UTC
+              后与当前时间比较。
             </Text>
           </div>
           <div>
             <Title level={5}>28 小时窗口</Title>
             <Text>
               抽取时间窗口为：该时区下「节日自然日 00:00 至次日 04:00」共 28
-              小时（换算为 UTC 后用于统计）。仅对在此窗口内用户消息数（排除开场白）≥ 30 的 (用户,
+              小时（换算为 UTC
+              后用于统计）。仅对在此窗口内用户消息数（排除开场白）≥ 30 的 (用户,
               角色) 组合进行抽取。
             </Text>
           </div>
           <div>
             <Title level={5}>执行方式</Title>
             <Text>
-              定时任务每 5 分钟扫描一次：若配置已启用且执行日期、执行时刻已填，系统会将 (执行日期,
-              执行时刻) 按配置时区转为 UTC，当当前时间 ≥ 该时刻且该配置尚未在此执行时刻跑过时执行一次，执行后更新「最近执行」时间，同一时刻只执行一次。也可对单条配置点击「立即执行」手动触发。执行日期不能早于节日日期。
+              定时任务每 5
+              分钟扫描一次：若配置已启用且执行日期、执行时刻已填，系统会将
+              (执行日期, 执行时刻) 按配置时区转为 UTC，当当前时间 ≥
+              该时刻且该配置尚未在此执行时刻跑过时执行一次，执行后更新「最近执行」时间，同一时刻只执行一次。也可对单条配置点击「立即执行」手动触发。执行日期不能早于节日日期。
             </Text>
           </div>
           <div>

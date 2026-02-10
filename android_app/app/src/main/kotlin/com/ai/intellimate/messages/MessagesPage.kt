@@ -3,7 +3,6 @@ package com.ai.intellimate.messages
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
-import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
@@ -188,7 +187,8 @@ private fun MessageTabContent(
         if (!vipStatus.isSubscribed) {
             MessagesSubscriptionBanner(
                 modifier =
-                    Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
                 titleText = stringResource(R.string.messages_premium_banner_title),
                 ctaText = stringResource(R.string.messages_premium_banner_cta),
                 onClick = {

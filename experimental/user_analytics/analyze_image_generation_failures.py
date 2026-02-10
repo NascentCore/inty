@@ -523,7 +523,9 @@ def load_database_config(config_file: Optional[str] = None) -> Dict[str, Any]:
         db_config["replica_host"] = None
     if "replica_port" not in db_config:
         db_config["replica_port"] = None
-    db_config["replica_host"] = os.getenv("DB_REPLICA_HOST", db_config.get("replica_host"))
+    db_config["replica_host"] = os.getenv(
+        "DB_REPLICA_HOST", db_config.get("replica_host")
+    )
     if db_config.get("replica_port") is not None:
         db_config["replica_port"] = int(db_config["replica_port"])
     elif os.getenv("DB_REPLICA_PORT"):
@@ -567,7 +569,9 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="使用只读副本（config 中 database.replica_host）；未配置时回退到主库",
     )
-    parser.add_argument("--db-host", type=str, help="数据库主机（显式指定时覆盖 config 与 --replica）")
+    parser.add_argument(
+        "--db-host", type=str, help="数据库主机（显式指定时覆盖 config 与 --replica）"
+    )
     parser.add_argument("--db-port", type=int, help="数据库端口")
     parser.add_argument("--db-user", type=str, help="数据库用户名")
     parser.add_argument("--db-password", type=str, help="数据库密码")

@@ -245,7 +245,9 @@ def generate_image_description(image_uri: str) -> str:
         if finish_reason and finish_reason != "STOP":
             logger.warning(f"候选结果完成原因: {finish_reason}")
             if finish_reason == "SAFETY":
-                raise ValueError("Image description generation blocked by safety filter")
+                raise ValueError(
+                    "Image description generation blocked by safety filter"
+                )
 
         # 提取文本内容
         if not candidate.content or not candidate.content.parts:

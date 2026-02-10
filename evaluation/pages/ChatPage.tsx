@@ -118,8 +118,7 @@ export const ChatPage: React.FC = () => {
   const [festivalMemoryModalOpen, setFestivalMemoryModalOpen] = useState(false);
   const [agentWithFestivalMemories, setAgentWithFestivalMemories] =
     useState<Agent | null>(null);
-  const [festivalMemoriesLoading, setFestivalMemoriesLoading] =
-    useState(false);
+  const [festivalMemoriesLoading, setFestivalMemoriesLoading] = useState(false);
   const backgroundImageUrl = selectedAgent?.background;
   const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
@@ -458,7 +457,8 @@ export const ChatPage: React.FC = () => {
               msg.type === "festival_memory_prompt" &&
               (msg.role == null || String(msg.role) === "")
                 ? "assistant"
-                : (msg.role ?? (msg.sender_type === "USER" ? "user" : "assistant")), // 优先使用 role，fallback 到 sender_type
+                : (msg.role ??
+                  (msg.sender_type === "USER" ? "user" : "assistant")), // 优先使用 role，fallback 到 sender_type
             content: msg.content || "",
             timestamp:
               msg.timestamp || msg.created_at || new Date().toISOString(),
@@ -1582,8 +1582,7 @@ export const ChatPage: React.FC = () => {
                                             selectedAgent?.name ?? "角色",
                                           )
                                           .replace("静静查看", "")
-                                          .trim()}
-                                        {" "}
+                                          .trim()}{" "}
                                         <a
                                           onClick={() =>
                                             setFestivalMemoryModalOpen(true)
@@ -2064,7 +2063,14 @@ export const ChatPage: React.FC = () => {
               <div style={{ marginBottom: 16 }}>
                 <Text strong>当前智能体: {selectedAgent?.name}</Text>
                 <br />
-                <Text type="secondary">共 {messages.filter((m) => m.type !== "festival_memory_prompt").length} 条消息</Text>
+                <Text type="secondary">
+                  共{" "}
+                  {
+                    messages.filter((m) => m.type !== "festival_memory_prompt")
+                      .length
+                  }{" "}
+                  条消息
+                </Text>
               </div>
 
               {/* 消息列表 */}
@@ -2214,7 +2220,8 @@ export const ChatPage: React.FC = () => {
           ) : (
             <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
               {agentWithFestivalMemories?.features?.festival_memories &&
-              agentWithFestivalMemories.features.festival_memories.length > 0 ? (
+              agentWithFestivalMemories.features.festival_memories.length >
+                0 ? (
                 <Row gutter={[12, 12]}>
                   {(
                     agentWithFestivalMemories.features
@@ -2224,9 +2231,7 @@ export const ChatPage: React.FC = () => {
                       <Card
                         size="small"
                         title={
-                          item.festival_name ||
-                          item.festival_date ||
-                          "节日记忆"
+                          item.festival_name || item.festival_date || "节日记忆"
                         }
                         style={{ height: "100%" }}
                       >

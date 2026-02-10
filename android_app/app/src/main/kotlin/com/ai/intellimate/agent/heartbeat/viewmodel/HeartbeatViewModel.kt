@@ -12,19 +12,17 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class HeartbeatViewModel: ViewModel() {
+class HeartbeatViewModel : ViewModel() {
 
     private val repository = CharacterRepository()
     private val _agentId = MutableStateFlow<String?>(null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val memories = _agentId.filterNotNull().flatMapLatest {
-        repository.getFestivalMemories(it)
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        emptyList()
-    )
+    val memories =
+        _agentId
+            .filterNotNull()
+            .flatMapLatest { repository.getFestivalMemories(it) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun setAgentId(agentId: String) {
         _agentId.value = agentId
@@ -33,8 +31,6 @@ class HeartbeatViewModel: ViewModel() {
     }
 
     private fun refreshAgent(agentId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.refreshAgent(agentId)
-        }
+        viewModelScope.launch(Dispatchers.IO) { repository.refreshAgent(agentId) }
     }
 }

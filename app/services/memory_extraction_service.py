@@ -300,7 +300,9 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
             )
         )
         if not full_analysis or len(full_analysis.strip()) < 10:
-            raise ValueError("Unable to extract text from response or content too short")
+            raise ValueError(
+                "Unable to extract text from response or content too short"
+            )
         part1 = _extract_part1_summary(full_analysis)
     except Exception as e:
         logger.warning(f"记忆抽取 LLM 调用失败 user_id={user_id}: {e}")

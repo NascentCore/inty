@@ -142,7 +142,9 @@ async def get_theme(
     try:
         theme = await character_theme_service.get_theme(db, theme_id)
         if not theme:
-            return schemas.APIResponse.error(message="Theme section not found", code=404)
+            return schemas.APIResponse.error(
+                message="Theme section not found", code=404
+            )
         theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
         return schemas.APIResponse.success(data=theme_schema)
     except Exception as e:
@@ -171,7 +173,9 @@ async def update_theme(
     try:
         theme = await character_theme_service.update_theme(db, theme_id, theme_in)
         if not theme:
-            return schemas.APIResponse.error(message="Theme section not found", code=404)
+            return schemas.APIResponse.error(
+                message="Theme section not found", code=404
+            )
         theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
         return schemas.APIResponse.success(data=theme_schema)
     except Exception as e:
@@ -199,7 +203,9 @@ async def delete_theme(
     try:
         success = await character_theme_service.delete_theme(db, theme_id)
         if not success:
-            return schemas.APIResponse.error(message="Theme section not found", code=404)
+            return schemas.APIResponse.error(
+                message="Theme section not found", code=404
+            )
         return schemas.APIResponse.success(data={"message": "专区删除成功"})
     except Exception as e:
         logger.error(f"删除角色主题专区失败: {str(e)}")

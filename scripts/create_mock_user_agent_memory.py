@@ -75,9 +75,7 @@ async def _get_festival_name_date(
 
 
 def _add_mock_chat_messages_sync(session_id: str, agent_id: str) -> None:
-    chat_history_service.add_user_message(
-        session_id, MOCK_HUMAN_CONTENT, meta_data={}
-    )
+    chat_history_service.add_user_message(session_id, MOCK_HUMAN_CONTENT, meta_data={})
     chat_history_service.add_ai_message_sync(
         session_id, MOCK_AI_CONTENT, agent_id=agent_id
     )
@@ -136,14 +134,16 @@ async def _run(
             logger.info(
                 "DRY-RUN: 将 get_or_create_chat，删除旧 memory 并插入新 memory，"
                 + ("插入 mock 人机 2 条 + " if add_mock_chat else "")
-                + ("插入节日记忆提示消息。" if memory_type == "festival" else "不插入提示消息。")
+                + (
+                    "插入节日记忆提示消息。"
+                    if memory_type == "festival"
+                    else "不插入提示消息。"
+                )
             )
             return
 
         try:
-            chat = await chat_service.get_or_create_chat_by_agent(
-                db, user_id, agent_id
-            )
+            chat = await chat_service.get_or_create_chat_by_agent(db, user_id, agent_id)
         except Exception as e:
             logger.error(f"get_or_create_chat_by_agent 失败: {e}")
             sys.exit(1)
@@ -196,9 +196,7 @@ async def _run(
         await db.commit()
 
         if add_mock_chat:
-            await asyncio.to_thread(
-                _add_mock_chat_messages_sync, session_id, agent_id
-            )
+            await asyncio.to_thread(_add_mock_chat_messages_sync, session_id, agent_id)
             logger.info("已插入 mock 人机消息 2 条")
 
         if memory_type == "festival" and memory_row is not None:
