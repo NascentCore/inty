@@ -1,0 +1,7 @@
+﻿failure_reason,failure_type,count,failure_reason_short
+'NoneType' object is not iterable,typeerror,161,'NoneType' object is not iterable
+FinishReason.IMAGE_SAFETY）,safety_filter,122,FinishReason.IMAGE_SAFETY）
+BlockedReason.PROHIBITED_CONTENT,safety_filter,39,BlockedReason.PROHIBITED_CONTENT
+No content in candidates (finish_reason: FinishReason.IMAGE_SAFETY),safety_filter,21,No content in candidates (finish_reason: FinishReason.IMAGE_SAFETY)
+Image generation request blocked by safety filter: BlockedReason.PROHIBITED_CONTENT,safety_filter,18,Image generation request blocked by safety filter: BlockedReason.PROHIBITED_CONTENT
+"429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED'}}",clienterror,4,"429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more de..."
