@@ -24,6 +24,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   PlayCircleOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -35,7 +36,7 @@ import type {
   FestivalMemoryExtractionRunResponse,
 } from "../types";
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 const FESTIVAL_TIMEZONE_OPTIONS = [
   { value: "UTC", label: "UTC" },
@@ -53,6 +54,7 @@ export const FestivalMemoryPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [runLoading, setRunLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [docModalOpen, setDocModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formName, setFormName] = useState("");
   const [formDate, setFormDate] = useState<dayjs.Dayjs | null>(null);
@@ -306,9 +308,18 @@ export const FestivalMemoryPage: React.FC = () => {
       <Card
         title="节日记忆提取"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            新建配置
-          </Button>
+          <Space>
+            <Button
+              type="link"
+              icon={<QuestionCircleOutlined />}
+              onClick={() => setDocModalOpen(true)}
+            >
+              使用文档
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              新建配置
+            </Button>
+          </Space>
         }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
@@ -447,6 +458,57 @@ export const FestivalMemoryPage: React.FC = () => {
                 启用（定时任务会执行该配置）
               </Text>
             </label>
+          </div>
+        </Space>
+      </Modal>
+
+      <Modal
+        title="节日记忆提取 - 使用文档"
+        open={docModalOpen}
+        onCancel={() => setDocModalOpen(false)}
+        width={640}
+        footer={
+          <Button type="primary" onClick={() => setDocModalOpen(false)}>
+            关闭
+          </Button>
+        }
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <div>
+            <Title level={5}>功能概述</Title>
+            <Text>
+              本页用于配置「节日记忆」抽取：在指定节日时间窗口内，对用户与角色的对话达到一定条数的 (用户,
+              角色) 组合，通过 LLM 抽取该节日相关回忆摘要并写入 memory
+              表。抽取结果会在角色详情接口的 features.festival_memories 中返回，供 App / Evaluation 展示（如「心跳日记」）。
+            </Text>
+          </div>
+          <div>
+            <Title level={5}>时区与日期</Title>
+            <Text>
+              每条配置需选择「时区」。节日日期、执行日期与执行时刻均为该时区下的本地值：节日日期表示「该时区下的自然日」；执行日期与执行时刻（0–23
+              点）表示定时任务到点的本地日期与小时，系统会将其换算为 UTC 后与当前时间比较。
+            </Text>
+          </div>
+          <div>
+            <Title level={5}>28 小时窗口</Title>
+            <Text>
+              抽取时间窗口为：该时区下「节日自然日 00:00 至次日 04:00」共 28
+              小时（换算为 UTC 后用于统计）。仅对在此窗口内用户消息数（排除开场白）≥ 30 的 (用户,
+              角色) 组合进行抽取。
+            </Text>
+          </div>
+          <div>
+            <Title level={5}>执行方式</Title>
+            <Text>
+              定时任务每 5 分钟扫描一次：若配置已启用且执行日期、执行时刻已填，系统会将 (执行日期,
+              执行时刻) 按配置时区转为 UTC，当当前时间 ≥ 该时刻且该配置尚未在此执行时刻跑过时执行一次，执行后更新「最近执行」时间，同一时刻只执行一次。也可对单条配置点击「立即执行」手动触发。执行日期不能早于节日日期。
+            </Text>
+          </div>
+          <div>
+            <Title level={5}>操作说明</Title>
+            <Text>
+              新建/编辑：填写时区、节日名称、节日日期（该时区自然日）、执行日期与执行时刻（该时区本地）、抽取提示词、是否启用。可点击「设为当前所选时区的本地时间」快速填入执行时间。删除可移除配置；已执行过的配置不可再次「立即执行」。
+            </Text>
           </div>
         </Space>
       </Modal>
