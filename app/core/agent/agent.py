@@ -80,7 +80,7 @@ INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX = "##IntelliMate Change Logs\n"
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
-INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "docs" / "CHANGE_LOGS.md"
+INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
 
 
 def _load_prompt_markdown_content(path: Path) -> str:
