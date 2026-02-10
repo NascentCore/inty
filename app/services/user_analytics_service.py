@@ -1760,3 +1760,209 @@ class UserAnalyticsService:
             "avg_duration_per_user": avg_duration_per_user,
             "avg_duration_per_session": avg_duration_per_session,
         }
+
+    async def get_image_generation_failure_analytics(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        top_n_reasons: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        生图失败与兜底分析（只读，适合在 replica 上执行）。
+        返回：summary、fallback_stats、failures_by_type、failures_by_reason、
+        daily_trend、failures_by_agent。
+        """
+        # 1) 总体 + 兜底
+        summary_query = text("""
+            SELECT
+                COUNT(*) as total_requests,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures,
+                COUNT(*) FILTER (WHERE extra_data->>'success' IS NULL OR extra_data->>'success' = '') as unknown_status,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND (extra_data->>'is_matched' IS NULL OR extra_data->>'is_matched' = 'false')) as new_generation,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND extra_data->>'is_matched' = 'true') as fallback_used
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date
+              AND usage_date < :end_date
+        """)
+        r = await self.db.execute(
+            summary_query, {"start_date": start_date, "end_date": end_date}
+        )
+        row = r.fetchone()
+        if not row:
+            return _empty_image_failure_analytics()
+
+        total_requests = row[0] or 0
+        total_success = row[1] or 0
+        total_failures = row[2] or 0
+        unknown_status = row[3] or 0
+        new_generation = row[4] or 0
+        fallback_used = row[5] or 0
+        success_rate = (total_success / total_requests * 100) if total_requests > 0 else 0.0
+        fallback_ratio_success = (
+            (fallback_used / total_success * 100) if total_success > 0 else 0.0
+        )
+        fallback_ratio_requests = (
+            (fallback_used / total_requests * 100) if total_requests > 0 else 0.0
+        )
+
+        summary = {
+            "total_requests": total_requests,
+            "total_success": total_success,
+            "total_failures": total_failures,
+            "unknown_status": unknown_status,
+            "success_rate": round(success_rate, 2),
+            "failure_rate": round((total_failures / total_requests * 100), 2)
+            if total_requests > 0
+            else 0.0,
+        }
+        fallback_stats = {
+            "new_generation": new_generation,
+            "fallback_used": fallback_used,
+            "fallback_ratio_of_success_pct": round(fallback_ratio_success, 2),
+            "fallback_ratio_of_requests_pct": round(fallback_ratio_requests, 2),
+        }
+
+        # 2) 失败类型
+        type_query = text("""
+            SELECT extra_data->>'failure_type' as failure_type, COUNT(*) as count
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date AND usage_date < :end_date
+              AND (extra_data->>'success' = 'false' OR extra_data->>'success' IS NULL)
+            GROUP BY extra_data->>'failure_type'
+            ORDER BY count DESC
+        """)
+        r = await self.db.execute(
+            type_query, {"start_date": start_date, "end_date": end_date}
+        )
+        failures_by_type = [
+            {"failure_type": (row[0] or "unknown"), "count": row[1]}
+            for row in r.fetchall()
+        ]
+
+        # 3) 失败原因 Top N
+        reason_query = text("""
+            SELECT extra_data->>'failure_reason' as failure_reason,
+                   extra_data->>'failure_type' as failure_type,
+                   COUNT(*) as count
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date AND usage_date < :end_date
+              AND (extra_data->>'success' = 'false' OR extra_data->>'success' IS NULL)
+              AND extra_data->>'failure_reason' IS NOT NULL
+            GROUP BY extra_data->>'failure_reason', extra_data->>'failure_type'
+            ORDER BY count DESC
+            LIMIT :top_n
+        """)
+        r = await self.db.execute(
+            reason_query,
+            {
+                "start_date": start_date,
+                "end_date": end_date,
+                "top_n": top_n_reasons,
+            },
+        )
+        failures_by_reason = [
+            {
+                "failure_reason": (row[0] or "")[:500],
+                "failure_type": row[1] or "unknown",
+                "count": row[2],
+            }
+            for row in r.fetchall()
+        ]
+
+        # 4) 按日趋势
+        daily_query = text("""
+            SELECT DATE(usage_date AT TIME ZONE 'UTC') as date,
+                   COUNT(*) as total_requests,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND (extra_data->>'is_matched' IS NULL OR extra_data->>'is_matched' = 'false')) as new_generation,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND extra_data->>'is_matched' = 'true') as fallback_used
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date AND usage_date < :end_date
+            GROUP BY DATE(usage_date AT TIME ZONE 'UTC')
+            ORDER BY date
+        """)
+        r = await self.db.execute(
+            daily_query, {"start_date": start_date, "end_date": end_date}
+        )
+        daily_trend = []
+        for row in r.fetchall():
+            total = row[1] or 0
+            daily_trend.append({
+                "date": row[0].isoformat() if row[0] else None,
+                "total_requests": total,
+                "total_success": row[2] or 0,
+                "total_failures": row[3] or 0,
+                "new_generation": row[4] or 0,
+                "fallback_used": row[5] or 0,
+                "success_rate": round((row[2] or 0) / total * 100, 2) if total > 0 else 0.0,
+            })
+
+        # 5) 按 Agent 失败率（请求数>=5）
+        agent_query = text("""
+            SELECT su.extra_data->>'agent_id' as agent_id,
+                   a.name as agent_name,
+                   COUNT(*) as total_requests,
+                   COUNT(*) FILTER (WHERE su.extra_data->>'success' = 'true') as total_success,
+                   COUNT(*) FILTER (WHERE su.extra_data->>'success' = 'false') as total_failures
+            FROM subscription_usage su
+            LEFT JOIN agents a ON su.extra_data->>'agent_id' = a.id::text
+            WHERE su.usage_type = 'image_generation'
+              AND su.usage_date >= :start_date AND su.usage_date < :end_date
+              AND su.extra_data->>'agent_id' IS NOT NULL
+            GROUP BY su.extra_data->>'agent_id', a.name
+            HAVING COUNT(*) >= 5
+            ORDER BY total_requests DESC
+        """)
+        r = await self.db.execute(
+            agent_query, {"start_date": start_date, "end_date": end_date}
+        )
+        failures_by_agent = []
+        for row in r.fetchall():
+            total = row[2] or 0
+            failures_by_agent.append({
+                "agent_id": row[0],
+                "agent_name": row[1] or "Unknown",
+                "total_requests": total,
+                "total_success": row[3] or 0,
+                "total_failures": row[4] or 0,
+                "failure_rate": round((row[4] or 0) / total * 100, 2) if total > 0 else 0.0,
+            })
+
+        return {
+            "summary": summary,
+            "fallback_stats": fallback_stats,
+            "failures_by_type": failures_by_type,
+            "failures_by_reason": failures_by_reason,
+            "daily_trend": daily_trend,
+            "failures_by_agent": failures_by_agent,
+        }
+
+
+def _empty_image_failure_analytics() -> Dict[str, Any]:
+    """无数据时的生图失败分析空结构"""
+    return {
+        "summary": {
+            "total_requests": 0,
+            "total_success": 0,
+            "total_failures": 0,
+            "unknown_status": 0,
+            "success_rate": 0.0,
+            "failure_rate": 0.0,
+        },
+        "fallback_stats": {
+            "new_generation": 0,
+            "fallback_used": 0,
+            "fallback_ratio_of_success_pct": 0.0,
+            "fallback_ratio_of_requests_pct": 0.0,
+        },
+        "failures_by_type": [],
+        "failures_by_reason": [],
+        "daily_trend": [],
+        "failures_by_agent": [],
+    }

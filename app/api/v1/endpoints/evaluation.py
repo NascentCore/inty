@@ -1963,6 +1963,70 @@ async def get_image_generation_latency_trend(
 
 
 @router.get(
+    "/user-analytics/image-generation-failures",
+    response_model=schemas.user_analytics.ImageGenerationFailureAnalyticsResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_image_generation_failure_analytics(
+    *,
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
+    top_n_reasons: int = Query(20, ge=1, le=100, description="失败原因 Top N"),
+) -> Any:
+    """获取生图失败与兜底分析（只读 replica：失败类型、失败原因、兜底占比、按 Agent、按日趋势）"""
+    if not current_user.is_superuser:
+        return schemas.APIResponse.error(message="Unauthorized access")
+
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        now = datetime.now(timezone.utc)
+        if activity_last_days:
+            act_end = now
+            act_start = now - timedelta(days=activity_last_days)
+        elif activity_start_date and activity_end_date:
+            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            ) + timedelta(days=1)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Provide activity_start_date/activity_end_date or activity_last_days",
+            )
+
+        service = UserAnalyticsService(db)
+        data = await service.get_image_generation_failure_analytics(
+            act_start, act_end, top_n_reasons=top_n_reasons
+        )
+        return {"data": data}
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取生图失败分析失败: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch image generation failure analytics",
+        )
+
+
+@router.get(
     "/user-analytics/live-chat-latency",
     response_model=schemas.user_analytics.LiveChatLatencyResponse,
     tags=[INTY_EVAL_TAG],

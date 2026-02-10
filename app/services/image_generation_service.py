@@ -32,6 +32,16 @@ def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     if response is None:
         return out
+    try:
+        _fill_serialized_gemini_response(out, response)
+    except Exception as e:
+        logger.warning("生图失败日志序列化异常，使用简化信息: %s", e)
+        return {"error": "serialization_failed", "message": str(e)}
+    return out
+
+
+def _fill_serialized_gemini_response(out: Dict[str, Any], response: Any) -> None:
+    """填充 out，可能抛错；由 _serialize_gemini_response_for_log 捕获。"""
     if hasattr(response, "prompt_feedback") and response.prompt_feedback:
         pf = response.prompt_feedback
         out["prompt_feedback"] = {
@@ -44,20 +54,33 @@ def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
                 "index": i,
                 "finish_reason": getattr(c, "finish_reason", None),
             }
-            if hasattr(c, "safety_ratings") and c.safety_ratings:
+            safety_ratings = getattr(c, "safety_ratings", None) or []
+            if safety_ratings:
                 entry["safety_ratings"] = [
                     {
                         "category": getattr(r, "category", None),
                         "probability": getattr(r, "probability", None),
                         "blocked": getattr(r, "blocked", None),
                     }
-                    for r in c.safety_ratings
+                    for r in safety_ratings
                 ]
-            if hasattr(c, "content") and c.content and hasattr(c.content, "parts"):
+            parts = (
+                getattr(c.content, "parts", None)
+                if (hasattr(c, "content") and c.content)
+                else None
+            )
+            if parts is not None:
                 parts_info = []
-                for p in c.content.parts:
+                for p in (parts or []):
                     if hasattr(p, "inline_data") and p.inline_data:
-                        parts_info.append({"kind": "inline_data", "size_bytes": len(getattr(p.inline_data, "data", b""))})
+                        parts_info.append(
+                            {
+                                "kind": "inline_data",
+                                "size_bytes": len(
+                                    getattr(p.inline_data, "data", b"")
+                                ),
+                            }
+                        )
                     elif hasattr(p, "text") and p.text:
                         parts_info.append({"kind": "text", "length": len(p.text)})
                     else:
@@ -69,7 +92,6 @@ def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
         out["candidates"] = candidates
     else:
         out["candidates"] = []
-    return out
 
 
 def _log_image_generation_failure(prompt: Optional[str], response: Any) -> None:
@@ -600,7 +622,9 @@ class ImageGenerationService:
                 logger.warning(f"候选结果完成原因: {finish_reason}")
                 if finish_reason == "SAFETY":
                     # 检查安全评级以获取详细信息
-                    safety_ratings = getattr(candidate, "safety_ratings", [])
+                    safety_ratings = (
+                        getattr(candidate, "safety_ratings", None) or []
+                    )
                     safety_details = []
                     if safety_ratings:
                         for rating in safety_ratings:
@@ -620,9 +644,12 @@ class ImageGenerationService:
                     logger.warning(f"候选结果以非正常原因结束: {finish_reason}")
 
             # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
-            if hasattr(candidate, "safety_ratings") and candidate.safety_ratings:
+            candidate_safety_ratings = (
+                getattr(candidate, "safety_ratings", None) or []
+            )
+            if candidate_safety_ratings:
                 blocked_ratings = []
-                for rating in candidate.safety_ratings:
+                for rating in candidate_safety_ratings:
                     if hasattr(rating, "blocked") and rating.blocked:
                         category = getattr(rating, "category", "UNKNOWN")
                         probability = getattr(rating, "probability", "UNKNOWN")

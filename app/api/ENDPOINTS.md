@@ -212,6 +212,7 @@
 | `/api/v1/evaluation/user-analytics/conversations-detail` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/stats` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/reports` | GET | `app/api/v1/endpoints/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/image-generation-failures` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-daily-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |

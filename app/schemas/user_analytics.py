@@ -301,6 +301,15 @@ class ImageGenerationLatencyResponse(BaseModel):
     data: List[ImageGenerationLatencyItem]
 
 
+class ImageGenerationFailureAnalyticsResponse(BaseModel):
+    """生图失败与兜底分析响应（只读 replica，与日报口径一致）"""
+
+    data: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="summary, fallback_stats, failures_by_type, failures_by_reason, daily_trend, failures_by_agent",
+    )
+
+
 class LiveChatLatencyItem(BaseModel):
     """Live Chat 延迟统计项"""
 
