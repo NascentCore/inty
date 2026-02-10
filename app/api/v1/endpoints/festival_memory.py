@@ -77,6 +77,7 @@ async def create_festival_memory_config(
         festival_date=body.festival_date,
         prompt=body.prompt,
         enabled=body.enabled,
+        timezone=body.timezone,
         run_at_date=body.run_at_date,
         run_at_hour=body.run_at_hour,
     )
@@ -134,6 +135,8 @@ async def update_festival_memory_config(
         config.prompt = body.prompt
     if body.enabled is not None:
         config.enabled = body.enabled
+    if body.timezone is not None:
+        config.timezone = body.timezone
     if body.run_at_date is not None:
         config.run_at_date = body.run_at_date
     if body.run_at_hour is not None:
@@ -176,6 +179,7 @@ async def run_festival_memory_extraction(
         festival_name = config.festival_name
         festival_date = config.festival_date
         prompt = config.prompt
+        tz_str = getattr(config, "timezone", "UTC") or "UTC"
     else:
         if (
             body.festival_name is None
@@ -192,11 +196,13 @@ async def run_festival_memory_extraction(
         festival_name = body.festival_name
         festival_date = body.festival_date
         prompt = body.prompt
+        tz_str = (body.timezone or "UTC").strip() or "UTC"
 
     pairs = await asyncio.to_thread(
         festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
         festival_date,
         festival_memory_service.FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
+        tz_str,
     )
     total = len(pairs)
     success = 0

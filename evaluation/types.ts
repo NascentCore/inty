@@ -772,9 +772,11 @@ export interface FestivalMemoryConfigItem {
   festival_date: string;
   prompt: string;
   enabled: boolean;
-  /** 执行日期，须不早于节日日期 */
+  /** 节日与执行时间所属时区，IANA 名如 Asia/Shanghai */
+  timezone: string;
+  /** 执行日期（该时区下），须不早于节日日期 */
   run_at_date: string | null;
-  /** 执行时刻 UTC 小时 0-23 */
+  /** 执行时刻（该时区下本地小时）0-23 */
   run_at_hour: number | null;
   /** 最近一次被定时任务执行的时间 */
   last_run_at: string | null;
@@ -785,6 +787,8 @@ export interface FestivalMemoryConfigCreate {
   festival_date: string;
   prompt: string;
   enabled?: boolean;
+  /** 节日与执行时间所属时区，IANA 名如 Asia/Shanghai，默认 UTC */
+  timezone?: string;
   run_at_date: string;
   run_at_hour: number; // 0-23
 }
@@ -794,6 +798,7 @@ export interface FestivalMemoryConfigUpdate {
   festival_date?: string;
   prompt?: string;
   enabled?: boolean;
+  timezone?: string;
   run_at_date?: string;
   run_at_hour?: number; // 0-23
 }
@@ -803,6 +808,8 @@ export interface FestivalMemoryExtractionRunRequest {
   festival_name?: string;
   festival_date?: string;
   prompt?: string;
+  /** 节日日期所属时区（仅当未传 config_id 时用于窗口计算） */
+  timezone?: string;
 }
 
 export interface FestivalMemoryExtractionRunResponse {

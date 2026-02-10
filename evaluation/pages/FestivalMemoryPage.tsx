@@ -13,6 +13,7 @@ import {
   InputNumber,
   message,
   Modal,
+  Select,
   Space,
   Table,
   Tag,
@@ -36,6 +37,17 @@ import type {
 
 const { Text } = Typography;
 
+const FESTIVAL_TIMEZONE_OPTIONS = [
+  { value: "UTC", label: "UTC" },
+  { value: "Asia/Shanghai", label: "Asia/Shanghai（中国）" },
+  { value: "Asia/Hong_Kong", label: "Asia/Hong_Kong" },
+  { value: "America/New_York", label: "America/New_York" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles" },
+  { value: "Europe/London", label: "Europe/London" },
+  { value: "Europe/Paris", label: "Europe/Paris" },
+  { value: "Japan", label: "Japan" },
+];
+
 export const FestivalMemoryPage: React.FC = () => {
   const [configs, setConfigs] = useState<FestivalMemoryConfigItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,6 +56,7 @@ export const FestivalMemoryPage: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formName, setFormName] = useState("");
   const [formDate, setFormDate] = useState<dayjs.Dayjs | null>(null);
+  const [formTimezone, setFormTimezone] = useState<string>("UTC");
   const [formPrompt, setFormPrompt] = useState("");
   const [formEnabled, setFormEnabled] = useState(true);
   const [formRunAtDate, setFormRunAtDate] = useState<dayjs.Dayjs | null>(null);
@@ -70,6 +83,7 @@ export const FestivalMemoryPage: React.FC = () => {
     setEditingId(null);
     setFormName("");
     setFormDate(null);
+    setFormTimezone("UTC");
     setFormPrompt("");
     setFormEnabled(true);
     setFormRunAtDate(null);
@@ -81,6 +95,7 @@ export const FestivalMemoryPage: React.FC = () => {
     setEditingId(row.id);
     setFormName(row.festival_name);
     setFormDate(row.festival_date ? dayjs(row.festival_date) : null);
+    setFormTimezone(row.timezone ?? "UTC");
     setFormPrompt(row.prompt);
     setFormEnabled(row.enabled);
     setFormRunAtDate(row.run_at_date ? dayjs(row.run_at_date) : null);
@@ -117,7 +132,7 @@ export const FestivalMemoryPage: React.FC = () => {
     }
     const hour = Math.floor(formRunAtHour);
     if (hour < 0 || hour > 23) {
-      message.warning("执行时刻（UTC 小时）须为 0–23");
+      message.warning("执行时刻（该时区本地小时）须为 0–23");
       return;
     }
     try {
@@ -127,6 +142,7 @@ export const FestivalMemoryPage: React.FC = () => {
           festival_date: dateStr,
           prompt: formPrompt.trim(),
           enabled: formEnabled,
+          timezone: formTimezone,
           run_at_date: runAtDateStr,
           run_at_hour: hour,
         };
@@ -138,6 +154,7 @@ export const FestivalMemoryPage: React.FC = () => {
           festival_date: dateStr,
           prompt: formPrompt.trim(),
           enabled: formEnabled,
+          timezone: formTimezone,
           run_at_date: runAtDateStr,
           run_at_hour: hour,
         };
@@ -199,6 +216,13 @@ export const FestivalMemoryPage: React.FC = () => {
       render: (v: string) => v || "-",
     },
     {
+      title: "时区",
+      dataIndex: "timezone",
+      key: "timezone",
+      width: 120,
+      render: (v: string) => v || "UTC",
+    },
+    {
       title: "执行日期",
       dataIndex: "run_at_date",
       key: "run_at_date",
@@ -206,7 +230,7 @@ export const FestivalMemoryPage: React.FC = () => {
       render: (v: string | null) => v || "-",
     },
     {
-      title: "执行时刻(UTC)",
+      title: "执行时刻(本地)",
       dataIndex: "run_at_hour",
       key: "run_at_hour",
       width: 110,
@@ -288,8 +312,9 @@ export const FestivalMemoryPage: React.FC = () => {
         }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          仅对在节日当天 0 点至次日 4 点（UTC）28 小时内用户消息达 30 条以上的
-          (用户, 角色) 组合抽取节日回忆并写入 memory
+          按配置的时区：节日为「该时区下的自然日」，28 小时窗口为该自然日 0 点至次日 4
+          点；执行时间为该时区下的本地日期与时刻。仅对窗口内用户消息达 30
+          条以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
           表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。
         </Text>
         <Table
@@ -311,6 +336,19 @@ export const FestivalMemoryPage: React.FC = () => {
       >
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
           <div>
+            <Text strong>时区</Text>
+            <br />
+            <Select
+              value={formTimezone}
+              onChange={setFormTimezone}
+              options={FESTIVAL_TIMEZONE_OPTIONS}
+              style={{ width: "100%", marginTop: 4 }}
+            />
+            <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
+              节日日期与执行日期/时刻均按此时区下的本地值
+            </Text>
+          </div>
+          <div>
             <Text strong>节日名称</Text>
             <br />
             <Input
@@ -321,7 +359,7 @@ export const FestivalMemoryPage: React.FC = () => {
             />
           </div>
           <div>
-            <Text strong>节日日期</Text>
+            <Text strong>节日日期（该时区下的自然日）</Text>
             <br />
             <DatePicker
               value={formDate}
@@ -331,18 +369,37 @@ export const FestivalMemoryPage: React.FC = () => {
           </div>
           <div>
             <Space style={{ marginBottom: 4 }}>
-              <Text strong>执行日期</Text>
+              <Text strong>执行日期（该时区下本地日期）</Text>
               <Button
                 type="link"
                 size="small"
                 onClick={() => {
                   const now = new Date();
-                  const utcDateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
-                  setFormRunAtDate(dayjs(utcDateStr));
-                  setFormRunAtHour(now.getUTCHours());
+                  try {
+                    const fmt = new Intl.DateTimeFormat("en-CA", {
+                      timeZone: formTimezone,
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      hour12: false,
+                    });
+                    const parts = fmt.formatToParts(now);
+                    const part = (k: string) => parts.find((p) => p.type === k)?.value ?? "0";
+                    const y = part("year");
+                    const m = part("month").padStart(2, "0");
+                    const d = part("day").padStart(2, "0");
+                    const h = parseInt(part("hour"), 10);
+                    setFormRunAtDate(dayjs(`${y}-${m}-${d}`));
+                    setFormRunAtHour(h >= 0 && h <= 23 ? h : 0);
+                  } catch {
+                    const utcDateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+                    setFormRunAtDate(dayjs(utcDateStr));
+                    setFormRunAtHour(now.getUTCHours());
+                  }
                 }}
               >
-                立刻执行（设为当前 UTC 时间）
+                设为当前所选时区的本地时间
               </Button>
             </Space>
             <DatePicker
@@ -358,7 +415,7 @@ export const FestivalMemoryPage: React.FC = () => {
             </Text>
           </div>
           <div>
-            <Text strong>执行时刻（UTC 小时）</Text>
+            <Text strong>执行时刻（该时区下本地小时 0–23）</Text>
             <br />
             <InputNumber
               min={0}

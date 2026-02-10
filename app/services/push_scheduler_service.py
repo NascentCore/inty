@@ -392,6 +392,7 @@ class PushSchedulerService:
     async def _run_festival_memory_extraction(self) -> None:
         """节日记忆抽取：每 5 分钟扫描，仅执行 run_at 已到且尚未为此执行时刻跑过的配置。"""
         from datetime import timezone as dt_timezone
+        from zoneinfo import ZoneInfo
 
         try:
             logger.info("[节日记忆抽取] 开始...")
@@ -407,11 +408,14 @@ class PushSchedulerService:
                 all_configs = result.scalars().all()
             due_configs = []
             for config in all_configs:
-                run_at_dt = datetime.datetime.combine(
+                tz_str = getattr(config, "timezone", "UTC") or "UTC"
+                tz = ZoneInfo(tz_str)
+                run_at_local = datetime.datetime.combine(
                     config.run_at_date,
                     datetime.time(config.run_at_hour or 0, 0, 0),
-                    tzinfo=dt_timezone.utc,
+                    tzinfo=tz,
                 )
+                run_at_dt = run_at_local.astimezone(dt_timezone.utc)
                 if now < run_at_dt:
                     continue
                 if config.last_run_at is not None and config.last_run_at >= run_at_dt:
@@ -421,10 +425,12 @@ class PushSchedulerService:
                 logger.debug("[节日记忆抽取] 无到点配置，跳过")
                 return
             for config in due_configs:
+                tz_str = getattr(config, "timezone", "UTC") or "UTC"
                 pairs = await asyncio.to_thread(
                     festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
                     config.festival_date,
                     festival_memory_service.FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
+                    tz_str,
                 )
                 async with AsyncSessionLocal() as db:
                     ran_ok = True

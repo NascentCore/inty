@@ -3,6 +3,7 @@
 
 from datetime import date, datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -10,20 +11,37 @@ RUN_AT_HOUR_MIN = 0
 RUN_AT_HOUR_MAX = 23
 
 
+def _validate_iana_timezone(v: str) -> str:
+    try:
+        ZoneInfo(v)
+    except Exception:
+        raise ValueError(f"Invalid IANA timezone: {v}")
+    return v
+
+
 class FestivalMemoryConfigCreate(BaseModel):
     """创建节日记忆配置"""
 
     festival_name: str = Field(..., description="节日名称")
-    festival_date: date = Field(..., description="节日日期")
+    festival_date: date = Field(..., description="节日日期（该时区下的自然日）")
     prompt: str = Field(..., description="抽取提示词")
     enabled: bool = Field(True, description="是否启用")
-    run_at_date: date = Field(..., description="执行日期，须不早于节日日期")
+    timezone: str = Field(
+        default="UTC",
+        description="节日日期与执行时间所属时区，IANA 名如 Asia/Shanghai",
+    )
+    run_at_date: date = Field(..., description="执行日期（该时区下），须不早于节日日期")
     run_at_hour: int = Field(
         ...,
         ge=RUN_AT_HOUR_MIN,
         le=RUN_AT_HOUR_MAX,
-        description="执行时刻 UTC 小时 0-23",
+        description="执行时刻（该时区下本地小时）0-23",
     )
+
+    @model_validator(mode="after")
+    def validate_timezone(self) -> "FestivalMemoryConfigCreate":
+        _validate_iana_timezone(self.timezone)
+        return self
 
     @model_validator(mode="after")
     def run_at_not_before_festival(self) -> "FestivalMemoryConfigCreate":
@@ -36,19 +54,25 @@ class FestivalMemoryConfigUpdate(BaseModel):
     """更新节日记忆配置"""
 
     festival_name: Optional[str] = Field(None, description="节日名称")
-    festival_date: Optional[date] = Field(None, description="节日日期")
+    festival_date: Optional[date] = Field(None, description="节日日期（该时区下的自然日）")
     prompt: Optional[str] = Field(None, description="抽取提示词")
     enabled: Optional[bool] = Field(None, description="是否启用")
-    run_at_date: Optional[date] = Field(None, description="执行日期，须不早于节日日期")
+    timezone: Optional[str] = Field(
+        None,
+        description="节日日期与执行时间所属时区，IANA 名如 Asia/Shanghai",
+    )
+    run_at_date: Optional[date] = Field(None, description="执行日期（该时区下），须不早于节日日期")
     run_at_hour: Optional[int] = Field(
         None,
         ge=RUN_AT_HOUR_MIN,
         le=RUN_AT_HOUR_MAX,
-        description="执行时刻 UTC 小时 0-23",
+        description="执行时刻（该时区下本地小时）0-23",
     )
 
     @model_validator(mode="after")
-    def run_at_not_before_festival(self) -> "FestivalMemoryConfigUpdate":
+    def validate_timezone_and_run_at(self) -> "FestivalMemoryConfigUpdate":
+        if self.timezone is not None:
+            _validate_iana_timezone(self.timezone)
         run_at = self.run_at_date
         festival = self.festival_date
         if run_at is not None and festival is not None and run_at < festival:
@@ -64,8 +88,9 @@ class FestivalMemoryConfigInDB(BaseModel):
     festival_date: date
     prompt: str
     enabled: bool
-    run_at_date: Optional[date] = Field(None, description="执行日期")
-    run_at_hour: Optional[int] = Field(None, description="执行时刻 UTC 小时")
+    timezone: str = Field(..., description="节日与执行时间所属时区，IANA 名")
+    run_at_date: Optional[date] = Field(None, description="执行日期（该时区下）")
+    run_at_hour: Optional[int] = Field(None, description="执行时刻（该时区下本地小时）0-23")
     last_run_at: Optional[datetime] = Field(
         None, description="最近一次被定时任务执行的时间"
     )
@@ -85,6 +110,16 @@ class FestivalMemoryExtractionRunRequest(BaseModel):
         None, description="节日日期（与 config_id 二选一）"
     )
     prompt: Optional[str] = Field(None, description="抽取提示词（与 config_id 二选一）")
+    timezone: Optional[str] = Field(
+        default="UTC",
+        description="节日日期所属时区（仅当未传 config_id 时用于窗口计算）",
+    )
+
+    @model_validator(mode="after")
+    def validate_timezone(self) -> "FestivalMemoryExtractionRunRequest":
+        if self.timezone:
+            _validate_iana_timezone(self.timezone)
+        return self
 
 
 class FestivalMemoryExtractionRunResponse(BaseModel):
