@@ -3,7 +3,9 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+from pydantic import BaseModel, ConfigDict
 
 # 尽早加载 .env（显式路径，避免工作目录影响）
 _THIS_DIR = Path(__file__).resolve().parent
@@ -24,7 +26,6 @@ from openai import OpenAI
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-# OPENROUTER_MODEL = "google/gemini-2.5-flash-lite"
 OPENROUTER_MODEL = "google/gemini-2.5-flash"
 
 CHAR_NAME = "AI Companion"
@@ -47,6 +48,21 @@ SEND_IMAGE_TOOLS = [
 assert os.getenv("OPENROUTER_API_KEY") is not None, "OPENROUTER_API_KEY 未设置"
 
 
+class ProcessedResponse(BaseModel):
+    """单轮 API 响应处理结果。"""
+    model_config = ConfigDict(frozen=True)
+
+    messages: list[dict[str, Any]]
+    content: str | None
+    done: bool
+    assistant_text: str
+    image_path: str | None
+
+
+# 工具名 -> 执行函数 (无参，返回 (供 API 的字符串, 成功时路径或 None))
+TOOL_EXECUTORS: dict[str, Callable[[], tuple[str, str | None]]] = {}
+
+
 def execute_send_image() -> tuple[str, str | None]:
     """执行发送图片：校验 app_icon.png 存在。返回 (供 API 的结果字符串, 成功时为可点击的绝对路径否则 None)。"""
     logger.info("执行 send_image 工具，图片路径: %s", APP_ICON_PATH)
@@ -61,6 +77,13 @@ def execute_send_image() -> tuple[str, str | None]:
     path_str = str(APP_ICON_PATH.resolve())
     logger.info("send_image 成功，已返回路径: %s", path_str)
     return ("已发送图片。", path_str)
+
+
+def _register_tools() -> None:
+    TOOL_EXECUTORS["send_image"] = execute_send_image
+
+
+_register_tools()
 
 
 def build_system_messages_openai(char_name: str, user_name: str) -> list[dict[str, str]]:
@@ -88,16 +111,16 @@ def create_openai_client() -> OpenAI:
 def process_response_with_tools(
     messages: list[dict[str, Any]],
     message: Any,
-) -> tuple[list[dict[str, Any]], str | None, bool, str, str | None]:
+) -> ProcessedResponse:
     """
-    处理单轮 API 响应：若含 tool_calls 则执行并追加 assistant + tool 消息，返回 (新 messages, None, False, 助手文本, 本轮发送的图片路径)；
-    若无 tool_calls 则返回 (未追加的 messages, content, True, "", None)。
+    处理单轮 API 响应：若含 tool_calls 则执行并追加 assistant + tool 消息；
+    若无 tool_calls 则返回 content 与 done=True。
     """
     tool_calls = getattr(message, "tool_calls", None) or []
     if not tool_calls:
         content = (message.content or "").strip()
         logger.info("API 响应无 tool_calls，content 长度=%d", len(content))
-        return (messages, content, True, "", None)
+        return ProcessedResponse(messages=messages, content=content, done=True, assistant_text="", image_path=None)
     tool_names = [getattr(tc.function, "name", "") for tc in tool_calls]
     logger.info("API 响应含 tool_calls: %s，助手文本长度=%d", tool_names, len((message.content or "")))
     assistant_content = (message.content or "").strip()
@@ -116,18 +139,18 @@ def process_response_with_tools(
     new_messages = [*messages, assistant_msg]
     image_path_sent: str | None = None
     for tc in tool_calls:
-        if tc.function.name == "send_image":
-            result, path = execute_send_image()
+        name = tc.function.name
+        executor = TOOL_EXECUTORS.get(name)
+        if executor:
+            result, path = executor()
             if path is not None:
                 image_path_sent = path
         else:
-            result = f"未知工具: {tc.function.name}"
-        new_messages.append(
-            {"role": "tool", "tool_call_id": tc.id, "content": result}
-        )
-        logger.info("工具 %s 执行完毕，result 长度=%d", tc.function.name, len(result))
+            result = f"未知工具: {name}"
+        new_messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
+        logger.info("工具 %s 执行完毕，result 长度=%d", name, len(result))
     logger.info("本轮 tool 处理完成，messages 总数=%d，image_path_sent=%s", len(new_messages), image_path_sent is not None)
-    return (new_messages, None, False, assistant_content, image_path_sent)
+    return ProcessedResponse(messages=new_messages, content=None, done=False, assistant_text=assistant_content, image_path=image_path_sent)
 
 
 def run_repl(
@@ -165,22 +188,21 @@ def run_repl(
             msg = resp.choices[0].message
             has_tool_calls = bool(getattr(msg, "tool_calls", None))
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tool_calls)
-            messages, content, done, assistant_text, image_path = process_response_with_tools(
-                messages, msg
-            )
-            if image_path is not None:
-                pending_image_path = image_path
-            if done:
-                assert content is not None
-                messages.append({"role": "assistant", "content": content})
-                display = content if content else "（已通过 send_image 发送图片。）"
+            out = process_response_with_tools(messages, msg)
+            messages = out.messages
+            if out.image_path is not None:
+                pending_image_path = out.image_path
+            if out.done:
+                assert out.content is not None
+                messages.append({"role": "assistant", "content": out.content})
+                display = out.content if out.content else "（已通过 send_image 发送图片。）"
                 if pending_image_path:
                     display = f"{display}\n点击打开: {pending_image_path}"
-                logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(content), pending_image_path is not None)
+                logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
                 print(f"{char_name}> {display}\n")
                 break
-            if assistant_text:
-                print(f"{char_name}> {assistant_text}")
+            if out.assistant_text:
+                print(f"{char_name}> {out.assistant_text}")
             logger.debug("继续本轮 API 请求，messages 已追加 assistant + tool")
 
 
