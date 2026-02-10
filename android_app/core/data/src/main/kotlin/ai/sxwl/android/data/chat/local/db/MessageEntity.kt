@@ -28,6 +28,11 @@ data class MessageEntity(
     val type: String? = null,
     val festivalMemoryId: Long? = null,
 ) {
+    val forMomentImage: String
+        get() = ""
+    val imageUnlockPrice: Int
+        get() = 10
+
     val isVoice: Boolean
         get() = metaData.isVoice
 

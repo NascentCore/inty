@@ -7,6 +7,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.design.theme.brushes
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.TimeUtils
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -40,6 +42,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
@@ -60,14 +63,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -216,6 +222,180 @@ private fun VersionSupportPreview() {
 }
 
 @Composable
+private fun ChatItemForMoment(
+    navController: NavController,
+    message: MessageEntity,
+    modifier: Modifier = Modifier
+) {
+    ChatItemForMoment(
+        image = message.forMomentImage,
+        text = message.content,
+
+    )
+}
+
+/**
+ * 秘密时刻解锁卡片
+ *
+ * 使用场景：聊天中展示未解锁的“秘密时刻”内容，引导用户通过 Premium 或 Credits 解锁。
+ * 预期效果：深色卡片、带渐变描边的模糊图区域、中央皇冠图标、提示文案（含酒杯 emoji）、
+ * “Go Premium”（渐变填充 + VIP 徽章 + 火焰 emoji）与“Unlock with Credits”（渐变描边空心）双按钮。
+ *
+ * 可配置项：image 图片 URL、isLocked 是否锁定、price 积分价格、unlockByVip / unlockByCredits 回调。
+ */
+@Composable
+private fun ChatItemForMoment(
+    image: String,
+    text: String,
+    isLocked: Boolean,
+    unlockByVip: () -> Unit,
+    unlockByCredits: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val borderWidth = dimensionResource(R.dimen.moment_border_width)
+
+    val gradientStart = MaterialTheme.colorScheme.primary
+    val gradientEnd = MaterialTheme.colorScheme.secondary
+    val borderGradient = Brush.linearGradient(listOf(gradientStart, gradientEnd))
+    val buttonShape = RoundedCornerShape(100)
+
+    ChatItem(modifier = modifier) {
+        Column(
+            modifier = Modifier
+        ) {
+            // 图片区域：渐变描边、模糊图、中央皇冠
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = dimensionResource(R.dimen.padding_medium))
+                    .fillMaxWidth()
+                    .aspectRatio(9f / 16f)
+                    .clip(MaterialTheme.shapes.medium)
+                    .border(
+                        width = borderWidth,
+                        brush = borderGradient,
+                        shape = MaterialTheme.shapes.medium
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    modifier = Modifier
+                        .fillMaxSize() then if (isLocked) {
+                            Modifier.blur(20.dp, 20.dp)
+                        } else Modifier,
+                    model = ImageRequest.Builder(context)
+                        .data(getCdnImageUrl(image, width = 360, quality = 70))
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop
+                )
+
+                if (isLocked) {
+                    Image(
+                        painter = painterResource(R.drawable.icon_subscription),
+                        contentDescription = "vip",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.secondary
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
+                            .padding(11.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            if (isLocked) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .clip(buttonShape)
+                        .drawBehind {
+                            drawRect(
+                                brush = MaterialTheme.brushes.gradientBrush2,
+                                alpha = 0.2f
+                            )
+                        }
+                        .border(
+                            width = 1.dp,
+                            brush = MaterialTheme.brushes.gradientBrush2,
+                            shape = buttonShape
+                        )
+                        .noRippleClickable(onClick = unlockByVip)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_vip_badge),
+                        contentDescription = "vip",
+                        modifier = Modifier.size(24.dp, 12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(dimensionResource(R.dimen.padding_small)))
+                    Text(
+                        text = stringResource(R.string.go_premium),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_extra_small)))
+
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .clip(buttonShape)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = buttonShape
+                        )
+                        .noRippleClickable(onClick = unlockByCredits),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.unlock_with_credits),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+        }
+    }
+
+}
+
+@Preview
+@Composable
+private fun ChatItemForMomentPreview() {
+    IntelliMateTheme {
+        ChatItemForMoment(
+            image = "",
+            text = stringResource(R.string.chat_moment_prompt),
+            isLocked = false,
+            unlockByVip = {},
+            unlockByCredits = {},
+            modifier = Modifier.width(200.dp)
+        )
+    }
+}
+
+
+@Composable
 private fun ChatItemFestivalMemory(
     agentName: String,
     onClick: () -> Unit,
@@ -234,7 +414,9 @@ private fun ChatItemFestivalMemory(
                     append(stringResource(R.string.take_a_look))
                 },
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
+            modifier = Modifier
+                .fillMaxWidth()
+                .noRippleClickable(onClick = onClick),
         )
     }
 }
@@ -262,7 +444,9 @@ private fun ChatItemAI(
     val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
-            Column(modifier = Modifier.padding(bottom = 16.dp).fillMaxWidth()) {
+            Column(modifier = Modifier
+                .padding(bottom = 16.dp)
+                .fillMaxWidth()) {
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
                 val isImageLoading = generatedImageUrl == "loading"
@@ -298,7 +482,9 @@ private fun ChatItemAI(
 
                     // 消息气泡上方的辅助内容条
                     Row(
-                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // 显示音频播放按钮
@@ -362,7 +548,8 @@ private fun ChatItemAI(
                 if (isNormalLoading) {
                     Box(
                         modifier =
-                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                 .padding(
                                     horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                     vertical = UiConfigs.ChatMessagePane.PaddingVertical,
@@ -377,7 +564,8 @@ private fun ChatItemAI(
                         val context = LocalContext.current
                         Box(
                             modifier =
-                                Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                                Modifier
+                                    .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                     .padding(
                                         horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                         vertical = UiConfigs.ChatMessagePane.PaddingVertical,
@@ -419,11 +607,15 @@ private fun ChatItemAI(
                                         viewModel.generateImageForMessageOrPickImage(item.id)
                                     },
                                     modifier =
-                                        Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),
+                                        Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .offset(10.dp, 10.dp),
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        Spacer(modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f))
                     }
                 }
 
@@ -457,7 +649,9 @@ private fun ChatItemAI(
                         if (isImageLoading) {
                             val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
                             ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                                 showLoadingDots = true,
                                 showSpeedUpButton = !vipStatus.isSubscribed,
@@ -471,7 +665,8 @@ private fun ChatItemAI(
                         } else if (imageLoadError) {
                             Box(
                                 modifier =
-                                    Modifier.fillMaxWidth(0.35f)
+                                    Modifier
+                                        .fillMaxWidth(0.35f)
                                         .aspectRatio(aspectRatio)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.Black.copy(alpha = 0.3f))
@@ -510,7 +705,8 @@ private fun ChatItemAI(
                                 // 使用 Box 叠加 shimmer 和图片
                                 Box(
                                     modifier =
-                                        Modifier.fillMaxWidth(0.35f)
+                                        Modifier
+                                            .fillMaxWidth(0.35f)
                                             .aspectRatio(aspectRatio)
                                             .constrainAs(img) {}
                                             .clip(RoundedCornerShape(12.dp))
@@ -553,7 +749,9 @@ private fun ChatItemAI(
                         } else {
                             // URL 为空或其他情况，显示 shimmer
                             ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                             )
                         }
@@ -627,7 +825,9 @@ private fun ChatItemAI(
                             modifier =
                                 Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
                         )
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        Spacer(modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f))
                     }
                 }
             }
@@ -637,7 +837,8 @@ private fun ChatItemAI(
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -657,7 +858,9 @@ private fun ChatItemAI(
                         fontSize = messageFontSize,
                     )
                 }
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f))
             }
         }
 }
@@ -676,7 +879,8 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
 
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -726,7 +930,8 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -768,7 +973,9 @@ private fun ChatItemSystemTips(item: MessageEntity, chatViewModel: ChatViewModel
         }
 
     Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -1034,7 +1241,8 @@ private fun LoadingAnimation(agentName: String?) {
 
                 Box(
                     modifier =
-                        Modifier.size(6.dp)
+                        Modifier
+                            .size(6.dp)
                             .background(
                                 color = Color.White.copy(dotAlpha * 0.7f),
                                 shape = CircleShape,
@@ -1058,7 +1266,8 @@ internal fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier.border(
+            Modifier
+                .border(
                     width = .5.dp,
                     brush = Brush.horizontalGradient(colors = listOf(purpleStart, purpleEnd)),
                     shape = RoundedCornerShape(12.dp),
@@ -1094,7 +1303,9 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -1115,7 +1326,8 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier.size(18.dp)
+                    Modifier
+                        .size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,
@@ -1197,11 +1409,15 @@ fun VoiceChatHistoryCollapsed(
 
     Box(
         modifier =
-            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp)
+            modifier
+                .fillMaxWidth()
+                .noRippleClickable(onClick = onClick)
+                .padding(vertical = 8.dp)
     ) {
         Row(
             modifier =
-                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                Modifier
+                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                     .background(
                         color = Color.Black.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(12.dp),
@@ -1288,13 +1504,15 @@ fun VoiceChatHistoryExpandedContainer(
         // 顶部折叠提示卡片（与折叠状态相同样式，但提示文字不同）
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .noRippleClickable(onClick = onCollapse)
                     .padding(bottom = 8.dp)
         ) {
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .background(
                             color = Color.Black.copy(alpha = 0.3f),
                             shape = RoundedCornerShape(12.dp),
