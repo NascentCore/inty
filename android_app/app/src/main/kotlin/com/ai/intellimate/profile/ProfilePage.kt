@@ -165,100 +165,99 @@ internal fun ProfilePage(
         // 背景图区域
         ProfileHeaderBg(modifier = Modifier.fillMaxWidth(), userPhoto = userProfile.userPhoto)
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header 区域 - 固定显示（不随列表滚动折叠）
-            ProfileHeader(
-                navController,
-                modifier = Modifier,
-                userProfile = userProfile,
-                context = context,
-                vipStatus = vipStatus,
-                editProfileLauncher = editProfileLauncher,
-                appUpdateTips = appUpdateTips,
-            )
-
-            // LazyGrid 区域
-            if (validDrafts.isEmpty() && agents.isEmpty()) {
-                AgentsEmptyUI(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { navController.navigate(Routes.Creat.createRole("")) },
-                )
-            } else {
-                Spacer(Modifier.height(UiConfigs.MePage.EmptyStateContentSpacing))
-
-                // Detect when user scrolls to bottom
-                LaunchedEffect(listState) {
-                    snapshotFlow { listState.layoutInfo.visibleItemsInfo }
-                        .collect { visibleItems ->
-                            val lastVisibleItem = visibleItems.lastOrNull()
-                            val totalItems = listState.layoutInfo.totalItemsCount
-                            // Trigger 3 items before end
-                            if (
-                                lastVisibleItem != null &&
-                                    lastVisibleItem.index >= totalItems - 3 &&
-                                    !isLoading &&
-                                    agents.isNotEmpty()
-                            ) {
-                                onLoadMore()
-                            }
-                        }
-                }
-
-                LazyVerticalGrid(
-                    state = listState,
-                    modifier =
-                        Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
-                    columns = GridCells.Fixed(2),
-                    contentPadding =
-                        PaddingValues(bottom = UiConfigs.MePage.GridContentBottomPadding),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
-                    verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
-                ) {
-                    // 显示所有草稿卡片
-                    if (validDrafts.isNotEmpty() && onClickDraft != null) {
-                        validDrafts.forEach { draft ->
-                            item(key = "draft_${draft.id}") {
-                                DraftAgentCard(
-                                    modifier =
-                                        Modifier.noRippleClickable { onClickDraft(draft.id) },
-                                    draft = draft,
-                                    onDeleteDraft = onDeleteDraft,
-                                )
-                            }
+            // Detect when user scrolls to bottom
+            LaunchedEffect(listState) {
+                snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+                    .collect { visibleItems ->
+                        val lastVisibleItem = visibleItems.lastOrNull()
+                        val totalItems = listState.layoutInfo.totalItemsCount
+                        // Trigger 3 items before end
+                        if (
+                            lastVisibleItem != null &&
+                            lastVisibleItem.index >= totalItems - 3 &&
+                            !isLoading &&
+                            agents.isNotEmpty()
+                        ) {
+                            onLoadMore()
                         }
                     }
+            }
 
-                    runCatching {
-                            if (agents.isNotEmpty()) {
-                                itemsIndexed(
-                                    items = agents,
-                                    key = { index, agent -> "${agent.id}_$index" },
-                                ) { index, agent ->
-                                    MyAgentCard(
-                                        navController,
-                                        modifier =
-                                            Modifier.noRippleClickable { onClickAgent(agent) },
-                                        agentInfo = agent,
-                                        onEditAgent = onEditAgent,
-                                        onDeleteAgent = onDeleteAgent,
-                                    )
-                                }
-                            }
+            LazyVerticalGrid(
+                state = listState,
+                modifier =
+                    Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
+                columns = GridCells.Fixed(2),
+                contentPadding =
+                    PaddingValues(bottom = UiConfigs.MePage.GridContentBottomPadding),
+                horizontalArrangement =
+                    Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
+                verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
+            ) {
+                item("header", span = {GridItemSpan(2)}) {
+                    // Header 区域 - 固定显示（不随列表滚动折叠）
+                    ProfileHeader(
+                        navController,
+                        modifier = Modifier.fillMaxWidth(),
+                        userProfile = userProfile,
+                        context = context,
+                        vipStatus = vipStatus,
+                        editProfileLauncher = editProfileLauncher,
+                        appUpdateTips = appUpdateTips,
+                    )
+                }
+
+                // LazyGrid 区域
+                if (validDrafts.isEmpty() && agents.isEmpty()) {
+                    item(span = {GridItemSpan(2)}) {
+                        AgentsEmptyUI(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { navController.navigate(Routes.Creat.createRole("")) },
+                        )
+                    }
+                }
+
+                // 显示所有草稿卡片
+                if (validDrafts.isNotEmpty() && onClickDraft != null) {
+                    validDrafts.forEach { draft ->
+                        item(key = "draft_${draft.id}") {
+                            DraftAgentCard(
+                                modifier =
+                                    Modifier.noRippleClickable { onClickDraft(draft.id) },
+                                draft = draft,
+                                onDeleteDraft = onDeleteDraft,
+                            )
                         }
-                        .onFailure { it.printStackTrace() }
+                    }
+                }
 
-                    // Loading indicator when loading more (only show when there's no data)
-                    if (isLoading && agents.isEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            Box(
-                                modifier = Modifier.padding(UiConfigs.Padding.ScreenHorizontal),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    color = Color.White,
-                                    modifier = Modifier.size(UiConfigs.MePage.TopIconsRow.Size),
-                                )
-                            }
+                if (agents.isNotEmpty()) {
+                    itemsIndexed(
+                        items = agents,
+                        key = { index, agent -> "${agent.id}_$index" },
+                    ) { index, agent ->
+                        MyAgentCard(
+                            navController,
+                            modifier =
+                                Modifier.noRippleClickable { onClickAgent(agent) },
+                            agentInfo = agent,
+                            onEditAgent = onEditAgent,
+                            onDeleteAgent = onDeleteAgent,
+                        )
+                    }
+                }
+
+                // Loading indicator when loading more (only show when there's no data)
+                if (isLoading && agents.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier.padding(UiConfigs.Padding.ScreenHorizontal),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(UiConfigs.MePage.TopIconsRow.Size),
+                            )
                         }
                     }
                 }
@@ -424,15 +423,12 @@ private fun ProfileHeader(
                 contentDescription = stringResource(R.string.me_icons_row_settings),
                 tint = Color.White,
             )
-            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.RightPadding))
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
 
         // 头像和昵称 - 固定显示（不随列表上划变化）
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
-
             Box(
                 modifier =
                     Modifier.size(UiConfigs.MePage.AvatarFullSize)
@@ -507,8 +503,6 @@ private fun ProfileHeader(
                 model = R.drawable.icon_edit,
                 contentDescription = null,
             )
-
-            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
@@ -528,7 +522,6 @@ private fun ProfileHeader(
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
         VibeModeBanner(
-            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             isSubscribed = isSubscribed,
             onRequestSubscribe = { showSubscribeDialog = true },
         )
@@ -537,7 +530,6 @@ private fun ProfileHeader(
         // Daily Rewards Banner - 固定显示（不随上划隐藏）
         var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
         DailyRewardsBanner(
-            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             onClick = {
                 val currentTime = System.currentTimeMillis()
                 if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
@@ -550,13 +542,12 @@ private fun ProfileHeader(
             Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
             NewVersionBanner(
                 modifier =
-                    Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
+                    Modifier.fillMaxWidth()
             )
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
         CreateCharacterBanner(
-            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             title = stringResource(R.string.me_create_character_banner_title),
             onClick = { navController.navigate(Routes.Creat.createRole("")) },
         )

@@ -15,7 +15,7 @@ abstract class BaseActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(scrim = Color.TRANSPARENT))
+        enableEdgeToEdge()
 
         // 页面追踪 - 记录页面访问
         // 如果有额外的追踪参数，使用 trackPageView 直接调用；否则使用 trackActivityLifecycle

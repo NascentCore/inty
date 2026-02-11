@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -419,6 +420,7 @@ private fun HomeContent(
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
                 appUpdateTips = appUpdateTips,
+                innerPadding = innerPadding,
                 mainViewModel = mainViewModel,
             )
         }
@@ -532,6 +534,7 @@ private fun ProfileTabContent(
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
     appUpdateTips: Boolean,
+    innerPadding: PaddingValues,
     mainViewModel: MainViewModel,
 ) {
     val context = LocalContext.current
@@ -550,29 +553,6 @@ private fun ProfileTabContent(
         } else {
             uiState.userProfile
         }
-
-    // 创建用于编辑的 launcher（独立于 Create Tab 的 launcher）
-    //    val editAgentLauncher =
-    //        rememberLauncherForActivityResult(
-    //            contract = ActivityResultContracts.StartActivityForResult()
-    //        ) { result ->
-    //            // 编辑成功后刷新列表
-    //            if (result.resultCode == Activity.RESULT_OK) {
-    //                profileViewModel.refreshCreatedAgents()
-    //            }
-    //        }
-
-    // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
-    //    val createFromProfileLauncher =
-    //        rememberLauncherForActivityResult(
-    //            contract = ActivityResultContracts.StartActivityForResult()
-    //        ) { result ->
-    //            // 创建成功后刷新列表和草稿
-    //            if (result.resultCode == Activity.RESULT_OK) {
-    //                profileViewModel.refreshCreatedAgents()
-    //                profileViewModel.refreshAgentDrafts()
-    //            }
-    //        }
 
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
@@ -639,7 +619,7 @@ private fun ProfileTabContent(
 
     ProfilePage(
         navController,
-        modifier = Modifier,
+        modifier = Modifier.padding(innerPadding),
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
         drafts = uiState.drafts,
