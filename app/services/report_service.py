@@ -234,8 +234,7 @@ async def update_report_github_issue(
 
     report.github_issues = _normalize_github_issue_url(github_issues)
     await db.commit()
-    await db.refresh(report)
-    return report
+    return await get_report(db, report_id)
 
 
 async def delete_report(
