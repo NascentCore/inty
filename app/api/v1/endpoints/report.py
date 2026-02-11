@@ -13,7 +13,6 @@ from app.models.report import ReportStatus, ReportType
 from app.models.user import User
 from app.schemas.report import (
     ReportCreate,
-    ReportGithubIssueUpdate,
     ReportOut,
     ReportQuery,
     ReportsList,
@@ -68,26 +67,6 @@ async def get_report(
 ):
     """按 id 获取单条举报详情（用于永久链接打开）。"""
     report = await report_service.get_report(db, report_id)
-    return ReportOut.model_validate(report)
-
-
-@router.put("/{report_id}/github-issue", response_model=ReportOut, tags=[WEB_APP_TAG])
-async def update_report_github_issue(
-    report_id: str,
-    payload: ReportGithubIssueUpdate,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_superuser),
-):
-    """更新举报记录关联的 GitHub issue URL。"""
-    try:
-        report = await report_service.update_report_github_issue(
-            db, report_id, payload.github_issues
-        )
-    except ValueError as exc:
-        error_message = str(exc)
-        if error_message == "Report not found":
-            raise HTTPException(status_code=404, detail=error_message) from exc
-        raise HTTPException(status_code=400, detail=error_message) from exc
     return ReportOut.model_validate(report)
 
 
