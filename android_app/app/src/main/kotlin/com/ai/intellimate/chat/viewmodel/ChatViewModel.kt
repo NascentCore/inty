@@ -1028,6 +1028,7 @@ class ChatViewModel : BaseVM() {
                 "message" to message?.content,
                 "has_generated_image" to
                     !message?.metaData?.generatedImage?.imageUrl.isNullOrBlank(),
+                "generated_image" to message?.metaData?.generatedImage?.imageUrl,
                 "is_opening" to message?.isOpening,
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                 "timestamp" to System.currentTimeMillis(),
