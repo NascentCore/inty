@@ -72,7 +72,7 @@ def execute_send_app_icon(*, _logger=None) -> tuple[str, str | None]:
     path_str = str(APP_ICON_PATH.resolve())
     if _logger is not None:
         _logger.info("send_app_icon 成功，已返回路径: %s", path_str)
-    return ("已发送图片。", path_str)
+    return ("已发送图片：", path_str)
 
 
 def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
@@ -92,7 +92,7 @@ def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
     path_str = str(ZUN_LONG_PHOTO_PATH.resolve())
     if _logger is not None:
         _logger.info("send_zun_long_photo 成功，已返回路径: %s", path_str)
-    return ("已发送图片。", path_str)
+    return ("已发送图片：", path_str)
 
 
 def execute_generate_image(
