@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from loguru import logger
 from sqlalchemy import text
@@ -116,6 +116,32 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def get_active_session_ids_on_date(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+    ) -> Set[str]:
+        """查询在指定日期范围内有消息的 session_id 集合（排除 festival_memory_prompt）。
+
+        用于日报等单日统计时先缩小范围，只对当日有活动的 session 做后续批量聚合。
+        """
+        query = text("""
+            SELECT DISTINCT session_id::text
+            FROM chat_history
+            WHERE created_at >= :activity_start_date
+              AND created_at < :activity_end_date
+              AND (meta_data->>'messageType' IS NULL
+                   OR meta_data->>'messageType' != 'festival_memory_prompt')
+        """)
+        result = await self.db.execute(
+            query,
+            {
+                "activity_start_date": activity_start_date,
+                "activity_end_date": activity_end_date,
+            },
+        )
+        return {row[0] for row in result.fetchall()}
+
     async def _query_session_message_counts(
         self,
         session_ids: List[str],
@@ -179,12 +205,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """查询对话轮数统计（按Session）
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
+            active_session_ids: 若提供，仅统计这些 session（与注册范围取交集），用于日报缩小范围
         """
         chats_query = text("""
             SELECT c.id
@@ -214,6 +242,15 @@ class UserAnalyticsService:
             chat_id: generate_session_id(chat_id) for chat_id in chat_ids
         }
         session_ids = list(chat_to_session.values())
+
+        if active_session_ids is not None:
+            session_ids = [s for s in session_ids if s in active_session_ids]
+            chat_to_session = {
+                cid: sid for cid, sid in chat_to_session.items() if sid in active_session_ids
+            }
+            logger.info(
+                f"get_conversation_rounds: 限定当日有活动的 session 后共 {len(session_ids)} 个"
+            )
 
         if not session_ids:
             logger.info("get_conversation_rounds: 没有生成有效的 session_ids")
@@ -319,12 +356,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """查询对话轮数分布（按用户）
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
+            active_session_ids: 若提供，仅统计这些 session，用于日报缩小范围
         """
         chats_query = text("""
             SELECT
@@ -355,6 +394,17 @@ class UserAnalyticsService:
         }
         session_ids = list(chat_to_session.values())
 
+        if active_session_ids is not None:
+            chat_records = [
+                (user_id, chat_id)
+                for user_id, chat_id in chat_records
+                if chat_to_session[chat_id] in active_session_ids
+            ]
+            session_ids = [s for s in session_ids if s in active_session_ids]
+            chat_to_session = {
+                cid: sid for cid, sid in chat_to_session.items() if sid in active_session_ids
+            }
+
         if not session_ids:
             return []
 
@@ -382,6 +432,7 @@ class UserAnalyticsService:
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
         limit: int = 20,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """获取热门角色排行（Top N）"""
         from collections import defaultdict
@@ -394,6 +445,7 @@ class UserAnalyticsService:
             register_end_date,
             activity_start_date,
             activity_end_date,
+            active_session_ids=active_session_ids,
         )
         chat_to_rounds = {
             item["chat_id"]: item["message_count_excluding_opening"]
@@ -527,12 +579,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
         """计算统计数据
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围
             activity_start_date/activity_end_date: 活跃日期范围（用于生图统计等）
+            active_session_ids: 若提供，仅统计这些 session，用于日报缩小范围
         """
         # 生图统计使用活跃日期范围，如果未提供则使用注册日期范围
         img_start = activity_start_date or register_start_date
@@ -550,6 +604,7 @@ class UserAnalyticsService:
             register_end_date,
             activity_start_date,
             activity_end_date,
+            active_session_ids=active_session_ids,
         )
 
         # 辅助函数：查询语音通话（Live Chat）统计
@@ -1070,12 +1125,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """查询用户会话详情（聚合数据）
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
+            active_session_ids: 若提供，仅统计这些 session，用于日报缩小范围
         """
         chats_query = text("""
             SELECT
@@ -1111,6 +1168,16 @@ class UserAnalyticsService:
             chat_id: generate_session_id(chat_id) for chat_id in chat_ids
         }
         session_ids = list(chat_to_session.values())
+
+        if active_session_ids is not None:
+            chat_records = [
+                row for row in chat_records
+                if chat_to_session[row[5]] in active_session_ids
+            ]
+            session_ids = [s for s in session_ids if s in active_session_ids]
+            chat_to_session = {
+                cid: sid for cid, sid in chat_to_session.items() if sid in active_session_ids
+            }
 
         if not session_ids:
             return []

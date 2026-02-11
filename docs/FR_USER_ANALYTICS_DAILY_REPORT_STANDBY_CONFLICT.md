@@ -45,5 +45,7 @@
 
 - **batch_size**：在 `config.yaml` 的 `user_analytics_report` 下可配置 `batch_size`（默认 500），由 `UserAnalyticsService` 读取并用于 `_batch_list`。
 - **重试**：副本读分支对 SerializationError / conflict with recovery 做最多 2 次重试，间隔 3 秒。
+- **方案一：按当日有活动的 session 缩小范围**  
+  日报计算时先查询「当日有消息的 session_id」集合（`get_active_session_ids_on_date`，单次 `SELECT DISTINCT session_id` 扫 `chat_history` 当日），再与注册范围内的 chat 取交集；仅对这些 session 做后续的 `get_conversation_rounds`、`get_user_rounds_distribution`、`get_user_sessions_detail`、`get_popular_agents` 批量聚合。若当日活跃 session 远小于全量（如 1～2 万 vs 19.8 万），批次数与副本负载显著下降。
 
 相关文档：[FR_USER_ANALYTICS_REPORTS.md](FR_USER_ANALYTICS_REPORTS.md)。

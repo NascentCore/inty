@@ -84,28 +84,43 @@ async def _read_daily_report_from_replica(
     act_start: datetime,
     act_end: datetime,
 ) -> tuple[dict, dict]:
-    """从副本读取日报所需统计与图表数据。调用方需保证 AsyncSessionLocalReplica 非空。"""
+    """从副本读取日报所需统计与图表数据。调用方需保证 AsyncSessionLocalReplica 非空。
+
+    先取当日有活动的 session 集合，仅对这些 session 做批量聚合以减轻副本负载。
+    """
     async with AsyncSessionLocalReplica() as read_db:
         await _ensure_statement_timeout(read_db)
         service = UserAnalyticsService(read_db)
+        active_session_ids = await service.get_active_session_ids_on_date(
+            act_start, act_end
+        )
+        logger.info(
+            f"[用户数据分析日报] 当日有活动的 session 数: {len(active_session_ids)}，"
+            "仅对上述 session 做聚合"
+        )
         stats = await service.get_analytics_stats(
             register_start_date=reg_start,
             register_end_date=reg_end,
             activity_start_date=act_start,
             activity_end_date=act_end,
+            active_session_ids=active_session_ids,
         )
         new_users = await service.get_new_users(reg_start, reg_end)
         conversation_rounds = await service.get_conversation_rounds(
-            reg_start, reg_end, act_start, act_end
+            reg_start, reg_end, act_start, act_end,
+            active_session_ids=active_session_ids,
         )
         user_rounds_distribution = await service.get_user_rounds_distribution(
-            reg_start, reg_end, act_start, act_end
+            reg_start, reg_end, act_start, act_end,
+            active_session_ids=active_session_ids,
         )
         users_hitting_limit = await service.get_users_hitting_chat_limit(
             act_start, act_end
         )
         popular_agents = await service.get_popular_agents(
-            reg_start, reg_end, act_start, act_end, limit=20
+            reg_start, reg_end, act_start, act_end,
+            limit=20,
+            active_session_ids=active_session_ids,
         )
         charts = _build_daily_charts(
             new_users,
@@ -162,24 +177,36 @@ async def compute_and_save_daily_report(
     else:
         await _ensure_statement_timeout(db)
         service = UserAnalyticsService(db)
+        active_session_ids = await service.get_active_session_ids_on_date(
+            act_start, act_end
+        )
+        logger.info(
+            f"[用户数据分析日报] 当日有活动的 session 数: {len(active_session_ids)}，"
+            "仅对上述 session 做聚合"
+        )
         stats = await service.get_analytics_stats(
             register_start_date=reg_start,
             register_end_date=reg_end,
             activity_start_date=act_start,
             activity_end_date=act_end,
+            active_session_ids=active_session_ids,
         )
         new_users = await service.get_new_users(reg_start, reg_end)
         conversation_rounds = await service.get_conversation_rounds(
-            reg_start, reg_end, act_start, act_end
+            reg_start, reg_end, act_start, act_end,
+            active_session_ids=active_session_ids,
         )
         user_rounds_distribution = await service.get_user_rounds_distribution(
-            reg_start, reg_end, act_start, act_end
+            reg_start, reg_end, act_start, act_end,
+            active_session_ids=active_session_ids,
         )
         users_hitting_limit = await service.get_users_hitting_chat_limit(
             act_start, act_end
         )
         popular_agents = await service.get_popular_agents(
-            reg_start, reg_end, act_start, act_end, limit=20
+            reg_start, reg_end, act_start, act_end,
+            limit=20,
+            active_session_ids=active_session_ids,
         )
         charts = _build_daily_charts(
             new_users,
