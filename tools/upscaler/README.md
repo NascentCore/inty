@@ -15,6 +15,8 @@
 ## 启动 Web UI（本地）
 
 ```bash
+uv venv
+source .venv/bin/activate
 uv run -m tools.upscaler.main serve --host 127.0.0.1 --port 8787
 ```
 
