@@ -433,12 +433,28 @@ async def backfill_missing_reports(
     missing_daily = await get_missing_daily_report_dates(db, days=days)
     if year is not None:
         missing_weekly = await get_missing_weekly_report_dates_first_half(db, year)
+        scope_desc = f"日报最近 {days} 天、周报当年上半年"
     else:
         missing_weekly = await get_missing_weekly_report_dates_past_weeks(db, weeks=7)
+        scope_desc = f"日报最近 {days} 天、周报过去 7 周"
+
+    logger.info(
+        f"[用户数据分析补算] 补算范围: {scope_desc}; "
+        f"缺失日报 {len(missing_daily)} 天, 缺失周报 {len(missing_weekly)} 周"
+    )
+    if missing_daily:
+        logger.info(
+            f"[用户数据分析补算] 缺失日报日期: {sorted(missing_daily)[:10]}{'...' if len(missing_daily) > 10 else ''}"
+        )
+    if missing_weekly:
+        logger.info(
+            f"[用户数据分析补算] 缺失周报日期(周一): {sorted(missing_weekly)[:10]}{'...' if len(missing_weekly) > 10 else ''}"
+        )
 
     daily_count = 0
     for d in missing_daily:
         try:
+            logger.info(f"[用户数据分析补算] 正在补算日报 {d}")
             async with AsyncSessionLocal() as report_db:
                 r = await compute_and_save_daily_report(report_db, d)
                 if r is not None:
@@ -449,6 +465,7 @@ async def backfill_missing_reports(
     weekly_count = 0
     for d in missing_weekly:
         try:
+            logger.info(f"[用户数据分析补算] 正在补算周报 {d}（当周周一）")
             async with AsyncSessionLocal() as report_db:
                 r = await compute_and_save_weekly_report(report_db, d)
                 if r is not None:

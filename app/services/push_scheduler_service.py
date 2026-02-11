@@ -239,15 +239,15 @@ class PushSchedulerService:
                         backfill_missing_reports,
                     )
 
+                    logger.info("[用户数据分析补算] 开始检查并补算缺失的日报与周报")
                     try:
                         async with AsyncSessionLocal() as db:
                             daily_count, weekly_count = await backfill_missing_reports(
                                 db
                             )
-                            if daily_count or weekly_count:
-                                logger.info(
-                                    f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
-                                )
+                            logger.info(
+                                f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
+                            )
                     except Exception as e:
                         logger.error(f"[用户数据分析补算] 执行失败: {str(e)}")
 
