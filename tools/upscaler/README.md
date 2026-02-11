@@ -51,3 +51,8 @@ python3 -m tools.upscaler.main upscale \
   - `POST https://{region}-aiplatform.googleapis.com/v1/projects/{project}/locations/{region}/publishers/google/models/imagen-4.0-upscale-preview:predict`
 - 请求 `parameters.mode=upscale`
 - 支持 `upscaleConfig.upscaleFactor`：`x2` / `x3` / `x4`
+
+## 补充说明
+
+- 只能使用 vertex ai API key（而非 Google AI studio API key）
+  <img width="800" height="1804" alt="image" src="https://github.com/user-attachments/assets/3d185f30-186b-4619-acb0-6166af3904e3" />
