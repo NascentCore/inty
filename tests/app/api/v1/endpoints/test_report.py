@@ -453,3 +453,84 @@ def test_delete_report_by_reporter(integration_client, db_session, report_superu
 
     deleted = db_session.query(Report).filter(Report.id == report.id).first()
     assert deleted is None, "Report should be deleted from database"
+
+
+def test_update_report_github_issue_success(
+    integration_client, db_session, report_superuser
+):
+    """测试管理员可以为举报记录绑定 GitHub issue 链接。"""
+    agent_id = integration_client.create_agent(
+        name="Test Github Issue Agent",
+        visibility="PUBLIC",
+    )
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["SENSITIVE_CONTENT"],
+        "description": "Test report for github issue binding",
+        "image_urls": [],
+    }
+    create_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+    assert create_resp.status_code == 200, create_resp.text
+    assert create_resp.json().get("code") == 200, create_resp.text
+
+    reporter_id = _get_reporter_id(integration_client)
+    report = _find_report(db_session, agent_id, reporter_id)
+    assert report is not None, "Report should be created before updating github issue"
+
+    github_issue_url = "https://github.com/example-org/example-repo/issues/123"
+    update_resp = integration_client.client.put(
+        f"{integration_client.base_url}/api/v1/report/{report.id}/github-issue",
+        json={"github_issues": github_issue_url},
+    )
+    assert update_resp.status_code == 200, update_resp.text
+    update_data = update_resp.json()
+    assert update_data["id"] == report.id
+    assert update_data["github_issues"] == github_issue_url
+
+    db_session.expire_all()
+    updated_report = db_session.query(Report).filter(Report.id == report.id).first()
+    assert updated_report is not None
+    assert updated_report.github_issues == github_issue_url
+
+
+def test_update_report_github_issue_invalid_url(
+    integration_client, db_session, report_superuser
+):
+    """测试不合法的 GitHub issue URL 会被拒绝。"""
+    agent_id = integration_client.create_agent(
+        name="Test Github Invalid URL",
+        visibility="PUBLIC",
+    )
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["MISINFORMATION"],
+        "description": "Test invalid github issue URL",
+        "image_urls": [],
+    }
+    create_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+    assert create_resp.status_code == 200, create_resp.text
+    assert create_resp.json().get("code") == 200, create_resp.text
+
+    reporter_id = _get_reporter_id(integration_client)
+    report = _find_report(db_session, agent_id, reporter_id)
+    assert report is not None, "Report should be created before validation test"
+
+    update_resp = integration_client.client.put(
+        f"{integration_client.base_url}/api/v1/report/{report.id}/github-issue",
+        json={"github_issues": "https://example.com/not-github-issue"},
+    )
+    assert update_resp.status_code == 400, update_resp.text
+    assert "Invalid GitHub issue URL format" in update_resp.text
+
+    db_session.expire_all()
+    unchanged_report = db_session.query(Report).filter(Report.id == report.id).first()
+    assert unchanged_report is not None
+    assert unchanged_report.github_issues is None

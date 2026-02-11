@@ -1319,6 +1319,15 @@ export const reportApi = {
   get: (reportId: string): Promise<import("../types").ReportItem> =>
     apiClient.get(`/report/${reportId}`),
 
+  // 更新举报/反馈关联的 GitHub issue 链接
+  updateGithubIssue: (
+    reportId: string,
+    githubIssueUrl: string | null,
+  ): Promise<import("../types").ReportItem> =>
+    apiClient.put(`/report/${reportId}/github-issue`, {
+      github_issues: githubIssueUrl,
+    }),
+
   // 删除举报/反馈记录
   delete: (reportId: string): Promise<null> =>
     apiClient.delete(`/report/${reportId}`),
