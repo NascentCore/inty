@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-BATCH_SIZE = 1000
+BATCH_SIZE = 500  # 默认每批数量，可通过 user_analytics_report.batch_size 覆盖
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -28,6 +28,10 @@ class UserAnalyticsService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+        uar = getattr(
+            global_config_loaded_from_config_yaml, "user_analytics_report", None
+        )
+        self._batch_size = getattr(uar, "batch_size", BATCH_SIZE)
 
     async def get_new_users(
         self,
@@ -127,7 +131,7 @@ class UserAnalyticsService:
 
         session_to_counts: Dict[str, tuple] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
@@ -261,7 +265,7 @@ class UserAnalyticsService:
 
         session_to_count: Dict[str, int] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
@@ -492,7 +496,7 @@ class UserAnalyticsService:
 
         session_to_voice_count: Dict[str, int] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
             query = text(f"""
                 SELECT 
@@ -756,7 +760,7 @@ class UserAnalyticsService:
         session_to_chat = {v: k for k, v in chat_to_session.items()}
         data = []
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
             query = text(f"""
                 SELECT
@@ -1156,7 +1160,7 @@ class UserAnalyticsService:
         session_to_msg_count: Dict[str, int] = {}
         session_to_voice_count: Dict[str, int] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:

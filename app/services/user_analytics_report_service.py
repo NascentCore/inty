@@ -6,10 +6,12 @@
 将全部用户的聚合统计写入 user_analytics_report 表，供独立日报周报页面快速展示。
 """
 
+import asyncio
 from datetime import date, datetime, timedelta, timezone
 
 from loguru import logger
 from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -18,6 +20,9 @@ from app.models.user_analytics_report import UserAnalyticsReport
 from app.services.user_analytics_service import UserAnalyticsService
 
 BACKFILL_DAILY_DAYS = 30
+
+REPLICA_READ_MAX_ATTEMPTS = 3  # 含首次共 3 次，用于 conflict with recovery 重试
+REPLICA_READ_RETRY_SLEEP_SEC = 3
 
 
 async def _ensure_statement_timeout(db: AsyncSession) -> None:
@@ -73,6 +78,50 @@ def _build_daily_charts(
     }
 
 
+async def _read_daily_report_from_replica(
+    reg_start: datetime,
+    reg_end: datetime,
+    act_start: datetime,
+    act_end: datetime,
+) -> tuple[dict, dict]:
+    """从副本读取日报所需统计与图表数据。调用方需保证 AsyncSessionLocalReplica 非空。"""
+    async with AsyncSessionLocalReplica() as read_db:
+        await _ensure_statement_timeout(read_db)
+        service = UserAnalyticsService(read_db)
+        stats = await service.get_analytics_stats(
+            register_start_date=reg_start,
+            register_end_date=reg_end,
+            activity_start_date=act_start,
+            activity_end_date=act_end,
+        )
+        new_users = await service.get_new_users(reg_start, reg_end)
+        conversation_rounds = await service.get_conversation_rounds(
+            reg_start, reg_end, act_start, act_end
+        )
+        user_rounds_distribution = await service.get_user_rounds_distribution(
+            reg_start, reg_end, act_start, act_end
+        )
+        users_hitting_limit = await service.get_users_hitting_chat_limit(
+            act_start, act_end
+        )
+        popular_agents = await service.get_popular_agents(
+            reg_start, reg_end, act_start, act_end, limit=20
+        )
+        charts = _build_daily_charts(
+            new_users,
+            conversation_rounds,
+            user_rounds_distribution,
+            users_hitting_limit,
+            popular_agents,
+        )
+    return stats, charts
+
+
+def _is_conflict_with_recovery(exc: BaseException) -> bool:
+    """是否为 PostgreSQL standby conflict with recovery 导致的错误。"""
+    return "conflict with recovery" in str(exc)
+
+
 async def compute_and_save_daily_report(
     db: AsyncSession, report_date: date
 ) -> UserAnalyticsReport | None:
@@ -91,35 +140,25 @@ async def compute_and_save_daily_report(
     act_end = reg_end
 
     if AsyncSessionLocalReplica is not None:
-        async with AsyncSessionLocalReplica() as read_db:
-            await _ensure_statement_timeout(read_db)
-            service = UserAnalyticsService(read_db)
-            stats = await service.get_analytics_stats(
-                register_start_date=reg_start,
-                register_end_date=reg_end,
-                activity_start_date=act_start,
-                activity_end_date=act_end,
-            )
-            new_users = await service.get_new_users(reg_start, reg_end)
-            conversation_rounds = await service.get_conversation_rounds(
-                reg_start, reg_end, act_start, act_end
-            )
-            user_rounds_distribution = await service.get_user_rounds_distribution(
-                reg_start, reg_end, act_start, act_end
-            )
-            users_hitting_limit = await service.get_users_hitting_chat_limit(
-                act_start, act_end
-            )
-            popular_agents = await service.get_popular_agents(
-                reg_start, reg_end, act_start, act_end, limit=20
-            )
-            charts = _build_daily_charts(
-                new_users,
-                conversation_rounds,
-                user_rounds_distribution,
-                users_hitting_limit,
-                popular_agents,
-            )
+        last_error: Exception | None = None
+        for attempt in range(REPLICA_READ_MAX_ATTEMPTS):
+            try:
+                stats, charts = await _read_daily_report_from_replica(
+                    reg_start, reg_end, act_start, act_end
+                )
+                break
+            except OperationalError as e:
+                if not _is_conflict_with_recovery(e):
+                    raise
+                last_error = e
+                if attempt < REPLICA_READ_MAX_ATTEMPTS - 1:
+                    logger.warning(
+                        f"日报副本读 conflict with recovery，{REPLICA_READ_RETRY_SLEEP_SEC}s 后重试 "
+                        f"（第 {attempt + 1}/{REPLICA_READ_MAX_ATTEMPTS} 次）"
+                    )
+                    await asyncio.sleep(REPLICA_READ_RETRY_SLEEP_SEC)
+                else:
+                    raise last_error from e
     else:
         await _ensure_statement_timeout(db)
         service = UserAnalyticsService(db)

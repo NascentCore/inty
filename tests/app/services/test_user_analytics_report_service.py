@@ -62,9 +62,15 @@ async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stat
     mock_result.scalar_one_or_none.return_value = MagicMock()
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.user_analytics_report_service.UserAnalyticsService"
-    ) as MockService:
+    with (
+        patch(
+            "app.services.user_analytics_report_service.AsyncSessionLocalReplica",
+            None,
+        ),
+        patch(
+            "app.services.user_analytics_report_service.UserAnalyticsService"
+        ) as MockService,
+    ):
         mock_service_instance = AsyncMock()
         mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
@@ -83,9 +89,15 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
     mock_result.scalar_one_or_none.return_value = None
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.user_analytics_report_service.UserAnalyticsService"
-    ) as MockService:
+    with (
+        patch(
+            "app.services.user_analytics_report_service.AsyncSessionLocalReplica",
+            None,
+        ),
+        patch(
+            "app.services.user_analytics_report_service.UserAnalyticsService"
+        ) as MockService,
+    ):
         mock_service_instance = AsyncMock()
         mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
@@ -104,9 +116,15 @@ async def test_compute_and_save_weekly_report_skips_existing(mock_db, sample_sta
     mock_result.scalar_one_or_none.return_value = MagicMock()
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.user_analytics_report_service.UserAnalyticsService"
-    ) as MockService:
+    with (
+        patch(
+            "app.services.user_analytics_report_service.AsyncSessionLocalReplica",
+            None,
+        ),
+        patch(
+            "app.services.user_analytics_report_service.UserAnalyticsService"
+        ) as MockService,
+    ):
         mock_service_instance = AsyncMock()
         mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
@@ -125,9 +143,15 @@ async def test_compute_and_save_weekly_report_creates_new(mock_db, sample_stats)
     mock_result.scalar_one_or_none.return_value = None
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.user_analytics_report_service.UserAnalyticsService"
-    ) as MockService:
+    with (
+        patch(
+            "app.services.user_analytics_report_service.AsyncSessionLocalReplica",
+            None,
+        ),
+        patch(
+            "app.services.user_analytics_report_service.UserAnalyticsService"
+        ) as MockService,
+    ):
         mock_service_instance = AsyncMock()
         mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
         MockService.return_value = mock_service_instance
