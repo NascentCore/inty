@@ -426,9 +426,10 @@ class PushSchedulerService:
                 return
             for config in due_configs:
                 tz_str = getattr(config, "timezone", "UTC") or "UTC"
-                min_rounds = getattr(
-                    config, "min_rounds_in_window", None
-                ) or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
+                min_rounds = (
+                    getattr(config, "min_rounds_in_window", None)
+                    or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
+                )
                 pairs = await asyncio.to_thread(
                     festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
                     config.festival_date,

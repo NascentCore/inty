@@ -116,9 +116,7 @@ class UserAnalyticsService:
             for row in rows
         ]
 
-    async def get_chat_agent_info(
-        self, chat_ids: List[str]
-    ) -> List[Dict[str, Any]]:
+    async def get_chat_agent_info(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
         """按 chat_id 批量查询 chat 对应的 user_id、agent_name，用于热门角色等仅需有活动 chat 的场景。"""
         if not chat_ids:
             return []
@@ -273,7 +271,9 @@ class UserAnalyticsService:
         if active_session_ids is not None:
             session_ids = [s for s in session_ids if s in active_session_ids]
             chat_to_session = {
-                cid: sid for cid, sid in chat_to_session.items() if sid in active_session_ids
+                cid: sid
+                for cid, sid in chat_to_session.items()
+                if sid in active_session_ids
             }
             logger.info(
                 f"get_conversation_rounds: 限定当日有活动的 session 后共 {len(session_ids)} 个"
@@ -429,7 +429,9 @@ class UserAnalyticsService:
             ]
             session_ids = [s for s in session_ids if s in active_session_ids]
             chat_to_session = {
-                cid: sid for cid, sid in chat_to_session.items() if sid in active_session_ids
+                cid: sid
+                for cid, sid in chat_to_session.items()
+                if sid in active_session_ids
             }
 
         if not session_ids:
@@ -977,9 +979,7 @@ class UserAnalyticsService:
         return [
             {
                 "date": (
-                    row[0].isoformat()
-                    if isinstance(row[0], datetime)
-                    else str(row[0])
+                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
                 ),
                 "user_id": row[1],
                 "auth_type": row[2],
@@ -1237,12 +1237,15 @@ class UserAnalyticsService:
 
         if active_session_ids is not None:
             chat_records = [
-                row for row in chat_records
+                row
+                for row in chat_records
                 if chat_to_session[row[5]] in active_session_ids
             ]
             session_ids = [s for s in session_ids if s in active_session_ids]
             chat_to_session = {
-                cid: sid for cid, sid in chat_to_session.items() if sid in active_session_ids
+                cid: sid
+                for cid, sid in chat_to_session.items()
+                if sid in active_session_ids
             }
 
         if not session_ids:
