@@ -3,10 +3,19 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 TTS_MODEL = "gemini-2.5-flash-preview-tts"
+logger = logging.getLogger(__name__)
 MAX_TEXT_LENGTH = 2000
+
+# 发给 TTS 的指令：识别 role-play 格式（括号内为舞台说明），只读台词并参考场景语气
+TTS_ROLEPLAY_INSTRUCTION = (
+    "The following is role-play style content. Lines or phrases in parentheses () are stage "
+    "directions or actions — do not speak them; only speak the actual dialogue. Use the mood or "
+    "scenario in the directions to inform your tone and delivery. Now read the following:\n\n"
+)
 
 
 def generate_speech_from_text(
@@ -25,11 +34,13 @@ def generate_speech_from_text(
     from google import genai
     from google.genai import types
 
-    clean_text = (text or "").strip()
-    if not clean_text:
+    raw_text = (text or "").strip()
+    if not raw_text:
         raise ValueError("要朗读的文本不能为空")
-    if len(clean_text) > MAX_TEXT_LENGTH:
-        clean_text = clean_text[:MAX_TEXT_LENGTH]
+    if len(raw_text) > MAX_TEXT_LENGTH:
+        raw_text = raw_text[:MAX_TEXT_LENGTH]
+
+    contents = TTS_ROLEPLAY_INSTRUCTION + raw_text
 
     client = genai.Client(api_key=api_key)
     config = types.GenerateContentConfig(
@@ -42,9 +53,11 @@ def generate_speech_from_text(
             )
         ),
     )
+    logger.info("TTS API 请求 model=%s voice_name=%s contents 长度=%d", model, voice_name, len(contents))
+    logger.debug("TTS API contents: %s", contents)
     response = client.models.generate_content(
         model=model,
-        contents=clean_text,
+        contents=contents,
         config=config,
     )
     candidates = getattr(response, "candidates", None) or []

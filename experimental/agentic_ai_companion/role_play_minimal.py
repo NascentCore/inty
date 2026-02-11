@@ -219,10 +219,10 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="text_to_speech",
-        description="将指定文本转为语音并发送给用户。当用户要求用语音回复、朗读、或「用语音说」时，必须调用本工具并传入要朗读的文本；仅用文字回复无法真正发出语音。",
+        description="将指定文本转为语音并发送给用户。当用户要求用语音回复、朗读、或「用语音说」时，必须调用本工具。参数 text 必须是**仅要读出的台词**（例如「你好」或「Hello」），不要传入动作或舞台说明（如 (looks at you)、(smiles)）；仅用文字回复无法真正发出语音。",
         parameters={
             "type": "object",
-            "properties": {"text": {"type": "string", "description": "要朗读的文本内容"}},
+            "properties": {"text": {"type": "string", "description": "要朗读的纯台词内容，仅限实际说出的文字，不要包含括号内的动作描述"}},
             "required": ["text"],
             "additionalProperties": False,
         },
@@ -384,6 +384,7 @@ def run_repl(
 
             if is_terminal:
                 # 2.2.1 TERMINAL：执行工具后返回
+                logger.info("执行 TERMINAL 工具 %s，msg: %s", tool_name, json.dumps(msg.model_dump(), indent=2))
                 out = process_response_with_tools(messages, msg)
                 messages = out.messages
                 if out.image_path is not None:

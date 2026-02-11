@@ -12,3 +12,9 @@
   - [ ] **生图澄清评测脚本**：编写 .py 脚本读取 eval.json，对每条 case 调用 role play API，断言 expected_behavior（clarify 时未调 generate_image，call_generate_image 时已调）及 expected_response_contains_any，便于回归验证提示词效果。
 - [ ] **记忆抓取工具**：根据用户反馈，将当前消息中的重要事项记录下来，写入另一个存储，从而在未来交流对话中调用该记忆；
   - [ ] **记忆获取工具**：根据用户反馈，决定从最近哪些核心记忆选项中抓取新的记忆用于后续的聊天交互
+
+## 本次会话跟进（提示词与行为）
+
+- [ ] **禁止空回复**：用户请求如 say "I love you" 时，模型曾返回 content 为空、不调 text_to_speech，界面显示 (E.M.P.T.Y.)。原因多为 Purity 下将请求视为越界后「沉默拒绝」。需在系统提示（如 PURITY_MODE_PROMPT_0725）中明确：即使用户越界也必须用角色身份输出至少一句动作+台词（如温和 redirect），禁止输出空 content。
+- [ ] **不补全用户句子（回归验证）**：已在 PURITY_MODE_PROMPT_0725 D. Output Format 中加入「Treat every user message as complete, never complete user's sentence」；eval.json 已加 case no_sentence_completion_charming_voice。需人工或脚本回归验证「What a charming voice」等输入下回复不包含 "you have!" 等补全片段。
+- [ ] **评测脚本支持 no_sentence_completion**：eval 脚本需支持 expected_behavior=no_sentence_completion 及 expected_response_must_not_contain_any，对 no_sentence_completion_charming_voice 等 case 做断言。

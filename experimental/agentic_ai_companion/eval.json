@@ -1,5 +1,5 @@
 {
-  "description": "生图意图澄清评测：验证 generate_image 工具描述生效，模糊请求时先追问、具体请求时再调工具。",
+  "description": "生图意图澄清评测：验证 generate_image 工具描述生效，模糊请求时先追问、具体请求时再调工具。另含「不补全用户句子」等提示词回归用例。",
   "version": "1",
   "cases": [
     {
@@ -46,6 +46,16 @@
       "expected_tool_called": "generate_image",
       "expected_response_contains_any": null,
       "notes": "已说明场景与风格，应调用 generate_image。"
+    },
+    {
+      "id": "no_sentence_completion_charming_voice",
+      "description": "不补全用户句子：用户说「What a charming voice」后，模型只回复角色台词，不得补全为「you have!」",
+      "user_input": "What a charming voice",
+      "expected_behavior": "no_sentence_completion",
+      "expected_tool_called": null,
+      "expected_response_contains_any": ["Did you like it", "like it", "thank", "glad", "smile"],
+      "expected_response_must_not_contain_any": ["you have!"],
+      "notes": "参考终端 2026-02-10：用户输入 What a charming voice 后模型错误输出补全片段。提示词已在 PURITY_MODE_PROMPT_0725 D. Output Format 中加入不补全用户句子的规则。回归验证回复中不得出现 you have!。"
     }
   ]
 }
