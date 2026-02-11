@@ -38,10 +38,11 @@ class ProcessedResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     messages: list[dict[str, Any]]
-    content: str | None
+    content: str | None = None
     done: bool
     assistant_text: str
-    image_path: str | None
+    image_path: str | None = None
+    tool_result: str | None = None
 
 
 class ToolDefinition(BaseModel):
@@ -272,5 +273,5 @@ def process_response_with_tools(
 
     if tool_types.get(name, ToolType.UNSPECIFIED) == ToolType.TERMINAL:
         content = (assistant_content + "\n" + result).strip()
-        return ProcessedResponse(messages=new_messages, content=content, done=True, assistant_text=assistant_content, image_path=image_path_sent)
-    return ProcessedResponse(messages=new_messages, content=None, done=False, assistant_text=assistant_content, image_path=image_path_sent)
+        return ProcessedResponse(messages=new_messages, content=content, done=True, assistant_text=assistant_content, image_path=image_path_sent, tool_result=result)
+    return ProcessedResponse(messages=new_messages, content=None, done=False, assistant_text=assistant_content, image_path=image_path_sent, tool_result=result)

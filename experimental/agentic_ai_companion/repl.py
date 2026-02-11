@@ -56,9 +56,17 @@ def _handle_api_response(
         new_pending = out.image_path if out.image_path is not None else pending_image_path
         if messages[-1]["role"] == "user":
             messages.append({"role": "assistant", "content": out.content})
-        display = new_pending or out.content or EMPTY_RESPONSE
+        # 第 1 块：assistant 文字
+        if out.assistant_text:
+            print(f"{char_name}> {out.assistant_text}\n")
+        # 第 2 块：工具结果
+        if new_pending is not None:
+            tool_display = (out.tool_result or "已发送图片。").rstrip("。") + "：" + new_pending
+        else:
+            tool_display = out.tool_result or ""
+        if tool_display:
+            print(f"{char_name}> {tool_display}\n")
         logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content or ""), new_pending is not None)
-        print(f"{char_name}> {display}\n")
         return True, messages, new_pending
 
     assistant_text = (msg.content or "").strip()
