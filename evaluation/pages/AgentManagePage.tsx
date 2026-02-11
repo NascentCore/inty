@@ -1074,7 +1074,7 @@ export const AgentManagePage: React.FC = () => {
     const randomName = generateRandomName(
       currentGender as "MALE" | "FEMALE" | "OTHER",
     );
-    createForm.setFieldsValue({ name: randomName });
+    createForm.setFieldValue("name", randomName);
   };
 
   // 随机生成角色名字（编辑表单）
@@ -1083,9 +1083,7 @@ export const AgentManagePage: React.FC = () => {
     const randomName = generateRandomName(
       currentGender as "MALE" | "FEMALE" | "OTHER",
     );
-    editForm.setFieldsValue({ name: randomName });
-    // 程序化 setFieldsValue 不会触发 onValuesChange，需要同步 agentCopy 以启用保存按钮
-    setAgentCopy((prev) => (prev ? { ...prev, name: randomName } : prev));
+    editForm.setFieldValue("name", randomName);
   };
 
   // 显示编辑模态框
