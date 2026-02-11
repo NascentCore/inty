@@ -44,6 +44,7 @@ user_analytics_report:
   daily_cron_hour: 4
   weekly_cron_hour: 5
   statement_timeout_sec: 600  # 生产大数据量时需调大，默认 600 秒
+  batch_size: 500             # 分批查询每批 session 数量，减小可降低 standby conflict with recovery
 ```
 
 定时任务由 `push_scheduler_service` 调度，需启动 push worker 后生效。
@@ -78,7 +79,7 @@ database:
 - **GET /api/v1/evaluation/user-analytics/reports**：从副本读 `user_analytics_report`。
 - **预计算日报/周报**（定时任务、补算、脚本）：统计类查询从副本读，写入 `user_analytics_report` 仍走主库。
 
-未配置 `replica_host` 时行为与之前一致，全部使用主库。
+未配置 `replica_host` 时行为与之前一致，全部使用主库。若日报在副本上出现 conflict with recovery，参见 [FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md](FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md)。
 
 ## 补算脚本
 
