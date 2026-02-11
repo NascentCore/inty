@@ -23,7 +23,7 @@ load_dotenv(_ENV_PATH)
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 _real_logger = logging.getLogger(__name__)
@@ -39,29 +39,28 @@ class _LoggerWrapper:
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = enabled
 
-    def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def _log(self, level: str, msg: str, *args: Any, **kwargs: Any) -> None:
         if self._enabled:
-            self._real.debug(msg, *args, **kwargs)
+            getattr(self._real, level)(msg, *args, **kwargs, stacklevel=3)
+
+    def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        self._log("debug", msg, *args, **kwargs)
 
     def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        if self._enabled:
-            self._real.info(msg, *args, **kwargs)
+        self._log("info", msg, *args, **kwargs)
 
     def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        if self._enabled:
-            self._real.warning(msg, *args, **kwargs)
+        self._log("warning", msg, *args, **kwargs)
 
     def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        if self._enabled:
-            self._real.error(msg, *args, **kwargs)
+        self._log("error", msg, *args, **kwargs)
 
     def critical(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        if self._enabled:
-            self._real.critical(msg, *args, **kwargs)
+        self._log("critical", msg, *args, **kwargs)
 
     def exception(self, msg: str, *args: Any, **kwargs: Any) -> None:
         if self._enabled:
-            self._real.exception(msg, *args, **kwargs)
+            self._real.exception(msg, *args, **kwargs, stacklevel=3)
 
 
 logger: _LoggerWrapper = _LoggerWrapper(_real_logger, enabled=False)
@@ -292,22 +291,33 @@ def run_repl(
     print(f"角色: {char_name} | 用户: {user_name} | 模型: {model}")
     print("输入内容后回车发送，空行跳过，Ctrl+C 退出。\n")
     turn = 0
+
+    # 对话主循环：读取用户输入，构建 messages，发送 API 请求，处理响应。
     while True:
         try:
             line = input(f"{user_name}> ").strip()
         except (KeyboardInterrupt, EOFError):
             logger.info("用户中断或 EOF，退出 REPL")
+            # TODO：实际中这个循环应该重新开始，持续进行对话，而不是终止。
             break
         if not line:
+            logger.debug("空行跳过")
             continue
+
         turn += 1
         logger.info("第 %d 轮对话，用户输入长度=%d: %s", turn, len(line), line[:80] + ("..." if len(line) > 80 else ""))
+
+        # 构建本轮 Chat Completion 请求的 messages，包括系统消息、用户消息、工具调用（若有）。
         messages.append({"role": "user", "content": line})
         pending_image_path: str | None = None
+        
+        # 执行本轮 Chat Completion：工具调用会有多轮循环，单轮对话则立即结束。
+        # 只能在获得首轮响应后才能决定是否持续执行。
         round_num = 0
         while True:
             round_num += 1
             logger.info("API 请求 第 %d 轮 turn=%d，messages 条数=%d", round_num, turn, len(messages))
+            logger.info("Current messages: %s", json.dumps(messages, indent=2))
             resp = client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -319,34 +329,44 @@ def run_repl(
             msg = resp.choices[0].message
             has_tool_calls = bool(getattr(msg, "tool_calls", None))
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tool_calls)
-            # 
-            printed_assistant_before_tool = False
             if has_tool_calls:
+                printed_assistant_before_tool = False
                 tool_name = msg.tool_calls[0].function.name
                 if TOOL_TYPES.get(tool_name, ToolType.UNSPECIFIED) != ToolType.TERMINAL:
                     assistant_content = (msg.content or "").strip()
                     if assistant_content:
                         print(f"{char_name}> {assistant_content}\n")
                         printed_assistant_before_tool = True
-            out = process_response_with_tools(messages, msg)
-            messages = out.messages
-            if out.image_path is not None:
-                pending_image_path = out.image_path
-            if out.done:
-                assert out.content is not None
-                # 无 tool_calls 时 out.messages 以 user 结尾，需追加 assistant；有 tool_calls 时已含 assistant+tool，不再追加。见 tests/test_role_play_append_assistant.py。
-                if messages[-1]["role"] == "user":
-                    messages.append({"role": "assistant", "content": out.content})
-                # 终端只展示「LLM 输出」：助手文案 + 若有工具调用则包含工具效果（如可点击路径），不追加 REPL 自拟文案
-                if pending_image_path:
-                    display = pending_image_path
-                else:
-                    display = out.content or EMPTY_RESPONSE
-                logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
+                out = process_response_with_tools(messages, msg)
+                messages = out.messages
+                if out.image_path is not None:
+                    pending_image_path = out.image_path
+                if out.done:
+                    assert out.content is not None
+                    # 无 tool_calls 时 out.messages 以 user 结尾，需追加 assistant；有 tool_calls 时已含 assistant+tool，不再追加。见 tests/test_role_play_append_assistant.py。
+                    if messages[-1]["role"] == "user":
+                        messages.append({"role": "assistant", "content": out.content})
+                    # 终端只展示「LLM 输出」：助手文案 + 若有工具调用则包含工具效果（如可点击路径），不追加 REPL 自拟文案
+                    if pending_image_path:
+                        display = pending_image_path
+                    else:
+                        display = out.content or EMPTY_RESPONSE
+                    logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
+                    print(f"{char_name}> {display}\n")
+                    break
+                if out.assistant_text and not printed_assistant_before_tool:
+                    print(f"{char_name}> {out.assistant_text}")
+            else:
+                # message.content 可为 null/缺失，或为 string | array of content parts（OpenAI/OpenRouter 约定）。
+                # 见 https://platform.openai.com/docs/api-reference/chat/object 中 ChatCompletionAssistantMessageParam.content，
+                # 及 https://openrouter.ai/docs/api-reference/chat-completion 响应 message。统一规整为 str。
+                raw = getattr(msg, "content", None)
+                content = (raw if isinstance(raw, str) else "").strip()
+                messages.append({"role": "assistant", "content": content})
+                display = content or EMPTY_RESPONSE
+                logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=False", turn, len(content))
                 print(f"{char_name}> {display}\n")
                 break
-            if out.assistant_text and not printed_assistant_before_tool:
-                print(f"{char_name}> {out.assistant_text}")
             logger.debug("继续本轮 API 请求，messages 已追加 assistant + tool")
 
 
