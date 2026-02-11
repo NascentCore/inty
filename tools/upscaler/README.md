@@ -11,7 +11,7 @@
 ## 启动 Web UI（本地）
 
 ```bash
-python3 -m tools.upscaler serve --host 127.0.0.1 --port 8787
+python3 -m tools.upscaler.main serve --host 127.0.0.1 --port 8787
 ```
 
 浏览器打开：<http://127.0.0.1:8787>
@@ -30,7 +30,7 @@ python3 -m tools.upscaler serve --host 127.0.0.1 --port 8787
 ## 纯命令行方式
 
 ```bash
-python3 -m tools.upscaler upscale \
+python3 -m tools.upscaler.main upscale \
   --input-path ./input.png \
   --project-id your-gcp-project-id \
   --api-key "$GOOGLE_API_KEY" \
