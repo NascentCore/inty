@@ -57,6 +57,7 @@ export type DailyUsageMetricKey = (typeof DAILY_USAGE_METRICS)[number]["key"];
 export interface DailyUsageSeries {
   dates: string[];
   valuesByMetric: Record<DailyUsageMetricKey, number[]>;
+  chatInitiators: number[];
 }
 
 export const WEEKLY_USAGE_ROLLING_WINDOW_DAYS = 7;
@@ -69,9 +70,9 @@ const getSortedDailyReports = (
     .slice()
     .sort((a, b) => a.report_date.localeCompare(b.report_date));
 
-const toMetricValue = (
+const toStatsMetricValue = (
   report: UserAnalyticsReportItem,
-  metricKey: DailyUsageMetricKey,
+  metricKey: keyof UserAnalyticsStatsResponse,
 ): number => {
   const rawValue = Number(report.stats[metricKey] ?? 0);
   return Number.isFinite(rawValue) ? rawValue : 0;
@@ -103,14 +104,17 @@ export const buildDailyUsageSeries = (
   const valuesByMetric = DAILY_USAGE_METRICS.reduce(
     (acc, metric) => {
       acc[metric.key] = dailyReports.map((report) =>
-        toMetricValue(report, metric.key),
+        toStatsMetricValue(report, metric.key),
       );
       return acc;
     },
     {} as Record<DailyUsageMetricKey, number[]>,
   );
+  const chatInitiators = dailyReports.map((report) =>
+    toStatsMetricValue(report, "total_chat_initiators"),
+  );
 
-  return { dates, valuesByMetric };
+  return { dates, valuesByMetric, chatInitiators };
 };
 
 export const buildRollingDailyUsageSeries = (
@@ -127,15 +131,22 @@ export const buildRollingDailyUsageSeries = (
   const valuesByMetric = DAILY_USAGE_METRICS.reduce(
     (acc, metric) => {
       const dailyValues = dailyReports.map((report) =>
-        toMetricValue(report, metric.key),
+        toStatsMetricValue(report, metric.key),
       );
       acc[metric.key] = buildRollingSums(dailyValues, normalizedWindowDays);
       return acc;
     },
     {} as Record<DailyUsageMetricKey, number[]>,
   );
+  const dailyChatInitiators = dailyReports.map((report) =>
+    toStatsMetricValue(report, "total_chat_initiators"),
+  );
+  const chatInitiators = buildRollingSums(
+    dailyChatInitiators,
+    normalizedWindowDays,
+  );
 
-  return { dates, valuesByMetric };
+  return { dates, valuesByMetric, chatInitiators };
 };
 
 const formatDateWithWeekday = (date: string): string => {
