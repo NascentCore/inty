@@ -110,6 +110,11 @@ class FestivalMemoryConfig(Base):
         nullable=True,
         comment="最近一次被定时任务执行的时间",
     )
+    min_rounds_in_window = Column(
+        Integer,
+        nullable=True,
+        comment="窗口内最少用户消息轮数，NULL 表示默认 15",
+    )
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

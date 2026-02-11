@@ -37,6 +37,11 @@ class FestivalMemoryConfigCreate(BaseModel):
         le=RUN_AT_HOUR_MAX,
         description="执行时刻（该时区下本地小时）0-23",
     )
+    min_rounds_in_window: Optional[int] = Field(
+        None,
+        ge=1,
+        description="窗口内最少用户消息轮数，不传则默认 15",
+    )
 
     @model_validator(mode="after")
     def validate_timezone(self) -> "FestivalMemoryConfigCreate":
@@ -72,6 +77,11 @@ class FestivalMemoryConfigUpdate(BaseModel):
         le=RUN_AT_HOUR_MAX,
         description="执行时刻（该时区下本地小时）0-23",
     )
+    min_rounds_in_window: Optional[int] = Field(
+        None,
+        ge=1,
+        description="窗口内最少用户消息轮数，不传则默认 15",
+    )
 
     @model_validator(mode="after")
     def validate_timezone_and_run_at(self) -> "FestivalMemoryConfigUpdate":
@@ -100,6 +110,9 @@ class FestivalMemoryConfigInDB(BaseModel):
     last_run_at: Optional[datetime] = Field(
         None, description="最近一次被定时任务执行的时间"
     )
+    min_rounds_in_window: Optional[int] = Field(
+        None, description="窗口内最少用户消息轮数，NULL 表示默认 15"
+    )
 
     class Config:
         from_attributes = True
@@ -119,6 +132,11 @@ class FestivalMemoryExtractionRunRequest(BaseModel):
     timezone: Optional[str] = Field(
         default="UTC",
         description="节日日期所属时区（仅当未传 config_id 时用于窗口计算）",
+    )
+    min_rounds_in_window: Optional[int] = Field(
+        None,
+        ge=1,
+        description="窗口内最少用户消息轮数（仅当未传 config_id 时生效），不传则默认 15",
     )
 
     @model_validator(mode="after")

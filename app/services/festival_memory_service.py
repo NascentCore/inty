@@ -27,7 +27,7 @@ from app.utils.openrouter_memory import (
 )
 
 _MAX_IN_PARAMS = 5000
-FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW = 30
+DEFAULT_MIN_ROUNDS_IN_WINDOW = 15
 
 
 def _window_for_festival_date(
@@ -52,7 +52,7 @@ def _window_for_festival_date(
 
 def get_pairs_with_min_rounds_in_window_sync(
     festival_date: date,
-    min_rounds: int = FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
+    min_rounds: int = DEFAULT_MIN_ROUNDS_IN_WINDOW,
     timezone_str: str = "UTC",
 ) -> List[Tuple[str, str]]:
     """
