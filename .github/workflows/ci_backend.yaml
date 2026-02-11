@@ -95,6 +95,17 @@ jobs:
           # https://stackoverflow.com/a/74669486
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+
+      - name: Ensure single alembic head
+        run: |
+          export PYTHONPATH=.
+          heads_count=$(alembic heads | wc -l)
+          if [ "$heads_count" -ne 1 ]; then
+            echo "Expected exactly one alembic head, got $heads_count:"
+            alembic heads
+            exit 1
+          fi
+
       - name: Run alembic tests
         run: |
           ./tests/alembic/test_custom_config.sh
