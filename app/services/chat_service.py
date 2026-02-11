@@ -1319,6 +1319,7 @@ async def _try_match_existing_image(
                         "is_from_other_user": is_other_user,
                         "session_id": session_id,
                         "message_id": message_id,
+                        "prompt": current_prompt,
                     },
                 )
                 logger.debug(f"匹配图片用量记录成功: user_id={user_id}")
@@ -1683,7 +1684,22 @@ async def generate_chat_image(
                 f"Message ID: {message_id}, Reason: {failure_reason}"
             )
 
-            # 记录失败信息（不计入用量，usage_count=0）
+            try:
+                await chat_history_service.update_message_metadata(
+                    db=db,
+                    session_id=session_id,
+                    message_id=message_id,
+                    metadata_update={
+                        "generated_image_attempt": {
+                            "prompt": current_prompt,
+                            "failure_reason": failure_reason,
+                            "failure_type": failure_type,
+                        }
+                    },
+                )
+            except Exception as meta_err:
+                logger.warning(f"更新失败尝试元数据失败: {meta_err}")
+
             try:
                 await subscription_service.record_usage(
                     db,
@@ -1699,6 +1715,7 @@ async def generate_chat_image(
                         "session_id": session_id,
                         "message_id": message_id,
                         "model": selected_model,
+                        "prompt": current_prompt,
                     },
                 )
                 logger.debug(f"图片生成失败记录成功: user_id={user_id}")
@@ -1743,7 +1760,22 @@ async def generate_chat_image(
             f"Reason: {failure_reason}"
         )
 
-        # 记录失败信息（不计入用量，usage_count=0）
+        try:
+            await chat_history_service.update_message_metadata(
+                db=db,
+                session_id=session_id,
+                message_id=message_id,
+                metadata_update={
+                    "generated_image_attempt": {
+                        "prompt": current_prompt,
+                        "failure_reason": failure_reason,
+                        "failure_type": failure_type,
+                    }
+                },
+            )
+        except Exception as meta_err:
+            logger.warning(f"更新失败尝试元数据失败: {meta_err}")
+
         try:
             await subscription_service.record_usage(
                 db,
@@ -1759,6 +1791,7 @@ async def generate_chat_image(
                     "session_id": session_id,
                     "message_id": message_id,
                     "model": selected_model,
+                    "prompt": current_prompt,
                 },
             )
             logger.debug(f"图片生成失败记录成功: user_id={user_id}")
@@ -1784,13 +1817,14 @@ async def generate_chat_image(
                 "model": actual_model,
                 "generation_time_ms": image_generation_result.get("generation_time_ms"),
                 "model_fallback_due_to_429": model_fallback_due_to_429,
+                "prompt": image_generation_result.get("prompt"),
             },
         )
         logger.debug(f"图片生成用量记录成功: user_id={user_id}")
     except Exception as e:
         logger.warning(f"记录图片生成用量失败: {str(e)}")
 
-    # 追加更新 meta_data，添加模型、耗时及是否因429使用备用模型
+    # 追加更新 meta_data，添加模型、耗时、是否因429使用备用模型及提示词
     try:
         await chat_history_service.update_message_metadata(
             db=db,
@@ -1801,6 +1835,7 @@ async def generate_chat_image(
                     "model": actual_model,
                     "generation_time_ms": generation_time_ms,
                     "model_fallback_due_to_429": model_fallback_due_to_429,
+                    "prompt": image_generation_result.get("prompt"),
                 }
             },
         )
