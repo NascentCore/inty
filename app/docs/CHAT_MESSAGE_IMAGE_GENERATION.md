@@ -111,7 +111,7 @@
 - **模板变量**:
 
   - `{chat_history}`: 格式化的聊天历史
-- `{user_info}`: 用户信息块（`##User Information` 格式，包含 Name/Gender/Age/Description/Selfie Persona）
+  - `{user_info}`: 用户信息块（`##User Information` 格式，包含 Name/Gender/Age/Description/Selfie Persona）
 
 - **提示词模板**（默认）:
 
