@@ -5,8 +5,6 @@ import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ai.intellimate.audio.PlaybackState
-import com.ai.intellimate.audio.RecordingState
 import com.ai.intellimate.call.data.AICallRepository
 import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallType
@@ -26,16 +24,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/** 语音通话状态 */
-data class VoiceCallState(
-    val isCallActive: Boolean = false,
-    val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
-    val recordingState: RecordingState = RecordingState.IDLE,
-    val playbackState: PlaybackState = PlaybackState.IDLE,
-    val error: String? = null,
-    val hasPermission: Boolean = false,
-)
 
 /** 语音通话ViewModel 管理语音通话的状态和业务逻辑 */
 class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel() {
