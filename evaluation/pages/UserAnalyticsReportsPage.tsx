@@ -757,7 +757,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
   }, [reportType, usageReports]);
   const usageChartTitle =
     reportType === "weekly"
-      ? `每周用量曲线（按日滚动${WEEKLY_USAGE_ROLLING_WINDOW_DAYS}天）`
+      ? "每周用量曲线"
       : "每日用量曲线";
   const usageEmptyDescription =
     reportType === "weekly"
