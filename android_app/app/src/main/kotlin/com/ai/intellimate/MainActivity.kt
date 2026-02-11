@@ -837,7 +837,7 @@ fun SplashLoginUI(
                                 LogUtils.e("Google login failed: ${loginResult.message}")
                                 reportLoginFailure("backend_error", loginResult.message, null)
                                 com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
-                                    "Network error, please try again later."
+                                    context.getString(R.string.network_error)
                                 )
                             }
                         }
@@ -1080,7 +1080,7 @@ private fun performEmailLogin(
                     LogUtils.e("Email login failed: ${loginResult.message}")
                     reportLoginFailure("backend_error", loginResult.message, null)
                     com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
-                        loginResult.message
+                        context.getString(R.string.network_error)
                     )
                 }
             }

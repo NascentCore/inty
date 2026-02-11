@@ -71,6 +71,7 @@
     <string name="unknown_error">Unknown error</string>
     <string name="check_network_connection">please check network connection</string>
     <string name="please_try_again_later">please try again later</string>
+    <string name="network_error">Network error, please try again later</string>
 
 
     <!-- Error message formats -->
