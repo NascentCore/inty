@@ -6,6 +6,13 @@ import type {
   AgentVisibility,
 } from "inty_sdk/src/resources/api/v1/ai/agents";
 
+/** 运营上传的专属角色照单条 */
+export interface ExclusivePhotoItem {
+  image_url: string;
+  caption: string;
+  credits_required: number;
+}
+
 /** 角色详情中的单条节日记忆（features.festival_memories） */
 export interface FestivalMemoryItem {
   festival_date: string;
@@ -25,6 +32,7 @@ export interface Agent extends BaseAgent {
   description?: string; // 描述字段
   source?: AgentSource; // 角色来源
   features?: AgentFeatures;
+  exclusive_photos?: ExclusivePhotoItem[]; // 运营专属角色照（评测管理用）
 }
 
 export type { AgentVisibility };
@@ -100,6 +108,7 @@ export interface AgentUpdateRequest {
   meta_data?: AgentMetaData;
   extensions?: { [key: string]: unknown } | null;
   tags?: string[];
+  exclusive_photos?: ExclusivePhotoItem[];
 }
 
 // 生成背景视频请求

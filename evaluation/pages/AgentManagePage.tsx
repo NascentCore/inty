@@ -3,6 +3,7 @@ import {
   Card,
   Button,
   Input,
+  InputNumber,
   Upload,
   Select,
   Row,
@@ -35,8 +36,9 @@ import modelCacheService from "../services/modelCache";
 import type {
   Agent,
   AgentCreateRequest,
-  OpenRouterModel,
   AvatarCropData,
+  ExclusivePhotoItem,
+  OpenRouterModel,
 } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
@@ -970,6 +972,10 @@ export const AgentManagePage: React.FC = () => {
         updateData.background_animated = "";
       }
 
+      if (agentCopy?.exclusive_photos) {
+        updateData.exclusive_photos = agentCopy.exclusive_photos;
+      }
+
       // 使用 useAgents hook 的 updateAgent 进行优化更新
       const updatedAgent = await updateAgentFromHook(
         currentAgent.id,
@@ -1094,6 +1100,7 @@ export const AgentManagePage: React.FC = () => {
       ...agent,
       extensions: agent.extensions ? { ...agent.extensions } : undefined,
       background_animated: agent.background_animated,
+      exclusive_photos: agent.exclusive_photos ?? [],
     });
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
@@ -1725,6 +1732,134 @@ export const AgentManagePage: React.FC = () => {
           onRefresh={handleRefreshModels}
           onValuesChange={isEdit ? handleFormChange : undefined}
         />
+
+        {/* 专属角色照（仅编辑模式） */}
+        {isEdit && (
+          <>
+            <Divider>专属角色照</Divider>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                运营上传的专属角色照，每项含照片、文案、解锁所需 credit。
+              </div>
+              <List
+                locale={{ emptyText: "暂无专属照，可点击下方按钮上传" }}
+                dataSource={agentCopy?.exclusive_photos ?? []}
+                renderItem={(item: ExclusivePhotoItem, index: number) => (
+                  <List.Item
+                    key={index}
+                    actions={[
+                      <Popconfirm
+                        key="del"
+                        title="确定删除该条？"
+                        onConfirm={() => {
+                          if (!agentCopy) return;
+                          const next = (agentCopy.exclusive_photos ?? []).filter(
+                            (_, i) => i !== index,
+                          );
+                          setAgentCopy({
+                            ...agentCopy,
+                            exclusive_photos: next,
+                          });
+                        }}
+                      >
+                        <Button type="text" danger size="small" icon={<DeleteOutlined />}>
+                          删除
+                        </Button>
+                      </Popconfirm>,
+                    ]}
+                  >
+                    <Row gutter={12} align="middle" style={{ width: "100%" }}>
+                      <Col flex="80px">
+                        <img
+                          src={item.image_url}
+                          alt=""
+                          style={{
+                            width: 64,
+                            height: 64,
+                            objectFit: "cover",
+                            borderRadius: 4,
+                          }}
+                        />
+                      </Col>
+                      <Col flex="1">
+                        <Input
+                          placeholder="文案"
+                          value={item.caption}
+                          onChange={(e) => {
+                            if (!agentCopy) return;
+                            const next = [...(agentCopy.exclusive_photos ?? [])];
+                            next[index] = { ...next[index], caption: e.target.value };
+                            setAgentCopy({
+                              ...agentCopy,
+                              exclusive_photos: next,
+                            });
+                          }}
+                          style={{ marginBottom: 6 }}
+                        />
+                        <InputNumber
+                          min={0}
+                          placeholder="解锁 credit"
+                          value={item.credits_required}
+                          onChange={(val) => {
+                            if (!agentCopy || val == null) return;
+                            const next = [...(agentCopy.exclusive_photos ?? [])];
+                            next[index] = {
+                              ...next[index],
+                              credits_required: Number(val),
+                            };
+                            setAgentCopy({
+                              ...agentCopy,
+                              exclusive_photos: next,
+                            });
+                          }}
+                          style={{ width: "100%" }}
+                        />
+                      </Col>
+                    </Row>
+                  </List.Item>
+                )}
+              />
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith("image/");
+                  if (!isImage) {
+                    message.error("只能上传图片");
+                    return false;
+                  }
+                  (async () => {
+                    try {
+                      const res = await api.agents.uploadAvatar(file, false);
+                      const url = res?.url ?? res?.data?.url;
+                      if (!url || !agentCopy) return;
+                      const newItem: ExclusivePhotoItem = {
+                        image_url: url,
+                        caption: "",
+                        credits_required: 0,
+                      };
+                      setAgentCopy({
+                        ...agentCopy,
+                        exclusive_photos: [
+                          ...(agentCopy.exclusive_photos ?? []),
+                          newItem,
+                        ],
+                      });
+                      message.success("已添加，请填写文案与解锁 credit");
+                    } catch (err) {
+                      logError("上传图片失败");
+                    }
+                  })();
+                  return false;
+                }}
+              >
+                <Button type="dashed" icon={<PlusOutlined />} style={{ width: "100%" }}>
+                  上传并添加一张专属照
+                </Button>
+              </Upload>
+            </div>
+          </>
+        )}
       </>
     );
   };
