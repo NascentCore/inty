@@ -53,8 +53,7 @@ def generate_speech_from_text(
             )
         ),
     )
-    logger.info("TTS API 请求 model=%s voice_name=%s contents 长度=%d", model, voice_name, len(contents))
-    logger.debug("TTS API contents: %s", contents)
+    logger.info("TTS API 请求: model=%s voice_name=%s contents 长度=%d 请求内容: %s", model, voice_name, len(contents), contents)
     response = client.models.generate_content(
         model=model,
         contents=contents,
