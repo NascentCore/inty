@@ -16,6 +16,7 @@
   只包含文档的目录用中文命名、方便理解，包含代码的目录必须用 English 以方便调用。
   - 如有可能、在不影响正确性前提下，使用中文编写各类非代码的文字内容：代码注释、GitHub Pull Request 标题 & 描述等等
   - 本代码库开发人员母语为中文普通话
+  - 该指令仅适用于可以使用中文的场景；若内容不能使用中文（如代码），则不适用。
 - **Python 版本**：仓库 `pyproject.toml` 约束为 `>=3.12`。
 - 评测数据采集要放在功能开发的核心需求里：原始数据收集（在功能设计过程中可以考虑将重要数据写入日志、数据库）、数据筛选清洗等等
 
@@ -30,26 +31,6 @@
 - 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
 - 修改数据库表 schema 应该**单独**进行，不要与其他改动混合：保证 alembic version 可以快速同步，避免多人并行产生非线性迁移链。
   - 例如：当前 alembic head revision 为 1，改动 A 与改动 B 同时修改 DB，则可能出现两个并行 version 文件都依赖 revision 1。
-
-## 代码库结构
-
-- `android_app/` IntelliMate, android app code，kotlin compose jetpack
-- `app/` Inty 后端服务，Python fastapi
-  - `app/openapi.json` 来自 FastAPI 生成，并使用 stainless 生成 Kotlin/TypeScript SDK（分别以 submodule 形式位于 `evaluation/inty_sdk`、`android_app/library/inty_sdk`）
-- `alembic/` Inty 后端服务数据库 schema 管理，使用 <https://github.com/sqlalchemy/alembic>
-- `evaluation/` Inty 运营工具，react 由 app/ 后端提供 web serving
-- `web_app/` 独立 Web App（React/TS）
-- `scripts/` 各类脚本，以修改数据库记录为主
-- `devops/` 运维相关代码
-- `experimental/` 原型代码
-- `docs/` 文档
-- `backend/`：后端相关文档与迁移中的说明（以目录内文档为准）
-
-## 语言与输出
-
-- 所有生成的输出默认使用中文（普通话），即使用户指令为英文。
-- 如果输出文件主体使用英文，则输出用英文。
-- 该指令仅适用于可以使用中文的场景；若内容不能使用中文（如代码），则不适用。
 
 ## 文档维护
 
@@ -67,51 +48,6 @@
 - `<TASK>` 命名：使用全大写下划线（snake_case）风格并与分支/任务编号一致，例如 `AGENT_MANAGER_REFACTOR`；避免使用 `-` 与空格。
 - 不要写关于改动内容的 summary markdown 文件
 
-## Coding style
-
-- 各类语言函数体不应超过 50 行；100 行以上必须拆分为更小函数；50-100 行之间酌情处理。
-
-### 不要在注释里重复显而易见的代码含义
-
-不要写这种“复述函数名”的注释：
-
-```python
-# Get current setting
-def get_current_setting():
-  ...
-```
-
-应该让函数名/代码本身表达含义：
-
-```python
-def get_current_setting():
-  ...
-```
-
-### 避免魔法数字/字符串/值
-
-尽可能用具名常量替代魔法值，提升可读性与可维护性。
-
-### 优先早返回（early return）
-
-优先：
-
-```python
-if false:
-  return None
-
-...
-```
-
-而不是：
-
-```python
-if true:
-  ...
-else:
-  return None
-```
-
 ## Python
 
 - 避免使用 `try ... except Exception` 覆盖所有异常；只捕获当前函数**能够处理**的特定异常类型。
@@ -119,17 +55,11 @@ else:
 - 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）
 - 严禁向已有的 `__init__.py` 内添加新逻辑代码（除非该目录规则明确要求）
 - 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
+- 禁止使用 `__main__.py` 这种范式，使用显式的 `main.py` 入口文件
 
-## 测试（仓库级）
+### 测试（仓库级）
 
 - `pytest` 配置在 `pytest.ini`，默认收集 `app/` 与 `tests/` 下的 `test_*.py`。
-- 常用命令（按环境选择 `python` 或 `python3`）：
-
-```bash
-python -m pytest
-python -m pytest -m "not slow"
-python -m pytest tests/app/services/test_chat_service.py -k test_xxx
-```
 
 ## Android App
 

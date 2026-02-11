@@ -58,6 +58,8 @@ agent:
   model: "google/gemini-2.5-flash"
   api_key: "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"
   base_url: "https://openrouter.ai/api/v1"
+  # try@sxwl.ai LangSmith IntelliMate-prod 项目
+  # https://smith.langchain.com/o/824a4bb5-ca84-4fa2-969e-7a50cd267999/projects/p/2808d56c-e07f-4293-8bec-1cc62d9f4975
   langchain_api_key: "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"
   force_default_prompts: false
   # 消息生图模型配置：prod 环境免费用户使用 fal 模型（降低成本），订阅用户使用 gemini
