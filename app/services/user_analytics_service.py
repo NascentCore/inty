@@ -847,34 +847,21 @@ class UserAnalyticsService:
 
         return data
 
-    async def get_users_hitting_chat_limit(
+    async def _get_users_hitting_chat_limit_single_day(
         self,
         activity_start_date: datetime,
         activity_end_date: datetime,
-        guest_limit: Optional[int] = None,
-        google_limit: Optional[int] = None,
+        guest_limit: int,
+        google_limit: int,
     ) -> List[Dict[str, Any]]:
-        """查询按日统计达到聊天限制的用户（使用活跃日期范围）"""
+        """单日「达到聊天限制用户」查询，供 get_users_hitting_chat_limit 按天调用以减轻周报单次查询压力。"""
         from datetime import timedelta
 
-        if guest_limit is None:
-            guest_limit = (
-                global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit
-            )
-        if google_limit is None:
-            google_limit = (
-                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
-            )
-
-        # 计算查询范围：需要提前24小时来获取活跃用户
         query_start_date = activity_start_date - timedelta(hours=24)
         end_date_minus_one_day = activity_end_date - timedelta(days=1)
-
-        # 将 datetime 转换为 date 字符串用于 SQL
         start_date_str = activity_start_date.date().isoformat()
         end_date_minus_one_day_str = end_date_minus_one_day.date().isoformat()
 
-        # 先检查 subscription_usage 表中是否有数据
         check_query = text("""
             SELECT COUNT(*) as count
             FROM subscription_usage
@@ -890,15 +877,9 @@ class UserAnalyticsService:
             },
         )
         usage_count = check_result.scalar() or 0
-        logger.debug(f"subscription_usage 表中符合条件的记录数: {usage_count}")
-
         if usage_count == 0:
-            logger.info(
-                f"subscription_usage 表中没有符合条件的聊天使用记录，返回空结果"
-            )
             return []
 
-        # 构建 SQL 查询，将日期字符串和整数限制直接嵌入（已验证是安全的）
         query = text(f"""
             WITH date_series AS (
                 SELECT generate_series(
@@ -949,45 +930,94 @@ class UserAnalyticsService:
             WHERE chat_count_24h >= limit_value
             ORDER BY check_date, user_id
         """)
-        try:
-            result = await self.db.execute(
-                query,
-                {
-                    "activity_end_date": activity_end_date,
-                    "query_start_date": query_start_date,
-                },
+        result = await self.db.execute(
+            query,
+            {
+                "activity_end_date": activity_end_date,
+                "query_start_date": query_start_date,
+            },
+        )
+        rows = result.fetchall()
+        return [
+            {
+                "date": (
+                    row[0].isoformat()
+                    if isinstance(row[0], datetime)
+                    else str(row[0])
+                ),
+                "user_id": row[1],
+                "auth_type": row[2],
+                "nickname": row[3],
+                "email": row[4],
+                "chat_count_24h": row[5],
+                "limit_value": row[6],
+            }
+            for row in rows
+        ]
+
+    async def get_users_hitting_chat_limit(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+        guest_limit: Optional[int] = None,
+        google_limit: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """查询按日统计达到聊天限制的用户（使用活跃日期范围）。
+
+        多日范围（如周报）时按天分别查询再合并，避免单条大 SQL 超时。
+        """
+        from datetime import timedelta
+
+        if guest_limit is None:
+            guest_limit = (
+                global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit
             )
-            rows = result.fetchall()
-            logger.debug(f"查询到 {len(rows)} 个达到限制的用户记录")
-            return [
-                {
-                    "date": (
-                        row[0].isoformat()
-                        if isinstance(row[0], datetime)
-                        else str(row[0])
-                    ),
-                    "user_id": row[1],
-                    "auth_type": row[2],
-                    "nickname": row[3],
-                    "email": row[4],
-                    "chat_count_24h": row[5],
-                    "limit_value": row[6],
-                }
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error(f"查询达到限制的用户失败: {str(e)}")
-            logger.error(
-                f"查询参数: activity_start_date={activity_start_date}, "
-                f"activity_end_date={activity_end_date}, "
-                f"guest_limit={guest_limit}, google_limit={google_limit}"
+        if google_limit is None:
+            google_limit = (
+                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
             )
-            logger.exception(e)
+
+        range_days = (activity_end_date - activity_start_date).days
+        if range_days <= 1:
             try:
-                await self.db.rollback()
+                return await self._get_users_hitting_chat_limit_single_day(
+                    activity_start_date,
+                    activity_end_date,
+                    guest_limit,
+                    google_limit,
+                )
             except Exception:
-                pass
-            return []
+                logger.exception(
+                    "查询达到限制的用户失败: activity_start_date=%s, activity_end_date=%s",
+                    activity_start_date,
+                    activity_end_date,
+                )
+                try:
+                    await self.db.rollback()
+                except Exception:
+                    pass
+                return []
+
+        all_results: List[Dict[str, Any]] = []
+        for i in range(range_days):
+            day_start = activity_start_date + timedelta(days=i)
+            day_end = day_start + timedelta(days=1)
+            try:
+                day_results = await self._get_users_hitting_chat_limit_single_day(
+                    day_start, day_end, guest_limit, google_limit
+                )
+                all_results.extend(day_results)
+            except Exception:
+                logger.exception(
+                    "查询达到限制的用户失败（单日）: day_start=%s, day_end=%s",
+                    day_start,
+                    day_end,
+                )
+                try:
+                    await self.db.rollback()
+                except Exception:
+                    pass
+        return all_results
 
     async def get_agent_analytics(
         self,

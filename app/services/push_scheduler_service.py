@@ -479,8 +479,8 @@ class PushSchedulerService:
             async with AsyncSessionLocal() as db:
                 await user_analytics_compute_daily(db, report_date)
             logger.info("[用户数据分析日报] 完成")
-        except Exception as e:
-            logger.error(f"[用户数据分析日报] 执行失败: {str(e)}")
+        except Exception:
+            logger.exception("[用户数据分析日报] 执行失败")
 
     async def _run_user_analytics_weekly_report(self) -> None:
         """每周用户数据分析周报：统计上一周（周一到周日）数据。"""
@@ -493,8 +493,8 @@ class PushSchedulerService:
             async with AsyncSessionLocal() as db:
                 await user_analytics_compute_weekly(db, week_start)
             logger.info("[用户数据分析周报] 完成")
-        except Exception as e:
-            logger.error(f"[用户数据分析周报] 执行失败: {str(e)}")
+        except Exception:
+            logger.exception("[用户数据分析周报] 执行失败")
 
 
 # 全局调度器实例
