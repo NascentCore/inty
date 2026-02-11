@@ -59,13 +59,41 @@ export interface DailyUsageSeries {
   valuesByMetric: Record<DailyUsageMetricKey, number[]>;
 }
 
-export const buildDailyUsageSeries = (
+export const WEEKLY_USAGE_ROLLING_WINDOW_DAYS = 7;
+
+const getSortedDailyReports = (
   reports: UserAnalyticsReportItem[],
-): DailyUsageSeries | null => {
-  const dailyReports = reports
+): UserAnalyticsReportItem[] =>
+  reports
     .filter((report) => report.report_type === "daily")
     .slice()
     .sort((a, b) => a.report_date.localeCompare(b.report_date));
+
+const toMetricValue = (
+  report: UserAnalyticsReportItem,
+  metricKey: DailyUsageMetricKey,
+): number => {
+  const rawValue = Number(report.stats[metricKey] ?? 0);
+  return Number.isFinite(rawValue) ? rawValue : 0;
+};
+
+const buildRollingSums = (values: number[], windowDays: number): number[] => {
+  const rollingSums: number[] = [];
+  let runningSum = 0;
+  values.forEach((value, index) => {
+    runningSum += value;
+    if (index >= windowDays) {
+      runningSum -= values[index - windowDays];
+    }
+    rollingSums.push(runningSum);
+  });
+  return rollingSums;
+};
+
+export const buildDailyUsageSeries = (
+  reports: UserAnalyticsReportItem[],
+): DailyUsageSeries | null => {
+  const dailyReports = getSortedDailyReports(reports);
 
   if (dailyReports.length === 0) {
     return null;
@@ -74,9 +102,34 @@ export const buildDailyUsageSeries = (
   const dates = dailyReports.map((report) => report.report_date);
   const valuesByMetric = DAILY_USAGE_METRICS.reduce(
     (acc, metric) => {
-      acc[metric.key] = dailyReports.map(
-        (report) => report.stats[metric.key] ?? 0,
+      acc[metric.key] = dailyReports.map((report) =>
+        toMetricValue(report, metric.key),
       );
+      return acc;
+    },
+    {} as Record<DailyUsageMetricKey, number[]>,
+  );
+
+  return { dates, valuesByMetric };
+};
+
+export const buildRollingDailyUsageSeries = (
+  reports: UserAnalyticsReportItem[],
+  windowDays: number = WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
+): DailyUsageSeries | null => {
+  const dailyReports = getSortedDailyReports(reports);
+  if (dailyReports.length === 0) {
+    return null;
+  }
+
+  const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
+  const dates = dailyReports.map((report) => report.report_date);
+  const valuesByMetric = DAILY_USAGE_METRICS.reduce(
+    (acc, metric) => {
+      const dailyValues = dailyReports.map((report) =>
+        toMetricValue(report, metric.key),
+      );
+      acc[metric.key] = buildRollingSums(dailyValues, normalizedWindowDays);
       return acc;
     },
     {} as Record<DailyUsageMetricKey, number[]>,

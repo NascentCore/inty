@@ -42,8 +42,10 @@ import type {
 import {
   DAILY_USAGE_METRICS,
   buildDailyUsageSeries,
+  buildRollingDailyUsageSeries,
   buildDailyUsageTickText,
   sortReportsByDateDesc,
+  WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 } from "../utils/userAnalyticsReports";
 
 type ReportType = "daily" | "weekly";
@@ -744,30 +746,44 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     () => sortReportsByDateDesc(reports),
     [reports],
   );
-  const dailyUsageSeries = useMemo(
-    () => buildDailyUsageSeries(usageReports),
-    [usageReports],
-  );
+  const usageSeries = useMemo(() => {
+    if (reportType === "weekly") {
+      return buildRollingDailyUsageSeries(
+        usageReports,
+        WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
+      );
+    }
+    return buildDailyUsageSeries(usageReports);
+  }, [reportType, usageReports]);
+  const usageChartTitle =
+    reportType === "weekly"
+      ? "每周用量曲线"
+      : "每日用量曲线";
+  const usageEmptyDescription =
+    reportType === "weekly"
+      ? "暂无日报数据，无法计算近7天用量"
+      : "暂无日报数据";
+
   const dailyUsagePlotData = useMemo(() => {
-    if (!dailyUsageSeries) {
+    if (!usageSeries) {
       return [];
     }
     return DAILY_USAGE_METRICS.map((metric) => ({
-      x: dailyUsageSeries.dates,
-      y: dailyUsageSeries.valuesByMetric[metric.key],
+      x: usageSeries.dates,
+      y: usageSeries.valuesByMetric[metric.key],
       name: metric.label,
       type: "scatter",
       mode: "lines+markers",
       marker: { size: USAGE_MARKER_SIZE, color: metric.color },
       line: { color: metric.color },
     }));
-  }, [dailyUsageSeries]);
+  }, [usageSeries]);
   const dailyUsageXAxisTickText = useMemo(() => {
-    if (!dailyUsageSeries) {
+    if (!usageSeries) {
       return [];
     }
-    return buildDailyUsageTickText(dailyUsageSeries.dates);
-  }, [dailyUsageSeries]);
+    return buildDailyUsageTickText(usageSeries.dates);
+  }, [usageSeries]);
 
   const items = useMemo(
     () =>
@@ -804,9 +820,9 @@ export const UserAnalyticsReportsPage: React.FC = () => {
         </Space>
       </Card>
 
-      <Card title="每日用量曲线" style={{ marginBottom: "24px" }}>
+      <Card title={usageChartTitle} style={{ marginBottom: "24px" }}>
         <Spin spinning={loadingUsage}>
-          {dailyUsageSeries ? (
+          {usageSeries ? (
             <Plot
               data={dailyUsagePlotData}
               layout={{
@@ -815,7 +831,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                 xaxis: {
                   title: "日期",
                   tickmode: "array",
-                  tickvals: dailyUsageSeries.dates,
+                  tickvals: usageSeries.dates,
                   ticktext: dailyUsageXAxisTickText,
                 },
                 yaxis: { title: "用量" },
@@ -826,7 +842,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
           ) : loadingUsage ? (
             <div style={{ height: USAGE_CHART_HEIGHT }} />
           ) : (
-            <Empty description="暂无日报数据" />
+            <Empty description={usageEmptyDescription} />
           )}
         </Spin>
       </Card>

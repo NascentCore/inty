@@ -4,8 +4,10 @@
 import { describe, it, expect } from "vitest";
 import {
   buildDailyUsageSeries,
+  buildRollingDailyUsageSeries,
   buildDailyUsageTickText,
   sortReportsByDateDesc,
+  WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 } from "../utils/userAnalyticsReports";
 import type {
   UserAnalyticsReportItem,
@@ -102,6 +104,74 @@ describe("buildDailyUsageSeries", () => {
 
   it("空列表时返回空值", () => {
     const series = buildDailyUsageSeries([]);
+    expect(series).toBeNull();
+  });
+});
+
+describe("buildRollingDailyUsageSeries", () => {
+  it("按日期输出每日近7天滚动和", () => {
+    const reports = Array.from({ length: 8 }, (_, index) => {
+      const day = String(index + 1).padStart(2, "0");
+      const value = index + 1;
+      return buildReport({
+        id: `r${value}`,
+        report_date: `2026-02-${day}`,
+        stats: buildStats({
+          total_user_messages: value,
+          total_image_generation_requests: value * 2,
+          total_live_chat_sessions: value * 3,
+          total_voice_requests: value * 4,
+        }),
+      });
+    });
+
+    const series = buildRollingDailyUsageSeries(reports);
+
+    expect(series?.valuesByMetric.total_user_messages).toEqual([
+      1, 3, 6, 10, 15, 21, 28, 35,
+    ]);
+    expect(series?.valuesByMetric.total_voice_requests).toEqual([
+      4, 12, 24, 40, 60, 84, 112, 140,
+    ]);
+    expect(series?.dates[series.dates.length - 1]).toBe("2026-02-08");
+    expect(WEEKLY_USAGE_ROLLING_WINDOW_DAYS).toBe(7);
+  });
+
+  it("支持自定义窗口并过滤周报", () => {
+    const reports = [
+      buildReport({
+        id: "d1",
+        report_date: "2026-02-01",
+        stats: buildStats({ total_user_messages: 10 }),
+      }),
+      buildReport({
+        id: "d2",
+        report_date: "2026-02-02",
+        stats: buildStats({ total_user_messages: 20 }),
+      }),
+      buildReport({
+        id: "d3",
+        report_date: "2026-02-03",
+        stats: buildStats({ total_user_messages: 30 }),
+      }),
+      buildReport({
+        id: "w1",
+        report_type: "weekly",
+        report_date: "2026-W05",
+        stats: buildStats({ total_user_messages: 999 }),
+      }),
+    ];
+
+    const series = buildRollingDailyUsageSeries(reports, 2);
+
+    expect(series?.dates).toEqual(["2026-02-01", "2026-02-02", "2026-02-03"]);
+    expect(series?.valuesByMetric.total_user_messages).toEqual([10, 30, 50]);
+  });
+
+  it("没有日报数据时返回空值", () => {
+    const series = buildRollingDailyUsageSeries([
+      buildReport({ report_type: "weekly", report_date: "2026-W05" }),
+    ]);
     expect(series).toBeNull();
   });
 });
