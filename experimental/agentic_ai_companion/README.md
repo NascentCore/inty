@@ -54,6 +54,11 @@ python -m experimental.agentic_ai_companion.main
 [OpenAI SDK 工具调用](https://developers.openai.com/api/docs/guides/tools)
 [Google GenAI SDK](https://ai.google.dev/gemini-api/docs/imagen)
 
+### LangSmith
+
+[LangSmith for Gemini](https://docs.langchain.com/langsmith/trace-with-google-gemini)
+[LangSmith for OpenAI](https://docs.langchain.com/langsmith/trace-openai)
+
 ### 可能的高级扩展
 
 - Tavus [实时多模态感知系统、细节表情、语调、等等跟踪](https://www.tavus.io/post/raven-1-bringing-emotional-intelligence-to-artificial-intelligence)
