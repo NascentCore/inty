@@ -226,15 +226,12 @@ def process_response_with_tools(
     message: Any,
 ) -> ProcessedResponse:
     """
-    处理单轮 API 响应：若含 tool_calls 则执行并追加 assistant + tool 消息；
-    若无 tool_calls 则返回 content 与 done=True。
+    处理单轮 API 响应中的 tool_call：执行工具并追加 assistant + tool 消息，按 TERMINAL 返回 content/done。
+    调用方必须保证 message 含有且仅含一个 tool_call；无 tool_calls 时由 run_repl 直接处理。
     """
     raw_tool_calls = getattr(message, "tool_calls", None) or []
+    assert len(raw_tool_calls) >= 1, "process_response_with_tools 仅在有 tool_calls 时调用"
     assert len(raw_tool_calls) <= 1, "工具调用数量必须为 0 或 1，因为禁止 parallel_tool_calls"
-    if not raw_tool_calls:
-        content = (message.content or "").strip()
-        logger.info("API 响应无 tool_calls，content 长度=%d", len(content))
-        return ProcessedResponse(messages=messages, content=content, done=True, assistant_text="", image_path=None)
     tool_call = raw_tool_calls[0]
     assistant_content = (message.content or "").strip()
     tc_dict: dict[str, Any] = {
@@ -311,8 +308,7 @@ def run_repl(
         messages.append({"role": "user", "content": line})
         pending_image_path: str | None = None
         
-        # 执行本轮 Chat Completion：工具调用会有多轮循环，单轮对话则立即结束。
-        # 只能在获得首轮响应后才能决定是否持续执行。
+        # 执行本轮 Chat Completion：1) create；2) 无工具 → 返回；有工具 → TERMINAL 返回 / 非 TERMINAL 打印、执行、循环。
         round_num = 0
         while True:
             round_num += 1
@@ -329,37 +325,9 @@ def run_repl(
             msg = resp.choices[0].message
             has_tool_calls = bool(getattr(msg, "tool_calls", None))
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tool_calls)
-            if has_tool_calls:
-                printed_assistant_before_tool = False
-                tool_name = msg.tool_calls[0].function.name
-                if TOOL_TYPES.get(tool_name, ToolType.UNSPECIFIED) != ToolType.TERMINAL:
-                    assistant_content = (msg.content or "").strip()
-                    if assistant_content:
-                        print(f"{char_name}> {assistant_content}\n")
-                        printed_assistant_before_tool = True
-                out = process_response_with_tools(messages, msg)
-                messages = out.messages
-                if out.image_path is not None:
-                    pending_image_path = out.image_path
-                if out.done:
-                    assert out.content is not None
-                    # 无 tool_calls 时 out.messages 以 user 结尾，需追加 assistant；有 tool_calls 时已含 assistant+tool，不再追加。见 tests/test_role_play_append_assistant.py。
-                    if messages[-1]["role"] == "user":
-                        messages.append({"role": "assistant", "content": out.content})
-                    # 终端只展示「LLM 输出」：助手文案 + 若有工具调用则包含工具效果（如可点击路径），不追加 REPL 自拟文案
-                    if pending_image_path:
-                        display = pending_image_path
-                    else:
-                        display = out.content or EMPTY_RESPONSE
-                    logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
-                    print(f"{char_name}> {display}\n")
-                    break
-                if out.assistant_text and not printed_assistant_before_tool:
-                    print(f"{char_name}> {out.assistant_text}")
-            else:
-                # message.content 可为 null/缺失，或为 string | array of content parts（OpenAI/OpenRouter 约定）。
-                # 见 https://platform.openai.com/docs/api-reference/chat/object 中 ChatCompletionAssistantMessageParam.content，
-                # 及 https://openrouter.ai/docs/api-reference/chat-completion 响应 message。统一规整为 str。
+
+            # 2.1 无工具调用 → 直接返回
+            if not has_tool_calls:
                 raw = getattr(msg, "content", None)
                 content = (raw if isinstance(raw, str) else "").strip()
                 messages.append({"role": "assistant", "content": content})
@@ -367,6 +335,33 @@ def run_repl(
                 logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=False", turn, len(content))
                 print(f"{char_name}> {display}\n")
                 break
+
+            # 2.2 有工具调用 → 按是否 TERMINAL 分叉
+            tool_name = msg.tool_calls[0].function.name
+            is_terminal = TOOL_TYPES.get(tool_name, ToolType.UNSPECIFIED) == ToolType.TERMINAL
+
+            if is_terminal:
+                # 2.2.1 TERMINAL：执行工具后返回
+                out = process_response_with_tools(messages, msg)
+                messages = out.messages
+                if out.image_path is not None:
+                    pending_image_path = out.image_path
+                assert out.content is not None
+                if messages[-1]["role"] == "user":
+                    messages.append({"role": "assistant", "content": out.content})
+                display = pending_image_path or out.content or EMPTY_RESPONSE
+                logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content), pending_image_path is not None)
+                print(f"{char_name}> {display}\n")
+                break
+
+            # 2.2.2 非 TERMINAL：打印中间结果，执行工具，继续循环
+            assistant_text = (msg.content or "").strip()
+            if assistant_text:
+                print(f"{char_name}> {assistant_text}\n")
+            out = process_response_with_tools(messages, msg)
+            messages = out.messages
+            if out.image_path is not None:
+                pending_image_path = out.image_path
             logger.debug("继续本轮 API 请求，messages 已追加 assistant + tool")
 
 
