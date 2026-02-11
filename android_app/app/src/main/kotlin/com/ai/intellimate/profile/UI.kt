@@ -235,7 +235,6 @@ internal fun PremiumBanner(
     Box(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp)
                 .clip(RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius))
                 .height(UiConfigs.MePage.VipBannerHeight)
                 .clickable {
