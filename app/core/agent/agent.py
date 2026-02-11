@@ -608,7 +608,7 @@ class Agent:
                 sync_engine = get_sync_engine()
                 with sync_engine.connect() as conn:
                     query = text("""
-                        SELECT nickname, gender, age_group, description, system_language 
+                        SELECT nickname, gender, age_group, description, selfie_persona_summary, system_language 
                         FROM users 
                         WHERE id = :user_id
                     """)
@@ -620,7 +620,14 @@ class Agent:
                         cache_service.set_user_info(user_id, user_info_text, ttl=60)
                     else:
                         user_info_parts = []
-                        nickname, gender, age_group, description, system_language = row
+                        (
+                            nickname,
+                            gender,
+                            age_group,
+                            description,
+                            selfie_persona_summary,
+                            system_language,
+                        ) = row
                         if nickname:
                             user_info_parts.append(f"Name: {nickname}")
                         if gender:
@@ -636,6 +643,10 @@ class Agent:
                             user_info_parts.append(f"Age: {age_group}")
                         if description:
                             user_info_parts.append(f"Description: {description}")
+                        if selfie_persona_summary:
+                            user_info_parts.append(
+                                f"Selfie Persona: {selfie_persona_summary}"
+                            )
                         if user_info_parts:
                             user_info_text = "##User Information\n" + "\n".join(
                                 user_info_parts
