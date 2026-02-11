@@ -755,6 +755,7 @@ export interface ReportItem {
   reason_codes: string[];
   image_urls: string[];
   description: string | null;
+  github_issue: string | null;
   status: ReportStatus;
   report_type: ReportType | null;
   created_at: string;

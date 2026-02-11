@@ -117,6 +117,9 @@
 | `/api/v1/report/upload-image` | POST | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/` | POST | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/` | GET | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}` | GET | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}` | DELETE | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}/github-issue` | PUT | `app/api/v1/endpoints/report.py` |
 
 ### 设置 (Settings)
 

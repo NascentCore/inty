@@ -24,6 +24,9 @@ import {
   EyeOutlined,
   DeleteOutlined,
   CopyOutlined,
+  EditOutlined,
+  SaveOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { reportApi } from "../services/api";
@@ -38,6 +41,10 @@ import {
   REPORT_IMAGE_PREVIEW_SIZE,
   REPORT_IMAGE_PREVIEW_STYLE,
 } from "../utils/reportImagePreview";
+import {
+  isValidGithubIssueUrl,
+  normalizeGithubIssueUrlInput,
+} from "../utils/reportGithubIssue";
 
 const { Option } = Select;
 
@@ -117,6 +124,9 @@ export const ReportFeedbackPage: React.FC = () => {
   // 详情弹窗状态
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ReportItem | null>(null);
+  const [githubIssueDraft, setGithubIssueDraft] = useState("");
+  const [isEditingGithubIssue, setIsEditingGithubIssue] = useState(false);
+  const [savingGithubIssue, setSavingGithubIssue] = useState(false);
 
   // 加载数据
   const loadData = useCallback(async () => {
@@ -165,6 +175,11 @@ export const ReportFeedbackPage: React.FC = () => {
       });
   }, []);
 
+  useEffect(() => {
+    setGithubIssueDraft(selectedItem?.github_issue || "");
+    setIsEditingGithubIssue(false);
+  }, [selectedItem?.id, selectedItem?.github_issue]);
+
   // 查看详情：打开弹窗并同步 URL hash，使当前地址即为该举报的永久链接
   const handleViewDetail = (record: ReportItem) => {
     setSelectedItem(record);
@@ -181,6 +196,54 @@ export const ReportFeedbackPage: React.FC = () => {
       message.success("链接已复制到剪贴板");
     } catch {
       message.error("复制失败，请手动复制链接");
+    }
+  };
+
+  const handleStartEditGithubIssue = () => {
+    if (!selectedItem) {
+      return;
+    }
+    setGithubIssueDraft(selectedItem.github_issue || "");
+    setIsEditingGithubIssue(true);
+  };
+
+  const handleCancelEditGithubIssue = () => {
+    setGithubIssueDraft(selectedItem?.github_issue || "");
+    setIsEditingGithubIssue(false);
+  };
+
+  const handleSaveGithubIssue = async () => {
+    if (!selectedItem) {
+      return;
+    }
+    const normalizedGithubIssueUrl =
+      normalizeGithubIssueUrlInput(githubIssueDraft);
+    if (
+      normalizedGithubIssueUrl &&
+      !isValidGithubIssueUrl(normalizedGithubIssueUrl)
+    ) {
+      message.error("请输入有效的 GitHub issue 链接");
+      return;
+    }
+
+    setSavingGithubIssue(true);
+    try {
+      const updatedItem = await reportApi.updateGithubIssue(
+        selectedItem.id,
+        normalizedGithubIssueUrl,
+      );
+      setSelectedItem(updatedItem);
+      setData((prev) =>
+        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
+      );
+      setGithubIssueDraft(updatedItem.github_issue || "");
+      setIsEditingGithubIssue(false);
+      message.success("GitHub issue 链接已保存");
+    } catch (error) {
+      console.error("保存 GitHub issue 链接失败:", error);
+      message.error("保存失败，请检查链接格式");
+    } finally {
+      setSavingGithubIssue(false);
     }
   };
 
@@ -404,6 +467,7 @@ export const ReportFeedbackPage: React.FC = () => {
         open={detailVisible}
         onCancel={() => {
           setDetailVisible(false);
+          setIsEditingGithubIssue(false);
           if (typeof window !== "undefined") {
             const base = `${window.location.origin}${window.location.pathname}`;
             window.history.replaceState(null, "", `${base}#report-feedback`);
@@ -431,6 +495,42 @@ export const ReportFeedbackPage: React.FC = () => {
                 >
                   复制链接
                 </Button>
+              </Space.Compact>
+            </Descriptions.Item>
+            <Descriptions.Item label="GitHub Issue" span={2}>
+              <Space.Compact style={{ width: "100%" }}>
+                <Input
+                  value={githubIssueDraft}
+                  readOnly={!isEditingGithubIssue}
+                  onChange={(event) => setGithubIssueDraft(event.target.value)}
+                  placeholder="https://github.com/<owner>/<repo>/issues/<number>"
+                />
+                {isEditingGithubIssue ? (
+                  <>
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      onClick={handleSaveGithubIssue}
+                      loading={savingGithubIssue}
+                    >
+                      保存
+                    </Button>
+                    <Button
+                      icon={<CloseOutlined />}
+                      onClick={handleCancelEditGithubIssue}
+                      disabled={savingGithubIssue}
+                    >
+                      取消
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={handleStartEditGithubIssue}
+                  >
+                    修改
+                  </Button>
+                )}
               </Space.Compact>
             </Descriptions.Item>
             <Descriptions.Item label="类型">

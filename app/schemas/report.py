@@ -89,6 +89,12 @@ class ReportQuery(BaseModel):
     limit: int = 100
 
 
+class ReportGithubIssueUpdate(BaseModel):
+    github_issue: Optional[str] = Field(
+        None, description="GitHub issue URL associated with this report"
+    )
+
+
 class ReportOut(BaseModel):
     id: str
     target_id: str
@@ -98,6 +104,7 @@ class ReportOut(BaseModel):
     reason_codes: List[str]
     image_urls: List[str]
     description: Optional[str]
+    github_issue: Optional[str]
     status: str
     report_type: Optional[str]
     created_at: datetime
