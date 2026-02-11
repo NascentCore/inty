@@ -131,6 +131,8 @@ class APIEndpointsConfig:
 @dataclass
 class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = False
+    # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
+    enable_selfie_persona_summary: bool = True
 
 
 @dataclass
@@ -232,6 +234,8 @@ class AgentConfig:
     # "gemini" 表示使用 Gemini，其他值为 fal.ai 模型名
     free_user_chat_image_model: str = "gemini"
     sub_user_chat_image_model: str = "gemini"
+    # 用户自拍画像推断模型（用于生成简短用户画像结论）
+    selfie_persona_gemini_model: str = "gemini-2.5-flash"
     # 当 chat_image_model 为 "gemini" 时，使用的 Vertex AI 模型 ID
     sub_user_chat_image_gemini_model: str = "gemini-2.5-flash-image"
     free_user_chat_image_gemini_model: str = "gemini-2.5-flash-image"

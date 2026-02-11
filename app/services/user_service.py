@@ -11,6 +11,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from typing_extensions import deprecated
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.models import User
 from app.models.chat import Chat
@@ -159,8 +160,19 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
             k: v for k, v in update_data.items() if v is not None and v != ""
         }
 
+        user_photo_changed = (
+            "user_photo" in update_data and update_data["user_photo"] != user.user_photo
+        )
+        selfie_persona_feature_enabled = (
+            global_config_loaded_from_config_yaml.app.features.enable_selfie_persona_summary
+        )
+
         for field, value in update_data.items():
             setattr(user, field, value)
+
+        if user_photo_changed:
+            # 自拍更新后先清空旧结论，避免出现与当前自拍不一致的旧画像结论。
+            user.selfie_persona_summary = None
 
         await db.commit()
         await db.refresh(user)
@@ -168,6 +180,18 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         # 清除用户信息缓存，确保Agent系统能获取到最新信息
         cache_service.invalidate_user_info(user_id)
         logger.debug(f"已清除用户 {user_id} 的缓存信息")
+
+        if (
+            selfie_persona_feature_enabled
+            and user_photo_changed
+            and user.user_photo
+        ):
+            from app.services.selfie_persona_service import selfie_persona_service
+
+            selfie_persona_service.enqueue_selfie_persona_inference(
+                user_id=user_id,
+                user_photo_url=user.user_photo,
+            )
 
         return user
     except Exception as e:
@@ -196,6 +220,9 @@ async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
     """
     from app.services.memory_service import get_user_memory_for_prompt_async
 
+    selfie_persona_feature_enabled = (
+        global_config_loaded_from_config_yaml.app.features.enable_selfie_persona_summary
+    )
     cached = cache_service.get_user_info(user_id)
     if cached is not None:
         user_info_text = cached
@@ -220,6 +247,11 @@ async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
                     parts.append(f"Age: {user.age_group}")
                 if user.description:
                     parts.append(f"Description: {user.description}")
+                if (
+                    selfie_persona_feature_enabled
+                    and user.selfie_persona_summary
+                ):
+                    parts.append(f"Selfie Persona: {user.selfie_persona_summary}")
                 user_info_text = (
                     "##User Information\n" + "\n".join(parts) if parts else ""
                 )

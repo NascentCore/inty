@@ -56,6 +56,10 @@ class User(Base):
     avatar = Column(String, comment="用户头像URL")
     email = Column(String, comment="邮箱地址")
     user_photo = Column(String, comment="用户自拍照片URL，用于生图参考")
+    selfie_persona_summary = Column(
+        String(1024),
+        comment="根据用户自拍推测的简短画像结论，用于聊天提示词",
+    )
 
     @validates("phone")
     def validate_phone(self, key, value):
