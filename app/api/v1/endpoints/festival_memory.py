@@ -80,6 +80,7 @@ async def create_festival_memory_config(
         timezone=body.timezone,
         run_at_date=body.run_at_date,
         run_at_hour=body.run_at_hour,
+        min_rounds_in_window=body.min_rounds_in_window,
     )
     db.add(config)
     await db.commit()
@@ -141,6 +142,8 @@ async def update_festival_memory_config(
         config.run_at_date = body.run_at_date
     if body.run_at_hour is not None:
         config.run_at_hour = body.run_at_hour
+    if body.min_rounds_in_window is not None:
+        config.min_rounds_in_window = body.min_rounds_in_window
     if (
         config.run_at_date is not None
         and config.festival_date is not None
@@ -180,6 +183,10 @@ async def run_festival_memory_extraction(
         festival_date = config.festival_date
         prompt = config.prompt
         tz_str = getattr(config, "timezone", "UTC") or "UTC"
+        min_rounds = (
+            getattr(config, "min_rounds_in_window", None)
+            or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
+        )
     else:
         if (
             body.festival_name is None
@@ -197,11 +204,15 @@ async def run_festival_memory_extraction(
         festival_date = body.festival_date
         prompt = body.prompt
         tz_str = (body.timezone or "UTC").strip() or "UTC"
+        min_rounds = (
+            body.min_rounds_in_window
+            or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
+        )
 
     pairs = await asyncio.to_thread(
         festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
         festival_date,
-        festival_memory_service.FESTIVAL_MEMORY_MIN_MESSAGES_IN_WINDOW,
+        min_rounds,
         tz_str,
     )
     total = len(pairs)

@@ -63,6 +63,7 @@ export const FestivalMemoryPage: React.FC = () => {
   const [formEnabled, setFormEnabled] = useState(true);
   const [formRunAtDate, setFormRunAtDate] = useState<dayjs.Dayjs | null>(null);
   const [formRunAtHour, setFormRunAtHour] = useState<number>(4);
+  const [formMinRounds, setFormMinRounds] = useState<number | null>(null);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -90,6 +91,7 @@ export const FestivalMemoryPage: React.FC = () => {
     setFormEnabled(true);
     setFormRunAtDate(null);
     setFormRunAtHour(4);
+    setFormMinRounds(null);
     setModalOpen(true);
   };
 
@@ -105,6 +107,11 @@ export const FestivalMemoryPage: React.FC = () => {
       row.run_at_hour != null && row.run_at_hour >= 0 && row.run_at_hour <= 23
         ? row.run_at_hour
         : 4,
+    );
+    setFormMinRounds(
+      row.min_rounds_in_window != null && row.min_rounds_in_window >= 1
+        ? row.min_rounds_in_window
+        : null,
     );
     setModalOpen(true);
   };
@@ -147,6 +154,7 @@ export const FestivalMemoryPage: React.FC = () => {
           timezone: formTimezone,
           run_at_date: runAtDateStr,
           run_at_hour: hour,
+          min_rounds_in_window: formMinRounds ?? undefined,
         };
         await festivalMemoryApi.updateConfig(editingId, update);
         message.success("更新成功");
@@ -159,6 +167,7 @@ export const FestivalMemoryPage: React.FC = () => {
           timezone: formTimezone,
           run_at_date: runAtDateStr,
           run_at_hour: hour,
+          min_rounds_in_window: formMinRounds ?? undefined,
         };
         await festivalMemoryApi.createConfig(create);
         message.success("创建成功");
@@ -223,6 +232,14 @@ export const FestivalMemoryPage: React.FC = () => {
       key: "timezone",
       width: 120,
       render: (v: string) => v || "UTC",
+    },
+    {
+      title: "窗口最少消息数",
+      dataIndex: "min_rounds_in_window",
+      key: "min_rounds_in_window",
+      width: 120,
+      render: (v: number | null | undefined) =>
+        v != null && v >= 1 ? String(v) : "默认 15",
     },
     {
       title: "执行日期",
@@ -323,10 +340,8 @@ export const FestivalMemoryPage: React.FC = () => {
         }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          按配置的时区：节日为「该时区下的自然日」，28 小时窗口为该自然日 0
-          点至次日 4
-          点；执行时间为该时区下的本地日期与时刻。仅对窗口内用户消息达 30
-          条以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
+          按配置的时区：节日为「该时区下的自然日」，28 小时窗口为该自然日 0 点至次日 4
+          点；执行时间为该时区下的本地日期与时刻。仅对窗口内用户消息达到配置的「窗口内最少用户消息数」（可选，默认 15 条）及以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
           表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。
         </Text>
         <Table
@@ -442,6 +457,23 @@ export const FestivalMemoryPage: React.FC = () => {
             />
           </div>
           <div>
+            <Text strong>窗口内最少用户消息数</Text>
+            <br />
+            <InputNumber
+              min={1}
+              value={formMinRounds ?? undefined}
+              onChange={(v) => setFormMinRounds(v ?? null)}
+              placeholder="留空表示默认 15"
+              style={{ width: "100%", marginTop: 4 }}
+            />
+            <Text
+              type="secondary"
+              style={{ fontSize: 12, marginTop: 4, display: "block" }}
+            >
+              留空表示默认 15；仅对窗口内用户消息数达到该值的 (用户, 角色) 抽取
+            </Text>
+          </div>
+          <div>
             <Text strong>抽取提示词</Text>
             <br />
             <Input.TextArea
@@ -498,10 +530,9 @@ export const FestivalMemoryPage: React.FC = () => {
           </div>
           <div>
             <Title level={5}>28 小时窗口</Title>
-            <Text>
+             <Text>
               抽取时间窗口为：该时区下「节日自然日 00:00 至次日 04:00」共 28
-              小时（换算为 UTC
-              后用于统计）。仅对在此窗口内用户消息数（排除开场白）≥ 30 的 (用户,
+              小时（换算为 UTC 后用于统计）。仅对在此窗口内用户消息数（排除开场白）≥ 配置的「窗口内最少用户消息数」（默认 15）的 (用户,
               角色) 组合进行抽取。
             </Text>
           </div>
@@ -517,7 +548,7 @@ export const FestivalMemoryPage: React.FC = () => {
           <div>
             <Title level={5}>操作说明</Title>
             <Text>
-              新建/编辑：填写时区、节日名称、节日日期（该时区自然日）、执行日期与执行时刻（该时区本地）、抽取提示词、是否启用。可点击「设为当前所选时区的本地时间」快速填入执行时间。删除可移除配置；已执行过的配置不可再次「立即执行」。
+              新建/编辑：填写时区、节日名称、节日日期（该时区自然日）、执行日期与执行时刻（该时区本地）、可选「窗口内最少用户消息数」（不填则默认 15）、抽取提示词、是否启用。可点击「设为当前所选时区的本地时间」快速填入执行时间。删除可移除配置；已执行过的配置不可再次「立即执行」。
             </Text>
           </div>
         </Space>

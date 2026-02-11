@@ -780,6 +780,8 @@ export interface FestivalMemoryConfigItem {
   run_at_hour: number | null;
   /** 最近一次被定时任务执行的时间 */
   last_run_at: string | null;
+  /** 窗口内最少用户消息轮数，null 表示默认 15 */
+  min_rounds_in_window?: number | null;
 }
 
 export interface FestivalMemoryConfigCreate {
@@ -791,6 +793,8 @@ export interface FestivalMemoryConfigCreate {
   timezone?: string;
   run_at_date: string;
   run_at_hour: number; // 0-23
+  /** 窗口内最少用户消息轮数，不传则默认 15 */
+  min_rounds_in_window?: number | null;
 }
 
 export interface FestivalMemoryConfigUpdate {
@@ -801,6 +805,8 @@ export interface FestivalMemoryConfigUpdate {
   timezone?: string;
   run_at_date?: string;
   run_at_hour?: number; // 0-23
+  /** 窗口内最少用户消息轮数，不传则默认 15 */
+  min_rounds_in_window?: number | null;
 }
 
 export interface FestivalMemoryExtractionRunRequest {
@@ -810,6 +816,8 @@ export interface FestivalMemoryExtractionRunRequest {
   prompt?: string;
   /** 节日日期所属时区（仅当未传 config_id 时用于窗口计算） */
   timezone?: string;
+  /** 窗口内最少用户消息轮数（仅当未传 config_id 时生效），不传则默认 15 */
+  min_rounds_in_window?: number | null;
 }
 
 export interface FestivalMemoryExtractionRunResponse {
