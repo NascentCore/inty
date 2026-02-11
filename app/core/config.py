@@ -131,6 +131,8 @@ class APIEndpointsConfig:
 @dataclass
 class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = False
+    # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
+    enable_selfie_persona_summary: bool = True
 
 
 @dataclass

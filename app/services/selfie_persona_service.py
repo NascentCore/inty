@@ -27,6 +27,8 @@ Requirements:
 """
 
     def enqueue_selfie_persona_inference(self, user_id: str, user_photo_url: str) -> None:
+        if not self._is_feature_enabled():
+            return
         if not user_photo_url:
             return
 
@@ -61,6 +63,8 @@ Requirements:
         user_id: str,
         user_photo_url: str,
     ) -> None:
+        if not self._is_feature_enabled():
+            return
         summary = await self._infer_selfie_persona_summary(user_photo_url)
         if not summary:
             logger.debug(
@@ -180,6 +184,12 @@ Requirements:
             summary = summary[: self.MAX_SUMMARY_LENGTH].rstrip(" ,.;:") + "..."
 
         return summary
+
+    @staticmethod
+    def _is_feature_enabled() -> bool:
+        return (
+            global_config_loaded_from_config_yaml.app.features.enable_selfie_persona_summary
+        )
 
 
 selfie_persona_service = SelfiePersonaService()

@@ -643,7 +643,10 @@ class Agent:
                             user_info_parts.append(f"Age: {age_group}")
                         if description:
                             user_info_parts.append(f"Description: {description}")
-                        if selfie_persona_summary:
+                        if (
+                            global_config_loaded_from_config_yaml.app.features.enable_selfie_persona_summary
+                            and selfie_persona_summary
+                        ):
                             user_info_parts.append(
                                 f"Selfie Persona: {selfie_persona_summary}"
                             )
