@@ -5,11 +5,25 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib import parse
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(path: str | Path | None = None) -> bool:
+        return False
+
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(_ENV_PATH)
+
+ENV_API_KEY = os.environ.get("GOOGLE_CLOUD_VERTEX_AI_API_KEY", "").strip()
+ENV_PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT_ID", "").strip()
 
 from tools.upscaler.vertex_imagen import (
     DEFAULT_MODEL_ID,
@@ -53,6 +67,12 @@ INDEX_HTML = """<!doctype html>
     img-comparison-slider img { width: 100%; display: block; border-radius: 10px; }
     .download-link { margin-top: 8px; display: inline-block; }
     code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+    .source-preview { margin-top: 12px; }
+    .source-preview img { max-width: 100%; max-height: 240px; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .source-preview .info { margin-top: 8px; font-size: 0.88rem; color: #4b5563; }
+    .btn-content { display: inline-flex; align-items: center; gap: 8px; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -65,18 +85,6 @@ INDEX_HTML = """<!doctype html>
 
     <form id="upscale-form">
       <div class="grid">
-        <label>Google API Key
-          <input id="apiKey" type="password" placeholder="AIza..." autocomplete="off" />
-        </label>
-        <label>Access Token（可选）
-          <input id="accessToken" type="password" placeholder="ya29..." autocomplete="off" />
-        </label>
-      </div>
-
-      <div class="grid">
-        <label>Project ID
-          <input id="projectId" type="text" required placeholder="your-gcp-project-id" />
-        </label>
         <label>Region
           <input id="region" type="text" value="__DEFAULT_REGION__" required />
         </label>
@@ -113,8 +121,17 @@ INDEX_HTML = """<!doctype html>
       <label>选择原图
         <input id="sourceImage" type="file" accept="image/*" required />
       </label>
+      <div id="sourcePreview" class="source-preview" hidden>
+        <img id="sourcePreviewImg" alt="原图预览" />
+        <div id="sourcePreviewInfo" class="info"></div>
+      </div>
 
-      <button id="submitBtn" type="submit">开始超分</button>
+      <button id="submitBtn" type="submit">
+        <span class="btn-content">
+          <span id="submitBtnText">开始超分</span>
+          <span id="submitBtnSpinner" class="spinner" hidden></span>
+        </span>
+      </button>
       <div id="status" class="status"></div>
     </form>
 
@@ -131,12 +148,14 @@ INDEX_HTML = """<!doctype html>
   <script>
     const form = document.getElementById("upscale-form");
     const submitBtn = document.getElementById("submitBtn");
+    const submitBtnText = document.getElementById("submitBtnText");
+    const submitBtnSpinner = document.getElementById("submitBtnSpinner");
     const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("preview");
     const originalImageEl = document.getElementById("originalImage");
     const upscaledImageEl = document.getElementById("upscaledImage");
     const downloadLinkEl = document.getElementById("downloadLink");
-    const persistedKeys = ["projectId", "region", "modelId", "upscaleFactor", "outputMimeType", "compressionQuality", "prompt"];
+    const persistedKeys = ["region", "modelId", "upscaleFactor", "outputMimeType", "compressionQuality", "prompt"];
 
     function restorePersistedSettings() {
       for (const key of persistedKeys) {
@@ -194,10 +213,47 @@ INDEX_HTML = """<!doctype html>
       label.hidden = mimeType === "image/png";
     }
 
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function updateSourcePreview() {
+      const imageInput = document.getElementById("sourceImage");
+      const previewEl = document.getElementById("sourcePreview");
+      const previewImg = document.getElementById("sourcePreviewImg");
+      const infoEl = document.getElementById("sourcePreviewInfo");
+      const file = imageInput.files && imageInput.files[0];
+      if (!file) {
+        previewEl.hidden = true;
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      previewImg.onload = () => {
+        URL.revokeObjectURL(url);
+        const info = [
+          file.name,
+          previewImg.naturalWidth + " × " + previewImg.naturalHeight + " px",
+          formatFileSize(file.size),
+          file.type || "未知格式"
+        ].join(" · ");
+        infoEl.textContent = info;
+        previewEl.hidden = false;
+      };
+      previewImg.onerror = () => {
+        URL.revokeObjectURL(url);
+        infoEl.textContent = file.name + " · 无法加载预览";
+        previewEl.hidden = false;
+      };
+      previewImg.src = url;
+    }
+
     let abortController = null;
 
     restorePersistedSettings();
     document.getElementById("outputMimeType").addEventListener("change", toggleCompressionQualityVisibility);
+    document.getElementById("sourceImage").addEventListener("change", updateSourcePreview);
     toggleCompressionQualityVisibility();
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -217,14 +273,12 @@ INDEX_HTML = """<!doctype html>
       }
 
       abortController = new AbortController();
-      submitBtn.textContent = "取消";
+      submitBtnText.textContent = "取消";
+      submitBtnSpinner.hidden = false;
 
       try {
         const imageBase64 = await fileToBase64(file);
         const payload = {
-          apiKey: document.getElementById("apiKey").value.trim(),
-          accessToken: document.getElementById("accessToken").value.trim(),
-          projectId: document.getElementById("projectId").value.trim(),
           region: document.getElementById("region").value.trim(),
           modelId: document.getElementById("modelId").value.trim(),
           prompt: document.getElementById("prompt").value.trim() || "Upscale the image",
@@ -263,7 +317,8 @@ INDEX_HTML = """<!doctype html>
           setStatus(error.message || "超分失败", true);
         }
       } finally {
-        submitBtn.textContent = "开始超分";
+        submitBtnText.textContent = "开始超分";
+        submitBtnSpinner.hidden = true;
         abortController = null;
       }
     });
@@ -356,6 +411,10 @@ class UpscalerHandler(BaseHTTPRequestHandler):
 
 
 def _convert_web_payload(payload: dict[str, Any]) -> VertexUpscaleRequest:
+    if not ENV_PROJECT_ID:
+        raise ValueError("请在 tools/upscaler/.env 中配置 GOOGLE_CLOUD_PROJECT_ID")
+    if not ENV_API_KEY:
+        raise ValueError("请在 tools/upscaler/.env 中配置 GOOGLE_CLOUD_VERTEX_AI_API_KEY")
     image_base64 = _get_required_text(payload, "imageBase64")
     try:
         image_bytes = base64.b64decode(image_base64, validate=True)
@@ -363,9 +422,9 @@ def _convert_web_payload(payload: dict[str, Any]) -> VertexUpscaleRequest:
         raise ValueError("imageBase64 不是合法 base64") from exc
 
     return VertexUpscaleRequest(
-        api_key=_get_optional_text(payload, "apiKey"),
-        access_token=_get_optional_text(payload, "accessToken"),
-        project_id=_get_required_text(payload, "projectId"),
+        api_key=ENV_API_KEY,
+        access_token=None,
+        project_id=ENV_PROJECT_ID,
         region=_get_optional_text(payload, "region") or DEFAULT_REGION,
         model_id=_get_optional_text(payload, "modelId") or DEFAULT_MODEL_ID,
         prompt=_get_optional_text(payload, "prompt") or DEFAULT_PROMPT,

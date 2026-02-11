@@ -4,28 +4,24 @@
 
 1. 命令行使用
 2. 本地 Web UI 使用
-3. 在 Web UI 设置 API Key
+3. 从 `tools/upscaler/.env` 读取 API Key 与 Project ID
 4. 默认使用 Vertex AI Imagen 4.0 Upscale（`imagen-4.0-upscale-preview`）
 5. 参考文档：<https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/imagen/4-0-upscale?hl=en>
+
+## 配置
+
+复制 `tools/upscaler/.env.example` 为 `tools/upscaler/.env`，填入 `GOOGLE_CLOUD_VERTEX_AI_API_KEY` 与 `GOOGLE_CLOUD_PROJECT_ID`。
 
 ## 启动 Web UI（本地）
 
 ```bash
-python3 -m tools.upscaler.main serve --host 127.0.0.1 --port 8787
+uv run -m tools.upscaler.main serve --host 127.0.0.1 --port 8787
 ```
 
 浏览器打开：<http://127.0.0.1:8787>
 
-在页面中填写：
+在页面中可调整 Region、Model ID、Upscale Factor 等。上传图片后点击开始超分即可。
 
-- `Google API Key`（可选，但通常需要）
-- `Access Token`（可选；有些 Vertex 场景可改用 Bearer Token）
-- `Project ID`（必填）
-- `Region`（默认 `us-central1`）
-- `Model ID`（默认 `imagen-4.0-upscale-preview`）
-- `Upscale Factor`（`x2` / `x3` / `x4`）
-
-上传图片后，点击“开始超分”即可。
 
 ## 纯命令行方式
 
