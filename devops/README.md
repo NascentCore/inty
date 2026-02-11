@@ -5,7 +5,7 @@
 - [prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
 - [dev push worker logs](https://cloudlogging.app.goo.gl/xhWv88U4bH7v7UNd9)
 - [prod inty backend logs](https://cloudlogging.app.goo.gl/9fr7rxgrwbas68En9)
-- [dev inty backend logs](https://cloudlogging.app.goo.gl/o8QRPguGe78soGUY9)
+- [dev inty backend logs](https://cloudlogging.app.goo.gl/aaPiWvxr7syuAFuX7)
 - [LangSmith IntelliMate-dev project](https://smith.langchain.com/o/1463b2d0-5d84-4f0c-b31e-0a158d823e01)
 - [LangSmith inty-backend-prod tracing project](https://smith.langchain.com/o/824a4bb5-ca84-4fa2-969e-7a50cd267999/projects/p/2808d56c-e07f-4293-8bec-1cc62d9f4975)
 
