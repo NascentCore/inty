@@ -219,7 +219,7 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="text_to_speech",
-        description="将指定文本转为语音并发送给用户。当用户要求用语音回复、朗读、或「用语音说」时，必须调用本工具。参数 text 必须是**仅要读出的台词**（例如「你好」或「Hello」），不要传入动作或舞台说明（如 (looks at you)、(smiles)）；仅用文字回复无法真正发出语音。",
+        description="将指定文本转为语音并发送给用户。当用户要求用语音回复、朗读、用语音说、或使用英文表达如 say X / say something / speak X / speak to me / I want to hear your voice / say it out loud 时，必须调用本工具。例如用户说 say \"how are you\" 或「用语音说你好」时，应调用本工具并传入要读出的台词，仅用文字回复无法真正发出语音。参数 text 必须是**仅要读出的台词**（例如「你好」或「Hello」），不要传入动作或舞台说明（如 (looks at you)、(smiles)）。",
         parameters={
             "type": "object",
             "properties": {"text": {"type": "string", "description": "要朗读的纯台词内容，仅限实际说出的文字，不要包含括号内的动作描述"}},
