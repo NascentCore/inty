@@ -484,17 +484,17 @@ def test_update_report_github_issue_success(
     github_issue_url = "https://github.com/example-org/example-repo/issues/123"
     update_resp = integration_client.client.put(
         f"{integration_client.base_url}/api/v1/report/{report.id}/github-issue",
-        json={"github_issues": github_issue_url},
+        json={"github_issue": github_issue_url},
     )
     assert update_resp.status_code == 200, update_resp.text
     update_data = update_resp.json()
     assert update_data["id"] == report.id
-    assert update_data["github_issues"] == github_issue_url
+    assert update_data["github_issue"] == github_issue_url
 
     db_session.expire_all()
     updated_report = db_session.query(Report).filter(Report.id == report.id).first()
     assert updated_report is not None
-    assert updated_report.github_issues == github_issue_url
+    assert updated_report.github_issue == github_issue_url
 
 
 def test_update_report_github_issue_invalid_url(
@@ -525,7 +525,7 @@ def test_update_report_github_issue_invalid_url(
 
     update_resp = integration_client.client.put(
         f"{integration_client.base_url}/api/v1/report/{report.id}/github-issue",
-        json={"github_issues": "https://example.com/not-github-issue"},
+        json={"github_issue": "https://example.com/not-github-issue"},
     )
     assert update_resp.status_code == 400, update_resp.text
     assert "Invalid GitHub issue URL format" in update_resp.text
@@ -533,4 +533,4 @@ def test_update_report_github_issue_invalid_url(
     db_session.expire_all()
     unchanged_report = db_session.query(Report).filter(Report.id == report.id).first()
     assert unchanged_report is not None
-    assert unchanged_report.github_issues is None
+    assert unchanged_report.github_issue is None

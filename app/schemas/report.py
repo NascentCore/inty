@@ -90,7 +90,7 @@ class ReportQuery(BaseModel):
 
 
 class ReportGithubIssueUpdate(BaseModel):
-    github_issues: Optional[str] = Field(
+    github_issue: Optional[str] = Field(
         None, description="GitHub issue URL associated with this report"
     )
 
@@ -104,7 +104,7 @@ class ReportOut(BaseModel):
     reason_codes: List[str]
     image_urls: List[str]
     description: Optional[str]
-    github_issues: Optional[str]
+    github_issue: Optional[str]
     status: str
     report_type: Optional[str]
     created_at: datetime

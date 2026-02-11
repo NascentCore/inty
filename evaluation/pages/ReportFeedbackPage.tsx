@@ -176,9 +176,9 @@ export const ReportFeedbackPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setGithubIssueDraft(selectedItem?.github_issues || "");
+    setGithubIssueDraft(selectedItem?.github_issue || "");
     setIsEditingGithubIssue(false);
-  }, [selectedItem?.id, selectedItem?.github_issues]);
+  }, [selectedItem?.id, selectedItem?.github_issue]);
 
   // 查看详情：打开弹窗并同步 URL hash，使当前地址即为该举报的永久链接
   const handleViewDetail = (record: ReportItem) => {
@@ -203,12 +203,12 @@ export const ReportFeedbackPage: React.FC = () => {
     if (!selectedItem) {
       return;
     }
-    setGithubIssueDraft(selectedItem.github_issues || "");
+    setGithubIssueDraft(selectedItem.github_issue || "");
     setIsEditingGithubIssue(true);
   };
 
   const handleCancelEditGithubIssue = () => {
-    setGithubIssueDraft(selectedItem?.github_issues || "");
+    setGithubIssueDraft(selectedItem?.github_issue || "");
     setIsEditingGithubIssue(false);
   };
 
@@ -216,10 +216,12 @@ export const ReportFeedbackPage: React.FC = () => {
     if (!selectedItem) {
       return;
     }
-    const normalizedGithubIssueUrl = normalizeGithubIssueUrlInput(
-      githubIssueDraft,
-    );
-    if (normalizedGithubIssueUrl && !isValidGithubIssueUrl(normalizedGithubIssueUrl)) {
+    const normalizedGithubIssueUrl =
+      normalizeGithubIssueUrlInput(githubIssueDraft);
+    if (
+      normalizedGithubIssueUrl &&
+      !isValidGithubIssueUrl(normalizedGithubIssueUrl)
+    ) {
       message.error("请输入有效的 GitHub issue 链接");
       return;
     }
@@ -234,7 +236,7 @@ export const ReportFeedbackPage: React.FC = () => {
       setData((prev) =>
         prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
       );
-      setGithubIssueDraft(updatedItem.github_issues || "");
+      setGithubIssueDraft(updatedItem.github_issue || "");
       setIsEditingGithubIssue(false);
       message.success("GitHub issue 链接已保存");
     } catch (error) {

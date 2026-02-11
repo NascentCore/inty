@@ -73,7 +73,7 @@ class Report(Base):
     )
     image_urls = Column(ARRAY(String), default=[], comment="举报图片URL列表")
     description = Column(Text, nullable=True, comment="举报描述")
-    github_issues = Column(
+    github_issue = Column(
         String(500), nullable=True, comment="关联的 GitHub issue URL"
     )
     status = Column(

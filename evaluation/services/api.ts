@@ -1325,7 +1325,7 @@ export const reportApi = {
     githubIssueUrl: string | null,
   ): Promise<import("../types").ReportItem> =>
     apiClient.put(`/report/${reportId}/github-issue`, {
-      github_issues: githubIssueUrl,
+      github_issue: githubIssueUrl,
     }),
 
   // 删除举报/反馈记录

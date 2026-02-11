@@ -208,11 +208,11 @@ async def get_report(db: AsyncSession, report_id: str) -> Report:
     return report
 
 
-def _normalize_github_issue_url(github_issues: Optional[str]) -> Optional[str]:
-    if github_issues is None:
+def _normalize_github_issue_url(github_issue: Optional[str]) -> Optional[str]:
+    if github_issue is None:
         return None
 
-    normalized_url = github_issues.strip()
+    normalized_url = github_issue.strip()
     if not normalized_url:
         return None
 
@@ -224,7 +224,7 @@ def _normalize_github_issue_url(github_issues: Optional[str]) -> Optional[str]:
 
 
 async def update_report_github_issue(
-    db: AsyncSession, report_id: str, github_issues: Optional[str]
+    db: AsyncSession, report_id: str, github_issue: Optional[str]
 ) -> Report:
     report = (
         await db.execute(select(Report).where(Report.id == report_id))
@@ -232,7 +232,7 @@ async def update_report_github_issue(
     if not report:
         raise ValueError("Report not found")
 
-    report.github_issues = _normalize_github_issue_url(github_issues)
+    report.github_issue = _normalize_github_issue_url(github_issue)
     await db.commit()
     return await get_report(db, report_id)
 

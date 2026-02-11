@@ -81,7 +81,7 @@ async def update_report_github_issue(
     """更新举报记录关联的 GitHub issue URL。"""
     try:
         report = await report_service.update_report_github_issue(
-            db, report_id, payload.github_issues
+            db, report_id, payload.github_issue
         )
     except ValueError as exc:
         error_message = str(exc)

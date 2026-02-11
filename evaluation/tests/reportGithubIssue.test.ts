@@ -25,8 +25,8 @@ describe("reportGithubIssue utils", () => {
     expect(isValidGithubIssueUrl("https://example.com/repo/issues/123")).toBe(
       false,
     );
-    expect(isValidGithubIssueUrl("https://github.com/example/repo/pull/123")).toBe(
-      false,
-    );
+    expect(
+      isValidGithubIssueUrl("https://github.com/example/repo/pull/123"),
+    ).toBe(false);
   });
 });
