@@ -837,7 +837,7 @@ fun SplashLoginUI(
                                 LogUtils.e("Google login failed: ${loginResult.message}")
                                 reportLoginFailure("backend_error", loginResult.message, null)
                                 com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
-                                    loginResult.message
+                                    "Network error, please try again later."
                                 )
                             }
                         }
