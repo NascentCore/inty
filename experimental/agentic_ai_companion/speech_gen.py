@@ -4,7 +4,12 @@
 from __future__ import annotations
 
 import logging
-import os
+from typing import TYPE_CHECKING
+
+from langsmith.run_helpers import traceable
+
+if TYPE_CHECKING:
+    from google.genai import Client
 
 TTS_MODEL = "gemini-2.5-flash-preview-tts"
 logger = logging.getLogger(__name__)
@@ -18,20 +23,27 @@ TTS_ROLEPLAY_INSTRUCTION = (
 )
 
 
+def _trace_output_pcm(data: bytes) -> dict:
+    """process_outputs：避免将原始 PCM 字节写入 trace，仅记录摘要。"""
+    return {"pcm_bytes": len(data), "status": "success"}
+
+
+# [tracing] LangSmith 中对应 role_play_minimal 的「text_to_speech」工具调用；输出摘要由 process_outputs 记录
+@traceable(
+    name="text_to_speech",
+    run_type="tool",
+    process_outputs=_trace_output_pcm,
+)
 def generate_speech_from_text(
     text: str,
+    client: "Client",
     voice_name: str = "Kore",
     model: str = TTS_MODEL,
 ) -> bytes:
     """
     将文本通过 Gemini TTS 转为单说话人语音，返回 PCM 字节（24kHz, 1ch, 16-bit）。
-    使用 GEMINI_API_KEY（.env），不在此模块内写 WAV 文件。
+    client 由调用方传入（通常为 LangSmith wrapped 的 genai.Client）。
     """
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key or not api_key.strip():
-        raise ValueError("GEMINI_API_KEY 未设置，请在 .env 中配置")
-
-    from google import genai
     from google.genai import types
 
     raw_text = (text or "").strip()
@@ -41,8 +53,6 @@ def generate_speech_from_text(
         raw_text = raw_text[:MAX_TEXT_LENGTH]
 
     contents = TTS_ROLEPLAY_INSTRUCTION + raw_text
-
-    client = genai.Client(api_key=api_key)
     config = types.GenerateContentConfig(
         response_modalities=["AUDIO"],
         speech_config=types.SpeechConfig(

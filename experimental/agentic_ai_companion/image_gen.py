@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
-import os
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+from langsmith.run_helpers import traceable
+
+if TYPE_CHECKING:
+    from google.genai import Client
 
 IMAGEN_4_FAST_MODEL = "imagen-4.0-fast-generate-001"
 RECENT_MESSAGES_LIMIT = 10
@@ -25,23 +29,29 @@ def _prompt_from_messages(messages: list[dict[str, Any]]) -> str:
     return "A scene inspired by the conversation."
 
 
+def _trace_output_image(data: bytes) -> dict:
+    """process_outputs：避免将原始图片字节写入 trace，仅记录摘要。"""
+    return {"image_bytes": len(data), "status": "success"}
+
+
+# [tracing] LangSmith 中对应 role_play_minimal 的「generate_image」工具调用；输出摘要由 process_outputs 记录
+@traceable(
+    name="generate_image",
+    run_type="tool",
+    process_outputs=_trace_output_image,
+)
 def generate_image_from_messages(
     messages: list[dict[str, Any]],
+    client: "Client",
     model: str = IMAGEN_4_FAST_MODEL,
 ) -> bytes:
     """
     根据当前 session 的若干条消息推导出 Imagen prompt，调用 Gemini API Imagen 生成一张图并返回图片字节。
-    使用 GEMINI_API_KEY（.env），不依赖 GCP/Vertex/GCS。
+    client 由调用方传入（通常为 LangSmith wrapped 的 genai.Client）。
     """
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key or not api_key.strip():
-        raise ValueError("GEMINI_API_KEY 未设置，请在 .env 中配置")
-
-    from google import genai
     from google.genai import types
 
     prompt = _prompt_from_messages(messages)
-    client = genai.Client(api_key=api_key)
     config = types.GenerateImagesConfig(
         number_of_images=1,
         aspect_ratio="1:1",
