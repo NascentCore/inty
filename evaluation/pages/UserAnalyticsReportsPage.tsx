@@ -40,7 +40,10 @@ import type {
   UserAnalyticsReportCharts,
 } from "../types";
 import {
-  DAILY_USAGE_METRICS,
+  DAILY_USAGE_CHART_METRICS,
+  DAILY_USAGE_HAS_SECONDARY_AXIS,
+  DAILY_USAGE_SECONDARY_AXIS_COLOR,
+  DAILY_USAGE_SECONDARY_AXIS_TITLE,
   buildDailyUsageSeries,
   buildRollingDailyUsageSeries,
   buildDailyUsageTickText,
@@ -73,7 +76,6 @@ const USAGE_CHART_HEIGHT = 360;
 const USAGE_MARKER_SIZE = 6;
 const REPORTS_LIMIT = 30;
 const DAILY_LATEST_LIMIT = 1;
-const CHAT_INITIATORS_COLOR = "#ff4d4f";
 
 function computeRoundsDistributionBySession(
   conversationRounds: UserAnalyticsReportCharts["conversation_rounds"],
@@ -767,7 +769,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     if (!usageSeries) {
       return [];
     }
-    const usageMetricTraces = DAILY_USAGE_METRICS.map((metric) => ({
+    return DAILY_USAGE_CHART_METRICS.map((metric) => ({
       x: usageSeries.dates,
       y: usageSeries.valuesByMetric[metric.key],
       name: metric.label,
@@ -775,18 +777,8 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       mode: "lines+markers",
       marker: { size: USAGE_MARKER_SIZE, color: metric.color },
       line: { color: metric.color },
+      ...(metric.axis === "y2" ? { yaxis: "y2" } : {}),
     }));
-    const chatInitiatorsTrace = {
-      x: usageSeries.dates,
-      y: usageSeries.chatInitiators,
-      name: "发起聊天的人数",
-      type: "scatter",
-      mode: "lines+markers",
-      marker: { size: USAGE_MARKER_SIZE, color: CHAT_INITIATORS_COLOR },
-      line: { color: CHAT_INITIATORS_COLOR },
-      yaxis: "y2",
-    };
-    return [...usageMetricTraces, chatInitiatorsTrace];
   }, [usageSeries]);
   const dailyUsageXAxisTickText = useMemo(() => {
     if (!usageSeries) {
@@ -845,19 +837,23 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                   ticktext: dailyUsageXAxisTickText,
                 },
                 yaxis: { title: "用量" },
-                  yaxis2: {
-                    title: {
-                      text: "发起聊天的人数",
-                      font: { color: CHAT_INITIATORS_COLOR },
-                    },
-                    tickfont: { color: CHAT_INITIATORS_COLOR },
-                    side: "right",
-                    overlaying: "y",
-                    rangemode: "tozero",
-                    showgrid: false,
-                    zeroline: false,
-                  },
-                  margin: { r: 80 },
+                ...(DAILY_USAGE_HAS_SECONDARY_AXIS
+                  ? {
+                      yaxis2: {
+                        title: {
+                          text: DAILY_USAGE_SECONDARY_AXIS_TITLE,
+                          font: { color: DAILY_USAGE_SECONDARY_AXIS_COLOR },
+                        },
+                        tickfont: { color: DAILY_USAGE_SECONDARY_AXIS_COLOR },
+                        side: "right",
+                        overlaying: "y",
+                        rangemode: "tozero",
+                        showgrid: false,
+                        zeroline: false,
+                      },
+                      margin: { r: 80 },
+                    }
+                  : {}),
                 legend: { orientation: "h" },
               }}
               style={{ width: "100%", height: "100%" }}

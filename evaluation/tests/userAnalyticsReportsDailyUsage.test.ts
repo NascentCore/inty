@@ -95,7 +95,7 @@ describe("buildDailyUsageSeries", () => {
     ]);
     expect(series?.valuesByMetric.total_live_chat_sessions).toEqual([1, 2]);
     expect(series?.valuesByMetric.total_voice_requests).toEqual([0, 1]);
-    expect(series?.chatInitiators).toEqual([3, 5]);
+    expect(series?.valuesByMetric.total_chat_initiators).toEqual([3, 5]);
   });
 
   it("没有日报数据时返回空值", () => {
@@ -137,7 +137,9 @@ describe("buildRollingDailyUsageSeries", () => {
     expect(series?.valuesByMetric.total_voice_requests).toEqual([
       4, 12, 24, 40, 60, 84, 112, 140,
     ]);
-    expect(series?.chatInitiators).toEqual([5, 15, 30, 50, 75, 105, 140, 175]);
+    expect(series?.valuesByMetric.total_chat_initiators).toEqual([
+      5, 15, 30, 50, 75, 105, 140, 175,
+    ]);
     expect(series?.dates[series.dates.length - 1]).toBe("2026-02-08");
     expect(WEEKLY_USAGE_ROLLING_WINDOW_DAYS).toBe(7);
   });
@@ -171,7 +173,7 @@ describe("buildRollingDailyUsageSeries", () => {
 
     expect(series?.dates).toEqual(["2026-02-01", "2026-02-02", "2026-02-03"]);
     expect(series?.valuesByMetric.total_user_messages).toEqual([10, 30, 50]);
-    expect(series?.chatInitiators).toEqual([2, 6, 10]);
+    expect(series?.valuesByMetric.total_chat_initiators).toEqual([2, 6, 10]);
   });
 
   it("没有日报数据时返回空值", () => {

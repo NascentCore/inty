@@ -6,20 +6,59 @@ import type {
   UserAnalyticsStatsResponse,
 } from "../types";
 
-export const DAILY_USAGE_METRICS = [
-  { key: "total_user_messages", label: "消息数", color: "#1677ff" },
+type DailyUsageAxis = "y" | "y2";
+
+export const DAILY_USAGE_CHART_METRICS = [
+  {
+    key: "total_user_messages",
+    label: "消息数",
+    color: "#1677ff",
+    axis: "y",
+  },
   {
     key: "total_image_generation_requests",
     label: "生图请求数",
     color: "#52c41a",
+    axis: "y",
   },
-  { key: "total_live_chat_sessions", label: "语音通话次数", color: "#faad14" },
-  { key: "total_voice_requests", label: "语音播报次数", color: "#722ed1" },
+  {
+    key: "total_live_chat_sessions",
+    label: "语音通话次数",
+    color: "#faad14",
+    axis: "y",
+  },
+  {
+    key: "total_voice_requests",
+    label: "语音播报次数",
+    color: "#722ed1",
+    axis: "y",
+  },
+  {
+    key: "total_chat_initiators",
+    label: "发起聊天的人数",
+    color: "#ff4d4f",
+    axis: "y2",
+  },
 ] as const satisfies ReadonlyArray<{
   key: keyof UserAnalyticsStatsResponse;
   label: string;
   color: string;
+  axis: DailyUsageAxis;
 }>;
+
+export const DAILY_USAGE_METRICS = DAILY_USAGE_CHART_METRICS.filter(
+  (metric) => metric.axis === "y",
+);
+export const DAILY_USAGE_HAS_SECONDARY_AXIS = DAILY_USAGE_CHART_METRICS.some(
+  (metric) => metric.axis === "y2",
+);
+export const DAILY_USAGE_SECONDARY_AXIS_TITLE = DAILY_USAGE_CHART_METRICS
+  .filter((metric) => metric.axis === "y2")
+  .map((metric) => metric.label)
+  .join(" / ");
+export const DAILY_USAGE_SECONDARY_AXIS_COLOR =
+  DAILY_USAGE_CHART_METRICS.find((metric) => metric.axis === "y2")?.color ??
+  "#ff4d4f";
 
 const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 const WEEKDAY_LABELS = [
@@ -52,12 +91,12 @@ const toValidUtcDate = (
   return dateValue;
 };
 
-export type DailyUsageMetricKey = (typeof DAILY_USAGE_METRICS)[number]["key"];
+export type DailyUsageMetricKey =
+  (typeof DAILY_USAGE_CHART_METRICS)[number]["key"];
 
 export interface DailyUsageSeries {
   dates: string[];
   valuesByMetric: Record<DailyUsageMetricKey, number[]>;
-  chatInitiators: number[];
 }
 
 export const WEEKLY_USAGE_ROLLING_WINDOW_DAYS = 7;
@@ -91,6 +130,21 @@ const buildRollingSums = (values: number[], windowDays: number): number[] => {
   return rollingSums;
 };
 
+const buildMetricValuesByMetricKey = (
+  dailyReports: UserAnalyticsReportItem[],
+  mapValues: (dailyValues: number[]) => number[],
+): Record<DailyUsageMetricKey, number[]> =>
+  DAILY_USAGE_CHART_METRICS.reduce(
+    (acc, metric) => {
+      const dailyValues = dailyReports.map((report) =>
+        toStatsMetricValue(report, metric.key),
+      );
+      acc[metric.key] = mapValues(dailyValues);
+      return acc;
+    },
+    {} as Record<DailyUsageMetricKey, number[]>,
+  );
+
 export const buildDailyUsageSeries = (
   reports: UserAnalyticsReportItem[],
 ): DailyUsageSeries | null => {
@@ -101,20 +155,12 @@ export const buildDailyUsageSeries = (
   }
 
   const dates = dailyReports.map((report) => report.report_date);
-  const valuesByMetric = DAILY_USAGE_METRICS.reduce(
-    (acc, metric) => {
-      acc[metric.key] = dailyReports.map((report) =>
-        toStatsMetricValue(report, metric.key),
-      );
-      return acc;
-    },
-    {} as Record<DailyUsageMetricKey, number[]>,
-  );
-  const chatInitiators = dailyReports.map((report) =>
-    toStatsMetricValue(report, "total_chat_initiators"),
+  const valuesByMetric = buildMetricValuesByMetricKey(
+    dailyReports,
+    (dailyValues) => dailyValues,
   );
 
-  return { dates, valuesByMetric, chatInitiators };
+  return { dates, valuesByMetric };
 };
 
 export const buildRollingDailyUsageSeries = (
@@ -128,25 +174,11 @@ export const buildRollingDailyUsageSeries = (
 
   const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
   const dates = dailyReports.map((report) => report.report_date);
-  const valuesByMetric = DAILY_USAGE_METRICS.reduce(
-    (acc, metric) => {
-      const dailyValues = dailyReports.map((report) =>
-        toStatsMetricValue(report, metric.key),
-      );
-      acc[metric.key] = buildRollingSums(dailyValues, normalizedWindowDays);
-      return acc;
-    },
-    {} as Record<DailyUsageMetricKey, number[]>,
-  );
-  const dailyChatInitiators = dailyReports.map((report) =>
-    toStatsMetricValue(report, "total_chat_initiators"),
-  );
-  const chatInitiators = buildRollingSums(
-    dailyChatInitiators,
-    normalizedWindowDays,
+  const valuesByMetric = buildMetricValuesByMetricKey(dailyReports, (values) =>
+    buildRollingSums(values, normalizedWindowDays),
   );
 
-  return { dates, valuesByMetric, chatInitiators };
+  return { dates, valuesByMetric };
 };
 
 const formatDateWithWeekday = (date: string): string => {
