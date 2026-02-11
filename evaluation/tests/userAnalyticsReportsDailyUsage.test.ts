@@ -60,6 +60,7 @@ describe("buildDailyUsageSeries", () => {
         id: "r2",
         report_date: "2026-02-02",
         stats: buildStats({
+          total_chat_initiators: 5,
           total_user_messages: 20,
           total_image_generation_requests: 4,
           total_live_chat_sessions: 2,
@@ -70,6 +71,7 @@ describe("buildDailyUsageSeries", () => {
         id: "r1",
         report_date: "2026-02-01",
         stats: buildStats({
+          total_chat_initiators: 3,
           total_user_messages: 10,
           total_image_generation_requests: 2,
           total_live_chat_sessions: 1,
@@ -93,6 +95,7 @@ describe("buildDailyUsageSeries", () => {
     ]);
     expect(series?.valuesByMetric.total_live_chat_sessions).toEqual([1, 2]);
     expect(series?.valuesByMetric.total_voice_requests).toEqual([0, 1]);
+    expect(series?.valuesByMetric.total_chat_initiators).toEqual([3, 5]);
   });
 
   it("没有日报数据时返回空值", () => {
@@ -117,6 +120,7 @@ describe("buildRollingDailyUsageSeries", () => {
         id: `r${value}`,
         report_date: `2026-02-${day}`,
         stats: buildStats({
+          total_chat_initiators: value * 5,
           total_user_messages: value,
           total_image_generation_requests: value * 2,
           total_live_chat_sessions: value * 3,
@@ -133,6 +137,9 @@ describe("buildRollingDailyUsageSeries", () => {
     expect(series?.valuesByMetric.total_voice_requests).toEqual([
       4, 12, 24, 40, 60, 84, 112, 140,
     ]);
+    expect(series?.valuesByMetric.total_chat_initiators).toEqual([
+      5, 15, 30, 50, 75, 105, 140, 175,
+    ]);
     expect(series?.dates[series.dates.length - 1]).toBe("2026-02-08");
     expect(WEEKLY_USAGE_ROLLING_WINDOW_DAYS).toBe(7);
   });
@@ -142,17 +149,17 @@ describe("buildRollingDailyUsageSeries", () => {
       buildReport({
         id: "d1",
         report_date: "2026-02-01",
-        stats: buildStats({ total_user_messages: 10 }),
+        stats: buildStats({ total_user_messages: 10, total_chat_initiators: 2 }),
       }),
       buildReport({
         id: "d2",
         report_date: "2026-02-02",
-        stats: buildStats({ total_user_messages: 20 }),
+        stats: buildStats({ total_user_messages: 20, total_chat_initiators: 4 }),
       }),
       buildReport({
         id: "d3",
         report_date: "2026-02-03",
-        stats: buildStats({ total_user_messages: 30 }),
+        stats: buildStats({ total_user_messages: 30, total_chat_initiators: 6 }),
       }),
       buildReport({
         id: "w1",
@@ -166,6 +173,7 @@ describe("buildRollingDailyUsageSeries", () => {
 
     expect(series?.dates).toEqual(["2026-02-01", "2026-02-02", "2026-02-03"]);
     expect(series?.valuesByMetric.total_user_messages).toEqual([10, 30, 50]);
+    expect(series?.valuesByMetric.total_chat_initiators).toEqual([2, 6, 10]);
   });
 
   it("没有日报数据时返回空值", () => {
