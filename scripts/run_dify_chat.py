@@ -109,9 +109,9 @@ def generate_characters(
     if len(existing_names) > 100:
         excluded_names_text += f" (and {len(existing_names) - 100} more)"
 
-    prompt = f"""Generate 10 diverse character profiles for a chat companion app. All character must be female and 
+    prompt = f"""Generate 10 diverse character profiles for an AI companion app. All character must be female and 
 Each character should have:
-- name: A unique first name
+- name: A unique first name and a unique last name, name should match the cultural background of the character, like a Franch person should have a Franch name etc.
 - description: A sentence description that includes:
   1. How the user encounters her (a specific, direct, romantic or conflict-ridden scenario based on real American life)
   2. This description should immediately motivate users to choose this character.
