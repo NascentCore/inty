@@ -39,7 +39,7 @@ def _resolve_output_path(
     return input_path.with_name(f"{input_path.stem}_upscaled{suffix}")
 
 
-@app.default
+@app.command
 def serve(host: str = DEFAULT_WEB_HOST, port: int = DEFAULT_WEB_PORT) -> None:
     """启动本地 Web UI。"""
 
