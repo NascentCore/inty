@@ -145,6 +145,7 @@ class AppConfig:
     backend_cors_origins: List[AnyHttpUrl] = None
     version: str = "1.1.0"
     environment: Environment = Environment.DEV
+    # 所有 Google 服务（GCP 及其他）都使用该身份信息来访问：GCS、Vertex AI
     gcp_service_account_key: str = ".secrets/gcp-service-account-key.json"
     api_v1_prefix: str = "/api/v1"
     # 仅当请求头 appVersionCode >= 此值时返回记忆提醒（消息列表 festival_memory_prompt、角色详情 festival_memories）；小于此值按旧版不返回。0 表示不按版本限制。
