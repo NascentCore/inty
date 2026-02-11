@@ -29,7 +29,7 @@
 - **范围**：暂不接入 Android，仅验证“从被动到主动”的逻辑转移。
 - **目标**：识别“状态切换 + 主动时机”的未知点与不确定性。
 
-- **工具**：当前支持 `send_app_icon`、`send_zun_long_photo`、`generate_image`。`generate_image` 根据**当前对话上下文**（最近 10 条消息）生成图片，调用 Imagen 4 Fast（Gemini API，$0.02/张）；需在 `.env` 中配置 `GEMINI_API_KEY`。REPL 中打印图片的绝对路径，用户可在终端中点击路径自行打开查看。
+- **工具**：当前支持 `send_app_icon`、`send_zun_long_photo`、`generate_image`、`text_to_speech`。`generate_image` 根据**当前对话上下文**（最近 10 条消息）生成图片，调用 Imagen 4 Fast（Gemini API）；`text_to_speech` 将 LLM 返回的文本转为语音（Gemini TTS），生成 WAV 文件。二者均需在 `.env` 中配置 `GEMINI_API_KEY`。REPL 中打印图片或语音的绝对路径，用户可在终端中点击路径自行打开查看或播放。
 
 ## 快速开始
 

@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import wave
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any, Callable
@@ -167,6 +168,33 @@ def execute_generate_image(
     return ("已根据对话上下文生成图片。", path_str)
 
 
+WAV_SAMPLE_RATE = 24000
+WAV_CHANNELS = 1
+WAV_SAMPLE_WIDTH = 2
+
+
+def execute_text_to_speech(text: str, **kwargs: Any) -> tuple[str, str | None]:
+    """将文本转为语音并写入 WAV 文件，返回 (结果文案, 可点击绝对路径或 None)。"""
+    from .speech_gen import generate_speech_from_text
+
+    if not (text or "").strip():
+        return ("要朗读的文本不能为空。", None)
+    try:
+        pcm = generate_speech_from_text(text.strip())
+    except Exception as e:
+        logger.warning("text_to_speech 失败: %s", e)
+        return (f"生成失败：{e}", None)
+    out_path = _THIS_DIR / f"generated_speech_{int(time.time() * 1000)}.wav"
+    with wave.open(str(out_path), "wb") as wf:
+        wf.setnchannels(WAV_CHANNELS)
+        wf.setsampwidth(WAV_SAMPLE_WIDTH)
+        wf.setframerate(WAV_SAMPLE_RATE)
+        wf.writeframes(pcm)
+    path_str = str(out_path.resolve())
+    logger.info("text_to_speech 成功，已写入: %s", path_str)
+    return ("已生成语音。", path_str)
+
+
 TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="send_app_icon",
@@ -184,10 +212,22 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="generate_image",
-        description="根据当前对话上下文生成一张图片。当用户希望根据当前对话内容生成图片时调用此工具；调用时无需参数，系统会使用当前聊天 session 中最近的 10 条消息作为上下文生成图片；仅用文字回复无法真正发出图片。",
+        description="根据当前对话上下文生成一张图片。仅在用户已说明想要什么图（主题、风格、场景等）时才调用本工具；调用时无需参数，系统会使用当前聊天 session 中最近的 10 条消息作为上下文生成图片。若用户只说「生成一张图」「画一张图」「generate a new image」等而无具体描述，不要先调用本工具，应先简短追问用户想要什么（如主题、风格、氛围），待用户补充后再调用；仅用文字回复无法真正发出图片。",
         parameters={"type": "object", "properties": {}, "additionalProperties": False},
         # type=ToolType.TERMINAL,
         executor=execute_generate_image,
+    ),
+    ToolDefinition(
+        name="text_to_speech",
+        description="将指定文本转为语音并发送给用户。当用户要求用语音回复、朗读、或「用语音说」时，必须调用本工具并传入要朗读的文本；仅用文字回复无法真正发出语音。",
+        parameters={
+            "type": "object",
+            "properties": {"text": {"type": "string", "description": "要朗读的文本内容"}},
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+        type=ToolType.TERMINAL,
+        executor=execute_text_to_speech,
     ),
 ]
 
@@ -326,14 +366,16 @@ def run_repl(
             has_tool_calls = bool(getattr(msg, "tool_calls", None))
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tool_calls)
 
-            # 2.1 无工具调用 → 直接返回
+            # 2.1 无工具调用 → 直接返回（此前若有非 TERMINAL 工具如 generate_image 已设置 pending_image_path，一并展示）
             if not has_tool_calls:
                 raw = getattr(msg, "content", None)
                 content = (raw if isinstance(raw, str) else "").strip()
                 messages.append({"role": "assistant", "content": content})
                 display = content or EMPTY_RESPONSE
-                logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=False", turn, len(content))
+                logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(content), pending_image_path is not None)
                 print(f"{char_name}> {display}\n")
+                if pending_image_path is not None:
+                    print(f"{char_name}> {pending_image_path}\n")
                 break
 
             # 2.2 有工具调用 → 按是否 TERMINAL 分叉
