@@ -1,5 +1,12 @@
 # DevOps 日常操作
 
+## 手动操作 alembic versions
+
+- 找到对应环境的 docker image
+- `docker run -it <docker-image> bash`
+- `export PYTHONPATH=.`
+- 使用 `alembic -c alembic/alembic.ini ...` 命令行来操作
+
 ## 重启后端服务器
 
 1. 重启 GCE VM
