@@ -116,6 +116,33 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def get_chat_agent_info(
+        self, chat_ids: List[str]
+    ) -> List[Dict[str, Any]]:
+        """按 chat_id 批量查询 chat 对应的 user_id、agent_name，用于热门角色等仅需有活动 chat 的场景。"""
+        if not chat_ids:
+            return []
+        out: List[Dict[str, Any]] = []
+        for batch in _batch_list(chat_ids, self._batch_size):
+            placeholders = ",".join([f":chat_id_{i}" for i in range(len(batch))])
+            query = text(f"""
+                SELECT c.id as chat_id, c.user_id, a.name as agent_name
+                FROM chats c
+                INNER JOIN agents a ON c.agent_id = a.id AND a.deleted_at IS NULL
+                WHERE c.id::text IN ({placeholders}) AND c.is_active = true
+            """)
+            params = {f"chat_id_{i}": cid for i, cid in enumerate(batch)}
+            result = await self.db.execute(query, params)
+            for row in result.fetchall():
+                out.append(
+                    {
+                        "chat_id": row[0],
+                        "user_id": row[1],
+                        "agent_name": row[2],
+                    }
+                )
+        return out
+
     async def get_active_session_ids_on_date(
         self,
         activity_start_date: datetime,
@@ -434,12 +461,13 @@ class UserAnalyticsService:
         limit: int = 20,
         active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
-        """获取热门角色排行（Top N）"""
+        """获取热门角色排行（Top N）
+
+        当传入 active_session_ids 时，仅基于有活动的 chat 查询 (user_id, agent_name)，
+        避免全量 get_user_chat_activity 在副本上超时。
+        """
         from collections import defaultdict
 
-        activity_data = await self.get_user_chat_activity(
-            register_start_date, register_end_date
-        )
         rounds_data = await self.get_conversation_rounds(
             register_start_date,
             register_end_date,
@@ -451,6 +479,14 @@ class UserAnalyticsService:
             item["chat_id"]: item["message_count_excluding_opening"]
             for item in rounds_data
         }
+
+        if active_session_ids is not None:
+            chat_ids = list(dict.fromkeys([r["chat_id"] for r in rounds_data]))
+            activity_data = await self.get_chat_agent_info(chat_ids)
+        else:
+            activity_data = await self.get_user_chat_activity(
+                register_start_date, register_end_date
+            )
 
         agent_stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
