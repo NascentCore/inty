@@ -26,7 +26,9 @@ Requirements:
 - Return only the sentence with no prefix.
 """
 
-    def enqueue_selfie_persona_inference(self, user_id: str, user_photo_url: str) -> None:
+    def enqueue_selfie_persona_inference(
+        self, user_id: str, user_photo_url: str
+    ) -> None:
         if not self._is_feature_enabled():
             return
         if not user_photo_url:
@@ -97,9 +99,7 @@ Requirements:
         cache_service.invalidate_user_info(user_id)
         logger.debug("Selfie persona summary updated: user_id={}", user_id)
 
-    async def _infer_selfie_persona_summary(
-        self, user_photo_url: str
-    ) -> Optional[str]:
+    async def _infer_selfie_persona_summary(self, user_photo_url: str) -> Optional[str]:
         image_uri = self._normalize_image_uri(user_photo_url)
         if not image_uri:
             return None
@@ -136,7 +136,9 @@ Requirements:
 
     @staticmethod
     def _normalize_image_uri(user_photo_url: str) -> str:
-        if user_photo_url.startswith("http://") or user_photo_url.startswith("https://"):
+        if user_photo_url.startswith("http://") or user_photo_url.startswith(
+            "https://"
+        ):
             return user_photo_url
         if user_photo_url.startswith("gs://"):
             return user_photo_url.replace("gs://", "https://storage.googleapis.com/", 1)

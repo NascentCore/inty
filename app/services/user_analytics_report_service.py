@@ -107,18 +107,27 @@ async def _read_daily_report_from_replica(
         )
         new_users = await service.get_new_users(reg_start, reg_end)
         conversation_rounds = await service.get_conversation_rounds(
-            reg_start, reg_end, act_start, act_end,
+            reg_start,
+            reg_end,
+            act_start,
+            act_end,
             active_session_ids=active_session_ids,
         )
         user_rounds_distribution = await service.get_user_rounds_distribution(
-            reg_start, reg_end, act_start, act_end,
+            reg_start,
+            reg_end,
+            act_start,
+            act_end,
             active_session_ids=active_session_ids,
         )
         users_hitting_limit = await service.get_users_hitting_chat_limit(
             act_start, act_end
         )
         popular_agents = await service.get_popular_agents(
-            reg_start, reg_end, act_start, act_end,
+            reg_start,
+            reg_end,
+            act_start,
+            act_end,
             limit=20,
             active_session_ids=active_session_ids,
         )
@@ -193,18 +202,27 @@ async def compute_and_save_daily_report(
         )
         new_users = await service.get_new_users(reg_start, reg_end)
         conversation_rounds = await service.get_conversation_rounds(
-            reg_start, reg_end, act_start, act_end,
+            reg_start,
+            reg_end,
+            act_start,
+            act_end,
             active_session_ids=active_session_ids,
         )
         user_rounds_distribution = await service.get_user_rounds_distribution(
-            reg_start, reg_end, act_start, act_end,
+            reg_start,
+            reg_end,
+            act_start,
+            act_end,
             active_session_ids=active_session_ids,
         )
         users_hitting_limit = await service.get_users_hitting_chat_limit(
             act_start, act_end
         )
         popular_agents = await service.get_popular_agents(
-            reg_start, reg_end, act_start, act_end,
+            reg_start,
+            reg_end,
+            act_start,
+            act_end,
             limit=20,
             active_session_ids=active_session_ids,
         )

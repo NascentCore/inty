@@ -181,11 +181,7 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         cache_service.invalidate_user_info(user_id)
         logger.debug(f"已清除用户 {user_id} 的缓存信息")
 
-        if (
-            selfie_persona_feature_enabled
-            and user_photo_changed
-            and user.user_photo
-        ):
+        if selfie_persona_feature_enabled and user_photo_changed and user.user_photo:
             from app.services.selfie_persona_service import selfie_persona_service
 
             selfie_persona_service.enqueue_selfie_persona_inference(
@@ -247,10 +243,7 @@ async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
                     parts.append(f"Age: {user.age_group}")
                 if user.description:
                     parts.append(f"Description: {user.description}")
-                if (
-                    selfie_persona_feature_enabled
-                    and user.selfie_persona_summary
-                ):
+                if selfie_persona_feature_enabled and user.selfie_persona_summary:
                     parts.append(f"Selfie Persona: {user.selfie_persona_summary}")
                 user_info_text = (
                     "##User Information\n" + "\n".join(parts) if parts else ""

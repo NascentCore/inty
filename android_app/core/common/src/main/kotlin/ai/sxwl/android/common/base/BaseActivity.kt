@@ -2,10 +2,8 @@ package ai.sxwl.android.common.base
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.design.theme.IntelliMateTheme
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable

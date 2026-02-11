@@ -359,7 +359,9 @@ class UserAnalyticsReportConfig:
     daily_cron_hour: int = 6  # UTC 小时，每日执行，统计 T-1 日
     weekly_cron_hour: int = 6  # UTC 小时，每周一执行，统计上一周
     statement_timeout_sec: int = 600  # 单条 SQL 超时秒数，生产大数据量时需调大
-    batch_size: int = 500  # 分批查询 session/chat 时每批数量，减小可降低 standby conflict with recovery
+    batch_size: int = (
+        500  # 分批查询 session/chat 时每批数量，减小可降低 standby conflict with recovery
+    )
 
 
 @dataclass

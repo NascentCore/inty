@@ -174,9 +174,9 @@ internal fun ProfilePage(
                         // Trigger 3 items before end
                         if (
                             lastVisibleItem != null &&
-                            lastVisibleItem.index >= totalItems - 3 &&
-                            !isLoading &&
-                            agents.isNotEmpty()
+                                lastVisibleItem.index >= totalItems - 3 &&
+                                !isLoading &&
+                                agents.isNotEmpty()
                         ) {
                             onLoadMore()
                         }
@@ -185,16 +185,14 @@ internal fun ProfilePage(
 
             LazyVerticalGrid(
                 state = listState,
-                modifier =
-                    Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
+                modifier = Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
                 columns = GridCells.Fixed(2),
-                contentPadding =
-                    PaddingValues(bottom = UiConfigs.MePage.GridContentBottomPadding),
+                contentPadding = PaddingValues(bottom = UiConfigs.MePage.GridContentBottomPadding),
                 horizontalArrangement =
                     Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
                 verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
             ) {
-                item("header", span = {GridItemSpan(2)}) {
+                item("header", span = { GridItemSpan(2) }) {
                     // Header 区域 - 固定显示（不随列表滚动折叠）
                     ProfileHeader(
                         navController,
@@ -209,7 +207,7 @@ internal fun ProfilePage(
 
                 // LazyGrid 区域
                 if (validDrafts.isEmpty() && agents.isEmpty()) {
-                    item(span = {GridItemSpan(2)}) {
+                    item(span = { GridItemSpan(2) }) {
                         AgentsEmptyUI(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { navController.navigate(Routes.Creat.createRole("")) },
@@ -222,8 +220,7 @@ internal fun ProfilePage(
                     validDrafts.forEach { draft ->
                         item(key = "draft_${draft.id}") {
                             DraftAgentCard(
-                                modifier =
-                                    Modifier.noRippleClickable { onClickDraft(draft.id) },
+                                modifier = Modifier.noRippleClickable { onClickDraft(draft.id) },
                                 draft = draft,
                                 onDeleteDraft = onDeleteDraft,
                             )
@@ -232,14 +229,12 @@ internal fun ProfilePage(
                 }
 
                 if (agents.isNotEmpty()) {
-                    itemsIndexed(
-                        items = agents,
-                        key = { index, agent -> "${agent.id}_$index" },
-                    ) { index, agent ->
+                    itemsIndexed(items = agents, key = { index, agent -> "${agent.id}_$index" }) {
+                        index,
+                        agent ->
                         MyAgentCard(
                             navController,
-                            modifier =
-                                Modifier.noRippleClickable { onClickAgent(agent) },
+                            modifier = Modifier.noRippleClickable { onClickAgent(agent) },
                             agentInfo = agent,
                             onEditAgent = onEditAgent,
                             onDeleteAgent = onDeleteAgent,
@@ -535,15 +530,12 @@ private fun ProfileHeader(
                 if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
                 lastDailyRewardsClickTime = currentTime
                 navController.navigate(Routes.Me.CheckIn)
-            },
+            }
         )
 
         if (appUpdateTips) {
             Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
-            NewVersionBanner(
-                modifier =
-                    Modifier.fillMaxWidth()
-            )
+            NewVersionBanner(modifier = Modifier.fillMaxWidth())
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
