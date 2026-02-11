@@ -15,7 +15,6 @@ def _handle_api_response(
     msg,
     char_name: str,
     turn: int,
-    pending_image_path: str | None,
     tool_types: dict,
     tool_context_types: dict,
     process_response_with_tools,
@@ -32,11 +31,9 @@ def _handle_api_response(
         content = (raw if isinstance(raw, str) else "").strip()
         messages.append({"role": "assistant", "content": content})
         display = content or EMPTY_RESPONSE
-        logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(content), pending_image_path is not None)
+        logger.info("第 %d 轮对话结束，assistant content 长度=%d", turn, len(content))
         print(f"{char_name}> {display}\n")
-        if pending_image_path is not None:
-            print(f"{char_name}> {pending_image_path}\n")
-        return True, messages, pending_image_path
+        return True, messages, None
 
     from .tools import ToolType
     tool_name = msg.tool_calls[0].function.name
@@ -53,7 +50,7 @@ def _handle_api_response(
             _logger=logger,
         )
         messages = out.messages
-        new_pending = out.image_path if out.image_path is not None else pending_image_path
+        new_pending = out.image_path
         if messages[-1]["role"] == "user":
             messages.append({"role": "assistant", "content": out.content})
         # 第 1 块：assistant 文字
@@ -81,7 +78,7 @@ def _handle_api_response(
         _logger=logger,
     )
     messages = out.messages
-    new_pending = out.image_path if out.image_path is not None else pending_image_path
+    new_pending = out.image_path
     logger.debug("继续本轮 API 请求，messages 已追加 assistant + tool")
     return False, messages, new_pending
 
@@ -104,7 +101,6 @@ def _execute_turn(
 ) -> list:
     """执行单轮对话：用户输入 -> API 调用 -> 可能多轮 tool 循环 -> 输出。"""
     messages.append({"role": "user", "content": line})
-    pending_image_path: str | None = None
 
     with trace(
         "AgenticAICompanion_turn",
@@ -127,8 +123,8 @@ def _execute_turn(
             msg = resp.choices[0].message
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, bool(getattr(msg, "tool_calls", None)))
 
-            done, messages, pending_image_path = _handle_api_response(
-                messages, msg, char_name, turn, pending_image_path,
+            done, messages, _ = _handle_api_response(
+                messages, msg, char_name, turn,
                 tool_types, tool_context_types, process_response_with_tools, tool_executors, get_gemini_client, logger,
             )
             if done:
