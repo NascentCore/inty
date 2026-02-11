@@ -27,6 +27,7 @@ INDEX_HTML = """<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Imagen 4.0 图片超分工具</title>
+  <script type="module" src="https://unpkg.com/img-comparison-slider@8.0.6/dist/index.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f8fb; color: #111827; }
     .container { max-width: 920px; margin: 24px auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
@@ -43,6 +44,13 @@ INDEX_HTML = """<!doctype html>
     .status.error { color: #b91c1c; }
     .preview img { max-width: 100%; border-radius: 10px; border: 1px solid #e5e7eb; }
     .preview { margin-top: 18px; }
+    img-comparison-slider {
+      max-width: 100%;
+      --divider-width: 2px;
+      --divider-color: #fff;
+      --default-handle-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    img-comparison-slider img { width: 100%; display: block; border-radius: 10px; }
     .download-link { margin-top: 8px; display: inline-block; }
     code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
   </style>
@@ -92,7 +100,8 @@ INDEX_HTML = """<!doctype html>
             <option value="image/webp">image/webp</option>
           </select>
         </label>
-        <label>compressionQuality (0-100)
+        <label id="compressionQualityLabel" title="PNG 不支持 compressionQuality，仅 JPEG/WebP 可用">
+          compressionQuality (0-100)
           <input id="compressionQuality" type="number" min="0" max="100" value="75" />
         </label>
       </div>
@@ -111,8 +120,10 @@ INDEX_HTML = """<!doctype html>
 
     <div id="preview" class="preview" hidden>
       <h2>输出结果</h2>
-      <img id="resultImage" alt="Upscaled Result" />
-      <br />
+      <img-comparison-slider value="50">
+        <img slot="first" id="originalImage" alt="原图" />
+        <img slot="second" id="upscaledImage" alt="超分图" />
+      </img-comparison-slider>
       <a id="downloadLink" class="download-link" download="upscaled-image">下载图片</a>
     </div>
   </div>
@@ -122,7 +133,8 @@ INDEX_HTML = """<!doctype html>
     const submitBtn = document.getElementById("submitBtn");
     const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("preview");
-    const resultImageEl = document.getElementById("resultImage");
+    const originalImageEl = document.getElementById("originalImage");
+    const upscaledImageEl = document.getElementById("upscaledImage");
     const downloadLinkEl = document.getElementById("downloadLink");
     const persistedKeys = ["projectId", "region", "modelId", "upscaleFactor", "outputMimeType", "compressionQuality", "prompt"];
 
@@ -176,21 +188,36 @@ INDEX_HTML = """<!doctype html>
       return "png";
     }
 
+    function toggleCompressionQualityVisibility() {
+      const mimeType = document.getElementById("outputMimeType").value;
+      const label = document.getElementById("compressionQualityLabel");
+      label.hidden = mimeType === "image/png";
+    }
+
+    let abortController = null;
+
     restorePersistedSettings();
+    document.getElementById("outputMimeType").addEventListener("change", toggleCompressionQualityVisibility);
+    toggleCompressionQualityVisibility();
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (abortController) {
+        abortController.abort();
+        return;
+      }
       setStatus("", false);
       previewEl.hidden = true;
-      submitBtn.disabled = true;
       persistSettings();
 
       const imageInput = document.getElementById("sourceImage");
       const file = imageInput.files && imageInput.files[0];
       if (!file) {
         setStatus("请先选择图片。", true);
-        submitBtn.disabled = false;
         return;
       }
+
+      abortController = new AbortController();
+      submitBtn.textContent = "取消";
 
       try {
         const imageBase64 = await fileToBase64(file);
@@ -210,7 +237,8 @@ INDEX_HTML = """<!doctype html>
         const response = await fetch("/api/upscale", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: abortController.signal
         });
         const responseBody = await response.json();
         if (!response.ok) {
@@ -218,18 +246,25 @@ INDEX_HTML = """<!doctype html>
         }
 
         const mimeType = String(responseBody.mimeType || "image/png");
-        const imageDataUrl = `data:${mimeType};base64,${responseBody.imageBase64}`;
-        resultImageEl.src = imageDataUrl;
+        const originalDataUrl = `data:${file.type || "image/png"};base64,${imageBase64}`;
+        const upscaledDataUrl = `data:${mimeType};base64,${responseBody.imageBase64}`;
+        originalImageEl.src = originalDataUrl;
+        upscaledImageEl.src = upscaledDataUrl;
         const extension = extensionByMimeType(mimeType);
-        downloadLinkEl.href = imageDataUrl;
+        downloadLinkEl.href = upscaledDataUrl;
         downloadLinkEl.download = `upscaled.${extension}`;
         downloadLinkEl.textContent = `下载图片 (${mimeType})`;
         previewEl.hidden = false;
         setStatus("超分完成。", false);
       } catch (error) {
-        setStatus(error.message || "超分失败", true);
+        if (error.name === "AbortError") {
+          setStatus("已取消。", false);
+        } else {
+          setStatus(error.message || "超分失败", true);
+        }
       } finally {
-        submitBtn.disabled = false;
+        submitBtn.textContent = "开始超分";
+        abortController = null;
       }
     });
   </script>
@@ -298,15 +333,18 @@ class UpscalerHandler(BaseHTTPRequestHandler):
         except (ValueError, KeyError, json.JSONDecodeError, UpscaleError) as exc:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             return
-        self._send_json(
-            HTTPStatus.OK,
-            {
-                "mimeType": result.mime_type,
-                "imageBase64": base64.b64encode(result.image_bytes).decode("ascii"),
-                "requestUrl": result.request_url,
-                "modelId": result.model_id,
-            },
-        )
+        try:
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "mimeType": result.mime_type,
+                    "imageBase64": base64.b64encode(result.image_bytes).decode("ascii"),
+                    "requestUrl": result.request_url,
+                    "modelId": result.model_id,
+                },
+            )
+        except (ConnectionResetError, BrokenPipeError):
+            pass
 
     def _send_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

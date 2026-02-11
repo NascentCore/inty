@@ -49,6 +49,33 @@ def test_build_upscale_payload_contains_base64_image_bytes() -> None:
     assert encoded == base64.b64encode(b"abc").decode("ascii")
 
 
+def test_build_upscale_payload_omits_compression_quality_for_png() -> None:
+    payload = build_upscale_payload(
+        image_bytes=b"abc",
+        prompt="Upscale",
+        upscale_factor="x2",
+        output_mime_type="image/png",
+        compression_quality=75,
+    )
+    output_options = payload["parameters"]["outputOptions"]
+    assert "compressionQuality" not in output_options
+    assert output_options["mimeType"] == "image/png"
+
+
+def test_build_upscale_payload_includes_compression_quality_for_jpeg_and_webp() -> None:
+    for mime_type in ("image/jpeg", "image/webp"):
+        payload = build_upscale_payload(
+            image_bytes=b"abc",
+            prompt="Upscale",
+            upscale_factor="x2",
+            output_mime_type=mime_type,
+            compression_quality=90,
+        )
+        output_options = payload["parameters"]["outputOptions"]
+        assert output_options["compressionQuality"] == 90
+        assert output_options["mimeType"] == mime_type
+
+
 def test_parse_upscale_response_returns_image_and_mime_type() -> None:
     response_json = {
         "predictions": [

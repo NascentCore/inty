@@ -71,6 +71,9 @@ def normalize_upscale_factor(upscale_factor: str | int) -> str:
     return normalized
 
 
+MIME_TYPES_SUPPORTING_COMPRESSION_QUALITY = frozenset({"image/jpeg", "image/webp"})
+
+
 def build_upscale_payload(
     *,
     image_bytes: bytes,
@@ -80,6 +83,9 @@ def build_upscale_payload(
     compression_quality: int,
 ) -> dict[str, Any]:
     image_base64 = base64.b64encode(image_bytes).decode("ascii")
+    output_options: dict[str, Any] = {"mimeType": output_mime_type}
+    if output_mime_type in MIME_TYPES_SUPPORTING_COMPRESSION_QUALITY:
+        output_options["compressionQuality"] = compression_quality
     return {
         "instances": [
             {
@@ -89,10 +95,7 @@ def build_upscale_payload(
         ],
         "parameters": {
             "mode": "upscale",
-            "outputOptions": {
-                "mimeType": output_mime_type,
-                "compressionQuality": compression_quality,
-            },
+            "outputOptions": output_options,
             "upscaleConfig": {"upscaleFactor": upscale_factor},
         },
     }
