@@ -1,4 +1,5 @@
-from typing import List
+import re
+from typing import List, Optional
 
 from sqlalchemy import and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,10 @@ from app.models.report import (
     ReportType,
 )
 from app.schemas.report import ReportCreate, ReportQuery, ReportReason
+
+GITHUB_ISSUE_URL_PATTERN = re.compile(
+    r"^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/issues/\d+/?(?:[?#].*)?$"
+)
 
 
 def list_report_reasons() -> List[ReportReason]:
@@ -201,6 +206,35 @@ async def get_report(db: AsyncSession, report_id: str) -> Report:
     if report.report_type is None:
         report.report_type = ReportType.REPORT
     return report
+
+
+def _normalize_github_issue_url(github_issues: Optional[str]) -> Optional[str]:
+    if github_issues is None:
+        return None
+
+    normalized_url = github_issues.strip()
+    if not normalized_url:
+        return None
+
+    if not GITHUB_ISSUE_URL_PATTERN.match(normalized_url):
+        raise ValueError(
+            "Invalid GitHub issue URL format. Expected: https://github.com/<owner>/<repo>/issues/<number>"
+        )
+    return normalized_url
+
+
+async def update_report_github_issue(
+    db: AsyncSession, report_id: str, github_issues: Optional[str]
+) -> Report:
+    report = (
+        await db.execute(select(Report).where(Report.id == report_id))
+    ).scalar_one_or_none()
+    if not report:
+        raise ValueError("Report not found")
+
+    report.github_issues = _normalize_github_issue_url(github_issues)
+    await db.commit()
+    return await get_report(db, report_id)
 
 
 async def delete_report(
