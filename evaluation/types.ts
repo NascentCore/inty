@@ -767,6 +767,12 @@ export interface ReportsListResponse {
 }
 
 // 节日记忆配置与执行
+export type FestivalMemoryRunStatus =
+  | "idle"
+  | "running"
+  | "completed"
+  | "failed";
+
 export interface FestivalMemoryConfigItem {
   id: number;
   festival_name: string;
@@ -783,6 +789,20 @@ export interface FestivalMemoryConfigItem {
   last_run_at: string | null;
   /** 窗口内最少用户消息轮数，null 表示默认 15 */
   min_rounds_in_window?: number | null;
+  /** 最近一次后台运行状态 */
+  run_status?: FestivalMemoryRunStatus;
+  /** 最近一次后台任务开始时间 */
+  run_started_at?: string | null;
+  /** 最近一次后台任务结束时间 */
+  run_finished_at?: string | null;
+  /** 最近一次后台任务筛选出的 (user, agent) 对数 */
+  run_total_pairs?: number | null;
+  /** 最近一次后台任务成功写入条数 */
+  run_success_count?: number | null;
+  /** 最近一次后台任务失败条数 */
+  run_failed_count?: number | null;
+  /** 最近一次后台任务错误信息 */
+  run_error_message?: string | null;
 }
 
 export interface FestivalMemoryConfigCreate {
@@ -825,4 +845,28 @@ export interface FestivalMemoryExtractionRunResponse {
   total_pairs: number;
   success_count: number;
   failed_count: number;
+}
+
+export interface FestivalMemoryResultItem {
+  memory_id: number;
+  user_id: string;
+  agent_id: string;
+  festival_name: string;
+  festival_date: string;
+  memory: string;
+  extracted_at: string;
+}
+
+export interface FestivalMemoryConfigResultResponse {
+  config_id: number;
+  festival_name: string;
+  festival_date: string;
+  run_status: FestivalMemoryRunStatus;
+  run_started_at?: string | null;
+  run_finished_at?: string | null;
+  run_total_pairs?: number | null;
+  run_success_count?: number | null;
+  run_failed_count?: number | null;
+  run_error_message?: string | null;
+  items: FestivalMemoryResultItem[];
 }

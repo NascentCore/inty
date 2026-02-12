@@ -1414,6 +1414,14 @@ export const festivalMemoryApi = {
     body: import("../types").FestivalMemoryExtractionRunRequest,
   ): Promise<import("../types").FestivalMemoryExtractionRunResponse> =>
     apiClient.post("/evaluation/admin/festival-memory-extraction/run", body),
+
+  getConfigResults: (
+    configId: number,
+    params?: { limit?: number },
+  ): Promise<import("../types").FestivalMemoryConfigResultResponse> =>
+    apiClient.get(`/evaluation/admin/festival-memory-configs/${configId}/results`, {
+      limit: params?.limit ?? 10,
+    }),
 };
 
 // =============================================================================

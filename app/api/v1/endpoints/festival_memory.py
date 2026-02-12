@@ -2,6 +2,7 @@
 """节日记忆配置与立即执行 API（仅超级用户）"""
 
 import asyncio
+from datetime import datetime, timezone
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -13,16 +14,19 @@ from app import schemas
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
 from app.api.utils.logger_route import LoggerRoute
-from app.core.user_privilege.superuser_check import is_superuser
-from app.models.memory import FestivalMemoryConfig
+from app.models.memory import FestivalMemoryConfig, Memory
 from app.schemas.festival_memory import (
     FestivalMemoryConfigCreate,
     FestivalMemoryConfigInDB,
+    FestivalMemoryConfigResultResponse,
     FestivalMemoryConfigUpdate,
     FestivalMemoryExtractionRunRequest,
     FestivalMemoryExtractionRunResponse,
+    FestivalMemoryResultItem,
 )
 from app.services import festival_memory_service
+from app.services import festival_memory_task_state_service
+from app.services.memory_service import MEMORY_TYPE_FESTIVAL
 
 router = APIRouter(
     prefix="/evaluation/admin", route_class=LoggerRoute, tags=[INTY_EVAL_TAG]
@@ -37,6 +41,39 @@ async def get_current_superuser(
             status_code=403, detail="Only superusers can access this endpoint"
         )
     return current_user
+
+
+def _resolve_run_state_fields(config: FestivalMemoryConfig) -> dict[str, Any]:
+    state = festival_memory_task_state_service.get_run_state(config.id)
+    if state is None:
+        if config.last_run_at is not None:
+            return {
+                "run_status": "completed",
+                "run_started_at": None,
+                "run_finished_at": config.last_run_at,
+                "run_total_pairs": None,
+                "run_success_count": None,
+                "run_failed_count": None,
+                "run_error_message": None,
+            }
+        return {
+            "run_status": "idle",
+            "run_started_at": None,
+            "run_finished_at": None,
+            "run_total_pairs": None,
+            "run_success_count": None,
+            "run_failed_count": None,
+            "run_error_message": None,
+        }
+    return {
+        "run_status": state.run_status,
+        "run_started_at": state.run_started_at,
+        "run_finished_at": state.run_finished_at,
+        "run_total_pairs": state.run_total_pairs,
+        "run_success_count": state.run_success_count,
+        "run_failed_count": state.run_failed_count,
+        "run_error_message": state.run_error_message,
+    }
 
 
 @router.get(
@@ -57,8 +94,14 @@ async def list_festival_memory_configs(
         .limit(limit)
     )
     configs = result.scalars().all()
+    response_items = []
+    for config in configs:
+        item = FestivalMemoryConfigInDB.model_validate(config).model_copy(
+            update=_resolve_run_state_fields(config)
+        )
+        response_items.append(item)
     return schemas.APIResponse.success(
-        data=[FestivalMemoryConfigInDB.model_validate(c) for c in configs]
+        data=response_items
     )
 
 
@@ -160,6 +203,74 @@ async def update_festival_memory_config(
     )
 
 
+@router.get(
+    "/festival-memory-configs/{config_id}/results",
+    response_model=schemas.APIResponse[FestivalMemoryConfigResultResponse],
+    summary="查看节日记忆配置最近结果（最多 10 条）",
+)
+async def get_festival_memory_config_results(
+    config_id: int,
+    limit: int = Query(10, ge=1, le=10),
+    db: AsyncSession = Depends(deps.get_async_db),
+    current_user: schemas.User = Depends(get_current_superuser),
+) -> Any:
+    config_result = await db.execute(
+        select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id)
+    )
+    config = config_result.scalar_one_or_none()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    memory_result = await db.execute(
+        select(
+            Memory.id,
+            Memory.user_id,
+            Memory.agent_id,
+            Memory.festival_name,
+            Memory.festival_date,
+            Memory.content,
+            Memory.extracted_at,
+        )
+        .where(
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+            Memory.festival_name == config.festival_name,
+            Memory.festival_date == config.festival_date,
+        )
+        .order_by(Memory.extracted_at.desc(), Memory.id.desc())
+        .limit(limit)
+    )
+    rows = memory_result.fetchall()
+    items = [
+        FestivalMemoryResultItem(
+            memory_id=row[0],
+            user_id=row[1],
+            agent_id=row[2],
+            festival_name=row[3],
+            festival_date=row[4],
+            memory=row[5],
+            extracted_at=row[6],
+        )
+        for row in rows
+    ]
+
+    run_state_fields = _resolve_run_state_fields(config)
+    return schemas.APIResponse.success(
+        data=FestivalMemoryConfigResultResponse(
+            config_id=config.id,
+            festival_name=config.festival_name,
+            festival_date=config.festival_date,
+            run_status=run_state_fields["run_status"],
+            run_started_at=run_state_fields["run_started_at"],
+            run_finished_at=run_state_fields["run_finished_at"],
+            run_total_pairs=run_state_fields["run_total_pairs"],
+            run_success_count=run_state_fields["run_success_count"],
+            run_failed_count=run_state_fields["run_failed_count"],
+            run_error_message=run_state_fields["run_error_message"],
+            items=items,
+        )
+    )
+
+
 @router.post(
     "/festival-memory-extraction/run",
     response_model=schemas.APIResponse[FestivalMemoryExtractionRunResponse],
@@ -170,6 +281,7 @@ async def run_festival_memory_extraction(
     db: AsyncSession = Depends(deps.get_async_db),
     current_user: schemas.User = Depends(get_current_superuser),
 ) -> Any:
+    tracked_config: FestivalMemoryConfig | None = None
     if body.config_id is not None:
         result = await db.execute(
             select(FestivalMemoryConfig).where(
@@ -187,6 +299,7 @@ async def run_festival_memory_extraction(
             getattr(config, "min_rounds_in_window", None)
             or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
         )
+        tracked_config = config
     else:
         if (
             body.festival_name is None
@@ -209,23 +322,66 @@ async def run_festival_memory_extraction(
             or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
         )
 
-    pairs = await asyncio.to_thread(
-        festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
-        festival_date,
-        min_rounds,
-        tz_str,
-    )
-    total = len(pairs)
+    if tracked_config is not None:
+        festival_memory_task_state_service.mark_running(
+            tracked_config.id,
+            tracked_config.festival_name,
+            tracked_config.festival_date,
+        )
+
+    total = 0
     success = 0
     failed = 0
-    for user_id, agent_id in pairs:
-        ok = await festival_memory_service.extract_festival_and_save(
-            db, user_id, agent_id, festival_name, festival_date, prompt
+    try:
+        pairs = await asyncio.to_thread(
+            festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
+            festival_date,
+            min_rounds,
+            tz_str,
         )
-        if ok:
-            success += 1
-        else:
-            failed += 1
+        total = len(pairs)
+        for user_id, agent_id in pairs:
+            try:
+                ok = await festival_memory_service.extract_festival_and_save(
+                    db, user_id, agent_id, festival_name, festival_date, prompt
+                )
+            except Exception as e:
+                await db.rollback()
+                failed += 1
+                logger.warning(
+                    f"festival memory extraction failed for user={user_id}, "
+                    f"agent={agent_id}, config_id={body.config_id}: {e}"
+                )
+                continue
+            if ok:
+                success += 1
+            else:
+                failed += 1
+
+        if tracked_config is not None:
+            tracked_config.last_run_at = datetime.now(timezone.utc)
+            await db.commit()
+            festival_memory_task_state_service.mark_completed(
+                tracked_config.id,
+                tracked_config.festival_name,
+                tracked_config.festival_date,
+                total_pairs=total,
+                success_count=success,
+                failed_count=failed,
+            )
+    except Exception as e:
+        if tracked_config is not None:
+            festival_memory_task_state_service.mark_failed(
+                tracked_config.id,
+                tracked_config.festival_name,
+                tracked_config.festival_date,
+                total_pairs=total,
+                success_count=success,
+                failed_count=failed,
+                error_message=str(e),
+            )
+        raise
+
     logger.info(
         f"节日记忆抽取完成 festival={festival_name} total={total} success={success} failed={failed}"
     )

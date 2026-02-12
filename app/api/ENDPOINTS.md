@@ -220,6 +220,12 @@
 | `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/session-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs` | GET | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs` | POST | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | PUT | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | DELETE | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}/results` | GET | `app/api/v1/endpoints/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-extraction/run` | POST | `app/api/v1/endpoints/festival_memory.py` |
 
 ## API v2 端点 (`/api/v2`)
 

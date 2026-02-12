@@ -2,13 +2,14 @@
 """节日记忆配置与执行相关 schema"""
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, model_validator
 
 RUN_AT_HOUR_MIN = 0
 RUN_AT_HOUR_MAX = 23
+FestivalMemoryRunStatus = Literal["idle", "running", "completed", "failed"]
 
 
 def _validate_iana_timezone(v: str) -> str:
@@ -113,6 +114,27 @@ class FestivalMemoryConfigInDB(BaseModel):
     min_rounds_in_window: Optional[int] = Field(
         None, description="窗口内最少用户消息轮数，NULL 表示默认 15"
     )
+    run_status: FestivalMemoryRunStatus = Field(
+        default="idle", description="最近一次后台任务状态"
+    )
+    run_started_at: Optional[datetime] = Field(
+        None, description="最近一次后台任务开始时间"
+    )
+    run_finished_at: Optional[datetime] = Field(
+        None, description="最近一次后台任务结束时间"
+    )
+    run_total_pairs: Optional[int] = Field(
+        None, description="最近一次后台任务筛选出的 (user, agent) 对数"
+    )
+    run_success_count: Optional[int] = Field(
+        None, description="最近一次后台任务成功写入条数"
+    )
+    run_failed_count: Optional[int] = Field(
+        None, description="最近一次后台任务失败条数"
+    )
+    run_error_message: Optional[str] = Field(
+        None, description="最近一次后台任务错误信息（仅失败时）"
+    )
 
     class Config:
         from_attributes = True
@@ -152,3 +174,31 @@ class FestivalMemoryExtractionRunResponse(BaseModel):
     total_pairs: int = Field(..., description="符合条件的 (user, agent) 对数")
     success_count: int = Field(..., description="成功写入条数")
     failed_count: int = Field(..., description="失败条数")
+
+
+class FestivalMemoryResultItem(BaseModel):
+    """单条节日记忆结果（用于后台查看）"""
+
+    memory_id: int
+    user_id: str
+    agent_id: str
+    festival_name: str
+    festival_date: date
+    memory: str
+    extracted_at: datetime
+
+
+class FestivalMemoryConfigResultResponse(BaseModel):
+    """按配置查看最近节日记忆结果"""
+
+    config_id: int
+    festival_name: str
+    festival_date: date
+    run_status: FestivalMemoryRunStatus = "idle"
+    run_started_at: Optional[datetime] = None
+    run_finished_at: Optional[datetime] = None
+    run_total_pairs: Optional[int] = None
+    run_success_count: Optional[int] = None
+    run_failed_count: Optional[int] = None
+    run_error_message: Optional[str] = None
+    items: list[FestivalMemoryResultItem] = Field(default_factory=list)

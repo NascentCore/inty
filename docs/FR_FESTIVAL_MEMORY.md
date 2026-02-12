@@ -28,10 +28,11 @@ CREATED_BY_AGENT
 
 ### 管理员 API（仅超级用户）
 
-- **GET** `/api/v1/evaluation/admin/festival-memory-configs`：节日记忆配置列表（支持 skip/limit）。
+- **GET** `/api/v1/evaluation/admin/festival-memory-configs`：节日记忆配置列表（支持 skip/limit），并返回每条配置最近一次后台任务状态：`run_status`（idle/running/completed/failed）、开始/结束时间、成功失败计数与错误信息。
 - **POST** `/api/v1/evaluation/admin/festival-memory-configs`：创建配置（节日名称、节日日期、提示词、是否启用、**timezone**（默认 UTC）、执行日期、执行时刻（该时区下本地小时）、可选 **min_rounds_in_window**（窗口内最少用户消息轮数，不传则默认 15））；执行日期不能早于节日日期。
 - **PUT** `/api/v1/evaluation/admin/festival-memory-configs/{config_id}`：更新配置（含 timezone、执行日期、执行时刻、min_rounds_in_window）。
 - **DELETE** `/api/v1/evaluation/admin/festival-memory-configs/{config_id}`：删除配置。
+- **GET** `/api/v1/evaluation/admin/festival-memory-configs/{config_id}/results`：按配置查看最近结果，`limit` 最大 10；返回最近任务状态与结果列表（`memory_id`、`user_id`、`agent_id`、`memory`、`extracted_at` 等）。
 - **POST** `/api/v1/evaluation/admin/festival-memory-extraction/run`：立即执行抽取。请求体可传 `config_id` 或直接传 `festival_name`、`festival_date`、`prompt`、可选 `timezone`（未传 config_id 时用于窗口计算，默认 UTC）、可选 `min_rounds_in_window`（未传 config_id 时生效，不传则默认 15）。返回 `total_pairs`、`success_count`、`failed_count`。
 
 ## 抽取逻辑
@@ -60,7 +61,7 @@ CREATED_BY_AGENT
 ## Evaluation 页面
 
 - 路径：evaluation 侧边栏「节日记忆提取」。
-- 功能：节日配置列表（名称、节日日期、执行日期、执行时刻 UTC、最近执行时间、提示词摘要、启用状态）、新建/编辑/删除配置（表单含执行日期、执行时刻，校验执行日期不早于节日日期）、单条配置「立即执行」、说明「定时任务每 5 分钟扫描，按每条配置的执行时间与 last_run_at 决定是否执行」。
+- 功能：节日配置列表（名称、节日日期、执行日期、执行时刻 UTC、运行情况、最近执行时间、提示词摘要、启用状态）、新建/编辑/删除配置（表单含执行日期、执行时刻，校验执行日期不早于节日日期）、单条配置「立即执行」、后台任务结束后可点击「显示结果」查看最多 10 条记忆数据、说明「定时任务每 5 分钟扫描，按每条配置的执行时间与 last_run_at 决定是否执行」。
 
 ## 关键文件
 

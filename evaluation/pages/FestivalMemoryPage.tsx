@@ -25,6 +25,7 @@ import {
   DeleteOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -32,9 +33,16 @@ import { festivalMemoryApi } from "../services/api";
 import type {
   FestivalMemoryConfigItem,
   FestivalMemoryConfigCreate,
+  FestivalMemoryConfigResultResponse,
   FestivalMemoryConfigUpdate,
   FestivalMemoryExtractionRunResponse,
+  FestivalMemoryResultItem,
 } from "../types";
+import {
+  canShowFestivalMemoryResults,
+  getFestivalMemoryRunStatusMeta,
+  resolveFestivalMemoryRunStatus,
+} from "../utils/festivalMemory";
 
 const { Text, Title } = Typography;
 
@@ -64,6 +72,12 @@ export const FestivalMemoryPage: React.FC = () => {
   const [formRunAtDate, setFormRunAtDate] = useState<dayjs.Dayjs | null>(null);
   const [formRunAtHour, setFormRunAtHour] = useState<number>(4);
   const [formMinRounds, setFormMinRounds] = useState<number | null>(null);
+  const [resultModalOpen, setResultModalOpen] = useState(false);
+  const [resultLoading, setResultLoading] = useState(false);
+  const [selectedResultConfig, setSelectedResultConfig] =
+    useState<FestivalMemoryConfigItem | null>(null);
+  const [resultData, setResultData] =
+    useState<FestivalMemoryConfigResultResponse | null>(null);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -80,6 +94,13 @@ export const FestivalMemoryPage: React.FC = () => {
 
   React.useEffect(() => {
     loadConfigs();
+  }, [loadConfigs]);
+
+  React.useEffect(() => {
+    const timer = window.setInterval(() => {
+      loadConfigs();
+    }, 15000);
+    return () => window.clearInterval(timer);
   }, [loadConfigs]);
 
   const openCreate = () => {
@@ -212,6 +233,58 @@ export const FestivalMemoryPage: React.FC = () => {
     }
   };
 
+  const formatDateTime = (value: string | null | undefined): string => {
+    if (!value) return "-";
+    const dt = dayjs(value);
+    return dt.isValid() ? dt.format("YYYY-MM-DD HH:mm") : value;
+  };
+
+  const handleShowResults = async (row: FestivalMemoryConfigItem) => {
+    setSelectedResultConfig(row);
+    setResultModalOpen(true);
+    setResultLoading(true);
+    setResultData(null);
+    try {
+      const data = await festivalMemoryApi.getConfigResults(row.id, { limit: 10 });
+      setResultData(data);
+    } catch {
+      message.error("加载结果失败");
+      setResultData(null);
+    } finally {
+      setResultLoading(false);
+    }
+  };
+
+  const resultColumns: ColumnsType<FestivalMemoryResultItem> = [
+    {
+      title: "提取时间",
+      dataIndex: "extracted_at",
+      key: "extracted_at",
+      width: 180,
+      render: (v: string) => formatDateTime(v),
+    },
+    {
+      title: "用户ID",
+      dataIndex: "user_id",
+      key: "user_id",
+      width: 180,
+      ellipsis: true,
+    },
+    {
+      title: "角色ID",
+      dataIndex: "agent_id",
+      key: "agent_id",
+      width: 180,
+      ellipsis: true,
+    },
+    {
+      title: "记忆内容",
+      dataIndex: "memory",
+      key: "memory",
+      render: (v: string) => (v && v.length > 200 ? `${v.slice(0, 200)}...` : v),
+    },
+  ];
+
   const columns: ColumnsType<FestivalMemoryConfigItem> = [
     {
       title: "节日名称",
@@ -256,12 +329,39 @@ export const FestivalMemoryPage: React.FC = () => {
       render: (v: number | null) => (v != null ? `${v}:00` : "-"),
     },
     {
+      title: "运行情况",
+      key: "run_status",
+      width: 180,
+      render: (_, row) => {
+        const status = resolveFestivalMemoryRunStatus(row);
+        const meta = getFestivalMemoryRunStatusMeta(status);
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color={meta.color}>{meta.label}</Tag>
+            {status === "running" && row.run_started_at ? (
+              <Text type="secondary">{`开始：${formatDateTime(row.run_started_at)}`}</Text>
+            ) : null}
+            {status !== "running" &&
+            (row.run_finished_at || row.last_run_at) ? (
+              <Text type="secondary">
+                {`结束：${formatDateTime(row.run_finished_at || row.last_run_at)}`}
+              </Text>
+            ) : null}
+            {row.run_total_pairs != null ? (
+              <Text type="secondary">
+                {`总 ${row.run_total_pairs} / 成 ${row.run_success_count ?? 0} / 败 ${row.run_failed_count ?? 0}`}
+              </Text>
+            ) : null}
+          </Space>
+        );
+      },
+    },
+    {
       title: "最近执行",
       dataIndex: "last_run_at",
       key: "last_run_at",
       width: 180,
-      render: (v: string | null) =>
-        v ? dayjs(v).format("YYYY-MM-DD HH:mm") : "-",
+      render: (v: string | null) => formatDateTime(v),
     },
     {
       title: "提示词摘要",
@@ -282,7 +382,7 @@ export const FestivalMemoryPage: React.FC = () => {
     {
       title: "操作",
       key: "actions",
-      width: 200,
+      width: 300,
       render: (_, row) => (
         <Space>
           <Button
@@ -305,6 +405,20 @@ export const FestivalMemoryPage: React.FC = () => {
             onClick={() => handleRun(row)}
           >
             立即执行
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            disabled={!canShowFestivalMemoryResults(row)}
+            title={
+              canShowFestivalMemoryResults(row)
+                ? undefined
+                : "后台任务尚未结束，暂无可展示结果"
+            }
+            onClick={() => handleShowResults(row)}
+          >
+            显示结果
           </Button>
           <Button
             type="link"
@@ -344,7 +458,8 @@ export const FestivalMemoryPage: React.FC = () => {
           点至次日 4
           点；执行时间为该时区下的本地日期与时刻。仅对窗口内用户消息达到配置的「窗口内最少用户消息数」（可选，默认
           15 条）及以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
-          表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。
+          表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。任务结束后可点击「显示结果」查看最多
+          10 条记忆数据。
         </Text>
         <Table
           rowKey="id"
@@ -498,6 +613,54 @@ export const FestivalMemoryPage: React.FC = () => {
               </Text>
             </label>
           </div>
+        </Space>
+      </Modal>
+
+      <Modal
+        title={
+          selectedResultConfig
+            ? `节日结果：${selectedResultConfig.festival_name}（最多 10 条）`
+            : "节日结果（最多 10 条）"
+        }
+        open={resultModalOpen}
+        onCancel={() => {
+          setResultModalOpen(false);
+          setSelectedResultConfig(null);
+          setResultData(null);
+        }}
+        width={900}
+        footer={
+          <Button
+            type="primary"
+            onClick={() => {
+              setResultModalOpen(false);
+              setSelectedResultConfig(null);
+              setResultData(null);
+            }}
+          >
+            关闭
+          </Button>
+        }
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="small">
+          {resultData ? (
+            <Text type="secondary">
+              {`状态：${getFestivalMemoryRunStatusMeta(resultData.run_status).label}；总 ${resultData.run_total_pairs ?? "-"} / 成 ${resultData.run_success_count ?? "-"} / 败 ${resultData.run_failed_count ?? "-"}`}
+            </Text>
+          ) : null}
+          {resultData?.run_error_message ? (
+            <Text type="danger">{`错误信息：${resultData.run_error_message}`}</Text>
+          ) : null}
+          <Table
+            rowKey="memory_id"
+            size="small"
+            loading={resultLoading}
+            columns={resultColumns}
+            dataSource={resultData?.items ?? []}
+            pagination={false}
+            locale={{ emptyText: "暂无结果数据" }}
+            scroll={{ x: 860 }}
+          />
         </Space>
       </Modal>
 

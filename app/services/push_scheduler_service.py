@@ -18,6 +18,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.memory import FestivalMemoryConfig
 from app.services import festival_memory_service
+from app.services import festival_memory_task_state_service
 from app.services.memory_extraction_service import (
     extract_and_save as memory_extract_and_save,
 )
@@ -425,46 +426,90 @@ class PushSchedulerService:
                 logger.debug("[节日记忆抽取] 无到点配置，跳过")
                 return
             for config in due_configs:
+                festival_memory_task_state_service.mark_running(
+                    config.id, config.festival_name, config.festival_date
+                )
                 tz_str = getattr(config, "timezone", "UTC") or "UTC"
                 min_rounds = (
                     getattr(config, "min_rounds_in_window", None)
                     or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
                 )
-                pairs = await asyncio.to_thread(
-                    festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
-                    config.festival_date,
-                    min_rounds,
-                    tz_str,
-                )
-                async with AsyncSessionLocal() as db:
-                    ran_ok = True
-                    for user_id, agent_id in pairs:
-                        try:
-                            await festival_memory_service.extract_festival_and_save(
-                                db,
-                                user_id,
-                                agent_id,
+                total = 0
+                success = 0
+                failed = 0
+                try:
+                    pairs = await asyncio.to_thread(
+                        festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
+                        config.festival_date,
+                        min_rounds,
+                        tz_str,
+                    )
+                    total = len(pairs)
+                    async with AsyncSessionLocal() as db:
+                        ran_ok = True
+                        for user_id, agent_id in pairs:
+                            try:
+                                ok = await festival_memory_service.extract_festival_and_save(
+                                    db,
+                                    user_id,
+                                    agent_id,
+                                    config.festival_name,
+                                    config.festival_date,
+                                    config.prompt,
+                                )
+                                if ok:
+                                    success += 1
+                                else:
+                                    failed += 1
+                            except Exception as e:
+                                await db.rollback()
+                                ran_ok = False
+                                failed += 1
+                                logger.warning(
+                                    f"[节日记忆抽取] user_id={user_id} agent_id={agent_id} "
+                                    f"festival={config.festival_name} 失败: {e}"
+                                )
+                        if ran_ok:
+                            result = await db.execute(
+                                select(FestivalMemoryConfig).where(
+                                    FestivalMemoryConfig.id == config.id
+                                )
+                            )
+                            row = result.scalar_one_or_none()
+                            if row:
+                                row.last_run_at = now
+                                await db.commit()
+                            festival_memory_task_state_service.mark_completed(
+                                config.id,
                                 config.festival_name,
                                 config.festival_date,
-                                config.prompt,
+                                total_pairs=total,
+                                success_count=success,
+                                failed_count=failed,
                             )
-                        except Exception as e:
-                            await db.rollback()
-                            ran_ok = False
-                            logger.warning(
-                                f"[节日记忆抽取] user_id={user_id} agent_id={agent_id} "
-                                f"festival={config.festival_name} 失败: {e}"
+                        else:
+                            festival_memory_task_state_service.mark_failed(
+                                config.id,
+                                config.festival_name,
+                                config.festival_date,
+                                total_pairs=total,
+                                success_count=success,
+                                failed_count=failed,
+                                error_message="One or more extractions failed with exceptions",
                             )
-                    if ran_ok:
-                        result = await db.execute(
-                            select(FestivalMemoryConfig).where(
-                                FestivalMemoryConfig.id == config.id
-                            )
-                        )
-                        row = result.scalar_one_or_none()
-                        if row:
-                            row.last_run_at = now
-                            await db.commit()
+                except Exception as e:
+                    festival_memory_task_state_service.mark_failed(
+                        config.id,
+                        config.festival_name,
+                        config.festival_date,
+                        total_pairs=total,
+                        success_count=success,
+                        failed_count=failed,
+                        error_message=str(e),
+                    )
+                    logger.warning(
+                        f"[节日记忆抽取] 配置执行失败 config_id={config.id}: {e}"
+                    )
             logger.info("[节日记忆抽取] 完成")
         except Exception as e:
             logger.error(f"[节日记忆抽取] 执行失败: {str(e)}")
