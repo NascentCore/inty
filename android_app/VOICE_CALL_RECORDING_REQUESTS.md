@@ -7,3 +7,9 @@
   - 播放按钮回放录音；
   - 展开查看文字消息。
 - 同时调研 Gemini Live API 是否可关联文字消息与语音文件时间信息。
+
+## 用户追加需求（turn 级匹配）
+
+- 由于 Android 语音聊天是 turn-based，服务端返回的多段音频属于同一轮 AI 回复。
+- 客户端需支持“同一 turn 的多个音频片段”与该 turn 对应文本消息的精准匹配。
+- 关联策略从 session 级升级为：`voiceSessionId + voiceTurnId`（turn 优先，session 兜底）。

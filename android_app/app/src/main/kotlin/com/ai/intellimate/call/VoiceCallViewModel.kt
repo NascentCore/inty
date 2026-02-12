@@ -6,13 +6,15 @@ import ai.sxwl.android.utils.Utils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ai.intellimate.call.data.VoiceCallRecordingCollector
 import com.ai.intellimate.call.data.AICallRepository
 import com.ai.intellimate.call.data.ConnectionState
+import com.ai.intellimate.call.data.VoiceCallRecordingCollector
+import com.ai.intellimate.call.data.VoiceCallTurnRecordingCollector
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
+import com.architecture.httplib.utils.MoshiUtils
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -55,7 +57,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     var messageCount = 0
     private val fallbackVoiceSessionId = "local_${System.currentTimeMillis()}_${System.nanoTime()}"
     private var voiceSessionId: String = fallbackVoiceSessionId
+    private var voiceTurnId: String? = null
     private val recordingCollector = VoiceCallRecordingCollector(Utils.getApp().filesDir)
+    private val turnRecordingCollector = VoiceCallTurnRecordingCollector(Utils.getApp().filesDir)
     private var finalCallResult: VoiceCallResult? = null
 
     init {
@@ -128,10 +132,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 .collect { packet ->
                     when (packet.typeEnum) {
                         CallType.AUDIO_RESPONSE -> {
+                            packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             // 将packet.data从base64转化为音频数据并通过_audioResponseChannel发送
                             try {
                                 val audioData = Base64.decode(packet.data, Base64.NO_WRAP)
                                 recordingCollector.appendPcmData(audioData)
+                                voiceTurnId?.let { turnRecordingCollector.appendPcmData(it, audioData) }
                                 _audioResponseChannel.send(audioData)
                             } catch (e: Exception) {
                                 LogUtils.e("Base64解码音频数据失败: ${e.message}")
@@ -140,11 +147,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
                         CallType.END -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             stopCalling()
                         }
 
                         CallType.ERROR -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
@@ -155,6 +164,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
                         CallType.STATUS -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             packet.statusEnum?.let { status ->
                                 _uiState.update { it.copy(callState = status) }
                             }
@@ -162,6 +172,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
                         CallType.SESSION_INFO -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             _uiState.update {
                                 it.copy(
                                     time =
@@ -176,6 +187,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         CallType.TRANSCRIPT,
                         CallType.USER_TRANSCRIPT -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             messageCount++
                         }
 
@@ -232,12 +244,26 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         finalCallResult?.let { return it }
         val resolvedSessionId = voiceSessionId.ifBlank { fallbackVoiceSessionId }
         val recordingOutput = recordingCollector.finalizeAndExport(resolvedSessionId)
+        val turnRecordingOutputs = turnRecordingCollector.finalizeAllAndExport(resolvedSessionId)
         stopCalling()
+        val turnRecordingsJson =
+            turnRecordingOutputs
+                .map {
+                    VoiceCallTurnRecordingResult(
+                        voiceTurnId = it.voiceTurnId,
+                        recordingPath = it.filePath,
+                        recordingDurationMs = it.durationMs,
+                    )
+                }
+                .takeIf { it.isNotEmpty() }
+                ?.let { MoshiUtils.toJson(VoiceCallTurnRecordingResultPayload(entries = it)) }
+                ?.takeIf { it.isNotBlank() }
         return VoiceCallResult(
                 messageCount = messageCount,
                 voiceSessionId = resolvedSessionId,
                 recordingPath = recordingOutput?.filePath,
                 recordingDurationMs = recordingOutput?.durationMs ?: 0L,
+                turnRecordingsJson = turnRecordingsJson,
             )
             .also { finalCallResult = it }
     }
@@ -246,6 +272,12 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         val normalized = candidate.trim()
         if (normalized.isBlank()) return
         voiceSessionId = normalized
+    }
+
+    private fun updateVoiceTurnId(candidate: String) {
+        val normalized = candidate.trim()
+        if (normalized.isBlank()) return
+        voiceTurnId = normalized
     }
 
     fun setMuted(isMuted: Boolean) {
@@ -257,6 +289,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         stopCalling()
         if (finalCallResult == null) {
             recordingCollector.discard()
+            turnRecordingCollector.discard()
         }
         // 关闭队列和通道
         sendQueueJob?.cancel()

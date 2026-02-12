@@ -14,6 +14,7 @@ object RoutesChat {
         const val SESSION_ID = "voiceCallSessionId"
         const val RECORDING_PATH = "voiceCallRecordingPath"
         const val RECORDING_DURATION_MS = "voiceCallRecordingDurationMs"
+        const val TURN_RECORDINGS_JSON = "voiceCallTurnRecordingsJson"
         const val LEGACY_MESSAGE_COUNT = "messageCount"
     }
 

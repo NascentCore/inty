@@ -47,6 +47,7 @@ internal fun ChatScreen(
     refreshVoiceSessionId: String? = null,
     voiceCallRecordingPath: String? = null,
     voiceCallRecordingDurationMs: Long = 0L,
+    voiceCallTurnRecordingsJson: String? = null,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
@@ -76,6 +77,7 @@ internal fun ChatScreen(
             refreshVoiceSessionId = refreshVoiceSessionId,
             voiceCallRecordingPath = voiceCallRecordingPath,
             voiceCallRecordingDurationMs = voiceCallRecordingDurationMs,
+            voiceCallTurnRecordingsJson = voiceCallTurnRecordingsJson,
         )
 
         // 反馈请求对话框

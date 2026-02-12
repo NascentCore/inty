@@ -132,6 +132,10 @@ fun AppNavHost(
                                     RoutesChat.VoiceCallResultKeys.RECORDING_DURATION_MS,
                                     result.recordingDurationMs,
                                 )
+                                set(
+                                    RoutesChat.VoiceCallResultKeys.TURN_RECORDINGS_JSON,
+                                    result.turnRecordingsJson,
+                                )
                             }
                         navController.popBackStack()
                     },

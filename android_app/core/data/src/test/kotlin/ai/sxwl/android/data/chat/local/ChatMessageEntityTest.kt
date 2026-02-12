@@ -13,12 +13,20 @@ class ChatMessageEntityTest {
 
     @Test
     fun `toEntity uses remote id as stable id and toModel preserves localMsgId`() {
-        val message = MsgInfo(id = "remote-id", content = "hello", role = "user")
+        val message =
+            MsgInfo(
+                id = "remote-id",
+                content = "hello",
+                role = "user",
+                meta_data = MsgInfo.MsgMetaData(voice_turn_id = "turn-1"),
+            )
 
         val entity = message.toEntity(agentId = "agent-1")
 
         assertEquals("remote-id", entity.id)
         assertEquals("remote-id", entity.toModel().localMsgId)
+        assertEquals("turn-1", entity.metaData.voiceTurnId)
+        assertEquals("turn-1", entity.toModel().meta_data?.voice_turn_id)
     }
 
     @Test

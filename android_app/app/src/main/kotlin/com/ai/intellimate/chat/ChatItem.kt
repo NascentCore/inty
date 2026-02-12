@@ -810,6 +810,9 @@ private fun DebugMessageMetadata(item: MessageEntity, modifier: Modifier = Modif
                         meta.voiceSessionId
                             ?.takeIf { it.isNotBlank() }
                             ?.let { metaParts += "voiceSession=$it" }
+                        meta.voiceTurnId
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { metaParts += "voiceTurn=$it" }
                         meta.generatedImage?.let { image ->
                             metaParts +=
                                 "image=${image.imageUrl?.debugEllipsize()} (${image.width}x${image.height})"
@@ -1188,6 +1191,17 @@ private fun resolveVoiceSessionId(messages: List<MessageEntity>): String? {
     }
 }
 
+/** 从语音消息组中提取 turn id。 */
+private fun resolveVoiceTurnId(messages: List<MessageEntity>): String? {
+    return messages.firstNotNullOfOrNull { msg ->
+        msg.metaData.voiceTurnId?.takeIf { it.isNotBlank() }
+    }
+}
+
+private fun buildVoiceTurnKey(voiceSessionId: String, voiceTurnId: String): String {
+    return "${voiceSessionId.trim()}::${voiceTurnId.trim()}"
+}
+
 /**
  * 语音通话历史卡片中的“整段录音回放”按钮。
  *
@@ -1197,7 +1211,7 @@ private fun resolveVoiceSessionId(messages: List<MessageEntity>): String? {
 @Composable
 private fun VoiceCallRecordingReplayButton(
     recording: VoiceCallRecordingEntry,
-    voiceSessionId: String,
+    recordingKey: String,
     modifier: Modifier = Modifier,
 ) {
     val recordingUri = remember(recording.recordingPath) { "file://${recording.recordingPath}" }
@@ -1208,7 +1222,7 @@ private fun VoiceCallRecordingReplayButton(
                 url = recordingUri,
                 title = recordingLabel,
                 artist = recordingLabel,
-                messageId = "voice_call_recording_$voiceSessionId",
+                messageId = "voice_call_recording_$recordingKey",
                 agentId = recording.agentId,
             ),
         autoPlay = false,
@@ -1229,7 +1243,7 @@ private fun VoiceCallRecordingReplayButton(
 fun VoiceChatHistoryCollapsed(
     messages: List<MessageEntity>,
     onClick: () -> Unit,
-    voiceSessionId: String?,
+    recordingReplayKey: String?,
     recording: VoiceCallRecordingEntry? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -1293,10 +1307,10 @@ fun VoiceChatHistoryCollapsed(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (recording != null && !voiceSessionId.isNullOrBlank()) {
+                if (recording != null && !recordingReplayKey.isNullOrBlank()) {
                     VoiceCallRecordingReplayButton(
                         recording = recording,
-                        voiceSessionId = voiceSessionId,
+                        recordingKey = recordingReplayKey,
                     )
                 }
                 Image(
@@ -1322,7 +1336,7 @@ fun VoiceChatHistoryCollapsed(
 fun VoiceChatHistoryExpandedContainer(
     messages: List<MessageEntity>,
     onCollapse: () -> Unit,
-    voiceSessionId: String?,
+    recordingReplayKey: String?,
     recording: VoiceCallRecordingEntry? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -1399,10 +1413,10 @@ fun VoiceChatHistoryExpandedContainer(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (recording != null && !voiceSessionId.isNullOrBlank()) {
+                    if (recording != null && !recordingReplayKey.isNullOrBlank()) {
                         VoiceCallRecordingReplayButton(
                             recording = recording,
-                            voiceSessionId = voiceSessionId,
+                            recordingKey = recordingReplayKey,
                         )
                     }
                     // 向上箭头图标（表示可折叠）
@@ -1439,6 +1453,7 @@ fun CallMessages(
     navController: NavController,
     chatViewModel: ChatViewModel?,
     voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry> = emptyMap(),
+    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry> = emptyMap(),
     onCollapseChange: () -> Unit,
     modifier: Modifier = Modifier,
     isCurrentPage: Boolean = true,
@@ -1447,12 +1462,24 @@ fun CallMessages(
 ) {
     val list = remember(messages) { messages.filterNotNull() }
     val voiceSessionId = remember(list) { resolveVoiceSessionId(list) }
-    val recording =
-        remember(voiceSessionId, voiceCallRecordingsBySession) {
-            voiceSessionId
-                ?.let { voiceCallRecordingsBySession[it] }
-                ?.takeIf { File(it.recordingPath).exists() }
+    val voiceTurnId = remember(list) { resolveVoiceTurnId(list) }
+    val turnRecordingKey =
+        remember(voiceSessionId, voiceTurnId) {
+            if (voiceSessionId.isNullOrBlank() || voiceTurnId.isNullOrBlank()) null
+            else buildVoiceTurnKey(voiceSessionId, voiceTurnId)
         }
+    val recording =
+        remember(voiceSessionId, turnRecordingKey, voiceCallRecordingsBySession, voiceCallRecordingsByTurn) {
+            val byTurn =
+                turnRecordingKey
+                    ?.let { voiceCallRecordingsByTurn[it] }
+                    ?.takeIf { File(it.recordingPath).exists() }
+            byTurn
+                ?: voiceSessionId
+                    ?.let { voiceCallRecordingsBySession[it] }
+                    ?.takeIf { File(it.recordingPath).exists() }
+        }
+    val replayKey = remember(turnRecordingKey, voiceSessionId) { turnRecordingKey ?: voiceSessionId }
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     if (expanded) {
@@ -1462,7 +1489,7 @@ fun CallMessages(
                 expanded = false
                 onCollapseChange()
             },
-            voiceSessionId = voiceSessionId,
+            recordingReplayKey = replayKey,
             recording = recording,
             modifier = modifier,
         ) {
@@ -1488,7 +1515,7 @@ fun CallMessages(
                 expanded = true
                 onCollapseChange()
             },
-            voiceSessionId = voiceSessionId,
+            recordingReplayKey = replayKey,
             recording = recording,
             modifier = modifier,
         )

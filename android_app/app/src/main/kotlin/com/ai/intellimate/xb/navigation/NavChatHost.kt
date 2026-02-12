@@ -52,6 +52,10 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             backStackEntry.savedStateHandle.get<Long>(
                 RoutesChat.VoiceCallResultKeys.RECORDING_DURATION_MS
             )
+        val voiceCallTurnRecordingsJson =
+            backStackEntry.savedStateHandle.get<String>(
+                RoutesChat.VoiceCallResultKeys.TURN_RECORDINGS_JSON
+            )
 
         LaunchedEffect(
             agentId,
@@ -59,6 +63,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             refreshVoiceSessionId,
             voiceCallRecordingPath,
             voiceCallRecordingDurationMs,
+            voiceCallTurnRecordingsJson,
         ) {
             val agent = AgentStore.getAgent(agentId = agentId)
             if (agentId != null) {
@@ -84,6 +89,9 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             backStackEntry.savedStateHandle.remove<Long>(
                 RoutesChat.VoiceCallResultKeys.RECORDING_DURATION_MS
             )
+            backStackEntry.savedStateHandle.remove<String>(
+                RoutesChat.VoiceCallResultKeys.TURN_RECORDINGS_JSON
+            )
         }
 
         ChatScreen(
@@ -98,6 +106,7 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             refreshVoiceSessionId = refreshVoiceSessionId,
             voiceCallRecordingPath = voiceCallRecordingPath,
             voiceCallRecordingDurationMs = voiceCallRecordingDurationMs ?: 0L,
+            voiceCallTurnRecordingsJson = voiceCallTurnRecordingsJson,
         )
     }
 }

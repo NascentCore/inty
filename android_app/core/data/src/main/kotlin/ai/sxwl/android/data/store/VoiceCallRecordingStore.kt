@@ -15,10 +15,11 @@ import kotlinx.coroutines.flow.map
 private val Context.voiceCallRecordingDataStore by
     preferencesDataStore(name = "voice_call_recording_cache")
 
-/** 语音通话录音条目，通过 voiceSessionId 与文本消息精确关联。 */
+/** 语音通话录音条目，通过 voiceSessionId/voiceTurnId 与文本消息精确关联。 */
 data class VoiceCallRecordingEntry(
     val agentId: String,
     val voiceSessionId: String,
+    val voiceTurnId: String? = null,
     val recordingPath: String,
     val recordingDurationMs: Long = 0L,
     val createdAtMs: Long = System.currentTimeMillis(),
@@ -33,8 +34,8 @@ data class VoiceCallRecordingCache(
  * 语音通话录音缓存存储。
  *
  * 作用：
- * - 将「voice session id -> 本地录音文件」持久化；
- * - 聊天页渲染 voice bubble 时按 session 精确关联回放按钮，避免错配。
+ * - 将「voice session id(+voice turn id) -> 本地录音文件」持久化；
+ * - 聊天页渲染 voice bubble 时按 turn 优先、session 兜底关联回放按钮，避免错配。
  */
 object VoiceCallRecordingStore {
     private val CACHE_KEY = stringPreferencesKey("voice_call_recording_cache_json")
@@ -51,7 +52,8 @@ object VoiceCallRecordingStore {
             (
                     current.entries
                         .asSequence()
-                        .filter { it.voiceSessionId != normalized.voiceSessionId }
+                        .map { it.normalize() }
+                        .filterNot { it.isSameLogicalRecord(normalized) }
                         .filter { it.isValid() }
                         .toList() + normalized
                 )
@@ -75,11 +77,34 @@ object VoiceCallRecordingStore {
 
     suspend fun readBySessionId(context: Context, voiceSessionId: String): VoiceCallRecordingEntry? {
         if (voiceSessionId.isBlank()) return null
+        val normalizedSessionId = voiceSessionId.trim()
+        val all =
+            readCache(context)
+            .entries
+            .asSequence()
+            .map { it.normalize() }
+            .filter { it.voiceSessionId == normalizedSessionId && it.isValid() }
+            .toList()
+        return all.firstOrNull { it.voiceTurnId.isNullOrBlank() } ?: all.firstOrNull()
+    }
+
+    suspend fun readByTurnId(
+        context: Context,
+        voiceSessionId: String,
+        voiceTurnId: String,
+    ): VoiceCallRecordingEntry? {
+        val normalizedSessionId = voiceSessionId.trim()
+        val normalizedTurnId = voiceTurnId.trim()
+        if (normalizedSessionId.isBlank() || normalizedTurnId.isBlank()) return null
         return readCache(context)
             .entries
             .asSequence()
             .map { it.normalize() }
-            .firstOrNull { it.voiceSessionId == voiceSessionId && it.isValid() }
+            .firstOrNull {
+                it.voiceSessionId == normalizedSessionId &&
+                    it.voiceTurnId == normalizedTurnId &&
+                    it.isValid()
+            }
     }
 
     private suspend fun readCache(context: Context): VoiceCallRecordingCache {
@@ -111,6 +136,7 @@ object VoiceCallRecordingStore {
         return copy(
             agentId = agentId.trim(),
             voiceSessionId = voiceSessionId.trim(),
+            voiceTurnId = voiceTurnId?.trim()?.takeIf { it.isNotBlank() },
             recordingPath = recordingPath.trim(),
             createdAtMs = createdAtMs.takeIf { it > 0 } ?: System.currentTimeMillis(),
             recordingDurationMs = recordingDurationMs.coerceAtLeast(0L),
@@ -121,5 +147,12 @@ object VoiceCallRecordingStore {
         if (agentId.isBlank() || voiceSessionId.isBlank() || recordingPath.isBlank()) return false
         val file = File(recordingPath)
         return file.exists() && file.isFile
+    }
+
+    private fun VoiceCallRecordingEntry.isSameLogicalRecord(
+        other: VoiceCallRecordingEntry
+    ): Boolean {
+        if (agentId != other.agentId || voiceSessionId != other.voiceSessionId) return false
+        return voiceTurnId.orEmpty() == other.voiceTurnId.orEmpty()
     }
 }

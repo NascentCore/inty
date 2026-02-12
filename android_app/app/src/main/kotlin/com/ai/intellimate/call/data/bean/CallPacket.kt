@@ -5,6 +5,7 @@ import androidx.annotation.Keep
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -25,8 +26,14 @@ data class CallPacket(
     @SerialName("agent_count") val agentCount: Int = 0,
     @SerialName("session_id") val sessionId: String? = null,
     @SerialName("voice_session_id") val voiceSessionId: String? = null,
+    @SerialName("turn_id") val turnId: String? = null,
+    @SerialName("voice_turn_id") val voiceTurnId: String? = null,
+    @SerialName("response_id") val responseId: String? = null,
+    @SerialName("item_id") val itemId: String? = null,
+    @SerialName("message_id") val messageId: String? = null,
     val id: String? = null,
     @SerialName("session_info") val sessionInfo: SessionInfo? = null,
+    @SerialName("turn_info") val turnInfo: TurnInfo? = null,
 ) {
     val errorEnum: IntyErrorCode?
         get() =
@@ -60,21 +67,58 @@ data class CallPacket(
             runCatching { Json.parseToJsonElement(payloadRaw).jsonObject }
                 .getOrNull()
                 ?: return null
-        return listOf("voice_session_id", "session_id", "id")
-            .firstNotNullOfOrNull { key ->
-                payload[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
-            }
+        return resolveCandidateFromJson(payload, listOf("voice_session_id", "session_id", "id"))
             ?: run {
                 val sessionInfoObject =
                     runCatching { payload["session_info"]?.jsonObject }.getOrNull()
                         ?: return@run null
-                listOf("voice_session_id", "session_id", "id")
-                    .firstNotNullOfOrNull { key ->
-                        sessionInfoObject[key]
-                            ?.jsonPrimitive
-                            ?.contentOrNull
-                            ?.takeIf { it.isNotBlank() }
-                    }
+                resolveCandidateFromJson(sessionInfoObject, listOf("voice_session_id", "session_id", "id"))
+            }
+    }
+
+    /** 解析并返回可用于“单轮语音->文本”关联的 turn id。 */
+    fun resolveVoiceTurnId(): String? {
+        val directCandidates =
+            listOf(
+                voiceTurnId,
+                turnId,
+                responseId,
+                itemId,
+                messageId,
+                turnInfo?.voiceTurnId,
+                turnInfo?.turnId,
+                turnInfo?.responseId,
+                turnInfo?.itemId,
+                turnInfo?.messageId,
+            )
+        directCandidates.firstOrNull { !it.isNullOrBlank() }?.let { return it }
+
+        if (data.isBlank()) return null
+        val payloadRaw = data.trim()
+        if (!payloadRaw.startsWith("{")) return null
+        val payload =
+            runCatching { Json.parseToJsonElement(payloadRaw).jsonObject }
+                .getOrNull()
+                ?: return null
+
+        return resolveCandidateFromJson(
+            payload,
+            listOf("voice_turn_id", "turn_id", "response_id", "item_id", "message_id"),
+        )
+            ?: run {
+                val turnInfoObject = runCatching { payload["turn_info"]?.jsonObject }.getOrNull()
+                resolveCandidateFromJson(
+                    turnInfoObject,
+                    listOf("voice_turn_id", "turn_id", "response_id", "item_id", "message_id"),
+                )
+            }
+            ?: run {
+                val sessionInfoObject =
+                    runCatching { payload["session_info"]?.jsonObject }.getOrNull()
+                resolveCandidateFromJson(
+                    sessionInfoObject,
+                    listOf("voice_turn_id", "turn_id", "response_id", "item_id", "message_id"),
+                )
             }
     }
 
@@ -93,6 +137,26 @@ data class CallPacket(
         @SerialName("session_id") val sessionId: String? = null,
         @SerialName("voice_session_id") val voiceSessionId: String? = null,
     )
+
+    @Keep
+    @Serializable
+    data class TurnInfo(
+        @SerialName("voice_turn_id") val voiceTurnId: String? = null,
+        @SerialName("turn_id") val turnId: String? = null,
+        @SerialName("response_id") val responseId: String? = null,
+        @SerialName("item_id") val itemId: String? = null,
+        @SerialName("message_id") val messageId: String? = null,
+    )
+}
+
+private fun resolveCandidateFromJson(
+    jsonObject: JsonObject?,
+    keys: List<String>,
+): String? {
+    val target = jsonObject ?: return null
+    return keys.firstNotNullOfOrNull { key ->
+        target[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+    }
 }
 
 /** 消息类型 */

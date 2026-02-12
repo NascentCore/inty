@@ -59,6 +59,7 @@ data class MessageEntity(
         val isVoice: Boolean = false,
         val isOpening: Boolean = false,
         val voiceSessionId: String? = null,
+        val voiceTurnId: String? = null,
         @Embedded("generate_image_") val generatedImage: GeneratedImage? = null,
     ) {
         data class GeneratedImage(
@@ -110,6 +111,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
                             )
                         },
                     voiceSessionId = voice_session_id,
+                    voiceTurnId = voice_turn_id,
                 )
             } ?: MetaData(agentId),
         type = type,
@@ -132,6 +134,7 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
                     isVoice = isVoice,
                     isOpening = isOpening,
                     voiceSessionId = voice_session_id,
+                    voiceTurnId = voice_turn_id,
                     generatedImage =
                         generatedImage?.run {
                             MessageEntity.MetaData.GeneratedImage(
@@ -164,6 +167,7 @@ fun MessageEntity.toModel(): MsgInfo {
                 isVoice = metaData.isVoice,
                 isOpening = metaData.isOpening,
                 voice_session_id = metaData.voiceSessionId,
+                voice_turn_id = metaData.voiceTurnId,
                 generatedImage =
                     metaData.generatedImage?.let { g ->
                         MsgInfo.MsgMetaData.GeneratedImage(

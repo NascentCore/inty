@@ -33,6 +33,7 @@ import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.call.VoiceCallTurnRecordingResultPayload
 import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.utils.VipChatCreditPolicy
@@ -40,6 +41,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
 import com.ai.intellimate.xb.helper.AgentStore
+import com.architecture.httplib.utils.MoshiUtils
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -81,6 +83,10 @@ class ChatViewModel : BaseVM() {
     private val _voiceCallRecordingsBySession =
         MutableStateFlow<Map<String, VoiceCallRecordingEntry>>(emptyMap())
     val voiceCallRecordingsBySession = _voiceCallRecordingsBySession.asStateFlow()
+
+    private val _voiceCallRecordingsByTurn =
+        MutableStateFlow<Map<String, VoiceCallRecordingEntry>>(emptyMap())
+    val voiceCallRecordingsByTurn = _voiceCallRecordingsByTurn.asStateFlow()
 
     private val _agentId = MutableStateFlow<String?>(null)
 
@@ -250,6 +256,7 @@ class ChatViewModel : BaseVM() {
         if (agentInfo == null) {
             _agentInfo.value = null
             _voiceCallRecordingsBySession.value = emptyMap()
+            _voiceCallRecordingsByTurn.value = emptyMap()
             lastQueryAgentId = null
             isQueryingMsgs = false
             _isQueryMsgsCompleted.value = false
@@ -429,12 +436,26 @@ class ChatViewModel : BaseVM() {
 
     private fun refreshVoiceCallRecordings(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val recordings =
-                VoiceCallRecordingStore.readByAgent(Utils.getApp(), agentId)
-                    .associateBy { it.voiceSessionId }
+            val allRecordings = VoiceCallRecordingStore.readByAgent(Utils.getApp(), agentId)
+            val recordingsBySession =
+                allRecordings
+                    .groupBy { it.voiceSessionId }
+                    .mapValues { (_, list) ->
+                        list.firstOrNull { it.voiceTurnId.isNullOrBlank() } ?: list.first()
+                    }
+            val recordingsByTurn =
+                allRecordings
+                    .asSequence()
+                    .filter { !it.voiceTurnId.isNullOrBlank() }
+                    .associateBy { buildVoiceTurnKey(it.voiceSessionId, it.voiceTurnId.orEmpty()) }
             if (_agentId.value != agentId) return@launch
-            _voiceCallRecordingsBySession.value = recordings
+            _voiceCallRecordingsBySession.value = recordingsBySession
+            _voiceCallRecordingsByTurn.value = recordingsByTurn
         }
+    }
+
+    private fun buildVoiceTurnKey(voiceSessionId: String, voiceTurnId: String): String {
+        return "${voiceSessionId.trim()}::${voiceTurnId.trim()}"
     }
 
     /**
@@ -449,6 +470,7 @@ class ChatViewModel : BaseVM() {
         voiceSessionId: String?,
         recordingPath: String?,
         recordingDurationMs: Long,
+        turnRecordingsJson: String?,
     ) {
         val agentId = _agentId.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
@@ -479,16 +501,54 @@ class ChatViewModel : BaseVM() {
                         VoiceCallRecordingEntry(
                             agentId = agentId,
                             voiceSessionId = resolvedSessionId,
+                            voiceTurnId = null,
                             recordingPath = recordingPath,
                             recordingDurationMs = recordingDurationMs,
                         ),
                 )
-                refreshVoiceCallRecordings(agentId)
             } else if (!recordingPath.isNullOrBlank()) {
                 LogUtils.w(
                     "voice call recording exists but session id unresolved, skip bind: agentId=$agentId, localSession=$normalizedSessionId"
                 )
             }
+
+            val turnRecordingsPayload =
+                runCatching {
+                        turnRecordingsJson
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let {
+                                MoshiUtils.fromJson<VoiceCallTurnRecordingResultPayload>(it)
+                            }
+                    }
+                    .getOrNull()
+            if (!resolvedSessionId.isNullOrBlank()) {
+                turnRecordingsPayload
+                    ?.entries
+                    .orEmpty()
+                    .asSequence()
+                    .map {
+                        it.copy(
+                            voiceTurnId = it.voiceTurnId.trim(),
+                            recordingPath = it.recordingPath.trim(),
+                            recordingDurationMs = it.recordingDurationMs.coerceAtLeast(0L),
+                        )
+                    }
+                    .filter { it.voiceTurnId.isNotBlank() && it.recordingPath.isNotBlank() }
+                    .forEach { turnEntry ->
+                        VoiceCallRecordingStore.saveOrUpdate(
+                            context = Utils.getApp(),
+                            entry =
+                                VoiceCallRecordingEntry(
+                                    agentId = agentId,
+                                    voiceSessionId = resolvedSessionId,
+                                    voiceTurnId = turnEntry.voiceTurnId,
+                                    recordingPath = turnEntry.recordingPath,
+                                    recordingDurationMs = turnEntry.recordingDurationMs,
+                                ),
+                        )
+                    }
+            }
+            refreshVoiceCallRecordings(agentId)
         }
     }
 
@@ -1473,6 +1533,7 @@ class ChatViewModel : BaseVM() {
     fun clearAllData() {
         _agentInfo.value = null
         _voiceCallRecordingsBySession.value = emptyMap()
+        _voiceCallRecordingsByTurn.value = emptyMap()
         inputData.update { "" }
         inputSelection.value = 0
         _isWaitingForReply.value = false

@@ -134,7 +134,7 @@ sealed class ChatMessageItem {
 private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<MessageItem> {
     val result = mutableListOf<MessageItem>()
     val currentVoiceGroupIndices = mutableListOf<Int>()
-    var voiceSessionId: String? = null
+    var voiceGroupKey: String? = null
 
     messages.forEachIndexed { index, info ->
         if (info == null) {
@@ -145,8 +145,8 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
             result.add(MessageItem.MessageIndex(index))
         } else {
             if (info.isVoice) {
-
-                if (voiceSessionId != info.metaData.voiceSessionId) {
+                val currentMessageGroupKey = buildVoiceGroupKey(info)
+                if (voiceGroupKey != currentMessageGroupKey) {
                     if (currentVoiceGroupIndices.isNotEmpty()) {
                         result.add(
                             MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed())
@@ -154,7 +154,7 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
                         currentVoiceGroupIndices.clear()
                     }
 
-                    voiceSessionId = info.metaData.voiceSessionId
+                    voiceGroupKey = currentMessageGroupKey
                 }
 
                 currentVoiceGroupIndices.add(index)
@@ -176,6 +176,15 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
     }
 
     return result
+}
+
+private fun buildVoiceGroupKey(message: MessageEntity): String {
+    val sessionId = message.metaData.voiceSessionId?.trim().orEmpty()
+    val turnId = message.metaData.voiceTurnId?.trim().orEmpty()
+    if (turnId.isNotBlank()) {
+        return "$sessionId::$turnId"
+    }
+    return sessionId.ifBlank { "unknown_session" }
 }
 
 /** ChatPage 页面来源常量 - 用于统计曝光事件 */
@@ -208,6 +217,7 @@ internal fun ChatPage(
     refreshVoiceSessionId: String? = null,
     voiceCallRecordingPath: String? = null,
     voiceCallRecordingDurationMs: Long = 0L,
+    voiceCallTurnRecordingsJson: String? = null,
 ) {
 
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
@@ -280,10 +290,15 @@ internal fun ChatPage(
         refreshVoiceSessionId,
         voiceCallRecordingPath,
         voiceCallRecordingDurationMs,
+        voiceCallTurnRecordingsJson,
         isCurrentPage,
     ) {
         if (!isCurrentPage) return@LaunchedEffect
-        if (!refreshVoiceSessionId.isNullOrBlank() || !voiceCallRecordingPath.isNullOrBlank()) {
+        if (
+            !refreshVoiceSessionId.isNullOrBlank() ||
+                !voiceCallRecordingPath.isNullOrBlank() ||
+                !voiceCallTurnRecordingsJson.isNullOrBlank()
+        ) {
             LogUtils.d(
                 "chatPage: handleVoiceCallReturn sessionId=$refreshVoiceSessionId, refreshCount=$refreshMessageCount"
             )
@@ -292,6 +307,7 @@ internal fun ChatPage(
                 voiceSessionId = refreshVoiceSessionId,
                 recordingPath = voiceCallRecordingPath,
                 recordingDurationMs = voiceCallRecordingDurationMs,
+                turnRecordingsJson = voiceCallTurnRecordingsJson,
             )
         } else if (refreshMessageCount > 0) {
             LogUtils.d("chatPage: refreshCount = $refreshMessageCount")
@@ -438,6 +454,7 @@ internal fun ChatPage(
     val uiState by chatViewModel.uiState.collectAsState()
     val voiceCallRecordingsBySession by
         chatViewModel.voiceCallRecordingsBySession.collectAsState()
+    val voiceCallRecordingsByTurn by chatViewModel.voiceCallRecordingsByTurn.collectAsState()
 
     if (
         uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
@@ -763,6 +780,7 @@ internal fun ChatPage(
                                         chatViewModel = chatViewModel,
                                         voiceCallRecordingsBySession =
                                             voiceCallRecordingsBySession,
+                                        voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
                                         isCurrentPage = isCurrentPage,
                                         isGuideVisible = isGuideVisible,
                                         messageFontSizeSp = chatFontSizeSp,
