@@ -89,6 +89,14 @@ class AgentRecommendationRequest(BaseModel):
     )
 
 
+class ExclusivePhotoItem(BaseModel):
+    """运营上传的专属角色照单条"""
+
+    image_url: str = Field(..., description="照片地址（GCS 或 CDN）")
+    caption: str = Field(..., description="文案")
+    credits_required: int = Field(..., ge=0, description="解锁所需 credit 数量")
+
+
 class ModelConfig(BaseModel):
     """AI模型配置"""
 
@@ -147,6 +155,10 @@ class AgentBase(BaseModel):
         description="角色来源：USER_CREATED（用户创建）或 AUTO_GENERATED（自动生成）",
     )
     photos: Optional[List[str]] = None
+    exclusive_photos: Optional[List[ExclusivePhotoItem]] = Field(
+        None,
+        description="运营上传的专属角色照：image_url, caption, credits_required",
+    )
     category: Optional[str] = None
 
     # Legacy字段 (已废弃)
@@ -188,7 +200,12 @@ class AgentBase(BaseModel):
     )
 
     @field_validator(
-        "background_images", "photos", "alternate_greetings", "tags", mode="before"
+        "background_images",
+        "photos",
+        "exclusive_photos",
+        "alternate_greetings",
+        "tags",
+        mode="before",
     )
     @classmethod
     def convert_empty_string_to_none(cls, v):

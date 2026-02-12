@@ -53,6 +53,11 @@ class Agent(Base):
         Enum(AgentVisibility, name="visibility"), default=AgentVisibility.PUBLIC
     )
     photos = Column(JSON)
+    exclusive_photos = Column(
+        JSON,
+        nullable=True,
+        comment="运营上传的专属角色照：每项含 image_url, caption, credits_required",
+    )
     category = Column(String)
     status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
     source = Column(
