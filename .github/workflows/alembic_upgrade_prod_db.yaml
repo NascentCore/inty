@@ -25,4 +25,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Upgrade production database
-        run: alembic -c devops/config.yaml.prod upgrade head
+        run: alembic -x config=devops/config.yaml.prod upgrade head
