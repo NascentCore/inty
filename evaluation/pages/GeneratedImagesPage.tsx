@@ -39,6 +39,10 @@ import {
 import { agentApi, generatedImagesApi } from "../services/api";
 import type { Agent, GeneratedImage } from "../types";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
+import {
+  AGENT_LIST_PAGE_SIZE,
+  fetchAllAgentsWithPagination,
+} from "../utils/agentPagination";
 
 const { Text, Paragraph, Title } = Typography;
 const { Search } = Input;
@@ -59,9 +63,16 @@ const GeneratedImagesPage: React.FC = () => {
     setLoadingAgents(true);
     try {
       const [agentsData, countsData] = await Promise.all([
-        agentApi.list({ limit: 200 }),
+        fetchAllAgentsWithPagination({
+          pageSize: AGENT_LIST_PAGE_SIZE,
+          fetchPage: ({ skip, limit }) => agentApi.list({ skip, limit }),
+          onBatchLoaded: (accumulatedAgents) => {
+            setAgents(accumulatedAgents);
+          },
+        }),
         generatedImagesApi.getImageCounts(),
       ]);
+
       setAgents(agentsData);
       setImageCounts(countsData.counts);
     } catch (error) {
@@ -180,7 +191,7 @@ const GeneratedImagesPage: React.FC = () => {
               allowClear
             />
             <div style={{ flex: 1, overflow: "auto" }}>
-              {loadingAgents ? (
+              {loadingAgents && filteredAgents.length === 0 ? (
                 <div
                   style={{
                     display: "flex",
@@ -193,61 +204,63 @@ const GeneratedImagesPage: React.FC = () => {
               ) : filteredAgents.length === 0 ? (
                 <Empty description="没有找到角色" />
               ) : (
-                <List
-                  dataSource={filteredAgents}
-                  renderItem={(agent) => (
-                    <List.Item
-                      onClick={() => setSelectedAgent(agent)}
-                      style={{
-                        cursor: "pointer",
-                        padding: "8px 12px",
-                        borderRadius: 8,
-                        backgroundColor:
-                          selectedAgent?.id === agent.id
-                            ? "#e6f4ff"
-                            : "transparent",
-                        marginBottom: 4,
-                        border:
-                          selectedAgent?.id === agent.id
-                            ? "1px solid #91caff"
-                            : "1px solid transparent",
-                        transition: "all 0.2s",
-                      }}
-                    >
-                      <List.Item.Meta
-                        avatar={
-                          <Avatar
-                            src={agent.avatar}
-                            icon={<UserOutlined />}
-                            size={40}
-                          />
-                        }
-                        title={
-                          <Text
-                            strong={selectedAgent?.id === agent.id}
-                            style={{ fontSize: 14 }}
-                          >
-                            {agent.name}
-                          </Text>
-                        }
-                        description={
-                          <Space size={4}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {agent.visibility === "PUBLIC" ? "公开" : "私有"}
+                <Spin spinning={loadingAgents}>
+                  <List
+                    dataSource={filteredAgents}
+                    renderItem={(agent) => (
+                      <List.Item
+                        onClick={() => setSelectedAgent(agent)}
+                        style={{
+                          cursor: "pointer",
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          backgroundColor:
+                            selectedAgent?.id === agent.id
+                              ? "#e6f4ff"
+                              : "transparent",
+                          marginBottom: 4,
+                          border:
+                            selectedAgent?.id === agent.id
+                              ? "1px solid #91caff"
+                              : "1px solid transparent",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <List.Item.Meta
+                          avatar={
+                            <Avatar
+                              src={agent.avatar}
+                              icon={<UserOutlined />}
+                              size={40}
+                            />
+                          }
+                          title={
+                            <Text
+                              strong={selectedAgent?.id === agent.id}
+                              style={{ fontSize: 14 }}
+                            >
+                              {agent.name}
                             </Text>
-                            {imageCounts[agent.id] > 0 && (
-                              <Badge
-                                count={imageCounts[agent.id]}
-                                style={{ backgroundColor: "#52c41a" }}
-                                size="small"
-                              />
-                            )}
-                          </Space>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
+                          }
+                          description={
+                            <Space size={4}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {agent.visibility === "PUBLIC" ? "公开" : "私有"}
+                              </Text>
+                              {imageCounts[agent.id] > 0 && (
+                                <Badge
+                                  count={imageCounts[agent.id]}
+                                  style={{ backgroundColor: "#52c41a" }}
+                                  size="small"
+                                />
+                              )}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </Spin>
               )}
             </div>
           </Card>

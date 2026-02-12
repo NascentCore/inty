@@ -36,6 +36,10 @@ import type {
   Agent,
 } from "../types";
 import {
+  AGENT_LIST_PAGE_SIZE,
+  fetchAllAgentsWithPagination,
+} from "../utils/agentPagination";
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -181,7 +185,14 @@ export const CharacterThemeManagePage: React.FC = () => {
 
   const loadAvailableAgents = useCallback(async () => {
     try {
-      const data = await agentApi.list({ type: "public", limit: 1000 });
+      const data = await fetchAllAgentsWithPagination({
+        pageSize: AGENT_LIST_PAGE_SIZE,
+        fetchPage: ({ skip, limit }) =>
+          agentApi.list({ type: "public", skip, limit }),
+        onBatchLoaded: (accumulatedAgents) => {
+          setAvailableAgents(accumulatedAgents);
+        },
+      });
       setAvailableAgents(data);
     } catch (error) {
       logError("加载角色列表失败");
