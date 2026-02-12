@@ -7,6 +7,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -47,6 +48,15 @@ interface ChatMessageDao {
 
     @Query("SELECT * FROM message WHERE agentId = :agentId AND id = :messageId LIMIT 1")
     suspend fun getMessage(agentId: String, messageId: String): MessageEntity?
+
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND id = :messageId AND indexId = :indexId LIMIT 1"
+    )
+    suspend fun getMessageByPrimaryKey(
+        agentId: String,
+        messageId: String,
+        indexId: String,
+    ): MessageEntity?
 
     @Query(
         "DELETE FROM message WHERE agentId = :agentId AND id = :messageId AND indexId = :indexId"
@@ -131,4 +141,36 @@ interface ChatMessageDao {
         indexId: String,
         voiceTurnId: String,
     )
+
+    /**
+     * 写入远端消息时保留本地 voiceTurnId：
+     * 当服务端暂未返回 voice_turn_id（null/blank）时，避免覆盖已回填的 turn 关联。
+     */
+    @Transaction
+    suspend fun insertOrDropPreservingVoiceTurn(messages: List<MessageUpdate>) {
+        if (messages.isEmpty()) return
+        val merged =
+            messages.map { incoming ->
+                val normalizedIncomingTurnId = incoming.metaData.voiceTurnId?.trim().orEmpty()
+                if (normalizedIncomingTurnId.isNotBlank()) {
+                    incoming.copy(
+                        metaData = incoming.metaData.copy(voiceTurnId = normalizedIncomingTurnId)
+                    )
+                } else {
+                    val existing =
+                        getMessageByPrimaryKey(
+                            agentId = incoming.metaData.agentId,
+                            messageId = incoming.id,
+                            indexId = incoming.indexId,
+                        )
+                    val existingTurnId = existing?.metaData?.voiceTurnId?.trim().orEmpty()
+                    if (existingTurnId.isBlank()) {
+                        incoming
+                    } else {
+                        incoming.copy(metaData = incoming.metaData.copy(voiceTurnId = existingTurnId))
+                    }
+                }
+            }
+        insertOrDrop(merged)
+    }
 }

@@ -82,7 +82,7 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
     }
 
     suspend fun upsert(updates: List<MessageUpdate>) {
-        chatMessageDao.insertOrDrop(updates)
+        chatMessageDao.insertOrDropPreservingVoiceTurn(updates)
     }
 
     suspend fun setMessageVote(

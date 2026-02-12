@@ -85,7 +85,7 @@ class ChatMessageRemoteMediator(
                         if (messages.isNotEmpty()) {
                             val entities = messages.map { msg -> msg.toUpdate(agentId) }
 
-                            messageDao.insertOrDrop(entities)
+                            messageDao.insertOrDropPreservingVoiceTurn(entities)
                             LogUtils.d(
                                 "ChatMessageRemoteMediator",
                                 "Saved ${entities.size} messages to database for agentId=$agentId",
