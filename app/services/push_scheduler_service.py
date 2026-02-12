@@ -12,7 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -426,6 +426,32 @@ class PushSchedulerService:
                 return
             for config in due_configs:
                 tz_str = getattr(config, "timezone", "UTC") or "UTC"
+                tz = ZoneInfo(tz_str)
+                run_at_local = datetime.datetime.combine(
+                    config.run_at_date,
+                    datetime.time(config.run_at_hour or 0, 0, 0),
+                    tzinfo=tz,
+                )
+                run_at_dt = run_at_local.astimezone(dt_timezone.utc)
+                # 占位：只有更新到 1 行的实例才执行 pairs，避免多实例重复执行
+                async with AsyncSessionLocal() as db:
+                    claim_result = await db.execute(
+                        update(FestivalMemoryConfig)
+                        .where(FestivalMemoryConfig.id == config.id)
+                        .where(
+                            or_(
+                                FestivalMemoryConfig.last_run_at.is_(None),
+                                FestivalMemoryConfig.last_run_at < run_at_dt,
+                            )
+                        )
+                        .values(last_run_at=now)
+                    )
+                    await db.commit()
+                if claim_result.rowcount != 1:
+                    logger.debug(
+                        f"[节日记忆抽取] config_id={config.id} 已被占位或已执行，跳过"
+                    )
+                    continue
                 min_rounds = (
                     getattr(config, "min_rounds_in_window", None)
                     or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
@@ -437,7 +463,6 @@ class PushSchedulerService:
                     tz_str,
                 )
                 async with AsyncSessionLocal() as db:
-                    ran_ok = True
                     for user_id, agent_id in pairs:
                         try:
                             await festival_memory_service.extract_festival_and_save(
@@ -450,21 +475,10 @@ class PushSchedulerService:
                             )
                         except Exception as e:
                             await db.rollback()
-                            ran_ok = False
                             logger.warning(
                                 f"[节日记忆抽取] user_id={user_id} agent_id={agent_id} "
                                 f"festival={config.festival_name} 失败: {e}"
                             )
-                    if ran_ok:
-                        result = await db.execute(
-                            select(FestivalMemoryConfig).where(
-                                FestivalMemoryConfig.id == config.id
-                            )
-                        )
-                        row = result.scalar_one_or_none()
-                        if row:
-                            row.last_run_at = now
-                            await db.commit()
             logger.info("[节日记忆抽取] 完成")
         except Exception as e:
             logger.error(f"[节日记忆抽取] 执行失败: {str(e)}")

@@ -1,5 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
+from datetime import date
+from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
@@ -343,16 +344,50 @@ META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
 
 
 def add_festival_memory_prompt_message_sync(
-    session_id: str, agent_id: str, memory_id: int
+    session_id: str,
+    agent_id: str,
+    memory_id: int,
+    festival_name: str,
+    festival_date: Union[date, str],
 ) -> Optional[int]:
     """
     向 chat_history 插入一条「节日记忆/心跳日记」提示类 AI 消息。
+    按 (session_id, agent_id, festival_name, festival_date) 幂等：已存在则返回已有 id 不插入。
     写入时用该会话的角色名称替换模板中的 {char}，落库即为最终文案；
-    meta_data 中记录该条消息对应的 memory 主键 festivalMemoryId。
-    返回插入的消息 ID，失败返回 None。
+    meta_data 中记录 festivalMemoryId、festivalName、festivalDate。
+    返回插入或已存在消息的 ID，失败返回 None。
     """
+    festival_date_str = (
+        festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date)
+    )
     try:
         conn = get_chat_history_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id FROM chat_history
+                WHERE session_id = %s AND deleted_at IS NULL
+                  AND meta_data->>'messageType' = %s AND meta_data->>'agentId' = %s
+                  AND meta_data->>'festivalName' = %s AND meta_data->>'festivalDate' = %s
+                LIMIT 1
+                """,
+                (
+                    session_id,
+                    META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+                    agent_id,
+                    festival_name,
+                    festival_date_str,
+                ),
+            )
+            row = cur.fetchone()
+            if row:
+                logger.debug(
+                    f"节日记忆提示消息已存在 session_id={session_id} agent_id={agent_id} "
+                    f"festival={festival_name} {festival_date_str}, id={row[0]}"
+                )
+                return row[0]
         agent_name = "角色"
         with conn.cursor() as cur:
             cur.execute(
@@ -371,6 +406,8 @@ def add_festival_memory_prompt_message_sync(
             "agentId": agent_id,
             "messageType": META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
             "festivalMemoryId": memory_id,
+            "festivalName": festival_name,
+            "festivalDate": festival_date_str,
         }
         insert_query = """
             INSERT INTO chat_history (session_id, message, meta_data)

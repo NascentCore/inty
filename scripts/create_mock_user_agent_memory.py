@@ -205,6 +205,8 @@ async def _run(
                 session_id,
                 agent_id,
                 memory_row.id,
+                festival_name_val,
+                festival_date_val,
             )
             if mid is None:
                 logger.warning("节日记忆提示消息插入失败（可能仍已写入 memory）")
