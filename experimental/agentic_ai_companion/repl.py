@@ -9,6 +9,8 @@ from langsmith.run_helpers import trace
 
 EMPTY_RESPONSE = "(E.M.P.T.Y.)"
 
+_TOOL_REQUEST_KEYWORDS = ("app icon", "zun long", "picture", "photo", "image", "voice", "speak", "say ", "generate")
+
 
 def _handle_api_response(
     messages: list,
@@ -57,7 +59,7 @@ def _handle_api_response(
         if messages[-1]["role"] == "user":
             messages.append({"role": "assistant", "content": out.content})
         # 第 2 块：工具结果
-        tool_display = out.tool_result + new_pending or ""
+        tool_display = (out.tool_result or "") + (new_pending or "")
         if tool_display:
             print(f"{char_name}> {tool_display}\n")
         logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content or ""), new_pending is not None)
@@ -108,17 +110,28 @@ def _execute_turn(
         while True:
             round_num += 1
             logger.info("API 请求 第 %d 轮 turn=%d，messages 条数=%d", round_num, turn, len(messages))
+            tool_msg_count = sum(1 for m in messages if m.get("role") == "tool")
+            logger.info("本次 API 请求 messages 中 tool 消息数量: %d", tool_msg_count)
             logger.info("Current messages: %s", json.dumps(messages, indent=2))
-            resp = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                tools=tools,
-                parallel_tool_calls=False,
+            line_lower = line.lower()
+            force_tool = (
+                tool_msg_count > 0
+                and any(kw in line_lower for kw in _TOOL_REQUEST_KEYWORDS)
             )
+            api_kwargs = {
+                "model": model,
+                "messages": messages,
+                "tools": tools,
+                "parallel_tool_calls": False,
+            }
+            if force_tool:
+                api_kwargs["tool_choice"] = "required"
+            resp = client.chat.completions.create(**api_kwargs)
             _raw = resp.model_dump() if hasattr(resp, "model_dump") else repr(resp)
             logger.info("API raw response: %s", _raw)
             msg = resp.choices[0].message
-            logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, bool(getattr(msg, "tool_calls", None)))
+            has_tc = bool(getattr(msg, "tool_calls", None))
+            logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tc)
 
             done, messages, _ = _handle_api_response(
                 messages, msg, char_name, turn,

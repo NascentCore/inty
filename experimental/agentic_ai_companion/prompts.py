@@ -23,7 +23,8 @@ def build_system_messages_openai(
     )
     tool_instruction = (
         "## Tool Usage\n"
-        "When the user requests app icon, Zun Long's photo, an image, or voice, you MUST call the corresponding tool. Never return empty content or skip the tool call."
+        "When the user requests app icon, Zun Long's photo, an image, or voice, you MUST call the corresponding tool. "
+        "This applies to every new user message, including after a previous tool result. Never return empty content or skip the tool call."
     )
     msgs = [
         {"role": "system", "content": rendered_main},

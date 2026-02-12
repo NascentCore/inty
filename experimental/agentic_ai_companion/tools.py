@@ -62,17 +62,17 @@ def execute_send_app_icon(*, _logger=None) -> tuple[str, str | None]:
     if not APP_ICON_PATH.exists():
         if _logger is not None:
             _logger.warning("send_app_icon 失败: 图片文件不存在")
-        return ("发送失败：图片文件不存在。", None)
+        return ("send_app_icon: Failed. Image file not found.", None)
     try:
         APP_ICON_PATH.read_bytes()
     except OSError as e:
         if _logger is not None:
             _logger.warning("send_app_icon 失败: 无法读取图片, error=%s", e)
-        return (f"发送失败：无法读取图片（{e!s}）。", None)
+        return (f"send_app_icon: Failed to read image ({e!s}).", None)
     path_str = str(APP_ICON_PATH.resolve())
     if _logger is not None:
         _logger.info("send_app_icon 成功，已返回路径: %s", path_str)
-    return ("已发送图片。", path_str)
+    return ("send_app_icon: Image sent.", path_str)
 
 
 def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
@@ -82,17 +82,17 @@ def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
     if not ZUN_LONG_PHOTO_PATH.exists():
         if _logger is not None:
             _logger.warning("send_zun_long_photo 失败: 图片文件不存在")
-        return ("发送失败：图片文件不存在。", None)
+        return ("send_zun_long_photo: Failed. Image file not found.", None)
     try:
         ZUN_LONG_PHOTO_PATH.read_bytes()
     except OSError as e:
         if _logger is not None:
             _logger.warning("send_zun_long_photo 失败: 无法读取图片, error=%s", e)
-        return (f"发送失败：无法读取图片（{e!s}）。", None)
+        return (f"send_zun_long_photo: Failed to read image ({e!s}).", None)
     path_str = str(ZUN_LONG_PHOTO_PATH.resolve())
     if _logger is not None:
         _logger.info("send_zun_long_photo 成功，已返回路径: %s", path_str)
-    return ("已发送图片。", path_str)
+    return ("send_zun_long_photo: Image sent.", path_str)
 
 
 def execute_generate_image(
@@ -111,7 +111,7 @@ def execute_generate_image(
     except (ValueError, OSError, AttributeError) as e:
         if _logger is not None:
             _logger.warning("generate_image 失败: %s", e)
-        return (f"生成失败：{e}", None)
+        return (f"generate_image: Failed ({e}).", None)
     suffix = ".jpg"
     if image_bytes[:2] == b"\xff\xd8":
         suffix = ".jpg"
@@ -122,7 +122,7 @@ def execute_generate_image(
     path_str = str(out_path.resolve())
     if _logger is not None:
         _logger.info("generate_image 成功，已写入: %s", path_str)
-    return ("已根据对话上下文生成图片。", path_str)
+    return ("generate_image: Image generated.", path_str)
 
 
 def execute_text_to_speech(text: str, *, client: Any, _logger=None, **kwargs: Any) -> tuple[str, str | None]:
@@ -130,13 +130,13 @@ def execute_text_to_speech(text: str, *, client: Any, _logger=None, **kwargs: An
     from .speech_gen import generate_speech_from_text
 
     if not (text or "").strip():
-        return ("要朗读的文本不能为空。", None)
+        return ("text_to_speech: Text cannot be empty.", None)
     try:
         pcm = generate_speech_from_text(text.strip(), client=client)
     except (ValueError, OSError, AttributeError) as e:
         if _logger is not None:
             _logger.warning("text_to_speech 失败: %s", e)
-        return (f"生成失败：{e}", None)
+        return (f"text_to_speech: Failed ({e}).", None)
     out_path = _THIS_DIR / f"generated_speech_{int(time.time() * 1000)}.wav"
     with wave.open(str(out_path), "wb") as wf:
         wf.setnchannels(WAV_CHANNELS)
@@ -146,7 +146,7 @@ def execute_text_to_speech(text: str, *, client: Any, _logger=None, **kwargs: An
     path_str = str(out_path.resolve())
     if _logger is not None:
         _logger.info("text_to_speech 成功，已写入: %s", path_str)
-    return ("已生成语音。", path_str)
+    return ("text_to_speech: Speech generated.", path_str)
 
 
 def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
