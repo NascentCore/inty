@@ -37,32 +37,8 @@ def _handle_api_response(
 
     from .tools import ToolType
     tool_name = msg.tool_calls[0].function.name
-    is_terminal = tool_types.get(tool_name, ToolType.UNSPECIFIED) == ToolType.TERMINAL
 
-    if is_terminal:
-        logger.info("执行 TERMINAL 工具 %s，msg: %s", tool_name, json.dumps(msg.model_dump(), indent=2))
-        assistant_text = (msg.content or "").strip()
-        if assistant_text:
-            print(f"{char_name}> {assistant_text}\n")
-        out = process_response_with_tools(
-            messages, msg,
-            tool_executors=tool_executors,
-            tool_types=tool_types,
-            tool_context_types=tool_context_types,
-            get_gemini_client=get_gemini_client,
-            _logger=logger,
-        )
-        messages = out.messages
-        new_pending = out.image_path
-        # if messages[-1]["role"] == "user":
-        messages.append({"role": "assistant", "content": out.content})
-        # 第 2 块：工具结果
-        tool_display = (out.tool_result or "") + " " + (new_pending or "")
-        if tool_display:
-            print(f"{char_name}> {tool_display}\n")
-        logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content or ""), new_pending is not None)
-        return True, messages, new_pending
-
+    logger.info("执行 TERMINAL 工具 %s，msg: %s", tool_name, json.dumps(msg.model_dump(), indent=2))
     assistant_text = (msg.content or "").strip()
     if assistant_text:
         print(f"{char_name}> {assistant_text}\n")
@@ -76,8 +52,14 @@ def _handle_api_response(
     )
     messages = out.messages
     new_pending = out.image_path
-    logger.debug("继续本轮 API 请求，messages 已追加 assistant + tool")
-    return False, messages, new_pending
+    # if messages[-1]["role"] == "user":
+    messages.append({"role": "assistant", "content": out.content})
+    # 第 2 块：工具结果
+    tool_display = (out.tool_result or "") + " " + (new_pending or "")
+    if tool_display:
+        print(f"{char_name}> {tool_display}\n")
+    logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content or ""), new_pending is not None)
+    return True, messages, new_pending
 
 
 def _execute_turn(
