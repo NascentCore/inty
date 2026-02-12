@@ -6,6 +6,7 @@ import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.data.store.VoiceCallRecordingEntry
+import ai.sxwl.android.data.store.VoiceCallRecordingIndex
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.firebase.FirebaseManager
@@ -125,8 +126,7 @@ fun ChatItem(
     agentName: String? = null,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
-    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry> = emptyMap(),
-    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry> = emptyMap(),
+    voiceCallRecordingIndex: VoiceCallRecordingIndex = VoiceCallRecordingIndex.empty(),
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
@@ -141,8 +141,7 @@ fun ChatItem(
                     item,
                     isCurrentPage,
                     chatViewModel,
-                    voiceCallRecordingsBySession,
-                    voiceCallRecordingsByTurn,
+                    voiceCallRecordingIndex,
                     isLatestMessage,
                     isGuideVisible,
                     messageFontSizeSp,
@@ -258,8 +257,7 @@ private fun ChatItemAI(
     item: MessageEntity,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
-    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry> = emptyMap(),
-    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry> = emptyMap(),
+    voiceCallRecordingIndex: VoiceCallRecordingIndex = VoiceCallRecordingIndex.empty(),
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float,
@@ -282,11 +280,10 @@ private fun ChatItemAI(
                     val metaAgentId = item.agentId()
                     val safeAgentId = vmAgentId ?: metaAgentId ?: ""
                     val localVoiceRecordingUrl =
-                        remember(item, voiceCallRecordingsBySession, voiceCallRecordingsByTurn) {
+                        remember(item, voiceCallRecordingIndex) {
                             resolveLocalVoiceRecordingUrl(
                                 item = item,
-                                voiceCallRecordingsBySession = voiceCallRecordingsBySession,
-                                voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
+                                voiceCallRecordingIndex = voiceCallRecordingIndex,
                             )
                         }
                     val preferredAudioUrl = localVoiceRecordingUrl ?: item.audioUrl.orEmpty()
@@ -1214,25 +1211,18 @@ private fun resolveVoiceTurnId(messages: List<MessageEntity>): String? {
 }
 
 private fun buildVoiceTurnKey(voiceSessionId: String, voiceTurnId: String): String {
-    return "${voiceSessionId.trim()}::${voiceTurnId.trim()}"
+    return VoiceCallRecordingIndex.buildTurnKey(voiceSessionId, voiceTurnId)
 }
 
 private fun resolveLocalVoiceRecordingUrl(
     item: MessageEntity,
-    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry>,
-    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry>,
+    voiceCallRecordingIndex: VoiceCallRecordingIndex,
 ): String? {
     if (!item.isVoice || item.role != "assistant") return null
     val voiceSessionId = item.metaData.voiceSessionId?.trim().orEmpty()
     if (voiceSessionId.isBlank()) return null
     val voiceTurnId = item.metaData.voiceTurnId?.trim().orEmpty()
-    val turnRecording =
-        if (voiceTurnId.isBlank()) {
-            null
-        } else {
-            voiceCallRecordingsByTurn[buildVoiceTurnKey(voiceSessionId, voiceTurnId)]
-        }
-    val matched = turnRecording ?: voiceCallRecordingsBySession[voiceSessionId] ?: return null
+    val matched = voiceCallRecordingIndex.resolve(voiceSessionId, voiceTurnId) ?: return null
     val path = matched.recordingPath.trim()
     if (path.isBlank()) return null
     val file = File(path)
@@ -1490,8 +1480,7 @@ fun CallMessages(
     messages: List<MessageEntity?>,
     navController: NavController,
     chatViewModel: ChatViewModel?,
-    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry> = emptyMap(),
-    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry> = emptyMap(),
+    voiceCallRecordingIndex: VoiceCallRecordingIndex = VoiceCallRecordingIndex.empty(),
     onCollapseChange: () -> Unit,
     modifier: Modifier = Modifier,
     isCurrentPage: Boolean = true,
@@ -1507,15 +1496,10 @@ fun CallMessages(
             else buildVoiceTurnKey(voiceSessionId, voiceTurnId)
         }
     val recording =
-        remember(voiceSessionId, turnRecordingKey, voiceCallRecordingsBySession, voiceCallRecordingsByTurn) {
-            val byTurn =
-                turnRecordingKey
-                    ?.let { voiceCallRecordingsByTurn[it] }
-                    ?.takeIf { File(it.recordingPath).exists() }
-            byTurn
-                ?: voiceSessionId
-                    ?.let { voiceCallRecordingsBySession[it] }
-                    ?.takeIf { File(it.recordingPath).exists() }
+        remember(voiceSessionId, voiceTurnId, voiceCallRecordingIndex) {
+            voiceCallRecordingIndex
+                .resolve(voiceSessionId = voiceSessionId, voiceTurnId = voiceTurnId)
+                ?.takeIf { File(it.recordingPath).exists() }
         }
     val replayKey = remember(turnRecordingKey, voiceSessionId) { turnRecordingKey ?: voiceSessionId }
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -1539,8 +1523,7 @@ fun CallMessages(
                         item = msg,
                         isCurrentPage = isCurrentPage,
                         chatViewModel = chatViewModel,
-                        voiceCallRecordingsBySession = voiceCallRecordingsBySession,
-                        voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
+                        voiceCallRecordingIndex = voiceCallRecordingIndex,
                         isLatestMessage = false,
                         isGuideVisible = isGuideVisible,
                         messageFontSizeSp = messageFontSizeSp,

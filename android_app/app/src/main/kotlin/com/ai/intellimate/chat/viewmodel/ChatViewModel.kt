@@ -17,6 +17,7 @@ import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.data.store.VoiceCallRecordingEntry
+import ai.sxwl.android.data.store.VoiceCallRecordingIndex
 import ai.sxwl.android.data.store.VoiceCallRecordingStore
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
@@ -80,13 +81,8 @@ class ChatViewModel : BaseVM() {
     private val _uiState = MutableStateFlow(ChatUIState())
     val uiState = _uiState.asStateFlow()
 
-    private val _voiceCallRecordingsBySession =
-        MutableStateFlow<Map<String, VoiceCallRecordingEntry>>(emptyMap())
-    val voiceCallRecordingsBySession = _voiceCallRecordingsBySession.asStateFlow()
-
-    private val _voiceCallRecordingsByTurn =
-        MutableStateFlow<Map<String, VoiceCallRecordingEntry>>(emptyMap())
-    val voiceCallRecordingsByTurn = _voiceCallRecordingsByTurn.asStateFlow()
+    private val _voiceCallRecordingIndex = MutableStateFlow(VoiceCallRecordingIndex.empty())
+    val voiceCallRecordingIndex = _voiceCallRecordingIndex.asStateFlow()
 
     private val _agentId = MutableStateFlow<String?>(null)
 
@@ -255,8 +251,7 @@ class ChatViewModel : BaseVM() {
         // 如果 agent 为空，清理所有状态
         if (agentInfo == null) {
             _agentInfo.value = null
-            _voiceCallRecordingsBySession.value = emptyMap()
-            _voiceCallRecordingsByTurn.value = emptyMap()
+            _voiceCallRecordingIndex.value = VoiceCallRecordingIndex.empty()
             lastQueryAgentId = null
             isQueryingMsgs = false
             _isQueryMsgsCompleted.value = false
@@ -437,25 +432,10 @@ class ChatViewModel : BaseVM() {
     private fun refreshVoiceCallRecordings(agentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val allRecordings = VoiceCallRecordingStore.readByAgent(Utils.getApp(), agentId)
-            val recordingsBySession =
-                allRecordings
-                    .groupBy { it.voiceSessionId }
-                    .mapValues { (_, list) ->
-                        list.firstOrNull { it.voiceTurnId.isNullOrBlank() } ?: list.first()
-                    }
-            val recordingsByTurn =
-                allRecordings
-                    .asSequence()
-                    .filter { !it.voiceTurnId.isNullOrBlank() }
-                    .associateBy { buildVoiceTurnKey(it.voiceSessionId, it.voiceTurnId.orEmpty()) }
+            val recordingIndex = VoiceCallRecordingIndex.fromEntries(allRecordings)
             if (_agentId.value != agentId) return@launch
-            _voiceCallRecordingsBySession.value = recordingsBySession
-            _voiceCallRecordingsByTurn.value = recordingsByTurn
+            _voiceCallRecordingIndex.value = recordingIndex
         }
-    }
-
-    private fun buildVoiceTurnKey(voiceSessionId: String, voiceTurnId: String): String {
-        return "${voiceSessionId.trim()}::${voiceTurnId.trim()}"
     }
 
     /**
@@ -1546,8 +1526,7 @@ class ChatViewModel : BaseVM() {
     // 新增：清理所有数据的方法
     fun clearAllData() {
         _agentInfo.value = null
-        _voiceCallRecordingsBySession.value = emptyMap()
-        _voiceCallRecordingsByTurn.value = emptyMap()
+        _voiceCallRecordingIndex.value = VoiceCallRecordingIndex.empty()
         inputData.update { "" }
         inputSelection.value = 0
         _isWaitingForReply.value = false

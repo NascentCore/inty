@@ -452,9 +452,7 @@ internal fun ChatPage(
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
-    val voiceCallRecordingsBySession by
-        chatViewModel.voiceCallRecordingsBySession.collectAsState()
-    val voiceCallRecordingsByTurn by chatViewModel.voiceCallRecordingsByTurn.collectAsState()
+    val voiceCallRecordingIndex by chatViewModel.voiceCallRecordingIndex.collectAsState()
 
     if (
         uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
@@ -749,9 +747,7 @@ internal fun ChatPage(
                                             isOnlyOpeningMessage = isOnlyOpeningMessage,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
-                                            voiceCallRecordingsBySession =
-                                                voiceCallRecordingsBySession,
-                                            voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
+                                            voiceCallRecordingIndex = voiceCallRecordingIndex,
                                             isGuideVisible = isGuideVisible,
                                             messageFontSizeSp = chatFontSizeSp,
                                         )
@@ -768,9 +764,7 @@ internal fun ChatPage(
                                             isOnlyOpeningMessage = false,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
-                                            voiceCallRecordingsBySession =
-                                                voiceCallRecordingsBySession,
-                                            voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
+                                            voiceCallRecordingIndex = voiceCallRecordingIndex,
                                             isLatestMessage = index == 0,
                                             isGuideVisible = isGuideVisible,
                                             messageFontSizeSp = chatFontSizeSp,
@@ -784,9 +778,7 @@ internal fun ChatPage(
                                         messages = item.messages.map { messages[it] },
                                         navController = navController,
                                         chatViewModel = chatViewModel,
-                                        voiceCallRecordingsBySession =
-                                            voiceCallRecordingsBySession,
-                                        voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
+                                        voiceCallRecordingIndex = voiceCallRecordingIndex,
                                         isCurrentPage = isCurrentPage,
                                         isGuideVisible = isGuideVisible,
                                         messageFontSizeSp = chatFontSizeSp,
