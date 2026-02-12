@@ -521,6 +521,12 @@ class ChatViewModel : BaseVM() {
                             }
                     }
                     .getOrNull()
+            val turnIdsInOrder =
+                turnRecordingsPayload
+                    ?.entries
+                    .orEmpty()
+                    .map { it.voiceTurnId.trim() }
+                    .filter { it.isNotBlank() }
             if (!resolvedSessionId.isNullOrBlank()) {
                 turnRecordingsPayload
                     ?.entries
@@ -547,6 +553,14 @@ class ChatViewModel : BaseVM() {
                                 ),
                         )
                     }
+
+                if (turnIdsInOrder.isNotEmpty()) {
+                    chatMessageRepository.bindAssistantVoiceMessagesToTurnIds(
+                        agentId = agentId,
+                        voiceSessionId = resolvedSessionId,
+                        turnIdsInOrder = turnIdsInOrder,
+                    )
+                }
             }
             refreshVoiceCallRecordings(agentId)
         }

@@ -113,4 +113,22 @@ interface ChatMessageDao {
         "SELECT voiceSessionId FROM message WHERE agentId = :agentId AND isVoice = 1 AND voiceSessionId IS NOT NULL AND voiceSessionId != '' ORDER BY Cast(id as INTEGER) DESC, indexId DESC LIMIT 1"
     )
     suspend fun getLatestVoiceSessionId(agentId: String): String?
+
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND role = 'assistant' AND isVoice = 1 AND voiceSessionId = :voiceSessionId ORDER BY Cast(id as INTEGER) ASC, indexId ASC"
+    )
+    suspend fun getAssistantVoiceMessagesBySession(
+        agentId: String,
+        voiceSessionId: String,
+    ): List<MessageEntity>
+
+    @Query(
+        "UPDATE message SET voiceTurnId = :voiceTurnId WHERE agentId = :agentId AND id = :messageId AND indexId = :indexId"
+    )
+    suspend fun updateVoiceTurnId(
+        agentId: String,
+        messageId: String,
+        indexId: String,
+        voiceTurnId: String,
+    )
 }

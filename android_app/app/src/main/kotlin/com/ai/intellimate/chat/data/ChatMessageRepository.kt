@@ -296,6 +296,44 @@ class ChatMessageRepository(
 
     suspend fun getLatestVoiceSessionId(agentId: String) = localDataSource.getLatestVoiceSessionId(agentId)
 
+    /**
+     * 当服务端消息未携带 voice_turn_id 时，按时间顺序将本地 turn 录音与 AI 语音消息逐条回填绑定。
+     */
+    suspend fun bindAssistantVoiceMessagesToTurnIds(
+        agentId: String,
+        voiceSessionId: String,
+        turnIdsInOrder: List<String>,
+    ) {
+        val normalizedSessionId = voiceSessionId.trim()
+        val normalizedTurnIds =
+            turnIdsInOrder
+                .asSequence()
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .toList()
+        if (normalizedSessionId.isBlank() || normalizedTurnIds.isEmpty()) return
+
+        val assistantVoiceMessages =
+            localDataSource.getAssistantVoiceMessagesBySession(agentId, normalizedSessionId)
+        if (assistantVoiceMessages.isEmpty()) return
+
+        val messagesNeedingTurnId =
+            assistantVoiceMessages.filter { it.metaData.voiceTurnId.isNullOrBlank() }
+        if (messagesNeedingTurnId.isEmpty()) return
+
+        messagesNeedingTurnId
+            .zip(normalizedTurnIds)
+            .forEach { (message, turnId) ->
+                localDataSource.updateVoiceTurnId(
+                    agentId = agentId,
+                    messageId = message.id,
+                    indexId = message.indexId,
+                    voiceTurnId = turnId,
+                )
+            }
+    }
+
     fun messageCountFlow(agentId: String) = localDataSource.messageCountFlow(agentId)
 
     fun userMessageCountFlow(agentId: String) = localDataSource.userMessageCountFlow(agentId)

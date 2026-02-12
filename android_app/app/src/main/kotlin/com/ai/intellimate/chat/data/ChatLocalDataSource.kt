@@ -101,6 +101,22 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         return chatMessageDao.getLatestVoiceSessionId(agentId)
     }
 
+    suspend fun getAssistantVoiceMessagesBySession(
+        agentId: String,
+        voiceSessionId: String,
+    ): List<MessageEntity> {
+        return chatMessageDao.getAssistantVoiceMessagesBySession(agentId, voiceSessionId)
+    }
+
+    suspend fun updateVoiceTurnId(
+        agentId: String,
+        messageId: String,
+        indexId: String,
+        voiceTurnId: String,
+    ) {
+        chatMessageDao.updateVoiceTurnId(agentId, messageId, indexId, voiceTurnId)
+    }
+
     suspend fun getImageMessages(agentId: String): Flow<List<MessageEntity>> {
         return chatMessageDao.streamMessagesWithImages(agentId)
     }
