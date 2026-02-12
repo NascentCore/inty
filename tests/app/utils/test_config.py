@@ -1,6 +1,6 @@
 import pytest
 
-from app.core.config import (
+from app.utils.config import (
     AgentConfig,
     AppConfig,
     CloudflareConfig,
