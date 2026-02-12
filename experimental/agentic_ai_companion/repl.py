@@ -41,6 +41,9 @@ def _handle_api_response(
 
     if is_terminal:
         logger.info("执行 TERMINAL 工具 %s，msg: %s", tool_name, json.dumps(msg.model_dump(), indent=2))
+        assistant_text = (msg.content or "").strip()
+        if assistant_text:
+            print(f"{char_name}> {assistant_text}\n")
         out = process_response_with_tools(
             messages, msg,
             tool_executors=tool_executors,
@@ -53,14 +56,8 @@ def _handle_api_response(
         new_pending = out.image_path
         if messages[-1]["role"] == "user":
             messages.append({"role": "assistant", "content": out.content})
-        # 第 1 块：assistant 文字
-        if out.assistant_text:
-            print(f"{char_name}> {out.assistant_text}\n")
         # 第 2 块：工具结果
-        if new_pending is not None:
-            tool_display = (out.tool_result or "已发送图片。").rstrip("。") + "：" + new_pending
-        else:
-            tool_display = out.tool_result or ""
+        tool_display = out.tool_result + new_pending or ""
         if tool_display:
             print(f"{char_name}> {tool_display}\n")
         logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content or ""), new_pending is not None)
@@ -155,20 +152,25 @@ def run_repl(
     print("输入内容后回车发送，空行跳过，Ctrl+C 退出。\n")
     turn = 0
 
-    while True:
-        try:
-            line = input(f"{user_name}> ").strip()
-        except (KeyboardInterrupt, EOFError):
-            logger.info("用户中断或 EOF，退出 REPL")
-            break
-        if not line:
-            logger.debug("空行跳过")
-            continue
+    with trace(
+        "AgenticAICompanion_session",
+        run_type="chain",
+        inputs={"char_name": char_name, "user_name": user_name, "model": model},
+    ):
+        while True:
+            try:
+                line = input(f"{user_name}> ").strip()
+            except (KeyboardInterrupt, EOFError):
+                logger.info("用户中断或 EOF，退出 REPL")
+                break
+            if not line:
+                logger.debug("空行跳过")
+                continue
 
-        turn += 1
-        logger.info("第 %d 轮对话，用户输入长度=%d: %s", turn, len(line), line[:80] + ("..." if len(line) > 80 else ""))
+            turn += 1
+            logger.info("第 %d 轮对话，用户输入长度=%d: %s", turn, len(line), line[:80] + ("..." if len(line) > 80 else ""))
 
-        messages = _execute_turn(
-            messages, line, turn, char_name, user_name, model,
-            client, tools, tool_types, tool_context_types, process_response_with_tools, tool_executors, get_gemini_client, logger,
-        )
+            messages = _execute_turn(
+                messages, line, turn, char_name, user_name, model,
+                client, tools, tool_types, tool_context_types, process_response_with_tools, tool_executors, get_gemini_client, logger,
+            )

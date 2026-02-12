@@ -72,7 +72,7 @@ def execute_send_app_icon(*, _logger=None) -> tuple[str, str | None]:
     path_str = str(APP_ICON_PATH.resolve())
     if _logger is not None:
         _logger.info("send_app_icon 成功，已返回路径: %s", path_str)
-    return ("已发送图片：", path_str)
+    return ("已发送图片。", path_str)
 
 
 def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
@@ -92,7 +92,7 @@ def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
     path_str = str(ZUN_LONG_PHOTO_PATH.resolve())
     if _logger is not None:
         _logger.info("send_zun_long_photo 成功，已返回路径: %s", path_str)
-    return ("已发送图片：", path_str)
+    return ("已发送图片。", path_str)
 
 
 def execute_generate_image(
@@ -163,7 +163,7 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
     return [
         ToolDefinition(
             name="send_app_icon",
-            description="向用户发送应用图标图片（固定为 app_icon.png）。当用户明确要求发送图片、图标或 app icon 时，必须调用本工具，仅用文字回复无法真正发出图片。",
+            description="Send the app icon image to the user (fixed file app_icon.png). When the user explicitly asks for app icon, picture, or icon, you MUST call this tool. Text-only replies cannot actually send images. Trigger phrases: send me app icon, app icon please, send app icon.",
             parameters={"type": "object", "properties": {}, "additionalProperties": False},
             type=ToolType.TERMINAL,
             context_type=ToolContextType.NONE,
@@ -171,26 +171,26 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ),
         ToolDefinition(
             name="send_zun_long_photo",
-            description="向用户发送尊龙照片（固定为 尊龙.png）。当用户要求看尊龙、尊龙照片或类似内容时，必须调用本工具，仅用文字回复无法真正发出图片。",
+            description="Send Zun Long's photo to the user (fixed file 尊龙.png). When the user asks for Zun Long, Zun Long's picture, or similar, you MUST call this tool. Text-only replies cannot actually send images. Trigger phrases: zun long picture, zun long's picture.",
             parameters={"type": "object", "properties": {}, "additionalProperties": False},
             type=ToolType.TERMINAL,
             context_type=ToolContextType.NONE,
             executor=exec_send_zun_long,
         ),
         ToolDefinition(
-            # generate_image 为 non-TERMINAL：执行后继续让 LLM 根据生成的图片输出文字（如解读或情感表达），提升体验。
+            # generate_image is non-TERMINAL: after execution LLM continues to output text (e.g. interpretation or emotion) for the generated image.
             name="generate_image",
-            description="根据当前对话上下文生成一张图片。仅在用户已说明想要什么图（主题、风格、场景等）时才调用本工具；调用时无需参数，系统会使用当前聊天 session 中最近的 10 条消息作为上下文生成图片。若用户只说「生成一张图」「画一张图」「generate a new image」等而无具体描述，不要先调用本工具，应先简短追问用户想要什么（如主题、风格、氛围），待用户补充后再调用；仅用文字回复无法真正发出图片。",
+            description="Generate an image based on the current conversation context. Call only when the user has described what they want (theme, style, scene). The system uses the most recent 10 messages as context. If the user says 'generate an image' without details, ask for specifics first. Text-only replies cannot actually send images.",
             parameters={"type": "object", "properties": {}, "additionalProperties": False},
             context_type=ToolContextType.GEMINI_CLIENT_WITH_MESSAGES,
             executor=exec_gen_image,
         ),
         ToolDefinition(
             name="text_to_speech",
-            description="将指定文本转为语音并发送给用户。当用户要求用语音回复、朗读、用语音说、或使用英文表达如 say X / say something / speak X / speak to me / I want to hear your voice / say it out loud 时，必须调用本工具。例如用户说 say \"how are you\" 或「用语音说你好」时，应调用本工具并传入要读出的台词，仅用文字回复无法真正发出语音。参数 text 必须是**仅要读出的台词**（例如「你好」或「Hello」），不要传入动作或舞台说明（如 (looks at you)、(smiles)）。",
+            description="Convert text to speech and send to the user. When the user asks for voice reply, read aloud, or says 'say X', 'speak X', 'say something', 'speak to me', 'I want to hear your voice', 'say it out loud', you MUST call this tool. The text parameter must be only the spoken lines, not actions or stage directions like (looks at you) or (smiles). Text-only replies cannot actually send voice.",
             parameters={
                 "type": "object",
-                "properties": {"text": {"type": "string", "description": "要朗读的纯台词内容，仅限实际说出的文字，不要包含括号内的动作描述"}},
+                "properties": {"text": {"type": "string", "description": "The spoken line content only; do not include action descriptions in parentheses."}},
                 "required": ["text"],
                 "additionalProperties": False,
             },
