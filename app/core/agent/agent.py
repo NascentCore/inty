@@ -46,6 +46,7 @@ from app.utils.openai_client import (
     langchain_message_to_openai_message,
     wrap_client_with_langsmith,
 )
+from app.utils.langsmith_metadata import normalize_langsmith_metadata
 
 # 圣诞节季节性提示词：放在角色人设（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
@@ -781,12 +782,13 @@ class Agent:
         for attempt in range(max_retries):
             try:
                 if enable_tracing:
+                    normalized_labels = normalize_langsmith_metadata(labels)
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
                         name=chat_name or f"{user_id}:{self.name}",
                         run_type="llm",
                         inputs={"messages": openai_messages, "model": model},
-                        metadata=labels or {},
+                        metadata=normalized_labels,
                     ) as run:
                         response = client.chat.completions.create(
                             messages=openai_messages,
