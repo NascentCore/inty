@@ -1753,16 +1753,21 @@ export const AgentManagePage: React.FC = () => {
                         title="确定删除该条？"
                         onConfirm={() => {
                           if (!agentCopy) return;
-                          const next = (agentCopy.exclusive_photos ?? []).filter(
-                            (_, i) => i !== index,
-                          );
+                          const next = (
+                            agentCopy.exclusive_photos ?? []
+                          ).filter((_, i) => i !== index);
                           setAgentCopy({
                             ...agentCopy,
                             exclusive_photos: next,
                           });
                         }}
                       >
-                        <Button type="text" danger size="small" icon={<DeleteOutlined />}>
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                        >
                           删除
                         </Button>
                       </Popconfirm>,
@@ -1787,8 +1792,13 @@ export const AgentManagePage: React.FC = () => {
                           value={item.caption}
                           onChange={(e) => {
                             if (!agentCopy) return;
-                            const next = [...(agentCopy.exclusive_photos ?? [])];
-                            next[index] = { ...next[index], caption: e.target.value };
+                            const next = [
+                              ...(agentCopy.exclusive_photos ?? []),
+                            ];
+                            next[index] = {
+                              ...next[index],
+                              caption: e.target.value,
+                            };
                             setAgentCopy({
                               ...agentCopy,
                               exclusive_photos: next,
@@ -1802,7 +1812,9 @@ export const AgentManagePage: React.FC = () => {
                           value={item.credits_required}
                           onChange={(val) => {
                             if (!agentCopy || val == null) return;
-                            const next = [...(agentCopy.exclusive_photos ?? [])];
+                            const next = [
+                              ...(agentCopy.exclusive_photos ?? []),
+                            ];
                             next[index] = {
                               ...next[index],
                               credits_required: Number(val),
@@ -1853,7 +1865,11 @@ export const AgentManagePage: React.FC = () => {
                   return false;
                 }}
               >
-                <Button type="dashed" icon={<PlusOutlined />} style={{ width: "100%" }}>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  style={{ width: "100%" }}
+                >
                   上传并添加一张专属照
                 </Button>
               </Upload>

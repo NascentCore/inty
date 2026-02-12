@@ -62,11 +62,7 @@ class BoostRepository(
         return withContext(Dispatchers.IO) {
             (BoostStorage.boostState.first().availablePoints >= amount).also { enough ->
                 if (enough) {
-                    BoostStorage.update {
-                        it.copy(
-                            availablePoints = it.availablePoints - amount
-                        )
-                    }
+                    BoostStorage.update { it.copy(availablePoints = it.availablePoints - amount) }
                 }
             }
         }

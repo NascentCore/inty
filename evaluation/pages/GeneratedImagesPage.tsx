@@ -261,7 +261,9 @@ const GeneratedImagesPage: React.FC = () => {
                           description={
                             <Space size={4}>
                               <Text type="secondary" style={{ fontSize: 12 }}>
-                                {agent.visibility === "PUBLIC" ? "公开" : "私有"}
+                                {agent.visibility === "PUBLIC"
+                                  ? "公开"
+                                  : "私有"}
                               </Text>
                               {imageCounts[agent.id] > 0 && (
                                 <Badge

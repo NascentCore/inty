@@ -149,17 +149,26 @@ describe("buildRollingDailyUsageSeries", () => {
       buildReport({
         id: "d1",
         report_date: "2026-02-01",
-        stats: buildStats({ total_user_messages: 10, total_chat_initiators: 2 }),
+        stats: buildStats({
+          total_user_messages: 10,
+          total_chat_initiators: 2,
+        }),
       }),
       buildReport({
         id: "d2",
         report_date: "2026-02-02",
-        stats: buildStats({ total_user_messages: 20, total_chat_initiators: 4 }),
+        stats: buildStats({
+          total_user_messages: 20,
+          total_chat_initiators: 4,
+        }),
       }),
       buildReport({
         id: "d3",
         report_date: "2026-02-03",
-        stats: buildStats({ total_user_messages: 30, total_chat_initiators: 6 }),
+        stats: buildStats({
+          total_user_messages: 30,
+          total_chat_initiators: 6,
+        }),
       }),
       buildReport({
         id: "w1",

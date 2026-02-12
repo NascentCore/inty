@@ -55,8 +55,11 @@ export const filterAgentsByType = (
 export const loadAdminAgentList = async (
   options: LoadPagedAgentListOptions = {},
 ): Promise<Agent[]> => {
-  const { pageSize = AGENT_LIST_PAGE_SIZE, onBatchLoaded, shouldContinue } =
-    options;
+  const {
+    pageSize = AGENT_LIST_PAGE_SIZE,
+    onBatchLoaded,
+    shouldContinue,
+  } = options;
 
   return fetchAllAgentsWithPagination({
     pageSize,

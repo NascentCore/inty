@@ -6,7 +6,6 @@ import json
 
 from langsmith.run_helpers import trace
 
-
 EMPTY_RESPONSE = "(E.M.P.T.Y.)"
 
 
@@ -36,14 +35,20 @@ def _handle_api_response(
         return True, messages, None
 
     from .tools import ToolType
+
     tool_name = msg.tool_calls[0].function.name
 
-    logger.info("执行 TERMINAL 工具 %s，msg: %s", tool_name, json.dumps(msg.model_dump(), indent=2))
+    logger.info(
+        "执行 TERMINAL 工具 %s，msg: %s",
+        tool_name,
+        json.dumps(msg.model_dump(), indent=2),
+    )
     assistant_text = (msg.content or "").strip()
     if assistant_text:
         print(f"{char_name}> {assistant_text}\n")
     out = process_response_with_tools(
-        messages, msg,
+        messages,
+        msg,
         tool_executors=tool_executors,
         tool_types=tool_types,
         tool_context_types=tool_context_types,
@@ -58,7 +63,12 @@ def _handle_api_response(
     tool_display = (out.tool_result or "") + " " + (new_pending or "")
     if tool_display:
         print(f"{char_name}> {tool_display}\n")
-    logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content or ""), new_pending is not None)
+    logger.info(
+        "第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s",
+        turn,
+        len(out.content or ""),
+        new_pending is not None,
+    )
     return True, messages, new_pending
 
 
@@ -89,7 +99,12 @@ def _execute_turn(
         round_num = 0
         while True:
             round_num += 1
-            logger.info("API 请求 第 %d 轮 turn=%d，messages 条数=%d", round_num, turn, len(messages))
+            logger.info(
+                "API 请求 第 %d 轮 turn=%d，messages 条数=%d",
+                round_num,
+                turn,
+                len(messages),
+            )
             tool_msg_count = sum(1 for m in messages if m.get("role") == "tool")
             logger.info("本次 API 请求 messages 中 tool 消息数量: %d", tool_msg_count)
             logger.info("Current messages: %s", json.dumps(messages, indent=2))
@@ -106,8 +121,16 @@ def _execute_turn(
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tc)
 
             done, messages, _ = _handle_api_response(
-                messages, msg, char_name, turn,
-                tool_types, tool_context_types, process_response_with_tools, tool_executors, get_gemini_client, logger,
+                messages,
+                msg,
+                char_name,
+                turn,
+                tool_types,
+                tool_context_types,
+                process_response_with_tools,
+                tool_executors,
+                get_gemini_client,
+                logger,
             )
             if done:
                 break
@@ -129,8 +152,11 @@ def run_repl(
     process_response_with_tools,
     logger,
 ) -> None:
-    logger.info("REPL 启动 char_name=%s user_name=%s model=%s", char_name, user_name, model)
+    logger.info(
+        "REPL 启动 char_name=%s user_name=%s model=%s", char_name, user_name, model
+    )
     from . import tools as tools_module
+
     tools_module.reset_sent_image_paths()
     system_messages = build_system_messages(char_name, user_name)
     client = create_openai_client()
@@ -155,9 +181,26 @@ def run_repl(
                 continue
 
             turn += 1
-            logger.info("第 %d 轮对话，用户输入长度=%d: %s", turn, len(line), line[:80] + ("..." if len(line) > 80 else ""))
+            logger.info(
+                "第 %d 轮对话，用户输入长度=%d: %s",
+                turn,
+                len(line),
+                line[:80] + ("..." if len(line) > 80 else ""),
+            )
 
             messages = _execute_turn(
-                messages, line, turn, char_name, user_name, model,
-                client, tools, tool_types, tool_context_types, process_response_with_tools, tool_executors, get_gemini_client, logger,
+                messages,
+                line,
+                turn,
+                char_name,
+                user_name,
+                model,
+                client,
+                tools,
+                tool_types,
+                tool_context_types,
+                process_response_with_tools,
+                tool_executors,
+                get_gemini_client,
+                logger,
             )

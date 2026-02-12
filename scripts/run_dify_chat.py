@@ -167,7 +167,9 @@ IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
             "仅支持 OpenRouter 模型名（需包含 '/'），例如 google/gemini-2.5-pro"
         )
     if not openrouter_api_key:
-        raise ValueError("使用 OpenRouter 模型时需设置 OPENROUTER_API_KEY 或 OPENAI_API_KEY")
+        raise ValueError(
+            "使用 OpenRouter 模型时需设置 OPENROUTER_API_KEY 或 OPENAI_API_KEY"
+        )
     logger.info(f"调用 OpenRouter 生成角色，model={model}")
     client = OpenAI(api_key=openrouter_api_key, base_url=OPENROUTER_BASE_URL)
     try:
@@ -263,7 +265,9 @@ async def main(
         logger.error("target_count 必须在 1-10 之间")
         return 1
     if "/" not in model:
-        logger.error("仅支持 OpenRouter 模型名（需包含 '/'），例如 google/gemini-2.5-pro")
+        logger.error(
+            "仅支持 OpenRouter 模型名（需包含 '/'），例如 google/gemini-2.5-pro"
+        )
         return 1
 
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get(
