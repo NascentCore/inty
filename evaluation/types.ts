@@ -1,10 +1,51 @@
 // 智能体管理系统类型定义
 
-// 从 SDK 导入 Agent 类型
-import type {
-  Agent as BaseAgent,
-  AgentVisibility,
-} from "inty_sdk/src/resources/api/v1/ai/agents";
+// 本地定义 Agent 基础类型，避免依赖 SDK 源码目录
+export type AgentVisibility = "PUBLIC" | "PRIVATE";
+export type AgentGender = "MALE" | "FEMALE" | "OTHER";
+
+export interface AgentCreator {
+  id?: string;
+  email?: string;
+  is_superuser?: boolean;
+  [key: string]: unknown;
+}
+
+export interface AgentImageSize {
+  width: number;
+  height: number;
+}
+
+export interface AgentBaseExtensions {
+  avatar_crop?: AvatarCropData;
+  [key: string]: unknown;
+}
+
+export interface BaseAgent {
+  id: string;
+  name: string;
+  visibility: AgentVisibility;
+  gender: AgentGender;
+  intro?: string;
+  opening?: string;
+  scenario?: string;
+  main_prompt?: string;
+  personality?: string;
+  mode_prompt?: string;
+  avatar?: string;
+  background?: string;
+  background_images?: string[];
+  voice_id?: string;
+  llm_config?: LLMConfig | null;
+  extensions?: AgentBaseExtensions | null;
+  tags?: string[];
+  creator?: AgentCreator;
+  created_at?: string;
+  updated_at?: string;
+  avatar_size?: AgentImageSize | null;
+  background_size?: AgentImageSize | null;
+  [key: string]: any;
+}
 
 /** 运营上传的专属角色照单条 */
 export interface ExclusivePhotoItem {
@@ -34,8 +75,6 @@ export interface Agent extends BaseAgent {
   features?: AgentFeatures;
   exclusive_photos?: ExclusivePhotoItem[]; // 运营专属角色照（评测管理用）
 }
-
-export type { AgentVisibility };
 
 // 角色来源类型
 export type AgentSource = "USER_CREATED" | "AUTO_GENERATED";

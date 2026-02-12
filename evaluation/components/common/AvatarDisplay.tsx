@@ -1,8 +1,7 @@
 import React from "react";
 import { Avatar } from "antd";
 import { RobotOutlined } from "@ant-design/icons";
-import type { Agent } from "inty_sdk/src/resources/api/v1/ai/agents";
-import type { AvatarCropData } from "../../types";
+import type { Agent, AvatarCropData } from "../../types";
 
 interface AvatarDisplayProps {
   agent: Agent;
