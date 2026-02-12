@@ -1204,17 +1204,6 @@ private fun resolveVoiceSessionId(messages: List<MessageEntity>): String? {
     }
 }
 
-/** 从语音消息组中提取 turn id。 */
-private fun resolveVoiceTurnId(messages: List<MessageEntity>): String? {
-    return messages.firstNotNullOfOrNull { msg ->
-        msg.metaData.voiceTurnId?.takeIf { it.isNotBlank() }
-    }
-}
-
-private fun buildVoiceTurnKey(voiceSessionId: String, voiceTurnId: String): String {
-    return VoiceCallRecordingIndex.buildTurnKey(voiceSessionId, voiceTurnId)
-}
-
 private fun resolveLocalVoiceRecordingUrl(
     item: MessageEntity,
     voiceCallRecordingIndex: VoiceCallRecordingIndex,
@@ -1500,19 +1489,13 @@ fun CallMessages(
 ) {
     val list = remember(messages) { messages.filterNotNull() }
     val voiceSessionId = remember(list) { resolveVoiceSessionId(list) }
-    val voiceTurnId = remember(list) { resolveVoiceTurnId(list) }
-    val turnRecordingKey =
-        remember(voiceSessionId, voiceTurnId) {
-            if (voiceSessionId.isNullOrBlank() || voiceTurnId.isNullOrBlank()) null
-            else buildVoiceTurnKey(voiceSessionId, voiceTurnId)
-        }
     val recording =
-        remember(voiceSessionId, voiceTurnId, voiceCallRecordingIndex) {
+        remember(voiceSessionId, voiceCallRecordingIndex) {
             voiceCallRecordingIndex
-                .resolve(voiceSessionId = voiceSessionId, voiceTurnId = voiceTurnId)
+                .resolve(voiceSessionId = voiceSessionId, voiceTurnId = null)
                 ?.takeIf { File(it.recordingPath).exists() }
         }
-    val replayKey = remember(turnRecordingKey, voiceSessionId) { turnRecordingKey ?: voiceSessionId }
+    val replayKey = remember(voiceSessionId) { voiceSessionId }
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     if (expanded) {

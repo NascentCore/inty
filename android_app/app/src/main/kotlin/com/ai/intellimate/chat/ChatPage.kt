@@ -141,10 +141,11 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
             if (currentVoiceGroupIndices.isNotEmpty()) {
                 result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
                 currentVoiceGroupIndices.clear()
+                voiceGroupKey = null
             }
             result.add(MessageItem.MessageIndex(index))
         } else {
-            if (info.isVoice) {
+            if (isVoiceSessionMessage(info)) {
                 val currentMessageGroupKey = buildVoiceGroupKey(info)
                 if (voiceGroupKey != currentMessageGroupKey) {
                     if (currentVoiceGroupIndices.isNotEmpty()) {
@@ -158,12 +159,11 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
                 }
 
                 currentVoiceGroupIndices.add(index)
-            } else if (info.role == "user" && currentVoiceGroupIndices.isNotEmpty()) {
-                currentVoiceGroupIndices.add(index)
             } else if (currentVoiceGroupIndices.isNotEmpty()) {
                 result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
                 result.add(MessageItem.MessageIndex(index))
                 currentVoiceGroupIndices.clear()
+                voiceGroupKey = null
             } else {
                 result.add(MessageItem.MessageIndex(index))
             }
@@ -178,13 +178,16 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
     return result
 }
 
+private fun isVoiceSessionMessage(message: MessageEntity): Boolean {
+    val sessionId = message.metaData.voiceSessionId?.trim().orEmpty()
+    if (sessionId.isBlank()) return false
+    // Voice-call transcripts can include both user/assistant rows.
+    return message.isVoice || message.role == "assistant" || message.role == "user"
+}
+
 private fun buildVoiceGroupKey(message: MessageEntity): String {
     val sessionId = message.metaData.voiceSessionId?.trim().orEmpty()
-    val turnId = message.metaData.voiceTurnId?.trim().orEmpty()
-    if (turnId.isNotBlank()) {
-        return "$sessionId::$turnId"
-    }
-    return sessionId.ifBlank { "unknown_session" }
+    return sessionId.ifBlank { "unknown_session_${message.id}_${message.indexId}" }
 }
 
 /** ChatPage 页面来源常量 - 用于统计曝光事件 */
