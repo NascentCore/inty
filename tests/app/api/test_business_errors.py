@@ -13,7 +13,6 @@ from app.api import deps
 from app.api.v1.endpoints import agents as agents_v1
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chats as chats_v1
-from app.api.v2.endpoints import chat as chat_v2
 from app.core.agent import agent as agent_module
 from app.models.user import AuthType
 from app.schemas import User
@@ -39,7 +38,7 @@ def _make_user(
 
 
 def _create_mock_db_session():
-    """Create a mock database session that can handle v2 endpoint queries."""
+    """Create a mock database session for endpoint queries."""
     mock_db = AsyncMock()
 
     # Mock result object for agent query
@@ -62,7 +61,6 @@ def test_app() -> FastAPI:
     app.include_router(agents_v1.router, prefix="/api/v1")
     app.include_router(chats_v1.router, prefix="/api/v1")
     app.include_router(chat_v1.router, prefix="/api/v1")
-    app.include_router(chat_v2.router, prefix="/api/v2")
 
     async def override_db():
         mock_db = _create_mock_db_session()
@@ -397,35 +395,6 @@ def test_v1_chat_completions_subscription_required(
 
     with _client_with_user(test_app, user) as client:
         response = client.post("/api/v1/chat/completions/agent-1", json=payload)
-
-    body = response.json()
-
-    assert response.status_code == 200
-    assert body["code"] == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
-    assert (
-        body["data"]["error_code"]
-        == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
-    )
-    assert body["data"]["used_count"] == 5
-    assert body["data"]["daily_limit"] == 5
-
-
-def test_v2_chat_completions_handles_business_error(
-    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
-):
-    _stub_chat_completion_dependencies(monkeypatch)
-
-    user = _make_user(auth_type=AuthType.GOOGLE)
-
-    payload = {
-        "messages": [{"role": "user", "content": "hello"}],
-        "stream": False,
-        "model": "chatbot",
-        "language": "zh",
-    }
-
-    with _client_with_user(test_app, user) as client:
-        response = client.post("/api/v2/chat/completions/agent-1", json=payload)
 
     body = response.json()
 

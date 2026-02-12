@@ -161,29 +161,8 @@ Content-Type: application/json
 ```
 
 - 该路由会根据 `chat_settings.voice_enabled` 决定是否调用 `voice_service.generate_voice`，并把生成得到的 `audio_url` 合并进响应。
-- 路由在代码层标记为 `deprecated`，但仍是 App 正在使用的主路径。
-
-### v2 聊天接口（实验中）
-
-```http
-POST /api/v2/chat/completions/{agent_id}
-Content-Type: application/json
-
-{
-  "messages": [
-    {
-      "role": "user",
-      "content": "Hello"
-    }
-  ],
-  "stream": false,
-  "model": "chatbot",
-  "language": "zh"
-}
-```
-
-- v2 版本沿用了相同的 `VoiceService`，但当前接口仍处于未完成状态（接口描述中明确标记）。
-- 两个版本都不支持 `stream = true`。
+- 该路由是 App 当前主路径。
+- 当前不支持 `stream = true`。
 
 #### 响应格式 (包含语音)
 

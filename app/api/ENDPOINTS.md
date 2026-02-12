@@ -221,21 +221,3 @@
 | `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/session-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
 
-## API v2 端点 (`/api/v2`)
-
-### 聊天 (Chat)
-
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v2/chat/completions/{agent_id}` | POST | `app/api/v2/endpoints/chat.py` |
-
-### AI 角色 (Agents)
-
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v2/ai/agents/recommend` | GET | `app/api/v2/endpoints/agents.py` |
-
-> **关于 `/recommend` 端点的行为说明**：
->
-> - 该端点只返回**超级用户**（`is_superuser=True`）创建的**公开**（`visibility=PUBLIC`）角色
-> - 不返回私有角色，也不返回普通用户创建的角色；调用者身份不影响结果
