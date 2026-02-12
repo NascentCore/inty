@@ -12,7 +12,6 @@ import {
   HistoryOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BgColorsOutlined,
   SettingOutlined,
   UserOutlined,
   AppstoreOutlined,
@@ -26,7 +25,6 @@ import {
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
-import { Live2DEmotionChatDemo } from "./pages/Live2DEmotionChatDemo";
 import AgentManagePage from "./pages/AgentManagePage";
 import CharacterThemeManagePage from "./pages/CharacterThemeManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -51,7 +49,6 @@ type PageKey =
   | "chat"
   | "voice-chat"
   | "agents"
-  | "live2d"
   | "settings"
   | "user-analytics"
   | "user-analytics-reports"
@@ -80,6 +77,9 @@ const AppContent: React.FC = () => {
       return "report-feedback";
     }
     const savedPage = localStorage.getItem("lastVisitedPage");
+    if (savedPage === "live2d") {
+      return "chat";
+    }
     return (savedPage as PageKey) || "chat";
   });
   const [collapsed, setCollapsed] = useState(false);
@@ -171,12 +171,6 @@ const AppContent: React.FC = () => {
       description: "与智能体进行实时语音对话",
     },
     {
-      key: "live2d",
-      icon: <BgColorsOutlined />,
-      label: "Live2D 情绪聊天",
-      description: "基于Gemini情绪标签切换背景",
-    },
-    {
       key: "agents",
       icon: <RobotOutlined />,
       label: "智能体管理",
@@ -261,8 +255,6 @@ const AppContent: React.FC = () => {
         return "单角色聊天";
       case "voice-chat":
         return "语音通话";
-      case "live2d":
-        return "Live2D 情绪聊天 (Gemini Demo)";
       case "agents":
         return "智能体管理";
       case "character-themes":
@@ -303,8 +295,6 @@ const AppContent: React.FC = () => {
         return <ChatPage />;
       case "voice-chat":
         return <VoiceChatPage />;
-      case "live2d":
-        return <Live2DEmotionChatDemo />;
       case "agents":
         return <AgentManagePage />;
       case "character-themes":
