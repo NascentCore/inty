@@ -1,8 +1,13 @@
+import asyncio
+import json
+import queue
+import threading
 import time
 import uuid
 from typing import Optional, TypeAlias, Union
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -96,6 +101,20 @@ def _build_chat_response(
     }
 
 
+def _run_sync_stream_worker(
+    stream_iterator,
+    output_queue: queue.Queue[tuple[str, object]],
+) -> None:
+    """在独立线程中拉取同步流式输出并写入线程安全队列。"""
+    try:
+        for chunk in stream_iterator:
+            output_queue.put(("chunk", chunk))
+    except Exception as exc:
+        output_queue.put(("error", exc))
+    finally:
+        output_queue.put(("done", None))
+
+
 @router.post(
     "/completions/{agent_id}",
     response_model=schemas.APIResponse[dict],
@@ -120,9 +139,6 @@ async def agent_chat_completions(
         raise HTTPException(
             status_code=404, detail="API v1 chat completions is disabled"
         )
-    if request.stream:
-        raise HTTPException(status_code=400, detail="Stream is not supported")
-
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -192,13 +208,150 @@ async def agent_chat_completions(
                     db, chat.id, current_user.id, agent_id
                 )
 
+            subscription = await subscription_service.get_user_current_subscription(
+                db, current_user.id
+            )
+            model_override = select_chat_model(
+                user=current_user, is_subscribed=bool(subscription)
+            )
+
+            if request.stream:
+                completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+                created_ts = int(time.time())
+                stream_queue: queue.Queue[tuple[str, object]] = queue.Queue(maxsize=128)
+
+                stream_iterator = agent.chat_stream(
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    messages=messages,
+                    chat_settings=chat_settings,
+                    user_time_context=user_time_context,
+                    model_override=model_override,
+                )
+                stream_worker = threading.Thread(
+                    target=_run_sync_stream_worker,
+                    args=(stream_iterator, stream_queue),
+                    daemon=True,
+                    name=f"chat-stream-{session_id}",
+                )
+                stream_worker.start()
+
+                async def stream_events():
+                    sent_role = False
+                    try:
+                        while True:
+                            event_type, event_payload = await asyncio.to_thread(
+                                stream_queue.get
+                            )
+
+                            if event_type == "chunk":
+                                chunk_text = str(event_payload)
+                                delta: dict[str, str] = {"content": chunk_text}
+                                if not sent_role:
+                                    delta["role"] = "assistant"
+                                    sent_role = True
+
+                                chunk_data = {
+                                    "id": completion_id,
+                                    "object": "chat.completion.chunk",
+                                    "created": created_ts,
+                                    "model": request.model,
+                                    "choices": [
+                                        {
+                                            "index": 0,
+                                            "delta": delta,
+                                            "finish_reason": None,
+                                        }
+                                    ],
+                                }
+                                yield f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
+                                continue
+
+                            if event_type == "error":
+                                if isinstance(event_payload, BaseException):
+                                    raise event_payload
+                                raise RuntimeError(
+                                    f"Unexpected streaming error payload: {event_payload}"
+                                )
+
+                            if event_type == "done":
+                                break
+
+                        # 流式消息结束后，执行与非流式一致的后处理（不影响 SSE 协议输出）
+                        try:
+                            read_count = await mark_user_push_notifications_as_read(
+                                db, current_user.id
+                            )
+                            if read_count > 0:
+                                logger.debug(
+                                    f"标记用户推送为已读: user_id={current_user.id}, count={read_count}"
+                                )
+                        except Exception as push_read_error:
+                            logger.warning(
+                                f"标记用户推送为已读失败: user_id={current_user.id}, error={str(push_read_error)}"
+                            )
+
+                        try:
+                            await subscription_service.record_usage(
+                                db,
+                                current_user.id,
+                                "chat",
+                                1,
+                                extra_data={
+                                    "agent_id": agent_id,
+                                    "message_length": len(last_user_message),
+                                },
+                            )
+                            logger.debug("聊天使用情况记录成功")
+                        except Exception as usage_error:
+                            logger.warning(f"记录聊天使用情况失败: {str(usage_error)}")
+
+                        end_chunk = {
+                            "id": completion_id,
+                            "object": "chat.completion.chunk",
+                            "created": created_ts,
+                            "model": request.model,
+                            "choices": [
+                                {
+                                    "index": 0,
+                                    "delta": {},
+                                    "finish_reason": "stop",
+                                }
+                            ],
+                        }
+                        yield f"data: {json.dumps(end_chunk, ensure_ascii=False)}\n\n"
+                        yield "data: [DONE]\n\n"
+
+                    except asyncio.CancelledError:
+                        logger.info(
+                            f"流式连接被客户端取消: user_id={current_user.id}, session_id={session_id}"
+                        )
+                        raise
+                    except Exception as stream_error:
+                        logger.error(f"流式聊天处理失败: {str(stream_error)}")
+                        error_chunk = {
+                            "error": {
+                                "message": f"Chat failed: {str(stream_error)}",
+                                "type": "server_error",
+                            }
+                        }
+                        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
+                    finally:
+                        await asyncio.to_thread(stream_worker.join, 1.0)
+                        timing_message = request_handling_timer.stop()
+                        logger.debug(f"流式聊天请求完成: agent_id={agent_id}, {timing_message}")
+
+                return StreamingResponse(
+                    stream_events(),
+                    media_type="text/event-stream",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                        "X-Accel-Buffering": "no",
+                    },
+                )
+
             with log_time(f"AI聊天处理: session_id={session_id}"):
-                subscription = await subscription_service.get_user_current_subscription(
-                    db, current_user.id
-                )
-                model_override = select_chat_model(
-                    user=current_user, is_subscribed=bool(subscription)
-                )
                 response_content = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,

@@ -86,7 +86,7 @@ Click the **Me** or the **right-most** icon
 - Every message supports voice playback; audio is cached locally (`AudioCacheManager`).
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
-- **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
+- **文本流式显示**：聊天页设置抽屉中可关闭该开关。开启时 App 会请求后端 `stream=true` 并实时接收 AI 文本（可显著降低首字符延迟）；关闭时使用非流式请求并在收到完整结果后一次性显示。
 - VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/0326fd90-1bbe-4207-9e9f-1c71c4608847" />

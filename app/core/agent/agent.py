@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, Iterator, List, Optional, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
@@ -899,6 +899,175 @@ class Agent:
         # 如果所有重试都失败，抛出最后一次的错误
         raise last_error
 
+    def _create_openai_stream_with_retry(
+        self,
+        client: OpenAI,
+        model: str,
+        openai_messages: List[Dict[str, Any]],
+        temperature: float,
+        max_tokens: int,
+        top_p: float,
+        extra_body: Dict[str, Any],
+        user_id: str,
+        max_retries: int = 3,
+        initial_delay: float = 1.0,
+    ):
+        """
+        带重试机制地创建 OpenAI 流式响应对象。
+        """
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                return client.chat.completions.create(
+                    messages=openai_messages,
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
+                    extra_body=extra_body,
+                    stream=True,
+                )
+            except Exception as e:
+                last_error = e
+                is_retryable = self._is_retryable_error(e)
+                if is_retryable and attempt < max_retries - 1:
+                    delay = initial_delay * (2**attempt)
+                    logger.warning(
+                        f"OpenRouter stream创建失败（可重试） - "
+                        f"Agent: {self.agent_id}, User: {user_id}, "
+                        f"Model: {model}, Attempt: {attempt + 1}/{max_retries}, "
+                        f"Error: {str(e)}, 将在 {delay:.2f}秒后重试"
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(
+                        f"OpenRouter stream创建失败（终止） - "
+                        f"Agent: {self.agent_id}, User: {user_id}, "
+                        f"Model: {model}, Attempt: {attempt + 1}/{max_retries}, "
+                        f"Error: {str(e)}"
+                    )
+                    raise
+
+        raise last_error
+
+    def _chat_stream_sync_optimized(
+        self,
+        user_id: str,
+        session_id: str,
+        messages: List[HumanMessage],
+        user_profile: str = None,
+        chat_settings: models.chat_settings.ChatSettings = None,
+        user_time_context: Optional[UserTimeContext] = None,
+        model_override: Optional[str] = None,
+    ) -> Iterator[str]:
+        """
+        优化版同步流式聊天方法，逐块产出文本并在完成后写入历史记录。
+        """
+        pool = get_connection_pool()
+        with pool.connection() as conn_local:
+            history = PostgresChatMessageHistory(
+                chat_history.TABLE_NAME, session_id, sync_connection=conn_local
+            )
+
+            history_messages = chat_history_service.get_history_messages(session_id)
+            recent_history = self._get_relevant_history(history_messages)
+            all_messages = recent_history + messages
+
+            # 先保存用户消息，保持与非流式行为一致
+            history.add_messages(messages)
+
+            user_name = self._extract_user_name_from_profile(user_profile)
+            labels = {
+                "user_id": user_id,
+                "user_name": user_name,
+                "agent_id": self.agent_id,
+                "agent_name": self.name,
+                "chat_settings": chat_settings,
+            }
+
+            system_messages = self.build_system_messages(
+                user_profile, chat_settings, user_time_context
+            )
+            message_chain: list[BaseMessage] = system_messages + all_messages
+            openai_messages = [
+                langchain_message_to_openai_message(message, user_name, self.name)
+                for message in message_chain
+            ]
+
+            chat_name = f"{user_name}:{self.name}"
+            default_model = global_config_loaded_from_config_yaml.agent.model
+            default_temperature = global_config_loaded_from_config_yaml.agent.temperature
+            default_max_tokens = global_config_loaded_from_config_yaml.agent.max_tokens
+            default_top_p = global_config_loaded_from_config_yaml.agent.top_p
+            model_name = model_override or self.model_config.get("model", default_model)
+            temperature = self.model_config.get("temperature", default_temperature)
+            max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+            top_p = self.model_config.get("top_p", default_top_p)
+
+            client = self._get_wrapped_client(chat_name, labels)
+
+            api_start = time.time()
+            stream = self._create_openai_stream_with_retry(
+                client=client,
+                model=model_name,
+                openai_messages=openai_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                extra_body={
+                    "generation_config": {
+                        "thinking_budget": 0,
+                    },
+                    "user": user_id,
+                },
+                user_id=user_id,
+                max_retries=3,
+                initial_delay=1.0,
+            )
+
+            response_chunks: List[str] = []
+            finish_reason: Optional[str] = None
+
+            for chunk in stream:
+                if not chunk.choices:
+                    continue
+                choice = chunk.choices[0]
+                if choice.finish_reason:
+                    finish_reason = choice.finish_reason
+                delta = choice.delta
+                delta_content = (
+                    getattr(delta, "content", None) if delta is not None else None
+                )
+                if delta_content:
+                    response_chunks.append(delta_content)
+                    yield delta_content
+
+            api_time = time.time() - api_start
+            response_text = "".join(response_chunks)
+            if not response_text:
+                raise ValueError("Model returned empty streaming response")
+
+            if finish_reason == "length":
+                logger.warning(
+                    f"流式响应被截断(max_tokens) - Agent: {self.agent_id}, Session: {session_id}"
+                )
+            elif finish_reason in {"content_filter", "safety"}:
+                logger.warning(
+                    f"流式响应触发内容过滤 - Agent: {self.agent_id}, Session: {session_id}"
+                )
+
+            meta_data: Dict[str, Any] = {"llm_invoke_time": api_time}
+            if finish_reason:
+                meta_data["finish_reason"] = finish_reason
+
+            chat_history_service.add_ai_message_sync(
+                session_id=session_id,
+                message=response_text,
+                agent_id=self.agent_id,
+                meta_data=meta_data,
+            )
+
     def _chat_sync_optimized(
         self,
         user_id: str,
@@ -1405,6 +1574,38 @@ class Agent:
                 f"异步推送消息生成失败 - Agent: {self.agent_id}, Error: {str(e)}"
             )
             raise
+
+    def chat_stream(
+        self,
+        user_id: str,
+        session_id: str,
+        messages: List[HumanMessage],
+        chat_settings: models.chat_settings.ChatSettings = None,
+        user_time_context: Optional[UserTimeContext] = None,
+        model_override: Optional[str] = None,
+    ) -> Iterator[str]:
+        """
+        同步流式聊天接口，逐块返回模型文本输出。
+        """
+        logger.debug(f"开始流式聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
+        self._update_last_used()
+
+        profile_start = time.time()
+        user_profile = self._get_user_profile_sync(user_id)
+        profile_time = time.time() - profile_start
+        logger.debug(
+            f"流式聊天用户信息获取耗时: {profile_time:.3f}秒 - Agent: {self.agent_id}"
+        )
+
+        yield from self._chat_stream_sync_optimized(
+            user_id=user_id,
+            session_id=session_id,
+            messages=messages,
+            user_profile=user_profile,
+            chat_settings=chat_settings,
+            user_time_context=user_time_context,
+            model_override=model_override,
+        )
 
     @deprecated("替换为流式消息输出，需要调整大模型 API 调用，输出方式等")
     async def chat(

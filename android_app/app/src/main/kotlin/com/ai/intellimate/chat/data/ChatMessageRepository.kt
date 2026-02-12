@@ -41,6 +41,11 @@ class ChatMessageRepository(
     private val localDataSource: ChatLocalDataSource = ChatLocalDataSource(database),
     private val roomDataSource: RoomDataSource = RoomDataSource(database),
 ) {
+    private companion object {
+        private const val STREAM_SYNC_FETCH_LIMIT = 20
+        private const val TEMP_ASSISTANT_MESSAGE_ID = "${Long.MAX_VALUE}"
+    }
+
 
     /** 获取聊天消息的 PagingData Flow 返回的 Flow 会从数据库读取数据，并在需要时通过 RemoteMediator 从网络同步 */
     @OptIn(ExperimentalPagingApi::class)
@@ -62,11 +67,16 @@ class ChatMessageRepository(
         localDataSource.chatMessageDao.deleteByAgent(agentId)
     }
 
-    suspend fun sendMessage(agentId: String, content: String): HttpResult<SendMsgResponse> {
+    suspend fun sendMessage(
+        agentId: String,
+        content: String,
+        stream: Boolean = false,
+    ): HttpResult<SendMsgResponse> {
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
         val trimmed = content.trimEnd()
         val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+        val streamAssistantBuffer = StringBuilder()
 
         localDataSource.appendSendingMessages(agentId, trimmed)
 
@@ -75,16 +85,50 @@ class ChatMessageRepository(
                 remoteDataSource.sendMessage(
                     agentId,
                     listOf(MsgInfo(content = trimmed, role = "user")),
+                    stream = stream,
+                    onStreamDelta =
+                        if (stream) {
+                            { delta ->
+                                if (delta.isNotEmpty()) {
+                                    streamAssistantBuffer.append(delta)
+                                    updateStreamingAssistantDraft(
+                                        agentId = agentId,
+                                        content = streamAssistantBuffer.toString(),
+                                        timestamp = timestamp,
+                                    )
+                                }
+                            }
+                        } else {
+                            null
+                        },
                 )
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
+        if (
+            stream &&
+                result is HttpResult.Success &&
+                result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+        ) {
+            val finalAssistantContent =
+                streamAssistantBuffer.toString().ifBlank {
+                    result.data.data?.choices?.firstOrNull()?.message?.content.orEmpty()
+                }
+            persistStreamedSendMessages(
+                agentId = agentId,
+                userContent = trimmed,
+                assistantContent = finalAssistantContent,
+                timestamp = timestamp,
+            )
+        }
+
         roomDataSource.removeSendingMessage(agentId)
 
         if (
-            result is HttpResult.Success &&
+            !stream &&
+                result is HttpResult.Success &&
                 result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
         ) {
 
@@ -113,7 +157,7 @@ class ChatMessageRepository(
         return result
     }
 
-    suspend fun recallLastAssistantMessage(agentId: String) {
+    suspend fun recallLastAssistantMessage(agentId: String, stream: Boolean = false) {
         LogUtils.d("RoomImpl.recallLastAssistantMessage called for $agentId")
         val lastAssistantMessage = localDataSource.getLatesAgentMessage(agentId)
 
@@ -128,27 +172,57 @@ class ChatMessageRepository(
             lastAssistantMessage.indexId,
         )
         localDataSource.appendSendingLoadingOnly(agentId)
+        val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+        val streamAssistantBuffer = StringBuilder()
 
         val result =
             try {
                 remoteDataSource.sendMessage(
                     agentId,
                     listOf(MsgInfo(content = "recall", role = "user")),
+                    stream = stream,
+                    onStreamDelta =
+                        if (stream) {
+                            { delta ->
+                                if (delta.isNotEmpty()) {
+                                    streamAssistantBuffer.append(delta)
+                                    updateStreamingAssistantDraft(
+                                        agentId = agentId,
+                                        content = streamAssistantBuffer.toString(),
+                                        timestamp = timestamp,
+                                    )
+                                }
+                            }
+                        } else {
+                            null
+                        },
                 )
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.recallLastAssistantMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
+        if (stream && result is HttpResult.Success && result.data.code == 200) {
+            val finalAssistantContent =
+                streamAssistantBuffer.toString().ifBlank {
+                    result.data.data?.choices?.firstOrNull()?.message?.content.orEmpty()
+                }
+            persistStreamedRecallAssistantMessage(
+                agentId = agentId,
+                assistantContent = finalAssistantContent,
+                timestamp = timestamp,
+            )
+        }
+
         roomDataSource.removeSendingMessage(agentId)
 
-        if (result is HttpResult.Success) {
+        if (!stream && result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
             if (choices.isNotEmpty()) {
                 val assistantMsgs = choices.map { it.message.toEntity(agentId) }
                 localDataSource.appendMessages(assistantMsgs)
             }
-        } else {
+        } else if (result is HttpResult.Failure) {
             localDataSource.upsert(lastAssistantMessage)
         }
     }
@@ -245,4 +319,123 @@ class ChatMessageRepository(
     fun messageCountFlow(agentId: String) = localDataSource.messageCountFlow(agentId)
 
     fun userMessageCountFlow(agentId: String) = localDataSource.userMessageCountFlow(agentId)
+
+    private suspend fun updateStreamingAssistantDraft(
+        agentId: String,
+        content: String,
+        timestamp: String,
+    ) {
+        localDataSource.appendMessages(
+            listOf(
+                MessageEntity(
+                    id = TEMP_ASSISTANT_MESSAGE_ID,
+                    content = content,
+                    role = "assistant",
+                    metaData = MessageEntity.MetaData(agentId),
+                    timestamp = timestamp,
+                    isSending = true,
+                )
+            )
+        )
+    }
+
+    private suspend fun persistStreamedSendMessages(
+        agentId: String,
+        userContent: String,
+        assistantContent: String,
+        timestamp: String,
+    ) {
+        if (assistantContent.isBlank()) return
+
+        val synced =
+            runCatching { remoteDataSource.getMessages(agentId, STREAM_SYNC_FETCH_LIMIT, 0) }
+                .getOrNull()
+        if (synced is HttpResult.Success) {
+            val nowMs = System.currentTimeMillis()
+            val messages = synced.data.messages.orEmpty()
+            val userMessage = messages.firstOrNull { it.role == "user" && it.content == userContent }
+            val assistantMessage =
+                messages.firstOrNull {
+                    it.role == "assistant" && it.content == assistantContent
+                }
+            if (userMessage != null || assistantMessage != null) {
+                val userEntity =
+                    userMessage?.toEntity(agentId)
+                        ?: MessageEntity(
+                            id = nowMs.toString(),
+                            content = userContent,
+                            role = "user",
+                            metaData = MessageEntity.MetaData(agentId),
+                            timestamp = timestamp,
+                        )
+                val assistantEntity =
+                    assistantMessage?.toEntity(agentId)
+                        ?: MessageEntity(
+                            id = (nowMs + 1).toString(),
+                            content = assistantContent,
+                            role = "assistant",
+                            metaData = MessageEntity.MetaData(agentId),
+                            timestamp = timestamp,
+                        )
+                localDataSource.appendMessages(listOf(userEntity, assistantEntity))
+                return
+            }
+        }
+
+        val nowMs = System.currentTimeMillis()
+        localDataSource.appendMessages(
+            listOf(
+                MessageEntity(
+                    id = nowMs.toString(),
+                    content = userContent,
+                    role = "user",
+                    metaData = MessageEntity.MetaData(agentId),
+                    timestamp = timestamp,
+                ),
+                MessageEntity(
+                    id = (nowMs + 1).toString(),
+                    content = assistantContent,
+                    role = "assistant",
+                    metaData = MessageEntity.MetaData(agentId),
+                    timestamp = timestamp,
+                ),
+            )
+        )
+    }
+
+    private suspend fun persistStreamedRecallAssistantMessage(
+        agentId: String,
+        assistantContent: String,
+        timestamp: String,
+    ) {
+        if (assistantContent.isBlank()) return
+
+        val synced =
+            runCatching { remoteDataSource.getMessages(agentId, STREAM_SYNC_FETCH_LIMIT, 0) }
+                .getOrNull()
+        if (synced is HttpResult.Success) {
+            val assistantMessage =
+                synced.data.messages
+                    ?.orEmpty()
+                    ?.firstOrNull {
+                        it.role == "assistant" && it.content == assistantContent
+                    }
+            if (assistantMessage != null) {
+                localDataSource.appendMessages(listOf(assistantMessage.toEntity(agentId)))
+                return
+            }
+        }
+
+        localDataSource.appendMessages(
+            listOf(
+                MessageEntity(
+                    id = System.currentTimeMillis().toString(),
+                    content = assistantContent,
+                    role = "assistant",
+                    metaData = MessageEntity.MetaData(agentId),
+                    timestamp = timestamp,
+                )
+            )
+        )
+    }
 }

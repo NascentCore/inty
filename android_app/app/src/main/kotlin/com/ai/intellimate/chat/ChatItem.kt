@@ -354,6 +354,7 @@ private fun ChatItemAI(
                         derivedStateOf {
                             isLatestMessage &&
                                 !shouldFlowShow &&
+                                !item.isSending &&
                                 !item.isOpening &&
                                 !isNormalLoading
                         }
@@ -413,7 +414,12 @@ private fun ChatItemAI(
                                 )
                             }
 
-                            if (!hasGeneratedImage && isLatestMessage && !shouldFlowShow) {
+                            if (
+                                !hasGeneratedImage &&
+                                    isLatestMessage &&
+                                    !shouldFlowShow &&
+                                    !item.isSending
+                            ) {
                                 MessageCornerActions(
                                     onImageGenerate = {
                                         viewModel.generateImageForMessageOrPickImage(item.id)

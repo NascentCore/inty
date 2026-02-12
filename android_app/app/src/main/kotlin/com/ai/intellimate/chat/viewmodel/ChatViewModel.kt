@@ -535,6 +535,10 @@ class ChatViewModel : BaseVM() {
             )
 
             val aiResponseStartTime = System.currentTimeMillis()
+            val isServerStreamingEnabled = SettingStateManager.textStreaming.value
+            if (isServerStreamingEnabled) {
+                _shouldFlowShow.value = false
+            }
 
             // ✅ 修复：将 MESSAGE_SENT 事件移到 API 调用开始时上报，确保与 MESSAGE_SEND_SUCCESS/FAILURE 一一对应
             FirebaseManager.logEvent(
@@ -550,7 +554,14 @@ class ChatViewModel : BaseVM() {
 
             try {
                 // 处理发送结果
-                when (val result = chatMessageRepository.sendMessage(agentId, inputMsg.trimEnd())) {
+                when (
+                    val result =
+                        chatMessageRepository.sendMessage(
+                            agentId = agentId,
+                            content = inputMsg.trimEnd(),
+                            stream = isServerStreamingEnabled,
+                        )
+                ) {
                     is HttpResult.Success -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
@@ -601,9 +612,11 @@ class ChatViewModel : BaseVM() {
                             }
                         }
 
-                        result.data.data?.choices?.getOrNull(0)?.let {
-                            if (it.message.agentId() == _agentId.value) {
-                                enableFlowShowIfAllowed()
+                        if (!isServerStreamingEnabled) {
+                            result.data.data?.choices?.getOrNull(0)?.let {
+                                if (it.message.agentId() == _agentId.value) {
+                                    enableFlowShowIfAllowed()
+                                }
                             }
                         }
 
@@ -847,6 +860,10 @@ class ChatViewModel : BaseVM() {
                         return@launchBackground
                     }
                     val aiResponseStartTime = System.currentTimeMillis()
+                    val isServerStreamingEnabled = SettingStateManager.textStreaming.value
+                    if (isServerStreamingEnabled) {
+                        _shouldFlowShow.value = false
+                    }
 
                     // ✅ 修复：添加缺失的 MESSAGE_SENT 事件上报（在 API 调用开始时）
                     FirebaseManager.logEvent(
@@ -861,7 +878,12 @@ class ChatViewModel : BaseVM() {
                         ),
                     )
 
-                    val result = chatMessageRepository.sendMessage(agent.id, keepTalkingMsg)
+                    val result =
+                        chatMessageRepository.sendMessage(
+                            agentId = agent.id,
+                            content = keepTalkingMsg,
+                            stream = isServerStreamingEnabled,
+                        )
                     _isWaitingForReply.value = false
 
                     when (result) {
@@ -902,9 +924,11 @@ class ChatViewModel : BaseVM() {
                                     _isWaitingForReply.value = false
                                 }
 
-                            result.data.data?.choices?.getOrNull(0)?.let {
-                                if (it.message.agentId() == _agentId.value) {
-                                    enableFlowShowIfAllowed()
+                            if (!isServerStreamingEnabled) {
+                                result.data.data?.choices?.getOrNull(0)?.let {
+                                    if (it.message.agentId() == _agentId.value) {
+                                        enableFlowShowIfAllowed()
+                                    }
                                 }
                             }
                         }
@@ -1066,13 +1090,22 @@ class ChatViewModel : BaseVM() {
 
         launchBackground {
             try {
+                val isServerStreamingEnabled = SettingStateManager.textStreaming.value
+                if (isServerStreamingEnabled) {
+                    _shouldFlowShow.value = false
+                }
                 if (!deductVipChatCreditsIfNeeded(agent)) {
                     _isWaitingForReply.value = false
                     return@launchBackground
                 }
-                chatMessageRepository.recallLastAssistantMessage(agentId)
+                chatMessageRepository.recallLastAssistantMessage(
+                    agentId = agentId,
+                    stream = isServerStreamingEnabled,
+                )
                 _isWaitingForReply.value = false
-                enableFlowShowIfAllowed()
+                if (!isServerStreamingEnabled) {
+                    enableFlowShowIfAllowed()
+                }
             } catch (e: Exception) {
                 LogUtils.e("Recall message error: ${e.message}")
                 NetworkErrorHandler.showNetworkAwareError("Failed to recall message: ${e.message}")

@@ -295,7 +295,7 @@ class ChatCompletionRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     messages: List[ChatMessage]
-    # DEPRECATED: Currently this parameter has no effect.
+    # Whether to enable server-side streaming output.
     stream: bool = False
     # DEPRECATED: Currently this parameter has no use.
     model: str = "chatbot"
@@ -312,8 +312,6 @@ class ChatCompletionRequest(BaseModel):
 
     @model_validator(mode="after")
     def check_deprecated_fields(self) -> "ChatCompletionRequest":
-        if self.stream:
-            logger.warning("DEPRECATED: 'stream' parameter has no effect")
         if self.model != "chatbot":
             logger.warning("DEPRECATED: 'model' parameter has no use")
         if self.language != "zh":

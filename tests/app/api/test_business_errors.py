@@ -350,6 +350,80 @@ def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
     )
 
 
+def _stub_stream_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(voice_enabled=False, premium_mode=False, style_prompt=None)
+
+    class DummyStreamAgent:
+        def chat_stream(self, *args, **kwargs):
+            yield "Hello"
+            yield " world"
+
+    async def fake_get_agent(agent_data):
+        return DummyStreamAgent()
+
+    async def fake_check_chat_limit(db, user):
+        return True, 1, 10
+
+    async def fake_get_user_current_subscription(db, user_id):
+        return None
+
+    async def fake_mark_user_push_notifications_as_read(db, user_id):
+        return 0
+
+    async def fake_record_usage(
+        db,
+        user_id,
+        feature,
+        amount,
+        extra_data=None,
+    ):
+        return None
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(
+        agent_module.agent_manager,
+        "get_agent",
+        fake_get_agent,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "mark_user_push_notifications_as_read",
+        fake_mark_user_push_notifications_as_read,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+
+
 def test_v1_chat_completions_guest_requires_login(
     monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
 ):
@@ -406,6 +480,61 @@ def test_v1_chat_completions_subscription_required(
     )
     assert body["data"]["used_count"] == 5
     assert body["data"]["daily_limit"] == 5
+
+
+def test_v1_chat_completions_stream_returns_sse_chunks(
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
+):
+    _stub_stream_chat_completion_dependencies(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": True,
+        "model": "chatbot",
+        "language": "zh",
+    }
+
+    with _client_with_user(test_app, user) as client:
+        with client.stream(
+            "POST",
+            "/api/v1/chat/completions/agent-1",
+            json=payload,
+        ) as response:
+            lines = [line for line in response.iter_lines() if line]
+            content_type = response.headers.get("content-type", "")
+
+    assert response.status_code == 200
+    assert "text/event-stream" in content_type
+    assert any('"chat.completion.chunk"' in line for line in lines)
+    assert any("Hello" in line for line in lines)
+    assert any("world" in line for line in lines)
+    assert lines[-1] == "data: [DONE]"
+
+
+def test_v1_chat_completions_stream_subscription_required_still_returns_business_error(
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
+):
+    _stub_chat_completion_dependencies(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": True,
+        "model": "chatbot",
+        "language": "zh",
+    }
+
+    with _client_with_user(test_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
+    )
 
 
 def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
