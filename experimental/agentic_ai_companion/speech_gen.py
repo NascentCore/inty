@@ -23,8 +23,10 @@ TTS_ROLEPLAY_INSTRUCTION = (
 )
 
 
-def _trace_output_pcm(data: bytes) -> dict:
-    """process_outputs：避免将原始 PCM 字节写入 trace，仅记录摘要。"""
+def _trace_output_pcm(data: bytes | None) -> dict:
+    """process_outputs：避免将原始 PCM 字节写入 trace，仅记录摘要。异常时 data 可能为 None。"""
+    if data is None:
+        return {"status": "error", "pcm_bytes": 0}
     return {"pcm_bytes": len(data), "status": "success"}
 
 

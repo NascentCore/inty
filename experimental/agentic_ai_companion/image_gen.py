@@ -29,8 +29,10 @@ def _prompt_from_messages(messages: list[dict[str, Any]]) -> str:
     return "A scene inspired by the conversation."
 
 
-def _trace_output_image(data: bytes) -> dict:
-    """process_outputs：避免将原始图片字节写入 trace，仅记录摘要。"""
+def _trace_output_image(data: bytes | None) -> dict:
+    """process_outputs：避免将原始图片字节写入 trace，仅记录摘要。异常时 data 可能为 None。"""
+    if data is None:
+        return {"status": "error", "image_bytes": 0}
     return {"image_bytes": len(data), "status": "success"}
 
 
@@ -41,17 +43,17 @@ def _trace_output_image(data: bytes) -> dict:
     process_outputs=_trace_output_image,
 )
 def generate_image_from_messages(
-    messages: list[dict[str, Any]],
     client: "Client",
+    prompt: str,
     model: str = IMAGEN_4_FAST_MODEL,
 ) -> bytes:
     """
-    根据当前 session 的若干条消息推导出 Imagen prompt，调用 Gemini API Imagen 生成一张图并返回图片字节。
+    使用 prompt 调用 Gemini API Imagen 生成一张图并返回图片字节。
     client 由调用方传入（通常为 LangSmith wrapped 的 genai.Client）。
     """
     from google.genai import types
 
-    prompt = _prompt_from_messages(messages)
+    prompt = (prompt or "").strip() or "A scene inspired by the conversation."
     config = types.GenerateImagesConfig(
         number_of_images=1,
         aspect_ratio="1:1",

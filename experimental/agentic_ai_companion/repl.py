@@ -57,7 +57,7 @@ def _handle_api_response(
         # if messages[-1]["role"] == "user":
         messages.append({"role": "assistant", "content": out.content})
         # 第 2 块：工具结果
-        tool_display = (out.tool_result or "") + (new_pending or "")
+        tool_display = (out.tool_result or "") + " " + (new_pending or "")
         if tool_display:
             print(f"{char_name}> {tool_display}\n")
         logger.info("第 %d 轮对话结束，assistant content 长度=%d，附带图片路径=%s", turn, len(out.content or ""), new_pending is not None)

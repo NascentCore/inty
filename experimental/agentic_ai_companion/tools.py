@@ -9,6 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
 
+from langsmith.run_helpers import trace
 from pydantic import BaseModel, ConfigDict, Field
 
 _THIS_DIR = Path(__file__).resolve().parent
@@ -99,15 +100,17 @@ def execute_generate_image(
     *,
     messages: list[dict[str, Any]],
     client: Any,
+    input: str | None = None,
     _logger=None,
     **kwargs: Any,
 ) -> tuple[str, str | None]:
-    """根据当前对话上下文（最近 N 条消息）生成图片并写入本地文件，返回 (结果文案, 可点击绝对路径或 None)。"""
-    from .image_gen import generate_image_from_messages
+    """根据工具参数 input 或对话上下文生成图片并写入本地文件，返回 (结果文案, 可点击绝对路径或 None)。"""
+    from .image_gen import _prompt_from_messages, generate_image_from_messages
 
     recent = messages[-RECENT_MESSAGES_FOR_IMAGE:] if len(messages) > RECENT_MESSAGES_FOR_IMAGE else messages
+    prompt = (input or "").strip() or _prompt_from_messages(recent)
     try:
-        image_bytes = generate_image_from_messages(recent, client=client)
+        image_bytes = generate_image_from_messages(client=client, prompt=prompt)
     except (ValueError, OSError, AttributeError) as e:
         if _logger is not None:
             _logger.warning("generate_image 失败: %s", e)
@@ -155,8 +158,8 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         return execute_send_app_icon(_logger=_logger)
     def exec_send_zun_long(**kw):
         return execute_send_zun_long_photo(_logger=_logger)
-    def exec_gen_image(*, messages, client, **kw):
-        return execute_generate_image(messages=messages, client=client, _logger=_logger)
+    def exec_gen_image(*, messages, client, input=None, **kw):
+        return execute_generate_image(messages=messages, client=client, input=input, _logger=_logger)
     def exec_tts(*, text, client, **kw):
         return execute_text_to_speech(text=text, client=client, _logger=_logger)
 
@@ -180,9 +183,19 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ToolDefinition(
             # generate_image is non-TERMINAL: after execution LLM continues to output text (e.g. interpretation or emotion) for the generated image.
             name="generate_image",
-            description="Generate an image based on the current conversation context. Call only when the user has described what they want (theme, style, scene). The system uses the most recent 10 messages as context. If the user says 'generate an image' without details, ask for specifics first. Text-only replies cannot actually send images.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            description="Generate an image based on the input prompt. When the user requests an image, extract or summarize their description into the input parameter.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "type": "string",
+                        "description": "The image generation prompt. Describe the scene, subject, style. When the user requests an image, extract or summarize their description here.",
+                    }
+                },
+                "additionalProperties": False,
+            },
             context_type=ToolContextType.GEMINI_CLIENT_WITH_MESSAGES,
+            type=ToolType.TERMINAL,
             executor=exec_gen_image,
         ),
         ToolDefinition(
@@ -262,7 +275,20 @@ def process_response_with_tools(
 
     executor = tool_executors.get(name)
     if executor:
-        result, path = executor(**parsed_args, **context_kwargs)
+        trace_inputs = {"tool_name": name}
+        if "text" in parsed_args:
+            trace_inputs["text_length"] = len(str(parsed_args.get("text", "")))
+        if "input" in parsed_args:
+            trace_inputs["input_length"] = len(str(parsed_args.get("input", "")))
+        if "messages" in context_kwargs:
+            trace_inputs["messages_count"] = len(context_kwargs.get("messages", []))
+        with trace(
+            name=f"tool_executor_{name}",
+            run_type="tool",
+            inputs=trace_inputs,
+        ) as run:
+            result, path = executor(**parsed_args, **context_kwargs)
+            run.end(outputs={"result_length": len(result), "has_path": path is not None})
         image_path_sent = path
     else:
         result = f"未知工具: {name}"
