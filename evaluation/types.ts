@@ -1,10 +1,7 @@
 // 智能体管理系统类型定义
 
-// 从 SDK 导入 Agent 类型
-import type {
-  Agent as BaseAgent,
-  AgentVisibility,
-} from "inty_sdk/src/resources/api/v1/ai/agents";
+export type AgentVisibility = "PUBLIC" | "PRIVATE";
+export type AgentGender = "MALE" | "FEMALE" | "OTHER";
 
 /** 角色详情中的单条节日记忆（features.festival_memories） */
 export interface FestivalMemoryItem {
@@ -18,16 +15,47 @@ export interface AgentFeatures {
   festival_memories?: FestivalMemoryItem[];
 }
 
-// 扩展 Agent 类型以包含 meta_data 和 background_animated 字段
-export interface Agent extends BaseAgent {
+// 评测前端使用的 Agent 类型（后端响应字段集合）
+export interface Agent {
+  id: string;
+  name: string;
+  visibility: AgentVisibility;
+  gender?: AgentGender;
+  intro?: string;
+  opening?: string;
+  scenario?: string;
+  created_at?: string;
+  updated_at?: string;
+  voice_id?: string;
+  avatar?: string;
+  background?: string;
+  background_images?: string[];
+  avatar_size?: {
+    width: number;
+    height: number;
+  };
+  background_size?: {
+    width: number;
+    height: number;
+  };
+  tags?: string[];
+  main_prompt?: string;
+  personality?: string;
+  mode_prompt?: string;
+  llm_config?: LLMConfig | null;
+  extensions?: Record<string, any> | null;
+  creator?: {
+    id?: string;
+    is_superuser?: boolean;
+    [key: string]: any;
+  };
   meta_data?: AgentMetaData;
   background_animated?: string; // webp 动图 URL
   description?: string; // 描述字段
   source?: AgentSource; // 角色来源
   features?: AgentFeatures;
+  [key: string]: any;
 }
-
-export type { AgentVisibility };
 
 // 角色来源类型
 export type AgentSource = "USER_CREATED" | "AUTO_GENERATED";

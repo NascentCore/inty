@@ -6,8 +6,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { message } from "antd";
 import api from "../services/api";
-import type { Agent, AgentCreateRequest, AgentUpdateRequest } from "../types";
-import type { AgentVisibility } from "../inty_sdk/src/resources/api/v1/ai/agents";
+import type {
+  Agent,
+  AgentCreateRequest,
+  AgentUpdateRequest,
+  AgentVisibility,
+} from "../types";
 import {
   filterAgentsByType,
   loadAdminAgentList,

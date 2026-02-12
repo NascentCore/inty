@@ -1,5 +1,5 @@
 import { isEqual } from "lodash";
-import type { Agent } from "inty_sdk/src/resources/api/v1/ai/agents";
+import type { Agent } from "../types";
 
 /**
  * 深度比较两个智能体对象，检测是否有变化
