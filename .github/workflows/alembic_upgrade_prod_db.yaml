@@ -26,5 +26,7 @@ jobs:
 
       - name: Upgrade production database
         run: |
+          # app.core.config 在 import 时要求根目录存在 config.yaml，先复制 prod 配置以满足导入
+          cp devops/config.yaml.prod config.yaml
           export PYTHONPATH=.
-          alembic -x config=devops/config.yaml.prod upgrade head
+          alembic upgrade head
