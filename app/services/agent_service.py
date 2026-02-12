@@ -353,13 +353,8 @@ async def get_user_agents(
                 status_code=400, detail="Limit parameter must be between 1-1000"
             )
 
-        # 获取agents和关注者数量
         query = (
-            select(
-                models.Agent,
-                func.count(agent_followers.c.user_id).label("follower_count"),
-            )
-            .outerjoin(agent_followers, models.Agent.id == agent_followers.c.agent_id)
+            select(models.Agent)
             .options(selectinload(models.Agent.creator))
             .where(
                 and_(
@@ -367,42 +362,17 @@ async def get_user_agents(
                     models.Agent.deleted_at.is_(None),
                 )
             )
-            # 获取每个agent的follower数量
-            .group_by(models.Agent.id)
             .offset(skip)
             .limit(limit)
             .order_by(desc(models.Agent.created_at))
         )
 
         result = await db.execute(query)
-        rows = result.all()
+        agents = list(result.scalars().unique().all())
 
-        agents = []
-        agent_ids = []
-
-        for row in rows:
-            agent = row[0]
-            follower_count = row[1] or 0
-            agent.follower_count = follower_count
-            agent.is_followed = False  # 默认值
+        for agent in agents:
             # 设置用户名字，用于模板变量替换
             agent.user = current_user.nickname if current_user.nickname else "you"
-            agents.append(agent)
-            agent_ids.append(agent.id)
-
-        # 批量检查当前用户是否关注了这些agents
-        if current_user and current_user.id and agent_ids:
-            follow_query = select(agent_followers.c.agent_id).where(
-                and_(
-                    agent_followers.c.user_id == current_user.id,
-                    agent_followers.c.agent_id.in_(agent_ids),
-                )
-            )
-            follow_result = await db.execute(follow_query)
-            followed_agent_ids = {row[0] for row in follow_result}
-
-            for agent in agents:
-                agent.is_followed = agent.id in followed_agent_ids
 
         # 批量填充图片尺寸信息
         for agent in agents:
