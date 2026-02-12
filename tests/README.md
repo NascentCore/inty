@@ -7,6 +7,9 @@
 docker run --rm --name pg-vec-inty -p 5432:5432 \
     -e POSTGRES_PASSWORD=sxwl666! -e POSTGRES_DB='inty' -d pgvector/pgvector:pg16
 
+# 使用测试配置（连接本地数据库等），供 pytest 导入 app 时加载
+cp devops/config.yaml.test config.yaml
+
 # 启动后端服务
 ./start.sh --dev &
 

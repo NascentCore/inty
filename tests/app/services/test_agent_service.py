@@ -1,8 +1,10 @@
 import io
 import uuid
-from unittest.mock import AsyncMock, patch
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, AsyncMock, patch
 
 import pytest
+from fastapi import HTTPException
 from google.cloud import storage
 from loguru import logger
 from PIL import Image
@@ -21,11 +23,13 @@ from app.external_services.gcs import (
 from app.models.agent import AgentVisibility
 from app.schemas.agent import AgentSortOption, AgentUpdate, ModelConfig
 from app.schemas.user import UserCreate
+from app import schemas
 from app.services import agent_service
 from app.services.agent_service import (
     _crop_avatar_from_background,
     _update_agent_in_db,
     get_balanced_score_based_agents,
+    get_user_agents,
 )
 
 admin_user = None
@@ -373,3 +377,131 @@ async def test_get_recommended_agents_paginated_excludes_private_always(db_sessi
     super_ids = {agent.id for agent in super_page.list}
     assert public_agent.id in super_ids
     assert private_agent.id not in super_ids
+
+
+@pytest.mark.asyncio
+async def test_get_user_agents_returns_created_agents_ordered_by_created_at(db_session):
+    """
+    单元测试 get_user_agents：使用本地数据库（config 见 devops/config.yaml.test），
+    验证返回当前用户创建的、未删除的 agents，按 created_at 降序，并设置 agent.user。
+    """
+    test_id = str(uuid.uuid4())[:8]
+    user_id = str(uuid.uuid4())
+    readable_id = str(uuid.uuid4().int)[:8]
+
+    db_user = models.User(
+        id=user_id,
+        readable_id=readable_id,
+        auth_type=models.AuthType.PHONE,
+        nickname="TestCreator",
+        email="creator@test.local",
+        system_language="en",
+        is_superuser=False,
+    )
+    db_session.add(db_user)
+    await db_session.flush()
+
+    agent_a = models.Agent(
+        id=f"test-ua-a-{test_id}",
+        readable_id=f"uaa{test_id}"[:8],
+        name=f"Agent A {test_id}",
+        gender=models.Gender.FEMALE,
+        visibility=AgentVisibility.PUBLIC,
+        creator_id=db_user.id,
+    )
+    agent_b = models.Agent(
+        id=f"test-ua-b-{test_id}",
+        readable_id=f"uab{test_id}"[:8],
+        name=f"Agent B {test_id}",
+        gender=models.Gender.FEMALE,
+        visibility=AgentVisibility.PUBLIC,
+        creator_id=db_user.id,
+    )
+    db_session.add(agent_a)
+    db_session.add(agent_b)
+    await db_session.commit()
+    await db_session.refresh(db_user)
+    await db_session.refresh(agent_a)
+    await db_session.refresh(agent_b)
+
+    current_user = schemas.User.model_validate(db_user)
+
+    agents = await get_user_agents(db_session, current_user, skip=0, limit=100)
+    assert len(agents) == 2
+    ids = [a.id for a in agents]
+    assert agent_a.id in ids and agent_b.id in ids
+    # 按 created_at 降序，后创建的在前（agent_b 后 add，通常后 commit 故 created_at 可能更晚）
+    assert ids[0] == agent_b.id and ids[1] == agent_a.id or ids[0] == agent_a.id and ids[1] == agent_b.id
+    for agent in agents:
+        assert agent.user == "TestCreator"
+
+    # 无 nickname 时应为 "you"
+    db_user.nickname = None
+    current_user_no_nick = schemas.User.model_validate(db_user)
+    agents2 = await get_user_agents(db_session, current_user_no_nick, skip=0, limit=100)
+    for agent in agents2:
+        assert agent.user == "you"
+
+
+@pytest.mark.asyncio
+async def test_get_user_agents_empty_when_no_agents(db_session):
+    """用户未创建任何 agent 时返回空列表。"""
+    test_id = str(uuid.uuid4())[:8]
+    user_id = str(uuid.uuid4())
+    readable_id = str(uuid.uuid4().int)[:8]
+    db_user = models.User(
+        id=user_id,
+        readable_id=readable_id,
+        auth_type=models.AuthType.PHONE,
+        nickname="NoAgents",
+        email="noagents@test.local",
+        system_language="en",
+        is_superuser=False,
+    )
+    db_session.add(db_user)
+    await db_session.commit()
+    await db_session.refresh(db_user)
+    current_user = schemas.User.model_validate(db_user)
+
+    agents = await get_user_agents(db_session, current_user)
+    assert agents == []
+
+
+@pytest.mark.asyncio
+async def test_get_user_agents_validation_skip_negative():
+    """skip < 0 时抛出 HTTPException 400。"""
+    mock_db = MagicMock()
+    mock_user = schemas.User(
+        id="u",
+        readable_id="r",
+        auth_type="PHONE",
+        is_active=True,
+        created_at=datetime.now(timezone.utc),
+        updated_at=None,
+        is_superuser=False,
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await get_user_agents(mock_db, mock_user, skip=-1)
+    assert exc_info.value.status_code == 400
+    assert "cannot be negative" in exc_info.value.detail.lower()
+
+
+@pytest.mark.asyncio
+async def test_get_user_agents_validation_limit_invalid():
+    """limit <= 0 或 > 1000 时抛出 HTTPException 400。"""
+    mock_db = MagicMock()
+    mock_user = schemas.User(
+        id="u",
+        readable_id="r",
+        auth_type="PHONE",
+        is_active=True,
+        created_at=datetime.now(timezone.utc),
+        updated_at=None,
+        is_superuser=False,
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await get_user_agents(mock_db, mock_user, skip=0, limit=0)
+    assert exc_info.value.status_code == 400
+    with pytest.raises(HTTPException) as exc_info2:
+        await get_user_agents(mock_db, mock_user, skip=0, limit=1001)
+    assert exc_info2.value.status_code == 400
