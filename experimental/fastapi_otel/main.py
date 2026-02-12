@@ -15,7 +15,25 @@ _service_name = os.environ.get("OTEL_SERVICE_NAME", "fastapi-otel-demo")
 _resource = Resource(attributes={"service.name": _service_name})
 _provider = TracerProvider(resource=_resource)
 _provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-if os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"):
+
+# OTLP export: Uptrace (recommended) or generic env-based
+_uptrace_dsn = os.environ.get("UPTRACE_DSN")
+if _uptrace_dsn:
+    # Pass endpoint and DSN in code so the DSN (e.g. ...?grpc=4317) is not
+    # mangled by OTEL_EXPORTER_OTLP_HEADERS comma/equals parsing. See:
+    # https://uptrace.dev/get/opentelemetry-python/otlp
+    _provider.add_span_processor(
+        BatchSpanProcessor(
+            OTLPSpanExporter(
+                endpoint=os.environ.get(
+                    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+                    "https://api.uptrace.dev/v1/traces",
+                ),
+                headers={"uptrace-dsn": _uptrace_dsn},
+            )
+        )
+    )
+elif os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"):
     _provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
 trace.set_tracer_provider(_provider)
 
