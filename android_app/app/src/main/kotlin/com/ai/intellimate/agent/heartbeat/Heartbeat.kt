@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -22,6 +25,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -151,7 +155,7 @@ private fun HeartbeatContent(
             memories.indexOfFirst { it.id == initialId }.takeIf { it >= 0 } ?: 0
         }
     val count = remember(memories) { memories.size }
-    val gridState = rememberLazyStaggeredGridState(initialIndex)
+    val listState = rememberLazyListState(initialIndex)
 
     Column(modifier = modifier) {
         Text(
@@ -162,35 +166,20 @@ private fun HeartbeatContent(
 
         Spacer(Modifier.height(16.dp))
 
-        LazyVerticalStaggeredGrid(
-            state = gridState,
-            columns = StaggeredGridCells.Fixed(2),
+        LazyColumn (
+            state = listState,
             contentPadding = PaddingValues(bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalItemSpacing = 8.dp,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(memories, key = { it.id }) {
-                Box(Modifier) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surface
+                ) {
                     Column(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clip(MaterialTheme.shapes.small)
-                                .drawBehind {
-                                    // 宽度填满容器，高度按容器居中裁剪显示
-                                    val srcHeight =
-                                        (size.height * itemBg.width / size.width)
-                                            .toInt()
-                                            .coerceIn(1, itemBg.height)
-                                    val srcY = (itemBg.height - srcHeight) / 2
-                                    drawImage(
-                                        image = itemBg,
-                                        srcOffset = IntOffset(0, srcY),
-                                        srcSize = IntSize(itemBg.width, srcHeight),
-                                        dstOffset = IntOffset.Zero,
-                                        dstSize = size.toIntSize(),
-                                    )
-                                }
-                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 8.dp)
                     ) {
                         Text(text = it.title, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(8.dp))
