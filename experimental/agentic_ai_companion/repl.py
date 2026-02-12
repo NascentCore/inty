@@ -9,8 +9,6 @@ from langsmith.run_helpers import trace
 
 EMPTY_RESPONSE = "(E.M.P.T.Y.)"
 
-_TOOL_REQUEST_KEYWORDS = ("app icon", "zun long", "picture", "photo", "image", "voice", "speak", "say ", "generate")
-
 
 def _handle_api_response(
     messages: list,
@@ -56,8 +54,8 @@ def _handle_api_response(
         )
         messages = out.messages
         new_pending = out.image_path
-        if messages[-1]["role"] == "user":
-            messages.append({"role": "assistant", "content": out.content})
+        # if messages[-1]["role"] == "user":
+        messages.append({"role": "assistant", "content": out.content})
         # 第 2 块：工具结果
         tool_display = (out.tool_result or "") + (new_pending or "")
         if tool_display:
@@ -113,20 +111,12 @@ def _execute_turn(
             tool_msg_count = sum(1 for m in messages if m.get("role") == "tool")
             logger.info("本次 API 请求 messages 中 tool 消息数量: %d", tool_msg_count)
             logger.info("Current messages: %s", json.dumps(messages, indent=2))
-            line_lower = line.lower()
-            force_tool = (
-                tool_msg_count > 0
-                and any(kw in line_lower for kw in _TOOL_REQUEST_KEYWORDS)
+            resp = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=tools,
+                parallel_tool_calls=False,
             )
-            api_kwargs = {
-                "model": model,
-                "messages": messages,
-                "tools": tools,
-                "parallel_tool_calls": False,
-            }
-            if force_tool:
-                api_kwargs["tool_choice"] = "required"
-            resp = client.chat.completions.create(**api_kwargs)
             _raw = resp.model_dump() if hasattr(resp, "model_dump") else repr(resp)
             logger.info("API raw response: %s", _raw)
             msg = resp.choices[0].message
