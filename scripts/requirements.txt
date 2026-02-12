@@ -1,6 +1,7 @@
 Pillow
 cyclopts
 openai
+pydantic
 matplotlib
 pydub
 requests
