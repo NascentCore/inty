@@ -322,16 +322,16 @@ class ChatMessageRepository(
             assistantVoiceMessages.filter { it.metaData.voiceTurnId.isNullOrBlank() }
         if (messagesNeedingTurnId.isEmpty()) return
 
-        messagesNeedingTurnId
-            .zip(normalizedTurnIds)
-            .forEach { (message, turnId) ->
-                localDataSource.updateVoiceTurnId(
-                    agentId = agentId,
-                    messageId = message.id,
-                    indexId = message.indexId,
-                    voiceTurnId = turnId,
-                )
-            }
+        val lastTurnIndex = normalizedTurnIds.lastIndex
+        messagesNeedingTurnId.forEachIndexed { index, message ->
+            val turnId = normalizedTurnIds[minOf(index, lastTurnIndex)]
+            localDataSource.updateVoiceTurnId(
+                agentId = agentId,
+                messageId = message.id,
+                indexId = message.indexId,
+                voiceTurnId = turnId,
+            )
+        }
     }
 
     fun messageCountFlow(agentId: String) = localDataSource.messageCountFlow(agentId)
