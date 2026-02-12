@@ -1,5 +1,10 @@
 ### 评测前端（evaluation）架构级 TODO（evaluation 根）
 
+- [ ] 修复 `npm run type-check` 剩余 3 个 `Inty` SDK 类型错误（`users/chats` 路径）并回归验证 **【工程量：0.5 人天】**
+  - _范围：`components/UserInfo.tsx`、`components/common/PremiumModeToggle.tsx`、`pages/ChatPage.tsx`_
+  - _建议：完善 `evaluation/inty.d.ts` 的 `api.v1` 声明，或恢复真实 SDK 包导入并统一类型来源_
+  - _验收：`cd evaluation && npm run type-check` 通过_
+
 - [ ] 分层与目录规范：`components/`、`pages/`、`services/`、`hooks/`、`utils/` 职责边界清晰 **【工程量：1-2 人天】**
   - _依据：主要是代码重构和目录整理，相对简单_
 - [ ] API 单一真源：基于 `openapi.json`/`stainless.yml` 生成 TS SDK 并接入 **【工程量：2-3 人天】**
