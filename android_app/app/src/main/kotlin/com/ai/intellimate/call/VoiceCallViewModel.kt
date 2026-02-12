@@ -16,6 +16,7 @@ import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.utils.MoshiUtils
+import java.util.ArrayDeque
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -62,6 +63,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     private var activeFallbackTurnId: String? = null
     private var fallbackTurnCounter = 0
     private var lastStatusForTurnStatsLog: CallStatus? = null
+    private val turnIdAliasMap = linkedMapOf<String, String>()
+    private val pendingFallbackTurnIds = ArrayDeque<String>()
     private val recordingCollector = VoiceCallRecordingCollector(Utils.getApp().filesDir)
     private val turnRecordingCollector = VoiceCallTurnRecordingCollector(Utils.getApp().filesDir)
     private var finalCallResult: VoiceCallResult? = null
@@ -73,6 +76,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 for (audioData in _audioSendQueue) {
                     try {
                         sendQueueSize = maxOf(0, sendQueueSize - 1) // 减少计数器
+                        if (_uiState.value.connectionState != ConnectionState.CONNECTED) {
+                            continue
+                        }
                         repository.sendVoice(audioData)
                     } catch (e: Exception) {
                         LogUtils.e("发送音频数据失败: ${e.message}")
@@ -118,6 +124,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         fallbackTurnCounter = 0
         voiceTurnId = null
         lastStatusForTurnStatsLog = null
+        turnIdAliasMap.clear()
+        pendingFallbackTurnIds.clear()
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAgentInfo(agentId).collect { result ->
                 result.getOrNull()?.let { agent -> _uiState.update { it.copy(agent = agent) } }
@@ -142,8 +150,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         CallType.AUDIO_RESPONSE -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             packet.resolveVoiceTurnId()?.let {
-                                activeFallbackTurnId = null
-                                updateVoiceTurnId(it)
+                                applyResolvedServerTurnId(it, source = "audio_response")
                             }
                             // 将packet.data从base64转化为音频数据并通过_audioResponseChannel发送
                             try {
@@ -165,7 +172,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
                         CallType.END -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
-                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
+                            packet.resolveVoiceTurnId()?.let {
+                                applyResolvedServerTurnId(it, source = "end")
+                            }
                             activeFallbackTurnId = null
                             voiceTurnId = null
                             lastStatusForTurnStatsLog = null
@@ -175,7 +184,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
                         CallType.ERROR -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
-                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
+                            packet.resolveVoiceTurnId()?.let {
+                                applyResolvedServerTurnId(it, source = "error")
+                            }
                             activeFallbackTurnId = null
                             voiceTurnId = null
                             lastStatusForTurnStatsLog = null
@@ -193,8 +204,11 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             val resolvedTurnId =
                                 packet.resolveVoiceTurnId()?.trim()?.takeIf { it.isNotBlank() }
                             if (resolvedTurnId != null) {
-                                activeFallbackTurnId = null
-                                updateVoiceTurnId(resolvedTurnId)
+                                applyResolvedServerTurnId(
+                                    resolvedTurnId,
+                                    source = "status",
+                                    allowPendingAlias = true,
+                                )
                             }
                             packet.statusEnum?.let { status ->
                                 if (lastStatusForTurnStatsLog != status) {
@@ -228,6 +242,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                                                 "voice_turn_closed_on_status: status=${status.name}, closingTurn=${voiceTurnId.orEmpty()}, fallback=${activeFallbackTurnId.orEmpty()}"
                                             )
                                         }
+                                        activeFallbackTurnId?.let(::markFallbackTurnPendingForAlias)
                                         activeFallbackTurnId = null
                                         voiceTurnId = null
                                     }
@@ -240,7 +255,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
                         CallType.SESSION_INFO -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
-                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
+                            packet.resolveVoiceTurnId()?.let {
+                                applyResolvedServerTurnId(it, source = "session_info")
+                            }
                             _uiState.update {
                                 it.copy(
                                     time =
@@ -255,7 +272,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         CallType.TRANSCRIPT,
                         CallType.USER_TRANSCRIPT -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
-                            packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
+                            packet.resolveVoiceTurnId()?.let {
+                                applyResolvedServerTurnId(it, source = "transcript")
+                            }
                             messageCount++
                         }
 
@@ -318,8 +337,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         val turnRecordingsJson =
             turnRecordingOutputs
                 .map {
+                    val exportedTurnId = resolveExportTurnId(it.voiceTurnId)
                     VoiceCallTurnRecordingResult(
-                        voiceTurnId = it.voiceTurnId,
+                        voiceTurnId = exportedTurnId,
                         recordingPath = it.filePath,
                         recordingDurationMs = it.durationMs,
                     )
@@ -327,6 +347,11 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 .takeIf { it.isNotEmpty() }
                 ?.let { MoshiUtils.toJson(VoiceCallTurnRecordingResultPayload(entries = it)) }
                 ?.takeIf { it.isNotBlank() }
+        if (turnIdAliasMap.isNotEmpty()) {
+            LogUtils.i(
+                "voice_turn_alias_summary: sessionId=$resolvedSessionId, aliasCount=${turnIdAliasMap.size}, aliases=${turnIdAliasMap.entries.joinToString(",") { "${it.key}->${it.value}" }}"
+            )
+        }
         return VoiceCallResult(
                 messageCount = messageCount,
                 voiceSessionId = resolvedSessionId,
@@ -337,7 +362,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             .also {
                 finalCallResult = it
                 LogUtils.i(
-                    "voice_turn_finish_summary: sessionId=$resolvedSessionId, messageCount=$messageCount, exportedTurns=${turnRecordingOutputs.size}, exportedTurnIds=${turnRecordingOutputs.joinToString(",") { output -> output.voiceTurnId }}"
+                    "voice_turn_finish_summary: sessionId=$resolvedSessionId, messageCount=$messageCount, exportedTurns=${turnRecordingOutputs.size}, exportedTurnIds=${turnRecordingOutputs.joinToString(",") { output -> resolveExportTurnId(output.voiceTurnId) }}"
                 )
             }
     }
@@ -357,7 +382,12 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     private fun resolveTurnIdForIncomingAudio(packet: com.ai.intellimate.call.data.bean.CallPacket): String? {
         val packetTurnId = packet.resolveVoiceTurnId()?.trim()?.takeIf { it.isNotBlank() }
         if (packetTurnId != null) {
-            activeFallbackTurnId = null
+            val activeFallback = activeFallbackTurnId?.trim()?.takeIf { it.isNotBlank() }
+            if (activeFallback != null) {
+                bindFallbackTurnAlias(activeFallback, packetTurnId, source = "audio_append")
+                updateVoiceTurnId(activeFallback)
+                return activeFallback
+            }
             updateVoiceTurnId(packetTurnId)
             return packetTurnId
         }
@@ -378,6 +408,69 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     private fun createFallbackTurnId(): String {
         fallbackTurnCounter += 1
         return "local_turn_${fallbackTurnCounter}_${System.nanoTime()}"
+    }
+
+    private fun resolveExportTurnId(rawTurnId: String): String {
+        val normalized = rawTurnId.trim()
+        if (normalized.isBlank()) return rawTurnId
+        return turnIdAliasMap[normalized]?.trim()?.takeIf { it.isNotBlank() } ?: normalized
+    }
+
+    private fun applyResolvedServerTurnId(
+        candidate: String,
+        source: String,
+        allowPendingAlias: Boolean = false,
+    ) {
+        val normalized = candidate.trim()
+        if (normalized.isBlank()) return
+        val activeFallback = activeFallbackTurnId?.trim()?.takeIf { it.isNotBlank() }
+        if (activeFallback != null) {
+            bindFallbackTurnAlias(activeFallback, normalized, source)
+            updateVoiceTurnId(activeFallback)
+            return
+        }
+        if (allowPendingAlias) {
+            val pendingFallback = consumePendingFallbackTurnForAlias()
+            if (pendingFallback != null) {
+                bindFallbackTurnAlias(pendingFallback, normalized, "$source-pending")
+            }
+        }
+        updateVoiceTurnId(normalized)
+    }
+
+    private fun markFallbackTurnPendingForAlias(localTurnId: String) {
+        val normalized = localTurnId.trim()
+        if (normalized.isBlank()) return
+        if (!normalized.startsWith("local_turn_")) return
+        if (turnIdAliasMap.containsKey(normalized)) return
+        if (pendingFallbackTurnIds.contains(normalized)) return
+        pendingFallbackTurnIds.addLast(normalized)
+        LogUtils.i(
+            "voice_turn_alias_pending: localTurn=$normalized, pendingCount=${pendingFallbackTurnIds.size}"
+        )
+    }
+
+    private fun consumePendingFallbackTurnForAlias(): String? {
+        while (pendingFallbackTurnIds.isNotEmpty()) {
+            val candidate = pendingFallbackTurnIds.removeFirst().trim()
+            if (candidate.isBlank()) continue
+            if (turnIdAliasMap.containsKey(candidate)) continue
+            return candidate
+        }
+        return null
+    }
+
+    private fun bindFallbackTurnAlias(localTurnId: String, serverTurnId: String, source: String) {
+        val normalizedLocal = localTurnId.trim()
+        val normalizedServer = serverTurnId.trim()
+        if (normalizedLocal.isBlank() || normalizedServer.isBlank()) return
+        if (normalizedLocal == normalizedServer) return
+        if (turnIdAliasMap[normalizedLocal] == normalizedServer) return
+        turnIdAliasMap[normalizedLocal] = normalizedServer
+        pendingFallbackTurnIds.remove(normalizedLocal)
+        LogUtils.i(
+            "voice_turn_alias_bound: source=$source, localTurn=$normalizedLocal, serverTurn=$normalizedServer, pendingCount=${pendingFallbackTurnIds.size}"
+        )
     }
 
     private fun logTurnCollectorSnapshot(prefix: String) {

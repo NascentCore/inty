@@ -297,7 +297,11 @@ class ChatMessageRepository(
     suspend fun getLatestVoiceSessionId(agentId: String) = localDataSource.getLatestVoiceSessionId(agentId)
 
     /**
-     * 当服务端消息未携带 voice_turn_id 时，按时间顺序将本地 turn 录音与 AI 语音消息逐条回填绑定。
+     * 将本地 turn 录音按顺序回填绑定到 AI 语音消息。
+     *
+     * 说明：
+     * - 不仅处理缺失 voice_turn_id 的消息，也会重绑与本地 turn 列表不一致的 turn_id；
+     * - 这样可以兼容「本地 fallback turn 与服务端 turn id 不同」的场景，避免播放回退到 session 全量录音。
      */
     suspend fun bindAssistantVoiceMessagesToTurnIds(
         agentId: String,
@@ -318,18 +322,23 @@ class ChatMessageRepository(
             localDataSource.getAssistantVoiceMessagesBySession(agentId, normalizedSessionId)
         if (assistantVoiceMessages.isEmpty()) return
 
-        val messagesNeedingTurnId =
-            assistantVoiceMessages.filter { it.metaData.voiceTurnId.isNullOrBlank() }
-        if (messagesNeedingTurnId.isEmpty()) return
-
         val lastTurnIndex = normalizedTurnIds.lastIndex
-        messagesNeedingTurnId.forEachIndexed { index, message ->
+        var updatedCount = 0
+        assistantVoiceMessages.forEachIndexed { index, message ->
             val turnId = normalizedTurnIds[minOf(index, lastTurnIndex)]
+            val existingTurnId = message.metaData.voiceTurnId?.trim().orEmpty()
+            if (existingTurnId == turnId) return@forEachIndexed
             localDataSource.updateVoiceTurnId(
                 agentId = agentId,
                 messageId = message.id,
                 indexId = message.indexId,
                 voiceTurnId = turnId,
+            )
+            updatedCount += 1
+        }
+        if (updatedCount > 0) {
+            LogUtils.i(
+                "voice_turn_bind_reassigned: agentId=$agentId, sessionId=$normalizedSessionId, updated=$updatedCount, totalVoiceMessages=${assistantVoiceMessages.size}, turnCount=${normalizedTurnIds.size}"
             )
         }
     }
