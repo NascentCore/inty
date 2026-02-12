@@ -250,7 +250,7 @@ const AppContent: React.FC = () => {
       case "evaluation":
         return "智能体评测";
       case "history":
-        return "评测记录";
+        return "智能体评测记录";
       case "chat":
         return "单角色聊天";
       case "voice-chat":
@@ -260,7 +260,7 @@ const AppContent: React.FC = () => {
       case "character-themes":
         return "角色专区管理";
       case "settings":
-        return "系统设置";
+        return "消息生图系统设置";
       case "user-analytics":
         return "用户数据分析";
       case "user-analytics-reports":
