@@ -198,7 +198,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             }
                             packet.statusEnum?.let { status ->
                                 if (lastStatusForTurnStatsLog != status) {
-                                    LogUtils.d(
+                                    LogUtils.i(
                                         "voice_turn_status_transition: from=${lastStatusForTurnStatsLog?.name}, to=${status.name}, voiceTurnId=${voiceTurnId.orEmpty()}, fallbackTurn=${activeFallbackTurnId.orEmpty()}"
                                     )
                                     logTurnCollectorSnapshot("voice_turn_status_${status.name.lowercase()}")
@@ -214,7 +214,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                                             val fallbackTurnId = createFallbackTurnId()
                                             activeFallbackTurnId = fallbackTurnId
                                             updateVoiceTurnId(fallbackTurnId)
-                                            LogUtils.d(
+                                            LogUtils.i(
                                                 "voice_turn_fallback_created: turnId=$fallbackTurnId, sessionId=$voiceSessionId"
                                             )
                                         }
@@ -224,7 +224,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                                     CallStatus.DISCONNECTED,
                                     CallStatus.ERROR -> {
                                         if (!voiceTurnId.isNullOrBlank() || !activeFallbackTurnId.isNullOrBlank()) {
-                                            LogUtils.d(
+                                            LogUtils.i(
                                                 "voice_turn_closed_on_status: status=${status.name}, closingTurn=${voiceTurnId.orEmpty()}, fallback=${activeFallbackTurnId.orEmpty()}"
                                             )
                                         }
@@ -336,7 +336,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             )
             .also {
                 finalCallResult = it
-                LogUtils.d(
+                LogUtils.i(
                     "voice_turn_finish_summary: sessionId=$resolvedSessionId, messageCount=$messageCount, exportedTurns=${turnRecordingOutputs.size}, exportedTurnIds=${turnRecordingOutputs.joinToString(",") { output -> output.voiceTurnId }}"
                 )
             }
@@ -382,7 +382,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
 
     private fun logTurnCollectorSnapshot(prefix: String) {
         val stats = turnRecordingCollector.snapshotStats()
-        LogUtils.d(
+        LogUtils.i(
             "$prefix: turns=${stats.turnCount}, chunks=${stats.totalChunkCount}, bytes=${stats.totalBytes}, details=${stats.turns.joinToString(";") { stat -> "${stat.turnId}[chunks=${stat.chunkCount},bytes=${stat.totalBytes}]" }}"
         )
     }

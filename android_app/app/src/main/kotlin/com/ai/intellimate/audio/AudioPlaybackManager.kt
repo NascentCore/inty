@@ -151,7 +151,11 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
 
             // 设置媒体项 - 优先使用缓存文件
             val mediaItem =
-                if (cacheManager.isCached(audioInfo.url)) {
+                if (isLocalAudioUri(audioInfo.url)) {
+                    val localUri = normalizeLocalAudioUri(audioInfo.url)
+                    LogUtils.i("音频LOG测试 Use local audio directly: $localUri")
+                    MediaItem.fromUri(localUri)
+                } else if (cacheManager.isCached(audioInfo.url)) {
                     val cachedPath = cacheManager.getCachedFilePath(audioInfo.url)
                     if (cachedPath != null) {
                         MediaItem.fromUri("file://$cachedPath")
@@ -459,6 +463,16 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
         val duration = _duration.value
         val position = _currentPosition.value
         return if (duration > 0) (position.toFloat() / duration.toFloat()) else 0f
+    }
+
+    private fun isLocalAudioUri(url: String): Boolean {
+        val normalized = url.trim()
+        return normalized.startsWith("file://") || normalized.startsWith("/")
+    }
+
+    private fun normalizeLocalAudioUri(url: String): String {
+        val normalized = url.trim()
+        return if (normalized.startsWith("file://")) normalized else "file://$normalized"
     }
 
     /** 重置播放器状态（页面切换时调用） */

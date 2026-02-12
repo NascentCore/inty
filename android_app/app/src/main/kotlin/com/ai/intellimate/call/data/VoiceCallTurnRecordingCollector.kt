@@ -76,7 +76,7 @@ class VoiceCallTurnRecordingCollector(
                     LogUtils.e("写入 turn 录音失败: turnId=$normalizedTurnId, error=${it.message}")
                 }
             if (buffer.chunkCount == 1 || buffer.chunkCount % 25 == 0) {
-                LogUtils.d(
+                LogUtils.i(
                     "voice_turn_chunk_stats: turnId=${buffer.turnId}, chunks=${buffer.chunkCount}, bytes=${buffer.totalBytesWritten}"
                 )
             }
@@ -94,7 +94,7 @@ class VoiceCallTurnRecordingCollector(
             isFinalized = true
             val safeSessionId = sanitizeId(sessionId.ifBlank { "unknown_session" })
             val preFinalizeStats = snapshotStatsUnsafe()
-            LogUtils.d(
+            LogUtils.i(
                 "voice_turn_finalize_begin: sessionId=$sessionId, turns=${preFinalizeStats.turnCount}, chunks=${preFinalizeStats.totalChunkCount}, bytes=${preFinalizeStats.totalBytes}, details=${formatStatsDetails(preFinalizeStats.turns)}"
             )
 
@@ -166,7 +166,7 @@ class VoiceCallTurnRecordingCollector(
             }
             turnBuffers.clear()
             finalizedOutputs = outputs
-            LogUtils.d(
+            LogUtils.i(
                 "voice_turn_finalize_end: sessionId=$sessionId, exportedTurns=${outputs.size}, exportedDurationMs=${outputs.sumOf { it.durationMs }}, exportedIds=${outputs.joinToString(",") { it.voiceTurnId }}"
             )
             return outputs
@@ -208,7 +208,7 @@ class VoiceCallTurnRecordingCollector(
         return TurnBuffer(turnId = turnId, tempPcmFile = tempFile, outputStream = stream)
             .also {
                 turnBuffers[turnId] = it
-                LogUtils.d("voice_turn_opened: turnId=$turnId, totalTurns=${turnBuffers.size}")
+                LogUtils.i("voice_turn_opened: turnId=$turnId, totalTurns=${turnBuffers.size}")
             }
     }
 

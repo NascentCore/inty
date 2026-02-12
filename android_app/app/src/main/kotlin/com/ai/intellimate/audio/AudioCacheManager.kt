@@ -56,6 +56,10 @@ class AudioCacheManager private constructor(private val context: Context) {
     suspend fun preloadAudio(url: String) =
         withContext(Dispatchers.IO) {
             try {
+                if (isLocalAudioUrl(url)) {
+                    LogUtils.i("音频LOG测试 Skip preload for local audio: $url")
+                    return@withContext
+                }
                 val cacheKey = generateCacheKey(url)
 
                 // 如果已经缓存，直接返回
@@ -76,12 +80,18 @@ class AudioCacheManager private constructor(private val context: Context) {
 
     /** 检查音频是否已缓存 */
     fun isCached(url: String): Boolean {
+        if (isLocalAudioUrl(url)) {
+            return resolveLocalAudioFile(url)?.exists() == true
+        }
         val cacheKey = generateCacheKey(url)
         return memoryCache.get(cacheKey) != null || getCachedFile(cacheKey).exists()
     }
 
     /** 获取缓存文件路径 */
     fun getCachedFilePath(url: String): String? {
+        if (isLocalAudioUrl(url)) {
+            return resolveLocalAudioFile(url)?.absolutePath
+        }
         val cacheKey = generateCacheKey(url)
         val cachedFile = getCachedFile(cacheKey)
         return if (cachedFile.exists()) cachedFile.absolutePath else null
@@ -144,6 +154,10 @@ class AudioCacheManager private constructor(private val context: Context) {
     /** 从网络下载音频 */
     private suspend fun downloadAudio(url: String): ByteArray? =
         withContext(Dispatchers.IO) {
+            if (!isRemoteHttpUrl(url)) {
+                LogUtils.w("音频LOG测试 Skip non-http audio download: $url")
+                return@withContext null
+            }
             var retryCount = 0
             val maxRetries = 3
 
@@ -209,6 +223,28 @@ class AudioCacheManager private constructor(private val context: Context) {
 
             null
         }
+
+    private fun isRemoteHttpUrl(url: String): Boolean {
+        val normalized = url.trim().lowercase()
+        return normalized.startsWith("http://") || normalized.startsWith("https://")
+    }
+
+    private fun isLocalAudioUrl(url: String): Boolean {
+        return resolveLocalAudioFile(url) != null
+    }
+
+    private fun resolveLocalAudioFile(url: String): File? {
+        val normalized = url.trim()
+        if (normalized.isBlank()) return null
+        return when {
+            normalized.startsWith("file://") -> {
+                val path = normalized.removePrefix("file://")
+                path.takeIf { it.isNotBlank() }?.let(::File)
+            }
+            normalized.startsWith("/") -> File(normalized)
+            else -> null
+        }
+    }
 
     /** 保存数据到文件 */
     private fun saveToFile(file: File, data: ByteArray) {
