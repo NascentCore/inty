@@ -294,6 +294,19 @@ object BoostManager {
         }
     }
 
+    suspend fun consume(amount: Int, source: PointSource): Boolean {
+        return (repository?.consume(amount) == true).also {
+            logFirebaseEvent(
+                "boost_consume",
+                mapOf(
+                    "source" to source.analyticsName,
+                    "points" to amount,
+                    "success" to it
+                )
+            )
+        }
+    }
+
     private suspend fun logPointsEvent(
         source: PointSource,
         points: Int,

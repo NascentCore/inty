@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
@@ -58,6 +59,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -102,6 +104,8 @@ import com.ai.intellimate.agent.heartbeat.toHeartbeat
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.audio.VoicePlayer
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.PointSource
 import com.ai.intellimate.chat.ui.FullScreenImageViewer
 import com.ai.intellimate.chat.ui.MessageActionBar
 import com.ai.intellimate.chat.ui.MessageCornerActions
@@ -112,6 +116,7 @@ import com.ai.intellimate.utils.ChatTextFormatter
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService<ClipboardManager>()
@@ -224,14 +229,123 @@ private fun VersionSupportPreview() {
 @Composable
 private fun ChatItemForMoment(
     navController: NavController,
+    chatViewModel: ChatViewModel,
     message: MessageEntity,
     modifier: Modifier = Modifier
 ) {
-    ChatItemForMoment(
-        image = message.forMomentImage,
-        text = message.content,
+    val vipStatus by VipStatusHelper.vipStatus.collectAsState()
+    val isLocked by remember(message) {
+        derivedStateOf { message.momentExtra?.isPurchased == false && !vipStatus.isSubscribed }
+    }
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
 
+    if (showConfirmDialog) {
+        PurchaseForMomentDialog(
+            price = message.momentExtra?.price ?: 0,
+            onConfirm = {
+                showConfirmDialog = false
+
+                message.momentExtra?.let {
+                    if (!isLoading) {
+                        scope.launch {
+                            isLoading = true
+                            val success = chatViewModel.purchaseForMoment(message)
+
+                            if (success) {
+                                ToastUtils.showShort(R.string.moment_purchase_success)
+                            } else {
+                                ToastUtils.showShort(R.string.credits_not_enough)
+                            }
+                        }.invokeOnCompletion {
+                            isLoading = false
+                        }
+                    }
+                }
+            },
+            onCancel = { showConfirmDialog = false }
+        )
+    }
+
+    ChatItemForMoment(
+        image = message.momentExtra?.image.orEmpty(),
+        text = message.content,
+        isLocked = isLocked,
+        unlockByVip = {
+            navController.navigate(Routes.Me.vipCenter("for_moment"))
+        },
+        unlockByCredits = {
+            showConfirmDialog = true
+        },
+        modifier = modifier
     )
+}
+
+/**
+ * 秘密时刻积分支付确认弹窗
+ *
+ * 使用场景：用户点击「Unlock with Credits」后，在扣费前确认是否使用积分解锁该条秘密时刻。
+ * 预期效果：居中对话框，标题 + 说明文案（含所需积分数量），取消 / 解锁 双按钮。
+ *
+ * 可配置项：price 所需积分、onConfirm 确认解锁、onCancel 取消。
+ */
+@Composable
+private fun PurchaseForMomentDialog(
+    price: Int,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Dialog(
+        onDismissRequest = onCancel,
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+    ) {
+        Surface(
+            modifier = modifier,
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(dimensionResource(R.dimen.padding_large))
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.moment_purchase_dialog_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_medium)))
+                Text(
+                    text = stringResource(R.string.moment_purchase_dialog_message, price),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_large)))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.noRippleClickable(onClick = onCancel)
+                    )
+                    Spacer(modifier = Modifier.width(dimensionResource(R.dimen.padding_medium)))
+                    Text(
+                        text = stringResource(R.string.moment_purchase_confirm),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.noRippleClickable(onClick = onConfirm)
+                    )
+                }
+            }
+        }
+    }
 }
 
 /**

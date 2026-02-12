@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -50,6 +51,25 @@ class BoostRepository(
         val snapshot = BoostStorage.getBoostState()
         _state.value = snapshot.toDomain()
         _leaderboard.value = buildLeaderboard(snapshot)
+    }
+
+    /**
+     * 消费点数
+     *
+     * @return 点数是否足够
+     */
+    suspend fun consume(amount: Int): Boolean {
+        return withContext(Dispatchers.IO) {
+            (BoostStorage.boostState.first().availablePoints >= amount).also { enough ->
+                if (enough) {
+                    BoostStorage.update {
+                        it.copy(
+                            availablePoints = it.availablePoints - amount
+                        )
+                    }
+                }
+            }
+        }
     }
 
     suspend fun addPoints(points: Int, source: PointSource) {

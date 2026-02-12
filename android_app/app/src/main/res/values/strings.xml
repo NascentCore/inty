@@ -287,6 +287,10 @@
     <string name="unlock_with_credits">Unlock with Credits</string>
     <string name="unlock_with_credits_price">Unlock with %d credits</string>
     <string name="chat_moment_prompt">🍷 Hey, do you wanna see more secret moments with me?</string>
+    <string name="moment_purchase_dialog_title">Unlock this moment?</string>
+    <string name="moment_purchase_dialog_message">Spend %d credits to unlock this secret moment.</string>
+    <string name="moment_purchase_confirm">Unlock</string>
+    <string name="moment_purchase_success">Purchase successful.</string>
     <string name="go_premium">Go Premium</string>
     <string name="close">Close</string>
 

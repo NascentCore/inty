@@ -16,6 +16,8 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.PointSource
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -245,4 +247,12 @@ class ChatMessageRepository(
     fun messageCountFlow(agentId: String) = localDataSource.messageCountFlow(agentId)
 
     fun userMessageCountFlow(agentId: String) = localDataSource.userMessageCountFlow(agentId)
+
+    suspend fun purchaseForMoment(agentId: String, messageId: String, price: Int): Boolean {
+        return BoostManager.consume(price, PointSource.ForMoment).also { success ->
+            if (success) {
+                localDataSource.setForMomentPurchased(agentId, messageId)
+            }
+        }
+    }
 }
