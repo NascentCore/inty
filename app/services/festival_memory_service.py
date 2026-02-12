@@ -7,6 +7,7 @@ import asyncio
 import json
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -54,6 +55,7 @@ def get_pairs_with_min_rounds_in_window_sync(
     db_url: str,
     min_rounds: int = DEFAULT_MIN_ROUNDS_IN_WINDOW,
     timezone_str: str = "UTC",
+    db_url: Optional[str] = None,
 ) -> List[Tuple[str, str]]:
     """
     同步筛选 (user_id, agent_id)：仅包含在「该时区下节日自然日 00:00 至次日 04:00」28 小时
@@ -112,6 +114,7 @@ def get_messages_for_user_agent_sync(
     拉取该用户与该角色的单会话消息 (role, content)，按 created_at 升序。
     connection 可选；不传则使用 get_chat_history_connection()（主库）。
     """
+    conn = connection if connection is not None else get_chat_history_connection()
     conn = connection if connection is not None else get_chat_history_connection()
     with conn.cursor() as cur:
         cur.execute(

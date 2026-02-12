@@ -240,8 +240,11 @@ async def compute_and_save_daily_report(
             UserAnalyticsReport.report_date == report_date,
         )
     )
-    if existing.scalar_one_or_none():
-        logger.info(f"日报 {report_date} 已存在，跳过")
+    existing_rows = existing.scalars().all()
+    if existing_rows:
+        logger.info(
+            f"日报 {report_date} 已存在（共 {len(existing_rows)} 条），跳过"
+        )
         return None
 
     report = UserAnalyticsReport(
@@ -381,8 +384,11 @@ async def compute_and_save_weekly_report(
             UserAnalyticsReport.report_date == week_start_date,
         )
     )
-    if existing.scalar_one_or_none():
-        logger.info(f"周报 {week_start_date} 已存在，跳过")
+    existing_rows = existing.scalars().all()
+    if existing_rows:
+        logger.info(
+            f"周报 {week_start_date} 已存在（共 {len(existing_rows)} 条），跳过"
+        )
         return None
 
     report = UserAnalyticsReport(

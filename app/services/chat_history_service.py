@@ -57,6 +57,7 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
 # Keep the legacy connection function for PostgresChatMessageHistory compatibility
 _connection = None
 _replica_connection = None
+_replica_connection = None
 
 
 def get_chat_history_connection():

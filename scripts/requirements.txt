@@ -10,3 +10,4 @@ asyncpg
 sqlalchemy
 pyyaml
 loguru
+psycopg2-binary
