@@ -3,11 +3,15 @@
  * 提供智能体的CRUD操作和缓存管理
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { message } from "antd";
 import api from "../services/api";
 import type { Agent, AgentCreateRequest, AgentUpdateRequest } from "../types";
 import type { AgentVisibility } from "../inty_sdk/src/resources/api/v1/ai/agents";
+import {
+  filterAgentsByType,
+  loadAdminAgentList,
+} from "../services/agentListService";
 
 interface UseAgentsOptions {
   type?: "public" | "private" | "all";
@@ -57,6 +61,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadRequestIdRef = useRef(0);
 
   // 缓存管理
   const CACHE_EXPIRY = 30 * 60 * 1000; // 30分钟过期
@@ -111,7 +116,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   // 加载智能体列表
   const loadAgents = useCallback(
     async (forceRefresh: boolean = false) => {
-      console.log("loadAgents called with forceRefresh:", forceRefresh);
+      const requestId = ++loadRequestIdRef.current;
+      const isCurrentRequest = () => loadRequestIdRef.current === requestId;
+
       try {
         setLoading(true);
         setError(null);
@@ -119,34 +126,43 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 检查缓存
         if (!forceRefresh) {
           const cachedData = getCachedData();
-          if (cachedData) {
+          if (cachedData && isCurrentRequest()) {
             setAgents(cachedData);
             setLoading(false);
-            console.log("cachedData:", cachedData);
             return;
           }
         }
 
+        let hasLoadedFirstBatch = false;
+
         // 评测后台需要看到全量角色（包含非管理员创建的角色），使用管理员专用列表接口
-        let data = await api.agents.listAll({
-          limit: 1000,
-          skip: 0,
+        const allAgents = await loadAdminAgentList({
+          shouldContinue: isCurrentRequest,
+          onBatchLoaded: (accumulatedAgents) => {
+            if (!isCurrentRequest()) {
+              return;
+            }
+
+            const filteredAgents = filterAgentsByType(accumulatedAgents, type);
+            setAgents(filteredAgents);
+
+            // 第一批返回后立即展示，避免长时间整页 loading
+            if (!hasLoadedFirstBatch) {
+              hasLoadedFirstBatch = true;
+              setLoading(false);
+            }
+          },
         });
-        console.log("agent data:", data, "total:", data?.length);
 
-        if (type !== "all" && Array.isArray(data)) {
-          data = data.filter((agent) => {
-            if (type === "public") return agent.visibility === "PUBLIC";
-            if (type === "private") return agent.visibility === "PRIVATE";
-            return true;
-          });
+        if (!isCurrentRequest()) {
+          return;
         }
-        console.log("agent data after filtering:", data);
 
-        setAgents((data || []) as unknown as Agent[]);
+        const filteredAgents = filterAgentsByType(allAgents, type);
+        setAgents(filteredAgents);
 
         // 更新缓存
-        setCachedData((data || []) as unknown as Agent[]);
+        setCachedData(filteredAgents);
 
         if (forceRefresh) {
           message.success(`智能体列表已刷新`);
@@ -154,7 +170,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
       } catch (error) {
         handleError(error, "获取智能体列表失败");
       } finally {
-        setLoading(false);
+        if (isCurrentRequest()) {
+          setLoading(false);
+        }
       }
     },
     [type, getCachedData, setCachedData, handleError],
@@ -361,13 +379,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
       loadAgents();
     }
   }, [autoLoad, loadAgents]);
-
-  // 类型变化时重新加载
-  useEffect(() => {
-    if (autoLoad) {
-      loadAgents();
-    }
-  }, [type, autoLoad, loadAgents]);
 
   return {
     // 状态

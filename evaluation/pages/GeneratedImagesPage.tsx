@@ -5,7 +5,7 @@
  * 用于查看每个角色所有聊天生成的图片
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   Row,
@@ -30,13 +30,13 @@ import {
 import {
   PictureOutlined,
   ReloadOutlined,
-  SearchOutlined,
   UserOutlined,
   ClockCircleOutlined,
   ExpandOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import { agentApi, generatedImagesApi } from "../services/api";
+import { generatedImagesApi } from "../services/api";
+import { loadSelfAgentList } from "../services/agentListService";
 import type { Agent, GeneratedImage } from "../types";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
 
@@ -53,22 +53,43 @@ const GeneratedImagesPage: React.FC = () => {
   const [loadingImages, setLoadingImages] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  const loadAgentsRequestIdRef = useRef(0);
 
   // 加载角色列表和图片数量
   const loadAgents = useCallback(async () => {
+    const requestId = ++loadAgentsRequestIdRef.current;
+    const isCurrentRequest = () => loadAgentsRequestIdRef.current === requestId;
+
     setLoadingAgents(true);
     try {
       const [agentsData, countsData] = await Promise.all([
-        agentApi.list({ limit: 200 }),
+        loadSelfAgentList({
+          shouldContinue: isCurrentRequest,
+          onBatchLoaded: (accumulatedAgents) => {
+            if (isCurrentRequest()) {
+              setAgents(accumulatedAgents);
+            }
+          },
+        }),
         generatedImagesApi.getImageCounts(),
       ]);
+
+      if (!isCurrentRequest()) {
+        return;
+      }
+
       setAgents(agentsData);
       setImageCounts(countsData.counts);
     } catch (error) {
+      if (!isCurrentRequest()) {
+        return;
+      }
       message.error("加载角色列表失败");
       console.error("加载角色列表失败:", error);
     } finally {
-      setLoadingAgents(false);
+      if (isCurrentRequest()) {
+        setLoadingAgents(false);
+      }
     }
   }, []);
 
@@ -93,6 +114,12 @@ const GeneratedImagesPage: React.FC = () => {
   useEffect(() => {
     loadAgents();
   }, [loadAgents]);
+
+  useEffect(() => {
+    return () => {
+      loadAgentsRequestIdRef.current += 1;
+    };
+  }, []);
 
   // 选择角色时加载图片
   useEffect(() => {
@@ -180,7 +207,7 @@ const GeneratedImagesPage: React.FC = () => {
               allowClear
             />
             <div style={{ flex: 1, overflow: "auto" }}>
-              {loadingAgents ? (
+              {loadingAgents && filteredAgents.length === 0 ? (
                 <div
                   style={{
                     display: "flex",
@@ -193,61 +220,63 @@ const GeneratedImagesPage: React.FC = () => {
               ) : filteredAgents.length === 0 ? (
                 <Empty description="没有找到角色" />
               ) : (
-                <List
-                  dataSource={filteredAgents}
-                  renderItem={(agent) => (
-                    <List.Item
-                      onClick={() => setSelectedAgent(agent)}
-                      style={{
-                        cursor: "pointer",
-                        padding: "8px 12px",
-                        borderRadius: 8,
-                        backgroundColor:
-                          selectedAgent?.id === agent.id
-                            ? "#e6f4ff"
-                            : "transparent",
-                        marginBottom: 4,
-                        border:
-                          selectedAgent?.id === agent.id
-                            ? "1px solid #91caff"
-                            : "1px solid transparent",
-                        transition: "all 0.2s",
-                      }}
-                    >
-                      <List.Item.Meta
-                        avatar={
-                          <Avatar
-                            src={agent.avatar}
-                            icon={<UserOutlined />}
-                            size={40}
-                          />
-                        }
-                        title={
-                          <Text
-                            strong={selectedAgent?.id === agent.id}
-                            style={{ fontSize: 14 }}
-                          >
-                            {agent.name}
-                          </Text>
-                        }
-                        description={
-                          <Space size={4}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {agent.visibility === "PUBLIC" ? "公开" : "私有"}
+                <Spin spinning={loadingAgents}>
+                  <List
+                    dataSource={filteredAgents}
+                    renderItem={(agent) => (
+                      <List.Item
+                        onClick={() => setSelectedAgent(agent)}
+                        style={{
+                          cursor: "pointer",
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          backgroundColor:
+                            selectedAgent?.id === agent.id
+                              ? "#e6f4ff"
+                              : "transparent",
+                          marginBottom: 4,
+                          border:
+                            selectedAgent?.id === agent.id
+                              ? "1px solid #91caff"
+                              : "1px solid transparent",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <List.Item.Meta
+                          avatar={
+                            <Avatar
+                              src={agent.avatar}
+                              icon={<UserOutlined />}
+                              size={40}
+                            />
+                          }
+                          title={
+                            <Text
+                              strong={selectedAgent?.id === agent.id}
+                              style={{ fontSize: 14 }}
+                            >
+                              {agent.name}
                             </Text>
-                            {imageCounts[agent.id] > 0 && (
-                              <Badge
-                                count={imageCounts[agent.id]}
-                                style={{ backgroundColor: "#52c41a" }}
-                                size="small"
-                              />
-                            )}
-                          </Space>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
+                          }
+                          description={
+                            <Space size={4}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {agent.visibility === "PUBLIC" ? "公开" : "私有"}
+                              </Text>
+                              {imageCounts[agent.id] > 0 && (
+                                <Badge
+                                  count={imageCounts[agent.id]}
+                                  style={{ backgroundColor: "#52c41a" }}
+                                  size="small"
+                                />
+                              )}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </Spin>
               )}
             </div>
           </Card>
