@@ -125,6 +125,8 @@ fun ChatItem(
     agentName: String? = null,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
+    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry> = emptyMap(),
+    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry> = emptyMap(),
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
@@ -139,6 +141,8 @@ fun ChatItem(
                     item,
                     isCurrentPage,
                     chatViewModel,
+                    voiceCallRecordingsBySession,
+                    voiceCallRecordingsByTurn,
                     isLatestMessage,
                     isGuideVisible,
                     messageFontSizeSp,
@@ -254,6 +258,8 @@ private fun ChatItemAI(
     item: MessageEntity,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
+    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry> = emptyMap(),
+    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry> = emptyMap(),
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float,
@@ -275,10 +281,19 @@ private fun ChatItemAI(
                     val vmAgentId = agentInfo?.id
                     val metaAgentId = item.agentId()
                     val safeAgentId = vmAgentId ?: metaAgentId ?: ""
+                    val localVoiceRecordingUrl =
+                        remember(item, voiceCallRecordingsBySession, voiceCallRecordingsByTurn) {
+                            resolveLocalVoiceRecordingUrl(
+                                item = item,
+                                voiceCallRecordingsBySession = voiceCallRecordingsBySession,
+                                voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
+                            )
+                        }
+                    val preferredAudioUrl = localVoiceRecordingUrl ?: item.audioUrl.orEmpty()
 
                     val audioInfo =
                         AudioInfo(
-                            url = item.audioUrl ?: "",
+                            url = preferredAudioUrl,
                             title = "Voice Message",
                             artist = "AI Agent",
                             messageId = item.id.takeIf { it.isNotBlank() },
@@ -1202,6 +1217,29 @@ private fun buildVoiceTurnKey(voiceSessionId: String, voiceTurnId: String): Stri
     return "${voiceSessionId.trim()}::${voiceTurnId.trim()}"
 }
 
+private fun resolveLocalVoiceRecordingUrl(
+    item: MessageEntity,
+    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry>,
+    voiceCallRecordingsByTurn: Map<String, VoiceCallRecordingEntry>,
+): String? {
+    if (!item.isVoice || item.role != "assistant") return null
+    val voiceSessionId = item.metaData.voiceSessionId?.trim().orEmpty()
+    if (voiceSessionId.isBlank()) return null
+    val voiceTurnId = item.metaData.voiceTurnId?.trim().orEmpty()
+    val turnRecording =
+        if (voiceTurnId.isBlank()) {
+            null
+        } else {
+            voiceCallRecordingsByTurn[buildVoiceTurnKey(voiceSessionId, voiceTurnId)]
+        }
+    val matched = turnRecording ?: voiceCallRecordingsBySession[voiceSessionId] ?: return null
+    val path = matched.recordingPath.trim()
+    if (path.isBlank()) return null
+    val file = File(path)
+    if (!file.exists() || !file.isFile) return null
+    return "file://$path"
+}
+
 /**
  * 语音通话历史卡片中的“整段录音回放”按钮。
  *
@@ -1501,6 +1539,8 @@ fun CallMessages(
                         item = msg,
                         isCurrentPage = isCurrentPage,
                         chatViewModel = chatViewModel,
+                        voiceCallRecordingsBySession = voiceCallRecordingsBySession,
+                        voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
                         isLatestMessage = false,
                         isGuideVisible = isGuideVisible,
                         messageFontSizeSp = messageFontSizeSp,

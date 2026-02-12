@@ -749,6 +749,9 @@ internal fun ChatPage(
                                             isOnlyOpeningMessage = isOnlyOpeningMessage,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
+                                            voiceCallRecordingsBySession =
+                                                voiceCallRecordingsBySession,
+                                            voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
                                             isGuideVisible = isGuideVisible,
                                             messageFontSizeSp = chatFontSizeSp,
                                         )
@@ -765,6 +768,9 @@ internal fun ChatPage(
                                             isOnlyOpeningMessage = false,
                                             isCurrentPage = isCurrentPage,
                                             chatViewModel = chatViewModel,
+                                            voiceCallRecordingsBySession =
+                                                voiceCallRecordingsBySession,
+                                            voiceCallRecordingsByTurn = voiceCallRecordingsByTurn,
                                             isLatestMessage = index == 0,
                                             isGuideVisible = isGuideVisible,
                                             messageFontSizeSp = chatFontSizeSp,
