@@ -11,6 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite --mode production",
+    "ci:check": "npm run lint:check && npm run type-check && npm run test",
     "type-check": "tsc --noEmit",
     "lint:check": "eslint . --ext .ts,.tsx",
     "lint:format": "npx prettier --write \"**/*.{ts,tsx}\"",

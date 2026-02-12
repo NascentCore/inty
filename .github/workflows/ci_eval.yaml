@@ -62,14 +62,6 @@ jobs:
         working-directory: evaluation
         run: npm ci
 
-      - name: Run ESLint checks
+      - name: Run evaluation CI checks (lint + type-check + tests)
         working-directory: evaluation
-        run: npm run lint:check
-
-      - name: Run TypeScript checks
-        working-directory: evaluation
-        run: npm run type-check
-
-      - name: Run unit tests
-        working-directory: evaluation
-        run: npm run test
+        run: npm run ci:check
