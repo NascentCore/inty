@@ -1,16 +1,11 @@
-name: Alembic Upgrade Production DB
+name: Alembic Upgrade Production DB Schema
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "alembic/versions/**"
   workflow_dispatch:
 
 jobs:
   alembic-upgrade-prod:
-    runs-on: ubuntu-latest
+    runs-on: inty-prod-server-gcp
     environment: prod
 
     steps:
