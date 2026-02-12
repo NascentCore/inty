@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="page_padding_horizontal">16dp</dimen>
+    <dimen name="padding_large">16dp</dimen>
+    <dimen name="padding_medium">12dp</dimen>
+    <dimen name="padding_small">8dp</dimen>
+    <dimen name="padding_extra_small">4dp</dimen>
+    <!-- ChatItemForMoment 秘密时刻卡片 -->
+    <dimen name="moment_card_corner_radius">12dp</dimen>
+    <dimen name="moment_border_width">1dp</dimen>
+    <dimen name="moment_prompt_vertical_spacing">12dp</dimen>
+    <dimen name="moment_button_height">44dp</dimen>
+    <dimen name="moment_button_spacing">10dp</dimen>
+    <dimen name="moment_overlay_icon_size">40dp</dimen>
+    <dimen name="moment_card_padding_horizontal">0dp</dimen>
+    <dimen name="moment_card_padding_vertical">0dp</dimen>
+    <dimen name="moment_inner_padding">16dp</dimen>
+    <dimen name="moment_go_premium_inner_spacing">8dp</dimen>
+    <dimen name="moment_vip_badge_padding_h">6dp</dimen>
+    <dimen name="moment_vip_badge_padding_v">2dp</dimen>
 </resources>

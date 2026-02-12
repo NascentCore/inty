@@ -31,6 +31,7 @@ import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.PointSource
 import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.utils.VipChatCreditPolicy
@@ -1421,6 +1422,16 @@ class ChatViewModel : BaseVM() {
             agent.id,
             Utils.getApp().getString(R.string.boost_system_message, points, agent.name, totalBoosts),
         )
+    }
+
+    suspend fun purchaseForMoment(messageEntity: MessageEntity): Boolean {
+        return runCatching {
+            chatMessageRepository.purchaseForMoment(
+                messageEntity.metaData.agentId,
+                messageEntity.id,
+                messageEntity.momentExtra?.price ?: 0
+            )
+        }.getOrDefault(false)
     }
 
     suspend fun reset() {

@@ -48,10 +48,20 @@ private val lightScheme =
         surfaceContainerHighest = surfaceContainerHighestLight,
     )
 
-data class Brushes(val gradientBrush4: Brush)
+data class Brushes(
+    val gradientBrush2: Brush,
+    val gradientBrush4: Brush
+)
 
 private val LightBrushes =
-    Brushes(gradientBrush4 = Brush.horizontalGradient(listOf(Color(0xFFFFEECC), Color(0xFFAD9515))))
+    Brushes(
+        gradientBrush2 = Brush.horizontalGradient(listOf(
+            Color(0xFFC3F0FD),
+            Color(0xFF9E97FF),
+            Color(0xFFC567F5)
+        )),
+        gradientBrush4 = Brush.horizontalGradient(listOf(Color(0xFFFFEECC), Color(0xFFAD9515)))
+    )
 
 val MaterialTheme.brushes: Brushes
     get() = LightBrushes

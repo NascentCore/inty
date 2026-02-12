@@ -100,4 +100,8 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
     suspend fun getImageMessages(agentId: String): Flow<List<MessageEntity>> {
         return chatMessageDao.streamMessagesWithImages(agentId)
     }
+
+    suspend fun setForMomentPurchased(agentId: String, messageId: String) {
+        chatMessageDao.setForMomentPurchaseState(agentId, messageId, true)
+    }
 }

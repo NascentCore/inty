@@ -108,4 +108,9 @@ interface ChatMessageDao {
         "SELECT id FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC LIMIT 1"
     )
     suspend fun getLatestMessageId(agentId: String): String?
+
+    @Query(
+        "UPDATE message SET moment_isPurchased = :isPurchased WHERE agentId = :agentId AND id = :messageId"
+    )
+    suspend fun setForMomentPurchaseState(agentId: String, messageId: String, isPurchased: Boolean)
 }
