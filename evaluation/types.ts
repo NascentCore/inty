@@ -15,6 +15,12 @@ export interface AgentFeatures {
   festival_memories?: FestivalMemoryItem[];
 }
 
+/** 运营专属角色照（评测管理） */
+export interface ExclusivePhotoItem {
+  url: string;
+  [key: string]: any;
+}
+
 // 评测前端使用的 Agent 类型（后端响应字段集合）
 export interface Agent {
   id: string;
@@ -54,6 +60,7 @@ export interface Agent {
   description?: string; // 描述字段
   source?: AgentSource; // 角色来源
   features?: AgentFeatures;
+  exclusive_photos?: ExclusivePhotoItem[]; // 运营专属角色照（评测管理用）
   [key: string]: any;
 }
 
