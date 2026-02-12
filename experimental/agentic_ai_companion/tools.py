@@ -16,8 +16,17 @@ _THIS_DIR = Path(__file__).resolve().parent
 DATA_DIR = _THIS_DIR / "tmp"
 APP_ICON_PATH = _THIS_DIR / "app_icon.png"
 ZUN_LONG_PHOTO_PATH = _THIS_DIR / "尊龙.png"
+COMPANION_PROFILE_DIR = _THIS_DIR / "companion_profile"
 
 RECENT_MESSAGES_FOR_IMAGE = 10
+
+# 内存维护已发送图片路径，用于 send_selfie_photo 去重
+_sent_image_paths: set[str] = set()
+
+
+def reset_sent_image_paths() -> None:
+    """REPL 会话开始时调用，清空已发送图片列表。"""
+    _sent_image_paths.clear()
 
 WAV_SAMPLE_RATE = 24000
 WAV_CHANNELS = 1
@@ -97,6 +106,61 @@ def execute_send_zun_long_photo(*, _logger=None) -> tuple[str, str | None]:
     return ("send_zun_long_photo: Image sent.", path_str)
 
 
+def _list_companion_photos() -> list[Path]:
+    """返回 companion_profile 中所有图片路径（顶层 + photos/ + photo_album/），按文件名排序。"""
+    paths: list[Path] = []
+    for ext in ("*.jpg", "*.jpeg", "*.png"):
+        paths.extend(COMPANION_PROFILE_DIR.glob(ext))
+    for subdir in ("photos", "photo_album"):
+        d = COMPANION_PROFILE_DIR / subdir
+        if d.is_dir():
+            for ext in ("*.jpg", "*.jpeg", "*.png"):
+                paths.extend(d.glob(ext))
+    paths.sort(key=lambda p: p.name)
+    return paths
+
+
+def get_photo_album_index() -> dict[str, str]:
+    """返回 companion_profile 相册索引：文件名（无后缀） -> 绝对路径。"""
+    index: dict[str, str] = {}
+    for p in _list_companion_photos():
+        stem = p.stem
+        if stem in index:
+            continue
+        try:
+            p.read_bytes()
+        except OSError:
+            continue
+        index[stem] = str(p.resolve())
+    return index
+
+
+def execute_send_selfie_photo(*, _logger=None) -> tuple[str, str | None]:
+    """从 companion_profile 相册选取未发送过的图片发送。若全部已发送则返回文案、无路径。"""
+    if _logger is not None:
+        _logger.info("执行 send_selfie_photo 工具")
+    candidates = _list_companion_photos()
+    if not candidates:
+        if _logger is not None:
+            _logger.warning("send_selfie_photo 失败: companion_profile 中无图片")
+        return ("send_selfie_photo: No photos available in album.", None)
+    for p in candidates:
+        path_str = str(p.resolve())
+        if path_str not in _sent_image_paths:
+            try:
+                p.read_bytes()
+            except OSError as e:
+                if _logger is not None:
+                    _logger.warning("send_selfie_photo 跳过无法读取的文件 %s: %s", p, e)
+                continue
+            if _logger is not None:
+                _logger.info("send_selfie_photo 成功，已返回路径: %s", path_str)
+            return ("send_selfie_photo: Photo sent.", path_str)
+    if _logger is not None:
+        _logger.info("send_selfie_photo: 所有相册图片已发送，返回文案")
+    return ("send_selfie_photo: Already shared all my photos with you.", None)
+
+
 def execute_generate_image(
     *,
     messages: list[dict[str, Any]],
@@ -161,6 +225,8 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         return execute_send_app_icon(_logger=_logger)
     def exec_send_zun_long(**kw):
         return execute_send_zun_long_photo(_logger=_logger)
+    def exec_send_selfie(**kw):
+        return execute_send_selfie_photo(_logger=_logger)
     def exec_gen_image(*, messages, client, input=None, **kw):
         return execute_generate_image(messages=messages, client=client, input=input, _logger=_logger)
     def exec_tts(*, text, client, **kw):
@@ -182,6 +248,14 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
             type=ToolType.TERMINAL,
             context_type=ToolContextType.NONE,
             executor=exec_send_zun_long,
+        ),
+        ToolDefinition(
+            name="send_selfie_photo",
+            description="Send a selfie/photo from AI Companion's album to the user. When the user asks for your photo, selfie, picture of you, show me you, send me a photo, etc., you MUST call this tool. The tool automatically avoids sending the same photo twice in the same conversation. Trigger phrases: your photo, selfie, picture of you, show me you, send me a photo.",
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            type=ToolType.TERMINAL,
+            context_type=ToolContextType.NONE,
+            executor=exec_send_selfie,
         ),
         ToolDefinition(
             # generate_image is non-TERMINAL: after execution LLM continues to output text (e.g. interpretation or emotion) for the generated image.
@@ -296,6 +370,8 @@ def process_response_with_tools(
     else:
         result = f"未知工具: {name}"
         image_path_sent = None
+    if image_path_sent:
+        _sent_image_paths.add(image_path_sent)
     new_messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
     if _logger is not None:
         _logger.info("工具 %s 执行完毕，result 长度=%d", name, len(result))

@@ -130,6 +130,8 @@ def run_repl(
     logger,
 ) -> None:
     logger.info("REPL 启动 char_name=%s user_name=%s model=%s", char_name, user_name, model)
+    from . import tools as tools_module
+    tools_module.reset_sent_image_paths()
     system_messages = build_system_messages(char_name, user_name)
     client = create_openai_client()
     messages: list = [*system_messages]
