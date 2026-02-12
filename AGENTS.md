@@ -10,6 +10,7 @@
 
 ## 代码库内的一般性约定
 
+- Must use English for interaction with users
 - **用户手册**：IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
   - app/（后端）改动不改动[用户手册](docs/INTELLIMATE.md)
 - **语言**：所有可自然语言表达的输出统一使用中文（普通话）。代码、命令、标识符不受该限制。
