@@ -3,7 +3,7 @@
 
 import cyclopts
 
-from .role_play_minimal import main
+from .chat import main
 
 if __name__ == "__main__":
     cyclopts.run(main)

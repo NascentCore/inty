@@ -13,6 +13,7 @@ from langsmith.run_helpers import trace
 from pydantic import BaseModel, ConfigDict, Field
 
 _THIS_DIR = Path(__file__).resolve().parent
+DATA_DIR = _THIS_DIR / "data"
 APP_ICON_PATH = _THIS_DIR / "app_icon.png"
 ZUN_LONG_PHOTO_PATH = _THIS_DIR / "尊龙.png"
 
@@ -120,7 +121,8 @@ def execute_generate_image(
         suffix = ".jpg"
     elif image_bytes[:8] == b"\x89PNG\r\n\x1a\n":
         suffix = ".png"
-    out_path = _THIS_DIR / f"generated_{int(time.time() * 1000)}{suffix}"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = DATA_DIR / f"generated_{int(time.time() * 1000)}{suffix}"
     out_path.write_bytes(image_bytes)
     path_str = str(out_path.resolve())
     if _logger is not None:
@@ -140,7 +142,8 @@ def execute_text_to_speech(text: str, *, client: Any, _logger=None, **kwargs: An
         if _logger is not None:
             _logger.warning("text_to_speech 失败: %s", e)
         return (f"text_to_speech: Failed ({e}).", None)
-    out_path = _THIS_DIR / f"generated_speech_{int(time.time() * 1000)}.wav"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = DATA_DIR / f"generated_speech_{int(time.time() * 1000)}.wav"
     with wave.open(str(out_path), "wb") as wf:
         wf.setnchannels(WAV_CHANNELS)
         wf.setsampwidth(WAV_SAMPLE_WIDTH)
