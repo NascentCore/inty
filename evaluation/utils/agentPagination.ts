@@ -22,24 +22,28 @@ export const fetchAllAgentsWithPagination = async (
   const pageSize = Math.max(1, options.pageSize ?? AGENT_LIST_PAGE_SIZE);
   const allAgents: Agent[] = [];
   let skip = 0;
+  let hasNextPage = true;
 
-  while (true) {
+  while (hasNextPage) {
     if (shouldContinue && !shouldContinue()) {
-      break;
+      hasNextPage = false;
+      continue;
     }
 
     const pageAgents = await fetchPage({ skip, limit: pageSize });
     const normalizedPageAgents = Array.isArray(pageAgents) ? pageAgents : [];
 
     if (normalizedPageAgents.length === 0) {
-      break;
+      hasNextPage = false;
+      continue;
     }
 
     allAgents.push(...normalizedPageAgents);
     onBatchLoaded?.([...allAgents], normalizedPageAgents);
 
     if (normalizedPageAgents.length < pageSize) {
-      break;
+      hasNextPage = false;
+      continue;
     }
 
     skip += pageSize;
