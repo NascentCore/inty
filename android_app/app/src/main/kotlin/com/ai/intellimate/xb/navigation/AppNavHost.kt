@@ -105,11 +105,34 @@ fun AppNavHost(
 
             if (agentId != null) {
                 VoiceCallScreen(
-                    onBack = {
-                        LogUtils.d("Call:语音聊天消息数=$it")
+                    onBack = { result ->
+                        LogUtils.d(
+                            "Call:语音聊天消息数=${result.messageCount}, sessionId=${result.voiceSessionId}, recording=${result.recordingPath}"
+                        )
                         navController.previousBackStackEntry
                             ?.savedStateHandle
-                            ?.set("messageCount", it)
+                            ?.apply {
+                                set(
+                                    RoutesChat.VoiceCallResultKeys.LEGACY_MESSAGE_COUNT,
+                                    result.messageCount,
+                                )
+                                set(
+                                    RoutesChat.VoiceCallResultKeys.MESSAGE_COUNT,
+                                    result.messageCount,
+                                )
+                                set(
+                                    RoutesChat.VoiceCallResultKeys.SESSION_ID,
+                                    result.voiceSessionId,
+                                )
+                                set(
+                                    RoutesChat.VoiceCallResultKeys.RECORDING_PATH,
+                                    result.recordingPath,
+                                )
+                                set(
+                                    RoutesChat.VoiceCallResultKeys.RECORDING_DURATION_MS,
+                                    result.recordingDurationMs,
+                                )
+                            }
                         navController.popBackStack()
                     },
                     onVip = { navController.navigate(Routes.Me.vipCenter("voice_call")) },

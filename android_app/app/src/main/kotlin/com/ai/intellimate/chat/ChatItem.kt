@@ -5,6 +5,7 @@ import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.data.store.VoiceCallRecordingEntry
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.firebase.FirebaseManager
@@ -104,6 +105,7 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
 import com.ai.intellimate.xb.navigation.Routes
+import java.io.File
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 
@@ -805,6 +807,9 @@ private fun DebugMessageMetadata(item: MessageEntity, modifier: Modifier = Modif
                         val metaParts = mutableListOf<String>()
                         meta.agentId.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
                         if (meta.isOpening) metaParts += "opening=true"
+                        meta.voiceSessionId
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { metaParts += "voiceSession=$it" }
                         meta.generatedImage?.let { image ->
                             metaParts +=
                                 "image=${image.imageUrl?.debugEllipsize()} (${image.width}x${image.height})"
@@ -1176,6 +1181,41 @@ private fun formatDuration(durationSeconds: Long): String {
     return durationSeconds.seconds.toString()
 }
 
+/** 从语音消息组中提取可用于关联录音文件的 session id。 */
+private fun resolveVoiceSessionId(messages: List<MessageEntity>): String? {
+    return messages.firstNotNullOfOrNull { msg ->
+        msg.metaData.voiceSessionId?.takeIf { it.isNotBlank() }
+    }
+}
+
+/**
+ * 语音通话历史卡片中的“整段录音回放”按钮。
+ *
+ * 使用场景：仅用于 voice call 历史折叠卡片/展开卡片头部，播放该 session 对应的本地完整录音。 预期视觉效果：复用消息中的 VoicePlayer
+ * 胶囊样式，保证聊天区音频控件视觉一致。 可配置项：录音条目、sessionId 与外层 modifier。
+ */
+@Composable
+private fun VoiceCallRecordingReplayButton(
+    recording: VoiceCallRecordingEntry,
+    voiceSessionId: String,
+    modifier: Modifier = Modifier,
+) {
+    val recordingUri = remember(recording.recordingPath) { "file://${recording.recordingPath}" }
+    val recordingLabel = stringResource(R.string.voice_chat_history_recording)
+    VoicePlayer(
+        audioInfo =
+            AudioInfo(
+                url = recordingUri,
+                title = recordingLabel,
+                artist = recordingLabel,
+                messageId = "voice_call_recording_$voiceSessionId",
+                agentId = recording.agentId,
+            ),
+        autoPlay = false,
+        modifier = modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
+    )
+}
+
 /**
  * 语音聊天历史记录折叠组件 显示折叠的语音聊天记录卡片，包含标题、时长、消息数量和点击提示
  *
@@ -1189,6 +1229,8 @@ private fun formatDuration(durationSeconds: Long): String {
 fun VoiceChatHistoryCollapsed(
     messages: List<MessageEntity>,
     onClick: () -> Unit,
+    voiceSessionId: String?,
+    recording: VoiceCallRecordingEntry? = null,
     modifier: Modifier = Modifier,
 ) {
     val durationSeconds = remember(messages) { calculateVoiceChatDuration(messages) }
@@ -1247,12 +1289,23 @@ fun VoiceChatHistoryCollapsed(
                 )
             }
 
-            Image(
-                imageVector = Icons.Rounded.KeyboardArrowDown,
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
-                modifier = Modifier.size(20.dp),
-            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (recording != null && !voiceSessionId.isNullOrBlank()) {
+                    VoiceCallRecordingReplayButton(
+                        recording = recording,
+                        voiceSessionId = voiceSessionId,
+                    )
+                }
+                Image(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
@@ -1269,6 +1322,8 @@ fun VoiceChatHistoryCollapsed(
 fun VoiceChatHistoryExpandedContainer(
     messages: List<MessageEntity>,
     onCollapse: () -> Unit,
+    voiceSessionId: String?,
+    recording: VoiceCallRecordingEntry? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -1340,13 +1395,24 @@ fun VoiceChatHistoryExpandedContainer(
                     )
                 }
 
-                // 向上箭头图标（表示可折叠）
-                Image(
-                    imageVector = Icons.Rounded.KeyboardArrowUp,
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
-                    modifier = Modifier.size(20.dp),
-                )
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (recording != null && !voiceSessionId.isNullOrBlank()) {
+                        VoiceCallRecordingReplayButton(
+                            recording = recording,
+                            voiceSessionId = voiceSessionId,
+                        )
+                    }
+                    // 向上箭头图标（表示可折叠）
+                    Image(
+                        imageVector = Icons.Rounded.KeyboardArrowUp,
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
 
@@ -1372,6 +1438,7 @@ fun CallMessages(
     messages: List<MessageEntity?>,
     navController: NavController,
     chatViewModel: ChatViewModel?,
+    voiceCallRecordingsBySession: Map<String, VoiceCallRecordingEntry> = emptyMap(),
     onCollapseChange: () -> Unit,
     modifier: Modifier = Modifier,
     isCurrentPage: Boolean = true,
@@ -1379,7 +1446,13 @@ fun CallMessages(
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
     val list = remember(messages) { messages.filterNotNull() }
-    val collapseChangeCall by rememberUpdatedState(onCollapseChange)
+    val voiceSessionId = remember(list) { resolveVoiceSessionId(list) }
+    val recording =
+        remember(voiceSessionId, voiceCallRecordingsBySession) {
+            voiceSessionId
+                ?.let { voiceCallRecordingsBySession[it] }
+                ?.takeIf { File(it.recordingPath).exists() }
+        }
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     if (expanded) {
@@ -1389,10 +1462,12 @@ fun CallMessages(
                 expanded = false
                 onCollapseChange()
             },
+            voiceSessionId = voiceSessionId,
+            recording = recording,
             modifier = modifier,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                list.forEachIndexed { index, msg ->
+                list.forEach { msg ->
                     ChatItem(
                         navController = navController,
                         isOnlyOpeningMessage = false,
@@ -1413,6 +1488,8 @@ fun CallMessages(
                 expanded = true
                 onCollapseChange()
             },
+            voiceSessionId = voiceSessionId,
+            recording = recording,
             modifier = modifier,
         )
     }

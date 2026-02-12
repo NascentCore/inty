@@ -2,9 +2,11 @@ package com.ai.intellimate.call
 
 import ai.sxwl.android.data.http.IntyErrorCode
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.call.data.VoiceCallRecordingCollector
 import com.ai.intellimate.call.data.AICallRepository
 import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallType
@@ -12,7 +14,6 @@ import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -52,6 +53,10 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     private var lastWarningLogTime = 0L
     private val warningLogInterval = 5000L // 5秒内最多打印一次警告
     var messageCount = 0
+    private val fallbackVoiceSessionId = "local_${System.currentTimeMillis()}_${System.nanoTime()}"
+    private var voiceSessionId: String = fallbackVoiceSessionId
+    private val recordingCollector = VoiceCallRecordingCollector(Utils.getApp().filesDir)
+    private var finalCallResult: VoiceCallResult? = null
 
     init {
         // 启动队列消费协程
@@ -126,6 +131,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             // 将packet.data从base64转化为音频数据并通过_audioResponseChannel发送
                             try {
                                 val audioData = Base64.decode(packet.data, Base64.NO_WRAP)
+                                recordingCollector.appendPcmData(audioData)
                                 _audioResponseChannel.send(audioData)
                             } catch (e: Exception) {
                                 LogUtils.e("Base64解码音频数据失败: ${e.message}")
@@ -133,10 +139,12 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         }
 
                         CallType.END -> {
+                            packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             stopCalling()
                         }
 
                         CallType.ERROR -> {
+                            packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
@@ -146,12 +154,14 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         }
 
                         CallType.STATUS -> {
+                            packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             packet.statusEnum?.let { status ->
                                 _uiState.update { it.copy(callState = status) }
                             }
                         }
 
                         CallType.SESSION_INFO -> {
+                            packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             _uiState.update {
                                 it.copy(
                                     time =
@@ -164,7 +174,10 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         }
 
                         CallType.TRANSCRIPT,
-                        CallType.USER_TRANSCRIPT -> messageCount++
+                        CallType.USER_TRANSCRIPT -> {
+                            packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            messageCount++
+                        }
 
                         else -> {}
                     }
@@ -211,7 +224,28 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     }
 
     private fun stopCalling() {
-        CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) { repository.closeCall() }
+        viewModelScope.launch(Dispatchers.IO) { repository.closeCall() }
+    }
+
+    /** 结束通话并生成返回结果（只会生成一次）。 */
+    fun finishCall(): VoiceCallResult {
+        finalCallResult?.let { return it }
+        val resolvedSessionId = voiceSessionId.ifBlank { fallbackVoiceSessionId }
+        val recordingOutput = recordingCollector.finalizeAndExport(resolvedSessionId)
+        stopCalling()
+        return VoiceCallResult(
+                messageCount = messageCount,
+                voiceSessionId = resolvedSessionId,
+                recordingPath = recordingOutput?.filePath,
+                recordingDurationMs = recordingOutput?.durationMs ?: 0L,
+            )
+            .also { finalCallResult = it }
+    }
+
+    private fun updateVoiceSessionId(candidate: String) {
+        val normalized = candidate.trim()
+        if (normalized.isBlank()) return
+        voiceSessionId = normalized
     }
 
     fun setMuted(isMuted: Boolean) {
@@ -221,6 +255,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     override fun onCleared() {
         super.onCleared()
         stopCalling()
+        if (finalCallResult == null) {
+            recordingCollector.discard()
+        }
         // 关闭队列和通道
         sendQueueJob?.cancel()
         sendQueueJob = null

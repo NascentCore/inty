@@ -97,6 +97,10 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         return chatMessageDao.getLatestMessageId(agentId)
     }
 
+    suspend fun getLatestVoiceSessionId(agentId: String): String? {
+        return chatMessageDao.getLatestVoiceSessionId(agentId)
+    }
+
     suspend fun getImageMessages(agentId: String): Flow<List<MessageEntity>> {
         return chatMessageDao.streamMessagesWithImages(agentId)
     }

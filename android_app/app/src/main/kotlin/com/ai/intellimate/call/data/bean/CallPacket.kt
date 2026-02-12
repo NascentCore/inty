@@ -4,6 +4,10 @@ import ai.sxwl.android.data.http.IntyErrorCode
 import androidx.annotation.Keep
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Keep
 @Serializable
@@ -19,6 +23,10 @@ data class CallPacket(
     @SerialName("remaining_duration") val remainingDuration: Long = 0,
     @SerialName("agent_limit") val agentLimit: Int = 0,
     @SerialName("agent_count") val agentCount: Int = 0,
+    @SerialName("session_id") val sessionId: String? = null,
+    @SerialName("voice_session_id") val voiceSessionId: String? = null,
+    val id: String? = null,
+    @SerialName("session_info") val sessionInfo: SessionInfo? = null,
 ) {
     val errorEnum: IntyErrorCode?
         get() =
@@ -31,12 +39,59 @@ data class CallPacket(
     val statusEnum: CallStatus?
         get() = runCatching { status?.let { CallStatus.valueOf(it.uppercase()) } }.getOrNull()
 
+    /** 解析并返回可用于关联文本消息与录音文件的 session id。 */
+    fun resolveVoiceSessionId(): String? {
+        val directCandidates =
+            listOf(
+                voiceSessionId,
+                sessionId,
+                sessionInfo?.voiceSessionId,
+                sessionInfo?.sessionId,
+                sessionInfo?.id,
+                id,
+            )
+        directCandidates.firstOrNull { !it.isNullOrBlank() }?.let { return it }
+
+        // 兼容后端把 session 信息塞进 data 字段（JSON 字符串）
+        if (data.isBlank()) return null
+        val payloadRaw = data.trim()
+        if (!payloadRaw.startsWith("{")) return null
+        val payload =
+            runCatching { Json.parseToJsonElement(payloadRaw).jsonObject }
+                .getOrNull()
+                ?: return null
+        return listOf("voice_session_id", "session_id", "id")
+            .firstNotNullOfOrNull { key ->
+                payload[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            }
+            ?: run {
+                val sessionInfoObject =
+                    runCatching { payload["session_info"]?.jsonObject }.getOrNull()
+                        ?: return@run null
+                listOf("voice_session_id", "session_id", "id")
+                    .firstNotNullOfOrNull { key ->
+                        sessionInfoObject[key]
+                            ?.jsonPrimitive
+                            ?.contentOrNull
+                            ?.takeIf { it.isNotBlank() }
+                    }
+            }
+    }
+
     @Keep
     @Serializable
     data class Reason(
         val code: Int,
         @SerialName("error_code") val errorCode: IntyErrorCode,
         val message: String = "",
+    )
+
+    @Keep
+    @Serializable
+    data class SessionInfo(
+        val id: String? = null,
+        @SerialName("session_id") val sessionId: String? = null,
+        @SerialName("voice_session_id") val voiceSessionId: String? = null,
     )
 }
 

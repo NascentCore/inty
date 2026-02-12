@@ -177,6 +177,58 @@ class ChatMessageRepository(
         }
     }
 
+    /**
+     * 按 voiceSessionId 定向拉取最近消息，优先确保当前语音会话的文本记录落库。
+     *
+     * 如果在最新一页未命中，会继续翻页（最多 5 页）直至命中或无更多数据。
+     */
+    suspend fun loadRecentMessagesForVoiceSession(
+        agentId: String,
+        voiceSessionId: String,
+        fallbackCount: Int = 20,
+    ) {
+        val targetSessionId = voiceSessionId.trim()
+        if (targetSessionId.isBlank()) {
+            loadRecentMessages(agentId, fallbackCount)
+            return
+        }
+
+        val pageSize = maxOf(40, fallbackCount, 20)
+        var offset = 0
+        var page = 0
+        val maxPages = 5
+
+        while (page < maxPages) {
+            val result =
+                runCatching {
+                        remoteDataSource.getMessages(agentId = agentId, pageSize = pageSize, offset = offset)
+                    }
+                    .getOrElse { HttpResult.Failure(it.message ?: "unknown error", -1) }
+
+            if (result !is HttpResult.Success) {
+                LogUtils.w(
+                    "按语音会话刷新消息失败，回退普通刷新: agentId=$agentId, sessionId=$targetSessionId"
+                )
+                loadRecentMessages(agentId, fallbackCount)
+                return
+            }
+
+            val messages = result.data.messages.orEmpty()
+            if (messages.isNotEmpty()) {
+                localDataSource.upsert(messages.map { it.toUpdate(agentId) })
+            }
+
+            val containsTargetSession =
+                messages.any { msg -> msg.meta_data?.voice_session_id == targetSessionId }
+            if (containsTargetSession || !result.data.hasMore || messages.size < pageSize) {
+                return
+            }
+
+            offset += messages.size
+            page++
+        }
+    }
+
     suspend fun setMessageVote(
         agentId: String,
         messageId: String,
@@ -241,6 +293,8 @@ class ChatMessageRepository(
     }
 
     suspend fun getImageMessages(agentId: String) = localDataSource.getImageMessages(agentId)
+
+    suspend fun getLatestVoiceSessionId(agentId: String) = localDataSource.getLatestVoiceSessionId(agentId)
 
     fun messageCountFlow(agentId: String) = localDataSource.messageCountFlow(agentId)
 

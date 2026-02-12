@@ -44,6 +44,9 @@ internal fun ChatScreen(
     shouldShowBoostSheetOnOpen: Boolean = false,
     fromPage: String? = null,
     refreshMessageCount: Int = 0,
+    refreshVoiceSessionId: String? = null,
+    voiceCallRecordingPath: String? = null,
+    voiceCallRecordingDurationMs: Long = 0L,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
@@ -70,6 +73,9 @@ internal fun ChatScreen(
             onCall = onCall,
             fromPage = fromPage,
             refreshMessageCount = refreshMessageCount,
+            refreshVoiceSessionId = refreshVoiceSessionId,
+            voiceCallRecordingPath = voiceCallRecordingPath,
+            voiceCallRecordingDurationMs = voiceCallRecordingDurationMs,
         )
 
         // 反馈请求对话框

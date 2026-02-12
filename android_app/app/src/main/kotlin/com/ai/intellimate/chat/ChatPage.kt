@@ -205,6 +205,9 @@ internal fun ChatPage(
     debugAgentIndex: Int? = null,
     fromPage: String? = null,
     refreshMessageCount: Int = 0,
+    refreshVoiceSessionId: String? = null,
+    voiceCallRecordingPath: String? = null,
+    voiceCallRecordingDurationMs: Long = 0L,
 ) {
 
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
@@ -272,8 +275,25 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(refreshMessageCount, isCurrentPage) {
-        if (isCurrentPage && refreshMessageCount > 0) {
+    LaunchedEffect(
+        refreshMessageCount,
+        refreshVoiceSessionId,
+        voiceCallRecordingPath,
+        voiceCallRecordingDurationMs,
+        isCurrentPage,
+    ) {
+        if (!isCurrentPage) return@LaunchedEffect
+        if (!refreshVoiceSessionId.isNullOrBlank() || !voiceCallRecordingPath.isNullOrBlank()) {
+            LogUtils.d(
+                "chatPage: handleVoiceCallReturn sessionId=$refreshVoiceSessionId, refreshCount=$refreshMessageCount"
+            )
+            chatViewModel.handleVoiceCallReturn(
+                messageCount = refreshMessageCount,
+                voiceSessionId = refreshVoiceSessionId,
+                recordingPath = voiceCallRecordingPath,
+                recordingDurationMs = voiceCallRecordingDurationMs,
+            )
+        } else if (refreshMessageCount > 0) {
             LogUtils.d("chatPage: refreshCount = $refreshMessageCount")
             chatViewModel.loadRecentMessages(refreshMessageCount)
         }
@@ -416,6 +436,8 @@ internal fun ChatPage(
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
+    val voiceCallRecordingsBySession by
+        chatViewModel.voiceCallRecordingsBySession.collectAsState()
 
     if (
         uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
@@ -739,6 +761,8 @@ internal fun ChatPage(
                                         messages = item.messages.map { messages[it] },
                                         navController = navController,
                                         chatViewModel = chatViewModel,
+                                        voiceCallRecordingsBySession =
+                                            voiceCallRecordingsBySession,
                                         isCurrentPage = isCurrentPage,
                                         isGuideVisible = isGuideVisible,
                                         messageFontSizeSp = chatFontSizeSp,

@@ -91,7 +91,7 @@ Click the **Me** or the **right-most** icon
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/0326fd90-1bbe-4207-9e9f-1c71c4608847" />
 
-**Voice call** (from Chat): Voice calls require microphone permission. The centre circle shows connection status (e.g. Connecting / Connected), **listening** when the AI is waiting for you, or **speaking** when the AI is talking—then you see “tap to interrupt AI” and a wave animation; tap the circle to interrupt and speak. Use mute and end-call as needed. If the voice call screen stays blank, grant microphone permission when prompted or in system Settings → App → IntelliMate → Permissions.
+**Voice call** (from Chat): Voice calls require microphone permission. The centre circle shows connection status (e.g. Connecting / Connected), **listening** when the AI is waiting for you, or **speaking** when the AI is talking—then you see “tap to interrupt AI” and a wave animation; tap the circle to interrupt and speak. Use mute and end-call as needed. After a call ends, IntelliMate saves a local call recording and shows a replay button directly on the voice-call history bubble; tap the bubble to expand/collapse transcript text messages. If the voice call screen stays blank, grant microphone permission when prompted or in system Settings → App → IntelliMate → Permissions.
 
 ### 3. iMates
 - iMate creation/editing supports uploads plus AI-generated art; failures surface clear error states (`AvatarManager`).

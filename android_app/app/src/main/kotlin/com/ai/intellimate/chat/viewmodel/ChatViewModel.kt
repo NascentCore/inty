@@ -16,6 +16,8 @@ import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.data.store.VoiceCallRecordingEntry
+import ai.sxwl.android.data.store.VoiceCallRecordingStore
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
@@ -75,6 +77,10 @@ class ChatViewModel : BaseVM() {
 
     private val _uiState = MutableStateFlow(ChatUIState())
     val uiState = _uiState.asStateFlow()
+
+    private val _voiceCallRecordingsBySession =
+        MutableStateFlow<Map<String, VoiceCallRecordingEntry>>(emptyMap())
+    val voiceCallRecordingsBySession = _voiceCallRecordingsBySession.asStateFlow()
 
     private val _agentId = MutableStateFlow<String?>(null)
 
@@ -243,6 +249,7 @@ class ChatViewModel : BaseVM() {
         // 如果 agent 为空，清理所有状态
         if (agentInfo == null) {
             _agentInfo.value = null
+            _voiceCallRecordingsBySession.value = emptyMap()
             lastQueryAgentId = null
             isQueryingMsgs = false
             _isQueryMsgsCompleted.value = false
@@ -279,6 +286,7 @@ class ChatViewModel : BaseVM() {
             viewModelScope.launch(Dispatchers.IO) {
                 characterRepository.updateEnergy(agentInfo.id, lastSyncedEnergyPoints)
             }
+            refreshVoiceCallRecordings(agentInfo.id)
             return
         }
 
@@ -320,6 +328,7 @@ class ChatViewModel : BaseVM() {
 
         // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
+        refreshVoiceCallRecordings(agentInfo.id)
 
         // 查询聊天设置
         getChatSetting()
@@ -416,6 +425,71 @@ class ChatViewModel : BaseVM() {
                     lastSyncedEnergyPoints = points
                 }
             }
+    }
+
+    private fun refreshVoiceCallRecordings(agentId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val recordings =
+                VoiceCallRecordingStore.readByAgent(Utils.getApp(), agentId)
+                    .associateBy { it.voiceSessionId }
+            if (_agentId.value != agentId) return@launch
+            _voiceCallRecordingsBySession.value = recordings
+        }
+    }
+
+    /**
+     * 处理语音通话返回聊天页后的同步逻辑。
+     *
+     * 行为：
+     * - 优先按 voiceSessionId 拉取最近聊天消息，确保语音文本记录完整；
+     * - 将本地录音文件与 voiceSessionId 建立持久化关联，供气泡回放按钮使用。
+     */
+    fun handleVoiceCallReturn(
+        messageCount: Int,
+        voiceSessionId: String?,
+        recordingPath: String?,
+        recordingDurationMs: Long,
+    ) {
+        val agentId = _agentId.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val normalizedSessionId = voiceSessionId?.trim().orEmpty()
+            val hasServerSessionId =
+                normalizedSessionId.isNotBlank() && !normalizedSessionId.startsWith("local_")
+
+            if (hasServerSessionId) {
+                chatMessageRepository.loadRecentMessagesForVoiceSession(
+                    agentId = agentId,
+                    voiceSessionId = normalizedSessionId,
+                    fallbackCount = maxOf(messageCount, 20),
+                )
+            } else if (messageCount > 0 || !recordingPath.isNullOrBlank()) {
+                chatMessageRepository.loadRecentMessages(agentId, maxOf(messageCount, 20))
+            }
+
+            var resolvedSessionId: String? =
+                normalizedSessionId.takeIf { it.isNotBlank() && !it.startsWith("local_") }
+            if (resolvedSessionId.isNullOrBlank()) {
+                resolvedSessionId = chatMessageRepository.getLatestVoiceSessionId(agentId)
+            }
+
+            if (!recordingPath.isNullOrBlank() && !resolvedSessionId.isNullOrBlank()) {
+                VoiceCallRecordingStore.saveOrUpdate(
+                    context = Utils.getApp(),
+                    entry =
+                        VoiceCallRecordingEntry(
+                            agentId = agentId,
+                            voiceSessionId = resolvedSessionId,
+                            recordingPath = recordingPath,
+                            recordingDurationMs = recordingDurationMs,
+                        ),
+                )
+                refreshVoiceCallRecordings(agentId)
+            } else if (!recordingPath.isNullOrBlank()) {
+                LogUtils.w(
+                    "voice call recording exists but session id unresolved, skip bind: agentId=$agentId, localSession=$normalizedSessionId"
+                )
+            }
+        }
     }
 
     // FIXME: 如果点数在其他地方被消耗，会因为此处的处理逻辑又会使得点数被恢复，没有正确计算消耗
@@ -1398,6 +1472,7 @@ class ChatViewModel : BaseVM() {
     // 新增：清理所有数据的方法
     fun clearAllData() {
         _agentInfo.value = null
+        _voiceCallRecordingsBySession.value = emptyMap()
         inputData.update { "" }
         inputSelection.value = 0
         _isWaitingForReply.value = false

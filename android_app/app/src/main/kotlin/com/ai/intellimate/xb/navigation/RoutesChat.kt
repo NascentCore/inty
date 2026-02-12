@@ -8,6 +8,15 @@ object RoutesChat {
     /** 语音通话页面路由，参数：agentId（角色ID） */
     const val VoiceCall = "voice_call/{agentId}"
 
+    /** 语音通话返回聊天页时写入 SavedStateHandle 的 key。 */
+    object VoiceCallResultKeys {
+        const val MESSAGE_COUNT = "voiceCallMessageCount"
+        const val SESSION_ID = "voiceCallSessionId"
+        const val RECORDING_PATH = "voiceCallRecordingPath"
+        const val RECORDING_DURATION_MS = "voiceCallRecordingDurationMs"
+        const val LEGACY_MESSAGE_COUNT = "messageCount"
+    }
+
     /**
      * 构建聊天页面路由路径
      *

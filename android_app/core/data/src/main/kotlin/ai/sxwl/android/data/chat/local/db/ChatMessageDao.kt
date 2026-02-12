@@ -108,4 +108,9 @@ interface ChatMessageDao {
         "SELECT id FROM message WHERE agentId = :agentId ORDER BY Cast(id as INTEGER) DESC LIMIT 1"
     )
     suspend fun getLatestMessageId(agentId: String): String?
+
+    @Query(
+        "SELECT voiceSessionId FROM message WHERE agentId = :agentId AND isVoice = 1 AND voiceSessionId IS NOT NULL AND voiceSessionId != '' ORDER BY Cast(id as INTEGER) DESC, indexId DESC LIMIT 1"
+    )
+    suspend fun getLatestVoiceSessionId(agentId: String): String?
 }

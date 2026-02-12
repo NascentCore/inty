@@ -36,9 +36,30 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
         val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
         val shouldAutoFocusInput = backStackEntry.arguments?.getBoolean("shouldAutoFocusInput")
         val isDeleted = backStackEntry.arguments?.getBoolean("isDeleted") ?: false
-        val refreshCount = backStackEntry.savedStateHandle.get<Int>("messageCount") ?: 1
+        val refreshCount =
+            backStackEntry.savedStateHandle.get<Int>(RoutesChat.VoiceCallResultKeys.MESSAGE_COUNT)
+                ?: backStackEntry.savedStateHandle.get<Int>(
+                    RoutesChat.VoiceCallResultKeys.LEGACY_MESSAGE_COUNT
+                )
+                ?: 1
+        val refreshVoiceSessionId =
+            backStackEntry.savedStateHandle.get<String>(RoutesChat.VoiceCallResultKeys.SESSION_ID)
+        val voiceCallRecordingPath =
+            backStackEntry.savedStateHandle.get<String>(
+                RoutesChat.VoiceCallResultKeys.RECORDING_PATH
+            )
+        val voiceCallRecordingDurationMs =
+            backStackEntry.savedStateHandle.get<Long>(
+                RoutesChat.VoiceCallResultKeys.RECORDING_DURATION_MS
+            )
 
-        LaunchedEffect(agentId) {
+        LaunchedEffect(
+            agentId,
+            refreshCount,
+            refreshVoiceSessionId,
+            voiceCallRecordingPath,
+            voiceCallRecordingDurationMs,
+        ) {
             val agent = AgentStore.getAgent(agentId = agentId)
             if (agentId != null) {
                 if (agent != null) {
@@ -50,7 +71,19 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
                 }
             }
 
-            backStackEntry.savedStateHandle.remove<Int>("messageCount")
+            backStackEntry.savedStateHandle.remove<Int>(RoutesChat.VoiceCallResultKeys.MESSAGE_COUNT)
+            backStackEntry.savedStateHandle.remove<Int>(
+                RoutesChat.VoiceCallResultKeys.LEGACY_MESSAGE_COUNT
+            )
+            backStackEntry.savedStateHandle.remove<String>(
+                RoutesChat.VoiceCallResultKeys.SESSION_ID
+            )
+            backStackEntry.savedStateHandle.remove<String>(
+                RoutesChat.VoiceCallResultKeys.RECORDING_PATH
+            )
+            backStackEntry.savedStateHandle.remove<Long>(
+                RoutesChat.VoiceCallResultKeys.RECORDING_DURATION_MS
+            )
         }
 
         ChatScreen(
@@ -62,6 +95,9 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             onCall = { agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) } },
             fromPage = backStackEntry.arguments?.getString("fromPage"),
             refreshMessageCount = refreshCount,
+            refreshVoiceSessionId = refreshVoiceSessionId,
+            voiceCallRecordingPath = voiceCallRecordingPath,
+            voiceCallRecordingDurationMs = voiceCallRecordingDurationMs ?: 0L,
         )
     }
 }

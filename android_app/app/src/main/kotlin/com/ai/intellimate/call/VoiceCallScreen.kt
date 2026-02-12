@@ -13,6 +13,7 @@ import android.media.AudioFormat
 import android.net.Uri
 import android.os.SystemClock
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
@@ -109,15 +110,16 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun VoiceCallScreen(
-    onBack: (Int) -> Unit,
+    onBack: (VoiceCallResult) -> Unit,
     onVip: () -> Unit,
     onVipMoreInfo: () -> Unit,
     agentId: String,
 ) {
 
     val viewModel = koinViewModel<VoiceCallViewModel>()
+    BackHandler { onBack(viewModel.finishCall()) }
 
-    VoiceCallScreen(onBack = { onBack(viewModel.messageCount) }) { contentPadding ->
+    VoiceCallScreen(onBack = { onBack(viewModel.finishCall()) }) { contentPadding ->
         // 权限请求Launcher
         val audioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
         val context = LocalContext.current
@@ -189,7 +191,7 @@ fun VoiceCallScreen(
             }
 
             VoiceCallContent(
-                onEnd = { onBack(viewModel.messageCount) },
+                onEnd = { onBack(viewModel.finishCall()) },
                 uiState = uiState,
                 onMuteChange = viewModel::setMuted,
                 onInterrupt = {
@@ -237,7 +239,7 @@ fun VoiceCallScreen(
                         dialogData,
                         onCancel = {
                             error = null
-                            onBack(viewModel.messageCount)
+                            onBack(viewModel.finishCall())
                         },
                         onSure = {
                             error = null
@@ -245,7 +247,7 @@ fun VoiceCallScreen(
                                 IntyErrorCode.SUBSCRIPTION_REQUIRED -> {
                                     onVip()
                                 }
-                                else -> onBack(viewModel.messageCount)
+                                else -> onBack(viewModel.finishCall())
                             }
                         },
                         onMoreInfo = {

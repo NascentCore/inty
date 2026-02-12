@@ -131,6 +131,7 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
                     agentId = this.agentId.orEmpty(),
                     isVoice = isVoice,
                     isOpening = isOpening,
+                    voiceSessionId = voice_session_id,
                     generatedImage =
                         generatedImage?.run {
                             MessageEntity.MetaData.GeneratedImage(
@@ -162,6 +163,7 @@ fun MessageEntity.toModel(): MsgInfo {
                 agentId = metaData.agentId,
                 isVoice = metaData.isVoice,
                 isOpening = metaData.isOpening,
+                voice_session_id = metaData.voiceSessionId,
                 generatedImage =
                     metaData.generatedImage?.let { g ->
                         MsgInfo.MsgMetaData.GeneratedImage(
