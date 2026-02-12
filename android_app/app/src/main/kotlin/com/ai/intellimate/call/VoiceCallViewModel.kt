@@ -56,6 +56,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     // 日志节流：记录上次打印警告的时间
     private var lastWarningLogTime = 0L
     private val warningLogInterval = 5000L // 5秒内最多打印一次警告
+    @Volatile private var isCallActive = false
     var messageCount = 0
     private val fallbackVoiceSessionId = "local_${System.currentTimeMillis()}_${System.nanoTime()}"
     private var voiceSessionId: String = fallbackVoiceSessionId
@@ -76,6 +77,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 for (audioData in _audioSendQueue) {
                     try {
                         sendQueueSize = maxOf(0, sendQueueSize - 1) // 减少计数器
+                        if (!isCallActive) {
+                            continue
+                        }
                         if (_uiState.value.connectionState != ConnectionState.CONNECTED) {
                             continue
                         }
@@ -120,6 +124,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     }
 
     fun startCalling(agentId: String) {
+        isCallActive = true
         activeFallbackTurnId = null
         fallbackTurnCounter = 0
         voiceTurnId = null
@@ -314,6 +319,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         // 通过队列缓存并按顺序发送，以避免同时发送多个音频数据而出现混乱
         viewModelScope.launch {
             try {
+                if (!isCallActive) {
+                    return@launch
+                }
                 // 使用send()让DROP_OLDEST策略生效：当队列满时自动丢弃最旧的数据
                 // 这对于实时语音通话是合理的，因为旧数据已经过时
                 _audioSendQueue.send(data)
@@ -338,12 +346,14 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     }
 
     private fun stopCalling() {
+        isCallActive = false
         viewModelScope.launch(Dispatchers.IO) { repository.closeCall() }
     }
 
     /** 结束通话并生成返回结果（只会生成一次）。 */
     fun finishCall(): VoiceCallResult {
         finalCallResult?.let { return it }
+        isCallActive = false
         val resolvedSessionId = voiceSessionId.ifBlank { fallbackVoiceSessionId }
         logTurnCollectorSnapshot("voice_turn_before_finalize")
         val recordingOutput = recordingCollector.finalizeAndExport(resolvedSessionId)
