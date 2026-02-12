@@ -22,7 +22,6 @@ import {
 import {
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -176,22 +175,6 @@ export const FestivalMemoryPage: React.FC = () => {
     }
   };
 
-  const handleDelete = (row: FestivalMemoryConfigItem) => {
-    Modal.confirm({
-      title: "确认删除",
-      content: `确定删除节日「${row.festival_name}」的配置吗？`,
-      onOk: async () => {
-        try {
-          await festivalMemoryApi.deleteConfig(row.id);
-          message.success("已删除");
-          loadConfigs();
-        } catch {
-          message.error("删除失败");
-        }
-      },
-    });
-  };
-
   const columns: ColumnsType<FestivalMemoryConfigItem> = [
     {
       title: "节日名称",
@@ -272,15 +255,6 @@ export const FestivalMemoryPage: React.FC = () => {
             onClick={() => openEdit(row)}
           >
             编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(row)}
-          >
-            删除
           </Button>
         </Space>
       ),
@@ -399,7 +373,7 @@ export const FestivalMemoryPage: React.FC = () => {
                   }
                 }}
               >
-                设为当前所选时区的本地时间
+                立刻执行
               </Button>
             </Space>
             <DatePicker
@@ -520,7 +494,7 @@ export const FestivalMemoryPage: React.FC = () => {
             <Title level={5}>操作说明</Title>
             <Text>
               新建/编辑：填写时区、节日名称、节日日期（该时区自然日）、执行日期与执行时刻（该时区本地）、可选「窗口内最少用户消息数」（不填则默认
-              15）、抽取提示词、是否启用。可点击「设为当前所选时区的本地时间」快速填入执行时间。删除可移除配置。
+              15）、抽取提示词、是否启用。可点击「立刻执行」快速填入执行时间。
             </Text>
           </div>
         </Space>
