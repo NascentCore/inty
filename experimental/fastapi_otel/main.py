@@ -2,6 +2,7 @@
 Minimal FastAPI + OpenTelemetry request/response tracing demo.
 Every HTTP request is automatically traced; spans go to console and optionally OTLP.
 """
+
 import os
 
 from opentelemetry import trace

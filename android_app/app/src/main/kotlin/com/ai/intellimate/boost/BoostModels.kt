@@ -85,7 +85,7 @@ sealed class PointSource(val analyticsName: String) {
 
     object Manual : PointSource("manual")
 
-    object ForMoment: PointSource("for_moment")
+    object ForMoment : PointSource("for_moment")
 }
 
 /** Boost 功能相关的错误类型。 */

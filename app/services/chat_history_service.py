@@ -339,7 +339,9 @@ def add_ai_message_sync(
         raise
 
 
-FESTIVAL_MEMORY_PROMPT_CONTENT = "{char} wrote you a secret heartbeat diary. Take a quiet look."
+FESTIVAL_MEMORY_PROMPT_CONTENT = (
+    "{char} wrote you a secret heartbeat diary. Take a quiet look."
+)
 META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
 
 

@@ -27,7 +27,7 @@ data class MessageEntity(
     val isSending: Boolean = false,
     val type: String? = null,
     val festivalMemoryId: Long? = null,
-    @Embedded("moment_") val momentExtra: MomentExtra? = null
+    @Embedded("moment_") val momentExtra: MomentExtra? = null,
 ) {
     val isVoice: Boolean
         get() = metaData.isVoice
@@ -58,7 +58,7 @@ data class MessageEntity(
     data class MomentExtra(
         val image: String? = null,
         val isPurchased: Boolean = false,
-        val price: Int = 10
+        val price: Int = 10,
     )
 
     data class MetaData(

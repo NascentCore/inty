@@ -52,10 +52,10 @@ export const DAILY_USAGE_METRICS = DAILY_USAGE_CHART_METRICS.filter(
 export const DAILY_USAGE_HAS_SECONDARY_AXIS = DAILY_USAGE_CHART_METRICS.some(
   (metric) => metric.axis === "y2",
 );
-export const DAILY_USAGE_SECONDARY_AXIS_TITLE = DAILY_USAGE_CHART_METRICS
-  .filter((metric) => metric.axis === "y2")
-  .map((metric) => metric.label)
-  .join(" / ");
+export const DAILY_USAGE_SECONDARY_AXIS_TITLE =
+  DAILY_USAGE_CHART_METRICS.filter((metric) => metric.axis === "y2")
+    .map((metric) => metric.label)
+    .join(" / ");
 export const DAILY_USAGE_SECONDARY_AXIS_COLOR =
   DAILY_USAGE_CHART_METRICS.find((metric) => metric.axis === "y2")?.color ??
   "#ff4d4f";

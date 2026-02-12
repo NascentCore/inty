@@ -28,6 +28,7 @@ def reset_sent_image_paths() -> None:
     """REPL 会话开始时调用，清空已发送图片列表。"""
     _sent_image_paths.clear()
 
+
 WAV_SAMPLE_RATE = 24000
 WAV_CHANNELS = 1
 WAV_SAMPLE_WIDTH = 2
@@ -46,6 +47,7 @@ class ToolContextType(Enum):
 
 class ProcessedResponse(BaseModel):
     """单轮 API 响应处理结果。"""
+
     model_config = ConfigDict(frozen=True)
 
     messages: list[dict[str, Any]]
@@ -58,6 +60,7 @@ class ProcessedResponse(BaseModel):
 
 class ToolDefinition(BaseModel):
     """单条工具定义：API schema 与执行函数，由 TOOL_DEFINITIONS 统一维护。executor 仅运行时使用，不参与序列化。"""
+
     name: str
     description: str
     parameters: dict[str, Any]
@@ -172,7 +175,11 @@ def execute_generate_image(
     """根据工具参数 input 或对话上下文生成图片并写入本地文件，返回 (结果文案, 可点击绝对路径或 None)。"""
     from .image_gen import _prompt_from_messages, generate_image_from_messages
 
-    recent = messages[-RECENT_MESSAGES_FOR_IMAGE:] if len(messages) > RECENT_MESSAGES_FOR_IMAGE else messages
+    recent = (
+        messages[-RECENT_MESSAGES_FOR_IMAGE:]
+        if len(messages) > RECENT_MESSAGES_FOR_IMAGE
+        else messages
+    )
     prompt = (input or "").strip() or _prompt_from_messages(recent)
     try:
         image_bytes = generate_image_from_messages(client=client, prompt=prompt)
@@ -194,7 +201,9 @@ def execute_generate_image(
     return ("generate_image: Image generated.", path_str)
 
 
-def execute_text_to_speech(text: str, *, client: Any, _logger=None, **kwargs: Any) -> tuple[str, str | None]:
+def execute_text_to_speech(
+    text: str, *, client: Any, _logger=None, **kwargs: Any
+) -> tuple[str, str | None]:
     """将文本转为语音并写入 WAV 文件，返回 (结果文案, 可点击绝对路径或 None)。"""
     from .speech_gen import generate_speech_from_text
 
@@ -221,14 +230,21 @@ def execute_text_to_speech(text: str, *, client: Any, _logger=None, **kwargs: An
 
 def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
     """构建 TOOL_DEFINITIONS，注入 logger 到各 executor。"""
+
     def exec_send_app_icon(**kw):
         return execute_send_app_icon(_logger=_logger)
+
     def exec_send_zun_long(**kw):
         return execute_send_zun_long_photo(_logger=_logger)
+
     def exec_send_selfie(**kw):
         return execute_send_selfie_photo(_logger=_logger)
+
     def exec_gen_image(*, messages, client, input=None, **kw):
-        return execute_generate_image(messages=messages, client=client, input=input, _logger=_logger)
+        return execute_generate_image(
+            messages=messages, client=client, input=input, _logger=_logger
+        )
+
     def exec_tts(*, text, client, **kw):
         return execute_text_to_speech(text=text, client=client, _logger=_logger)
 
@@ -236,7 +252,11 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ToolDefinition(
             name="send_app_icon",
             description="Send the app icon image to the user (fixed file app_icon.png). When the user explicitly asks for app icon, picture, or icon, you MUST call this tool. Text-only replies cannot actually send images. Trigger phrases: send me app icon, app icon please, send app icon.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            parameters={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
             type=ToolType.TERMINAL,
             context_type=ToolContextType.NONE,
             executor=exec_send_app_icon,
@@ -244,7 +264,11 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ToolDefinition(
             name="send_zun_long_photo",
             description="Send Zun Long's photo to the user (fixed file 尊龙.png). When the user asks for Zun Long, Zun Long's picture, or similar, you MUST call this tool. Text-only replies cannot actually send images. Trigger phrases: zun long picture, zun long's picture.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            parameters={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
             type=ToolType.TERMINAL,
             context_type=ToolContextType.NONE,
             executor=exec_send_zun_long,
@@ -252,7 +276,11 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ToolDefinition(
             name="send_selfie_photo",
             description="Send a selfie/photo from AI Companion's album to the user. When the user asks for your photo, selfie, picture of you, show me you, send me a photo, etc., you MUST call this tool. The tool automatically avoids sending the same photo twice in the same conversation. Trigger phrases: your photo, selfie, picture of you, show me you, send me a photo.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            parameters={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
             type=ToolType.TERMINAL,
             context_type=ToolContextType.NONE,
             executor=exec_send_selfie,
@@ -280,7 +308,12 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
             description="Convert text to speech and send to the user. When the user asks for voice reply, read aloud, or says 'say X', 'speak X', 'say something', 'speak to me', 'I want to hear your voice', 'say it out loud', you MUST call this tool. The text parameter must be only the spoken lines, not actions or stage directions like (looks at you) or (smiles). Text-only replies cannot actually send voice.",
             parameters={
                 "type": "object",
-                "properties": {"text": {"type": "string", "description": "The spoken line content only; do not include action descriptions in parentheses."}},
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "The spoken line content only; do not include action descriptions in parentheses.",
+                    }
+                },
                 "required": ["text"],
                 "additionalProperties": False,
             },
@@ -322,8 +355,12 @@ def process_response_with_tools(
     调用方必须保证 message 含有且仅含一个 tool_call；无 tool_calls 时由 run_repl 直接处理。
     """
     raw_tool_calls = getattr(message, "tool_calls", None) or []
-    assert len(raw_tool_calls) >= 1, "process_response_with_tools 仅在有 tool_calls 时调用"
-    assert len(raw_tool_calls) <= 1, "工具调用数量必须为 0 或 1，因为禁止 parallel_tool_calls"
+    assert (
+        len(raw_tool_calls) >= 1
+    ), "process_response_with_tools 仅在有 tool_calls 时调用"
+    assert (
+        len(raw_tool_calls) <= 1
+    ), "工具调用数量必须为 0 或 1，因为禁止 parallel_tool_calls"
     tool_call = raw_tool_calls[0]
     assistant_content = (message.content or "").strip()
     tc_dict: dict[str, Any] = {
@@ -365,18 +402,36 @@ def process_response_with_tools(
             inputs=trace_inputs,
         ) as run:
             result, path = executor(**parsed_args, **context_kwargs)
-            run.end(outputs={"result_length": len(result), "has_path": path is not None})
+            run.end(
+                outputs={"result_length": len(result), "has_path": path is not None}
+            )
         image_path_sent = path
     else:
         result = f"未知工具: {name}"
         image_path_sent = None
     if image_path_sent:
         _sent_image_paths.add(image_path_sent)
-    new_messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
+    new_messages.append(
+        {"role": "tool", "tool_call_id": tool_call.id, "content": result}
+    )
     if _logger is not None:
         _logger.info("工具 %s 执行完毕，result 长度=%d", name, len(result))
 
     if tool_types.get(name, ToolType.UNSPECIFIED) == ToolType.TERMINAL:
         content = (assistant_content + "\n" + result).strip()
-        return ProcessedResponse(messages=new_messages, content=content, done=True, assistant_text=assistant_content, image_path=image_path_sent, tool_result=result)
-    return ProcessedResponse(messages=new_messages, content=None, done=False, assistant_text=assistant_content, image_path=image_path_sent, tool_result=result)
+        return ProcessedResponse(
+            messages=new_messages,
+            content=content,
+            done=True,
+            assistant_text=assistant_content,
+            image_path=image_path_sent,
+            tool_result=result,
+        )
+    return ProcessedResponse(
+        messages=new_messages,
+        content=None,
+        done=False,
+        assistant_text=assistant_content,
+        image_path=image_path_sent,
+        tool_result=result,
+    )

@@ -13,6 +13,7 @@ _THIS_DIR = Path(__file__).resolve().parent
 _ENV_PATH = _THIS_DIR / ".env"
 assert _ENV_PATH.exists(), f"环境变量文件不存在: {_ENV_PATH}"
 from dotenv import load_dotenv
+
 load_dotenv(_ENV_PATH)
 
 logging.basicConfig(
@@ -60,6 +61,7 @@ class _LoggerWrapper:
 logger: _LoggerWrapper = _LoggerWrapper(_real_logger, enabled=False)
 
 import os
+
 assert os.getenv("OPENROUTER_API_KEY") is not None, "OPENROUTER_API_KEY 未设置"
 
 from . import clients
@@ -73,7 +75,14 @@ USER_NAME = "Yaxiong Zhao"
 
 TOOL_DEFINITIONS = tools.build_tool_definitions(_logger=logger)
 TOOLS = [
-    {"type": "function", "function": {"name": d.name, "description": d.description, "parameters": d.parameters}}
+    {
+        "type": "function",
+        "function": {
+            "name": d.name,
+            "description": d.description,
+            "parameters": d.parameters,
+        },
+    }
     for d in TOOL_DEFINITIONS
 ]
 TOOL_EXECUTORS = {d.name: d.executor for d in TOOL_DEFINITIONS}
@@ -88,7 +97,9 @@ def _build_system_messages(char_name: str, user_name: str):
 def main(
     debug: Annotated[
         bool,
-        cyclopts.Parameter(name="--debug", help="开启时输出 logger 日志，默认关闭以减少屏幕干扰"),
+        cyclopts.Parameter(
+            name="--debug", help="开启时输出 logger 日志，默认关闭以减少屏幕干扰"
+        ),
     ] = False,
 ) -> None:
     logger.set_enabled(debug)
