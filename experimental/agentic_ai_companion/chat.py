@@ -68,7 +68,7 @@ from . import tools
 from .repl import run_repl
 
 OPENROUTER_MODEL = "google/gemini-2.5-flash"
-CHAR_NAME = "AI Companion"
+CHAR_NAME = "Ms. Sophie Walsh"
 USER_NAME = "Yaxiong Zhao"
 
 TOOL_DEFINITIONS = tools.build_tool_definitions(_logger=logger)
