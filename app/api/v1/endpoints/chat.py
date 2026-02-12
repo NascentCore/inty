@@ -264,7 +264,9 @@ async def agent_chat_completions(
                                         }
                                     ],
                                 }
-                                yield f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
+                                yield (
+                                    f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
+                                ).encode("utf-8")
                                 continue
 
                             if event_type == "error":
@@ -319,8 +321,10 @@ async def agent_chat_completions(
                                 }
                             ],
                         }
-                        yield f"data: {json.dumps(end_chunk, ensure_ascii=False)}\n\n"
-                        yield "data: [DONE]\n\n"
+                        yield (
+                            f"data: {json.dumps(end_chunk, ensure_ascii=False)}\n\n"
+                        ).encode("utf-8")
+                        yield b"data: [DONE]\n\n"
 
                     except asyncio.CancelledError:
                         logger.info(
@@ -335,7 +339,9 @@ async def agent_chat_completions(
                                 "type": "server_error",
                             }
                         }
-                        yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
+                        yield (
+                            f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
+                        ).encode("utf-8")
                     finally:
                         await asyncio.to_thread(stream_worker.join, 1.0)
                         timing_message = request_handling_timer.stop()
