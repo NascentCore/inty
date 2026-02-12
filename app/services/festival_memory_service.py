@@ -271,5 +271,7 @@ Based on the conversation above, extract memories or preferences related to "{fe
             session_id,
             agent_id,
             memory_row.id,
+            festival_name,
+            festival_date,
         )
     return True

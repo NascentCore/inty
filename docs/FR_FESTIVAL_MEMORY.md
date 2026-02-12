@@ -45,17 +45,18 @@ CREATED_BY_AGENT
 ## chat_history 提示消息约定
 
 - **写入时机**：每次 `extract_festival_and_save` 成功提交 memory 后，向该会话插入一条提示消息（由 `chat_history_service.add_festival_memory_prompt_message_sync` 写入）。
+- **幂等**：按 (session_id, agent_id, festival_name, festival_date) 幂等：若该会话下已存在同角色、同节日的提示消息则不再插入，直接返回已有消息 id，避免定时任务与立即执行 API 重复调用导致同一条记忆出现多条提醒。
 - **消息结构**：
   - `message.type`：`"ai"`（与现有 AI 消息一致，role 为 assistant）。
   - `message.data.content`：固定模板，当前为 `"{char} wrote you a secret heartbeat diary. Take a quiet look."`。前端/App 展示时需将 `{char}` 替换为当前角色名。
-  - `meta_data`：`agentId` 为角色 ID；`messageType` 为 `"festival_memory_prompt"`；`festivalMemoryId` 为该条提示消息对应的 memory 记录主键 id（写入时由 `add_festival_memory_prompt_message_sync` 写入），用于识别该条为「节日记忆/心跳日记」提示，从而分支渲染与点击行为。
+  - `meta_data`：`agentId` 为角色 ID；`messageType` 为 `"festival_memory_prompt"`；`festivalMemoryId` 为该条提示消息对应的 memory 记录主键 id；**`festivalName`**、**`festivalDate`**（ISO 日期字符串）用于幂等查询与前端展示。
 - **消息列表 API**：`GET /api/v1/chats/agents/{agent_id}/messages` 返回的每条消息中，若为上述提示消息，则 `type` 字段为 `"festival_memory_prompt"`（由 `get_messages_paginated` 根据 `meta_data.messageType` 设置），并附带 `festival_memory_id`：该条提示消息对应的 memory 记录 id（整型），来自 meta_data.festivalMemoryId，便于客户端按 id 引用或跳转。该类消息的 **role** 与 **sender_type** 接口返回为 **null**，以便不识别的旧版客户端不将其当作普通 AI 消息展示；新版客户端应以 type 为准进行渲染。App 与 Evaluation 据此展示「{char} wrote you a secret heartbeat diary. Take a quiet look.」，并将「Take a quiet look」作为可点击入口，跳转或弹窗展示对应节日记忆。
 - **统计口径**：与统计相关的指标（对话轮数、消息数、会话消息条数等）在计数时**排除**此类记忆提取型消息（即 `meta_data.messageType === 'festival_memory_prompt'` 的 chat_history 记录），后端统计查询与 evaluation 前端展示的条数均不包含该类型消息。
 
 ## 定时任务
 
 - 在 `push_scheduler_service` 中注册「节日记忆抽取」任务，使用 **每 5 分钟** 的 `IntervalTrigger` 扫描（启动后立即执行一次，之后每 5 分钟执行一次）。
-- 每轮扫描：取当前 UTC 时间 `now`，查询 `festival_memory_config` 中 `enabled = true` 且 `run_at_date`、`run_at_hour` 均非空的配置；对每条配置将 **(run_at_date, run_at_hour)** 按该配置的 **timezone** 解释为本地日期+时刻，换算为 UTC 得到 `run_at_dt_utc`，仅当 `now >= run_at_dt_utc` 且（`last_run_at` 为 NULL 或 `last_run_at < run_at_dt_utc`）时视为「到点」；对到点配置按该配置的 **timezone** 与 **festival_date** 计算 28 小时窗口（该时区下节日自然日 00:00 至次日 04:00 换算为 UTC），筛选该窗口内 (user, agent) 用户消息数 ≥ 配置的 `min_rounds_in_window`（可选，默认 15），逐个调用抽取并写入 memory，**执行成功后更新该配置的 `last_run_at = now()`**（UTC），从而同一执行时刻只会在某次 5 分钟扫描中执行一次。执行时间不早于节日日期（由创建/更新接口校验 `run_at_date >= festival_date`）。
+- 每轮扫描：取当前 UTC 时间 `now`，查询 `festival_memory_config` 中 `enabled = true` 且 `run_at_date`、`run_at_hour` 均非空的配置；对每条配置将 **(run_at_date, run_at_hour)** 按该配置的 **timezone** 解释为本地日期+时刻，换算为 UTC 得到 `run_at_dt_utc`，仅当 `now >= run_at_dt_utc` 且（`last_run_at` 为 NULL 或 `last_run_at < run_at_dt_utc`）时视为「到点」。对到点配置采用 **先占位再执行**：先执行 `UPDATE festival_memory_config SET last_run_at = now() WHERE id = ? AND (last_run_at IS NULL OR last_run_at < run_at_dt_utc)`，仅当更新行数为 1 时表示本实例抢到执行权，再按该配置的 **timezone** 与 **festival_date** 计算 28 小时窗口、筛选该窗口内 (user, agent) 用户消息数 ≥ `min_rounds_in_window` 的组合并逐个调用抽取；若更新行数不为 1 则跳过该配置（已被其他实例执行或已执行过）。从而多实例下同一 config 在同一执行时刻只会被一个实例执行一次。执行时间不早于节日日期（由创建/更新接口校验 `run_at_date >= festival_date`）。
 
 ## Evaluation 页面
 

@@ -1,6 +1,6 @@
 /**
  * 节日记忆提取管理页
- * 管理员配置节日（名称、日期、提示词），立即执行或由定时任务抽取 (user, agent) 节日回忆并写入 memory 表
+ * 管理员配置节日（名称、日期、提示词），由定时任务抽取 (user, agent) 节日回忆并写入 memory 表
  * CREATED_BY_AGENT
  */
 
@@ -23,7 +23,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  PlayCircleOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -33,7 +32,6 @@ import type {
   FestivalMemoryConfigItem,
   FestivalMemoryConfigCreate,
   FestivalMemoryConfigUpdate,
-  FestivalMemoryExtractionRunResponse,
 } from "../types";
 
 const { Text, Title } = Typography;
@@ -52,7 +50,6 @@ const FESTIVAL_TIMEZONE_OPTIONS = [
 export const FestivalMemoryPage: React.FC = () => {
   const [configs, setConfigs] = useState<FestivalMemoryConfigItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [runLoading, setRunLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -195,23 +192,6 @@ export const FestivalMemoryPage: React.FC = () => {
     });
   };
 
-  const handleRun = async (row: FestivalMemoryConfigItem) => {
-    setRunLoading(true);
-    try {
-      const result = (await festivalMemoryApi.runExtraction({
-        config_id: row.id,
-      })) as FestivalMemoryExtractionRunResponse;
-      message.success(
-        `执行完成：共 ${result.total_pairs} 对，成功 ${result.success_count}，失败 ${result.failed_count}`,
-      );
-      loadConfigs();
-    } catch {
-      message.error("执行失败");
-    } finally {
-      setRunLoading(false);
-    }
-  };
-
   const columns: ColumnsType<FestivalMemoryConfigItem> = [
     {
       title: "节日名称",
@@ -296,19 +276,6 @@ export const FestivalMemoryPage: React.FC = () => {
           <Button
             type="link"
             size="small"
-            icon={<PlayCircleOutlined />}
-            loading={runLoading}
-            disabled={!!row.last_run_at}
-            title={
-              row.last_run_at ? "该配置已执行过，不可再次立即执行" : undefined
-            }
-            onClick={() => handleRun(row)}
-          >
-            立即执行
-          </Button>
-          <Button
-            type="link"
-            size="small"
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(row)}
@@ -344,7 +311,7 @@ export const FestivalMemoryPage: React.FC = () => {
           点至次日 4
           点；执行时间为该时区下的本地日期与时刻。仅对窗口内用户消息达到配置的「窗口内最少用户消息数」（可选，默认
           15 条）及以上的 (用户, 角色) 组合抽取节日回忆并写入 memory
-          表。系统将按配置的定时任务自动执行提取；也可在此对单条配置点击「立即执行」。
+          表。系统将按配置的定时任务自动执行提取。
         </Text>
         <Table
           rowKey="id"
@@ -546,14 +513,14 @@ export const FestivalMemoryPage: React.FC = () => {
               定时任务每 5
               分钟扫描一次：若配置已启用且执行日期、执行时刻已填，系统会将
               (执行日期, 执行时刻) 按配置时区转为 UTC，当当前时间 ≥
-              该时刻且该配置尚未在此执行时刻跑过时执行一次，执行后更新「最近执行」时间，同一时刻只执行一次。也可对单条配置点击「立即执行」手动触发。执行日期不能早于节日日期。
+              该时刻且该配置尚未在此执行时刻跑过时执行一次，执行后更新「最近执行」时间，同一时刻只执行一次。执行日期不能早于节日日期。
             </Text>
           </div>
           <div>
             <Title level={5}>操作说明</Title>
             <Text>
               新建/编辑：填写时区、节日名称、节日日期（该时区自然日）、执行日期与执行时刻（该时区本地）、可选「窗口内最少用户消息数」（不填则默认
-              15）、抽取提示词、是否启用。可点击「设为当前所选时区的本地时间」快速填入执行时间。删除可移除配置；已执行过的配置不可再次「立即执行」。
+              15）、抽取提示词、是否启用。可点击「设为当前所选时区的本地时间」快速填入执行时间。删除可移除配置。
             </Text>
           </div>
         </Space>
