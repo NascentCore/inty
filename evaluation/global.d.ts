@@ -5,11 +5,4 @@ declare global {
   }
 }
 
-declare module "inty" {
-  export class Inty {
-    constructor(config: { baseURL: string; apiKey: string });
-    api: any;
-  }
-}
-
 export {};
