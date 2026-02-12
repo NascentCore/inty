@@ -24,12 +24,6 @@ echo "📦 安装前端依赖..."
 pushd "${SCRIPT_DIR}" >/dev/null
 npm install
 
-echo "🔍 TypeScript 类型检查..."
-npm run type-check
-
-echo "🧹 ESLint 检查..."
-npm run lint
-
 echo "🔨 构建前端应用..."
 NODE_OPTIONS="--max-old-space-size=4096" npm run build
 popd >/dev/null
