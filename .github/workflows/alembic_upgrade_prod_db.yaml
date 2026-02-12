@@ -11,11 +11,9 @@ jobs:
     environment: prod
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -26,7 +24,5 @@ jobs:
 
       - name: Upgrade production database
         run: |
-          # app.core.config 在 import 时要求根目录存在 config.yaml，先复制 prod 配置以满足导入
-          cp devops/config.yaml.prod config.yaml
           export PYTHONPATH=.
-          alembic upgrade head
+          alembic -x "config=devops/config.yaml.prod" upgrade head
