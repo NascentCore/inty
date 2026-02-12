@@ -24,7 +24,9 @@ import cyclopts
 import requests
 import yaml
 from google import genai
+from google.genai import types
 from openai import OpenAI
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -41,6 +43,53 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+class GeneratedCharacter(BaseModel):
+    """单个角色的结构化输出。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, description="Character full name")
+    description: str = Field(
+        min_length=1,
+        description="One-sentence scenario that motivates user to choose her",
+    )
+
+
+class GeneratedCharactersResponse(BaseModel):
+    """角色生成的结构化输出。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    characters: list[GeneratedCharacter] = Field(
+        min_length=10,
+        max_length=10,
+        description="Exactly 10 generated characters",
+    )
+
+
+OPENAI_CHARACTER_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "generated_characters_response",
+        "strict": True,
+        "schema": GeneratedCharactersResponse.model_json_schema(),
+    },
+}
+
+
+def parse_generated_characters(raw_json: str) -> list[dict[str, str]]:
+    """使用 Pydantic 模型校验并解析角色生成结果。"""
+
+    try:
+        parsed = GeneratedCharactersResponse.model_validate_json(raw_json)
+    except ValidationError as e:
+        logger.error(f"角色结构化输出校验失败: {e}")
+        logger.debug(f"模型原始输出片段: {raw_json[:2000]}")
+        raise
+
+    return [item.model_dump() for item in parsed.characters]
 
 
 def load_config(config_path: str) -> dict:
@@ -116,12 +165,6 @@ Each character should have:
   1. How the user encounters her (a specific, direct, romantic or conflict-ridden scenario based on real American life)
   2. This description should immediately motivate users to choose this character.
 
-Return ONLY a valid JSON array in this exact format:
-[
-  {{"name": "Alice", "description": "Your sister's female classmate has had a crush on you since childhood. She's sitting on your bed crying right now."}},
-  {{"name": "Marcus", "description": "Your stepsister is moving in with you soon."}}
-]
-
 Make the characters diverse in name and scenario.
 
 IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
@@ -138,9 +181,17 @@ IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
             response = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
+                response_format=OPENAI_CHARACTER_RESPONSE_FORMAT,
                 stream=False,
             )
-            text = (response.choices[0].message.content or "").strip()
+            message = response.choices[0].message
+            refusal = getattr(message, "refusal", None)
+            if refusal:
+                raise ValueError(f"OpenRouter 模型拒绝输出结构化结果: {refusal}")
+
+            text = (message.content or "").strip()
+            if not text:
+                raise ValueError("OpenRouter 返回空响应")
         except Exception as e:
             logger.error(f"OpenRouter 调用失败: {e}")
             raise
@@ -153,21 +204,19 @@ IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
             response = client.models.generate_content(
                 model=model,
                 contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=GeneratedCharactersResponse.model_json_schema(),
+                ),
             )
-            text = response.text.strip()
+            text = (response.text or "").strip()
+            if not text:
+                raise ValueError("Gemini 返回空响应")
         except Exception as e:
             logger.error(f"Gemini 调用失败: {e}")
             raise
 
-    if text.startswith("```json"):
-        text = text[7:]
-    if text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-    text = text.strip()
-
-    characters = json.loads(text)
+    characters = parse_generated_characters(text)
     logger.info(f"成功生成 {len(characters)} 个角色")
     logger.debug(f"角色列表: {json.dumps(characters, indent=2, ensure_ascii=False)}")
     return characters
