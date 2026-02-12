@@ -4,8 +4,8 @@
 
 - [ ] 自拍 video 工具，输入角色形象照片、根据聊天内容，返回相应的视频给用户，符合聊天上下文
 - [ ] Live voice message reply 工具，调用 Gemini live API，生成语音回复给用户，是对语音通话的补充，类似微信语音消息，点击播放（Soul 虚拟伴侣有类似的功能）
-- [ ] 添加 自拍 工具，让 AI 在用户要照片时发送 AI 自拍/相册中照片 等等功能，完成初次交流的体验；
-  希望 AI 可以根据聊天记录避免发送重复图片
+- [ ] 自拍 photo 工具，让 AI 在用户要照片时发送 AI 自拍/相册中照片 等等功能，
+  完成初次交流的体验；希望 AI 可以根据聊天记录避免发送重复图片
 - [x] 添加 send_zun_long_photo 工具，调用时返回 experimental/agentic_ai_companion/尊龙.png，来测试多个工具调用
 - [x] 添加 generate_image 工具（基于 generate_image_from_messages + 最近 10 条消息，Imagen 4 Fast，GEMINI_API_KEY）
 - [x] **语音回复工具**：使用 <https://ai.google.dev/gemini-api/docs/speech-generation> 将 LLM
