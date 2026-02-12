@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # CREATED_BY_AGENT
 """
-调用 Gemini 或 OpenRouter 生成角色，再通过 Dify API 创建角色的定时脚本
+调用 OpenRouter 生成角色，再通过 Dify API 创建角色的定时脚本
 
-默认使用 OpenRouter 模型 mistralai/devstral-2512。模型名包含 "/" 时走 OpenRouter，否则走 Gemini。
+默认使用 OpenRouter 模型 mistralai/devstral-2512。
 
 从环境变量读取：
 - OpenRouter：OPENROUTER_API_KEY 或 OPENAI_API_KEY
-- Gemini：GOOGLE_API_KEY
 - DIFY_API_KEY: Dify API 密钥
 
 数据库配置文件默认使用 scripts/sync_agents_dev_to_prod/config.yaml.example
@@ -23,8 +22,6 @@ from pathlib import Path
 import cyclopts
 import requests
 import yaml
-from google import genai
-from google.genai import types
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
@@ -138,17 +135,13 @@ def generate_characters(
     existing_names: list[str],
     model: str = "mistralai/devstral-2512",
     *,
-    google_api_key: str | None = None,
     openrouter_api_key: str | None = None,
 ) -> list[dict]:
-    """调用 Gemini 或 OpenRouter 生成 10 个角色信息
-
-    模型名包含 "/" 时使用 OpenRouter（需 openrouter_api_key），否则使用 Gemini（需 google_api_key）。
+    """调用 OpenRouter 生成 10 个角色信息
 
     Args:
         existing_names: 数据库中已有的角色名称列表
-        model: 模型名，默认 mistralai/devstral-2512（OpenRouter）
-        google_api_key: Google API 密钥，Gemini 时必填
+        model: OpenRouter 模型名，默认 mistralai/devstral-2512
         openrouter_api_key: OpenRouter API 密钥，OpenRouter 时必填
 
     Returns:
@@ -169,52 +162,32 @@ Make the characters diverse in name and scenario.
 
 IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
 
-    use_openrouter = "/" in model
-    if use_openrouter:
-        if not openrouter_api_key:
-            raise ValueError(
-                "使用 OpenRouter 模型时需设置 OPENROUTER_API_KEY 或 OPENAI_API_KEY"
-            )
-        logger.info(f"调用 OpenRouter 生成角色，model={model}")
-        client = OpenAI(api_key=openrouter_api_key, base_url=OPENROUTER_BASE_URL)
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                response_format=OPENAI_CHARACTER_RESPONSE_FORMAT,
-                stream=False,
-            )
-            message = response.choices[0].message
-            refusal = getattr(message, "refusal", None)
-            if refusal:
-                raise ValueError(f"OpenRouter 模型拒绝输出结构化结果: {refusal}")
+    if "/" not in model:
+        raise ValueError(
+            "仅支持 OpenRouter 模型名（需包含 '/'），例如 google/gemini-2.5-pro"
+        )
+    if not openrouter_api_key:
+        raise ValueError("使用 OpenRouter 模型时需设置 OPENROUTER_API_KEY 或 OPENAI_API_KEY")
+    logger.info(f"调用 OpenRouter 生成角色，model={model}")
+    client = OpenAI(api_key=openrouter_api_key, base_url=OPENROUTER_BASE_URL)
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            response_format=OPENAI_CHARACTER_RESPONSE_FORMAT,
+            stream=False,
+        )
+        message = response.choices[0].message
+        refusal = getattr(message, "refusal", None)
+        if refusal:
+            raise ValueError(f"OpenRouter 模型拒绝输出结构化结果: {refusal}")
 
-            text = (message.content or "").strip()
-            if not text:
-                raise ValueError("OpenRouter 返回空响应")
-        except Exception as e:
-            logger.error(f"OpenRouter 调用失败: {e}")
-            raise
-    else:
-        if not google_api_key:
-            raise ValueError("使用 Gemini 模型时需设置 GOOGLE_API_KEY")
-        logger.info(f"调用 Gemini 生成角色，model={model}")
-        client = genai.Client(api_key=google_api_key)
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=GeneratedCharactersResponse.model_json_schema(),
-                ),
-            )
-            text = (response.text or "").strip()
-            if not text:
-                raise ValueError("Gemini 返回空响应")
-        except Exception as e:
-            logger.error(f"Gemini 调用失败: {e}")
-            raise
+        text = (message.content or "").strip()
+        if not text:
+            raise ValueError("OpenRouter 返回空响应")
+    except Exception as e:
+        logger.error(f"OpenRouter 调用失败: {e}")
+        raise
 
     characters = parse_generated_characters(text)
     logger.info(f"成功生成 {len(characters)} 个角色")
@@ -284,25 +257,24 @@ async def main(
     Args:
         config: 配置文件路径，相对于 scripts/ 目录（默认: sync_agents_dev_to_prod/config.yaml.example）
         target_count: 目标创建角色数量（默认: 3，最大: 10）
-        model: 模型名，含 "/" 为 OpenRouter（默认: mistralai/devstral-2512），否则为 Gemini
+        model: OpenRouter 模型名（默认: mistralai/devstral-2512）
     """
     if target_count < 1 or target_count > 10:
         logger.error("target_count 必须在 1-10 之间")
         return 1
-    use_openrouter = "/" in model
+    if "/" not in model:
+        logger.error("仅支持 OpenRouter 模型名（需包含 '/'），例如 google/gemini-2.5-pro")
+        return 1
+
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get(
         "OPENAI_API_KEY"
     )
-    google_api_key = os.environ.get("GOOGLE_API_KEY")
     dify_api_key = os.environ.get("DIFY_API_KEY")
 
-    if use_openrouter and not openrouter_api_key:
+    if not openrouter_api_key:
         logger.error(
             "使用 OpenRouter 模型时需设置环境变量 OPENROUTER_API_KEY 或 OPENAI_API_KEY"
         )
-        return 1
-    if not use_openrouter and not google_api_key:
-        logger.error("使用 Gemini 模型时需设置环境变量 GOOGLE_API_KEY")
         return 1
     if not dify_api_key:
         logger.error("环境变量 DIFY_API_KEY 未设置")
@@ -328,7 +300,6 @@ async def main(
             characters = generate_characters(
                 existing_names,
                 model,
-                google_api_key=google_api_key,
                 openrouter_api_key=openrouter_api_key,
             )
 
