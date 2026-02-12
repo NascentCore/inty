@@ -8,6 +8,7 @@
 - [dev inty backend logs](https://cloudlogging.app.goo.gl/aaPiWvxr7syuAFuX7)
 - [LangSmith IntelliMate-dev project](https://smith.langchain.com/o/1463b2d0-5d84-4f0c-b31e-0a158d823e01)
 - [LangSmith inty-backend-prod tracing project](https://smith.langchain.com/o/824a4bb5-ca84-4fa2-969e-7a50cd267999/projects/p/2808d56c-e07f-4293-8bec-1cc62d9f4975)
+- [Sentry plan overview](https://inty-inc.sentry.io/settings/billing/overview/): 生产环境追踪等 Observability 需求
 
 ## 非 .md 文件与子目录概述
 
