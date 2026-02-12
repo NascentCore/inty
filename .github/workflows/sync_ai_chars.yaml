@@ -2,8 +2,8 @@ name: dev-prod 同步 AI 角色
 
 on:
   schedule:
-    # Run every day at 5 PM UTC, 2:00 AM Beijing time, 10:00 AM PST.
-    - cron: "0 17 * * *"
+    # 21:00 Beijing time, 06:00 AM PST.
+    - cron: "0 13 * * *"
   workflow_dispatch:
 
 jobs:
