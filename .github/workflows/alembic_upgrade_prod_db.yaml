@@ -6,6 +6,8 @@ on:
 jobs:
   alembic-upgrade-prod:
     runs-on: inty-prod-server-gcp
+    # 只用于手动更新 prod 环境数据库，dev 环境随时会随着代码改动被实时更新
+    # 为了避免回退等操作影响后端数据库，这个只能手动触发
     environment: prod
 
     steps:
