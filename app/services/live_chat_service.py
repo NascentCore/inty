@@ -203,6 +203,17 @@ class LiveChatService:
             "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
         )
 
+        response_language_name = (
+            getattr(self._config, "response_language_name", "") or ""
+        ).strip()
+        if response_language_name:
+            parts.append(
+                "## Language policy\n"
+                f"You must speak ONLY in {response_language_name}. "
+                "Never switch to any other language, even if the user asks or speaks in another language. "
+                "If the user speaks another language, politely continue in the required language."
+            )
+
         return "\n\n".join(parts)
 
     def _summarize_history(self, messages: List[Any], max_turns: int = 10) -> str:
@@ -350,15 +361,26 @@ class LiveChatService:
                     f"根据性别 {agent_gender} 使用默认语音: {voice_name}"
                 )
 
+        speech_config_kwargs: Dict[str, Any] = {
+            "voice_config": types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+            )
+        }
+        speech_language_code = (
+            getattr(self._config, "speech_language_code", "") or ""
+        ).strip()
+        speech_fields = getattr(types.SpeechConfig, "model_fields", {})
+        if speech_language_code and "language_code" in speech_fields:
+            speech_config_kwargs["language_code"] = speech_language_code
+        elif speech_language_code:
+            logger.warning(
+                "当前 google-genai SDK 的 SpeechConfig 不支持 language_code，"
+                "将仅依赖 system instruction 约束回复语言"
+            )
+
         live_cfg = types.LiveConnectConfig(
             response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name=voice_name
-                    )
-                )
-            ),
+            speech_config=types.SpeechConfig(**speech_config_kwargs),
             system_instruction=system_instruction,
             input_audio_transcription=(
                 types.AudioTranscriptionConfig()

@@ -410,6 +410,10 @@ class GeminiLiveConfig:
     send_sample_rate: int = 16000  # 上行音频采样率 (Hz)
     receive_sample_rate: int = 24000  # 下行音频采样率 (Hz)
     default_voice: str = "Zephyr"  # 默认 AI 语音
+    # SpeechConfig.language_code（BCP-47），用于尽量固定语音合成语言
+    speech_language_code: str = "en-US"
+    # native-audio 模型主要通过 system instruction 约束回复语言
+    response_language_name: str = "English"
     session_resumption: bool = True  # 启用会话恢复支持断线重连
     input_transcription: bool = True  # 启用用户语音转录
     output_transcription: bool = True  # 启用 AI 语音转录

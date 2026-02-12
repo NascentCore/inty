@@ -11,6 +11,7 @@ from app.core.config import (
     Environment,
     FirebaseConfig,
     GCSConfig,
+    GeminiLiveConfig,
     GoogleOAuthConfig,
     GooglePlayConfig,
     LoggingConfig,
@@ -304,3 +305,10 @@ def test_name_for_openrouter_with_special_characters():
     )
 
     assert app_config.name_for_openrouter == "https://inty-backend-v2-prod"
+
+
+def test_gemini_live_language_defaults():
+    config = GeminiLiveConfig()
+
+    assert config.speech_language_code == "en-US"
+    assert config.response_language_name == "English"
