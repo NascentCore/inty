@@ -13,6 +13,7 @@
 
 ## 目录索引（节选）
 
+- `fastapi_otel/`：FastAPI + OpenTelemetry 请求/响应追踪最小化 demo（纯 OTLP，无 Sentry）。
 - `gemini_native_audio_websocket_demo/`：Gemini Live（native audio）WebSocket demo（Plain JS + Python SDK），包含 single-session 复现与 reconnect 绕过模式。
 - `image_model_benchmark/`：图像生成模型评测工具，对比 Seedream 4.5、Gemini 2.5 Flash Image、Nano Banana Pro、Flux.2 Pro 的响应时间和效果。
 - `memory_prompt_benchmark/`：记忆提示词评测工具，从用户聊天历史提取记忆，对比有记忆和无记忆情况下与新角色的对话效果。
