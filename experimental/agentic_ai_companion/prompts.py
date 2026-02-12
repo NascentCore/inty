@@ -13,8 +13,8 @@ def build_system_messages_openai(
 ) -> list[dict[str, str]]:
     if _logger is not None:
         _logger.debug("构建系统消息 char_name=%s user_name=%s", char_name, user_name)
-    main_prompt = prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
-    mode_prompt = prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
+    main_prompt = prompts.ROLEPLAY_MAIN_PROMPT_1225
+    mode_prompt = prompts.FLIRTING_MODE_PROMPT_20250902
     rendered_main = prompt_template.render_prompt_jinja2_template(
         main_prompt, char=char_name, user=user_name
     )

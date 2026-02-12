@@ -13,7 +13,7 @@ from langsmith.run_helpers import trace
 from pydantic import BaseModel, ConfigDict, Field
 
 _THIS_DIR = Path(__file__).resolve().parent
-DATA_DIR = _THIS_DIR / "data"
+DATA_DIR = _THIS_DIR / "tmp"
 APP_ICON_PATH = _THIS_DIR / "app_icon.png"
 ZUN_LONG_PHOTO_PATH = _THIS_DIR / "尊龙.png"
 
