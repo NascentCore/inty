@@ -1,5 +1,39 @@
 ### 评测前端（evaluation）架构级 TODO（evaluation 根）
 
+- [ ] 类型系统收敛（承接本次 `npm run type-check` 修复）**【工程量：1-2 人天】**
+  - _背景：当前为快速解除阻塞，在 `types.ts` 中将 `Agent` 基础结构本地化并保留了宽松字段。_
+  - _目标：在不影响业务迭代的前提下，逐步把 `Agent` 从“宽松可用”收敛到“契约驱动”。_
+  - 子任务：
+    - [ ] 将 `types.ts` 中 `BaseAgent` 的 `[key: string]: any` 收敛为白名单字段，先改为 `unknown`，再逐个消除调用点断言。
+    - [ ] 对 `extensions` 建立明确结构：
+      - [ ] `avatar_crop`
+      - [ ] `festival_memories`
+      - [ ] 其他已在线上使用的扩展键
+    - [ ] 为 `creator`、`llm_config`、`background_images`、`avatar_size/background_size` 增补与后端一致的类型注释与可空约束。
+    - [ ] 清理临时 `inty.d.ts`：
+      - [ ] 优先改为从正式 SDK 产物导入类型；
+      - [ ] 若 SDK 暂不可用，保持单一声明来源，避免重复声明漂移。
+    - [ ] 为 `useAgents`、`AgentInfoDisplay`、`AgentManagePage` 补 3-5 个类型回归测试（至少覆盖：
+      - [ ] `visibility` 过滤
+      - [ ] `tags/background_images` 渲染
+      - [ ] `extensions.avatar_crop` 读取）
+  - 验收标准：
+    - [ ] `npm run type-check` 持续通过
+    - [ ] 不引入新的 `any`（仅允许遗留白名单）
+    - [ ] 关键页面（Agent 管理、聊天页、生图页）无类型相关回归
+  - 里程碑建议：
+    - [ ] M1（0.5d）：完成 `BaseAgent` 字段盘点与调用点统计，产出字段使用矩阵
+    - [ ] M2（0.5d）：移除核心页面中的隐式 `any`，完成首轮收敛
+    - [ ] M3（0.5-1d）：补齐测试并合并 SDK 类型源，删除过渡声明
+  - 风险与回滚：
+    - [ ] 若收敛导致页面阻塞，临时回滚到“字段级放宽”而不是整体回滚
+    - [ ] 每次收敛只改一个页面域，避免大范围联动风险
+  - 观测数据（用于评测数据采集）：
+    - [ ] 记录 `Agent` 字段缺失率（按接口/页面）
+    - [ ] 记录因类型不一致导致的前端告警频次
+    - [ ] 记录修复后 7 天内相关告警下降趋势
+    - [ ] 记录 `type-check` 在 CI 的平均耗时变化
+
 - [ ] 分层与目录规范：`components/`、`pages/`、`services/`、`hooks/`、`utils/` 职责边界清晰 **【工程量：1-2 人天】**
   - _依据：主要是代码重构和目录整理，相对简单_
 - [ ] API 单一真源：基于 `openapi.json`/`stainless.yml` 生成 TS SDK 并接入 **【工程量：2-3 人天】**
