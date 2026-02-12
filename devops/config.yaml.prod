@@ -15,6 +15,7 @@ app:
   gcp_service_account_key: "inty-backend-key.json"
 
 sentry:
+  # inty-backend/default
   dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
   enabled: true
   traces_sample_rate: 0.1
