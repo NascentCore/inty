@@ -1,12 +1,64 @@
 from datetime import datetime, timezone
 
-from app.core.agent import agent as agent_module
-from app.models.chat_settings import ChatSettings
+from app.utils.langsmith_metadata import normalize_langsmith_metadata
+
+
+class _ColumnStub:
+    def __init__(self, name: str):
+        self.name = name
+
+
+class _TableStub:
+    def __init__(self, *column_names: str):
+        self.columns = [_ColumnStub(name) for name in column_names]
+
+
+class _FakeChatSettingsModel:
+    __table__ = _TableStub(
+        "id",
+        "language",
+        "voice_enabled",
+        "keep_talking",
+        "style_prompt",
+        "premium_mode",
+        "created_at",
+        "updated_at",
+        "user_id",
+        "agent_id",
+        "chat_id",
+    )
+
+    def __init__(
+        self,
+        *,
+        id: str,
+        language: str,
+        voice_enabled: bool,
+        keep_talking: bool,
+        style_prompt: str,
+        premium_mode: bool,
+        created_at: datetime,
+        updated_at: datetime,
+        user_id: str,
+        agent_id: str,
+        chat_id: str,
+    ):
+        self.id = id
+        self.language = language
+        self.voice_enabled = voice_enabled
+        self.keep_talking = keep_talking
+        self.style_prompt = style_prompt
+        self.premium_mode = premium_mode
+        self.created_at = created_at
+        self.updated_at = updated_at
+        self.user_id = user_id
+        self.agent_id = agent_id
+        self.chat_id = chat_id
 
 
 def test_normalize_langsmith_metadata_serializes_chat_settings_model():
     now = datetime(2026, 2, 12, 10, 30, tzinfo=timezone.utc)
-    chat_settings = ChatSettings(
+    chat_settings = _FakeChatSettingsModel(
         id="chat_settings_1",
         language="en",
         voice_enabled=True,
@@ -20,9 +72,7 @@ def test_normalize_langsmith_metadata_serializes_chat_settings_model():
         updated_at=now,
     )
 
-    metadata = agent_module._normalize_langsmith_metadata(
-        {"chat_settings": chat_settings}
-    )
+    metadata = normalize_langsmith_metadata({"chat_settings": chat_settings})
     serialized = metadata["chat_settings"]
 
     assert serialized["id"] == "chat_settings_1"
@@ -48,7 +98,7 @@ def test_normalize_langsmith_metadata_handles_opaque_nested_values():
         "nested": {"values": [OpaqueValue(), {"more": OpaqueValue()}]},
     }
 
-    normalized = agent_module._normalize_langsmith_metadata(metadata)
+    normalized = normalize_langsmith_metadata(metadata)
 
     assert normalized["opaque"] == "OpaqueValue(debug=ok)"
     assert normalized["nested"]["values"][0] == "OpaqueValue(debug=ok)"

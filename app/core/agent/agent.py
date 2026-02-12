@@ -1,6 +1,5 @@
 import asyncio
 import time
-from datetime import date, datetime, time as time_type
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
@@ -47,6 +46,7 @@ from app.utils.openai_client import (
     langchain_message_to_openai_message,
     wrap_client_with_langsmith,
 )
+from app.utils.langsmith_metadata import normalize_langsmith_metadata
 
 # 圣诞节季节性提示词：放在角色人设（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
@@ -68,48 +68,6 @@ USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
     "- Use it only as context for the user's situation and daily rhythm.",
     "- Do not claim to need sleep or be offline.",
 ]
-
-
-def _normalize_langsmith_metadata_value(value: Any) -> Any:
-    """Convert metadata values into LangSmith-friendly readable structures."""
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-
-    if isinstance(value, (datetime, date, time_type)):
-        return value.isoformat()
-
-    if isinstance(value, dict):
-        return {
-            str(key): _normalize_langsmith_metadata_value(item)
-            for key, item in value.items()
-        }
-
-    if isinstance(value, (list, tuple, set)):
-        return [_normalize_langsmith_metadata_value(item) for item in value]
-
-    model_dump = getattr(value, "model_dump", None)
-    if callable(model_dump):
-        return _normalize_langsmith_metadata_value(model_dump())
-
-    table = getattr(value, "__table__", None)
-    if table is not None and hasattr(table, "columns"):
-        serialized: dict[str, Any] = {}
-        for column in table.columns:
-            serialized[column.name] = _normalize_langsmith_metadata_value(
-                getattr(value, column.name, None)
-            )
-        return serialized
-
-    return str(value)
-
-
-def _normalize_langsmith_metadata(metadata: Optional[dict[str, Any]]) -> dict[str, Any]:
-    if not metadata:
-        return {}
-    return {
-        str(key): _normalize_langsmith_metadata_value(value)
-        for key, value in metadata.items()
-    }
 
 
 class UserTimeContext(TypedDict, total=False):
@@ -824,7 +782,7 @@ class Agent:
         for attempt in range(max_retries):
             try:
                 if enable_tracing:
-                    normalized_labels = _normalize_langsmith_metadata(labels)
+                    normalized_labels = normalize_langsmith_metadata(labels)
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
                         name=chat_name or f"{user_id}:{self.name}",
