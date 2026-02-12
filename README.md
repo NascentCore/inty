@@ -1,7 +1,7 @@
 # InTy - 长期 AI 情感陪伴
 
-- **InTy 是基于 AI 的情感伴侣系统，包含后端服务、Android 应用和 Web 应用。**
-- **本代码库是多语言（Python Kotlin Typescript）monorepo**
+- **InTy 是基于 AI 的情感陪伴系统，不是伴侣/聚焦情感因为其没有物理实体（仅手机 App）、长期在于目标是建立长期关系（角色与用户、用户与长期陪伴体验/app）**
+- **本代码库是多语言（Python 后端、Kotlin 安卓 app、Typescript 运营系统）monorepo**
 
 ![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=flat&theme=default&responseTime=true)
 ![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=flat&theme=default&responseTime=true)
