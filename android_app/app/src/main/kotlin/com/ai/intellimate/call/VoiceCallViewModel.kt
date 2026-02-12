@@ -256,7 +256,11 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         CallType.SESSION_INFO -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             packet.resolveVoiceTurnId()?.let {
-                                applyResolvedServerTurnId(it, source = "session_info")
+                                applyResolvedServerTurnId(
+                                    it,
+                                    source = "session_info",
+                                    allowPendingAlias = true,
+                                )
                             }
                             _uiState.update {
                                 it.copy(
@@ -269,11 +273,22 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             }
                         }
 
-                        CallType.TRANSCRIPT,
+                        CallType.TRANSCRIPT -> {
+                            packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
+                            packet.resolveVoiceTurnId()?.let {
+                                applyResolvedServerTurnId(
+                                    it,
+                                    source = "transcript",
+                                    allowPendingAlias = true,
+                                )
+                            }
+                            messageCount++
+                        }
+
                         CallType.USER_TRANSCRIPT -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             packet.resolveVoiceTurnId()?.let {
-                                applyResolvedServerTurnId(it, source = "transcript")
+                                applyResolvedServerTurnId(it, source = "user_transcript")
                             }
                             messageCount++
                         }

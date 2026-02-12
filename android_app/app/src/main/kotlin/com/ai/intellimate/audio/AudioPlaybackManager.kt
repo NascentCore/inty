@@ -153,7 +153,9 @@ class AudioPlaybackManager private constructor(private val context: Context) : P
             val mediaItem =
                 if (isLocalAudioUri(audioInfo.url)) {
                     val localUri = normalizeLocalAudioUri(audioInfo.url)
-                    LogUtils.i("音频LOG测试 Use local audio directly: $localUri")
+                    LogUtils.i(
+                        "音频LOG测试 Use local audio directly: $localUri, messageId=${audioInfo.messageId.orEmpty()}"
+                    )
                     MediaItem.fromUri(localUri)
                 } else if (cacheManager.isCached(audioInfo.url)) {
                     val cachedPath = cacheManager.getCachedFilePath(audioInfo.url)

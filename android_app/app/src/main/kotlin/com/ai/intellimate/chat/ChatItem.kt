@@ -11,6 +11,7 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
@@ -1227,6 +1228,16 @@ private fun resolveLocalVoiceRecordingUrl(
     if (path.isBlank()) return null
     val file = File(path)
     if (!file.exists() || !file.isFile) return null
+    val matchedTurnId = matched.voiceTurnId?.trim().orEmpty()
+    val matchMode =
+        if (voiceTurnId.isNotBlank() && matchedTurnId == voiceTurnId) {
+            "turn"
+        } else {
+            "session_fallback"
+        }
+    LogUtils.i(
+        "voice_turn_playback_resolve: mode=$matchMode, messageId=${item.id}, sessionId=$voiceSessionId, requestTurn=$voiceTurnId, matchedTurn=$matchedTurnId, path=$path"
+    )
     return "file://$path"
 }
 
