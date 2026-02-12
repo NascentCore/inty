@@ -174,7 +174,7 @@ def get_session_id_for_user_agent_sync(user_id: str, agent_id: str) -> Optional[
 def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     lines = []
     for role, content in messages:
-        label = "用户" if role == "user" else "AI"
+        label = "User" if role == "user" else "AI"
         lines.append(f"**{label}**: {content}")
     return "\n".join(lines)
 
@@ -207,16 +207,16 @@ async def extract_festival_and_save(
     full_prompt = f"""{prompt_template}
 
 ---
-节日名称：{festival_name}
-节日日期：{date_str}
+Festival name: {festival_name}
+Festival date: {date_str}
 
 ---
-# 用户与该角色的对话记录
+# Conversation between the user and the character
 
 {chat_text}
 
 ---
-请根据上述对话，抽取该用户与该角色在「{festival_name}」相关的回忆或偏好，输出一段简洁的摘要（一段话即可）。只输出摘要内容，不要其他格式。"""
+Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
 
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
     model_name = (
