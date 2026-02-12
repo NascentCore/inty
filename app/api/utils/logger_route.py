@@ -7,7 +7,7 @@ import json
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 import sentry_sdk
 from fastapi import Request, Response
@@ -16,6 +16,65 @@ from fastapi.routing import APIRoute
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
+
+
+def is_sentry_api_monitoring_enabled() -> bool:
+    """Check whether Sentry API monitoring is enabled and configured."""
+    sentry_config = global_config_loaded_from_config_yaml.sentry
+    return bool(sentry_config.enabled and sentry_config.dsn)
+
+
+def build_sentry_transaction_name(method: str, route_path: str) -> str:
+    """Build normalized transaction name as `METHOD /route/template`."""
+    normalized_method = (method or "UNKNOWN").upper()
+    normalized_route_path = route_path or "/"
+    return f"{normalized_method} {normalized_route_path}"
+
+
+def resolve_route_path_from_scope(scope: Mapping[str, Any], fallback_path: str) -> str:
+    """Resolve route template path from ASGI scope; fallback to real URL path."""
+    route = scope.get("route") if scope else None
+    for path_attr in ("path", "path_format"):
+        route_path = getattr(route, path_attr, None)
+        if isinstance(route_path, str) and route_path:
+            return route_path
+    return fallback_path
+
+
+def resolve_route_path_from_request(
+    request: Request, fallback_path: str | None = None
+) -> str:
+    """Resolve route template path from request scope."""
+    default_path = fallback_path or request.url.path
+    return resolve_route_path_from_scope(request.scope, fallback_path=default_path)
+
+
+def _get_sentry_scope():
+    """Get current Sentry scope across SDK versions."""
+    get_current_scope = getattr(sentry_sdk, "get_current_scope", None)
+    if callable(get_current_scope):
+        scope = get_current_scope()
+        if scope is not None:
+            return scope
+
+    hub = sentry_sdk.Hub.current
+    return getattr(hub, "scope", None)
+
+
+def set_sentry_transaction_name(method: str, route_path: str) -> None:
+    """Set transaction name and route tag on current Sentry scope."""
+    if not is_sentry_api_monitoring_enabled():
+        return
+
+    scope = _get_sentry_scope()
+    if scope is None:
+        return
+
+    transaction_name = build_sentry_transaction_name(method, route_path)
+    scope.transaction = transaction_name
+    if getattr(scope, "span", None) is not None:
+        scope.span.name = transaction_name
+    scope.set_tag("api.route", route_path)
 
 
 class LoggerRoute(APIRoute):
@@ -35,20 +94,8 @@ class LoggerRoute(APIRoute):
     }
 
     def _maybe_set_sentry_transaction_name(self, request: Request) -> None:
-        sentry_config = global_config_loaded_from_config_yaml.sentry
-        if not sentry_config.enabled or not sentry_config.dsn:
-            return
-
-        transaction_name = f"{request.method} {self.path}"
-        hub = sentry_sdk.Hub.current
-        scope = getattr(hub, "scope", None)
-        if scope is None:
-            return
-
-        scope.transaction = transaction_name
-        if getattr(scope, "span", None) is not None:
-            scope.span.name = transaction_name
-        scope.set_tag("api.route", self.path)
+        route_path = resolve_route_path_from_request(request, fallback_path=self.path)
+        set_sentry_transaction_name(request.method, route_path)
 
     def get_route_handler(self) -> Callable:
         original_route_handler = super().get_route_handler()

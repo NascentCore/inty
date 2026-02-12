@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -440,6 +441,13 @@ async def monitor_evaluation_session(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     await websocket.accept()
+    websocket_route = "/api/v1/evaluation/sessions/{session_id}/monitor"
+    websocket_transaction = sentry_sdk.start_transaction(
+        op="websocket.server",
+        name=f"WEBSOCKET {websocket_route}",
+    )
+    websocket_transaction.set_tag("api.route", websocket_route)
+    websocket_transaction.set_tag("api.protocol", "websocket")
 
     try:
         evaluation_service = EvaluationService(db)
@@ -473,11 +481,13 @@ async def monitor_evaluation_session(
                 break
 
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         logger.error(f"WebSocket连接错误: {str(e)}")
     finally:
         # 移除连接
         evaluation_service = EvaluationService(db)
         evaluation_service.remove_websocket_connection(session_id, websocket)
+        websocket_transaction.finish()
 
 
 # =============================================================================

@@ -20,7 +20,12 @@ sentry:
 
 ## 代码侧说明（保证 Dashboard 聚合稳定）
 
-项目里很多路由使用了自定义 `route_class=LoggerRoute`。为了避免 Sentry transaction 名称按“内部 handler 函数名”聚合失真，`LoggerRoute` 会把 transaction 名称显式设置为：
+项目里使用了两层命名策略来保证所有 HTTP endpoint 都稳定聚合：
+
+1. `route_class=LoggerRoute`（大部分 `api/v1` 路由）
+2. `app/main.py` 中的全局 HTTP middleware（兜底覆盖未使用 `LoggerRoute` 的路由）
+
+两者都会把 transaction 名称统一设置为：
 
 - `METHOD + 空格 + self.path`
 - 例如：`POST /api/v1/chat`、`GET /api/v1/users/{user_id}`
@@ -30,6 +35,16 @@ sentry:
 - `api.route=<self.path>`
 
 这能让 Sentry Dashboard 用 `transaction` 或 `api.route` 做稳定分组（避免 path 参数导致高基数）。
+
+### WebSocket 端点
+
+对于 WebSocket 端点，代码中使用手动 transaction：
+
+- `op = websocket.server`
+- `name = WEBSOCKET /api/v1/live-chat/{agent_id}`（示例）
+- tag: `api.route`, `api.protocol=websocket`
+
+这样可以在 Sentry Performance 里单独查看 WebSocket 会话耗时与错误。
 
 ## Sentry Dashboard（手动创建步骤）
 
@@ -79,6 +94,13 @@ sentry:
 - **Y-Axis**：`p95(transaction.duration)`
 - **Group by**：`http.status_code` 或 `transaction`
 - **Display**：Bar/Table
+
+### Widget 6：WebSocket 会话延迟（可选）
+
+- **Query**：`event.type:transaction transaction.op:websocket.server`
+- **Y-Axis**：`p95(transaction.duration)`
+- **Display**：Line/Table
+- **Group by**：`transaction` 或 `api.route`
 
 ## 常见排查建议（可选）
 

@@ -10,6 +10,7 @@ import json
 import time
 from typing import Optional
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import schemas
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
+from app.api.utils.logger_route import LoggerRoute
 from app.schemas.live_chat import (
     LiveChatAudioResponseMessage,
     LiveChatErrorMessage,
@@ -31,7 +33,7 @@ from app.schemas.response import BusinessErrorCode
 from app.services.global_services import subscription_service
 from app.services.live_chat_service import live_chat_service
 
-router = APIRouter(prefix="/live-chat")
+router = APIRouter(prefix="/live-chat", route_class=LoggerRoute)
 
 
 @router.get("/status", tags=[INTY_EVAL_TAG])
@@ -197,6 +199,14 @@ async def live_chat_session(
         agent_count=agent_count,
     )
     await websocket.send_json(session_info_msg.model_dump())
+
+    websocket_route = "/api/v1/live-chat/{agent_id}"
+    websocket_transaction = sentry_sdk.start_transaction(
+        op="websocket.server",
+        name=f"WEBSOCKET {websocket_route}",
+    )
+    websocket_transaction.set_tag("api.route", websocket_route)
+    websocket_transaction.set_tag("api.protocol", "websocket")
 
     session = None
     session_start_time = time.time()
@@ -399,6 +409,7 @@ async def live_chat_session(
                 pass
 
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         logger.error(f"Live chat 会话错误: {str(e)}")
         try:
             msg = LiveChatErrorMessage(
@@ -475,3 +486,4 @@ async def live_chat_session(
             f"Live chat 会话结束 - user_id: {current_user.id}, agent_id: {agent_id}, "
             f"duration: {session_duration}s"
         )
+        websocket_transaction.finish()

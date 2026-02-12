@@ -1,5 +1,5 @@
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -14,6 +14,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_db
+from app.api.utils.logger_route import (
+    resolve_route_path_from_request,
+    set_sentry_transaction_name,
+)
 from app.api.v1.router import api_router
 from app.core.agent.agent import agent_manager
 
@@ -54,8 +58,8 @@ def init_sentry():
             environment=global_config_loaded_from_config_yaml.app.environment.value,
             send_default_pii=False,  # 默认不发送个人身份信息
             integrations=[
-                FastApiIntegration(),
-                StarletteIntegration(transaction_style="endpoint"),
+                FastApiIntegration(transaction_style="url"),
+                StarletteIntegration(transaction_style="url"),
                 SqlalchemyIntegration(),
             ],
             # 设置服务名称和版本
@@ -122,6 +126,23 @@ if global_config_loaded_from_config_yaml.app.backend_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+@app.middleware("http")
+async def set_sentry_transaction_name_for_http_routes(request: Request, call_next):
+    """
+    Ensure all HTTP endpoints have route-template transaction names in Sentry.
+    This is a fallback for routes that don't use LoggerRoute.
+    """
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        route_path = resolve_route_path_from_request(
+            request, fallback_path=request.url.path
+        )
+        set_sentry_transaction_name(request.method, route_path)
+
 
 # Register error handlers
 app.add_exception_handler(RequestValidationError, validation_exception_handler)

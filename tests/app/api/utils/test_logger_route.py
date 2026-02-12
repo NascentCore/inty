@@ -5,7 +5,11 @@ import json
 from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
 
-from app.api.utils.logger_route import LoggerRoute
+from app.api.utils.logger_route import (
+    LoggerRoute,
+    build_sentry_transaction_name,
+    resolve_route_path_from_scope,
+)
 from app.schemas.response import APIResponse
 
 
@@ -43,6 +47,41 @@ client = TestClient(app)
 
 class TestLoggerRoute:
     """Test cases for logger_route module using TestClient"""
+
+    def test_build_sentry_transaction_name_uses_uppercase_method(self):
+        transaction_name = build_sentry_transaction_name(
+            method="get",
+            route_path="/api/v1/users/{user_id}",
+        )
+        assert transaction_name == "GET /api/v1/users/{user_id}"
+
+    def test_resolve_route_path_from_scope_prefers_route_path(self):
+        class MockRoute:
+            path = "/api/v1/users/{user_id}"
+
+        route_path = resolve_route_path_from_scope(
+            scope={"route": MockRoute()},
+            fallback_path="/api/v1/users/123",
+        )
+        assert route_path == "/api/v1/users/{user_id}"
+
+    def test_resolve_route_path_from_scope_fallback_to_path_format(self):
+        class MockRoute:
+            path = None
+            path_format = "/api/v1/evaluation/sessions/{session_id}/monitor"
+
+        route_path = resolve_route_path_from_scope(
+            scope={"route": MockRoute()},
+            fallback_path="/api/v1/evaluation/sessions/abc/monitor",
+        )
+        assert route_path == "/api/v1/evaluation/sessions/{session_id}/monitor"
+
+    def test_resolve_route_path_from_scope_returns_fallback_when_missing_route(self):
+        route_path = resolve_route_path_from_scope(
+            scope={},
+            fallback_path="/api/v1/users/123",
+        )
+        assert route_path == "/api/v1/users/123"
 
     def test_read_body_request_json_happy_case(self):
         """Test read_body function with JSON request body using TestClient"""
