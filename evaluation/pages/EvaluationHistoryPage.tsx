@@ -1,5 +1,5 @@
 /**
- * 评测记录页面 - 查看历史评测会话和结果
+ * 智能体评测记录页面 - 查看历史评测会话和结果
  */
 
 import React, { useState, useEffect, useCallback } from "react";
