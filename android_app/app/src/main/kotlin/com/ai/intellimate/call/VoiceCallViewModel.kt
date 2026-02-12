@@ -188,7 +188,11 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             packet.statusEnum?.let { status ->
                                 when (status) {
                                     CallStatus.SPEAKING -> {
-                                        if (resolvedTurnId == null && activeFallbackTurnId.isNullOrBlank()) {
+                                        if (
+                                            resolvedTurnId == null &&
+                                                activeFallbackTurnId.isNullOrBlank() &&
+                                                voiceTurnId.isNullOrBlank()
+                                        ) {
                                             val fallbackTurnId = createFallbackTurnId()
                                             activeFallbackTurnId = fallbackTurnId
                                             updateVoiceTurnId(fallbackTurnId)
@@ -226,7 +230,6 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         CallType.USER_TRANSCRIPT -> {
                             packet.resolveVoiceSessionId()?.let(::updateVoiceSessionId)
                             packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
-                            activeFallbackTurnId = null
                             messageCount++
                         }
 
@@ -331,7 +334,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             return fallbackTurnId
         }
         val currentTurnId = voiceTurnId?.trim().orEmpty()
-        if (currentTurnId.isNotBlank() && currentTurnId.startsWith("local_turn_")) {
+        if (currentTurnId.isNotBlank()) {
             return currentTurnId
         }
         val generatedTurnId = createFallbackTurnId()
