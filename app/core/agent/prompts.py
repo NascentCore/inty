@@ -69,7 +69,7 @@ RP_MODE_PROMPT_1225 = _get_prompt_text("RP_MODE_PROMPT_1225")
 
 @dataclass
 class PromptOption:
-    """Prompt 选项数据类"""
+    """Prompt option data class."""
 
     id: str
     name: str
@@ -80,20 +80,20 @@ class PromptOption:
 AVAILABLE_MAIN_PROMPTS: list[PromptOption] = [
     PromptOption(
         id="roleplay_main",
-        name="角色扮演主提示词",
-        description="标准角色扮演主提示词，用于建立角色扮演对话框架",
+        name="Roleplay Main Prompt",
+        description="Standard roleplay main prompt for establishing the roleplay conversation framework",
         content=ROLEPLAY_MAIN_PROMPT,
     ),
     PromptOption(
         id="purity_main_0725",
-        name="纯净模式主提示词 (0725)",
-        description="纯净模式主提示词，用于建立更安全的对话框架",
+        name="Purity Main Prompt (0725)",
+        description="Purity-mode main prompt for establishing a safer conversation framework",
         content=PURITY_MAIN_PROMPT_0725,
     ),
     PromptOption(
         id="roleplay_main_1225",
-        name="角色扮演主提示词 (1225)",
-        description="角色扮演主提示词（1225版本），强调情感连接和角色代入",
+        name="Roleplay Main Prompt (1225)",
+        description="Roleplay main prompt (1225 version), emphasizing emotional connection and character immersion",
         content=ROLEPLAY_MAIN_PROMPT_1225,
     ),
 ]
@@ -101,32 +101,32 @@ AVAILABLE_MAIN_PROMPTS: list[PromptOption] = [
 AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
     PromptOption(
         id="flirting_mode",
-        name="调情模式",
-        description="调情模式提示词，用于浪漫角色扮演",
+        name="Flirting Mode",
+        description="Flirting-mode prompt for romantic roleplay",
         content=FLIRTING_MODE_PROMPT,
     ),
     PromptOption(
         id="flirting_mode_20250902",
-        name="调情模式 (20250902)",
-        description="调情模式提示词（2025年9月2日版本），用于浪漫角色扮演",
+        name="Flirting Mode (20250902)",
+        description="Flirting-mode prompt (September 2, 2025 version) for romantic roleplay",
         content=FLIRTING_MODE_PROMPT_20250902,
     ),
     PromptOption(
         id="friendly_mode",
-        name="友好模式",
-        description="友好模式提示词，用于友好对话",
+        name="Friendly Mode",
+        description="Friendly-mode prompt for friendly conversation",
         content=FRIENDLY_MODE_PROMPT,
     ),
     PromptOption(
         id="purity_mode_0725",
-        name="纯净模式 (0725)",
-        description="纯净模式提示词（0725版本），用于更安全的对话",
+        name="Purity Mode (0725)",
+        description="Purity-mode prompt (0725 version) for safer conversation",
         content=PURITY_MODE_PROMPT_0725,
     ),
     PromptOption(
         id="rp_mode_1225",
-        name="RP模式 (1225)",
-        description="角色扮演模式提示词（1225版本），强调主动推动剧情和场景变化",
+        name="RP Mode (1225)",
+        description="Roleplay mode prompt (1225 version), emphasizing proactive plot progression and scene changes",
         content=RP_MODE_PROMPT_1225,
     ),
 ]
@@ -136,7 +136,7 @@ DEFAULT_MODE_PROMPT_ID = "purity_mode_0725"
 
 
 def get_main_prompt_by_id(prompt_id: str) -> str:
-    """根据 ID 获取 main prompt 内容"""
+    """Get main prompt content by ID."""
     for prompt in AVAILABLE_MAIN_PROMPTS:
         if prompt.id == prompt_id:
             return prompt.content
@@ -144,7 +144,7 @@ def get_main_prompt_by_id(prompt_id: str) -> str:
 
 
 def get_mode_prompt_by_id(prompt_id: str) -> str:
-    """根据 ID 获取 mode prompt 内容"""
+    """Get mode prompt content by ID."""
     for prompt in AVAILABLE_MODE_PROMPTS:
         if prompt.id == prompt_id:
             return prompt.content

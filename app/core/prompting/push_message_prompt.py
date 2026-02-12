@@ -1,7 +1,8 @@
 """
-主动推送消息的提示词模板
+Prompt templates for proactive push messages.
 
-用于生成 Agent 主动发送给用户的消息，参考 Dify chatflow 中的提示词结构。
+Used to generate proactive agent messages sent to users, inspired by the
+prompt structure in Dify chatflow.
 """
 
 
@@ -13,17 +14,18 @@ def build_push_message_prompt(
     time_since_last_message: str = "",
 ) -> str:
     """
-    构建主动推送消息的提示词
+    Build a proactive push-message prompt.
 
     Args:
-        agent_name: 角色名称
-        agent_bio: 角色简介/人设
-        user_name: 用户名称
-        chat_history_summary: 聊天历史摘要（可选）
-        time_since_last_message: 距离最后一条消息的时间（如"10分钟"、"30分钟"、"2小时"）
+        agent_name: Character name.
+        agent_bio: Character bio/persona.
+        user_name: User name.
+        chat_history_summary: Summary of chat history (optional).
+        time_since_last_message: Time since the last message (for example:
+            "10 minutes", "30 minutes", "2 hours").
 
     Returns:
-        构建好的提示词字符串
+        The assembled prompt string.
     """
     # Basic prompt structure, referencing the format: article | @character_bio.text | @input | @test.me... @text
     prompt_parts = []
@@ -62,16 +64,17 @@ def build_simple_push_message_prompt(
     previous_push_messages: list = None,
 ) -> str:
     """
-    构建简化的主动推送消息提示词（用于快速生成）
+    Build a simplified proactive push-message prompt (for quick generation).
 
     Args:
-        agent_name: 角色名称
-        user_name: 用户名称
-        time_since_last_message: 距离最后一条消息的时间
-        previous_push_messages: 之前推送的消息内容列表（用于避免重复）
+        agent_name: Character name.
+        user_name: User name.
+        time_since_last_message: Time since the last message.
+        previous_push_messages: List of previously sent push messages
+            (used to avoid repetition).
 
     Returns:
-        构建好的提示词字符串
+        The assembled prompt string.
     """
     if previous_push_messages is None:
         previous_push_messages = []
@@ -91,13 +94,13 @@ def build_simple_push_message_prompt(
         f"{', considering that some time has passed since the last chat' if time_context else ''}."
     ]
 
-    # 如果有之前的推送消息，在提示词中包含它们并要求避免重复
+    # If previous push messages exist, include them and ask for non-repetition.
     if previous_push_messages:
         prompt_parts.append(
             "\nIMPORTANT: You have already sent the following push messages to this user (they have not responded yet):"
         )
         for i, msg in enumerate(previous_push_messages, 1):
-            # 截取消息内容的前100个字符，避免提示词过长
+            # Truncate to first 100 characters to keep the prompt concise.
             msg_preview = msg[:100] + "..." if len(msg) > 100 else msg
             prompt_parts.append(f"{i}. {msg_preview}")
         prompt_parts.append(
@@ -115,14 +118,14 @@ def build_welcome_message_prompt(
     user_name: str,
 ) -> str:
     """
-    构建欢迎消息提示词（用于无聊天用户的首次推送）
+    Build a welcome-message prompt for first-time users with no chat history.
 
     Args:
-        agent_name: 角色名称
-        user_name: 用户名称
+        agent_name: Character name.
+        user_name: User name.
 
     Returns:
-        构建好的提示词字符串
+        The assembled prompt string.
     """
     return (
         f"You are {agent_name}. Send a welcome message to {user_name}, "
