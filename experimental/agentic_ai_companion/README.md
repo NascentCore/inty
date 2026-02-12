@@ -48,6 +48,10 @@ python -m experimental.agentic_ai_companion.main
 
 这样方便 AI 自由决策
 
+## 第一迭代计划（仅更新计划，不写代码）
+
+目标：在终端原型中验证“多代工具”对 LLM 调用的影响，确保低成本工具优先、必要时再升级到高代工具。
+
 **generate_image 设计意图**：`generate_image` 为 non-TERMINAL 工具。执行后不会立即返回用户，而是再调用 LLM 根据生成的图片输出一段文字（如对图片的解读或情感表达），以配合图片给出更自然的回复。
 
 ## 参考资料
