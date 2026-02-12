@@ -61,6 +61,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     private var voiceTurnId: String? = null
     private var activeFallbackTurnId: String? = null
     private var fallbackTurnCounter = 0
+    private var lastStatusForTurnStatsLog: CallStatus? = null
     private val recordingCollector = VoiceCallRecordingCollector(Utils.getApp().filesDir)
     private val turnRecordingCollector = VoiceCallTurnRecordingCollector(Utils.getApp().filesDir)
     private var finalCallResult: VoiceCallResult? = null
@@ -116,6 +117,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         activeFallbackTurnId = null
         fallbackTurnCounter = 0
         voiceTurnId = null
+        lastStatusForTurnStatsLog = null
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAgentInfo(agentId).collect { result ->
                 result.getOrNull()?.let { agent -> _uiState.update { it.copy(agent = agent) } }
@@ -147,8 +149,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             try {
                                 val audioData = Base64.decode(packet.data, Base64.NO_WRAP)
                                 recordingCollector.appendPcmData(audioData)
-                                resolveTurnIdForIncomingAudio(packet)?.let {
-                                    turnRecordingCollector.appendPcmData(it, audioData)
+                                val resolvedTurnId = resolveTurnIdForIncomingAudio(packet)
+                                if (resolvedTurnId != null) {
+                                    turnRecordingCollector.appendPcmData(resolvedTurnId, audioData)
+                                } else {
+                                    LogUtils.w(
+                                        "voice_turn_unresolved_on_audio: bytes=${audioData.size}, sessionId=$voiceSessionId"
+                                    )
                                 }
                                 _audioResponseChannel.send(audioData)
                             } catch (e: Exception) {
@@ -161,6 +168,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             activeFallbackTurnId = null
                             voiceTurnId = null
+                            lastStatusForTurnStatsLog = null
+                            logTurnCollectorSnapshot("voice_turn_on_end")
                             stopCalling()
                         }
 
@@ -169,6 +178,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             packet.resolveVoiceTurnId()?.let(::updateVoiceTurnId)
                             activeFallbackTurnId = null
                             voiceTurnId = null
+                            lastStatusForTurnStatsLog = null
+                            logTurnCollectorSnapshot("voice_turn_on_error")
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
                             _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
@@ -186,6 +197,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                                 updateVoiceTurnId(resolvedTurnId)
                             }
                             packet.statusEnum?.let { status ->
+                                if (lastStatusForTurnStatsLog != status) {
+                                    LogUtils.d(
+                                        "voice_turn_status_transition: from=${lastStatusForTurnStatsLog?.name}, to=${status.name}, voiceTurnId=${voiceTurnId.orEmpty()}, fallbackTurn=${activeFallbackTurnId.orEmpty()}"
+                                    )
+                                    logTurnCollectorSnapshot("voice_turn_status_${status.name.lowercase()}")
+                                    lastStatusForTurnStatsLog = status
+                                }
                                 when (status) {
                                     CallStatus.SPEAKING -> {
                                         if (
@@ -196,12 +214,20 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                                             val fallbackTurnId = createFallbackTurnId()
                                             activeFallbackTurnId = fallbackTurnId
                                             updateVoiceTurnId(fallbackTurnId)
+                                            LogUtils.d(
+                                                "voice_turn_fallback_created: turnId=$fallbackTurnId, sessionId=$voiceSessionId"
+                                            )
                                         }
                                     }
 
                                     CallStatus.LISTENING,
                                     CallStatus.DISCONNECTED,
                                     CallStatus.ERROR -> {
+                                        if (!voiceTurnId.isNullOrBlank() || !activeFallbackTurnId.isNullOrBlank()) {
+                                            LogUtils.d(
+                                                "voice_turn_closed_on_status: status=${status.name}, closingTurn=${voiceTurnId.orEmpty()}, fallback=${activeFallbackTurnId.orEmpty()}"
+                                            )
+                                        }
                                         activeFallbackTurnId = null
                                         voiceTurnId = null
                                     }
@@ -285,6 +311,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     fun finishCall(): VoiceCallResult {
         finalCallResult?.let { return it }
         val resolvedSessionId = voiceSessionId.ifBlank { fallbackVoiceSessionId }
+        logTurnCollectorSnapshot("voice_turn_before_finalize")
         val recordingOutput = recordingCollector.finalizeAndExport(resolvedSessionId)
         val turnRecordingOutputs = turnRecordingCollector.finalizeAllAndExport(resolvedSessionId)
         stopCalling()
@@ -307,7 +334,12 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                 recordingDurationMs = recordingOutput?.durationMs ?: 0L,
                 turnRecordingsJson = turnRecordingsJson,
             )
-            .also { finalCallResult = it }
+            .also {
+                finalCallResult = it
+                LogUtils.d(
+                    "voice_turn_finish_summary: sessionId=$resolvedSessionId, messageCount=$messageCount, exportedTurns=${turnRecordingOutputs.size}, exportedTurnIds=${turnRecordingOutputs.joinToString(",") { output -> output.voiceTurnId }}"
+                )
+            }
     }
 
     private fun updateVoiceSessionId(candidate: String) {
@@ -346,6 +378,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     private fun createFallbackTurnId(): String {
         fallbackTurnCounter += 1
         return "local_turn_${fallbackTurnCounter}_${System.nanoTime()}"
+    }
+
+    private fun logTurnCollectorSnapshot(prefix: String) {
+        val stats = turnRecordingCollector.snapshotStats()
+        LogUtils.d(
+            "$prefix: turns=${stats.turnCount}, chunks=${stats.totalChunkCount}, bytes=${stats.totalBytes}, details=${stats.turns.joinToString(";") { stat -> "${stat.turnId}[chunks=${stat.chunkCount},bytes=${stat.totalBytes}]" }}"
+        )
     }
 
     fun setMuted(isMuted: Boolean) {

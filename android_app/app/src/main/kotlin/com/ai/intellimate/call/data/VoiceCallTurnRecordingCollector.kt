@@ -14,6 +14,21 @@ data class VoiceCallTurnRecordingOutput(
     val durationMs: Long,
 )
 
+/** turn 录音统计（用于调试日志） */
+data class VoiceCallTurnBufferStat(
+    val turnId: String,
+    val chunkCount: Int,
+    val totalBytes: Long,
+)
+
+/** 录音收集器统计快照（用于调试日志） */
+data class VoiceCallTurnCollectorStats(
+    val turnCount: Int,
+    val totalChunkCount: Int,
+    val totalBytes: Long,
+    val turns: List<VoiceCallTurnBufferStat>,
+)
+
 /**
  * 语音通话“按轮次”录音收集器。
  *
@@ -32,6 +47,7 @@ class VoiceCallTurnRecordingCollector(
         val tempPcmFile: File,
         var outputStream: BufferedOutputStream?,
         var totalBytesWritten: Long = 0L,
+        var chunkCount: Int = 0,
     )
 
     private val lock = Any()
@@ -54,10 +70,16 @@ class VoiceCallTurnRecordingCollector(
             runCatching {
                     stream.write(audioBytes)
                     buffer.totalBytesWritten += audioBytes.size.toLong()
+                    buffer.chunkCount += 1
                 }
                 .onFailure {
                     LogUtils.e("写入 turn 录音失败: turnId=$normalizedTurnId, error=${it.message}")
                 }
+            if (buffer.chunkCount == 1 || buffer.chunkCount % 25 == 0) {
+                LogUtils.d(
+                    "voice_turn_chunk_stats: turnId=${buffer.turnId}, chunks=${buffer.chunkCount}, bytes=${buffer.totalBytesWritten}"
+                )
+            }
         }
     }
 
@@ -71,6 +93,10 @@ class VoiceCallTurnRecordingCollector(
             if (isFinalized) return finalizedOutputs.orEmpty()
             isFinalized = true
             val safeSessionId = sanitizeId(sessionId.ifBlank { "unknown_session" })
+            val preFinalizeStats = snapshotStatsUnsafe()
+            LogUtils.d(
+                "voice_turn_finalize_begin: sessionId=$sessionId, turns=${preFinalizeStats.turnCount}, chunks=${preFinalizeStats.totalChunkCount}, bytes=${preFinalizeStats.totalBytes}, details=${formatStatsDetails(preFinalizeStats.turns)}"
+            )
 
             val outputs = buildList {
                 turnBuffers.values.forEach { buffer ->
@@ -140,8 +166,16 @@ class VoiceCallTurnRecordingCollector(
             }
             turnBuffers.clear()
             finalizedOutputs = outputs
+            LogUtils.d(
+                "voice_turn_finalize_end: sessionId=$sessionId, exportedTurns=${outputs.size}, exportedDurationMs=${outputs.sumOf { it.durationMs }}, exportedIds=${outputs.joinToString(",") { it.voiceTurnId }}"
+            )
             return outputs
         }
+    }
+
+    /** 获取当前统计快照（线程安全）。 */
+    fun snapshotStats(): VoiceCallTurnCollectorStats {
+        synchronized(lock) { return snapshotStatsUnsafe() }
     }
 
     /** 放弃录音并清理临时文件。 */
@@ -171,14 +205,39 @@ class VoiceCallTurnRecordingCollector(
                 }
                 .getOrNull()
                 ?: return null
-        return TurnBuffer(turnId = turnId, tempPcmFile = tempFile, outputStream = stream).also {
-            turnBuffers[turnId] = it
-        }
+        return TurnBuffer(turnId = turnId, tempPcmFile = tempFile, outputStream = stream)
+            .also {
+                turnBuffers[turnId] = it
+                LogUtils.d("voice_turn_opened: turnId=$turnId, totalTurns=${turnBuffers.size}")
+            }
     }
 
     private fun sanitizeId(raw: String): String {
         val normalized = raw.trim().ifBlank { "unknown" }
         return normalized.replace(Regex("[^A-Za-z0-9._-]"), "_")
+    }
+
+    private fun snapshotStatsUnsafe(): VoiceCallTurnCollectorStats {
+        val turnStats =
+            turnBuffers.values.map { buffer ->
+                VoiceCallTurnBufferStat(
+                    turnId = buffer.turnId,
+                    chunkCount = buffer.chunkCount,
+                    totalBytes = buffer.totalBytesWritten,
+                )
+            }
+        return VoiceCallTurnCollectorStats(
+            turnCount = turnStats.size,
+            totalChunkCount = turnStats.sumOf { it.chunkCount },
+            totalBytes = turnStats.sumOf { it.totalBytes },
+            turns = turnStats,
+        )
+    }
+
+    private fun formatStatsDetails(stats: List<VoiceCallTurnBufferStat>): String {
+        return stats.joinToString(";") { stat ->
+            "${stat.turnId}[chunks=${stat.chunkCount},bytes=${stat.totalBytes}]"
+        }
     }
 }
 
