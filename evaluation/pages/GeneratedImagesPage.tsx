@@ -5,7 +5,7 @@
  * 用于查看每个角色所有聊天生成的图片
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   Row,
@@ -30,19 +30,15 @@ import {
 import {
   PictureOutlined,
   ReloadOutlined,
-  SearchOutlined,
   UserOutlined,
   ClockCircleOutlined,
   ExpandOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import { agentApi, generatedImagesApi } from "../services/api";
+import { generatedImagesApi } from "../services/api";
+import { loadSelfAgentList } from "../services/agentListService";
 import type { Agent, GeneratedImage } from "../types";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
-import {
-  AGENT_LIST_PAGE_SIZE,
-  fetchAllAgentsWithPagination,
-} from "../utils/agentPagination";
 
 const { Text, Paragraph, Title } = Typography;
 const { Search } = Input;
@@ -57,29 +53,43 @@ const GeneratedImagesPage: React.FC = () => {
   const [loadingImages, setLoadingImages] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  const loadAgentsRequestIdRef = useRef(0);
 
   // 加载角色列表和图片数量
   const loadAgents = useCallback(async () => {
+    const requestId = ++loadAgentsRequestIdRef.current;
+    const isCurrentRequest = () => loadAgentsRequestIdRef.current === requestId;
+
     setLoadingAgents(true);
     try {
       const [agentsData, countsData] = await Promise.all([
-        fetchAllAgentsWithPagination({
-          pageSize: AGENT_LIST_PAGE_SIZE,
-          fetchPage: ({ skip, limit }) => agentApi.list({ skip, limit }),
+        loadSelfAgentList({
+          shouldContinue: isCurrentRequest,
           onBatchLoaded: (accumulatedAgents) => {
-            setAgents(accumulatedAgents);
+            if (isCurrentRequest()) {
+              setAgents(accumulatedAgents);
+            }
           },
         }),
         generatedImagesApi.getImageCounts(),
       ]);
 
+      if (!isCurrentRequest()) {
+        return;
+      }
+
       setAgents(agentsData);
       setImageCounts(countsData.counts);
     } catch (error) {
+      if (!isCurrentRequest()) {
+        return;
+      }
       message.error("加载角色列表失败");
       console.error("加载角色列表失败:", error);
     } finally {
-      setLoadingAgents(false);
+      if (isCurrentRequest()) {
+        setLoadingAgents(false);
+      }
     }
   }, []);
 
@@ -104,6 +114,12 @@ const GeneratedImagesPage: React.FC = () => {
   useEffect(() => {
     loadAgents();
   }, [loadAgents]);
+
+  useEffect(() => {
+    return () => {
+      loadAgentsRequestIdRef.current += 1;
+    };
+  }, []);
 
   // 选择角色时加载图片
   useEffect(() => {

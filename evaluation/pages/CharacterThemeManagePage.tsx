@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   Button,
@@ -27,18 +27,15 @@ import {
   CloseOutlined,
   DragOutlined,
 } from "@ant-design/icons";
-import { characterThemeApi, agentApi, logError } from "../services/api";
+import { characterThemeApi, logError } from "../services/api";
 import { useApiKeyContext } from "../hooks/useApiKey";
+import { loadSelfAgentList } from "../services/agentListService";
 import type {
   CharacterTheme,
   CharacterThemeCreateRequest,
   CharacterThemeUpdateRequest,
   Agent,
 } from "../types";
-import {
-  AGENT_LIST_PAGE_SIZE,
-  fetchAllAgentsWithPagination,
-} from "../utils/agentPagination";
 import {
   DndContext,
   closestCenter,
@@ -158,6 +155,7 @@ export const CharacterThemeManagePage: React.FC = () => {
   const [availableAgents, setAvailableAgents] = useState<Agent[]>([]);
   const [addAgentModalVisible, setAddAgentModalVisible] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+  const loadAvailableAgentsRequestIdRef = useRef(0);
 
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
@@ -184,18 +182,30 @@ export const CharacterThemeManagePage: React.FC = () => {
   }, []);
 
   const loadAvailableAgents = useCallback(async () => {
+    const requestId = ++loadAvailableAgentsRequestIdRef.current;
+    const isCurrentRequest = () =>
+      loadAvailableAgentsRequestIdRef.current === requestId;
+
     try {
-      const data = await fetchAllAgentsWithPagination({
-        pageSize: AGENT_LIST_PAGE_SIZE,
-        fetchPage: ({ skip, limit }) =>
-          agentApi.list({ type: "public", skip, limit }),
+      const data = await loadSelfAgentList({
+        type: "public",
+        shouldContinue: isCurrentRequest,
         onBatchLoaded: (accumulatedAgents) => {
-          setAvailableAgents(accumulatedAgents);
+          if (isCurrentRequest()) {
+            setAvailableAgents(accumulatedAgents);
+          }
         },
       });
+
+      if (!isCurrentRequest()) {
+        return;
+      }
+
       setAvailableAgents(data);
     } catch (error) {
-      logError("加载角色列表失败");
+      if (isCurrentRequest()) {
+        logError("加载角色列表失败");
+      }
     }
   }, []);
 
@@ -206,6 +216,12 @@ export const CharacterThemeManagePage: React.FC = () => {
       loadAvailableAgents();
     }
   }, [loadThemes, loadAvailableAgents, isApiKeyValid, isApiKeyLoading]);
+
+  useEffect(() => {
+    return () => {
+      loadAvailableAgentsRequestIdRef.current += 1;
+    };
+  }, []);
 
   const handleCreate = async (values: CharacterThemeCreateRequest) => {
     try {
@@ -578,7 +594,7 @@ export const CharacterThemeManagePage: React.FC = () => {
                 >
                   <List
                     dataSource={currentTheme.agents}
-                    renderItem={(item, index) => {
+                    renderItem={(item, _index) => {
                       const agent =
                         item.agent ||
                         availableAgents.find((a) => a.id === item.agent_id);

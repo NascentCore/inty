@@ -9,9 +9,9 @@ import api from "../services/api";
 import type { Agent, AgentCreateRequest, AgentUpdateRequest } from "../types";
 import type { AgentVisibility } from "../inty_sdk/src/resources/api/v1/ai/agents";
 import {
-  AGENT_LIST_PAGE_SIZE,
-  fetchAllAgentsWithPagination,
-} from "../utils/agentPagination";
+  filterAgentsByType,
+  loadAdminAgentList,
+} from "../services/agentListService";
 
 interface UseAgentsOptions {
   type?: "public" | "private" | "all";
@@ -46,27 +46,6 @@ interface UseAgentsReturn {
 
 const isFile = (value: unknown): value is File => {
   return value instanceof File;
-};
-
-const filterAgentsByType = (
-  data: Agent[],
-  type: UseAgentsOptions["type"] = "all",
-): Agent[] => {
-  if (type === "all") {
-    return data;
-  }
-
-  return data.filter((agent) => {
-    if (type === "public") {
-      return agent.visibility === "PUBLIC";
-    }
-
-    if (type === "private") {
-      return agent.visibility === "PRIVATE";
-    }
-
-    return true;
-  });
 };
 
 export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
@@ -157,9 +136,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         let hasLoadedFirstBatch = false;
 
         // 评测后台需要看到全量角色（包含非管理员创建的角色），使用管理员专用列表接口
-        const allAgents = await fetchAllAgentsWithPagination({
-          pageSize: AGENT_LIST_PAGE_SIZE,
-          fetchPage: ({ skip, limit }) => api.agents.listAll({ skip, limit }),
+        const allAgents = await loadAdminAgentList({
           shouldContinue: isCurrentRequest,
           onBatchLoaded: (accumulatedAgents) => {
             if (!isCurrentRequest()) {
