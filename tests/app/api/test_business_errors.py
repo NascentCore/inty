@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import json
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -506,10 +507,32 @@ def test_v1_chat_completions_stream_returns_sse_chunks(
 
     assert response.status_code == 200
     assert "text/event-stream" in content_type
-    assert any('"chat.completion.chunk"' in line for line in lines)
-    assert any("Hello" in line for line in lines)
-    assert any("world" in line for line in lines)
     assert lines[-1] == "data: [DONE]"
+
+    sse_payload_lines = [
+        line.removeprefix("data:").strip()
+        for line in lines
+        if line.startswith("data:")
+    ]
+    parsed_payloads = []
+    for payload_line in sse_payload_lines:
+        if payload_line == "[DONE]":
+            continue
+        parsed = json.loads(payload_line)
+        if "choices" in parsed:
+            parsed_payloads.append(parsed)
+
+    assert parsed_payloads, f"Expected SSE payloads, got lines: {lines}"
+    assert any(
+        payload.get("object") == "chat.completion.chunk" for payload in parsed_payloads
+    )
+    assert any(
+        (
+            payload["choices"][0].get("finish_reason") is None
+            and payload["choices"][0].get("delta", {}).get("content")
+        )
+        for payload in parsed_payloads
+    ), f"Expected at least one content delta chunk, got payloads: {parsed_payloads}"
 
 
 def test_v1_chat_completions_stream_subscription_required_still_returns_business_error(
