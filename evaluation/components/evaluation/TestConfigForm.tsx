@@ -41,7 +41,7 @@ interface FormValues {
   scoring_model: string;
   scoring_criteria: string;
   use_new_user_identity: boolean;
-  config: EvaluationConfig | Record<string, never>;
+  config: Partial<EvaluationConfig>;
 }
 
 const defaultScoringCriteria = `请基于智能体的角色设定对其表现进行综合评分(1-10分):
