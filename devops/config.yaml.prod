@@ -41,12 +41,8 @@ database:
   pool_pre_ping: true
   connect_timeout: 5
   command_timeout: 30
-  # 这是 prod 环境只读副本的公开 IP，注意只能用于信息查询，不能写入修改。
-  replica_host: "34.87.163.31"
+  replica_host: "10.41.177.17"
   replica_port: 5432
-  # 用户名密码保持一致，方便管理
-  replica_user: "postgres"
-  replica_password: "sxwl666A!"
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
