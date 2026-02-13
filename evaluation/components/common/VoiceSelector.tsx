@@ -173,6 +173,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   // 初始加载
   useEffect(() => {
     loadVoices(false, searchText, sourceFilter, providerFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 只在组件挂载时加载一次
 
   // 当 value 变化时，立即显示基本信息并异步加载详细信息

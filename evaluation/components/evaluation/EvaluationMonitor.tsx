@@ -106,6 +106,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       setError(hookError);
     }
   }, [
+    propSession,
     propSession?.id,
     propSession?.status,
     hookResults,

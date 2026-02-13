@@ -142,6 +142,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
     }
 
     loadScoringModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 保持空依赖数组，只在组件挂载时运行一次
 
   // 通知父组件表单值变化

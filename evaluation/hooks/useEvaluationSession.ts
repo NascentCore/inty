@@ -60,6 +60,7 @@ export const useEvaluationSession = (
       }
       disconnectWebSocket();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 错误处理
@@ -244,6 +245,7 @@ export const useEvaluationSession = (
         setIsWebSocketConnected(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [refreshSession, refreshResults],
   );
 
