@@ -56,6 +56,7 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
 
 # Keep the legacy connection function for PostgresChatMessageHistory compatibility
 _connection = None
+_replica_connection = None
 
 
 def get_chat_history_connection():
@@ -73,6 +74,41 @@ def get_chat_history_connection():
             logger.error(f"建立chat_history数据库连接失败: {str(e)}")
             raise
     return _connection
+
+
+def _sync_url_from_async_replica(async_replica_url: Optional[str]) -> Optional[str]:
+    """从 async_replica_url（postgresql+asyncpg://...）得到同步驱动用 URL（postgresql://...）。"""
+    if not async_replica_url:
+        return None
+    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+
+def get_chat_history_replica_connection():
+    """
+    只读副本连接，用于 chat_history/chats 的只读查询（如按日期查会话对与消息）。
+    当 config.database.async_replica_url 未配置时返回 None。
+    """
+    global _replica_connection
+    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    sync_url = _sync_url_from_async_replica(async_replica_url)
+    if not sync_url:
+        return None
+    if _replica_connection is None or _replica_connection.closed:
+        try:
+            import psycopg
+
+            # 5 秒连接超时，避免副本不可达时长时间阻塞（如从本机连生产副本）
+            conninfo = (
+                f"{sync_url}?connect_timeout=5"
+                if "?" not in sync_url
+                else f"{sync_url}&connect_timeout=5"
+            )
+            _replica_connection = psycopg.connect(conninfo, autocommit=True)
+            logger.info("chat_history 副本数据库连接已建立")
+        except Exception as e:
+            logger.error("建立 chat_history 副本连接失败: %s", e)
+            raise
+    return _replica_connection
 
 
 # chat_history表现在由Alembic迁移管理，不需要手动初始化

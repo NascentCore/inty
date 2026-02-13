@@ -456,9 +456,11 @@ class PushSchedulerService:
                     getattr(config, "min_rounds_in_window", None)
                     or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
                 )
+                db_url = global_config_loaded_from_config_yaml.database.url
                 pairs = await asyncio.to_thread(
                     festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
                     config.festival_date,
+                    db_url,
                     min_rounds,
                     tz_str,
                 )

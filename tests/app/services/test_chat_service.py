@@ -44,18 +44,26 @@ async def db_session():
     await engine.dispose()
 
 
+def _make_mock_subscription_svc():
+    """构造用于 generate_chat_image 的 mock SubscriptionService（避免导入 global_services）。"""
+    mock_svc = AsyncMock()
+    mock_svc.check_image_gen_limit.return_value = (True, 2, 10)
+    mock_svc.get_user_subscription_status.return_value = SubscriptionStatusResponse(
+        is_subscribed=False,
+        subscription_status="free",
+    )
+    mock_svc.record_usage.return_value = None
+    return mock_svc
+
+
 class TestChatService:
     """测试聊天服务"""
 
     @pytest.mark.asyncio
-    @patch("app.services.chat_service.subscription_service.record_usage")
     @patch("app.services.image_generation_service.image_generation_service.generate_chat_image_with_gemini")
-    @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
     async def test_generate_chat_image_success(
         self,
-        mock_check_limit: AsyncMock,
         mock_generate_image: AsyncMock,
-        mock_record_usage: AsyncMock,
         db_session: AsyncSession,
     ):
         """测试生成聊天图片成功流程 - 使用真实数据库"""
@@ -128,8 +136,7 @@ class TestChatService:
         await db_session.refresh(ai_message)
         message_id = ai_message.id
 
-        # Mock 限额检查 - 允许生成
-        mock_check_limit.return_value = (True, 2, 10)  # (is_allowed, used_count, daily_limit)
+        mock_subscription_svc = _make_mock_subscription_svc()
 
         # Mock 图片生成结果（model/generation_time_ms/model_fallback_due_to_429 由 generate_chat_image 成功路径写入）
         mock_image_result = {
@@ -144,15 +151,13 @@ class TestChatService:
         }
         mock_generate_image.return_value = mock_image_result
 
-        # Mock 用量记录
-        mock_record_usage.return_value = None
-
         # 执行测试
         result = await chat_service.generate_chat_image(
             db=db_session,
             agent_id=agent_id,
             user_id=user_id,
             message_id=message_id,
+            subscription_service=mock_subscription_svc,
             history_count=history_count,
         )
 
@@ -173,8 +178,8 @@ class TestChatService:
 
         # 验证调用
         # 验证限额检查
-        mock_check_limit.assert_called_once()
-        check_limit_call_args = mock_check_limit.call_args
+        mock_subscription_svc.check_image_gen_limit.assert_called_once()
+        check_limit_call_args = mock_subscription_svc.check_image_gen_limit.call_args
         assert check_limit_call_args[0][0] == db_session
         called_user = check_limit_call_args[0][1]
         assert called_user.id == user_id
@@ -190,8 +195,8 @@ class TestChatService:
         assert generate_call_args[1]["history_count"] == history_count
 
         # 验证用量记录
-        mock_record_usage.assert_called_once()
-        record_call_args = mock_record_usage.call_args
+        mock_subscription_svc.record_usage.assert_called_once()
+        record_call_args = mock_subscription_svc.record_usage.call_args
         assert record_call_args[0][0] == db_session
         assert record_call_args[0][1] == user_id
         assert record_call_args[0][2] == "image_generation"
@@ -208,10 +213,8 @@ class TestChatService:
         await db_session.commit()
 
     @pytest.mark.asyncio
-    @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
     async def test_generate_chat_image_business_limit_guest(
         self,
-        mock_check_limit: AsyncMock,
         db_session: AsyncSession,
     ):
         """测试生成聊天图片 - Guest 用户业务限制错误"""
@@ -258,8 +261,8 @@ class TestChatService:
         )
         await db_session.refresh(chat)
 
-        # Mock 限额检查 - 不允许生成（Guest 用户）
-        mock_check_limit.return_value = (
+        mock_subscription_svc = AsyncMock()
+        mock_subscription_svc.check_image_gen_limit.return_value = (
             False,
             0,
             0,
@@ -271,6 +274,7 @@ class TestChatService:
             agent_id=agent_id,
             user_id=user_id,
             message_id=123,  # 这个 ID 不会被用到，因为会在限额检查时返回
+            subscription_service=mock_subscription_svc,
             history_count=None,
         )
 
@@ -284,7 +288,7 @@ class TestChatService:
         assert result.daily_limit == 0
 
         # 验证限额检查被调用
-        mock_check_limit.assert_called_once()
+        mock_subscription_svc.check_image_gen_limit.assert_called_once()
 
         # 清理测试数据
         await db_session.delete(chat)
@@ -293,10 +297,8 @@ class TestChatService:
         await db_session.commit()
 
     @pytest.mark.asyncio
-    @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
     async def test_generate_chat_image_business_limit_subscription(
         self,
-        mock_check_limit: AsyncMock,
         db_session: AsyncSession,
     ):
         """测试生成聊天图片 - 非 Guest 用户业务限制错误（订阅限制）"""
@@ -343,12 +345,15 @@ class TestChatService:
         )
         await db_session.refresh(chat)
 
-        # Mock 限额检查 - 不允许生成（达到限额）
-        mock_check_limit.return_value = (
+        mock_subscription_svc = AsyncMock()
+        mock_subscription_svc.check_image_gen_limit.return_value = (
             False,
             10,
             10,
         )  # (is_allowed, used_count, daily_limit)
+        mock_subscription_svc.get_user_subscription_status.return_value = (
+            SubscriptionStatusResponse(is_subscribed=False, subscription_status="free")
+        )
 
         # 执行测试
         result = await chat_service.generate_chat_image(
@@ -356,6 +361,7 @@ class TestChatService:
             agent_id=agent_id,
             user_id=user_id,
             message_id=123,  # 这个 ID 不会被用到，因为会在限额检查时返回
+            subscription_service=mock_subscription_svc,
             history_count=None,
         )
 
@@ -371,7 +377,7 @@ class TestChatService:
         assert result.daily_limit == 10
 
         # 验证限额检查被调用
-        mock_check_limit.assert_called_once()
+        mock_subscription_svc.check_image_gen_limit.assert_called_once()
 
         # 清理测试数据
         await db_session.delete(chat)
@@ -381,20 +387,12 @@ class TestChatService:
 
     @pytest.mark.asyncio
     @patch("app.services.chat_service.chat_history_service.update_message_metadata")
-    @patch("app.services.chat_service.subscription_service.record_usage")
     @patch(
         "app.services.image_generation_service.image_generation_service.generate_chat_image_with_gemini"
     )
-    @patch("app.services.chat_service.subscription_service.check_image_gen_limit")
-    @patch(
-        "app.services.chat_service.subscription_service.get_user_subscription_status"
-    )
     async def test_generate_chat_image_429_fallback_success(
         self,
-        mock_get_subscription: AsyncMock,
-        mock_check_limit: AsyncMock,
         mock_generate_image: AsyncMock,
-        mock_record_usage: AsyncMock,
         mock_update_metadata: AsyncMock,
         db_session: AsyncSession,
     ):
@@ -458,11 +456,15 @@ class TestChatService:
         await db_session.refresh(ai_message)
         message_id = ai_message.id
 
-        mock_get_subscription.return_value = SubscriptionStatusResponse(
-            is_subscribed=True,
-            subscription_status="subscribed",
+        mock_subscription_svc = AsyncMock()
+        mock_subscription_svc.get_user_subscription_status.return_value = (
+            SubscriptionStatusResponse(
+                is_subscribed=True,
+                subscription_status="subscribed",
+            )
         )
-        mock_check_limit.return_value = (True, 2, 10)
+        mock_subscription_svc.check_image_gen_limit.return_value = (True, 2, 10)
+        mock_subscription_svc.record_usage.return_value = None
 
         class Err429(Exception):
             status_code = 429
@@ -474,7 +476,6 @@ class TestChatService:
             "prompt": "构建的提示词",
         }
         mock_generate_image.side_effect = [Err429("429 RESOURCE_EXHAUSTED"), mock_image_result]
-        mock_record_usage.return_value = None
         mock_update_metadata.return_value = None
 
         result = await chat_service.generate_chat_image(
@@ -482,6 +483,7 @@ class TestChatService:
             agent_id=agent_id,
             user_id=user_id,
             message_id=message_id,
+            subscription_service=mock_subscription_svc,
             history_count=history_count,
         )
 
@@ -493,7 +495,7 @@ class TestChatService:
         )
         assert mock_generate_image.call_args_list[1][1]["model"] == fallback_model
 
-        record_kw = mock_record_usage.call_args[1]
+        record_kw = mock_subscription_svc.record_usage.call_args[1]
         assert record_kw["extra_data"]["model"] == fallback_model
         assert record_kw["extra_data"]["model_fallback_due_to_429"] is True
 

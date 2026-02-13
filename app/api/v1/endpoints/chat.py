@@ -401,6 +401,7 @@ async def generate_chat_image(
             agent_id=agent_id,
             user_id=current_user.id,
             message_id=request.message_id,
+            subscription_service=subscription_service,
             history_count=request.history_count,
             model=request.model,
         )
