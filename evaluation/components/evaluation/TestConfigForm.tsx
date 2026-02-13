@@ -148,7 +148,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
 
   // 通知父组件表单值变化
   useEffect(() => {
-    onValuesChange?.(form.values);
+    onValuesChange?.(form.values as Partial<EvaluationSessionCreateRequest>);
   }, [form.values, onValuesChange]);
 
   // 通知父组件验证状态变化

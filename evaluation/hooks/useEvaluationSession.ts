@@ -195,17 +195,17 @@ export const useEvaluationSession = (
         wsManager.current = new WebSocketManager(sessionId);
 
         // 设置消息监听器
-        wsManager.current.on("session_started", (message: WebSocketMessage) => {
+        wsManager.current.on("session_started", (message: Record<string, unknown>) => {
           console.log("评测会话已启动:", message);
           refreshSession(sessionId);
         });
 
-        wsManager.current.on("test_started", (message: WebSocketMessage) => {
+        wsManager.current.on("test_started", (message: Record<string, unknown>) => {
           console.log("测试开始:", message);
           // 可以更新UI显示当前测试进度
         });
 
-        wsManager.current.on("test_completed", (message: WebSocketMessage) => {
+        wsManager.current.on("test_completed", (message: Record<string, unknown>) => {
           console.log("测试完成:", message);
           // 更新结果列表
           refreshResults(sessionId);
@@ -214,7 +214,7 @@ export const useEvaluationSession = (
 
         wsManager.current.on(
           "session_completed",
-          (_message: WebSocketMessage) => {
+          (_message: Record<string, unknown>) => {
             console.log("评测会话完成:", _message);
             message.success("评测已完成");
             refreshSession(sessionId);
@@ -222,7 +222,7 @@ export const useEvaluationSession = (
           },
         );
 
-        wsManager.current.on("session_failed", (_message: WebSocketMessage) => {
+        wsManager.current.on("session_failed", (_message: Record<string, unknown>) => {
           console.log("评测会话失败:", _message);
           message.error("评测执行失败");
           refreshSession(sessionId);
@@ -230,7 +230,7 @@ export const useEvaluationSession = (
 
         wsManager.current.on(
           "session_cancelled",
-          (_message: WebSocketMessage) => {
+          (_message: Record<string, unknown>) => {
             console.log("评测会话取消:", _message);
             message.info("评测已取消");
             refreshSession(sessionId);
