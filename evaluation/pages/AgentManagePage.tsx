@@ -1039,7 +1039,7 @@ export const AgentManagePage: React.FC = () => {
             .api.v1.ai.agents.update(currentAgent.id, {
               background_images: filteredImages,
               replace_background_images: true,
-            } as any)) as unknown as Agent;
+            } as { background_images: string[]; replace_background_images: boolean })) as unknown as Agent;
 
           if (updatedAgent) {
             setCurrentAgent({

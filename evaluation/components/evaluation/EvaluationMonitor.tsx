@@ -91,8 +91,9 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
         try {
           const sessionResults = await api.sessions.getResults(propSession.id);
           setResults(sessionResults);
-        } catch (err: any) {
-          setError(err.message || "加载结果失败");
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : "加载结果失败";
+          setError(errorMessage);
         } finally {
           setLoading(false);
         }

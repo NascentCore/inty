@@ -130,15 +130,16 @@ export const UserDailyMessagesPage: React.FC = () => {
         const sessionsData =
           await userAnalyticsApi.getUserSessions(identifierParams);
         setSessions(sessionsData.sessions);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("加载会话列表失败:", error);
         // 不显示错误，因为这不是主要功能
       }
 
       message.success("查询成功");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("查询失败:", error);
-      message.error(error?.message || "查询失败");
+      const errorMessage = error instanceof Error ? error.message : "查询失败";
+      message.error(errorMessage);
       setUserInfo(null);
       setTodayStats(null);
     } finally {
@@ -159,9 +160,10 @@ export const UserDailyMessagesPage: React.FC = () => {
         searchType === "email" ? { email: trimmed } : { user_id: trimmed };
       const data = await userAnalyticsApi.getUserSessions(identifierParams);
       setSessions(data.sessions);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("加载会话列表失败:", error);
-      message.error(error?.message || "加载会话列表失败");
+      const errorMessage = error instanceof Error ? error.message : "加载会话列表失败";
+      message.error(errorMessage);
     } finally {
       setLoadingSessions(false);
     }
@@ -181,9 +183,10 @@ export const UserDailyMessagesPage: React.FC = () => {
           ...prev,
           [chatId]: data,
         }));
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("加载会话消息失败:", error);
-        message.error(error?.message || "加载会话消息失败");
+        const errorMessage = error instanceof Error ? error.message : "加载会话消息失败";
+        message.error(errorMessage);
       } finally {
         setLoadingMessages((prev) => ({ ...prev, [chatId]: false }));
       }
@@ -235,9 +238,10 @@ export const UserDailyMessagesPage: React.FC = () => {
       });
       setUserImages(data.images);
       setUserImagesTotal(data.total);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("加载用户生成图片失败:", error);
-      message.error(error?.message || "加载用户生成图片失败");
+      const errorMessage = error instanceof Error ? error.message : "加载用户生成图片失败";
+      message.error(errorMessage);
       setUserImages([]);
       setUserImagesTotal(0);
     } finally {
@@ -373,9 +377,10 @@ export const UserDailyMessagesPage: React.FC = () => {
         URL.revokeObjectURL(url);
 
         message.success(`会话记录已导出: ${filename}`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("导出会话记录失败:", error);
-        message.error(error?.message || "导出失败，请重试");
+        const errorMessage = error instanceof Error ? error.message : "导出失败，请重试";
+        message.error(errorMessage);
       } finally {
         setExportingSessions((prev) => ({ ...prev, [chatId]: false }));
       }
@@ -440,7 +445,7 @@ export const UserDailyMessagesPage: React.FC = () => {
       title: "操作",
       key: "action",
       width: 100,
-      render: (_: any, record: UserSessionItem) => (
+      render: (_text: unknown, record: UserSessionItem) => (
         <Button
           type="link"
           icon={<DownloadOutlined />}

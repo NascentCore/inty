@@ -73,8 +73,9 @@ export const SettingsPage: React.FC = () => {
         });
         message.success("配置加载成功");
       }
-    } catch (error: any) {
-      message.error(`加载配置失败: ${error.message || "未知错误"}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "未知错误";
+      message.error(`加载配置失败: ${errorMessage}`);
       console.error("加载配置失败:", error);
     } finally {
       setLoading(false);
@@ -100,11 +101,12 @@ export const SettingsPage: React.FC = () => {
             response.sub_user_chat_image_gemini_model,
         });
       }
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         message.error("请检查表单填写");
       } else {
-        message.error(`保存配置失败: ${error.message || "未知错误"}`);
+        const errorMessage = error instanceof Error ? error.message : "未知错误";
+        message.error(`保存配置失败: ${errorMessage}`);
         console.error("保存配置失败:", error);
       }
     } finally {

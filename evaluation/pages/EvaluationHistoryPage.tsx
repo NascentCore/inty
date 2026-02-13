@@ -38,6 +38,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
 import api from "../services/api";
 import { MultiAgentChatDisplay } from "../components/evaluation/MultiAgentChatDisplay";
 import { JsonDisplayModal } from "../components/common/JsonDisplayModal";
@@ -83,7 +84,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   // 筛选和搜索状态
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -98,7 +99,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     try {
       setLoading(true);
 
-      const params: any = {
+      const params: Record<string, string | number> = {
         skip: (pagination.current - 1) * pagination.pageSize,
         limit: pagination.pageSize,
       };

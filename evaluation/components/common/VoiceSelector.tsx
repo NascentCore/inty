@@ -67,7 +67,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     ) => {
       setLoading(true);
       try {
-        const params: any = {
+        const params: Record<string, string> = {
           // 移除page_size限制，让后端返回所有音色
         };
         if (search) params.search = search;
@@ -160,7 +160,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const debouncedLoadVoices = useMemo(() => {
     const debounce = (func: Function, delay: number) => {
       let timeoutId: ReturnType<typeof setTimeout>;
-      return (...args: any[]) => {
+      return (...args: unknown[]) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func(...args), delay);
       };

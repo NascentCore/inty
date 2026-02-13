@@ -6,6 +6,6 @@ declare module "inty" {
 
   export class Inty {
     constructor(config?: IntyConfig);
-    api: any;
+    api: unknown;
   }
 }
