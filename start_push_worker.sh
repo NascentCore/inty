@@ -30,5 +30,5 @@ alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 # 启动推送服务
 echo "Starting push worker service..."
-python -m app.services.push_worker
+python -m backend.push_worker.main
 

@@ -8,7 +8,7 @@
 
 ## 1. 现象
 
-- **监控**：GCE 实例上 `python -m app.services.push_worker` 进程 RSS 在约 12 小时内从约 2 GiB 升至近 6 GiB，呈近似线性上升；同一实例上 uvicorn 主应用进程内存相对稳定。
+- **监控**：GCE 实例上 `python -m backend.push_worker.main` 进程 RSS 在约 12 小时内从约 2 GiB 升至近 6 GiB，呈近似线性上升；同一实例上 uvicorn 主应用进程内存相对稳定。
 - **时间**：约 2026 年 2 月初。
 - **其他**：进程曾出现“莫名退出”；标准输出中可见 `Killed`（通常为 OOM killer）；多次重启后内存曲线呈多条“阶梯式上升后终止”的线段。
 
@@ -123,7 +123,7 @@ export PYTHONPATH=.
 
 ## 8. 涉及文件
 
-- `app/services/push_worker.py`：cache 清理任务启停；退出流程（自建 loop、`shutdown(wait=False)` 等）。  
+- `backend/push_worker/main.py`：cache 清理任务启停；退出流程（自建 loop、`shutdown(wait=False)` 等）。  
 - `app/services/push_scheduler_service.py`：`stop()` 中 `shutdown(wait=False)`。  
 - `app/services/cache_service.py`：逻辑未改，被 push_worker 调用 `start_cleanup_task` / `stop_cleanup_task`。  
 - `app/services/memory_extraction_service.py`：包含 `_compute_users_to_extract_sync`（已改为用 subscription_usage 筛选）、`get_all_messages_for_user`（仍从 chat_history 读消息）。  

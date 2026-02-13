@@ -24,7 +24,7 @@
    - 30分钟推送：每10分钟检查一次
    - 2小时推送：每30分钟检查一次
 
-4. **独立服务入口** (`app/services/push_worker.py`)
+4. **独立服务入口** (`backend/push_worker/main.py`)
    - 可单独运行的服务进程
    - 初始化 Firebase、数据库连接和 AgentManager
    - 支持优雅关闭（SIGTERM/SIGINT）
@@ -120,7 +120,7 @@ push_notification:
 推送服务可以作为独立进程运行：
 
 ```bash
-python -m app.services.push_worker
+python -m backend.push_worker.main
 ```
 
 ### 依赖要求
@@ -219,7 +219,7 @@ alembic upgrade head
 - `app/models/push_notification.py` - 推送历史模型
 - `app/services/push_notification_service.py` - 推送服务核心逻辑
 - `app/services/push_scheduler_service.py` - 定时任务调度
-- `app/services/push_worker.py` - 独立服务入口
+- `backend/push_worker/main.py` - 独立服务入口
 - `app/core/prompting/push_message_prompt.py` - 提示词模板
 - `alembic/versions/20251111_140711_create_push_notification_history.py` - 数据库迁移
 

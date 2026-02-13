@@ -8,6 +8,7 @@ on:
     paths:
       # 后端代码
       - "app/**/*.py"
+      - "backend/**"
       - "alembic/**/*.py"
       - "scripts/**/*.py"
       - "devops/docker/Dockerfile.push-worker"

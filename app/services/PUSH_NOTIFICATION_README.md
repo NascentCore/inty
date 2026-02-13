@@ -32,7 +32,7 @@ alembic upgrade head
 启动推送服务：
 
 ```bash
-python -m app.services.push_worker
+python -m backend.push_worker.main
 ```
 
 或使用 systemd/supervisor 等进程管理器。
@@ -78,7 +78,7 @@ docker run -d \
 ## 服务架构
 
 ```
-push_worker.py (入口)
+backend/push_worker/main.py (入口)
     ↓
 push_scheduler_service.py (定时任务调度)
     ↓
