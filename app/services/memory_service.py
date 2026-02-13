@@ -3,11 +3,20 @@
 记忆服务：从 memory 表读取用户记忆，供提示词注入使用。
 """
 
-from sqlalchemy import select
+import asyncio
+from datetime import date, datetime, timezone
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import get_sync_engine
 from app.models.memory import Memory
+from app.services.chat_history_service import (
+    add_festival_memory_prompt_message_sync,
+    get_chat_history_connection,
+    get_festival_memory_prompt_content_for_agent_sync,
+)
+from app.services.chat_service import generate_session_id
 
 MEMORY_TYPE_USER_COMMON = "user_common"
 MEMORY_TYPE_FESTIVAL = "festival"
@@ -100,3 +109,110 @@ async def get_festival_memories_for_user_agent(
             }
         )
     return out
+
+
+def _get_session_id_for_user_agent_sync(user_id: str, agent_id: str) -> str | None:
+    """根据 (user_id, agent_id) 获取该会话的 session_id，无会话则返回 None。"""
+    conn = get_chat_history_connection()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true LIMIT 1",
+            (user_id, agent_id),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    return generate_session_id(row[0])
+
+
+async def get_undelivered_festival_memories(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> list[dict]:
+    """
+    查询 (user_id, agent_id) 下尚未投递的节日记忆（delivery_at IS NULL）。
+    返回列表元素：{"id": int, "festival_name": str, "festival_date": date}
+    """
+    stmt = (
+        select(Memory.id, Memory.festival_name, Memory.festival_date)
+        .where(
+            Memory.user_id == user_id,
+            Memory.agent_id == agent_id,
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+            Memory.delivery_at.is_(None),
+        )
+        .order_by(Memory.festival_date.asc())
+    )
+    result = await db.execute(stmt)
+    rows = result.fetchall()
+    return [
+        {
+            "id": row[0],
+            "festival_name": row[1] or "",
+            "festival_date": row[2],
+        }
+        for row in rows
+        if row[1] is not None and row[2] is not None
+    ]
+
+
+async def deliver_festival_memories_for_user_agent(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> list[dict]:
+    """
+    为 (user_id, agent_id) 执行所有未投递节日记忆的投递：写入 chat_history 并更新 memory.delivery_at。
+    返回本次投递的提醒列表，每项含 memory_id, content, festival_name, festival_date，
+    供发起聊天接口追加到 choices 使用。
+    """
+    undelivered = await get_undelivered_festival_memories(db, user_id, agent_id)
+    if not undelivered:
+        return []
+
+    session_id = await asyncio.to_thread(
+        _get_session_id_for_user_agent_sync, user_id, agent_id
+    )
+    if not session_id:
+        return []
+
+    now = datetime.now(timezone.utc)
+    prompt_content = await asyncio.to_thread(
+        get_festival_memory_prompt_content_for_agent_sync, agent_id
+    )
+    delivered = []
+    for item in undelivered:
+        mid = item["id"]
+        festival_name = item["festival_name"]
+        festival_date = item["festival_date"]
+        festival_date_val: date = (
+            festival_date
+            if isinstance(festival_date, date)
+            else date.fromisoformat(str(festival_date))
+        )
+        msg_id = await asyncio.to_thread(
+            add_festival_memory_prompt_message_sync,
+            session_id,
+            agent_id,
+            mid,
+            festival_name,
+            festival_date_val,
+        )
+        if msg_id is None:
+            continue
+        await db.execute(
+            update(Memory)
+            .where(Memory.id == mid, Memory.delivery_at.is_(None))
+            .values(delivery_at=now)
+        )
+        delivered.append(
+            {
+                "memory_id": mid,
+                "content": prompt_content,
+                "festival_name": festival_name,
+                "festival_date": (
+                    festival_date_val.isoformat()
+                    if hasattr(festival_date_val, "isoformat")
+                    else str(festival_date_val)
+                ),
+            }
+        )
+    await db.commit()
+    return delivered

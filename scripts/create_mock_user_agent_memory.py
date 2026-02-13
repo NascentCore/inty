@@ -135,7 +135,7 @@ async def _run(
                 "DRY-RUN: 将 get_or_create_chat，删除旧 memory 并插入新 memory，"
                 + ("插入 mock 人机 2 条 + " if add_mock_chat else "")
                 + (
-                    "插入节日记忆提示消息。"
+                    "不插入节日记忆提示（与生产一致，由发起聊天/消息列表按需投递）。"
                     if memory_type == "festival"
                     else "不插入提示消息。"
                 )
@@ -199,19 +199,11 @@ async def _run(
             await asyncio.to_thread(_add_mock_chat_messages_sync, session_id, agent_id)
             logger.info("已插入 mock 人机消息 2 条")
 
+        # 节日记忆与生产一致：仅写 memory，不在此处写 chat_history；用户发起聊天或拉取消息列表时会按需投递
         if memory_type == "festival" and memory_row is not None:
-            mid = await asyncio.to_thread(
-                chat_history_service.add_festival_memory_prompt_message_sync,
-                session_id,
-                agent_id,
-                memory_row.id,
-                festival_name_val,
-                festival_date_val,
+            logger.info(
+                f"节日记忆已写入 memory id={memory_row.id}，提示将在用户发起聊天或拉取消息列表时按需投递"
             )
-            if mid is None:
-                logger.warning("节日记忆提示消息插入失败（可能仍已写入 memory）")
-            else:
-                logger.info(f"已插入节日记忆提示消息 id={mid}")
 
     logger.success("mock 记忆与对应消息已创建")
 

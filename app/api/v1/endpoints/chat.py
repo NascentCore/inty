@@ -23,6 +23,7 @@ from app.schemas.response import (
     create_business_error_response,
 )
 from app.services import agent_service, chat_history_service, chat_service
+from app.services.memory_service import deliver_festival_memories_for_user_agent
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.push_notification_service import mark_user_push_notifications_as_read
@@ -301,6 +302,16 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"获取最新用户消息ID失败: {str(e)}")
 
+        # 按需投递节日记忆提示：写入 chat_history、更新 delivery_at，并收集本次投递项用于 choices
+        try:
+            with log_time(f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"):
+                delivered_prompts = await deliver_festival_memories_for_user_agent(
+                    db, current_user.id, agent_id
+                )
+        except Exception as e:
+            logger.warning(f"投递节日记忆提示失败: {e}")
+            delivered_prompts = []
+
         # 构建响应
         data = _build_chat_response(
             response_content,
@@ -310,6 +321,22 @@ async def agent_chat_completions(
             request,
             user_message_id=user_message_id,
         )
+
+        # 若有本次投递的节日提醒，追加到 choices，与消息列表的 festival_memory_prompt 结构一致
+        if delivered_prompts:
+            for idx, item in enumerate(delivered_prompts, start=1):
+                data["choices"].append(
+                    {
+                        "index": idx,
+                        "message": {
+                            "role": None,
+                            "content": item["content"],
+                            "type": "festival_memory_prompt",
+                            "festival_memory_id": item["memory_id"],
+                        },
+                        "finish_reason": "stop",
+                    }
+                )
 
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")

@@ -32,6 +32,7 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
+from app.services.memory_service import deliver_festival_memories_for_user_agent
 from app.services.global_services import subscription_service
 from app.services.voice_service import voice_service
 
@@ -389,6 +390,14 @@ async def get_agent_chat_messages(
 
         # Use unified session_id generation rule
         session_id = generate_session_id(chat.id)
+
+        # 按需投递节日记忆提示，再拉取消息列表（新投递的提示会出现在列表中）
+        try:
+            await deliver_festival_memories_for_user_agent(
+                db, current_user.id, agent_id
+            )
+        except Exception as e:
+            logger.warning(f"投递节日记忆提示失败: {e}")
 
         # 获取分页消息
         messages_data = chat_history_service.get_messages_paginated(

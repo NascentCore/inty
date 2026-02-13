@@ -8,7 +8,7 @@ CREATED_BY_AGENT
 
 ## 数据与模型
 
-- **memory 表**：沿用现有表，新增可选列 `festival_name`、`festival_date`；`memory_type` 取值增加 `festival`。节日记忆语义：`(user_id, agent_id, festival_name, festival_date)` 唯一确定一条，`content` 存该用户与该角色在该节日下的回忆摘要。
+- **memory 表**：沿用现有表，新增可选列 `festival_name`、`festival_date`、**`delivery_at`**；`memory_type` 取值增加 `festival`。节日记忆语义：`(user_id, agent_id, festival_name, festival_date)` 唯一确定一条，`content` 存该用户与该角色在该节日下的回忆摘要。**`delivery_at`**（DateTime with timezone，可空）：节日记忆提示**首次**投递到会话的时间；`NULL` 表示尚未投递，仅在用户发起聊天或拉取消息列表时按需写入 chat_history 并更新该字段。
 - **festival_memory_config 表**：节日记忆抽取配置，字段：`id`, `festival_name`, `festival_date`, `prompt`, `enabled`, **`timezone`**（节日与执行时间所属时区，IANA 名如 Asia/Shanghai，默认 UTC）, `run_at_date`, `run_at_hour`, **`min_rounds_in_window`**（窗口内最少用户消息轮数，可选，NULL 表示默认 15）, `last_run_at`, `created_at`, `updated_at`。其中 **节日日期与执行日期/时刻均为该 timezone 下的本地值**：`festival_date` 为「该时区下的自然日」，`run_at_date`（执行日期）、`run_at_hour`（该时区下本地小时 0–23）表示该配置的「可执行时间」，须满足 `run_at_date >= festival_date`；定时任务到点判断时将 (run_at_date, run_at_hour, timezone) 转为 UTC 后与当前时间比较。`last_run_at` 为该配置最近一次被定时任务执行的时间（UTC），用于避免同一执行时刻被重复执行。
 
 ## 接口
@@ -39,13 +39,13 @@ CREATED_BY_AGENT
 1. **筛选**：对每条节日配置按其 `timezone` 与 `festival_date` 确定时间窗：**该时区下节日自然日 00:00 至次日 04:00**（共 28 小时）换算为 UTC 的区间；从 `chats` 与 `chat_history` 统计在该时间窗内每个 (user_id, agent_id) 会话的用户消息数（排除开场白），仅对**该窗口内**消息数 ≥ 配置的 `min_rounds_in_window`（可选，默认 15）的组合进行抽取。
 2. **拉取**：按 (user_id, agent_id) 拉取该用户与该角色的单会话消息，格式与现有记忆抽取一致。
 3. **LLM**：使用配置的提示词 + 节日名称、日期作为上下文，调用 OpenRouter（默认模型 `mistralai/devstral-2512`）抽取该节日相关回忆摘要。
-4. **写入**：同一 (user_id, agent_id, festival_name, festival_date) 先 DELETE 再 INSERT 一条 `memory`（整批替换）。
-5. **提示消息**：抽取成功后，在该 (user_id, agent_id) 对应会话的 `chat_history` 中追加一条特殊 AI 消息，用于提示 App/Evaluation「心跳日记已写好，可点击查看」。详见下文「chat_history 提示消息约定」。
+4. **写入**：同一 (user_id, agent_id, festival_name, festival_date) 先 DELETE 再 INSERT 一条 `memory`（整批替换），**不**在此处写入 chat_history；`delivery_at` 保持 NULL。
+5. **提示消息**：改为按需投递。在用户**发起聊天**或**拉取消息列表**时，对 (user_id, agent_id) 下 `delivery_at IS NULL` 的节日记忆执行投递（写入 chat_history 并更新 `memory.delivery_at`）。详见下文「chat_history 提示消息约定」。
 
 ## chat_history 提示消息约定
 
-- **写入时机**：每次 `extract_festival_and_save` 成功提交 memory 后，向该会话插入一条提示消息（由 `chat_history_service.add_festival_memory_prompt_message_sync` 写入）。
-- **幂等**：按 (session_id, agent_id, festival_name, festival_date) 幂等：若该会话下已存在同角色、同节日的提示消息则不再插入，直接返回已有消息 id，避免定时任务与立即执行 API 重复调用导致同一条记忆出现多条提醒。
+- **写入时机**：在用户**发起聊天**（`POST /chat/completions/{agent_id}`）或**拉取消息列表**（`GET /api/v1/chats/agents/{agent_id}/messages`）时按需投递：对 (user_id, agent_id) 下 `delivery_at IS NULL` 的节日记忆执行投递（调用 `chat_history_service.add_festival_memory_prompt_message_sync` 写入 chat_history，并更新 `memory.delivery_at`）。发起聊天时，当次响应的 **choices** 中会在主 AI 回复之后追加本次投递的节日提醒（与消息列表中的 `festival_memory_prompt` 结构一致）。
+- **幂等**：按 (session_id, agent_id, festival_name, festival_date) 幂等：若该会话下已存在同角色、同节日的提示消息则不再插入，直接返回已有消息 id；已投递（`delivery_at` 非空）的 memory 不再重复写入 chat_history。
 - **消息结构**：
   - `message.type`：`"ai"`（与现有 AI 消息一致，role 为 assistant）。
   - `message.data.content`：固定模板，当前为 `"{char} wrote you a secret heartbeat diary. Take a quiet look."`。前端/App 展示时需将 `{char}` 替换为当前角色名。
@@ -68,9 +68,10 @@ CREATED_BY_AGENT
 | 模块       | 文件                                                                                                                                       |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | 模型       | `app/models/memory.py`（Memory 扩展、FestivalMemoryConfig）                                                                                |
-| 迁移       | `alembic/versions/20260204_120000_add_festival_memory_fields_and_config.py`                                                                |
-| 抽取/筛选  | `app/services/festival_memory_service.py`（含抽取成功后写入 chat_history 提示消息）                                                        |
-| 聊天历史   | `app/services/chat_history_service.py`（add_festival_memory_prompt_message_sync、get_messages_paginated 返回 type festival_memory_prompt） |
+| 迁移       | `alembic/versions/20260204_120000_add_festival_memory_fields_and_config.py`、`alembic/versions/20260213_120000_add_delivery_at_to_memory.py` |
+| 抽取/筛选  | `app/services/festival_memory_service.py`（抽取成功后仅写 memory，不写 chat_history）                                                        |
+| 投递服务   | `app/services/memory_service.py`（get_undelivered_festival_memories、deliver_festival_memories_for_user_agent）                             |
+| 聊天历史   | `app/services/chat_history_service.py`（add_festival_memory_prompt_message_sync、get_festival_memory_prompt_content_for_agent_sync、get_messages_paginated） |
 | 记忆读取   | `app/services/memory_service.py`（get_festival_memories_for_user_agent）                                                                   |
 | 角色详情   | `app/api/v1/endpoints/agents.py`（GET /{agent_id} 附加 features）                                                                          |
 | Schema     | `app/schemas/agent.py`（AgentFeatures、FestivalMemoryItem）、`app/schemas/festival_memory.py`                                              |
