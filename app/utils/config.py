@@ -84,8 +84,10 @@ class DatabaseSettings:
     pool_pre_ping: bool = True
     connect_timeout: int = 5
     command_timeout: int = 30
-    replica_host: Optional[str] = None
-    replica_port: Optional[int] = None
+    replica_host: str = "localhost"
+    replica_port: int = 5432
+    replica_user: str = "postgres"
+    replica_password: str = "sxwl666!"
 
     @property
     def url(self) -> str:
@@ -101,7 +103,7 @@ class DatabaseSettings:
             return None
         port = self.replica_port if self.replica_port is not None else self.port
         return (
-            f"postgresql+asyncpg://{self.user}:{self.password}"
+            f"postgresql+asyncpg://{self.replica_user}:{self.replica_password}"
             f"@{self.replica_host}:{port}/{self.db}"
         )
 

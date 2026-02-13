@@ -43,6 +43,9 @@ database:
   command_timeout: 30
   replica_host: "10.41.177.17"
   replica_port: 5432
+  # 用户名密码保持一致，方便管理
+  replica_user: "postgres"
+  replica_password: "sxwl666A!"
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
