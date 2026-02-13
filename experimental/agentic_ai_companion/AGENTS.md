@@ -1,6 +1,5 @@
 # Agentic AI Companion
 
 - Use Pydantic models for defining data structures
-<!-- - 每次改动要在 CHANGE_LOGS.md 记录改动总结 -->
 - 创建 main.py 而不是 @experimental/agentic_ai_companion/__main__.py 隐藏文件
 - 模块分工：role_play_minimal 入口与组装；tools 工具定义与执行；clients 客户端；prompts 系统提示词；repl 对话主循环
