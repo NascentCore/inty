@@ -6,22 +6,20 @@ from __future__ import annotations
 import re
 from typing import Any
 
+
 # 匹配 {{ 标识符 }}，允许标识符前后有空格
 _PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
 
 def _get_line_indent(template: str, position: int) -> str:
-    """返回 template 中 position 所在行的行首空白（不含换行）。"""
+    """返回占位符所在行从行首到 position（占位符起始）的缩进，用于多行替换时后续行对齐到占位符位置。"""
     line_start = template.rfind("\n", 0, position)
     if line_start == -1:
         line_start = 0
     else:
         line_start += 1  # 从换行符后开始
-    end = position
-    indent_len = 0
-    while line_start + indent_len < end and template[line_start + indent_len] in " \t":
-        indent_len += 1
-    return template[line_start : line_start + indent_len]
+    # 用空格表示从行首到占位符的列数，使续行与占位符位置对齐（如 "  - {{ x }}" 续行缩进 4 格）
+    return " " * (position - line_start)
 
 
 def _indented_value(value: str, line_indent: str) -> str:
@@ -36,19 +34,7 @@ def _indented_value(value: str, line_indent: str) -> str:
 
 def render_template_with_indent(template: str, **kwargs: Any) -> str:
     """
-    将模板中的 {{ name }} 占位符替换为 kwargs 中对应值；若值为多行，则按占位符所在行的缩进折叠后续行。
-
-    示例:
-        template = \"\"\"
-        I am {{ char }}, I have been many places:
-          {{ places }}
-        \"\"\"
-        render_template_with_indent(template, char="Yaxiong", places="- Beijing\\n- New York\\n- etc.")
-        =>
-        I am Yaxiong, I have been many places:
-          - Beijing
-          - New York
-          - etc.
+    将模板中的 {{ name }} 占位符替换为 kwargs 中对应值；若值为多行，则先经 strip_multiline_str 规范化缩进，再按占位符所在行的缩进折叠后续行。
     """
     # 从后往前替换，避免偏移变化
     matches = list(_PLACEHOLDER_PATTERN.finditer(template))
@@ -61,7 +47,10 @@ def render_template_with_indent(template: str, **kwargs: Any) -> str:
         if key not in kwargs:
             continue
         raw = kwargs[key]
-        value = str(raw).strip() if raw is not None else ""
+        value = str(raw) if raw is not None else ""
+        if "\n" in value:
+            value = strip_multiline_str(value)
+        value = value.strip()
         line_indent = _get_line_indent(result, m.start())
         replacement = _indented_value(value, line_indent)
         result = result[: m.start()] + replacement + result[m.end() :]

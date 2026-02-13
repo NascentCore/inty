@@ -7,26 +7,27 @@ from app.utils.prompt_utils import render_template_with_indent, strip_multiline_
 
 def test_render_template_with_indent_multiline_placeholder():
     """多行占位符按所在行缩进折叠，与用户示例一致。"""
-    template = """
-I am {{ char }}, I have been many places:
-  {{ places }}
-"""
+    template = """I am {{ char }}, I have been many places:
+  - {{ places }}
+  - Tianjin
+  - Shenzhen
+  """
     char = "Yaxiong"
     places = """
+Specials:
 - Beijing
 - New York
-- etc.
 """
     out = render_template_with_indent(template, char=char, places=places)
-    assert "I am Yaxiong," in out
-    assert "I have been many places:" in out
-    assert "  - Beijing" in out
-    assert "  - New York" in out
-    assert "  - etc." in out
-    # 不应出现未替换的占位符或错误缩进
-    assert "{{ " not in out
-    assert "\n- " not in out  # 多行内容应带两格缩进
-
+    assert out.splitlines() == [
+        "I am Yaxiong, I have been many places:",
+        "  - Specials:",
+        "    - Beijing",
+        "    - New York",
+        "  - Tianjin",
+        "  - Shenzhen",
+        "  ",
+    ]
 
 def test_render_template_with_indent_single_line():
     """单行替换不改变缩进。"""
@@ -52,6 +53,40 @@ def test_render_template_with_indent_deeper_indent():
     items = "1\n2\n3"
     out = render_template_with_indent(template, items=items)
     assert out == "List:\n    1\n    2\n    3"
+
+
+def test_render_template_with_indent_docstring_example():
+    """与 render_template_with_indent 文档字符串示例一致。"""
+    template = """
+        I am {{ char }}, I have been many places:
+          {{ places }}
+        """
+    out = render_template_with_indent(
+        template,
+        char="Yaxiong",
+        places="places:\n  - Beijing\n  - New York\n  - etc.",
+    )
+    expected = """
+        I am Yaxiong, I have been many places:
+          places:
+            - Beijing
+            - New York
+            - etc.
+        """
+    assert out == expected
+
+
+def test_render_template_with_indent_multiline_kwarg_stripped():
+    """多行 kwargs 值会先经 strip_multiline_str 规范化缩进再按占位符行缩进折叠。"""
+    template = "Intro:\n  {{ block }}"
+    # 多行值带多余首行缩进，应被 strip_multiline_str 规范化
+    block = """
+      - first
+      - second
+    """
+    out = render_template_with_indent(template, block=block)
+    # 规范化后为 "- first\n- second"，再按 "  " 折叠得：
+    assert out == "Intro:\n  - first\n  - second"
 
 
 def test_strip_multiline_str_example():
@@ -103,10 +138,33 @@ def test_render_template_with_indent_multiline_placeholder_stripped():
     template_stripped = strip_multiline_str(template)
     places_stripped = strip_multiline_str(places)
     out = render_template_with_indent(template_stripped, char=char, places=places_stripped)
-    print(out)
     assert out.splitlines() == [
         "I am Yaxiong, I have been many places:",
         "  - Beijing",
         "  - New York",
         "  - etc.",
     ]
+
+
+def test_render_template_with_indent_roleplay_text_output_format_expanded():
+    """多行 ROLEPLAY_TEXT_OUTPUT_FORMAT 占位符被完整替换；续行缩进对齐到占位符起始列。"""
+    template = "- Output Format\n        - {{ ROLEPLAY_TEXT_OUTPUT_FORMAT }}\n        - Avoid reusing."
+    value = """Roleplay Text Output Format:
+  - All dialogues must be enclosed in double quotation marks "".
+  - All non-dialogue descriptions, like actions, thoughts, feelings, descriptions of surrounding environment, etc.:
+    - must be enclosed in parentheses ().
+    - should be short and concise.
+    - should be vivid and detailed."""
+    out = render_template_with_indent(template, ROLEPLAY_TEXT_OUTPUT_FORMAT=value.strip())
+    # 续行缩进对齐到占位符起始列（此处为 10 格），value 内行自带 "  "，故首条续行为 12 格
+    expected_lines = [
+        "- Output Format",
+        "        - Roleplay Text Output Format:",
+        "            - All dialogues must be enclosed in double quotation marks \"\".",
+        "            - All non-dialogue descriptions, like actions, thoughts, feelings, descriptions of surrounding environment, etc.:",
+        "              - must be enclosed in parentheses ().",
+        "              - should be short and concise.",
+        "              - should be vivid and detailed.",
+        "        - Avoid reusing.",
+    ]
+    assert out.splitlines() == expected_lines
