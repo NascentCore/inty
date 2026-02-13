@@ -212,12 +212,12 @@ class AgentConfig:
     # 下面的代码文件不需要检测订阅状态，因为 evaluation 是做评测，不部面向用户
     # - app/services/evaluation_service.py (updated to use select_chat_model)
     base_url: str = OPENROUTER_BASE_URL
-    temperature: float = 0.5
+    temperature: float = 0.7
     max_tokens: int = 1000
-    top_p: float = 1.0
+    top_p: float = 1.1
     top_k: int = 50
-    frequency_penalty: float = 0.0
-    presence_penalty: float = 0.0
+    frequency_penalty: float = 0.5
+    presence_penalty: float = 0.5
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
