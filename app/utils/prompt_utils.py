@@ -6,7 +6,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 # 匹配 {{ 标识符 }}，允许标识符前后有空格
 _PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 

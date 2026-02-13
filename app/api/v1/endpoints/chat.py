@@ -304,7 +304,9 @@ async def agent_chat_completions(
 
         # 按需投递节日记忆提示：写入 chat_history、更新 delivery_at，并收集本次投递项用于 choices
         try:
-            with log_time(f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"):
+            with log_time(
+                f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
+            ):
                 delivered_prompts = await deliver_festival_memories_for_user_agent(
                     db, current_user.id, agent_id
                 )
