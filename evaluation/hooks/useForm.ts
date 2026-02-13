@@ -21,7 +21,7 @@ interface UseFormReturn<T> {
   isValid: boolean;
 
   // 操作
-  setValue: (field: keyof T, value: any) => void;
+  setValue: <K extends keyof T>(field: K, value: T[K]) => void;
   setValues: (values: Partial<T>) => void;
   setError: (field: keyof T, message: string) => void;
   clearError: (field: keyof T) => void;
@@ -36,7 +36,7 @@ interface UseFormReturn<T> {
   isFieldTouched: (field: keyof T) => boolean;
 }
 
-export function useForm<T extends Record<string, any>>(
+export function useForm<T extends Record<string, unknown>>(
   options: UseFormOptions<T> = {},
 ): UseFormReturn<T> {
   const { initialValues = {} as T, validate, onSubmit } = options;
@@ -53,7 +53,7 @@ export function useForm<T extends Record<string, any>>(
   const isValid = useMemo(() => errors.length === 0, [errors]);
 
   // 设置单个字段值
-  const setValue = useCallback((field: keyof T, value: any) => {
+  const setValue = useCallback(<K extends keyof T>(field: K, value: T[K]) => {
     setFormValues((prev) => ({
       ...prev,
       [field]: value,

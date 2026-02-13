@@ -44,7 +44,7 @@ export interface BaseAgent {
   updated_at?: string;
   avatar_size?: AgentImageSize | null;
   background_size?: AgentImageSize | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /** 运营上传的专属角色照单条 */
@@ -402,14 +402,14 @@ export interface ComparisonResult {
 }
 
 // API 响应通用格式
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
 }
 
 // 分页响应
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   items: T[];
   total: number;
   page: number;
@@ -684,6 +684,18 @@ export interface UserSessionsResponse {
   sessions: UserSessionItem[];
 }
 
+export interface SessionGeneratedImageMeta {
+  image_url: string;
+  width?: number;
+  height?: number;
+  [key: string]: unknown;
+}
+
+export interface SessionMessageMetaData {
+  generated_image?: SessionGeneratedImageMeta;
+  [key: string]: unknown;
+}
+
 export interface SessionMessageItem {
   id: number;
   message_type: string;
@@ -691,7 +703,7 @@ export interface SessionMessageItem {
   image_url?: string | null; // 独立图片消息的 URL
   created_at: string | null;
   audio_url: string | null;
-  meta_data: Record<string, any> | null;
+  meta_data: SessionMessageMetaData | null;
 }
 
 export interface SessionMessagesResponse {

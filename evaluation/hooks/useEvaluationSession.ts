@@ -52,6 +52,15 @@ export const useEvaluationSession = (
   const wsManager = useRef<WebSocketManager | null>(null);
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // 断开WebSocket
+  const disconnectWebSocket = useCallback(() => {
+    if (wsManager.current) {
+      wsManager.current.disconnect();
+      wsManager.current = null;
+    }
+    setIsWebSocketConnected(false);
+  }, []);
+
   // 清理函数
   useEffect(() => {
     return () => {
@@ -60,11 +69,11 @@ export const useEvaluationSession = (
       }
       disconnectWebSocket();
     };
-  }, []);
+  }, [disconnectWebSocket]);
 
   // 错误处理
-  const handleError = useCallback((error: any, defaultMessage: string) => {
-    const errorMessage = error?.message || defaultMessage;
+  const handleError = useCallback((error: unknown, defaultMessage: string) => {
+    const errorMessage = error instanceof Error ? error.message : defaultMessage;
     setError(errorMessage);
     message.error(errorMessage);
     console.error(defaultMessage, error);
@@ -244,17 +253,8 @@ export const useEvaluationSession = (
         setIsWebSocketConnected(false);
       }
     },
-    [refreshSession, refreshResults],
+    [disconnectWebSocket, refreshSession, refreshResults],
   );
-
-  // 断开WebSocket
-  const disconnectWebSocket = useCallback(() => {
-    if (wsManager.current) {
-      wsManager.current.disconnect();
-      wsManager.current = null;
-    }
-    setIsWebSocketConnected(false);
-  }, []);
 
   // 自动刷新 - 扩展到所有非最终状态，增强频率
   useEffect(() => {

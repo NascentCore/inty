@@ -21,7 +21,6 @@ import {
   Empty,
   Pagination,
   Modal,
-  Image,
   Typography,
   Tooltip,
 } from "antd";
@@ -35,7 +34,7 @@ import {
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
-import dayjs, { Dayjs } from "dayjs";
+import type { Dayjs } from "dayjs";
 import { userAnalyticsApi } from "../services/api";
 import {
   formatUtcTime,
@@ -93,6 +92,21 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [previewImage, setPreviewImage] =
     useState<UserGeneratedImageItem | null>(null);
 
+  const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
+    return fallback;
+  };
+
   // 查询用户每日消息
   const handleSearch = useCallback(async () => {
     const trimmed = searchValue.trim();
@@ -131,15 +145,15 @@ export const UserDailyMessagesPage: React.FC = () => {
         const sessionsData =
           await userAnalyticsApi.getUserSessions(identifierParams);
         setSessions(sessionsData.sessions);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("加载会话列表失败:", error);
         // 不显示错误，因为这不是主要功能
       }
 
       message.success("查询成功");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("查询失败:", error);
-      message.error(error?.message || "查询失败");
+      message.error(getErrorMessage(error, "查询失败"));
       setUserInfo(null);
       setTodayStats(null);
     } finally {
@@ -160,9 +174,9 @@ export const UserDailyMessagesPage: React.FC = () => {
         searchType === "email" ? { email: trimmed } : { user_id: trimmed };
       const data = await userAnalyticsApi.getUserSessions(identifierParams);
       setSessions(data.sessions);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("加载会话列表失败:", error);
-      message.error(error?.message || "加载会话列表失败");
+      message.error(getErrorMessage(error, "加载会话列表失败"));
     } finally {
       setLoadingSessions(false);
     }
@@ -182,9 +196,9 @@ export const UserDailyMessagesPage: React.FC = () => {
           ...prev,
           [chatId]: data,
         }));
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("加载会话消息失败:", error);
-        message.error(error?.message || "加载会话消息失败");
+        message.error(getErrorMessage(error, "加载会话消息失败"));
       } finally {
         setLoadingMessages((prev) => ({ ...prev, [chatId]: false }));
       }
@@ -236,9 +250,9 @@ export const UserDailyMessagesPage: React.FC = () => {
       });
       setUserImages(data.images);
       setUserImagesTotal(data.total);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("加载用户生成图片失败:", error);
-      message.error(error?.message || "加载用户生成图片失败");
+      message.error(getErrorMessage(error, "加载用户生成图片失败"));
       setUserImages([]);
       setUserImagesTotal(0);
     } finally {
@@ -374,9 +388,9 @@ export const UserDailyMessagesPage: React.FC = () => {
         URL.revokeObjectURL(url);
 
         message.success(`会话记录已导出: ${filename}`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("导出会话记录失败:", error);
-        message.error(error?.message || "导出失败，请重试");
+        message.error(getErrorMessage(error, "导出失败，请重试"));
       } finally {
         setExportingSessions((prev) => ({ ...prev, [chatId]: false }));
       }
@@ -441,7 +455,7 @@ export const UserDailyMessagesPage: React.FC = () => {
       title: "操作",
       key: "action",
       width: 100,
-      render: (_: any, record: UserSessionItem) => (
+      render: (_value: unknown, record: UserSessionItem) => (
         <Button
           type="link"
           icon={<DownloadOutlined />}

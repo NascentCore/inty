@@ -31,7 +31,7 @@ import {
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
-import dayjs, { Dayjs } from "dayjs";
+import type { Dayjs } from "dayjs";
 import { userAnalyticsApi } from "../services/api";
 import { formatUtcTimeOnly } from "../utils/dateUtils";
 import type {
@@ -43,8 +43,6 @@ import type {
   UserSessionsDetailResponse,
   ConversationsDetailResponse,
   UserAnalyticsStatsResponse,
-  LLMLatencyItem,
-  ImageGenerationLatencyItem,
 } from "../types";
 
 const { RangePicker } = DatePicker;

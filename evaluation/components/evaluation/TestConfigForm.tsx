@@ -3,7 +3,7 @@
  * 负责评测会话的基本配置（测试名称、用户身份、评分标准等）
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Form,
@@ -40,7 +40,7 @@ interface FormValues {
   scoring_model: string;
   scoring_criteria: string;
   use_new_user_identity: boolean;
-  config: any;
+  config: Record<string, unknown>;
 }
 
 const defaultScoringCriteria = `请基于智能体的角色设定对其表现进行综合评分(1-10分):
@@ -108,7 +108,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
   });
 
   // 加载评分模型 - 使用OpenRouter模型
-  const loadScoringModels = async () => {
+  const loadScoringModels = useCallback(async () => {
     try {
       setModelsLoading(true);
       const models = await modelCacheService.getOpenRouterModels();
@@ -128,7 +128,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
     } finally {
       setModelsLoading(false);
     }
-  };
+  }, [form.values.scoring_model, form.setValue]);
 
   // 刷新模型列表
   const handleRefreshModels = () => {
@@ -142,7 +142,7 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
     }
 
     loadScoringModels();
-  }, []); // 保持空依赖数组，只在组件挂载时运行一次
+  }, [loadScoringModels, scoringModels.length]);
 
   // 通知父组件表单值变化
   useEffect(() => {
