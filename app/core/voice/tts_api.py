@@ -351,6 +351,18 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
     },
 ]
 
+# Gemini TTS 音色按使用场景的推荐 shortlist（基于官方样本听感整理）
+USE_CASES_SHORTLIST: Dict[str, List[str]] = {
+    "general_ai_assistant": ["Callirrhoe", "Rasalgethi", "Enceladus"],
+    "customer_support_help_center": ["Puck", "Achird", "Aoede"],
+    "long_form_narration_explainers": ["Autonoe", "Sadaltager", "Zubenelgenubi"],
+    "calm_soothing_wellness": ["Zubenelgenubi", "Iapetus", "Laomedeia"],
+    "premium_authoritative_executive": ["Algieba", "Fenrir", "Pulcherrima"],
+    "energetic_marketing_promos": ["Schedar", "Sadachbia", "Orus"],
+    "emotional_storytelling": ["Leda", "Erinome", "Vindemiatrix"],
+    "bright_youthful_lively": ["Kore", "Sulafat", "Despina"],
+}
+
 # 预计算 Gemini 音色名称集合，用于快速查找
 _GEMINI_VOICE_NAMES: Set[str] = {v["voice_id"] for v in GEMINI_PREBUILT_VOICES}
 
