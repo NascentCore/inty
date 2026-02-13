@@ -36,7 +36,8 @@ interface UseFormReturn<T> {
   isFieldTouched: (field: keyof T) => boolean;
 }
 
-export function useForm<T extends Record<string, unknown>>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useForm<T extends Record<string, any>>(
   options: UseFormOptions<T> = {},
 ): UseFormReturn<T> {
   const { initialValues = {} as T, validate, onSubmit } = options;

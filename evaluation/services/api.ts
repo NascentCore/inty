@@ -112,7 +112,8 @@ class ApiClient {
     };
 
     // 验证 Authorization header 是否已正确设置
-    const authHeaderValue = config.headers?.Authorization;
+    const configHeaders = config.headers as Record<string, string> | undefined;
+    const authHeaderValue = configHeaders?.Authorization;
     const hasAuthHeader =
       authHeaderValue &&
       typeof authHeaderValue === "string" &&
@@ -218,7 +219,7 @@ class ApiClient {
   // GET请求
   async get<T>(
     endpoint: string,
-    params?: Record<string, string | number | boolean>,
+    params?: Record<string, string | number | boolean | undefined>,
     options?: Record<string, unknown>,
   ): Promise<T> {
     let finalEndpoint = endpoint;
@@ -421,7 +422,7 @@ export const agentApi = {
     }),
 
   // 上传头像
-  uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<{ url: string }> =>
+  uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<{ url?: string; data?: { url?: string } }> =>
     apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 
   // 检查背景图宽高比
@@ -657,7 +658,7 @@ export const statsApi = {
 // =============================================================================
 
 // 双日期范围参数类型
-interface AnalyticsDateParams {
+interface AnalyticsDateParams extends Record<string, string | number | boolean | undefined> {
   // 注册日期范围
   register_start_date?: string;
   register_end_date?: string;
@@ -821,7 +822,7 @@ export class WebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval = 3000;
-  private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
+  private listeners: Map<string, Set<(data: Record<string, unknown>) => void>> = new Map();
 
   constructor(sessionId: string) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -908,14 +909,14 @@ export class WebSocketManager {
     }
   }
 
-  on(eventType: string, callback: (data: unknown) => void) {
+  on(eventType: string, callback: (data: Record<string, unknown>) => void) {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, new Set());
     }
     this.listeners.get(eventType)!.add(callback);
   }
 
-  off(eventType: string, callback: (data: unknown) => void) {
+  off(eventType: string, callback: (data: Record<string, unknown>) => void) {
     const listeners = this.listeners.get(eventType);
     if (listeners) {
       listeners.delete(callback);

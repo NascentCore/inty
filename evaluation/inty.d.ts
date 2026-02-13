@@ -6,6 +6,7 @@ declare module "inty" {
 
   export class Inty {
     constructor(config?: IntyConfig);
-    api: unknown;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    api: any;
   }
 }

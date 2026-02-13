@@ -210,8 +210,9 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
       try {
         setUploading(true);
 
+        // UploadFile from Ant Design can be cast to File for API call
         const uploadResult: QuestionFileUpload = await api.questions.parseFile(
-          file as File & { originFileObj?: File },
+          file as unknown as File,
         );
 
         // 合并问题，避免重复
