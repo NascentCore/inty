@@ -77,7 +77,7 @@ export const VoiceChatPage: React.FC = () => {
     startCall,
     endCall,
     toggleMute,
-    sendText,
+    sendText: _sendText,
     clearTranscripts,
     clearError,
   } = useLiveChat();

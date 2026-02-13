@@ -789,10 +789,10 @@ export const AgentManagePage: React.FC = () => {
       const {
         score,
         comment,
-        main_prompt_select,
-        mode_prompt_select,
-        main_prompt_display,
-        mode_prompt_display,
+        main_prompt_select: _main_prompt_select,
+        mode_prompt_select: _mode_prompt_select,
+        main_prompt_display: _main_prompt_display,
+        mode_prompt_display: _mode_prompt_display,
         ...otherValues
       } = values;
 
@@ -894,10 +894,10 @@ export const AgentManagePage: React.FC = () => {
       const {
         score,
         comment,
-        main_prompt_select,
-        mode_prompt_select,
-        main_prompt_display,
-        mode_prompt_display,
+        main_prompt_select: _main_prompt_select,
+        mode_prompt_select: _mode_prompt_select,
+        main_prompt_display: _main_prompt_display,
+        mode_prompt_display: _mode_prompt_display,
         ...otherValues
       } = values;
 

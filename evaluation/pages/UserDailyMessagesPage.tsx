@@ -21,7 +21,6 @@ import {
   Empty,
   Pagination,
   Modal,
-  Image,
   Typography,
   Tooltip,
 } from "antd";
@@ -35,7 +34,7 @@ import {
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
-import dayjs, { Dayjs } from "dayjs";
+import { Dayjs } from "dayjs";
 import { userAnalyticsApi } from "../services/api";
 import {
   formatUtcTime,
