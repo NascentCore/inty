@@ -115,7 +115,7 @@ jobs:
         run: |
           cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as start.sh already includes it
-          ./start.sh --dev &
+          ./start.sh --test &
 
           # Wait for the server to be ready with better retry logic
           echo "Waiting for server to start..."
