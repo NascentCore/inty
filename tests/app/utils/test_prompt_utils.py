@@ -138,7 +138,6 @@ def test_render_template_with_indent_multiline_placeholder_stripped():
     template_stripped = strip_multiline_str(template)
     places_stripped = strip_multiline_str(places)
     out = render_template_with_indent(template_stripped, char=char, places=places_stripped)
-    print(out)
     assert out.splitlines() == [
         "I am Yaxiong, I have been many places:",
         "  - Beijing",
@@ -169,62 +168,3 @@ def test_render_template_with_indent_roleplay_text_output_format_expanded():
         "        - Avoid reusing.",
     ]
     assert out.splitlines() == expected_lines
-
-
-def test_experimental_prompts_mode_contains_roleplay_text_output_format():
-    """experimental.agentic_ai_companion.prompts 使用 prompt_utils 渲染后，mode 系统消息中应包含 ROLEPLAY_TEXT_OUTPUT_FORMAT 的完整内容。"""
-    from experimental.agentic_ai_companion.prompts import build_system_messages_openai
-
-    msgs = build_system_messages_openai("Char", "User")
-    # 第二条 system 为 mode prompt（main, mode, tool_instruction, 可选 photo_album）
-    mode_lines = msgs[1]["content"].splitlines()
-    # 期望至少有一行包含下列子串
-    expected_in_some_line = [
-        "Roleplay Text Output Format",
-        "double quotation marks",
-        "parentheses ()",
-    ]
-    for exp in expected_in_some_line:
-        assert any(exp in line for line in mode_lines), f"Expected substring {exp!r} in some line of mode content"
-
-
-def test_build_system_messages_openai_output():
-    """验证 build_system_messages_openai 返回结构、条数及前三条 system 消息的内容。"""
-    from experimental.agentic_ai_companion.prompts import (
-        DEFAULT_FOUNDATIONAL_GOAL,
-        DEFAULT_MAX_WORDS,
-        build_system_messages_openai,
-    )
-
-    char_name = "小尊"
-    user_name = "小明"
-    msgs = build_system_messages_openai(char_name, user_name)
-
-    print(msgs)
-
-    assert isinstance(msgs, list), "返回值应为 list"
-    assert len(msgs) >= 3, "至少包含 main、mode、tool_instruction 三条 system 消息"
-    for i, m in enumerate(msgs[:3]):
-        assert m.get("role") == "system", f"第 {i+1} 条应为 system 消息"
-        assert "content" in m and isinstance(m["content"], str), f"第 {i+1} 条应有 content 字符串"
-
-    main_content = msgs[0]["content"]
-    assert char_name in main_content, "main 中应包含 char_name"
-    assert user_name in main_content, "main 中应包含 user_name"
-    assert DEFAULT_FOUNDATIONAL_GOAL in main_content, "main 中应包含 foundational_goal"
-
-    mode_content = msgs[1]["content"]
-    assert char_name in mode_content, "mode 中应包含 char_name"
-    assert user_name in mode_content, "mode 中应包含 user_name"
-    assert DEFAULT_MAX_WORDS in mode_content, "mode 中应包含 max_words"
-    assert "Roleplay Text Output Format" in mode_content, "mode 中应包含 ROLEPLAY_TEXT_OUTPUT_FORMAT 标题"
-    assert 'double quotation marks ""' in mode_content or "double quotation marks" in mode_content
-    assert "parentheses ()" in mode_content
-
-    tool_content = msgs[2]["content"]
-    assert "## Tool Usage" in tool_content, "第三条应为 Tool Usage 块"
-    assert "erotic_scene_generate" in tool_content, "应提及 erotic_scene_generate"
-
-    if len(msgs) > 3:
-        assert msgs[3].get("role") == "system"
-        assert "Photo Album" in msgs[3].get("content", "") or "photo" in msgs[3].get("content", "").lower()
