@@ -11,6 +11,12 @@ Response 无法输出 reasoning details，无法确定 thinking 是否打开
 Response 输出 `reasoning` & `reasoning_details`，当 `reasoning_effort="low"` (或 low/medium/high 其中之一),
 删除 reasoning_effort 参数，则关闭 reasoning
 
+## Gemini Image-to-Video (minimal interface demo)
+
+`uv run -s demo_gemini_image_to_video.py`
+
+请先设置 `GOOGLE_APPLICATION_CREDENTIALS` 与 `GOOGLE_CLOUD_PROJECT`，并在脚本中替换 `IMAGE_GCS_URI` 与 `OUTPUT_GCS_URI`。
+
 # Content detection example
 
 ```
