@@ -40,7 +40,7 @@ interface FormValues {
   scoring_model: string;
   scoring_criteria: string;
   use_new_user_identity: boolean;
-  config: Record<string, unknown>;
+  config: EvaluationSessionCreateRequest["config"];
 }
 
 const defaultScoringCriteria = `请基于智能体的角色设定对其表现进行综合评分(1-10分):
@@ -101,7 +101,14 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
       scoring_model: "",
       scoring_criteria: defaultScoringCriteria,
       use_new_user_identity: false,
-      config: {},
+      config: {
+        agents: [],
+        questions: [],
+        scoring_model: "",
+        scoring_criteria: defaultScoringCriteria,
+        parallel_limit: 1,
+        timeout: 300,
+      },
       ...initialValues,
     },
     validate: validateForm,

@@ -36,7 +36,7 @@ interface UseFormReturn<T> {
   isFieldTouched: (field: keyof T) => boolean;
 }
 
-export function useForm<T extends Record<string, unknown>>(
+export function useForm<T extends object>(
   options: UseFormOptions<T> = {},
 ): UseFormReturn<T> {
   const { initialValues = {} as T, validate, onSubmit } = options;

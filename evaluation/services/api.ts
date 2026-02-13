@@ -50,6 +50,7 @@ export const getGlobalApiKey = (): string | null => {
 };
 
 type RequestOptions = NonNullable<Parameters<typeof fetch>[1]>;
+type QueryParamValue = string | number | boolean | null | undefined;
 
 class ApiClient {
   private baseURL: string;
@@ -212,18 +213,20 @@ class ApiClient {
   // GET请求
   async get<T>(
     endpoint: string,
-    params?: Record<string, string | number | boolean | null | undefined>,
+    params?: Record<string, QueryParamValue> | object,
     options?: RequestOptions,
   ): Promise<T> {
     let finalEndpoint = endpoint;
 
-    if (params && !("signal" in params)) {
+    if (params && !("signal" in (params as object))) {
       const searchParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
+      Object.entries(params as Record<string, QueryParamValue>).forEach(
+        ([key, value]) => {
         if (value !== undefined && value !== null) {
           searchParams.append(key, String(value));
         }
-      });
+        },
+      );
       const queryString = searchParams.toString();
       if (queryString) {
         finalEndpoint += `?${queryString}`;
@@ -364,7 +367,11 @@ export const evaluationSessionApi = {
 // =============================================================================
 
 interface UploadAvatarResponse {
-  url: string;
+  url?: string;
+  data?: {
+    url?: string;
+    avatar_url?: string;
+  };
   [key: string]: unknown;
 }
 
@@ -424,7 +431,9 @@ export const agentApi = {
     file: File,
     croppingAvatar: boolean = true,
   ): Promise<UploadAvatarResponse> =>
-    apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
+    apiClient.upload<UploadAvatarResponse>("/images", file, {
+      cropping_avatar: croppingAvatar,
+    }),
 
   // 检查背景图宽高比
   checkBackgroundAspectRatio: (
