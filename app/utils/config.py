@@ -214,7 +214,7 @@ class AgentConfig:
     base_url: str = OPENROUTER_BASE_URL
     temperature: float = 0.7
     max_tokens: int = 1000
-    top_p: float = 1.1
+    top_p: float = 1.0
     top_k: int = 50
     frequency_penalty: float = 0.5
     presence_penalty: float = 0.5
