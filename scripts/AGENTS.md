@@ -1,5 +1,6 @@
 # AGENTS.md · scripts/（脚本）
 
+- 最简设计来完成用户需求
 - 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
 - 脚本需可重复执行（幂等），参数化（使用 `argparse`/配置），日志使用 `logger.debug()`。
 - 依赖在本目录 `requirements.txt` 中声明；禁止隐式外部依赖。
