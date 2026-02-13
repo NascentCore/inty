@@ -8,7 +8,7 @@
     "dev": "vite",
     "preinstall": "mkdir -p inty_sdk/dist",
     "prebuild": "test -f inty_sdk/dist/index.mjs || (cd inty_sdk && yarn install --ignore-scripts && yarn run build)",
-    "build": "NODE_OPTIONS='--max-old-space-size=4096' vite build",
+    "build": "NODE_OPTIONS=\"--max-old-space-size=4096\" vite build",
     "preview": "vite preview",
     "start": "vite --mode production",
     "type-check": "tsc --noEmit",
