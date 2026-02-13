@@ -14,5 +14,5 @@ data class FestivalMemory(
     val memory: String = "",
 ) {
     val title: String
-        get() = festivalName?.let { "$it ${festivalDate.split("-").firstOrNull()}" } ?: festivalDate
+        get() = festivalName ?: festivalDate
 }
