@@ -33,8 +33,7 @@ from app.schemas.response import (
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.memory_service import deliver_festival_memories_for_user_agent
-from app.services.global_services import subscription_service
-from app.services.voice_service import voice_service
+from app.services.global_services import subscription_service, voice_service
 
 # TODO: Prefix should be /chat instead of /chats.
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
@@ -1059,6 +1058,7 @@ async def generate_chat_image(
             agent_id=agent_id,
             user_id=current_user.id,
             message_id=request.message_id,
+            subscription_service=subscription_service,
             history_count=request.history_count,
             model=request.model,
         )

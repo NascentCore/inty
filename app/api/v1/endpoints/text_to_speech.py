@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query
 
 from app.api.tags import INTY_EVAL_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
-from app.services.voice_service import voice_service
+from app.services.global_services import voice_service
 
 router = APIRouter(prefix="/text-to-speech", route_class=LoggerRoute)
 

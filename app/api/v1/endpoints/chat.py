@@ -27,7 +27,7 @@ from app.services.memory_service import deliver_festival_memories_for_user_agent
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.push_notification_service import mark_user_push_notifications_as_read
-from app.services.voice_service import voice_service
+from app.services.global_services import voice_service
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
@@ -401,6 +401,7 @@ async def generate_chat_image(
             agent_id=agent_id,
             user_id=current_user.id,
             message_id=request.message_id,
+            subscription_service=subscription_service,
             history_count=request.history_count,
             model=request.model,
         )

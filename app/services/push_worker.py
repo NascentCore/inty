@@ -18,7 +18,12 @@ from app.core.logging import init_logger
 from app.db.session import AsyncSessionLocal
 from app.external_services.firebase import init_firebase
 from app.services import agent_service
-from app.services.push_scheduler_service import push_scheduler_service
+from app.services.global_services import subscription_service
+from app.services.push_scheduler_service import PushSchedulerService
+
+# 由 push_worker 创建并注入 subscription_service，满足 AGENTS.md 约定：
+# *_service.py 不直接引用 global_services，由上层注入。
+push_scheduler_service = PushSchedulerService(subscription_service)
 
 
 class PushWorker:

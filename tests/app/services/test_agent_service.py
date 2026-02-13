@@ -240,8 +240,12 @@ async def test_update_agent_increments_version(db_session, monkeypatch):
     monkeypatch.setattr(agent_service, "cache_service", dummy_cache)
     monkeypatch.setattr(agent_service, "agent_manager", dummy_agent_manager)
 
+    from app.services.global_services import voice_service
+
     agent_update = AgentUpdate(name="Updated Name")
-    updated_agent = await agent_service.update_agent(db_session, agent, agent_update)
+    updated_agent = await agent_service.update_agent(
+        db_session, agent, agent_update, voice_service
+    )
 
     assert updated_agent.version == 2
     assert dummy_cache.invalidated == [agent.id]

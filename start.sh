@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 DEV=false
+SKIP_EVAL_BUILD=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -9,6 +10,11 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --dev)
       DEV=true
+      shift
+      ;;
+    --test)
+      DEV=true
+      SKIP_EVAL_BUILD=true
       shift
       ;;
     *)
@@ -39,15 +45,19 @@ python scripts/init_subscription_plans_simple.py
 
 if [ "$DEV" = true ]; then
   echo "Starting in dev mode..."
-  # 构建 evaluation 前端并拷贝到 app/static/evaluation（CI 中跳过，后端测试不依赖静态资源）
+  # 构建 evaluation 前端并拷贝到 app/static/evaluation（CI 或 --test 时跳过，后端测试不依赖静态资源）
   # CI 由 GitHub Actions 自动设为 true，见：
   # https://docs.github.com/zh/actions/reference/workflows-and-actions/variables
-  if [ -z "${CI:-}" ]; then
+  if [ -z "${CI:-}" ] && [ "$SKIP_EVAL_BUILD" != true ]; then
     echo "Building evaluation frontend..."
     ./evaluation/build.sh
   else
-    echo "CI detected, skipping evaluation frontend build."
-    echo "CI 环境不需要提供评测 web UI"
+    if [ "$SKIP_EVAL_BUILD" = true ]; then
+      echo "Skipping evaluation frontend build (--test)."
+    else
+      echo "CI detected, skipping evaluation frontend build."
+      echo "CI 环境不需要提供评测 web UI"
+    fi
   fi
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   python scripts/seed_report_test_data.py

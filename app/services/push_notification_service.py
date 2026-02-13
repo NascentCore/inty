@@ -39,8 +39,8 @@ from app.services.chat_history_service import (
     get_chat_history_connection,
 )
 from app.services.chat_service import generate_session_id
-from app.services.global_services import subscription_service
 from app.services.image_transform_service import image_transform_service
+from app.services.subscription_service import SubscriptionService
 
 # ============================================================================
 # 常量配置
@@ -1538,6 +1538,7 @@ async def generate_agent_message(
     user_id: str,
     agent_id: str,
     stage: str,
+    subscription_service: SubscriptionService,
     push_type: str = PUSH_TYPE_RECENT_CHAT,
     agent_data: Optional[dict] = None,
     chat_id: Optional[str] = None,
@@ -1903,6 +1904,7 @@ async def process_single_user_recent_chat_push(
     agent_id: str,
     stage: str,
     last_message_time: datetime.datetime,
+    subscription_service: SubscriptionService,
 ) -> Tuple[bool, Optional[str]]:
     """
     处理单个用户的最近聊天推送（使用独立的数据库会话）
@@ -1963,6 +1965,7 @@ async def process_single_user_recent_chat_push(
             user_id=user_id,
             agent_id=agent_id,
             stage=stage,
+            subscription_service=subscription_service,
             push_type=PUSH_TYPE_RECENT_CHAT,
             agent_data=agent_data,
             chat_id=chat_id,
@@ -2048,6 +2051,7 @@ async def process_single_user_no_chat_push(
     user_id: str,
     agent_id: str,
     stage: str,
+    subscription_service: SubscriptionService,
 ) -> Tuple[bool, Optional[str]]:
     """
     处理单个用户的无聊天推送（使用独立的数据库会话）
@@ -2094,6 +2098,7 @@ async def process_single_user_no_chat_push(
             user_id=user_id,
             agent_id=agent_id,
             stage=stage,
+            subscription_service=subscription_service,
             push_type=PUSH_TYPE_NO_CHAT,
             agent_data=agent_data,
             chat_id=None,
@@ -2178,6 +2183,7 @@ async def process_single_user_push(
     db: AsyncSession,
     user_id: str,
     stage: str,
+    subscription_service: SubscriptionService,
     chat: Optional[Chat] = None,
     agent: Optional[Agent] = None,
     last_message_time: Optional[datetime.datetime] = None,
@@ -2262,6 +2268,7 @@ async def process_single_user_push(
             user_id=user_id,
             agent_id=agent_id,
             stage=stage,
+            subscription_service=subscription_service,
             push_type=push_type,
             agent_data=agent_data,
             chat_id=chat_id,
@@ -2345,6 +2352,7 @@ async def process_single_user_push(
 async def process_push_batch(
     db: AsyncSession,
     stage: str,
+    subscription_service: SubscriptionService,
     batch_size: int = 50,
 ) -> Tuple[int, int]:
     """
@@ -2397,6 +2405,7 @@ async def process_push_batch(
                             db=worker_db,
                             user_id=user.id,
                             stage=stage,
+                            subscription_service=subscription_service,
                             chat=chat,
                             agent=agent,
                             last_message_time=time_ref if chat else None,
@@ -2450,6 +2459,7 @@ async def process_no_chat_push_batch(
     db: AsyncSession,
     stage: str,
     time_delta_hours: int,
+    subscription_service: SubscriptionService,
     batch_size: int = 50,
 ) -> Tuple[int, int]:
     """
@@ -2508,6 +2518,7 @@ async def process_no_chat_push_batch(
                             user_id=user.id,
                             agent_id=agent.id,
                             stage=stage,
+                            subscription_service=subscription_service,
                         )
                     except Exception as e:
                         error_msg = f"Worker处理失败: user_id={user.id}, error={str(e)}"

@@ -25,6 +25,7 @@ from app.core.voice.tts_api import (
     is_gemini_voice,
 )
 from app.services.gcs_service import GCSService
+from app.services.subscription_service import SubscriptionService
 
 # 性别到音色ID的映射
 GENDER_VOICE_MAPPING = {
@@ -37,9 +38,10 @@ GENDER_VOICE_MAPPING = {
 class VoiceService:
     """语音生成服务"""
 
-    def __init__(self):
+    def __init__(self, subscription_service: SubscriptionService):
         self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
+        self._subscription_service = subscription_service
         # 语音元数据（音色列表/详情）来自 ElevenLabs 和 Gemini 预置音色；
         # 语音生成根据 voice_id 自动选择对应的 TTS 服务（Gemini 或 ElevenLabs）。
         self.tts_api = ElevenLabsTTSAPI(api_key=self.config.api_key)
@@ -113,13 +115,13 @@ class VoiceService:
 
         # 如果提供了用户信息，检查语音生成限制
         if user and db:
-            from app.services.global_services import subscription_service
-
             (
                 is_allowed,
                 used_count,
                 limit,
-            ) = await subscription_service.check_voice_generation_limit(db, user)
+            ) = await self._subscription_service.check_voice_generation_limit(
+                db, user
+            )
 
             if not is_allowed:
                 logger.warning(
@@ -183,11 +185,7 @@ class VoiceService:
                     # 记录语音生成用量（包括缓存命中）
                     if user:
                         try:
-                            from app.services.global_services import (
-                                subscription_service,
-                            )
-
-                            await subscription_service.record_usage(
+                            await self._subscription_service.record_usage(
                                 db,
                                 user.id,
                                 "voice_generation",
@@ -266,9 +264,7 @@ class VoiceService:
             # 记录语音生成用量（新生成）
             if user and db:
                 try:
-                    from app.services.global_services import subscription_service
-
-                    await subscription_service.record_usage(
+                    await self._subscription_service.record_usage(
                         db,
                         user.id,
                         "voice_generation",
@@ -739,5 +735,5 @@ class VoiceService:
         return None
 
 
-# 创建全局实例
-voice_service = VoiceService()
+# 全局实例由 app.services.global_services 创建并注入 subscription_service，
+# 其他模块从 global_services 获取 voice_service，避免 *_service.py 互相依赖 global_services。

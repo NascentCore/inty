@@ -549,9 +549,13 @@ async def create_evaluation_agent(
 
     try:
         from app.services import agent_service
+        from app.services.global_services import voice_service
 
         agent = await agent_service.create_agent(
-            db=db, agent_in=agent_in, creator_id=current_user.id
+            db=db,
+            agent_in=agent_in,
+            user_id=current_user.id,
+            voice_service=voice_service,
         )
 
         logger.info(f"用户 {current_user.id} 创建评测智能体: {agent.id}")
@@ -584,6 +588,7 @@ async def update_evaluation_agent(
 
     try:
         from app.services import agent_service
+        from app.services.global_services import voice_service
 
         # 验证权限
         agent = await agent_service.get_agent(db, agent_id=agent_id)
@@ -596,7 +601,10 @@ async def update_evaluation_agent(
             )
 
         updated_agent = await agent_service.update_agent(
-            db=db, agent_id=agent_id, agent_in=agent_in
+            db=db,
+            db_agent=agent,
+            agent_in=agent_in,
+            voice_service=voice_service,
         )
 
         logger.info(f"用户 {current_user.id} 更新智能体: {agent_id}")
@@ -793,9 +801,14 @@ async def upload_cropped_background(
             )
 
         # 更新 Agent 的背景图
+        from app.services.global_services import voice_service
+
         agent_update = AgentUpdate(background=result.data.url)
         updated_agent = await agent_service.update_agent(
-            db, db_agent=agent, agent_in=agent_update
+            db,
+            db_agent=agent,
+            agent_in=agent_update,
+            voice_service=voice_service,
         )
 
         logger.info(

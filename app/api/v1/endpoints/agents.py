@@ -43,7 +43,7 @@ from app.schemas.response import (
 )
 from app.services import agent_service
 from app.services.character_card_service import character_card_service
-from app.services.global_services import subscription_service
+from app.services.global_services import subscription_service, voice_service
 from app.services import memory_service
 from app.services.resource_service import async_create_image_resource
 from app.utils.gemini import ImagenGeneratedImage, text_to_image
@@ -243,7 +243,10 @@ async def create_agent(
         )
 
     agent = await agent_service.create_agent(
-        db, agent_in=agent_in, user_id=current_user.id
+        db,
+        agent_in=agent_in,
+        user_id=current_user.id,
+        voice_service=voice_service,
     )
     return schemas.APIResponse.success(data=agent)
 
@@ -312,7 +315,12 @@ async def update_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    agent = await agent_service.update_agent(db, db_agent=agent, agent_in=agent_in)
+    agent = await agent_service.update_agent(
+        db,
+        db_agent=agent,
+        agent_in=agent_in,
+        voice_service=voice_service,
+    )
     return agent
 
 
@@ -460,7 +468,10 @@ async def generate_background_animated(
 
         agent_update = AgentUpdate(background_animated=webp_url)
         updated_agent = await agent_service.update_agent(
-            db, db_agent=agent, agent_in=agent_update
+            db,
+            db_agent=agent,
+            agent_in=agent_update,
+            voice_service=voice_service,
         )
 
         logger.info(f"背景动图生成成功，webp URL: {webp_url}")

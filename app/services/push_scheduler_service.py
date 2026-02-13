@@ -30,6 +30,7 @@ from app.services.push_notification_service import (
     initialize_push_system,
     process_push_batch,
 )
+from app.services.subscription_service import SubscriptionService
 from app.services.user_analytics_report_service import (
     compute_and_save_daily_report as user_analytics_compute_daily,
 )
@@ -41,7 +42,8 @@ from app.services.user_analytics_report_service import (
 class PushSchedulerService:
     """推送定时任务调度服务"""
 
-    def __init__(self):
+    def __init__(self, subscription_service: SubscriptionService):
+        self._subscription_service = subscription_service
         self.scheduler: Optional[AsyncIOScheduler] = None
         self.is_running = False
 
@@ -297,6 +299,7 @@ class PushSchedulerService:
                     success_count, fail_count = await process_push_batch(
                         db=db,
                         stage=stage,
+                        subscription_service=self._subscription_service,
                         batch_size=batch_size,
                     )
 
@@ -512,5 +515,5 @@ class PushSchedulerService:
             logger.exception("[用户数据分析周报] 执行失败")
 
 
-# 全局调度器实例
-push_scheduler_service = PushSchedulerService()
+# 全局调度器实例由 push_worker 在启动时创建并注入 subscription_service，
+# 见 app.services.push_worker 中的 push_scheduler_service。

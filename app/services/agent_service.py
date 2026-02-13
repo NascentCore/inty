@@ -83,7 +83,9 @@ async def _populate_agent_image_sizes(db: AsyncSession, agent: models.Agent) -> 
 
 
 async def generate_agent_opening_voice(
-    agent: models.Agent, db: AsyncSession
+    agent: models.Agent,
+    db: AsyncSession,
+    voice_service: VoiceService,
 ) -> Optional[str]:
     """
     为Agent生成开场白语音并返回音频URL
@@ -115,9 +117,7 @@ async def generate_agent_opening_voice(
             f"Agent {agent.id} 使用voice_id: {voice_id_to_use} (来源: {'Agent' if agent.voice_id else '性别默认值'})"
         )
 
-        voice_service = VoiceService()
-
-        # 生成开场白语音
+        # 生成开场白语音（使用注入的 voice_service）
         voice_result = await voice_service.generate_voice(
             text=opening, voice_id=voice_id_to_use
         )
@@ -766,7 +766,10 @@ async def get_recommended_agents_paginated(
 
 
 async def create_agent(
-    db: AsyncSession, agent_in: schemas.AgentCreate, user_id: str
+    db: AsyncSession,
+    agent_in: schemas.AgentCreate,
+    user_id: str,
+    voice_service: VoiceService,
 ) -> models.Agent:
     """
     创建新的AI角色
@@ -865,7 +868,7 @@ async def create_agent(
             # 比如 “你好，我是 {{ char }}，很高兴认识你”
             # 如果出现了用户的名字，则无法静态生成。
             # TODO：考虑在用户打开时再进行生成，这样用户看到的信息是不同的。
-            await generate_agent_opening_voice(db_agent, db)
+            await generate_agent_opening_voice(db_agent, db, voice_service)
         except Exception as e:
             logger.warning(
                 f"Agent {db_agent.id} 创建后语音生成失败，将在后续使用时生成: {str(e)}"
@@ -1062,7 +1065,10 @@ def _update_agent_in_db(update_data: dict, db_agent: models.Agent):
 
 
 async def update_agent(
-    db: AsyncSession, db_agent: models.Agent, agent_in: schemas.AgentUpdate
+    db: AsyncSession,
+    db_agent: models.Agent,
+    agent_in: schemas.AgentUpdate,
+    voice_service: VoiceService,
 ) -> models.Agent:
     """
     更新AI角色
@@ -1114,7 +1120,7 @@ async def update_agent(
                 # 生成的开场语音中是包含变量名，这种场景下只能替换 agent 名字
                 # 比如 “你好，我是 {{ char }}，很高兴认识你”
                 # 如果出现了用户的名字，则无法静态生成。
-                await generate_agent_opening_voice(db_agent, db)
+                await generate_agent_opening_voice(db_agent, db, voice_service)
             except Exception as e:
                 logger.warning(f"Agent {db_agent.id} 更新后语音重新生成失败: {str(e)}")
 

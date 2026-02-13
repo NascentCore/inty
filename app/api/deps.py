@@ -6,6 +6,8 @@ from typing import Generator
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+
+from app.services.global_services import subscription_service, voice_service
 from jose import JWTError, jwt
 from loguru import logger
 from pydantic import ValidationError
@@ -18,6 +20,16 @@ from app.db.session import get_async_db, get_async_replica_db
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+def get_subscription_service():
+    """供路由层通过 Depends 注入 subscription_service。"""
+    return subscription_service
+
+
+def get_voice_service():
+    """供路由层通过 Depends 注入 voice_service。"""
+    return voice_service
 
 
 def get_db() -> Generator:
