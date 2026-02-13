@@ -52,6 +52,11 @@ class Memory(Base):
     festival_date = Column(
         Date, nullable=True, comment="节日日期，仅 memory_type=festival 时使用"
     )
+    delivery_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="节日记忆提示首次投递到会话的时间，仅 memory_type=festival 时使用",
+    )
 
     __table_args__ = (
         Index("ix_memory_user_type", "user_id", "memory_type"),

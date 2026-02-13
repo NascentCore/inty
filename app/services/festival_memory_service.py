@@ -17,7 +17,6 @@ import psycopg
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
-from app.services import chat_history_service
 from app.services.chat_history_service import get_chat_history_connection
 from app.services.chat_service import generate_session_id
 from app.services.memory_service import MEMORY_TYPE_FESTIVAL
@@ -262,16 +261,5 @@ Based on the conversation above, extract memories or preferences related to "{fe
     logger.debug(
         f"节日记忆写入完成 user_id={user_id} agent_id={agent_id} festival={festival_name}"
     )
-    session_id = await asyncio.to_thread(
-        get_session_id_for_user_agent_sync, user_id, agent_id
-    )
-    if session_id:
-        await asyncio.to_thread(
-            chat_history_service.add_festival_memory_prompt_message_sync,
-            session_id,
-            agent_id,
-            memory_row.id,
-            festival_name,
-            festival_date,
-        )
+    # 提示消息改为按需投递：在用户发起聊天或拉取消息列表时写入 chat_history 并更新 memory.delivery_at
     return True

@@ -345,6 +345,27 @@ FESTIVAL_MEMORY_PROMPT_CONTENT = (
 META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
 
 
+def get_festival_memory_prompt_content_for_agent_sync(agent_id: str) -> str:
+    """
+    返回用于展示的节日记忆提示文案（与 add_festival_memory_prompt_message_sync 落库一致）。
+    供按需投递时构建 chat completion choices 中的 message 使用。
+    """
+    agent_name = "角色"
+    try:
+        conn = get_chat_history_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name FROM agents WHERE id = %s LIMIT 1",
+                (agent_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                agent_name = str(row[0]).strip() or agent_name
+    except Exception as e:
+        logger.debug(f"获取 agent 名称失败 agent_id={agent_id}: {e}")
+    return FESTIVAL_MEMORY_PROMPT_CONTENT.replace("{char}", agent_name)
+
+
 def add_festival_memory_prompt_message_sync(
     session_id: str,
     agent_id: str,
