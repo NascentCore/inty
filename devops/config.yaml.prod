@@ -1,7 +1,10 @@
 app:
   environment: prod
   # 仅当请求头 appVersionCode >= 此值时返回记忆提醒；0 表示不按版本限制。不配则默认 0。
-  # min_app_version_code_for_festival_memory: 0
+  # 4000 远远大于现在的 commit count，这样相当于禁止功能；这样方便测试后端：
+  # https://github.com/NascentCore/inty/blob/130596ee989fce0bd4db863d1030274950cd4bf6/devops/config.yaml.dev#L16C45-L16C49
+  # app 发布上线之前，这个数值要调整回 dev 环境的数值：3345
+  min_app_version_code_for_festival_memory: 4000
   limits:
     guest_user_chat_24h_limit: 10
     free_user_chat_24h_limit: 100
