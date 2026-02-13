@@ -51,6 +51,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Zephyr.mp3",
+        "keywords": ["balanced", "fast pacing", "gentle", "steady"],
     },
     {
         "voice_id": "Puck",
@@ -60,6 +61,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Puck.mp3",
+        "keywords": ["clear", "medium pacing", "natural", "smooth"],
     },
     {
         "voice_id": "Charon",
@@ -69,6 +71,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Charon.mp3",
+        "keywords": ["deep", "warm", "fast pacing", "strong", "expressive"],
     },
     {
         "voice_id": "Kore",
@@ -78,6 +81,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Kore.mp3",
+        "keywords": ["bright", "high-pitched", "slow pacing", "natural", "smooth"],
     },
     {
         "voice_id": "Fenrir",
@@ -87,6 +91,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Fenrir.mp3",
+        "keywords": ["balanced", "medium pacing", "strong", "smooth"],
     },
     {
         "voice_id": "Aoede",
@@ -96,6 +101,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Aoede.mp3",
+        "keywords": ["clear", "slow pacing", "natural", "steady"],
     },
     {
         "voice_id": "Orus",
@@ -105,6 +111,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Orus.mp3",
+        "keywords": ["balanced", "fast pacing", "gentle", "expressive"],
     },
     {
         "voice_id": "Leda",
@@ -114,6 +121,13 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Leda.mp3",
+        "keywords": [
+            "soft-bright",
+            "high-pitched",
+            "slow pacing",
+            "gentle",
+            "expressive",
+        ],
     },
     {
         "voice_id": "Achernar",
@@ -123,6 +137,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Achernar.mp3",
+        "keywords": ["balanced", "fast pacing", "natural", "steady"],
     },
     {
         "voice_id": "Achird",
@@ -132,6 +147,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Achird.mp3",
+        "keywords": ["clear", "fast pacing", "natural", "steady"],
     },
     {
         "voice_id": "Algenib",
@@ -141,6 +157,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Algenib.mp3",
+        "keywords": ["clear", "low-pitched", "medium pacing", "gentle", "smooth"],
     },
     {
         "voice_id": "Algieba",
@@ -150,6 +167,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Algieba.mp3",
+        "keywords": ["clear", "low-pitched", "medium pacing", "strong", "expressive"],
     },
     {
         "voice_id": "Alnilam",
@@ -159,6 +177,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Alnilam.mp3",
+        "keywords": ["deep", "warm", "fast pacing", "natural", "smooth"],
     },
     {
         "voice_id": "Autonoe",
@@ -168,6 +187,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Autonoe.mp3",
+        "keywords": ["balanced", "slow pacing", "natural", "smooth"],
     },
     {
         "voice_id": "Callirrhoe",
@@ -177,6 +197,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Callirrhoe.mp3",
+        "keywords": ["balanced", "medium pacing", "natural", "steady"],
     },
     {
         "voice_id": "Despina",
@@ -186,6 +207,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Despina.mp3",
+        "keywords": ["soft-bright", "high-pitched", "medium pacing", "strong", "steady"],
     },
     {
         "voice_id": "Enceladus",
@@ -195,6 +217,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Enceladus.mp3",
+        "keywords": ["balanced", "medium pacing", "natural", "smooth"],
     },
     {
         "voice_id": "Erinome",
@@ -204,6 +227,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Erinome.mp3",
+        "keywords": ["balanced", "medium pacing", "strong", "expressive"],
     },
     {
         "voice_id": "Gacrux",
@@ -213,6 +237,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Gacrux.mp3",
+        "keywords": ["soft", "slow pacing", "strong", "smooth"],
     },
     {
         "voice_id": "Iapetus",
@@ -222,6 +247,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Iapetus.mp3",
+        "keywords": ["deep", "warm", "medium pacing", "gentle", "steady"],
     },
     {
         "voice_id": "Laomedeia",
@@ -231,6 +257,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Laomedeia.mp3",
+        "keywords": ["soft", "medium pacing", "natural", "smooth"],
     },
     {
         "voice_id": "Pulcherrima",
@@ -240,6 +267,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Pulcherrima.mp3",
+        "keywords": ["balanced", "fast pacing", "strong", "smooth"],
     },
     {
         "voice_id": "Rasalgethi",
@@ -249,6 +277,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Rasalgethi.mp3",
+        "keywords": ["balanced", "medium pacing", "natural", "smooth"],
     },
     {
         "voice_id": "Sadachbia",
@@ -258,6 +287,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Sadachbia.mp3",
+        "keywords": ["balanced", "fast pacing", "natural", "expressive"],
     },
     {
         "voice_id": "Sadaltager",
@@ -267,6 +297,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Sadaltager.mp3",
+        "keywords": ["balanced", "slow pacing", "gentle", "smooth"],
     },
     {
         "voice_id": "Schedar",
@@ -276,6 +307,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Schedar.mp3",
+        "keywords": ["clear", "fast pacing", "natural", "steady"],
     },
     {
         "voice_id": "Sulafat",
@@ -285,6 +317,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Sulafat.mp3",
+        "keywords": ["bright", "high-pitched", "slow pacing", "strong", "smooth"],
     },
     {
         "voice_id": "Umbriel",
@@ -294,6 +327,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Umbriel.mp3",
+        "keywords": ["balanced", "medium pacing", "gentle", "expressive"],
     },
     {
         "voice_id": "Vindemiatrix",
@@ -303,6 +337,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Vindemiatrix.mp3",
+        "keywords": ["balanced", "medium pacing", "natural", "expressive"],
     },
     {
         "voice_id": "Zubenelgenubi",
@@ -312,6 +347,7 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Zubenelgenubi.mp3",
+        "keywords": ["soft", "slow pacing", "gentle", "smooth"],
     },
 ]
 
