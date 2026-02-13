@@ -142,7 +142,7 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
 
   // 通用导出JSON函数
   const exportToJson = useCallback(
-    (data: any, filename: string, successMessage: string) => {
+    (data: unknown, filename: string, successMessage: string) => {
       try {
         // 生成文件名
         const timestamp = new Date()
@@ -209,9 +209,14 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
     async (file: UploadFile) => {
       try {
         setUploading(true);
+        const rawFile = file.originFileObj;
+        if (!rawFile) {
+          message.error("无法读取上传文件");
+          return false;
+        }
 
         const uploadResult: QuestionFileUpload = await api.questions.parseFile(
-          file as any,
+          rawFile,
         );
 
         // 合并问题，避免重复

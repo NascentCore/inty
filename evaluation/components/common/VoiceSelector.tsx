@@ -67,7 +67,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     ) => {
       setLoading(true);
       try {
-        const params: any = {
+        const params: { search?: string; provider?: string } = {
           // 移除page_size限制，让后端返回所有音色
         };
         if (search) params.search = search;
@@ -158,9 +158,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 搜索防抖处理
   const debouncedLoadVoices = useMemo(() => {
-    const debounce = (func: Function, delay: number) => {
+    const debounce = <TArgs extends unknown[]>(
+      func: (...args: TArgs) => void,
+      delay: number,
+    ) => {
       let timeoutId: ReturnType<typeof setTimeout>;
-      return (...args: any[]) => {
+      return (...args: TArgs) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func(...args), delay);
       };
@@ -172,8 +175,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 初始加载
   useEffect(() => {
-    loadVoices(false, searchText, sourceFilter, providerFilter);
-  }, []); // 只在组件挂载时加载一次
+    loadVoices(false, "", "all", "all");
+  }, [loadVoices]);
 
   // 当 value 变化时，立即显示基本信息并异步加载详细信息
   useEffect(() => {

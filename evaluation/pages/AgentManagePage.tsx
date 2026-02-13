@@ -36,6 +36,7 @@ import modelCacheService from "../services/modelCache";
 import type {
   Agent,
   AgentCreateRequest,
+  AgentUpdateRequest,
   AvatarCropData,
   ExclusivePhotoItem,
   OpenRouterModel,
@@ -785,16 +786,17 @@ export const AgentManagePage: React.FC = () => {
 
       setSaveLoading(true);
 
+      const score = values.score;
+      const comment = values.comment;
+
       // 从 values 中排除 UI 状态字段，只保留需要提交的数据
-      const {
-        score,
-        comment,
-        main_prompt_select,
-        mode_prompt_select,
-        main_prompt_display,
-        mode_prompt_display,
-        ...otherValues
-      } = values;
+      const otherValues = { ...values };
+      delete otherValues.score;
+      delete otherValues.comment;
+      delete otherValues.main_prompt_select;
+      delete otherValues.mode_prompt_select;
+      delete otherValues.main_prompt_display;
+      delete otherValues.mode_prompt_display;
 
       const agentData: AgentCreateRequest = {
         ...otherValues,
@@ -890,16 +892,17 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
+      const score = values.score;
+      const comment = values.comment;
+
       // 从 values 中排除 UI 状态字段，只保留需要提交的数据
-      const {
-        score,
-        comment,
-        main_prompt_select,
-        mode_prompt_select,
-        main_prompt_display,
-        mode_prompt_display,
-        ...otherValues
-      } = values;
+      const otherValues = { ...values };
+      delete otherValues.score;
+      delete otherValues.comment;
+      delete otherValues.main_prompt_select;
+      delete otherValues.mode_prompt_select;
+      delete otherValues.main_prompt_display;
+      delete otherValues.mode_prompt_display;
 
       const updateData = {
         ...otherValues,
@@ -1033,13 +1036,19 @@ export const AgentManagePage: React.FC = () => {
           );
 
           // 直接调用 API，使用 replace_background_images 参数来替换而非追加
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const updatePayload: AgentUpdateRequest & {
+            replace_background_images: boolean;
+          } = {
+            background_images: filteredImages,
+            replace_background_images: true,
+          };
+
           const updatedAgent = (await api
             .getIntyClient()
-            .api.v1.ai.agents.update(currentAgent.id, {
-              background_images: filteredImages,
-              replace_background_images: true,
-            } as any)) as unknown as Agent;
+            .api.v1.ai.agents.update(
+              currentAgent.id,
+              updatePayload,
+            )) as unknown as Agent;
 
           if (updatedAgent) {
             setCurrentAgent({

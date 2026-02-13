@@ -48,6 +48,17 @@ interface UseAgentsReturn {
   clearCache: () => void;
 }
 
+interface IntyUploadImageResponse {
+  data?: {
+    avatar_url?: string;
+    url?: string;
+  };
+}
+
+interface IntyAgentMutationResponse {
+  data?: Agent;
+}
+
 const isFile = (value: unknown): value is File => {
   return value instanceof File;
 };
@@ -207,12 +218,12 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         ) {
           // data.avatar 是 File 对象，需要上传
           try {
-            const uploadResponse = await api
+            const uploadResponse = (await api
               .getIntyClient()
               .api.v1.uploadImage({
                 file: data.avatar,
                 cropping_avatar: true,
-              });
+              })) as IntyUploadImageResponse;
             console.log("uploadResponse:", uploadResponse);
             // 上传成功后，将返回的 avatar_url 和 url 赋值给 agentData
             (agentData as AgentCreateRequest).avatar = uploadResponse.data
@@ -235,10 +246,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           agentData.voice_id = data.voice_id;
         }
 
-        const response = await api
+        const response = (await api
           .getIntyClient()
-          .api.v1.ai.agents.create(agentData);
-        const newAgent = response.data as unknown as Agent;
+          .api.v1.ai.agents.create(agentData)) as IntyAgentMutationResponse;
+        const newAgent = (response.data as Agent | undefined) ?? null;
 
         // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
         clearCache();
@@ -276,12 +287,12 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           isFile(data.avatar)
         ) {
           try {
-            const uploadResponse = await api
+            const uploadResponse = (await api
               .getIntyClient()
               .api.v1.uploadImage({
                 file: data.avatar,
                 cropping_avatar: true,
-              });
+              })) as IntyUploadImageResponse;
             console.log("uploadResponse:", uploadResponse);
             (updateData as AgentUpdateRequest).avatar = uploadResponse.data
               ?.avatar_url as string;

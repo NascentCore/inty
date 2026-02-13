@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 interface UseJsonDisplayReturn {
   jsonModalVisible: boolean;
   jsonData: string;
-  showJson: (data: any) => void;
+  showJson: (data: unknown) => void;
   hideJson: () => void;
 }
 
@@ -11,7 +11,7 @@ export const useJsonDisplay = (): UseJsonDisplayReturn => {
   const [jsonModalVisible, setJsonModalVisible] = useState(false);
   const [jsonData, setJsonData] = useState("");
 
-  const showJson = useCallback((data: any) => {
+  const showJson = useCallback((data: unknown) => {
     try {
       const formattedJson = JSON.stringify(data, null, 2);
       setJsonData(formattedJson);

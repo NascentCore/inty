@@ -38,6 +38,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
 import api from "../services/api";
 import { MultiAgentChatDisplay } from "../components/evaluation/MultiAgentChatDisplay";
 import { JsonDisplayModal } from "../components/common/JsonDisplayModal";
@@ -83,12 +84,15 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
   // 筛选和搜索状态
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [dateRange, setDateRange] = useState<[any, any] | null>(null);
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
+  const { current: currentPage, pageSize } = pagination;
 
   // JSON显示功能
   const { jsonModalVisible, jsonData, showJson, hideJson } = useJsonDisplay();
@@ -98,9 +102,16 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     try {
       setLoading(true);
 
-      const params: any = {
-        skip: (pagination.current - 1) * pagination.pageSize,
-        limit: pagination.pageSize,
+      const params: {
+        skip: number;
+        limit: number;
+        status?: string;
+        search?: string;
+        start_date?: string;
+        end_date?: string;
+      } = {
+        skip: (currentPage - 1) * pageSize,
+        limit: pageSize,
       };
 
       if (statusFilter) {
@@ -182,8 +193,8 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
       setLoading(false);
     }
   }, [
-    pagination.current,
-    pagination.pageSize,
+    currentPage,
+    pageSize,
     statusFilter,
     searchText,
     dateRange,

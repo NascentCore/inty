@@ -4,8 +4,13 @@ declare module "inty" {
     apiKey?: string;
   }
 
+  interface IntyApiNode {
+    (...args: unknown[]): Promise<unknown>;
+    [key: string]: IntyApiNode;
+  }
+
   export class Inty {
     constructor(config?: IntyConfig);
-    api: any;
+    api: IntyApiNode;
   }
 }

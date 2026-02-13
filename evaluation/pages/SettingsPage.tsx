@@ -55,6 +55,21 @@ export const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
+    return fallback;
+  };
+
   // 加载配置
   const loadConfig = async () => {
     try {
@@ -73,8 +88,8 @@ export const SettingsPage: React.FC = () => {
         });
         message.success("配置加载成功");
       }
-    } catch (error: any) {
-      message.error(`加载配置失败: ${error.message || "未知错误"}`);
+    } catch (error: unknown) {
+      message.error(`加载配置失败: ${getErrorMessage(error, "未知错误")}`);
       console.error("加载配置失败:", error);
     } finally {
       setLoading(false);
@@ -100,11 +115,15 @@ export const SettingsPage: React.FC = () => {
             response.sub_user_chat_image_gemini_model,
         });
       }
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "errorFields" in error
+      ) {
         message.error("请检查表单填写");
       } else {
-        message.error(`保存配置失败: ${error.message || "未知错误"}`);
+        message.error(`保存配置失败: ${getErrorMessage(error, "未知错误")}`);
         console.error("保存配置失败:", error);
       }
     } finally {
