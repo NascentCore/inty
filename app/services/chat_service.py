@@ -16,7 +16,7 @@ from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
-from app.services.global_services import subscription_service
+from app.services.subscription_service import SubscriptionService
 from app.services.user_service import build_user_info_prompt_block
 
 
@@ -1232,6 +1232,7 @@ async def _try_match_existing_image(
     session_id: str,
     current_prompt: str,
     message_content: str,
+    subscription_service: SubscriptionService,
     is_network_error: bool = False,
 ) -> Optional[schemas.ChatImageGenerationResponse]:
     """
@@ -1355,6 +1356,7 @@ async def generate_chat_image(
     agent_id: str,
     user_id: str,
     message_id: int,
+    subscription_service: SubscriptionService,
     history_count: Optional[int] = None,
     model: Optional[str] = None,
 ) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
@@ -1749,6 +1751,7 @@ async def generate_chat_image(
                 session_id=session_id,
                 current_prompt=current_prompt,
                 message_content=message_content,
+                subscription_service=subscription_service,
                 is_network_error=is_network_error,
             )
             if fallback_result:

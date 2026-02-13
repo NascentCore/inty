@@ -6,7 +6,7 @@
 import asyncio
 import json
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -51,15 +51,16 @@ def _window_for_festival_date(
 
 def get_pairs_with_min_rounds_in_window_sync(
     festival_date: date,
+    db_url: str,
     min_rounds: int = DEFAULT_MIN_ROUNDS_IN_WINDOW,
     timezone_str: str = "UTC",
 ) -> List[Tuple[str, str]]:
     """
     同步筛选 (user_id, agent_id)：仅包含在「该时区下节日自然日 00:00 至次日 04:00」28 小时
     （换算为 UTC）内，该会话用户消息数（排除开场白）>= min_rounds 的组合。
+    db_url：用于 psycopg 连接的数据库 URL（主库或只读副本）。
     """
     window_start, window_end = _window_for_festival_date(festival_date, timezone_str)
-    db_url = global_config_loaded_from_config_yaml.database.url
     conn = psycopg.connect(db_url, autocommit=True)
     try:
         with conn.cursor() as cur:
@@ -105,12 +106,13 @@ def get_pairs_with_min_rounds_in_window_sync(
 
 
 def get_messages_for_user_agent_sync(
-    user_id: str, agent_id: str
+    user_id: str, agent_id: str, connection: Optional[Any] = None
 ) -> List[Tuple[str, str]]:
     """
     拉取该用户与该角色的单会话消息 (role, content)，按 created_at 升序。
+    connection 可选；不传则使用 get_chat_history_connection()（主库）。
     """
-    conn = get_chat_history_connection()
+    conn = connection if connection is not None else get_chat_history_connection()
     with conn.cursor() as cur:
         cur.execute(
             "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true LIMIT 1",
