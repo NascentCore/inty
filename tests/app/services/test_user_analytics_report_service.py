@@ -59,7 +59,7 @@ def sample_stats():
 async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stats):
     """已存在的日报应跳过"""
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [MagicMock()]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
     with (
@@ -86,7 +86,7 @@ async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stat
 async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
     """新日报应创建并保存"""
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalars.return_value.all.return_value = []
     mock_db.execute = AsyncMock(return_value=mock_result)
 
     with (
@@ -113,7 +113,7 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
 async def test_compute_and_save_weekly_report_skips_existing(mock_db, sample_stats):
     """已存在的周报应跳过"""
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [MagicMock()]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
     with (
@@ -140,7 +140,7 @@ async def test_compute_and_save_weekly_report_skips_existing(mock_db, sample_sta
 async def test_compute_and_save_weekly_report_creates_new(mock_db, sample_stats):
     """新周报应创建并保存"""
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalars.return_value.all.return_value = []
     mock_db.execute = AsyncMock(return_value=mock_result)
 
     with (
