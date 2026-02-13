@@ -22,6 +22,7 @@ class VoiceMetadata(BaseModel):
     source: str
     category: str
     preview_url: str
+    keywords: list[str]
 
 
 def list_gemini_voices() -> list[VoiceMetadata]:

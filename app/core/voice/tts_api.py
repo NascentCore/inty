@@ -36,12 +36,33 @@ DEFAULT_GEMINI_TTS_TEMPERATURE = 1.3
 TTS_PROVIDER_GEMINI = "gemini"
 TTS_PROVIDER_ELEVENLABS = "elevenlabs"
 
+# How the per-voice "keywords" were generated (for reference):
+#
+# 1. Pulled official samples from the Chirp 3 HD doc page (all 30 voice .wav URLs).
+# 2. Analyzed each clip; per voice we computed:
+#    - Duration → proxy for pacing (fast / medium / slow)
+#    - Estimated pitch (F0) via autocorrelation → low vs high pitch
+#    - Spectral centroid → darker/warmer vs brighter/clearer tone
+#    - RMS energy → gentle vs strong presence
+#    - Dynamic range (P90–P10 energy) → steady vs expressive variation
+# 3. Converted numbers to keywords: compared voices (quartiles), then mapped to words, e.g.:
+#    - high centroid + high F0 → bright, high-pitched
+#    - low centroid + low F0 → deep, warm
+#    - short duration → fast pacing
+#    - high dynamic range → expressive; low → steady
+# 4. Built a use-case shortlist and matched tags to scenario intent:
+#    - support → clearer + steadier
+#    - storytelling → more expressive
+#    - wellness → softer + slower, etc.
+
 # Gemini TTS 预置音色列表
 # 来源: https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd (Chirp 3: HD voices)
 _GCS_VOICE_PREVIEW_BASE = (
     "https://storage.googleapis.com/inty-static/voice_previews/gemini"
 )
 
+# 来源：https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd
+# 其中 keywords 使用 Cursor Agent 云端自主阅读完成，采用了对音频直接进行分析的方式
 GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
     {
         "voice_id": "Zephyr",
