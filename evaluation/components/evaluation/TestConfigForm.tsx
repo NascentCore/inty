@@ -106,9 +106,11 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
     },
     validate: validateForm,
   });
+  const scoringModelValue = form.values.scoring_model;
+  const setFormValue = form.setValue;
 
   // 加载评分模型 - 使用OpenRouter模型
-  const loadScoringModels = useCallback(async () => {
+  const loadScoringModels = useCallback(async (currentScoringModel: string) => {
     try {
       setModelsLoading(true);
       const models = await modelCacheService.getOpenRouterModels();
@@ -116,23 +118,23 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
       setScoringModels(models);
 
       // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
-      if (models.length > 0 && !form.values.scoring_model) {
+      if (models.length > 0 && !currentScoringModel) {
         const preferredModel = models.find(
           (model) => model.id === "google/gemini-2.5-flash-lite",
         );
         const defaultModel = preferredModel || models[0];
-        form.setValue("scoring_model", defaultModel.id);
+        setFormValue("scoring_model", defaultModel.id);
       }
     } catch (error) {
       console.error("加载评分模型失败:", error);
     } finally {
       setModelsLoading(false);
     }
-  }, [form.values.scoring_model, form.setValue]);
+  }, [setFormValue]);
 
   // 刷新模型列表
   const handleRefreshModels = () => {
-    loadScoringModels();
+    loadScoringModels(scoringModelValue);
   };
 
   useEffect(() => {
@@ -141,8 +143,8 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
       return;
     }
 
-    loadScoringModels();
-  }, [loadScoringModels, scoringModels.length]);
+    loadScoringModels(scoringModelValue);
+  }, [loadScoringModels, scoringModels.length, scoringModelValue]);
 
   // 通知父组件表单值变化
   useEffect(() => {

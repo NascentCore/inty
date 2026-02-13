@@ -49,6 +49,8 @@ export const getGlobalApiKey = (): string | null => {
   return globalApiKey;
 };
 
+type RequestOptions = NonNullable<Parameters<typeof fetch>[1]>;
+
 class ApiClient {
   private baseURL: string;
   private apiPrefix: string;
@@ -66,7 +68,10 @@ class ApiClient {
     };
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestOptions = {},
+  ): Promise<T> {
     // 自动添加API前缀，如果endpoint已经包含/api/则不添加
     const fullEndpoint = endpoint.startsWith("/api/")
       ? endpoint
@@ -98,7 +103,7 @@ class ApiClient {
     requestHeaders.set("Authorization", `Bearer ${currentApiKey}`);
 
     // 构建最终的 config 对象
-    const config: RequestInit = {
+    const config: RequestOptions = {
       ...options,
       headers: requestHeaders,
     };
@@ -208,7 +213,7 @@ class ApiClient {
   async get<T>(
     endpoint: string,
     params?: Record<string, string | number | boolean | null | undefined>,
-    options?: RequestInit,
+    options?: RequestOptions,
   ): Promise<T> {
     let finalEndpoint = endpoint;
 
