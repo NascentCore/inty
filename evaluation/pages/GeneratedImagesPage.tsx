@@ -39,6 +39,7 @@ import { generatedImagesApi } from "../services/api";
 import { loadSelfAgentList } from "../services/agentListService";
 import type { Agent, GeneratedImage } from "../types";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
+import { rankAgentsByGeneratedImageCount } from "../utils/generatedImagesRanking";
 
 const { Text, Paragraph, Title } = Typography;
 const { Search } = Input;
@@ -130,10 +131,18 @@ const GeneratedImagesPage: React.FC = () => {
     }
   }, [selectedAgent, loadImages]);
 
-  // 过滤角色列表
-  const filteredAgents = agents.filter((agent) =>
-    agent.name.toLowerCase().includes(searchText.toLowerCase()),
-  );
+  // 过滤并按生成图片数量降序排序角色列表
+  const filteredAgents = React.useMemo(() => {
+    const normalizedSearchText = searchText.trim().toLowerCase();
+    const visibleAgents =
+      normalizedSearchText.length === 0
+        ? agents
+        : agents.filter((agent) =>
+            agent.name.toLowerCase().includes(normalizedSearchText),
+          );
+
+    return rankAgentsByGeneratedImageCount(visibleAgents, imageCounts);
+  }, [agents, imageCounts, searchText]);
 
   // 按用户分组图片
   const groupedImages = React.useMemo(() => {
