@@ -65,7 +65,7 @@ class ApiClient {
     };
   }
 
-  private async request<T>(endpoint: string, options: any = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: Record<string, unknown> = {}): Promise<T> {
     // 自动添加API前缀，如果endpoint已经包含/api/则不添加
     const fullEndpoint = endpoint.startsWith("/api/")
       ? endpoint
@@ -95,7 +95,7 @@ class ApiClient {
       // 删除Content-Type，让浏览器自动设置；覆盖默认的 Content-Type: application/json
       // TODO: 是否仅支持浏览器使用，代码中使用该 API 是否会有问题
       if (headers && typeof headers === "object") {
-        delete (headers as any)["Content-Type"];
+        delete (headers as Record<string, string | undefined>)["Content-Type"];
       }
     }
 
@@ -106,7 +106,7 @@ class ApiClient {
     };
 
     // 构建最终的 config 对象
-    const config: any = {
+    const config: Record<string, unknown> = {
       ...options,
       headers,
     };
@@ -157,13 +157,13 @@ class ApiClient {
       class ApiError extends Error {
         public status: number;
         public statusText: string;
-        public errorData: any;
+        public errorData: unknown;
 
         constructor(
           message: string,
           status: number,
           statusText: string,
-          errorData: any,
+          errorData: unknown,
         ) {
           super(message);
           this.name = "ApiError";
@@ -207,7 +207,7 @@ class ApiClient {
           return result;
         }
       } else {
-        return response as any;
+        return response as unknown as T;
       }
     } catch (error) {
       logError(`API请求失败: ${endpoint}, 错误信息: ${error}`);
@@ -218,8 +218,8 @@ class ApiClient {
   // GET请求
   async get<T>(
     endpoint: string,
-    params?: Record<string, any>,
-    options?: any,
+    params?: Record<string, string | number | boolean>,
+    options?: Record<string, unknown>,
   ): Promise<T> {
     let finalEndpoint = endpoint;
 
@@ -240,7 +240,7 @@ class ApiClient {
   }
 
   // POST请求
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
@@ -248,7 +248,7 @@ class ApiClient {
   }
 
   // PUT请求
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
@@ -266,7 +266,7 @@ class ApiClient {
   async upload<T>(
     endpoint: string,
     file: File,
-    additionalData?: Record<string, any>,
+    additionalData?: Record<string, string | number | boolean>,
   ): Promise<T> {
     const formData = new FormData();
     formData.append("file", file);
@@ -421,7 +421,7 @@ export const agentApi = {
     }),
 
   // 上传头像
-  uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
+  uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<{ url: string }> =>
     apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
 
   // 检查背景图宽高比
@@ -821,7 +821,7 @@ export class WebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval = 3000;
-  private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
 
   constructor(sessionId: string) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -864,7 +864,7 @@ export class WebSocketManager {
     });
   }
 
-  private handleMessage(message: any) {
+  private handleMessage(message: { type: string; [key: string]: unknown }) {
     const { type } = message;
     const listeners = this.listeners.get(type);
 
@@ -908,14 +908,14 @@ export class WebSocketManager {
     }
   }
 
-  on(eventType: string, callback: (data: any) => void) {
+  on(eventType: string, callback: (data: unknown) => void) {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, new Set());
     }
     this.listeners.get(eventType)!.add(callback);
   }
 
-  off(eventType: string, callback: (data: any) => void) {
+  off(eventType: string, callback: (data: unknown) => void) {
     const listeners = this.listeners.get(eventType);
     if (listeners) {
       listeners.delete(callback);
@@ -1122,7 +1122,7 @@ export const chatApi = {
     apiClient.delete(`/chats/${chatId}`),
 
   // 获取智能体调试消息
-  getAgentDebugMessages: (agentId: string): Promise<any> =>
+  getAgentDebugMessages: (agentId: string): Promise<{ messages: unknown[] }> =>
     apiClient.get(`/chats/agents/${agentId}/debug-messages`),
 
   // 生成消息语音
@@ -1152,7 +1152,7 @@ export const chatApi = {
       voice_enabled?: boolean;
       style_prompt?: string;
     },
-  ): Promise<any> =>
+  ): Promise<{ message: string }> =>
     apiClient.put(`/chats/agents/${agentId}/settings`, settings),
 };
 
