@@ -389,16 +389,37 @@ export const CharacterThemeManagePage: React.FC = () => {
                       <div
                         style={{
                           display: "flex",
-                          alignItems: "center",
+                          flexDirection: "column",
+                          alignItems: "flex-start",
                           gap: 8,
+                          whiteSpace: "normal",
                         }}
                       >
-                        <span>{theme.name}</span>
-                        <Tag
-                          color={getVisibilityConfig(theme.visibility).color}
+                        <span
+                          style={{
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                            lineHeight: 1.4,
+                          }}
                         >
-                          {getVisibilityConfig(theme.visibility).text}
-                        </Tag>
+                          {theme.name}
+                        </span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            whiteSpace: "normal",
+                          }}
+                        >
+                          <Text type="secondary" style={{ fontSize: 13 }}>
+                            可见性:
+                          </Text>
+                          <Tag color={getVisibilityConfig(theme.visibility).color}>
+                            {getVisibilityConfig(theme.visibility).text}
+                          </Tag>
+                        </div>
                       </div>
                     }
                     description={
