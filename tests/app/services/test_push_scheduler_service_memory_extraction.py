@@ -1,8 +1,90 @@
+import importlib
+import sys
+import types
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.services.push_scheduler_service import PushSchedulerService
+
+def _load_push_scheduler_service_module():
+    fake_config = types.SimpleNamespace(
+        push_notification=types.SimpleNamespace(enabled=True, festival_memory_enabled=False),
+        memory_extraction=types.SimpleNamespace(enabled=True, cron_hour=3),
+        user_analytics_report=types.SimpleNamespace(enabled=False),
+    )
+    fake_core_config_module = types.ModuleType("app.core.config")
+    fake_core_config_module.global_config_loaded_from_config_yaml = fake_config
+
+    fake_db_session_module = types.ModuleType("app.db.session")
+    fake_db_session_module.AsyncSessionLocal = lambda: None
+    fake_db_session_module.AsyncSessionLocalReplica = None
+
+    fake_models_memory_module = types.ModuleType("app.models.memory")
+    fake_models_memory_module.FestivalMemoryConfig = type("FestivalMemoryConfig", (), {})
+
+    fake_festival_memory_module = types.ModuleType("app.services.festival_memory_service")
+    fake_festival_memory_module.DEFAULT_MIN_ROUNDS_IN_WINDOW = 3
+
+    fake_memory_extraction_module = types.ModuleType(
+        "app.services.memory_extraction_service"
+    )
+
+    async def _dummy_extract(*args, **kwargs):
+        return None
+
+    async def _dummy_get_users(*args, **kwargs):
+        return []
+
+    fake_memory_extraction_module.extract_and_save = _dummy_extract
+    fake_memory_extraction_module.get_users_to_extract = _dummy_get_users
+
+    fake_push_notification_module = types.ModuleType(
+        "app.services.push_notification_service"
+    )
+
+    async def _dummy_process(*args, **kwargs):
+        return (0, 0)
+
+    async def _dummy_discover(*args, **kwargs):
+        return 0
+
+    async def _dummy_init(*args, **kwargs):
+        return None
+
+    fake_push_notification_module.discover_new_users_for_push = _dummy_discover
+    fake_push_notification_module.discover_users_with_updated_tokens = _dummy_discover
+    fake_push_notification_module.initialize_push_system = _dummy_init
+    fake_push_notification_module.process_festival_memory_push_batch = _dummy_process
+    fake_push_notification_module.process_push_batch = _dummy_process
+
+    fake_analytics_report_module = types.ModuleType(
+        "app.services.user_analytics_report_service"
+    )
+
+    async def _dummy_report(*args, **kwargs):
+        return None
+
+    fake_analytics_report_module.compute_and_save_daily_report = _dummy_report
+    fake_analytics_report_module.compute_and_save_weekly_report = _dummy_report
+
+    sys.modules.pop("app.services.push_scheduler_service", None)
+    with patch.dict(
+        sys.modules,
+        {
+            "app.core.config": fake_core_config_module,
+            "app.db.session": fake_db_session_module,
+            "app.models.memory": fake_models_memory_module,
+            "app.services.festival_memory_service": fake_festival_memory_module,
+            "app.services.memory_extraction_service": fake_memory_extraction_module,
+            "app.services.push_notification_service": fake_push_notification_module,
+            "app.services.user_analytics_report_service": fake_analytics_report_module,
+        },
+    ):
+        return importlib.import_module("app.services.push_scheduler_service")
+
+
+push_scheduler_module = _load_push_scheduler_service_module()
+PushSchedulerService = push_scheduler_module.PushSchedulerService
 
 
 class _SessionContextManager:
@@ -32,22 +114,18 @@ async def test_run_memory_extraction_uses_replica_for_read_and_primary_for_write
     mock_extract = AsyncMock()
 
     with (
-        patch(
-            "app.services.push_scheduler_service.AsyncSessionLocalReplica",
+        patch.object(
+            push_scheduler_module,
+            "AsyncSessionLocalReplica",
             _SessionFactory([read_db]),
         ),
-        patch(
-            "app.services.push_scheduler_service.AsyncSessionLocal",
+        patch.object(
+            push_scheduler_module,
+            "AsyncSessionLocal",
             _SessionFactory([write_db]),
         ),
-        patch(
-            "app.services.push_scheduler_service.memory_get_users_to_extract",
-            mock_get_users,
-        ),
-        patch(
-            "app.services.push_scheduler_service.memory_extract_and_save",
-            mock_extract,
-        ),
+        patch.object(push_scheduler_module, "memory_get_users_to_extract", mock_get_users),
+        patch.object(push_scheduler_module, "memory_extract_and_save", mock_extract),
     ):
         scheduler = PushSchedulerService()
         await scheduler._run_memory_extraction()
