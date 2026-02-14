@@ -370,7 +370,9 @@ class PushNotificationConfig:
     enabled: bool = True  # 是否启用推送服务
     batch_size: int = 50  # 每批处理的聊天数量
     festival_memory_enabled: bool = True  # 是否启用节日记忆通知推送
-    festival_memory_batch_size: int = 50  # 节日记忆通知每批处理的 (user_id, agent_id) 数量
+    festival_memory_batch_size: int = (
+        50  # 节日记忆通知每批处理的 (user_id, agent_id) 数量
+    )
     max_retries: int = 3  # 最大重试次数
     max_concurrent_workers: int = 50  # 最大并发 worker 数
     workers_per_user_ratio: int = (

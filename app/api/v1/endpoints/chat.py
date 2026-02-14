@@ -59,9 +59,7 @@ def _handle_subscription_limit_error(
         )
 
 
-def _build_festival_prompt_choice_message(
-    item: dict, info: Optional[dict]
-) -> dict:
+def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> dict:
     """构建单条节日提醒 choice 的 message 字典，与普通 AI 消息结构一致（含 id、meta_data、timestamp、audio_url）。
 
     同一条 message 中可能同时出现顶层的 festival_memory_id（snake_case）与 meta_data 内的
@@ -242,8 +240,10 @@ async def agent_chat_completions(
                     model_override=model_override,
                 )
                 response_content, ai_message_id = (
-                    chat_result[0], chat_result[1]
-                ) if isinstance(chat_result, tuple) else (chat_result, None)
+                    (chat_result[0], chat_result[1])
+                    if isinstance(chat_result, tuple)
+                    else (chat_result, None)
+                )
 
             logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")
 

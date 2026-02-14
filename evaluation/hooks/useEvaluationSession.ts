@@ -73,7 +73,8 @@ export const useEvaluationSession = (
 
   // 错误处理
   const handleError = useCallback((error: unknown, defaultMessage: string) => {
-    const errorMessage = error instanceof Error ? error.message : defaultMessage;
+    const errorMessage =
+      error instanceof Error ? error.message : defaultMessage;
     setError(errorMessage);
     message.error(errorMessage);
     console.error(defaultMessage, error);

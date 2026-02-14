@@ -211,7 +211,9 @@ class PushSchedulerService:
                     max_instances=1,
                     next_run_time=datetime.datetime.now(),
                 )
-                logger.info("已添加节日记忆通知任务: 启动后立即执行，之后每 15 分钟扫描")
+                logger.info(
+                    "已添加节日记忆通知任务: 启动后立即执行，之后每 15 分钟扫描"
+                )
 
             # 用户数据分析日报周报：每日/每周执行（若启用）
             uar_cfg = getattr(
@@ -510,9 +512,7 @@ class PushSchedulerService:
                 success_count, fail_count = await process_festival_memory_push_batch(
                     db, batch_size=batch_size
                 )
-            logger.info(
-                f"[节日记忆通知] 完成: 成功={success_count}, 失败={fail_count}"
-            )
+            logger.info(f"[节日记忆通知] 完成: 成功={success_count}, 失败={fail_count}")
         except Exception as e:
             logger.error(f"[节日记忆通知] 执行失败: {str(e)}")
 

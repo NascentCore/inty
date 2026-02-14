@@ -62,7 +62,10 @@ def _ensure_config(config_path: Optional[str]) -> None:
 def main(
     date_arg: Annotated[
         str,
-        cyclopts.Parameter(name="--date", help="日期 YYYY-MM-DD，用于 28 小时时间窗（该时区当日 00:00 至次日 04:00）。"),
+        cyclopts.Parameter(
+            name="--date",
+            help="日期 YYYY-MM-DD，用于 28 小时时间窗（该时区当日 00:00 至次日 04:00）。",
+        ),
     ],
     timezone: Annotated[
         str,
@@ -70,11 +73,17 @@ def main(
     ] = "UTC",
     min_rounds: Annotated[
         int,
-        cyclopts.Parameter(name="--min-rounds", help="时间窗内用户消息数（不含开场白）至少达到此数才纳入。"),
+        cyclopts.Parameter(
+            name="--min-rounds",
+            help="时间窗内用户消息数（不含开场白）至少达到此数才纳入。",
+        ),
     ] = 15,
     user_id: Annotated[
         Optional[str],
-        cyclopts.Parameter(name="--user-id", help="仅保留该 user_id（与 agent_id 同时指定则只查单会话）。"),
+        cyclopts.Parameter(
+            name="--user-id",
+            help="仅保留该 user_id（与 agent_id 同时指定则只查单会话）。",
+        ),
     ] = None,
     agent_id: Annotated[
         Optional[str],
@@ -86,11 +95,16 @@ def main(
     ] = None,
     include_messages: Annotated[
         bool,
-        cyclopts.Parameter(name="--include-messages", help="为每个匹配对拉取完整消息列表并写入输出。"),
+        cyclopts.Parameter(
+            name="--include-messages", help="为每个匹配对拉取完整消息列表并写入输出。"
+        ),
     ] = False,
     config: Annotated[
         Optional[str],
-        cyclopts.Parameter(name="--config", help="复制此 YAML 到当前目录 config.yaml 后再导入 app；不指定则要求已存在 config.yaml。"),
+        cyclopts.Parameter(
+            name="--config",
+            help="复制此 YAML 到当前目录 config.yaml 后再导入 app；不指定则要求已存在 config.yaml。",
+        ),
     ] = None,
     no_replica: Annotated[
         bool,
@@ -124,7 +138,9 @@ def main(
     replica_conn = None
     if use_replica:
         logger.info("Using read replica (replica_host/replica_port from config)")
-        async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+        async_replica_url = (
+            global_config_loaded_from_config_yaml.database.async_replica_url
+        )
         if not async_replica_url:
             print(
                 "错误: 已指定从副本读取但 config 未配置 replica_host/replica_port，请检查 config.yaml 或使用 --no-replica",
@@ -168,9 +184,16 @@ def main(
         pairs = [
             (uid, aid)
             for uid, aid in pairs
-            if (user_id is None or uid == user_id) and (agent_id is None or aid == agent_id)
+            if (user_id is None or uid == user_id)
+            and (agent_id is None or aid == agent_id)
         ]
-        logger.info("After filter (user_id=%s, agent_id=%s): %s -> %s pairs", user_id, agent_id, before, len(pairs))
+        logger.info(
+            "After filter (user_id=%s, agent_id=%s): %s -> %s pairs",
+            user_id,
+            agent_id,
+            before,
+            len(pairs),
+        )
 
     entries: list[dict] = []
     total_messages = 0
@@ -179,11 +202,18 @@ def main(
     for idx, (uid, aid) in enumerate(pairs):
         entry: dict = {"user_id": uid, "agent_id": aid}
         if include_messages:
-            messages = get_messages_for_user_agent_sync(uid, aid, connection=replica_conn)
+            messages = get_messages_for_user_agent_sync(
+                uid, aid, connection=replica_conn
+            )
             entry["messages"] = [{"role": r, "content": c} for r, c in messages]
             total_messages += len(messages)
             if (idx + 1) % 50 == 0 or idx + 1 == len(pairs):
-                logger.info("Messages fetched for %s/%s pairs (%s messages so far)", idx + 1, len(pairs), total_messages)
+                logger.info(
+                    "Messages fetched for %s/%s pairs (%s messages so far)",
+                    idx + 1,
+                    len(pairs),
+                    total_messages,
+                )
         entries.append(entry)
 
     logger.info("Building result (pairs=%s)", len(entries))
@@ -216,6 +246,8 @@ def main(
 
 
 if __name__ == "__main__":
-    app = cyclopts.App(help="按日期与条件查询 chat_history，复用节日记忆时间窗与消息拉取逻辑。")
+    app = cyclopts.App(
+        help="按日期与条件查询 chat_history，复用节日记忆时间窗与消息拉取逻辑。"
+    )
     app.default(main)
     app()

@@ -134,23 +134,20 @@ async def get_pairs_with_undelivered_festival_memories(
     按 (user_id, agent_id) 去重，取前 limit 对；每对带一条代表 festival_memory_id（按 festival_date 升序取第一条）。
     返回列表元素：{"user_id": str, "agent_id": str, "festival_memory_id": int}。
     """
-    subq = (
-        select(
-            Memory.user_id,
-            Memory.agent_id,
-            Memory.id.label("festival_memory_id"),
-            func.row_number()
-            .over(
-                partition_by=[Memory.user_id, Memory.agent_id],
-                order_by=Memory.festival_date.asc().nulls_last(),
-            )
-            .label("rn"),
+    subq = select(
+        Memory.user_id,
+        Memory.agent_id,
+        Memory.id.label("festival_memory_id"),
+        func.row_number()
+        .over(
+            partition_by=[Memory.user_id, Memory.agent_id],
+            order_by=Memory.festival_date.asc().nulls_last(),
         )
-        .where(
-            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
-            Memory.delivery_at.is_(None),
-            Memory.system_notification_sent_at.is_(None),
-        )
+        .label("rn"),
+    ).where(
+        Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+        Memory.delivery_at.is_(None),
+        Memory.system_notification_sent_at.is_(None),
     )
     subq = subq.subquery()
     stmt = (

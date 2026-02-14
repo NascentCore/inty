@@ -192,13 +192,7 @@ export const EvaluationHistoryPage: React.FC<EvaluationHistoryPageProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [
-    currentPage,
-    pageSize,
-    statusFilter,
-    searchText,
-    dateRange,
-  ]);
+  }, [currentPage, pageSize, statusFilter, searchText, dateRange]);
 
   // 初始加载
   useEffect(() => {

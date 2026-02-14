@@ -15,7 +15,6 @@ import time
 from google import genai
 from google.genai import types
 
-
 # AI 工作总结（关键中间步骤）：
 # 1) 先在仓库中定位现有 Veo 调用路径：app/services/video_generation_service.py
 # 2) 从生产实现中提炼最小必需参数：model + source(prompt/image) + config(duration/output_gcs_uri)

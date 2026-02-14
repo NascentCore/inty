@@ -282,7 +282,9 @@ def execute_live_voice_message_reply(
         _logger.info("live_voice_message_reply 成功，已写入: %s", path_str)
     # Path is shown once via image_path (new_pending) in REPL; do not embed in result to avoid double print
     if transcript:
-        result = f'live_voice_message_reply: Speech generated. Transcript: "{transcript}".'
+        result = (
+            f'live_voice_message_reply: Speech generated. Transcript: "{transcript}".'
+        )
     else:
         result = "live_voice_message_reply: Speech generated. Transcript: (none)."
     return (result, path_str)
@@ -356,7 +358,9 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
             _logger=_logger,
         )
 
-    def exec_love_making_scene_writer(*, messages, client, char_name, user_name, user_desires="", **kw):
+    def exec_love_making_scene_writer(
+        *, messages, client, char_name, user_name, user_desires="", **kw
+    ):
         return execute_erotic_scene_generate(
             messages=messages,
             client=client,
@@ -508,7 +512,11 @@ def _build_tool_context(
             parts=[genai_types.Part.from_text(text=".")],
             role="user",
         )
-        if build_system_messages is not None and char_name is not None and user_name is not None:
+        if (
+            build_system_messages is not None
+            and char_name is not None
+            and user_name is not None
+        ):
             system_msgs = build_system_messages(char_name, user_name)
             merged = "\n\n".join(
                 (m.get("content") or "").strip()

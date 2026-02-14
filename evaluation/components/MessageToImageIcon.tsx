@@ -98,8 +98,8 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
         typeof error === "object" &&
         error !== null &&
         "response" in error &&
-        typeof (error as { response?: { status?: unknown } }).response?.status ===
-          "number"
+        typeof (error as { response?: { status?: unknown } }).response
+          ?.status === "number"
           ? (error as { response: { status: number } }).response.status
           : undefined;
 

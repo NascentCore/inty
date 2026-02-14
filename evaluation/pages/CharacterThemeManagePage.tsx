@@ -416,7 +416,9 @@ export const CharacterThemeManagePage: React.FC = () => {
                           <Text type="secondary" style={{ fontSize: 13 }}>
                             可见性:
                           </Text>
-                          <Tag color={getVisibilityConfig(theme.visibility).color}>
+                          <Tag
+                            color={getVisibilityConfig(theme.visibility).color}
+                          >
                             {getVisibilityConfig(theme.visibility).text}
                           </Tag>
                         </div>

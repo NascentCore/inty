@@ -215,9 +215,8 @@ export const QuestionManager: React.FC<QuestionManagerProps> = ({
           return false;
         }
 
-        const uploadResult: QuestionFileUpload = await api.questions.parseFile(
-          rawFile,
-        );
+        const uploadResult: QuestionFileUpload =
+          await api.questions.parseFile(rawFile);
 
         // 合并问题，避免重复
         const existingQuestions = new Set(questions);

@@ -38,7 +38,9 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
 
     try {
       setLoading(true);
-      const response = (await api.getIntyClient().api.v1.users.profile.me()) as {
+      const response = (await api
+        .getIntyClient()
+        .api.v1.users.profile.me()) as {
         data?: UserProfile | null;
       };
       setUserInfo(response.data || null);

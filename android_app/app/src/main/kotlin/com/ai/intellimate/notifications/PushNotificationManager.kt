@@ -231,10 +231,15 @@ class PushNotificationManager private constructor(private val application: Appli
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         putExtra(FCMConstants.DATA_KEY_TYPE, FCMConstants.TYPE_FESTIVAL_MEMORY)
                         putExtra(FCMConstants.DATA_KEY_AGENT_ID, agentId)
-                        festivalMemoryId?.let { putExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID, it) }
+                        festivalMemoryId?.let {
+                            putExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID, it)
+                        }
                     }
                 } else {
-                    LogUtils.w("PushNotificationManager", "消息类型为 festival_memory 但缺少 agent_id，跳转到主页面")
+                    LogUtils.w(
+                        "PushNotificationManager",
+                        "消息类型为 festival_memory 但缺少 agent_id，跳转到主页面",
+                    )
                     createMainActivityIntent()
                 }
             }

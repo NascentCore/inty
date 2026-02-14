@@ -79,7 +79,11 @@ def generate_erotic_scene_text(
     recent = messages[-recent_n:] if len(messages) > recent_n else messages
     context_str = _format_messages_as_context(recent, recent_n)
     prompt = _build_scene_prompt(
-        context_str, char_name, user_name, user_desires or "", max_paragraphs=max_paragraphs
+        context_str,
+        char_name,
+        user_name,
+        user_desires or "",
+        max_paragraphs=max_paragraphs,
     )
     log.info(
         "generate_erotic_scene_text: char=%s user=%s recent_n=%d prompt=%s",
