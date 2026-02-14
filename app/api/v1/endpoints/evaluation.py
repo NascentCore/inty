@@ -1184,7 +1184,7 @@ async def _find_user_info_by_identifier(
 )
 async def get_new_users(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1230,7 +1230,7 @@ async def get_new_users(
 )
 async def get_user_activity(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1276,7 +1276,7 @@ async def get_user_activity(
 )
 async def get_conversation_rounds(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1335,7 +1335,7 @@ async def get_conversation_rounds(
 )
 async def get_user_rounds_distribution(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1394,7 +1394,7 @@ async def get_user_rounds_distribution(
 )
 async def get_popular_agents(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1450,7 +1450,7 @@ async def get_popular_agents(
 )
 async def get_users_hitting_limit(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
@@ -1508,7 +1508,7 @@ async def get_users_hitting_limit(
 )
 async def get_agent_analytics(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1563,7 +1563,7 @@ async def get_agent_analytics(
 )
 async def get_user_sessions_detail(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1622,7 +1622,7 @@ async def get_user_sessions_detail(
 )
 async def get_conversations_detail(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1726,7 +1726,7 @@ async def get_conversations_detail(
 )
 async def get_user_analytics_stats(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
@@ -1849,7 +1849,7 @@ async def get_user_analytics_reports(
 )
 async def get_llm_latency_trend(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
@@ -1908,7 +1908,7 @@ async def get_llm_latency_trend(
 )
 async def get_image_generation_latency_trend(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
@@ -2035,7 +2035,7 @@ async def get_image_generation_failure_analytics(
 )
 async def get_live_chat_latency_trend(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
@@ -2096,7 +2096,7 @@ async def get_live_chat_latency_trend(
 )
 async def get_live_chat_basic_stats(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
@@ -2157,7 +2157,7 @@ async def get_live_chat_basic_stats(
 )
 async def get_user_daily_messages(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
@@ -2230,7 +2230,7 @@ async def get_user_daily_messages(
 )
 async def get_user_today_stats(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
@@ -2270,7 +2270,7 @@ async def get_user_today_stats(
 )
 async def get_user_generated_images(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
@@ -2396,7 +2396,7 @@ async def get_user_generated_images(
 )
 async def get_user_sessions(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
@@ -2434,7 +2434,7 @@ async def get_user_sessions(
 )
 async def get_session_messages(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
     current_user: schemas.User = Depends(deps.get_current_active_user),
     chat_id: str = Query(..., description="会话ID (chat_id)"),
     page: int = Query(1, ge=1, description="页码"),
