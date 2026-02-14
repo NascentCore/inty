@@ -6,6 +6,7 @@
 用法: export PYTHONPATH=.
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --timezone Asia/Shanghai --min-rounds 10
+  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --limit 1
 """
 
 from __future__ import annotations
@@ -52,6 +53,7 @@ async def _run(
     min_rounds: int,
     output_path: Path,
     config: Optional[str],
+    limit: Optional[int] = None,
 ) -> None:
     _ensure_config(config)
     from app.core.config import global_config_loaded_from_config_yaml
@@ -64,6 +66,8 @@ async def _run(
     pairs = get_pairs_with_min_rounds_in_window_sync(
         festival_date, db_url, min_rounds=min_rounds, timezone_str=timezone
     )
+    if limit is not None:
+        pairs = pairs[:limit]
     memories: list[dict] = []
     success = 0
     for user_id, agent_id in pairs:
@@ -73,13 +77,16 @@ async def _run(
         if d is not None:
             memories.append(d)
             success += 1
+    query: dict = {
+        "festival_name": festival_name,
+        "festival_date": festival_date.isoformat(),
+        "timezone": timezone,
+        "min_rounds_in_window": min_rounds,
+    }
+    if limit is not None:
+        query["limit"] = limit
     payload = {
-        "query": {
-            "festival_name": festival_name,
-            "festival_date": festival_date.isoformat(),
-            "timezone": timezone,
-            "min_rounds_in_window": min_rounds,
-        },
+        "query": query,
         "summary": {
             "total_pairs": len(pairs),
             "success_count": success,
@@ -100,6 +107,10 @@ def main(
     prompt_file: Annotated[Optional[str], cyclopts.Parameter(name="--prompt-file", help="从文件读取提示词")] = None,
     timezone: Annotated[str, cyclopts.Parameter(name="--timezone")] = "UTC",
     min_rounds: Annotated[int, cyclopts.Parameter(name="--min-rounds")] = 15,
+    limit: Annotated[
+        Optional[int],
+        cyclopts.Parameter(name="--limit", help="仅处理前 count 个 (user, agent) 对，不传则处理全部；便于测试"),
+    ] = None,
     config: Annotated[Optional[str], cyclopts.Parameter(name="--config")] = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -118,6 +129,7 @@ def main(
             min_rounds=min_rounds,
             output_path=Path(output),
             config=config,
+            limit=limit,
         )
     )
 
