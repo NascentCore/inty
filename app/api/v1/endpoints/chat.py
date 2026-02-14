@@ -335,20 +335,39 @@ async def agent_chat_completions(
             user_message_id=user_message_id,
         )
 
-        # 若有本次投递的节日提醒，追加到 choices，与消息列表的 festival_memory_prompt 结构一致
+        # 若有本次投递的节日提醒，追加到 choices，message 结构与普通 AI 消息一致（含 id、meta_data、timestamp、audio_url）
         if delivered_prompts:
             for idx, item in enumerate(delivered_prompts, start=1):
-                data["choices"].append(
-                    {
-                        "index": idx,
-                        "message": {
-                            "role": None,
-                            "content": item["content"],
-                            "type": "festival_memory_prompt",
-                            "festival_memory_id": item["memory_id"],
-                        },
-                        "finish_reason": "stop",
+                msg_id = item.get("message_id")
+                info = None
+                if msg_id is not None:
+                    info = await chat_history_service.get_ai_message_info_by_id(
+                        db, msg_id
+                    )
+                if info:
+                    message = {
+                        "role": None,
+                        "content": item["content"],
+                        "type": "festival_memory_prompt",
+                        "festival_memory_id": item["memory_id"],
+                        "id": info["id"],
+                        "meta_data": info["meta_data"],
+                        "timestamp": info["timestamp"],
+                        "audio_url": info["audio_url"],
                     }
+                else:
+                    message = {
+                        "role": None,
+                        "content": item["content"],
+                        "type": "festival_memory_prompt",
+                        "festival_memory_id": item["memory_id"],
+                        "id": msg_id,
+                        "meta_data": None,
+                        "timestamp": None,
+                        "audio_url": None,
+                    }
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
                 )
 
         timing_message = request_handling_timer.stop()

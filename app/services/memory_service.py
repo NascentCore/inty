@@ -205,6 +205,7 @@ async def deliver_festival_memories_for_user_agent(
         delivered.append(
             {
                 "memory_id": mid,
+                "message_id": msg_id,
                 "content": prompt_content,
                 "festival_name": festival_name,
                 "festival_date": (
