@@ -30,7 +30,6 @@ security:
 
 database:
   host: "10.41.177.3"
-  port: 5432
   user: "postgres"
   password: "sxwl666A!"
   db: "inty"
@@ -42,7 +41,6 @@ database:
   connect_timeout: 5
   command_timeout: 30
   replica_host: "10.41.177.17"
-  replica_port: 5432
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
