@@ -3,6 +3,7 @@ package com.ai.intellimate.settings
 // import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -33,6 +34,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -151,6 +155,9 @@ fun SettingScreen(
 
                 Spacer(Modifier.height(16.dp))
                 DebugVipStatus()
+
+                Spacer(Modifier.height(16.dp))
+                DebugFcmTokenEntry()
             }
 
             // 对话框
@@ -208,6 +215,47 @@ private fun DebugVipStatus() {
                 )
             }
         }
+    }
+}
+
+/**
+ * Debug 下展示当前设备 FCM Token，支持长按复制。
+ *
+ * 使用范围：仅 build type 为 debug 时在 Me → Settings 页展示，位于现有 Debug 区块（后端切换、Boost、Vip 状态）下方。
+ * 预期效果：进入设置后异步拉取 FCM token，展示为一行文案（加载中 / Unavailable / token 字符串），长按可复制 token 到剪贴板并提示已复制。
+ * 无入参，无可配置项。
+ */
+@Composable
+private fun DebugFcmTokenEntry() {
+    val context = LocalContext.current
+    var token by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        token = runCatching { FirebaseManager.registerFCM() }.getOrElse { "" }
+    }
+    val title = stringResource(R.string.settings_debug_fcm_token)
+    val content =
+        when {
+            token == null -> stringResource(R.string.settings_debug_fcm_token_loading)
+            token.isNullOrBlank() -> stringResource(R.string.settings_user_id_unavailable)
+            else -> token!!
+        }
+    val tokenToCopy = token
+    SettingsItemGroup {
+        SettingsArrowItem(
+            item =
+                SettingsItemData.CommonItemData(
+                    title = title,
+                    content = content,
+                    arrow = false,
+                ),
+            isInGroup = true,
+            onLongClick = {
+                if (!tokenToCopy.isNullOrBlank()) {
+                    ClipboardUtils.copyToClipboard(context, label = title, text = tokenToCopy)
+                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                }
+            },
+        )
     }
 }
 
