@@ -84,6 +84,7 @@ class DatabaseSettings:
     pool_pre_ping: bool = True
     connect_timeout: int = 5
     command_timeout: int = 30
+    # 未指定时 fall back 到 host
     replica_host: Optional[str] = None
     replica_port: int = 5432
 
