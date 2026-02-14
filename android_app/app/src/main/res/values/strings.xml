@@ -35,6 +35,8 @@
     <string name="settings_debug_user_time_context_title">User time context reporting</string>
     <string name="settings_debug_user_time_context_on">Enabled</string>
     <string name="settings_debug_user_time_context_off">Disabled</string>
+    <string name="settings_debug_fcm_token">FCM Token</string>
+    <string name="settings_debug_fcm_token_loading">Loading…</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="introduction">Introduction</string>
