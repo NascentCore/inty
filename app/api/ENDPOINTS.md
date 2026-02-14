@@ -94,6 +94,18 @@
 | `/api/v1/chats/agents/{agent_id}/clear-messages` | POST | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/agents/{agent_id}/generate-image` | POST | `app/api/v1/endpoints/chats.py` |
 
+> **节日记忆提示消息（与 Android App 的接口约定）**：
+>
+> 类型为 `festival_memory_prompt` 的消息在以下响应中返回：
+> - **POST** `/api/v1/chat/completions/{agent_id}` 的 `data.choices[].message`
+> - **GET** `/api/v1/chats/agents/{agent_id}/messages` 的 `messages[]`
+>
+> 同一条消息可能同时包含：
+> - **顶层** `festival_memory_id`（snake_case，整型）：对应 memory 表主键，**客户端应以该字段为准**，与普通 AI 消息的 `id` 用法一致。
+> - **meta_data 内** `festivalMemoryId`（camelCase）：来自写入 chat_history 时存储的 meta_data，透传未改，仅作兼容。
+>
+> Android App 解析时请优先使用顶层 `festival_memory_id`。
+
 ### 图片 (Images)
 
 | 路径 | 方法 | 实现文件 |
