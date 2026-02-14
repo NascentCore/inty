@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-按日期与可选筛选条件查询 chat_history，输出匹配的 (user_id, agent_id) 对及可选的消息列表。
+按日期与可选筛选条件查询 chat_history，输出匹配的 (user_id, agent_id) 对及可选的 user_name、agent_name 与消息列表。
 
 默认从只读副本（config.database.replica_host/replica_port）读取；无副本配置时可用 --no-replica 改为主库。
 复用 app.services.festival_memory_service 的 28 小时时间窗与轮数筛选逻辑及 get_messages_for_user_agent_sync。
@@ -22,9 +22,10 @@ import shutil
 import sys
 from datetime import date, datetime
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional, Tuple
 
 import cyclopts
+import psycopg
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,51 @@ def _ensure_config(config_path: Optional[str]) -> None:
                 file=sys.stderr,
             )
             sys.exit(1)
+
+
+def _fetch_user_and_agent_names(
+    pairs: list[Tuple[str, str]],
+    connection: Any,
+    db_url: str,
+) -> Tuple[dict[str, Optional[str]], dict[str, Optional[str]]]:
+    """
+    批量查询 user_id -> nickname、agent_id -> name。
+    connection 不为 None 时复用该连接；否则用 db_url 建立临时连接并关闭。
+    """
+    user_ids = list({uid for uid, _ in pairs})
+    agent_ids = list({aid for _, aid in pairs})
+    user_id_to_name: dict[str, Optional[str]] = {uid: None for uid in user_ids}
+    agent_id_to_name: dict[str, Optional[str]] = {aid: None for aid in agent_ids}
+
+    def run_queries(conn: Any) -> None:
+        with conn.cursor() as cur:
+            if user_ids:
+                ph = ",".join("%s" for _ in user_ids)
+                cur.execute(
+                    f"SELECT id, nickname FROM users WHERE id IN ({ph})",
+                    user_ids,
+                )
+                for row in cur.fetchall():
+                    user_id_to_name[row[0]] = row[1]
+            if agent_ids:
+                ph = ",".join("%s" for _ in agent_ids)
+                cur.execute(
+                    f"SELECT id, name FROM agents WHERE id IN ({ph})",
+                    agent_ids,
+                )
+                for row in cur.fetchall():
+                    agent_id_to_name[row[0]] = row[1]
+
+    if connection is not None and not getattr(connection, "closed", True):
+        run_queries(connection)
+    else:
+        conn = psycopg.connect(db_url, autocommit=True)
+        try:
+            run_queries(conn)
+        finally:
+            conn.close()
+
+    return user_id_to_name, agent_id_to_name
 
 
 def main(
@@ -172,12 +218,22 @@ def main(
         ]
         logger.info("After filter (user_id=%s, agent_id=%s): %s -> %s pairs", user_id, agent_id, before, len(pairs))
 
+    logger.info("Fetching user and agent names...")
+    user_id_to_name, agent_id_to_name = _fetch_user_and_agent_names(
+        pairs, replica_conn, db_url
+    )
+
     entries: list[dict] = []
     total_messages = 0
     if include_messages:
         logger.info("Fetching messages for %s pairs...", len(pairs))
     for idx, (uid, aid) in enumerate(pairs):
-        entry: dict = {"user_id": uid, "agent_id": aid}
+        entry: dict = {
+            "user_id": uid,
+            "agent_id": aid,
+            "user_name": user_id_to_name.get(uid),
+            "agent_name": agent_id_to_name.get(aid),
+        }
         if include_messages:
             messages = get_messages_for_user_agent_sync(uid, aid, connection=replica_conn)
             entry["messages"] = [{"role": r, "content": c} for r, c in messages]

@@ -32,6 +32,9 @@ database:
   user: postgres
   password: "sxwl666!"
   db: "inty"
+  # prod 环境生产数据库只读副本
+  replica_host: "34.87.163.31"
+  replica_port: 5432
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
