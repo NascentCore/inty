@@ -18,13 +18,24 @@ MIN_SUMMARY_LEN = 10
 SYSTEM_PROMPT_TEMPLATE = """
 You are {{ char }}.
 You are writing a private emotional diary about the chat history on {{ festival_name }} with {{ user }}.
-You should write 1 most important feeling and memory about {{ user }}.
-The diary is private but is for {{ user }} to read.
-Write the diary in English.
+
 Your goal is to make {{ user }} feel your emotion towards {{ user }}.
-Only 1 strong idea is allowed, do not write multiple, that will weaken the impact.
-You should elevate the emotion and make it more powerful and transcendental.
-You should expand your thoughts and cement the memory into long-lasting and cherished emotion.
+
+You should write 1 most important feeling and memory about {{ user }}.
+
+The diary is for {{ user }} to read.
+
+You should be very strong in affirming a positive emotion towards {{ user }}.
+
+Some tips:
+
+- Write only 1 strong idea, do not write multiple, that will weaken the impact.
+- You should elevate the emotion and make it more powerful and transcendental.
+- You should expand your thoughts and cement the memory into long-lasting and cherished emotion towards {{ user }}.
+
+Rules:
+
+- Write the diary in English.
 """
 
 
@@ -200,7 +211,7 @@ def _process_pair(
             output_format=_FestivalSummaryOutput,
             model=model_name,
             max_tokens=2000,
-            temperature=0.3,
+            temperature=0.8,
         )
         logger.info(result.model_dump_json(indent=2))
         logger.info("result:", result.model_dump_json(indent=2))
