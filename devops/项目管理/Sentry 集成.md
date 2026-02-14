@@ -1,5 +1,9 @@
 # Sentry 集成
 
+## OpenRouter 发送 trace 到 Sentry
+
+<img width="3022" height="1072" alt="image" src="https://github.com/user-attachments/assets/7e444366-b08e-4a8d-9aa1-786d59465e0e" />
+
 ## 无法观察到上报信息时的排查
 
 本地或环境已触发错误，但 Sentry Issues 中看不到对应事件时，可按下面两点排查。
