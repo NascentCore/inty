@@ -103,7 +103,8 @@ class MainViewModel : BaseVM() {
 
     /** 节日记忆推送点击：跳转 Love Journal 页并定位到对应记忆条目。Pair(agentId, memoryId)，memoryId 可为 null。 */
     private var _pushFestivalMemoryTarget = MutableStateFlow<Pair<String, Long?>?>(null)
-    val pushFestivalMemoryTarget: StateFlow<Pair<String, Long?>?> = _pushFestivalMemoryTarget.asStateFlow()
+    val pushFestivalMemoryTarget: StateFlow<Pair<String, Long?>?> =
+        _pushFestivalMemoryTarget.asStateFlow()
 
     // 首次登陆时，记录跳转注册页面时的动作
     private val _needsRegInfo = MutableStateFlow(false)

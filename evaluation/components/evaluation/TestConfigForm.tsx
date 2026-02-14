@@ -117,27 +117,30 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
   const setFormValue = form.setValue;
 
   // 加载评分模型 - 使用OpenRouter模型
-  const loadScoringModels = useCallback(async (currentScoringModel: string) => {
-    try {
-      setModelsLoading(true);
-      const models = await modelCacheService.getOpenRouterModels();
+  const loadScoringModels = useCallback(
+    async (currentScoringModel: string) => {
+      try {
+        setModelsLoading(true);
+        const models = await modelCacheService.getOpenRouterModels();
 
-      setScoringModels(models);
+        setScoringModels(models);
 
-      // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
-      if (models.length > 0 && !currentScoringModel) {
-        const preferredModel = models.find(
-          (model) => model.id === "google/gemini-2.5-flash-lite",
-        );
-        const defaultModel = preferredModel || models[0];
-        setFormValue("scoring_model", defaultModel.id);
+        // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
+        if (models.length > 0 && !currentScoringModel) {
+          const preferredModel = models.find(
+            (model) => model.id === "google/gemini-2.5-flash-lite",
+          );
+          const defaultModel = preferredModel || models[0];
+          setFormValue("scoring_model", defaultModel.id);
+        }
+      } catch (error) {
+        console.error("加载评分模型失败:", error);
+      } finally {
+        setModelsLoading(false);
       }
-    } catch (error) {
-      console.error("加载评分模型失败:", error);
-    } finally {
-      setModelsLoading(false);
-    }
-  }, [setFormValue]);
+    },
+    [setFormValue],
+  );
 
   // 刷新模型列表
   const handleRefreshModels = () => {

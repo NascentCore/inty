@@ -2532,7 +2532,9 @@ async def process_festival_memory_push_batch(
                     )
                     continue
 
-                agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+                agent_data = await agent_service.get_agent_for_chat(
+                    db, agent_id=agent_id
+                )
                 if not agent_data:
                     logger.warning(
                         f"[节日记忆推送] Agent 未找到: agent_id={agent_id}, 跳过"
@@ -2932,13 +2934,17 @@ async def has_sent_festival_push_for_user_agent(
         是否已发送过（存在 PushNotificationHistory 且 push_type == PUSH_TYPE_FESTIVAL_MEMORY）
     """
     try:
-        stmt = select(PushNotificationHistory.id).where(
-            and_(
-                PushNotificationHistory.user_id == user_id,
-                PushNotificationHistory.agent_id == agent_id,
-                PushNotificationHistory.push_type == PUSH_TYPE_FESTIVAL_MEMORY,
+        stmt = (
+            select(PushNotificationHistory.id)
+            .where(
+                and_(
+                    PushNotificationHistory.user_id == user_id,
+                    PushNotificationHistory.agent_id == agent_id,
+                    PushNotificationHistory.push_type == PUSH_TYPE_FESTIVAL_MEMORY,
+                )
             )
-        ).limit(1)
+            .limit(1)
+        )
         result = await db.execute(stmt)
         return result.scalar_one_or_none() is not None
     except Exception as e:

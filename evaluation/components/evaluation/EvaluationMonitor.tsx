@@ -107,12 +107,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       setLoading(hookLoading);
       setError(hookError);
     }
-  }, [
-    propSession,
-    hookResults,
-    hookLoading,
-    hookError,
-  ]);
+  }, [propSession, hookResults, hookLoading, hookError]);
 
   // 自动刷新逻辑 - 当传入session且需要自动刷新时
   useEffect(() => {

@@ -228,7 +228,13 @@ GEMINI_PREBUILT_VOICES: List[Dict[str, Any]] = [
         "source": "preset",
         "category": "prebuilt",
         "preview_url": f"{_GCS_VOICE_PREVIEW_BASE}/Despina.mp3",
-        "keywords": ["soft-bright", "high-pitched", "medium pacing", "strong", "steady"],
+        "keywords": [
+            "soft-bright",
+            "high-pitched",
+            "medium pacing",
+            "strong",
+            "steady",
+        ],
     },
     {
         "voice_id": "Enceladus",

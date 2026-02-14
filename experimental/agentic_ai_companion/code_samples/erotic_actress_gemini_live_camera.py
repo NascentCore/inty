@@ -60,9 +60,11 @@ CONFIG = types.LiveConnectConfig(
     system_instruction=types.Content(
         parts=[
             types.Part.from_text(
-                text=("You are an erotic movie actress. "
-                      "You are acting out a scene where the user "
-                      "is engaging with intimacy with the character you are playing"),
+                text=(
+                    "You are an erotic movie actress. "
+                    "You are acting out a scene where the user "
+                    "is engaging with intimacy with the character you are playing"
+                ),
             )
         ],
         role="user",
@@ -143,7 +145,9 @@ class AudioLoop:
         try:
             import mss  # pytype: disable=import-error # pylint: disable=g-import-not-at-top
         except ImportError as e:
-            raise ImportError("Please install mss package using 'pip install mss'") from e
+            raise ImportError(
+                "Please install mss package using 'pip install mss'"
+            ) from e
         sct = mss.mss()
         monitor = sct.monitors[0]
 

@@ -983,13 +983,10 @@ async def get_ai_message_infos_by_ids(
     if not message_ids:
         return {}
     try:
-        stmt = (
-            select(ChatHistory)
-            .where(
-                ChatHistory.id.in_(message_ids),
-                ChatHistory.message["type"].astext == "ai",
-                ChatHistory.deleted_at.is_(None),
-            )
+        stmt = select(ChatHistory).where(
+            ChatHistory.id.in_(message_ids),
+            ChatHistory.message["type"].astext == "ai",
+            ChatHistory.deleted_at.is_(None),
         )
         result = await db.execute(stmt)
         rows = result.scalars().all()

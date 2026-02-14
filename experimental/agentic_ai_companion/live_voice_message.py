@@ -19,6 +19,7 @@ DEFAULT_VOICE_NAME = "Kore"
 LIVE_MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 LIVE_TIMEOUT_SECONDS = 30
 
+
 # Live API 需要 http_options={"api_version": "v1beta"}，与 get_gemini_client() 可能不同，故在模块内自建
 def _live_client() -> genai.Client:
     return genai.Client(
@@ -43,7 +44,9 @@ def _format_messages_as_context(messages: list[dict[str, Any]], recent_n: int) -
     return "\n".join(lines) if lines else ""
 
 
-def _system_instruction_to_content(system_instruction: types.Content | str) -> types.Content:
+def _system_instruction_to_content(
+    system_instruction: types.Content | str,
+) -> types.Content:
     """将 str 或 Content 转为 Live 所需的 types.Content。"""
     if isinstance(system_instruction, types.Content):
         return system_instruction

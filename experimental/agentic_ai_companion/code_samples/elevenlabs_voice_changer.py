@@ -11,7 +11,7 @@ from io import BytesIO
 load_dotenv()
 
 elevenlabs = ElevenLabs(
-  api_key=os.getenv("ELEVENLABS_API_KEY"),
+    api_key=os.getenv("ELEVENLABS_API_KEY"),
 )
 voice_id = "JBFqnCBsd6RMkjVDRZzb"
 
