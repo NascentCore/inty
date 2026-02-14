@@ -27,6 +27,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -89,6 +90,8 @@ class MainViewModel : BaseVM() {
     // 反馈请求弹窗显示状态
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog: StateFlow<Boolean> = _showFeedbackRequestDialog.asStateFlow()
+    private val _deeplink = Channel<String>(1)
+    val deepLink: ReceiveChannel<String> = _deeplink
 
     private val pushMessageSubscriber =
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
@@ -484,6 +487,10 @@ class MainViewModel : BaseVM() {
     /** 更新 pushAgentId (离线推送通知点击) */
     fun updatePushAgentId(id: String) {
         _pushAgentId.value = id
+    }
+
+    fun deepLinkNavigate(uri: String) {
+        _deeplink.trySend(uri)
     }
 
     /** 更新 needsRegInfo (首次登录跳转完善资料页面) */

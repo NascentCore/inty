@@ -40,6 +40,7 @@ object DirectBootStorage {
         val agentId: String?,
         val title: String?,
         val body: String?,
+        val deepLink: String?
     )
 
     /**
@@ -251,6 +252,7 @@ object DirectBootStorage {
                         agentId = fields[3].takeIf { it.isNotEmpty() },
                         title = fields[4].takeIf { it.isNotEmpty() },
                         body = fields[5].takeIf { it.isNotEmpty() },
+                        deepLink = fields[6].takeIf { it.isNotEmpty() }
                     )
                 } else {
                     null

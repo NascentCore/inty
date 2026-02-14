@@ -12,6 +12,9 @@ object FCMConstants {
     /** 数据键名：Agent ID（用于跳转到聊天页面） */
     const val DATA_KEY_AGENT_ID = "agent_id"
 
+    /** 数据键名：deepLink，在 handleNotificationIntent 中可查 */
+    const val DATA_KEY_DEEP_LINK = "deepLink"
+
     /** 消息类型：聊天消息 */
     const val TYPE_AGENT_MESSAGE = "agent_message"
 

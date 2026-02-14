@@ -8,8 +8,10 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartBottomAppBar
 import ai.sxwl.android.design.ui.HeartBottomTabItem
+import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -48,6 +50,7 @@ import com.ai.intellimate.explore.ExplorePage
 import com.ai.intellimate.explore.ExploreViewModel
 import com.ai.intellimate.messages.MessagesPage
 import com.ai.intellimate.messages.MessagesViewModel
+import com.ai.intellimate.notifications.PushNotificationManager
 import com.ai.intellimate.profile.ProfilePage
 import com.ai.intellimate.profile.ProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
@@ -207,6 +210,17 @@ fun HomeScreen(
                             createRoleLauncher,
                         )
                     }
+                    //测试推送通知
+                    /*PushNotificationManager
+                        .getInstance(context.applicationContext as Application)
+                        .showNotification(
+                            title = "通知标题",
+                            body = "通知内容跳转页面",
+                            iconResId = R.mipmap.ic_launcher_round,
+                            data = mapOf(
+                                FCMConstants.DATA_KEY_DEEP_LINK to "intellimate://heartbeat/c55c6474-7c68-44a3-aa13-a9ac9effc3b1"
+                            )
+                        )*/
                 },
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
                 height = UiConfigs.BottomBar.Height,

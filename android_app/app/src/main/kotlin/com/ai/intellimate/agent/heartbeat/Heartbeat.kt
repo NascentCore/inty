@@ -44,13 +44,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 import androidx.navigation.navOptions
 import androidx.navigation.toRoute
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.viewmodel.HeartbeatViewModel
 import kotlinx.serialization.Serializable
 
-@Serializable data class Heartbeat(val agentId: String, val memoryId: Long?)
+@Serializable data class Heartbeat(val agentId: String, val memoryId: Long? = null)
 
 fun NavController.toHeartbeat(agentId: String, memoryId: Long? = null, pageSource: String? = null) {
 
@@ -67,7 +68,11 @@ fun NavController.toHeartbeat(agentId: String, memoryId: Long? = null, pageSourc
 }
 
 fun NavGraphBuilder.heartbeat(onBack: () -> Unit) {
-    composable<Heartbeat> {
+    composable<Heartbeat>(
+        deepLinks = listOf(
+            navDeepLink<Heartbeat>("intellimate://heartbeat"),
+        ),
+    ) {
         val heartbeat = it.toRoute<Heartbeat>()
 
         Heartbeat(agentId = heartbeat.agentId, memoryId = heartbeat.memoryId, onBack = onBack)

@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
@@ -283,9 +284,10 @@ class MainActivity : BaseActivity() {
         // Firebase 会将 data 字段作为 Intent extras 传递，键名就是 data 中的键名
         val messageType = intent.getStringExtra(FCMConstants.DATA_KEY_TYPE)
         val agentId = intent.getStringExtra(FCMConstants.DATA_KEY_AGENT_ID)
+        val deepLink = intent.getStringExtra(FCMConstants.DATA_KEY_DEEP_LINK)
 
         // 如果没有推送数据，直接返回
-        if (messageType == null && agentId == null) {
+        if (messageType == null && agentId == null && deepLink.isNullOrEmpty()) {
             return false
         }
 
@@ -306,12 +308,21 @@ class MainActivity : BaseActivity() {
             // 清除 Intent extras，避免重复处理
             intent.removeExtra(FCMConstants.DATA_KEY_TYPE)
             intent.removeExtra(FCMConstants.DATA_KEY_AGENT_ID)
+            intent.removeExtra(FCMConstants.DATA_KEY_DEEP_LINK)
             return true
         } else {
+
             // 有推送数据但不是有效的 agent_message，记录日志
-            LogUtils.w("MainActivity", "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId")
+            LogUtils.w("MainActivity", "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId, deepLink: $deepLink")
             // 标记已处理，避免重复检查
             hasHandledNotificationIntent = true
+            intent.removeExtra(FCMConstants.DATA_KEY_DEEP_LINK)
+
+            if (!deepLink.isNullOrBlank()) {
+                mainViewModel.deepLinkNavigate(deepLink)
+                return true
+            }
+
             return false
         }
     }
@@ -469,6 +480,15 @@ class MainActivity : BaseActivity() {
             defaultViewModelProviderFactory,
             navController,
         )
+
+        LaunchedEffect(Unit) {
+            for (uri in mainViewModel.deepLink) {
+                if (uri.isNotBlank()) {
+                    LogUtils.d("跳转页面=$uri")
+                    navController.navigate(uri.toUri())
+                }
+            }
+        }
 
         // 只在用户已登录时显示 tips 弹窗
         if (showIntelliMateTipDialog && isLoggedIn) {

@@ -131,6 +131,7 @@ class PushNotificationManager private constructor(private val application: Appli
             val data = mutableMapOf<String, String>()
             message.type?.let { data[FCMConstants.DATA_KEY_TYPE] = it }
             message.agentId?.let { data[FCMConstants.DATA_KEY_AGENT_ID] = it }
+            message.deepLink?.let { data[FCMConstants.DATA_KEY_DEEP_LINK] = it }
 
             // 显示通知，使用特定的通知 ID 和时间戳
             showNotification(
@@ -225,7 +226,7 @@ class PushNotificationManager private constructor(private val application: Appli
             FCMConstants.TYPE_SYSTEM,
             null -> {
                 // 系统通知或其他：跳转到主页面
-                createMainActivityIntent()
+                createMainActivityIntent(data)
             }
 
             else -> {
@@ -247,9 +248,10 @@ class PushNotificationManager private constructor(private val application: Appli
     }
 
     /** 创建跳转到主页面的 Intent */
-    private fun createMainActivityIntent(): Intent {
+    private fun createMainActivityIntent(data: Map<String, String> = emptyMap()): Intent {
         return Intent(application, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(FCMConstants.DATA_KEY_DEEP_LINK, data[FCMConstants.DATA_KEY_DEEP_LINK])
         }
     }
 

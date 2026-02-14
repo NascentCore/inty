@@ -114,6 +114,7 @@ class FCMService : FirebaseMessagingService() {
                     agentId = data[FCMConstants.DATA_KEY_AGENT_ID],
                     title = notification?.title,
                     body = notification?.body,
+                    deepLink = data[FCMConstants.DATA_KEY_DEEP_LINK]
                 )
 
             LogUtils.d(
