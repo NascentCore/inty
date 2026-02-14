@@ -1,16 +1,19 @@
 """
-Imports all models for centralized management.
+倒入所有的数据表模型
 
-Base object is used to define all tables in app/models, when importing all models,
-their metadata is added to Base.metadata, which is then shared with alembic's env.py file
-to get all data tables.
+注意⚠️：
+1. 这与代码库要求的空 __init__.py 相悖，是由于历史原因，改动较为复杂，牵连风险，所以保持。
+2. 所有子类型必须是 Base 子类，否则无法被 Alembic 识别。
+3. 所有表模型定义必须导入到这里，否则无法被加入到 Base.metadata 中，从而无法被 Alembic 识别。
 
-!!! All models must be defined with Base as their base class.
-!!! All models must be imported here to be added to Base.metadata.
+
+Base对象用于定义app/models中的所有数据表；当导入所有模型时，它们的元数据会被添加到Base.metadata中，
+随后该metadata会被alembic的env.py共享，用于识别所有数据表。
 """
 
 from sqlalchemy.ext.declarative import declarative_base
 
+# 所有表模型定义必须在 Base 后被倒入。
 Base = declarative_base()
 
 from app.models.agent import Agent as Agent

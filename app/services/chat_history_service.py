@@ -65,11 +65,11 @@ def get_chat_history_connection():
     if _connection is None or _connection.closed:
         try:
             import psycopg
-
+            logger.debug(f"connecting to database: {global_config_loaded_from_config_yaml.database.url}")
             _connection = psycopg.connect(
                 global_config_loaded_from_config_yaml.database.url, autocommit=True
             )
-            logger.info("chat_history数据库连接已建立")
+            logger.info("chat_history 数据库连接已建立")
         except Exception as e:
             logger.error(f"建立chat_history数据库连接失败: {str(e)}")
             raise

@@ -10,13 +10,15 @@ from typing import Any, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 from loguru import logger
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import psycopg
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.models.agent import Agent
 from app.models.memory import Memory
+from app.models.user import User
 from app.services.chat_history_service import get_chat_history_connection
 from app.services.chat_service import generate_session_id
 from app.services.memory_service import MEMORY_TYPE_FESTIVAL
@@ -61,6 +63,7 @@ def get_pairs_with_min_rounds_in_window_sync(
     db_url：用于 psycopg 连接的数据库 URL（主库或只读副本）。
     """
     window_start, window_end = _window_for_festival_date(festival_date, timezone_str)
+    logger.debug(f"connecting to database: {db_url}")
     conn = psycopg.connect(db_url, autocommit=True)
     try:
         with conn.cursor() as cur:
@@ -265,3 +268,99 @@ Based on the conversation above, extract memories or preferences related to "{fe
     )
     # 提示消息改为按需投递：在用户发起聊天或拉取消息列表时写入 chat_history 并更新 memory.delivery_at
     return True
+
+
+async def _get_user_agent_names(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> Tuple[Optional[str], Optional[str]]:
+    """从主库查 user nickname 与 agent name，用于 JSON 导出等。"""
+    user_name, agent_name = None, None
+    try:
+        r = await db.execute(
+            select(User.nickname).where(User.id == user_id, User.deleted_at.is_(None))
+        )
+        row = r.scalar_one_or_none()
+        if row is not None:
+            user_name = (row or "").strip() or None
+    except Exception as e:
+        logger.debug(f"resolve user name for {user_id}: {e}")
+    try:
+        r = await db.execute(
+            select(Agent.name).where(Agent.id == agent_id, Agent.deleted_at.is_(None))
+        )
+        row = r.scalar_one_or_none()
+        if row is not None:
+            agent_name = (row or "").strip() or None
+    except Exception as e:
+        logger.debug(f"resolve agent name for {agent_id}: {e}")
+    return user_name, agent_name
+
+
+async def extract_festival_to_dict(
+    user_id: str,
+    agent_id: str,
+    festival_name: str,
+    festival_date: date,
+    prompt_template: str,
+    db: Optional[AsyncSession] = None,
+) -> Optional[dict]:
+    """
+    与 extract_festival_and_save 相同的拉消息、拼 prompt、调 LLM 流程，
+    但返回可 JSON 序列化的 dict，不写库。失败返回 None。
+    若传入 db，会在返回的 dict 中附带 user_name、agent_name（从主库查 nickname/name）。
+    """
+    messages = await asyncio.to_thread(
+        get_messages_for_user_agent_sync, user_id, agent_id
+    )
+    if not messages:
+        return None
+    chat_text = _format_chat_for_prompt(messages)
+    date_str = (
+        festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date)
+    )
+    full_prompt = f"""{prompt_template}
+
+---
+Festival name: {festival_name}
+Festival date: {date_str}
+
+---
+# Conversation between the user and the character
+
+{chat_text}
+
+---
+Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
+
+    cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
+    model_name = (
+        cfg.model.strip() if cfg and cfg.model else None
+    ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
+    summary, _, _ = await call_openrouter_for_extraction(
+        full_prompt,
+        model=model_name,
+        max_tokens=2000,
+        temperature=0.3,
+    )
+    if not summary or len(summary.strip()) < 10:
+        return None
+    summary = summary.strip()
+    extracted_at = datetime.now(timezone.utc)
+    out = {
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "memory_type": MEMORY_TYPE_FESTIVAL,
+        "content": summary,
+        "extracted_at": extracted_at.isoformat(),
+        "festival_name": festival_name,
+        "festival_date": festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date),
+    }
+    if db is not None:
+        user_name, agent_name = await _get_user_agent_names(db, user_id, agent_id)
+        out["user_name"] = user_name or user_id
+        out["agent_name"] = agent_name or agent_id
+    return out

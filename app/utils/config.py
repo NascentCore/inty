@@ -8,6 +8,8 @@ import yaml
 from loguru import logger
 from pydantic import AnyHttpUrl
 
+from loguru import logger
+
 # 所有配置项必须有默认值，防止出现校验失败。
 # 这些默认值允许在没有实际配置文件的情况下使用。
 # 因为 config 对象被用作全局单例，大部分代码依赖它，但并不实际使用配置值，所以默认值是可以的。
@@ -50,15 +52,24 @@ class Environment(str, Enum):
     PROD = "prod"
 
 
+LOGGING_TIME_FORMAT = "{time:YYYY-MM-DD HH:mm:ss.SSS zz}"
+LOGGING_LEVEL_FORMAT = "{level: <8}"
+LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
+LOGGING_MESSAGE_FORMAT = "{message}"
+
 @dataclass
 class LoggingConfig:
     level: str = "INFO"
+    # 默认格式，不使用颜色；{file.path} 为完整路径，便于终端/IDE 点击跳转
     format: str = (
-        "{time:YYYY-MM-DD HH:mm:ss.SSS zz} | {level: <8} | {name}:{function}:{line} - {message}"
+        f"{LOGGING_TIME_FORMAT} | {LOGGING_LEVEL_FORMAT} | {LOGGING_FILE_FORMAT} - {LOGGING_MESSAGE_FORMAT}"
     )
-    file: str = "inty.log"
-    rotation: str = "100 MB"
-    retention: str = "7 days"
+    # 是否使用颜色
+    colorize: bool = False
+    def __post_init__(self):
+        if self.colorize:
+            # 区分四块：时间=绿，级别=按级别着色，位置=品红(含完整路径)，正文=白
+            self.format = f"<green>{LOGGING_TIME_FORMAT}</green> | <level>{LOGGING_LEVEL_FORMAT}</level> | <magenta>{LOGGING_FILE_FORMAT}</magenta> - <white>{LOGGING_MESSAGE_FORMAT}</white>"
 
 
 @dataclass
@@ -461,12 +472,17 @@ class Config:
 
 
 def load_config(path: str) -> Config:
+    """加载配置文件
+
+    因为 logger 配置会先调用本函数，因此这里的日志格式还未生效。
+    因此这里的日志会使用默认格式，不使用颜色。
+    """
     config_path = Path(path)
     if not config_path.exists():
-        print(f"config file {path} not found!")
+        logger.error(f"config file {path} not found!")
         sys.exit(1)
 
-    print(f"[CONFIG] Loading config from: {config_path.absolute()}")
+    logger.info(f"[CONFIG] Loading config from: {config_path.absolute()}")
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
