@@ -2,6 +2,7 @@
 
 > 记录下一步需要完成的任务，防止遗忘
 
+- [ ] Change outfit 工具，用户请求时，修改聊天背景形象图为新的 outfit，后端可以选择生成、或者是从已有图片选择；可能要做一下记录，防止重复
 - [ ] Erotic voice message 工具，当用户处于亢奋状态，为其提供 erotic voice message 消息，发送一段语音，并自动播放（听筒）
 - [ ] 自拍 video 工具，输入角色形象照片、根据聊天内容，返回相应的视频给用户，符合聊天上下文
 - [ ] Live voice message reply 工具，调用 Gemini live API，生成语音回复给用户，是对语音通话的补充，类似微信语音消息，点击播放（Soul 虚拟伴侣有类似的功能）
