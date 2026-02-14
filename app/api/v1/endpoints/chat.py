@@ -62,7 +62,12 @@ def _handle_subscription_limit_error(
 def _build_festival_prompt_choice_message(
     item: dict, info: Optional[dict]
 ) -> dict:
-    """构建单条节日提醒 choice 的 message 字典，与普通 AI 消息结构一致（含 id、meta_data、timestamp、audio_url）。"""
+    """构建单条节日提醒 choice 的 message 字典，与普通 AI 消息结构一致（含 id、meta_data、timestamp、audio_url）。
+
+    同一条 message 中可能同时出现顶层的 festival_memory_id（snake_case）与 meta_data 内的
+    festivalMemoryId（camelCase）：前者为本接口显式提供、供客户端优先使用；后者来自写入
+    chat_history 时存储的 meta_data，透传未改。客户端应以顶层 festival_memory_id 为准。
+    """
     if info:
         return {
             "role": None,
