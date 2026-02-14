@@ -202,7 +202,8 @@ def _process_pair(
             max_tokens=2000,
             temperature=0.3,
         )
-        logger.info("result: %s", result)
+        logger.info(result.model_dump_json(indent=2))
+        logger.info("result:", result.model_dump_json(indent=2))
         summary = result.summary.strip()
         one_sentence_short_title = result.one_sentence_short_title.strip()
         entry["festival_summary"] = summary
