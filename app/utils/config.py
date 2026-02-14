@@ -85,7 +85,7 @@ class DatabaseSettings:
     connect_timeout: int = 5
     command_timeout: int = 30
     replica_host: Optional[str] = None
-    replica_port: Optional[int] = None
+    replica_port: int = 5432
 
     @property
     def url(self) -> str:
