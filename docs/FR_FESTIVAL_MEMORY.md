@@ -56,6 +56,7 @@ CREATED_BY_AGENT
 ## 定时任务
 
 - 在 `push_scheduler_service` 中注册「节日记忆抽取」任务，使用 **每 5 分钟** 的 `IntervalTrigger` 扫描（启动后立即执行一次，之后每 5 分钟执行一次）。
+- **节日记忆通知**：push worker 中新增「节日记忆通知」任务（可选配置 `push_notification.festival_memory_enabled`，默认 true）。每 15 分钟扫描存在「未投递且未发过 system notification」的节日记忆的 (user_id, agent_id)，发送 FCM 推送；点击通知进入该角色 **Love Journal 页并定位到对应记忆条目**。投递仍由 GET messages / POST completions 完成，不在 push worker 内写 chat_history。
 - 每轮扫描：取当前 UTC 时间 `now`，查询 `festival_memory_config` 中 `enabled = true` 且 `run_at_date`、`run_at_hour` 均非空的配置；对每条配置将 **(run_at_date, run_at_hour)** 按该配置的 **timezone** 解释为本地日期+时刻，换算为 UTC 得到 `run_at_dt_utc`，仅当 `now >= run_at_dt_utc` 且（`last_run_at` 为 NULL 或 `last_run_at < run_at_dt_utc`）时视为「到点」。对到点配置采用 **先占位再执行**：先执行 `UPDATE festival_memory_config SET last_run_at = now() WHERE id = ? AND (last_run_at IS NULL OR last_run_at < run_at_dt_utc)`，仅当更新行数为 1 时表示本实例抢到执行权，再按该配置的 **timezone** 与 **festival_date** 计算 28 小时窗口、筛选该窗口内 (user, agent) 用户消息数 ≥ `min_rounds_in_window` 的组合并逐个调用抽取；若更新行数不为 1 则跳过该配置（已被其他实例执行或已执行过）。从而多实例下同一 config 在同一执行时刻只会被一个实例执行一次。执行时间不早于节日日期（由创建/更新接口校验 `run_at_date >= festival_date`）。
 
 ## Evaluation 页面

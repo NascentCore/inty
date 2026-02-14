@@ -289,6 +289,30 @@ class MainActivity : BaseActivity() {
             return false
         }
 
+        // 节日记忆通知：跳转到该角色 Love Journal 页并定位到对应记忆条目
+        if (messageType == FCMConstants.TYPE_FESTIVAL_MEMORY && !agentId.isNullOrEmpty()) {
+            hasHandledNotificationIntent = true
+            val memoryId =
+                if (intent.hasExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID)) {
+                    intent.getLongExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID, 0L)
+                } else {
+                    null
+                }
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to agentId,
+                    "page_source" to PUSH_NOTIFICATION,
+                    "type" to FCMConstants.TYPE_FESTIVAL_MEMORY,
+                ),
+            )
+            mainViewModel.updatePushFestivalMemoryTarget(agentId, memoryId)
+            intent.removeExtra(FCMConstants.DATA_KEY_TYPE)
+            intent.removeExtra(FCMConstants.DATA_KEY_AGENT_ID)
+            intent.removeExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID)
+            return true
+        }
+
         // 如果是 agent_message 类型且有 agent_id，跳转到 ChatActivity
         if (messageType == FCMConstants.TYPE_AGENT_MESSAGE && !agentId.isNullOrEmpty()) {
             hasHandledNotificationIntent = true // 标记已处理，避免重复跳转
@@ -307,13 +331,12 @@ class MainActivity : BaseActivity() {
             intent.removeExtra(FCMConstants.DATA_KEY_TYPE)
             intent.removeExtra(FCMConstants.DATA_KEY_AGENT_ID)
             return true
-        } else {
-            // 有推送数据但不是有效的 agent_message，记录日志
-            LogUtils.w("MainActivity", "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId")
-            // 标记已处理，避免重复检查
-            hasHandledNotificationIntent = true
-            return false
         }
+
+        // 有推送数据但不是有效的类型，记录日志
+        LogUtils.w("MainActivity", "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId")
+        hasHandledNotificationIntent = true
+        return false
     }
 
     @Composable

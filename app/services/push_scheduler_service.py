@@ -28,6 +28,7 @@ from app.services.push_notification_service import (
     discover_new_users_for_push,
     discover_users_with_updated_tokens,
     initialize_push_system,
+    process_festival_memory_push_batch,
     process_push_batch,
 )
 from app.services.user_analytics_report_service import (
@@ -197,6 +198,20 @@ class PushSchedulerService:
                 next_run_time=datetime.datetime.now(),
             )
             logger.info("已添加节日记忆抽取任务: 启动后立即执行，之后每 5 分钟扫描")
+
+            # 节日记忆通知：每 15 分钟扫描未投递且未发过 system notification 的节日记忆并发送 FCM（可选）
+            if getattr(config, "festival_memory_enabled", True):
+                self.scheduler.add_job(
+                    self._run_festival_memory_push,
+                    trigger=IntervalTrigger(minutes=15),
+                    id="run_festival_memory_push",
+                    name="节日记忆通知",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                    next_run_time=datetime.datetime.now(),
+                )
+                logger.info("已添加节日记忆通知任务: 启动后立即执行，之后每 15 分钟扫描")
 
             # 用户数据分析日报周报：每日/每周执行（若启用）
             uar_cfg = getattr(
@@ -484,6 +499,22 @@ class PushSchedulerService:
             logger.info("[节日记忆抽取] 完成")
         except Exception as e:
             logger.error(f"[节日记忆抽取] 执行失败: {str(e)}")
+
+    async def _run_festival_memory_push(self) -> None:
+        """节日记忆通知：扫描未投递且未发过 system notification 的节日记忆并发送 FCM。"""
+        try:
+            logger.info("[节日记忆通知] 开始...")
+            config = global_config_loaded_from_config_yaml.push_notification
+            batch_size = getattr(config, "festival_memory_batch_size", 50)
+            async with AsyncSessionLocal() as db:
+                success_count, fail_count = await process_festival_memory_push_batch(
+                    db, batch_size=batch_size
+                )
+            logger.info(
+                f"[节日记忆通知] 完成: 成功={success_count}, 失败={fail_count}"
+            )
+        except Exception as e:
+            logger.error(f"[节日记忆通知] 执行失败: {str(e)}")
 
     async def _run_user_analytics_daily_report(self) -> None:
         """每日用户数据分析日报：统计 T-1 日数据。"""

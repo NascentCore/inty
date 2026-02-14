@@ -6,7 +6,7 @@
 import asyncio
 from datetime import date, datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import get_sync_engine
@@ -123,6 +123,74 @@ def _get_session_id_for_user_agent_sync(user_id: str, agent_id: str) -> str | No
     if not row:
         return None
     return generate_session_id(row[0])
+
+
+async def get_pairs_with_undelivered_festival_memories(
+    db: AsyncSession, limit: int = 100
+) -> list[dict]:
+    """
+    查询存在未投递且未发过 system notification 的节日记忆的 (user_id, agent_id) 对。
+    条件：memory_type == festival、delivery_at IS NULL、system_notification_sent_at IS NULL。
+    按 (user_id, agent_id) 去重，取前 limit 对；每对带一条代表 festival_memory_id（按 festival_date 升序取第一条）。
+    返回列表元素：{"user_id": str, "agent_id": str, "festival_memory_id": int}。
+    """
+    subq = (
+        select(
+            Memory.user_id,
+            Memory.agent_id,
+            Memory.id.label("festival_memory_id"),
+            func.row_number()
+            .over(
+                partition_by=[Memory.user_id, Memory.agent_id],
+                order_by=Memory.festival_date.asc().nulls_last(),
+            )
+            .label("rn"),
+        )
+        .where(
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+            Memory.delivery_at.is_(None),
+            Memory.system_notification_sent_at.is_(None),
+        )
+    )
+    subq = subq.subquery()
+    stmt = (
+        select(subq.c.user_id, subq.c.agent_id, subq.c.festival_memory_id)
+        .where(subq.c.rn == 1)
+        .order_by(subq.c.user_id, subq.c.agent_id)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    rows = result.fetchall()
+    return [
+        {
+            "user_id": row[0],
+            "agent_id": row[1],
+            "festival_memory_id": row[2],
+        }
+        for row in rows
+        if row[0] and row[1] and row[2] is not None
+    ]
+
+
+async def mark_system_notification_sent_for_user_agent(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> None:
+    """
+    对该 (user_id, agent_id) 下所有 memory_type == festival 且 delivery_at IS NULL 的
+    memory 行更新 system_notification_sent_at = now()。
+    """
+    now = datetime.now(timezone.utc)
+    await db.execute(
+        update(Memory)
+        .where(
+            Memory.user_id == user_id,
+            Memory.agent_id == agent_id,
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+            Memory.delivery_at.is_(None),
+        )
+        .values(system_notification_sent_at=now)
+    )
+    await db.commit()
 
 
 async def get_undelivered_festival_memories(

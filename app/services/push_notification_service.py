@@ -41,6 +41,10 @@ from app.services.chat_history_service import (
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.image_transform_service import image_transform_service
+from app.services.memory_service import (
+    get_pairs_with_undelivered_festival_memories,
+    mark_system_notification_sent_for_user_agent,
+)
 
 # ============================================================================
 # 常量配置
@@ -104,6 +108,7 @@ RECENT_CHAT_STAGE_TO_COUNT = {
 # 推送类型常量
 PUSH_TYPE_RECENT_CHAT = "recent_chat"
 PUSH_TYPE_NO_CHAT = "no_chat"
+PUSH_TYPE_FESTIVAL_MEMORY = "festival_memory"
 
 # 未读推送记录数上限
 MAX_UNREAD_PUSH_COUNT = 5
@@ -1751,6 +1756,54 @@ async def send_push_notification(
         return False
 
 
+async def send_festival_memory_push(
+    db: AsyncSession,
+    user_id: str,
+    agent_id: str,
+    agent_name: str,
+    agent_avatar_url: Optional[str] = None,
+    festival_memory_id: Optional[int] = None,
+) -> bool:
+    """
+    发送节日记忆 FCM 推送（Love Journal 通知）。
+    data 含 type=festival_memory、agent_id、festival_memory_id（字符串，与 App 键名一致）。
+    """
+    try:
+        title = f"{agent_name} wrote you a secret Heartbeat Journal."
+        body = "Take a quiet look."
+        push_data = {
+            "agent_id": agent_id,
+            "type": "festival_memory",
+        }
+        if festival_memory_id is not None:
+            push_data["festival_memory_id"] = str(festival_memory_id)
+
+        image_url = None
+        if agent_avatar_url:
+            try:
+                image_url = image_transform_service.transform_mobile(agent_avatar_url)
+            except Exception as e:
+                logger.warning(
+                    f"头像 URL 转换失败: {agent_avatar_url}, error={str(e)}, 使用原始 URL"
+                )
+                image_url = agent_avatar_url
+
+        success = await notification_service.send_fcm_multicast(
+            db=db,
+            user_ids=[user_id],
+            title=title,
+            body=body,
+            data=push_data,
+            image_url=image_url,
+        )
+        return success
+    except Exception as e:
+        logger.error(
+            f"发送节日记忆推送失败: user_id={user_id}, agent_id={agent_id}, error={str(e)}"
+        )
+        return False
+
+
 async def record_push_history(
     db: AsyncSession,
     user_id: str,
@@ -2446,6 +2499,96 @@ async def process_push_batch(
         return 0, 0
 
 
+async def process_festival_memory_push_batch(
+    db: AsyncSession,
+    batch_size: int = 50,
+) -> Tuple[int, int]:
+    """
+    处理一批节日记忆推送：查询未投递且未发过 system notification 的 (user_id, agent_id)，
+    发送 FCM 后记录推送历史并更新 memory.system_notification_sent_at。
+    """
+    try:
+        pairs = await get_pairs_with_undelivered_festival_memories(db, limit=batch_size)
+        if not pairs:
+            logger.debug("[节日记忆推送] 无待推送的对")
+            return 0, 0
+
+        success_count = 0
+        fail_count = 0
+        for item in pairs:
+            user_id = item["user_id"]
+            agent_id = item["agent_id"]
+            festival_memory_id = item.get("festival_memory_id")
+            try:
+                if not await _check_user_has_device_token(db, user_id):
+                    logger.debug(
+                        f"[节日记忆推送] 用户无 device_token，跳过: user_id={user_id}"
+                    )
+                    fail_count += 1
+                    continue
+                if await has_sent_festival_push_for_user_agent(db, user_id, agent_id):
+                    logger.debug(
+                        f"[节日记忆推送] 已发过，跳过: user_id={user_id}, agent_id={agent_id}"
+                    )
+                    continue
+
+                agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+                if not agent_data:
+                    logger.warning(
+                        f"[节日记忆推送] Agent 未找到: agent_id={agent_id}, 跳过"
+                    )
+                    fail_count += 1
+                    continue
+                agent_name, agent_avatar_url = await _extract_agent_info(agent_data)
+
+                sent = await send_festival_memory_push(
+                    db,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    agent_name=agent_name,
+                    agent_avatar_url=agent_avatar_url,
+                    festival_memory_id=festival_memory_id,
+                )
+                if not sent:
+                    fail_count += 1
+                    continue
+
+                sent_at = datetime.datetime.now(datetime.timezone.utc)
+                await record_push_history(
+                    db,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    stage="festival",
+                    push_type=PUSH_TYPE_FESTIVAL_MEMORY,
+                    message_content=None,
+                    sent_at=sent_at,
+                    chat_id=None,
+                )
+                await mark_system_notification_sent_for_user_agent(
+                    db, user_id, agent_id
+                )
+                success_count += 1
+                logger.info(
+                    f"[节日记忆推送] 成功: user_id={user_id}, agent_id={agent_id}, festival_memory_id={festival_memory_id}"
+                )
+            except Exception as e:
+                fail_count += 1
+                logger.error(
+                    f"[节日记忆推送] 处理失败: user_id={user_id}, agent_id={agent_id}, error={str(e)}"
+                )
+
+        logger.info(
+            f"[节日记忆推送] 批次完成: 成功={success_count}, 失败={fail_count}, 总计={len(pairs)}"
+        )
+        return success_count, fail_count
+    except Exception as e:
+        logger.error(f"[节日记忆推送] 批次失败: {str(e)}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+        return 0, 0
+
+
 async def process_no_chat_push_batch(
     db: AsyncSession,
     stage: str,
@@ -2774,6 +2917,32 @@ async def has_sent_push_for_user_stage(
         return result.scalar_one_or_none() is not None
     except Exception as e:
         logger.error(f"检查推送历史失败: {str(e)}")
+        return True  # 出错时返回 True，避免重复发送
+
+
+async def has_sent_festival_push_for_user_agent(
+    db: AsyncSession,
+    user_id: str,
+    agent_id: str,
+) -> bool:
+    """
+    检查是否已对该 (user_id, agent_id) 发送过节日记忆推送。
+
+    Returns:
+        是否已发送过（存在 PushNotificationHistory 且 push_type == PUSH_TYPE_FESTIVAL_MEMORY）
+    """
+    try:
+        stmt = select(PushNotificationHistory.id).where(
+            and_(
+                PushNotificationHistory.user_id == user_id,
+                PushNotificationHistory.agent_id == agent_id,
+                PushNotificationHistory.push_type == PUSH_TYPE_FESTIVAL_MEMORY,
+            )
+        ).limit(1)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none() is not None
+    except Exception as e:
+        logger.error(f"检查节日记忆推送历史失败: {str(e)}")
         return True  # 出错时返回 True，避免重复发送
 
 

@@ -18,6 +18,7 @@ import androidx.navigation.navArgument
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.SplashLoginUI
+import com.ai.intellimate.agent.heartbeat.toHeartbeat
 import com.ai.intellimate.agent.info.AgentInfoViewModel
 import com.ai.intellimate.call.VoiceCallScreen
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -52,6 +53,14 @@ fun AppNavHost(
         if (pushAgentId.isEmpty()) return@LaunchedEffect
         mainViewModel.updatePushAgentId("")
         navController.navigate(Routes.Chat.chatPage(pushAgentId, false, fromPage = "push"))
+    }
+
+    val pushFestivalMemoryTarget by mainViewModel.pushFestivalMemoryTarget.collectAsState()
+    LaunchedEffect(pushFestivalMemoryTarget) {
+        val pair = pushFestivalMemoryTarget
+        if (pair == null || pair.first.isEmpty()) return@LaunchedEffect
+        mainViewModel.clearPushFestivalMemoryTarget()
+        navController.toHeartbeat(pair.first, pair.second, pageSource = "push")
     }
 
     val needsRegInfo by mainViewModel.needsRegInfo.collectAsState()
