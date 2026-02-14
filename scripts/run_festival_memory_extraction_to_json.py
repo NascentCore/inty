@@ -22,7 +22,9 @@ from typing import Annotated, Optional
 
 import cyclopts
 
-logger = logging.getLogger(__name__)
+from app.core.logging import init_logger
+from loguru import logger
+init_logger()
 
 CONFIG_YAML = "config.yaml"
 
