@@ -98,6 +98,8 @@ async def _run(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
+    n = len(pairs)
+    print(f"Done: {n} pair(s) in window, {success} memory(ies) written to {output_path}")
 
 
 def main(
@@ -107,7 +109,7 @@ def main(
     prompt: Annotated[Optional[str], cyclopts.Parameter(name="--prompt", help="抽取提示词")] = None,
     prompt_file: Annotated[Optional[str], cyclopts.Parameter(name="--prompt-file", help="从文件读取提示词")] = None,
     timezone: Annotated[str, cyclopts.Parameter(name="--timezone")] = "UTC",
-    min_rounds: Annotated[int, cyclopts.Parameter(name="--min-rounds")] = 15,
+    min_rounds: Annotated[int, cyclopts.Parameter(name="--min-rounds")] = 50,
     limit: Annotated[
         Optional[int],
         cyclopts.Parameter(name="--limit", help="仅处理前 count 个 (user, agent) 对，不传则处理全部；便于测试"),
@@ -121,6 +123,7 @@ def main(
         print("错误: 请提供 --prompt 或 --prompt-file", file=sys.stderr)
         sys.exit(1)
     parsed_date = date.fromisoformat(festival_date)
+    logger.debug(f"All arguments: {locals()}")
     asyncio.run(
         _run(
             festival_name=festival_name,
