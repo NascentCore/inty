@@ -20,6 +20,9 @@ def _handle_api_response(
     tool_executors: dict,
     get_gemini_client,
     logger,
+    *,
+    build_system_messages=None,
+    user_name: str | None = None,
 ) -> tuple[bool, list, str | None]:
     """
     处理单次 API 响应。返回 (是否结束本轮, 更新后的 messages, 新的 pending_image_path)。
@@ -54,6 +57,9 @@ def _handle_api_response(
         tool_context_types=tool_context_types,
         get_gemini_client=get_gemini_client,
         _logger=logger,
+        build_system_messages=build_system_messages,
+        char_name=char_name,
+        user_name=user_name,
     )
     messages = out.messages
     new_pending = out.image_path
@@ -87,6 +93,8 @@ def _execute_turn(
     tool_executors: dict,
     get_gemini_client,
     logger,
+    *,
+    build_system_messages=None,
 ) -> list:
     """执行单轮对话：用户输入 -> API 调用 -> 可能多轮 tool 循环 -> 输出。"""
     messages.append({"role": "user", "content": line})
@@ -115,7 +123,10 @@ def _execute_turn(
                 parallel_tool_calls=False,
             )
             _raw = resp.model_dump() if hasattr(resp, "model_dump") else repr(resp)
-            logger.info("API raw response: %s", _raw)
+            if isinstance(_raw, dict):
+                logger.info("API raw response: %s", json.dumps(_raw, indent=2))
+            else:
+                logger.info("API raw response: %s", _raw)
             msg = resp.choices[0].message
             has_tc = bool(getattr(msg, "tool_calls", None))
             logger.info("API 响应 第 %d 轮，has_tool_calls=%s", round_num, has_tc)
@@ -131,6 +142,8 @@ def _execute_turn(
                 tool_executors,
                 get_gemini_client,
                 logger,
+                build_system_messages=build_system_messages,
+                user_name=user_name,
             )
             if done:
                 break
@@ -203,4 +216,5 @@ def run_repl(
                 tool_executors,
                 get_gemini_client,
                 logger,
+                build_system_messages=build_system_messages,
             )

@@ -19,6 +19,8 @@ ZUN_LONG_PHOTO_PATH = _THIS_DIR / "尊龙.png"
 COMPANION_PROFILE_DIR = _THIS_DIR / "companion_profile"
 
 RECENT_MESSAGES_FOR_IMAGE = 10
+RECENT_MESSAGES_FOR_LIVE = 10
+RECENT_MESSAGES_FOR_SCENE = 10
 
 # 内存维护已发送图片路径，用于 send_selfie_photo 去重
 _sent_image_paths: set[str] = set()
@@ -43,6 +45,8 @@ class ToolContextType(Enum):
     NONE = "none"
     GEMINI_CLIENT = "gemini_client"
     GEMINI_CLIENT_WITH_MESSAGES = "gemini_client_with_messages"
+    GEMINI_CLIENT_WITH_MESSAGES_AND_SYSTEM = "gemini_client_with_messages_and_system"
+    GEMINI_CLIENT_WITH_MESSAGES_AND_NAMES = "gemini_client_with_messages_and_names"
 
 
 class ProcessedResponse(BaseModel):
@@ -214,7 +218,8 @@ def execute_text_to_speech(
     except (ValueError, OSError, AttributeError) as e:
         if _logger is not None:
             _logger.warning("text_to_speech 失败: %s", e)
-        return (f"text_to_speech: Failed ({e}).", None)
+        attempted = (text or "").strip()
+        return (f"text_to_speech: Failed ({e}). Spoken (attempted): {attempted}", None)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     out_path = DATA_DIR / f"generated_speech_{int(time.time() * 1000)}.wav"
     with wave.open(str(out_path), "wb") as wf:
@@ -225,7 +230,102 @@ def execute_text_to_speech(
     path_str = str(out_path.resolve())
     if _logger is not None:
         _logger.info("text_to_speech 成功，已写入: %s", path_str)
-    return ("text_to_speech: Speech generated.", path_str)
+    # 显示原文以便用户知道朗读内容（保留换行，不截断）
+    spoken_preview = (text or "").strip()
+    result_msg = f"text_to_speech: Speech generated. Spoken:\n{spoken_preview}"
+    return (result_msg, path_str)
+
+
+def execute_live_voice_message_reply(
+    text: str,
+    *,
+    messages: list[dict[str, Any]],
+    system_instruction: Any,
+    _logger=None,
+    **kwargs: Any,
+) -> tuple[str, str | None]:
+    """使用 Live API 生成语音回复并写入 WAV，返回 (结果文案, 可点击绝对路径或 None)。内部使用 Live 专用 client（v1beta），不依赖传入的 client。"""
+    if _logger is not None:
+        _logger.info(
+            "live_voice_message_reply 输入参数: text=%s, messages=%s, system_instruction=%s",
+            text,
+            messages,
+            system_instruction,
+        )
+    import asyncio
+
+    from .live_voice_message import generate_speech_via_live
+
+    if not (text or "").strip():
+        return ("live_voice_message_reply: Text cannot be empty.", None)
+    try:
+        pcm, transcript = asyncio.run(
+            generate_speech_via_live(
+                text.strip(),
+                messages=messages,
+                system_instruction=system_instruction,
+            )
+        )
+    except (ValueError, OSError, AttributeError, asyncio.TimeoutError) as e:
+        if _logger is not None:
+            _logger.warning("live_voice_message_reply 失败: %s", e)
+        return (f"live_voice_message_reply: Failed ({e}).", None)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = DATA_DIR / f"live_voice_{int(time.time() * 1000)}.wav"
+    with wave.open(str(out_path), "wb") as wf:
+        wf.setnchannels(WAV_CHANNELS)
+        wf.setsampwidth(WAV_SAMPLE_WIDTH)
+        wf.setframerate(WAV_SAMPLE_RATE)
+        wf.writeframes(pcm)
+    path_str = str(out_path.resolve())
+    if _logger is not None:
+        _logger.info("live_voice_message_reply 成功，已写入: %s", path_str)
+    # Path is shown once via image_path (new_pending) in REPL; do not embed in result to avoid double print
+    if transcript:
+        result = f'live_voice_message_reply: Speech generated. Transcript: "{transcript}".'
+    else:
+        result = "live_voice_message_reply: Speech generated. Transcript: (none)."
+    return (result, path_str)
+
+
+def execute_erotic_scene_generate(
+    *,
+    messages: list[dict[str, Any]],
+    client: Any,
+    char_name: str,
+    user_name: str,
+    user_desires: str,
+    _logger=None,
+    **kwargs: Any,
+) -> tuple[str, str | None]:
+    """根据最近对话与角色/用户名生成连续文字 scene，仅文本、不生成图片。返回 (结果文案含 scene 正文, None)。"""
+    from .scene_gen import generate_erotic_scene_text
+
+    if _logger is not None:
+        _logger.info(
+            "erotic_scene_generate: messages_count=%d char=%s user=%s",
+            len(messages),
+            char_name,
+            user_name,
+        )
+    try:
+        text = generate_erotic_scene_text(
+            messages=messages,
+            client=client,
+            char_name=char_name,
+            user_name=user_name,
+            user_desires=user_desires or "",
+            recent_n=RECENT_MESSAGES_FOR_SCENE,
+            _logger=_logger,
+        )
+    except (ValueError, OSError, AttributeError) as e:
+        if _logger is not None:
+            _logger.warning("erotic_scene_generate 失败: %s", e)
+        return (f"erotic_scene_generate: Failed ({e}).", None)
+    result_msg = "erotic_scene_generate: Scene:\n" + (text or "").strip()
+    if _logger is not None:
+        _logger.info("erotic_scene_generate 成功，scene 长度=%d", len(text or ""))
+    return (result_msg, None)
 
 
 def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
@@ -247,6 +347,24 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
 
     def exec_tts(*, text, client, **kw):
         return execute_text_to_speech(text=text, client=client, _logger=_logger)
+
+    def exec_live_voice(*, text, messages, system_instruction, **kw):
+        return execute_live_voice_message_reply(
+            text=text,
+            messages=messages,
+            system_instruction=system_instruction,
+            _logger=_logger,
+        )
+
+    def exec_love_making_scene_writer(*, messages, client, char_name, user_name, user_desires="", **kw):
+        return execute_erotic_scene_generate(
+            messages=messages,
+            client=client,
+            char_name=char_name,
+            user_name=user_name,
+            user_desires=user_desires or "",
+            _logger=_logger,
+        )
 
     return [
         ToolDefinition(
@@ -305,13 +423,16 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ),
         ToolDefinition(
             name="text_to_speech",
-            description="Convert text to speech and send to the user. When the user asks for voice reply, read aloud, or says 'say X', 'speak X', 'say something', 'speak to me', 'I want to hear your voice', 'say it out loud', you MUST call this tool. The text parameter must be only the spoken lines, not actions or stage directions like (looks at you) or (smiles). Text-only replies cannot actually send voice.",
+            description=(
+                "Convert text to speech. Call this **only** when the user's **current** message explicitly asks for voice or speech, e.g. 'say something', 'speak to me', 'I want to hear you', 'send a voice message', 'read aloud', 'say X'. "
+                "Do NOT call this tool for normal conversational replies (e.g. user said 'wow', 'how are you', 'of course', 'I saw your project')."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
                     "text": {
                         "type": "string",
-                        "description": "The spoken line content only; do not include action descriptions in parentheses.",
+                        "description": "Include non-audible descriptions like scene, thoughts, actions, etc., which are in parentheses (), and actual dialogue that is not inside parentheses ().",
                     }
                 },
                 "required": ["text"],
@@ -321,6 +442,52 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
             context_type=ToolContextType.GEMINI_CLIENT,
             executor=exec_tts,
         ),
+        ToolDefinition(
+            name="love_making_scene_writer",
+            description=(
+                "Write a love making scene between the character and the user. "
+                "Call this tool when:\n"
+                "- the user shows intention to make love with you\n"
+                "- you or the user started a love making interaction\n"
+                "- the user is sexually aroused\n"
+                "- they explicitly ask for a love making scene or story\n"
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "user_desires": {
+                        "type": "string",
+                        "description": "The desires of the user. Describe the user's desires in detail.",
+                    }
+                },
+                "additionalProperties": False,
+            },
+            type=ToolType.TERMINAL,
+            context_type=ToolContextType.GEMINI_CLIENT_WITH_MESSAGES_AND_NAMES,
+            executor=exec_love_making_scene_writer,
+        ),
+        # This tool is right now only useful for generating erotic voice messages.
+        # But it's too slow, and the effect is no different from text_to_speech.
+        # ToolDefinition(
+        #     name="live_voice_message_reply",
+        #     description=(
+        #         "Strong emotional but slower voice message reply using Live API with full context. Use only when the user wants strong emotional stimulus, explicitly asks for a 'Live' or 'conversational' voice reply; for all other voice requests (say something, hear you, voice message, read aloud, etc.) use text_to_speech instead, which is faster."
+        #     ),
+        #     parameters={
+        #         "type": "object",
+        #         "properties": {
+        #             "text": {
+        #                 "type": "string",
+        #                 "description": "The reply content to speak in this voice message.",
+        #             }
+        #         },
+        #         "required": ["text"],
+        #         "additionalProperties": False,
+        #     },
+        #     type=ToolType.TERMINAL,
+        #     context_type=ToolContextType.GEMINI_CLIENT_WITH_MESSAGES_AND_SYSTEM,
+        #     executor=exec_live_voice,
+        # ),
     ]
 
 
@@ -328,8 +495,43 @@ def _build_tool_context(
     context_type: ToolContextType,
     new_messages: list[dict[str, Any]],
     get_gemini_client,
+    *,
+    build_system_messages=None,
+    char_name: str | None = None,
+    user_name: str | None = None,
 ) -> dict[str, Any]:
     """根据 ToolContextType 构建注入 executor 的 context_kwargs。"""
+    if context_type == ToolContextType.GEMINI_CLIENT_WITH_MESSAGES_AND_SYSTEM:
+        from google.genai import types as genai_types
+
+        system_instruction = genai_types.Content(
+            parts=[genai_types.Part.from_text(text=".")],
+            role="user",
+        )
+        if build_system_messages is not None and char_name is not None and user_name is not None:
+            system_msgs = build_system_messages(char_name, user_name)
+            merged = "\n\n".join(
+                (m.get("content") or "").strip()
+                for m in system_msgs
+                if m.get("role") == "system"
+            ).strip()
+            if merged:
+                system_instruction = genai_types.Content(
+                    parts=[genai_types.Part.from_text(text=merged)],
+                    role="user",
+                )
+        return {
+            "client": get_gemini_client(),
+            "messages": new_messages[-RECENT_MESSAGES_FOR_LIVE:],
+            "system_instruction": system_instruction,
+        }
+    if context_type == ToolContextType.GEMINI_CLIENT_WITH_MESSAGES_AND_NAMES:
+        return {
+            "client": get_gemini_client(),
+            "messages": new_messages[-RECENT_MESSAGES_FOR_SCENE:],
+            "char_name": char_name or "",
+            "user_name": user_name or "",
+        }
     if context_type == ToolContextType.GEMINI_CLIENT_WITH_MESSAGES:
         return {
             "client": get_gemini_client(),
@@ -349,6 +551,9 @@ def process_response_with_tools(
     tool_context_types: dict[str, ToolContextType],
     get_gemini_client,
     _logger=None,
+    build_system_messages=None,
+    char_name: str | None = None,
+    user_name: str | None = None,
 ) -> ProcessedResponse:
     """
     处理单轮 API 响应中的 tool_call：执行工具并追加 assistant + tool 消息，按 TERMINAL 返回 content/done。
@@ -385,7 +590,14 @@ def process_response_with_tools(
     except json.JSONDecodeError:
         parsed_args = {}
     context_type = tool_context_types.get(name, ToolContextType.NONE)
-    context_kwargs = _build_tool_context(context_type, new_messages, get_gemini_client)
+    context_kwargs = _build_tool_context(
+        context_type,
+        new_messages,
+        get_gemini_client,
+        build_system_messages=build_system_messages,
+        char_name=char_name,
+        user_name=user_name,
+    )
 
     executor = tool_executors.get(name)
     if executor:

@@ -29,7 +29,7 @@
 - **范围**：暂不接入 Android，仅验证“从被动到主动”的逻辑转移。
 - **目标**：识别“状态切换 + 主动时机”的未知点与不确定性。
 
-- **工具**：当前支持 `send_app_icon`、`send_zun_long_photo`、`send_selfie_photo`、`generate_image`、`text_to_speech`。`generate_image` 根据**当前对话上下文**（最近 10 条消息）生成图片，调用 Imagen 4 Fast（Gemini API），执行后会再调用 LLM 输出文字以配合图片；`text_to_speech` 将 LLM 返回的文本转为语音（Gemini TTS），生成 WAV 文件。二者均需在 `.env` 中配置 `GEMINI_API_KEY`。REPL 中打印图片或语音的绝对路径，用户可在终端中点击路径自行打开查看或播放。
+- **工具**：当前支持 `send_app_icon`、`send_zun_long_photo`、`send_selfie_photo`、`generate_image`、`text_to_speech`、`live_voice_message_reply`、`erotic_scene_generate`。`generate_image` 根据**当前对话上下文**（最近 10 条消息）生成图片，调用 Imagen 4 Fast（Gemini API），执行后会再调用 LLM 输出文字以配合图片；`text_to_speech` 将 LLM 返回的文本转为语音（Gemini TTS），生成 WAV 文件，适合精确朗读给定句子；`live_voice_message_reply` 使用 Gemini Live API，带系统指令与最近 10 条消息上下文，生成更自然、对话式的短语音消息（类似微信语音消息，点击播放），与 TTS 对比用于验证 Live 语音能力；`erotic_scene_generate` 在对话暗示用户亢奋或用户明确要求亲密/色情场景时，根据最近对话生成连续多段**文字** scene 描述，仅文字、不生成图片，无需用户输入 continue。上述 Gemini 相关工具均需在 `.env` 中配置 `GEMINI_API_KEY`。REPL 中打印图片或语音的绝对路径，用户可在终端中点击路径自行打开查看或播放。
 
 ## 快速开始
 
@@ -38,6 +38,52 @@
 ```bash
 python -m experimental.agentic_ai_companion.main
 ```
+
+## 如何测试 live_voice_message_reply
+
+**环境**：在仓库根目录或 `experimental/agentic_ai_companion/` 下配置 `.env`（或 export），需包含 `GEMINI_API_KEY` 与 `OPENROUTER_API_KEY`。
+
+**方式一：REPL 手动触发**
+
+1. 从仓库根目录运行：`python -m experimental.agentic_ai_companion.main`（可选加 `--debug` 看日志）。
+2. 在提示符输入一句会促使模型调用语音消息工具的话，例如：
+   - "Send me a short voice message saying hello."
+   - "Reply with a voice message."
+   - "I want to hear a voice message from you."
+3. 若模型调用 `live_voice_message_reply`，终端会打印工具结果与 WAV 绝对路径；在终端或文件管理器中打开该路径即可播放。
+
+**方式二：仅测 Live API 语音生成（不经过 REPL/OpenRouter）**
+
+在仓库根目录执行下面脚本，用最小上下文调用 `generate_speech_via_live`，检查是否生成 WAV（需 `GEMINI_API_KEY`）：
+
+```bash
+cd /path/to/agent-ai-companion
+python -c "
+import asyncio
+from experimental.agentic_ai_companion.live_voice import generate_speech_via_live
+from google.genai import types
+
+async def run():
+    sys = types.Content(parts=[types.Part.from_text(text='You are a friendly assistant.')], role='user')
+    msgs = [{'role': 'user', 'content': 'Hi'}, {'role': 'assistant', 'content': 'Hello!'}]
+    pcm, transcript = await generate_speech_via_live('Say hello in a short voice message.', messages=msgs, system_instruction=sys)
+    print('PCM length:', len(pcm), 'Transcript:', repr(transcript))
+    from pathlib import Path
+    out = Path('experimental/agentic_ai_companion/tmp/test_live.wav')
+    out.parent.mkdir(parents=True, exist_ok=True)
+    import wave
+    with wave.open(str(out), 'wb') as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(24000)
+        w.writeframes(pcm)
+    print('Wrote', out)
+
+asyncio.run(run())
+"
+```
+
+播放生成的 `tmp/test_live.wav` 即可确认 Live 语音输出是否正常。
 
 ## 工具定义
 
