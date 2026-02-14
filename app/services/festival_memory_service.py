@@ -61,6 +61,7 @@ def get_pairs_with_min_rounds_in_window_sync(
     db_url：用于 psycopg 连接的数据库 URL（主库或只读副本）。
     """
     window_start, window_end = _window_for_festival_date(festival_date, timezone_str)
+    logger.debug(f"connecting to database: {db_url}")
     conn = psycopg.connect(db_url, autocommit=True)
     try:
         with conn.cursor() as cur:

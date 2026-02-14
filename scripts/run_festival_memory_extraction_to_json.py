@@ -71,6 +71,7 @@ async def _run(
     memories: list[dict] = []
     success = 0
     for user_id, agent_id in pairs:
+        logger.debug(f"extracting festival memory for user_id={user_id} agent_id={agent_id}")
         d = await extract_festival_to_dict(
             user_id, agent_id, festival_name, festival_date, prompt
         )
