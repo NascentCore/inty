@@ -265,3 +265,66 @@ Based on the conversation above, extract memories or preferences related to "{fe
     )
     # 提示消息改为按需投递：在用户发起聊天或拉取消息列表时写入 chat_history 并更新 memory.delivery_at
     return True
+
+
+async def extract_festival_to_dict(
+    user_id: str,
+    agent_id: str,
+    festival_name: str,
+    festival_date: date,
+    prompt_template: str,
+) -> Optional[dict]:
+    """
+    与 extract_festival_and_save 相同的拉消息、拼 prompt、调 LLM 流程，
+    但返回可 JSON 序列化的 dict，不写库。失败返回 None。
+    """
+    messages = await asyncio.to_thread(
+        get_messages_for_user_agent_sync, user_id, agent_id
+    )
+    if not messages:
+        return None
+    chat_text = _format_chat_for_prompt(messages)
+    date_str = (
+        festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date)
+    )
+    full_prompt = f"""{prompt_template}
+
+---
+Festival name: {festival_name}
+Festival date: {date_str}
+
+---
+# Conversation between the user and the character
+
+{chat_text}
+
+---
+Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
+
+    cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
+    model_name = (
+        cfg.model.strip() if cfg and cfg.model else None
+    ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
+    summary, _, _ = await call_openrouter_for_extraction(
+        full_prompt,
+        model=model_name,
+        max_tokens=2000,
+        temperature=0.3,
+    )
+    if not summary or len(summary.strip()) < 10:
+        return None
+    summary = summary.strip()
+    extracted_at = datetime.now(timezone.utc)
+    return {
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "memory_type": MEMORY_TYPE_FESTIVAL,
+        "content": summary,
+        "extracted_at": extracted_at.isoformat(),
+        "festival_name": festival_name,
+        "festival_date": festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date),
+    }
