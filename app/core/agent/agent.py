@@ -1149,9 +1149,9 @@ class Agent:
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录（包含LLM调用时间）
+                # 保存AI响应到历史记录（包含LLM调用时间），并返回插入后的 message id 供调用方使用
                 save_response_start = time.time()
-                chat_history_service.add_ai_message_sync(
+                ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session_id,
                     message=response_text,
                     agent_id=self.agent_id,
@@ -1162,7 +1162,7 @@ class Agent:
                     f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                return response_text
+                return (response_text, ai_message_id)
             except Exception as e:
                 # 增强的错误日志记录
                 error_context = {

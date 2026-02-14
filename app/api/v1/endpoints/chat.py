@@ -200,7 +200,7 @@ async def agent_chat_completions(
                 model_override = select_chat_model(
                     user=current_user, is_subscribed=bool(subscription)
                 )
-                response_content = await agent.chat(
+                chat_result = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
@@ -208,6 +208,9 @@ async def agent_chat_completions(
                     user_time_context=user_time_context,
                     model_override=model_override,
                 )
+                response_content, ai_message_id = (
+                    chat_result[0], chat_result[1]
+                ) if isinstance(chat_result, tuple) else (chat_result, None)
 
             logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")
 
@@ -281,17 +284,25 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
-        # 获取最新AI消息的完整信息
+        # 获取 AI 消息完整信息：插入时已拿到 message id 则按 id 查，否则查最新一条
+        latest_message_info = None
         try:
-            with log_time(f"获取最新消息: session_id={session_id}"):
-                latest_message_info = (
-                    await chat_history_service.get_latest_ai_message_info(
-                        db, session_id
+            if ai_message_id is not None:
+                with log_time(f"获取AI消息信息: message_id={ai_message_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            db, ai_message_id
+                        )
                     )
-                )
+            if latest_message_info is None:
+                with log_time(f"获取最新消息: session_id={session_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            db, session_id
+                        )
+                    )
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
-            latest_message_info = None
 
         user_message_id = None
         try:

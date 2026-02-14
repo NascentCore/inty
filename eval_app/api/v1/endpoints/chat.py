@@ -183,11 +183,14 @@ async def agent_chat_completions(
                 )
 
             with log_time(f"AI聊天处理: session_id={session_id}"):
-                response_content = await agent.chat(
+                chat_result = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
                     chat_settings=chat_settings,
+                )
+                response_content = (
+                    chat_result[0] if isinstance(chat_result, tuple) else chat_result
                 )
 
             logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")

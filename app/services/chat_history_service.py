@@ -929,6 +929,50 @@ async def get_latest_ai_message_info(
         return None
 
 
+async def get_ai_message_info_by_id(
+    db: AsyncSession, message_id: int
+) -> Optional[Dict[str, Any]]:
+    """根据消息 ID 获取 AI 消息的完整信息（与 get_latest_ai_message_info 返回结构一致）。"""
+    try:
+        stmt = (
+            select(ChatHistory)
+            .where(
+                ChatHistory.id == message_id,
+                ChatHistory.message["type"].astext == "ai",
+                ChatHistory.deleted_at.is_(None),
+            )
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+        if not chat_history:
+            return None
+
+        content = ""
+        try:
+            message_data = chat_history.message
+            if "data" in message_data and "content" in message_data["data"]:
+                content = message_data["data"]["content"]
+            elif "content" in message_data:
+                content = message_data["content"]
+        except (TypeError, KeyError) as e:
+            logger.warning(f"解析AI消息内容失败: {str(e)}")
+            content = str(chat_history.message) if chat_history.message else ""
+
+        return {
+            "id": chat_history.id,
+            "content": content,
+            "audio_url": chat_history.audio_url,
+            "meta_data": chat_history.meta_data,
+            "timestamp": (
+                chat_history.created_at.isoformat() if chat_history.created_at else None
+            ),
+        }
+    except Exception as e:
+        logger.error(f"根据ID获取AI消息信息失败 message_id={message_id}: {str(e)}")
+        return None
+
+
 def get_messages_paginated(
     session_id: str, limit: int = 20, offset: int = 0, user_id: Optional[str] = None
 ) -> Dict[str, Any]:
