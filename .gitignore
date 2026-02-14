@@ -111,3 +111,6 @@ inty-firebase-key.json
 # 压缩包数据文件
 *.tar
 *.tar.gz
+
+# 临时文件目录
+tmp/
