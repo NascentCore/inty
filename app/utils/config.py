@@ -52,21 +52,24 @@ class Environment(str, Enum):
     PROD = "prod"
 
 
+LOGGING_TIME_FORMAT = "{time:YYYY-MM-DD HH:mm:ss.SSS zz}"
+LOGGING_LEVEL_FORMAT = "{level: <8}"
+LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
+LOGGING_MESSAGE_FORMAT = "{message}"
+
 @dataclass
 class LoggingConfig:
     level: str = "INFO"
-    # 默认格式，不使用颜色
+    # 默认格式，不使用颜色；{file.path} 为完整路径，便于终端/IDE 点击跳转
     format: str = (
-        "{time:YYYY-MM-DD HH:mm:ss.SSS zz} | {level: <8} | {name}:{file}:{line}:{function} - {message}"
+        f"{LOGGING_TIME_FORMAT} | {LOGGING_LEVEL_FORMAT} | {LOGGING_FILE_FORMAT} - {LOGGING_MESSAGE_FORMAT}"
     )
     # 是否使用颜色
     colorize: bool = False
     def __post_init__(self):
         if self.colorize:
-            # 区分四块：时间=绿，级别=按级别着色，位置=品红，正文=白
-            self.format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS zz}</green> | <level>{level: <8}</level> | <magenta>{name}:{file}:{line}:{function}</magenta> - <white>{message}</white>"
-        else:
-            self.format = "{time:YYYY-MM-DD HH:mm:ss.SSS zz} | {level: <8} | {name}:{file}:{line}:{function} - {message}"
+            # 区分四块：时间=绿，级别=按级别着色，位置=品红(含完整路径)，正文=白
+            self.format = f"<green>{LOGGING_TIME_FORMAT}</green> | <level>{LOGGING_LEVEL_FORMAT}</level> | <magenta>{LOGGING_FILE_FORMAT}</magenta> - <white>{LOGGING_MESSAGE_FORMAT}</white>"
 
 
 @dataclass
