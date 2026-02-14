@@ -21,6 +21,15 @@
 
 **建立生活节奏（晨午晚仪式）+ 共同记忆（挚爱馆/歌/回顾）+ 角色人生线三位一体的长期陪伴底座，使关系可回溯、可延续、可生长。**
 
+## Cursor
+
+> Cursor 是我们选定的 AI coding 工具，必须使用
+> 本代码库维护了丰富的 AGENTS.md 来增强 Cursor 在本代码库的效能
+
+- https://cursor.com/blog/secure-codebase-indexing
+- 使用 Cursor 对代码库进行问答；直接打开 Ask 模式（Shift+Tab 切换）
+  <img width="900" height="1766" alt="image" src="https://github.com/user-attachments/assets/9ca85fb0-4fe3-495b-ae37-13534bfd2999" />
+
 ## 快速开始
 
 [添加 SSH key 到你的 GitHub 账户](https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
@@ -60,7 +69,7 @@ docker compose up pgvector -d
 
 <img width="1028" height="932" alt="image" src="https://github.com/user-attachments/assets/59c52323-9ee3-4042-85ca-39344815b71c" />
 
-### 启动 Dummy 服务
+### 本地联调：本地后端+ Android Studio App
 
 ```bash
 docker compose up pgvector -d
@@ -68,21 +77,14 @@ cp devops/config.yaml.test config.yaml
 
 # 修改相关 py 代码，会自动加载，无需重启
 ./start.sh --dev
+
+# 打开 Android Studio
+# 选择 local build type，编译运行
+
+# 同时打开端口代理、让模拟器可以访问本机端口
+# -s 在多个模拟器时可以指向特定模拟器
+adb reverse [-s 34181JEHN02316] tcp:8000 tcp:8000
 ```
-
-修改 app/core/config.py 中的 APIEndpointsConfig `use_dummy_*` 等相关开关；
-找到你需要返回特定测试值的 endpoints 文件
-
-用 `local` build type 来构建 Android App IntelliMate 就能访问。
-记住打开本地反向代理 `adb -s 34181JEHN02316 reverse tcp:8000 tcp:8000`
-
-
-## 代码库其他组件说明
-
-更多详细信息请参考各子目录的 README 文件：
-
-- 后端开发：参见 [backend/README.md](backend/README.md)
-- [mychatplayground](mychatplayground/README.md): 用于测试提示词和聊天效果的 web 工具
 
 ### 相关链接
 
