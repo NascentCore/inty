@@ -1,7 +1,7 @@
 # AGENTS.md · scripts/（脚本）
 
 - 最简设计来完成用户需求
-- **节日记忆摘要（离线）**：`apply_festival_summary_to_chats_json.py` 对 `query_chat_history_by_date.py --include-messages` 导出的 chats.json 应用与线上一致的节日记忆摘要逻辑，输出带 `festival_summary` 的 JSON。选项：`--input-json`/`-i`、`--output-json`/`-o`、`--festival-name`、`--festival-date`（可选）、`--prompt`/`--prompt-file`、`--limit`、`--dry-run`。运行前需 config.yaml 在 cwd。
+- **节日记忆摘要（离线）**：`apply_festival_summary_to_chats_json.py` 对 `query_chat_history_by_date.py --include-messages` 导出的 chats.json 应用与线上一致的节日记忆摘要逻辑，输出带 `festival_summary` 的 JSON。system message 由脚本内 `SYSTEM_PROMPT_TEMPLATE` 生成。选项：`--input-json`/`-i`、`--output-json`/`-o`、`--festival-name`、`--festival-date`（可选）、`--limit`、`--dry-run`、`--no-output`（不写入不打印结果 JSON）。运行前需 config.yaml 在 cwd。
 - 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
 - 脚本需可重复执行（幂等），参数化（使用 `argparse`/配置），日志使用 `logger.debug()`。
 - 依赖在本目录 `requirements.txt` 中声明；禁止隐式外部依赖。
