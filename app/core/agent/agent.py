@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
@@ -1417,8 +1417,10 @@ class Agent:
         chat_settings: models.chat_settings.ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
-    ) -> str:
-        """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
+    ) -> Tuple[str, Optional[int]]:
+        """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里。
+        成功时返回 (响应文本, 插入的 AI 消息 ID)；异常时抛出。
+        """
         logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
 
         self._update_last_used()

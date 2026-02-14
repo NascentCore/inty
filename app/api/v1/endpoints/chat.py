@@ -59,6 +59,34 @@ def _handle_subscription_limit_error(
         )
 
 
+def _build_festival_prompt_choice_message(
+    item: dict, info: Optional[dict]
+) -> dict:
+    """构建单条节日提醒 choice 的 message 字典，与普通 AI 消息结构一致（含 id、meta_data、timestamp、audio_url）。"""
+    if info:
+        return {
+            "role": None,
+            "content": item["content"],
+            "type": "festival_memory_prompt",
+            "festival_memory_id": item["memory_id"],
+            "id": info["id"],
+            "meta_data": info["meta_data"],
+            "timestamp": info["timestamp"],
+            "audio_url": info["audio_url"],
+        }
+    msg_id = item.get("message_id")
+    return {
+        "role": None,
+        "content": item["content"],
+        "type": "festival_memory_prompt",
+        "festival_memory_id": item["memory_id"],
+        "id": msg_id,
+        "meta_data": None,
+        "timestamp": None,
+        "audio_url": None,
+    }
+
+
 def _build_chat_response(
     response_content: str,
     last_user_message: str,
@@ -337,35 +365,18 @@ async def agent_chat_completions(
 
         # 若有本次投递的节日提醒，追加到 choices，message 结构与普通 AI 消息一致（含 id、meta_data、timestamp、audio_url）
         if delivered_prompts:
+            msg_ids = [
+                item["message_id"]
+                for item in delivered_prompts
+                if item.get("message_id") is not None
+            ]
+            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
+                db, msg_ids
+            )
             for idx, item in enumerate(delivered_prompts, start=1):
                 msg_id = item.get("message_id")
-                info = None
-                if msg_id is not None:
-                    info = await chat_history_service.get_ai_message_info_by_id(
-                        db, msg_id
-                    )
-                if info:
-                    message = {
-                        "role": None,
-                        "content": item["content"],
-                        "type": "festival_memory_prompt",
-                        "festival_memory_id": item["memory_id"],
-                        "id": info["id"],
-                        "meta_data": info["meta_data"],
-                        "timestamp": info["timestamp"],
-                        "audio_url": info["audio_url"],
-                    }
-                else:
-                    message = {
-                        "role": None,
-                        "content": item["content"],
-                        "type": "festival_memory_prompt",
-                        "festival_memory_id": item["memory_id"],
-                        "id": msg_id,
-                        "meta_data": None,
-                        "timestamp": None,
-                        "audio_url": None,
-                    }
+                info = infos_map.get(msg_id) if msg_id is not None else None
+                message = _build_festival_prompt_choice_message(item, info)
                 data["choices"].append(
                     {"index": idx, "message": message, "finish_reason": "stop"}
                 )

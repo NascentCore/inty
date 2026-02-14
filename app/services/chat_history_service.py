@@ -973,6 +973,57 @@ async def get_ai_message_info_by_id(
         return None
 
 
+async def get_ai_message_infos_by_ids(
+    db: AsyncSession, message_ids: List[int]
+) -> Dict[int, Dict[str, Any]]:
+    """
+    根据消息 ID 列表批量获取 AI 消息完整信息（与 get_ai_message_info_by_id 单条结构一致）。
+    返回 id -> info 的映射；未找到或非 AI 消息的 id 不会出现在结果中。
+    """
+    if not message_ids:
+        return {}
+    try:
+        stmt = (
+            select(ChatHistory)
+            .where(
+                ChatHistory.id.in_(message_ids),
+                ChatHistory.message["type"].astext == "ai",
+                ChatHistory.deleted_at.is_(None),
+            )
+        )
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+        out = {}
+        for chat_history in rows:
+            content = ""
+            try:
+                message_data = chat_history.message
+                if "data" in message_data and "content" in message_data["data"]:
+                    content = message_data["data"]["content"]
+                elif "content" in message_data:
+                    content = message_data["content"]
+            except (TypeError, KeyError) as e:
+                logger.warning(f"解析AI消息内容失败: {str(e)}")
+                content = str(chat_history.message) if chat_history.message else ""
+            out[chat_history.id] = {
+                "id": chat_history.id,
+                "content": content,
+                "audio_url": chat_history.audio_url,
+                "meta_data": chat_history.meta_data,
+                "timestamp": (
+                    chat_history.created_at.isoformat()
+                    if chat_history.created_at
+                    else None
+                ),
+            }
+        return out
+    except Exception as e:
+        logger.error(
+            f"批量根据ID获取AI消息信息失败 message_ids={message_ids}: {str(e)}"
+        )
+        return {}
+
+
 def get_messages_paginated(
     session_id: str, limit: int = 20, offset: int = 0, user_id: Optional[str] = None
 ) -> Dict[str, Any]:
