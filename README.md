@@ -27,6 +27,8 @@
 
 - https://cursor.com/blog/secure-codebase-indexing
   - 团队账户内的成员共享云端代码索引，可以加速
+- https://cursor.com/docs/context/commands
+  - 定制命令
 - 使用 Cursor 对代码库进行问答；直接打开 Ask 模式（Shift+Tab 切换）
   <img width="900" height="1766" alt="image" src="https://github.com/user-attachments/assets/9ca85fb0-4fe3-495b-ae37-13534bfd2999" />
 - 本代码库维护了丰富的 AGENTS.md 来增强 Cursor 在本代码库的效能
