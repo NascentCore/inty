@@ -59,6 +59,34 @@ def _handle_subscription_limit_error(
         )
 
 
+def _build_festival_prompt_choice_message(
+    item: dict, info: Optional[dict]
+) -> dict:
+    """构建单条节日提醒 choice 的 message 字典，与普通 AI 消息结构一致（含 id、meta_data、timestamp、audio_url）。"""
+    if info:
+        return {
+            "role": None,
+            "content": item["content"],
+            "type": "festival_memory_prompt",
+            "festival_memory_id": item["memory_id"],
+            "id": info["id"],
+            "meta_data": info["meta_data"],
+            "timestamp": info["timestamp"],
+            "audio_url": info["audio_url"],
+        }
+    msg_id = item.get("message_id")
+    return {
+        "role": None,
+        "content": item["content"],
+        "type": "festival_memory_prompt",
+        "festival_memory_id": item["memory_id"],
+        "id": msg_id,
+        "meta_data": None,
+        "timestamp": None,
+        "audio_url": None,
+    }
+
+
 def _build_chat_response(
     response_content: str,
     last_user_message: str,
@@ -200,7 +228,7 @@ async def agent_chat_completions(
                 model_override = select_chat_model(
                     user=current_user, is_subscribed=bool(subscription)
                 )
-                response_content = await agent.chat(
+                chat_result = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
@@ -208,6 +236,9 @@ async def agent_chat_completions(
                     user_time_context=user_time_context,
                     model_override=model_override,
                 )
+                response_content, ai_message_id = (
+                    chat_result[0], chat_result[1]
+                ) if isinstance(chat_result, tuple) else (chat_result, None)
 
             logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")
 
@@ -281,17 +312,25 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
-        # 获取最新AI消息的完整信息
+        # 获取 AI 消息完整信息：插入时已拿到 message id 则按 id 查，否则查最新一条
+        latest_message_info = None
         try:
-            with log_time(f"获取最新消息: session_id={session_id}"):
-                latest_message_info = (
-                    await chat_history_service.get_latest_ai_message_info(
-                        db, session_id
+            if ai_message_id is not None:
+                with log_time(f"获取AI消息信息: message_id={ai_message_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            db, ai_message_id
+                        )
                     )
-                )
+            if latest_message_info is None:
+                with log_time(f"获取最新消息: session_id={session_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            db, session_id
+                        )
+                    )
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
-            latest_message_info = None
 
         user_message_id = None
         try:
@@ -324,20 +363,22 @@ async def agent_chat_completions(
             user_message_id=user_message_id,
         )
 
-        # 若有本次投递的节日提醒，追加到 choices，与消息列表的 festival_memory_prompt 结构一致
+        # 若有本次投递的节日提醒，追加到 choices，message 结构与普通 AI 消息一致（含 id、meta_data、timestamp、audio_url）
         if delivered_prompts:
+            msg_ids = [
+                item["message_id"]
+                for item in delivered_prompts
+                if item.get("message_id") is not None
+            ]
+            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
+                db, msg_ids
+            )
             for idx, item in enumerate(delivered_prompts, start=1):
+                msg_id = item.get("message_id")
+                info = infos_map.get(msg_id) if msg_id is not None else None
+                message = _build_festival_prompt_choice_message(item, info)
                 data["choices"].append(
-                    {
-                        "index": idx,
-                        "message": {
-                            "role": None,
-                            "content": item["content"],
-                            "type": "festival_memory_prompt",
-                            "festival_memory_id": item["memory_id"],
-                        },
-                        "finish_reason": "stop",
-                    }
+                    {"index": idx, "message": message, "finish_reason": "stop"}
                 )
 
         timing_message = request_handling_timer.stop()

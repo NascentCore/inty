@@ -162,6 +162,11 @@ async def deliver_festival_memories_for_user_agent(
     为 (user_id, agent_id) 执行所有未投递节日记忆的投递：写入 chat_history 并更新 memory.delivery_at。
     返回本次投递的提醒列表，每项含 memory_id, content, festival_name, festival_date，
     供发起聊天接口追加到 choices 使用。
+
+    TODO: 若 Completions 与 GET messages 对同一 (user_id, agent_id) 并发调用本函数，
+    理论上可能发生同一 memory 被投递两次（重复 chat_history 行）的 race；
+    因操作仅限定于同一用户与角色对，发生概率较低。若需严格避免，可对 memory 行加
+    SELECT FOR UPDATE 或对投递结果加唯一约束并做幂等处理。
     """
     undelivered = await get_undelivered_festival_memories(db, user_id, agent_id)
     if not undelivered:
@@ -205,6 +210,7 @@ async def deliver_festival_memories_for_user_agent(
         delivered.append(
             {
                 "memory_id": mid,
+                "message_id": msg_id,
                 "content": prompt_content,
                 "festival_name": festival_name,
                 "festival_date": (
