@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import sys
@@ -26,11 +25,18 @@ from pathlib import Path
 from typing import Annotated, Any, Optional
 
 import cyclopts
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 CONFIG_YAML = "config.yaml"
 MIN_SUMMARY_LEN = 10
+
+
+class _FestivalSummaryOutput(BaseModel):
+    """llm_qa 结构化输出：节日记忆摘要一段英文。"""
+
+    summary: str
 
 
 def _ensure_config() -> None:
@@ -45,13 +51,12 @@ def _ensure_config() -> None:
         sys.exit(1)
 
 
-def _build_full_prompt(
+def _build_system_prompt(
     prompt_template: str,
     festival_name: str,
     festival_date: date,
-    chat_text: str,
 ) -> str:
-    """与 festival_memory_service.extract_festival_and_save 中 prompt 构建一致。"""
+    """与 festival_memory_service 语义一致：模板 + 节日名/日期 + 抽取与格式说明（不含会话正文）。"""
     date_str = (
         festival_date.isoformat()
         if isinstance(festival_date, date)
@@ -64,22 +69,24 @@ Festival name: {festival_name}
 Festival date: {date_str}
 
 ---
-# Conversation between the user and the character
-
-{chat_text}
-
----
-Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
+Based on the conversation below, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
 
 
-async def _process_pair(
+def _build_user_query(chat_text: str) -> str:
+    """User 消息：会话正文，供 llm_qa 的 query 参数。"""
+    return f"""# Conversation between the user and the character
+
+{chat_text}"""
+
+
+def _process_pair(
     entry: dict,
     festival_name: str,
     festival_date: date,
     prompt_template: str,
     model_name: str,
 ) -> None:
-    """对单个 pair 拉取 messages、调用 LLM、写入 entry['festival_summary'] 或 entry['festival_summary_error']。"""
+    """对单个 pair 拉取 messages、调用 llm_qa、写入 entry['festival_summary'] 或 entry['festival_summary_error']。"""
     messages_raw = entry.get("messages")
     if not messages_raw:
         logger.debug("跳过无 messages 的 pair: user_id=%s agent_id=%s", entry.get("user_id"), entry.get("agent_id"))
@@ -89,22 +96,24 @@ async def _process_pair(
         for m in messages_raw
     ]
     from app.services.festival_memory_service import _format_chat_for_prompt
-    from app.utils.openrouter_memory import call_openrouter_for_extraction
+    from app.utils.openrouter_memory import llm_qa
 
     chat_text = _format_chat_for_prompt(tuples_list)
-    full_prompt = _build_full_prompt(
-        prompt_template, festival_name, festival_date, chat_text
-    )
+    system_prompt = _build_system_prompt(prompt_template, festival_name, festival_date)
+    query = _build_user_query(chat_text)
     try:
-        summary, _, _ = await call_openrouter_for_extraction(
-            full_prompt,
+        result = llm_qa(
+            system_prompt,
+            query,
+            output_format=_FestivalSummaryOutput,
             model=model_name,
             max_tokens=2000,
             temperature=0.3,
         )
-        if not summary or len(summary.strip()) < MIN_SUMMARY_LEN:
+        summary = result.summary.strip() if result.summary else ""
+        if len(summary) < MIN_SUMMARY_LEN:
             raise ValueError("Extraction result is too short or empty")
-        entry["festival_summary"] = summary.strip()
+        entry["festival_summary"] = summary
         if "festival_summary_error" in entry:
             del entry["festival_summary_error"]
     except Exception as e:
@@ -245,19 +254,16 @@ def main(
     model_name = _resolve_model()
     logger.debug("使用模型: %s", model_name)
 
-    async def run_all() -> None:
-        for idx, entry in enumerate(processable):
-            await _process_pair(
-                entry,
-                festival_name,
-                festival_date_val,
-                prompt,
-                model_name,
-            )
-            if (idx + 1) % 10 == 0 or idx + 1 == len(processable):
-                logger.info("已处理 %s/%s pair", idx + 1, len(processable))
-
-    asyncio.run(run_all())
+    for idx, entry in enumerate(processable):
+        _process_pair(
+            entry,
+            festival_name,
+            festival_date_val,
+            prompt,
+            model_name,
+        )
+        if (idx + 1) % 10 == 0 or idx + 1 == len(processable):
+            logger.info("已处理 %s/%s pair", idx + 1, len(processable))
 
     out_str = json.dumps(data, ensure_ascii=False, indent=2)
     if output_json:
