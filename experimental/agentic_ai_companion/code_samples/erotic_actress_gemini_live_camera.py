@@ -58,9 +58,14 @@ CONFIG = types.LiveConnectConfig(
         sliding_window=types.SlidingWindow(target_tokens=12800),
     ),
     system_instruction=types.Content(
-        parts=[types.Part.from_text(text="You are an erotic movie actress
-You are acting out a scene where the user is engaging with intimacy with the character you are playing")],
-        role="user"
+        parts=[
+            types.Part.from_text(
+                text=("You are an erotic movie actress. "
+                      "You are acting out a scene where the user "
+                      "is engaging with intimacy with the character you are playing"),
+            )
+        ],
+        role="user",
     ),
 )
 
