@@ -183,25 +183,16 @@ def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
-async def extract_festival_and_save(
-    db: AsyncSession,
-    user_id: str,
-    agent_id: str,
+def assemble_args(
+    messages: List[Tuple[str, str]],
     festival_name: str,
     festival_date: date,
     prompt_template: str,
-) -> bool:
+) -> Tuple[str, str, int, float]:
     """
-    对 (user_id, agent_id) 拉取该会话消息、按节日提示词调用 LLM 抽取回忆摘要，
-    删除旧节日记忆后写入一条 memory（memory_type=festival）。
-    返回是否成功。
+    组装 call_openrouter_for_extraction 的调用参数（full_prompt, model, max_tokens, temperature）。
+    供 extract_festival_and_save 与 extract_festival_to_dict 复用。
     """
-    messages = await asyncio.to_thread(
-        get_messages_for_user_agent_sync, user_id, agent_id
-    )
-    if not messages:
-        logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
-        return False
     chat_text = _format_chat_for_prompt(messages)
     date_str = (
         festival_date.isoformat()
@@ -221,18 +212,35 @@ Festival date: {date_str}
 
 ---
 Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
-
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
     model_name = (
         cfg.model.strip() if cfg and cfg.model else None
     ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
+    return (full_prompt, model_name, 2000, 0.3)
+
+
+async def extract_festival_and_save(
+    db: AsyncSession,
+    user_id: str,
+    agent_id: str,
+    festival_name: str,
+    festival_date: date,
+    prompt_template: str,
+) -> bool:
+    """
+    对 (user_id, agent_id) 拉取该会话消息、按节日提示词调用 LLM 抽取回忆摘要，
+    删除旧节日记忆后写入一条 memory（memory_type=festival）。
+    返回是否成功。
+    """
+    messages = await asyncio.to_thread(
+        get_messages_for_user_agent_sync, user_id, agent_id
+    )
+    if not messages:
+        logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
+        return False
+    args = assemble_args(messages, festival_name, festival_date, prompt_template)
     try:
-        summary, _, _ = await call_openrouter_for_extraction(
-            full_prompt,
-            model=model_name,
-            max_tokens=2000,
-            temperature=0.3,
-        )
+        summary, _, _ = await call_openrouter_for_extraction(*args)
         if not summary or len(summary.strip()) < 10:
             raise ValueError("Extraction result is too short or empty")
         summary = summary.strip()
@@ -308,42 +316,16 @@ async def extract_festival_to_dict(
     与 extract_festival_and_save 相同的拉消息、拼 prompt、调 LLM 流程，
     但返回可 JSON 序列化的 dict，不写库。失败返回 None。
     若传入 db，会在返回的 dict 中附带 user_name、agent_name（从主库查 nickname/name）。
+    
+    这个只用于离线脚本，在线服务不使用本函数。
     """
     messages = await asyncio.to_thread(
         get_messages_for_user_agent_sync, user_id, agent_id
     )
     if not messages:
         return None
-    chat_text = _format_chat_for_prompt(messages)
-    date_str = (
-        festival_date.isoformat()
-        if isinstance(festival_date, date)
-        else str(festival_date)
-    )
-    full_prompt = f"""{prompt_template}
-
----
-Festival name: {festival_name}
-Festival date: {date_str}
-
----
-# Conversation between the user and the character
-
-{chat_text}
-
----
-Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
-
-    cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
-    model_name = (
-        cfg.model.strip() if cfg and cfg.model else None
-    ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
-    summary, _, _ = await call_openrouter_for_extraction(
-        full_prompt,
-        model=model_name,
-        max_tokens=2000,
-        temperature=0.3,
-    )
+    args = assemble_args(messages, festival_name, festival_date, prompt_template)
+    summary, _, _ = await call_openrouter_for_extraction(*args)
     if not summary or len(summary.strip()) < 10:
         return None
     summary = summary.strip()
