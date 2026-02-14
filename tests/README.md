@@ -16,3 +16,5 @@ cp devops/config.yaml.test config.yaml
 # 运行测试
 pytest -m "not noci" -v -s tests/
 ```
+
+依赖本地后端与 `config.yaml` 的 E2E（如节日记忆 Chat History 投递）需先启动服务（如 `./start.sh --dev`）后再运行；单独运行该 E2E：`pytest tests/app/api/v1/endpoints/test_festival_memory_chat_history_e2e.py -v -s`。
