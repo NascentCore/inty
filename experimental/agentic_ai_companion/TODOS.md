@@ -2,13 +2,23 @@
 
 > 记录下一步需要完成的任务，防止遗忘
 
-- [ ] Change outfit 工具，用户请求时，修改聊天背景形象图为新的 outfit，后端可以选择生成、或者是从已有图片选择；可能要做一下记录，防止重复
+- [ ] **同时调用多个工具**：给定参数：最多同时调用工具数量，设计一套合理的多工具调用机制，来完成处理；
+  要区分工具类型：有消息返回给用户、没有消息返回给用户，被调用的工具中最多只能有一个工具返回
+  消息给用户、可以有多个不返回消息给用户；目前实现的工具都返回消息给用户，我会增加记忆抓取工具（如下所示）他不会返回
+  消息给用户；还会有工具运行在后台，需要用户稍后回来查看/或等待完成通知。
+- [ ] **记忆抓取工具**：根据用户反馈，将当前消息中的重要事项记录下来，写入另一个存储，从而在未来交流对话中调用该记忆；
+  - [ ] **记忆获取工具**：根据用户反馈，决定从最近哪些核心记忆选项中抓取新的记忆用于后续的聊天交互
+- [ ] 隐含信号：比如用户上线、用户停留、用户打字、等等，这些信号输入到模型里让他反应
+- [ ] 记忆提取工具，记录用户和角色之间重要事件的事实性信息，包括时间、地点、事件、影响等等
+- [x] Erotic scene generation 工具，当用户处于亢奋状态（sexually aroused），为其提供连续的 **文字** scene 描述，而无需用户输入 continue；仅生成文字描述，不生成图片；已实现：`erotic_scene_generate` 工具，根据最近 N=10 条消息与角色/用户名调用 Gemini 文本模型生成 3–5 段连续 scene 文字
+- [ ] 连发消息功能，当场景需要推进、需要更多描述时、或者描述不完整时、应该持续发消息给用户，而不是等待下一条用户输入；
+  【这个还在考虑】不太清楚是否合适
+- [ ] Erotic scene **image** generation 工具（follow-up）：当用户处于亢奋状态时，连续生成多张场景图，无需用户输入 continue
 - [ ] Erotic voice message 工具，当用户处于亢奋状态，为其提供 erotic voice message 消息，发送一段语音，并自动播放（听筒）
 - [ ] 自拍 video 工具，输入角色形象照片、根据聊天内容，返回相应的视频给用户，符合聊天上下文
-- [ ] Live voice message reply 工具，调用 Gemini live API，生成语音回复给用户，是对语音通话的补充，类似微信语音消息，点击播放（Soul 虚拟伴侣有类似的功能）
+- [x] Live voice message reply 工具，调用 Gemini live API，生成语音回复给用户，是对语音通话的补充，类似微信语音消息，点击播放（Soul 虚拟伴侣有类似的功能）；已实现：`live_voice_message_reply` 工具，带系统指令与最近 N=10 条消息上下文，输出 WAV 路径
 - [x] 发图工具，让 AI 在用户要照片时发送 AI 自拍/相册中照片 等等功能，
   完成初次交流的体验；希望 AI 可以根据聊天记录避免发送重复图片
-- [ ] 自拍 
 - [x] 添加 send_zun_long_photo 工具，调用时返回 experimental/agentic_ai_companion/尊龙.png，来测试多个工具调用
 - [x] 添加 generate_image 工具（基于 generate_image_from_messages + 最近 10 条消息，Imagen 4 Fast，GEMINI_API_KEY）
 - [x] **语音回复工具**：使用 <https://ai.google.dev/gemini-api/docs/speech-generation> 将 LLM
@@ -16,8 +26,6 @@
 - [x] **Clarify user request**：当工具调用的上下文不清晰时向用户询问（experimental 已通过 generate_image 工具描述实现）
   - [ ] **生图前澄清（app 层）**：探索在 app 的 roleplay 系统提示中增加「生图前若上下文不清先澄清」的规则，使行为与 experimental 一致；工具描述仍建议保留，双保险。但是需要测试。
   - [ ] **生图澄清评测脚本**：编写 .py 脚本读取 eval.json，对每条 case 调用 role play API，断言 expected_behavior（clarify 时未调 generate_image，call_generate_image 时已调）及 expected_response_contains_any，便于回归验证提示词效果。
-- [ ] **记忆抓取工具**：根据用户反馈，将当前消息中的重要事项记录下来，写入另一个存储，从而在未来交流对话中调用该记忆；
-  - [ ] **记忆获取工具**：根据用户反馈，决定从最近哪些核心记忆选项中抓取新的记忆用于后续的聊天交互
 
 ## 次要优先级
 

@@ -15,11 +15,23 @@ TTS_MODEL = "gemini-2.5-flash-preview-tts"
 logger = logging.getLogger(__name__)
 MAX_TEXT_LENGTH = 2000
 
+# 与 live_voice.DEFAULT_VOICE_NAME 保持相同，保证 text_to_speech 与 live_voice_message_reply 音色一致
+DEFAULT_VOICE_NAME = "Kore"
+
 # 发给 TTS 的指令：识别 role-play 格式（括号内为舞台说明），只读台词并参考场景语气
 TTS_ROLEPLAY_INSTRUCTION = (
-    "The following is role-play style content. Lines or phrases in parentheses () are stage "
-    "directions or actions — do not speak them; only speak the actual dialogue. Use the mood or "
-    "scenario in the directions to inform your tone and delivery. Now read the following:\n\n"
+    "You are a voice actor. "
+    "You are naturally and convincingly acting out a scene description.\n\n"
+    "In the scene description: "
+    "non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses (); "
+    "the rest are the actual dialogue that you must speak. "
+    "example: <begin-of-example>(whispering) I won the lottery!!!.<end-of-example>\n\n"
+    "You must:\n"
+    "1. In your speech: use the non-audible descriptions to inform the delivery, "
+    "strictly adhere to the non-audible descriptions.\n"
+    "2. Never speak the non-audible descriptions\n"
+    "3. Speak only the actual dialogue that is not inside parentheses ()\n\n"
+    "The following are the scene description:\n\n"
 )
 
 
@@ -39,7 +51,7 @@ def _trace_output_pcm(data: bytes | None) -> dict:
 def generate_speech_from_text(
     text: str,
     client: "Client",
-    voice_name: str = "Kore",
+    voice_name: str = DEFAULT_VOICE_NAME,
     model: str = TTS_MODEL,
 ) -> bytes:
     """

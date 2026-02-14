@@ -106,6 +106,8 @@ def main(
     if not debug:
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("httpcore").setLevel(logging.WARNING)
+        # 非 debug 时隐藏 Google GenAI SDK 的 INFO（如 "AFC is enabled with max remote calls"）
+        logging.getLogger("google_genai").setLevel(logging.WARNING)
     logger.info("入口 main() 调用 run_repl")
     run_repl(
         char_name=CHAR_NAME,
