@@ -1,5 +1,6 @@
 """Integration tests for chat endpoints using the custom TestClient."""
 
+import json
 import pytest
 from loguru import logger
 
@@ -36,8 +37,19 @@ def test_agent_chat_completions_with_sdk(
         language="en",
     )
 
-    logger.info(f"Chat completion response: {response}")
+    logger.info(
+        "Chat completion full HTTP response:\n{}",
+        json.dumps(response, indent=2, ensure_ascii=False),
+    )
 
     assert response is not None
     assert response.get("code") == 200
     assert response.get("data") is not None
+
+    data = response["data"]
+    choices = data.get("choices")
+    assert isinstance(choices, list) and len(choices) > 0
+    message = choices[0].get("message")
+    assert message is not None
+    assert "id" in message
+    assert isinstance(message["id"], int)
