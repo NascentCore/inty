@@ -15,7 +15,7 @@ from loguru import logger
 from sqlalchemy import or_, select, update
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, AsyncSessionLocalReplica
 from app.models.memory import FestivalMemoryConfig
 from app.services import festival_memory_service
 from app.services.memory_extraction_service import (
@@ -393,14 +393,28 @@ class PushSchedulerService:
         """每日记忆抽取：筛选待抽取用户并逐个 extract_and_save。"""
         try:
             logger.info("[记忆抽取] 开始...")
-            async with AsyncSessionLocal() as db:
-                user_ids = await memory_get_users_to_extract(db)
-                logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
-                for idx, uid in enumerate(user_ids):
+            read_session_factory = (
+                AsyncSessionLocalReplica
+                if AsyncSessionLocalReplica is not None
+                else AsyncSessionLocal
+            )
+            read_source = "replica" if AsyncSessionLocalReplica is not None else "primary"
+            logger.info(f"[记忆抽取] 用户筛选与历史读取将优先使用: {read_source}")
+
+            async with read_session_factory() as read_db:
+                user_ids = await memory_get_users_to_extract(
+                    read_db, prefer_replica_read=True
+                )
+
+            logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
+            async with AsyncSessionLocal() as write_db:
+                for uid in user_ids:
                     try:
-                        await memory_extract_and_save(db, uid)
+                        await memory_extract_and_save(
+                            write_db, uid, prefer_replica_read=True
+                        )
                     except Exception as e:
-                        await db.rollback()
+                        await write_db.rollback()
                         logger.warning(f"[记忆抽取] user_id={uid} 失败: {e}")
             logger.info("[记忆抽取] 完成")
         except Exception as e:
