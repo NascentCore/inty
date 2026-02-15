@@ -161,20 +161,6 @@ def get_messages_for_user_agent_sync(
     return out
 
 
-def get_session_id_for_user_agent_sync(user_id: str, agent_id: str) -> Optional[str]:
-    """根据 (user_id, agent_id) 获取该会话的 session_id，无会话则返回 None。"""
-    conn = get_chat_history_connection()
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true LIMIT 1",
-            (user_id, agent_id),
-        )
-        row = cur.fetchone()
-    if not row:
-        return None
-    return generate_session_id(row[0])
-
-
 def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     lines = []
     for role, content in messages:
