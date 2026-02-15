@@ -51,7 +51,7 @@ git tag $GIT_TAG && git push --tags
 - **镜像名称**：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
 - **容器名称**：`inty-push-worker-{environment}`（如 `inty-push-worker-dev`、`inty-push-worker-prod`）
 - **Dockerfile**：`devops/docker/Dockerfile.push-worker`
-- **启动脚本**：`backend/push_worker/start_push_worker.sh`
+- **启动脚本**：`backend/push_worker/start.sh`
 - **配置文件**：使用与后端服务一致的 `devops/config.yaml.{environment}`（构建期注入进镜像，见下文「配置文件如何进入 Docker 镜像」）
 - **挂载卷**：
   - `/opt/inty-{environment}/inty-backend-key.json`

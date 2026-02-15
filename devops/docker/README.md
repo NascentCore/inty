@@ -118,4 +118,4 @@ docker build -f Dockerfile -t inty-backend .
 
 - 部署流程：参见 `devops/README.md`
 - 推送服务详情：参见 `devops/README.md#推送服务部署`
-- 启动脚本：`start.sh`（后端主服务）、`backend/push_worker/start_push_worker.sh`（推送服务）
+- 启动脚本：`start.sh`（后端主服务）、`backend/push_worker/start.sh`（推送服务）

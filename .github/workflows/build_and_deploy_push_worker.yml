@@ -12,7 +12,7 @@ on:
       - "alembic/**/*.py"
       - "scripts/**/*.py"
       - "devops/docker/Dockerfile.push-worker"
-      - "backend/push_worker/start_push_worker.sh"
+      - "backend/push_worker/start.sh"
       - "devops/config.yaml.dev"
       - "devops/config.yaml.prod"
       - "requirements.txt"

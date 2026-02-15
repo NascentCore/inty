@@ -4,4 +4,4 @@
 
 入口为 `main.py`，运行：`python -m backend.push_worker.main`。
 
-从仓库根目录启动推送服务：`./backend/push_worker/start_push_worker.sh`。
+从仓库根目录启动推送服务：`./backend/push_worker/start.sh`。
