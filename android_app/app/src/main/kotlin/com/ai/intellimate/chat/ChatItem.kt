@@ -512,7 +512,7 @@ private fun ChatItemFestivalMemory(
                 text =
                     buildAnnotatedString {
                         val fullText = stringResource(R.string.chat_festival_memory_notify, agentName)
-                        val boldPhrase = "Love Journal"
+                        val boldPhrase = stringResource(R.string.heartbeat_journal)
                         val start = fullText.indexOf(boldPhrase)
                         if (start >= 0) {
                             append(fullText.substring(0, start))

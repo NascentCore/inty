@@ -83,10 +83,17 @@ fun Heartbeat(
     memoryId: Long? = null,
 ) {
     val memories by viewModel.memories.collectAsState()
+    val agentFirstName by viewModel.agentFirstName.collectAsState()
 
     LaunchedEffect(agentId) { viewModel.setAgentId(agentId) }
 
-    Heartbeat(onBack = onBack, initialId = memoryId, memories = memories, modifier = modifier)
+    Heartbeat(
+        onBack = onBack,
+        initialId = memoryId,
+        memories = memories,
+        agentFirstName = agentFirstName,
+        modifier = modifier,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,7 +103,14 @@ private fun Heartbeat(
     memories: List<FestivalMemory>,
     modifier: Modifier = Modifier,
     initialId: Long? = null,
+    agentFirstName: String? = null,
 ) {
+    val title =
+        if (agentFirstName != null) {
+            stringResource(R.string.heartbeat_journal_title_with_name, agentFirstName)
+        } else {
+            stringResource(R.string.heartbeat_journal)
+        }
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -104,7 +118,7 @@ private fun Heartbeat(
                     TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
                 title = {
                     Text(
-                        text = stringResource(R.string.heartbeat_journal),
+                        text = title,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 },
