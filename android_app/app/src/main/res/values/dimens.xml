@@ -28,6 +28,8 @@
     <dimen name="heartbeat_list_content_padding_bottom">24dp</dimen>
     <dimen name="heartbeat_title_underline_height">4dp</dimen>
     <dimen name="heartbeat_title_underline_spacing">4dp</dimen>
+    <!-- 标题下划线左侧圆角半径 -->
+    <dimen name="heartbeat_title_underline_corner_radius">2dp</dimen>
     <!-- 顶栏左侧回退按钮占用宽度（padding_medium*2 + 图标宽），用于右侧 Spacer 使标题相对整屏居中 -->
     <dimen name="heartbeat_top_bar_nav_icon_area_width">48dp</dimen>
 </resources>

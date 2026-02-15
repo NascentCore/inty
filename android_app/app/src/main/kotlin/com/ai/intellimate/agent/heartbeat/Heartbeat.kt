@@ -11,6 +11,7 @@ import ai.sxwl.android.design.theme.loveJournalCardBackground
 import ai.sxwl.android.design.theme.loveJournalOnBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -112,7 +114,7 @@ fun Heartbeat(
 
 /**
  * Love Journal 顶栏标题 + 下划线。使用 SubcomposeLayout 先测量标题宽度，再按该宽度绘制下划线，保证与标题等长。
- * 下划线为横向渐变：左侧为强调色（红橙），向右渐隐至透明，与设计稿一致。
+ * 下划线为横向渐变：左侧为强调色（红橙），向右渐隐至透明；左侧两端带圆角。
  */
 @Composable
 private fun HeartbeatTitleWithUnderline(
@@ -143,6 +145,14 @@ private fun HeartbeatTitleWithUnderline(
         val widthPx = textPlaceable.width.toFloat()
         val underlinePlaceable =
             subcompose("underline") {
+                val cornerRadius = dimensionResource(R.dimen.heartbeat_title_underline_corner_radius)
+                val leftRoundedShape =
+                    RoundedCornerShape(
+                        topStart = cornerRadius,
+                        topEnd = 0.dp,
+                        bottomEnd = 0.dp,
+                        bottomStart = cornerRadius,
+                    )
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
@@ -154,6 +164,7 @@ private fun HeartbeatTitleWithUnderline(
                                         start = Offset(0f, 0f),
                                         end = Offset(widthPx, 0f),
                                     ),
+                                shape = leftRoundedShape,
                             ),
                 )
             }
