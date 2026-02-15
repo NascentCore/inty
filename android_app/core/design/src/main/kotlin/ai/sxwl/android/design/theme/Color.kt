@@ -278,10 +278,10 @@ object VibeModeColors {
  * 屏幕背景、卡片、主文字与强调色（标题下划线、日期）。
  */
 object LoveJournalColors {
-    /** 屏幕背景：暖米色 */
-    val background = Color(0xFFFCF7F0)
-    /** 卡片背景：略浅的米白 */
-    val cardBackground = Color(0xFFFAF8F5)
+    /** 屏幕背景：暖浅米/粉米（设计稿 #F7E5DE） */
+    val background = Color(0xFFF7E5DE)
+    /** 卡片背景：极浅灰白（设计稿 rgb(249,249,249)） */
+    val cardBackground = Color(0xFFF9F9F9)
     /** 主文字（标题、副标题、正文）：深灰 */
     val onBackground = Color(0xFF241F1A)
     /** 强调色：标题下划线、日期（红橙） */

@@ -118,7 +118,8 @@ private fun Heartbeat(
     val titleUnderlineHeight = dimensionResource(R.dimen.heartbeat_title_underline_height)
     val titleUnderlineSpacing = dimensionResource(R.dimen.heartbeat_title_underline_spacing)
     Scaffold(
-        modifier = modifier.background(cs.loveJournalBackground),
+        modifier = modifier,
+        containerColor = cs.loveJournalBackground,
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
