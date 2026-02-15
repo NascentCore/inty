@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -184,6 +185,7 @@ private fun Heartbeat(
     val cs = MaterialTheme.colorScheme
     val titleUnderlineHeight = dimensionResource(R.dimen.heartbeat_title_underline_height)
     val titleUnderlineSpacing = dimensionResource(R.dimen.heartbeat_title_underline_spacing)
+    val navIconAreaWidth = dimensionResource(R.dimen.heartbeat_top_bar_nav_icon_area_width)
     Scaffold(
         modifier = modifier,
         containerColor = Color.Transparent,
@@ -210,6 +212,10 @@ private fun Heartbeat(
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(Color.Black),
                     )
+                },
+                actions = {
+                    // 右侧等宽 Spacer，使标题槽对称，标题相对整屏视觉居中（补偿左侧回退按钮占用）
+                    Spacer(modifier = Modifier.width(navIconAreaWidth))
                 },
             )
         },
