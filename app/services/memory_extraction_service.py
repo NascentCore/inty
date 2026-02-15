@@ -9,7 +9,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from loguru import logger
 from sqlalchemy import delete, text
@@ -19,7 +19,10 @@ import psycopg
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory, MemoryExtractionLog
-from app.services.chat_history_service import get_chat_history_connection
+from app.services.chat_history_service import (
+    get_chat_history_connection,
+    get_chat_history_replica_connection,
+)
 from app.services.chat_service import generate_session_id
 from app.utils.openrouter_memory import (
     DEFAULT_MEMORY_EXTRACTION_MODEL,
@@ -79,14 +82,21 @@ def _extract_part1_summary(full_analysis: str) -> str:
     return full_analysis[:2000] if len(full_analysis) > 2000 else full_analysis
 
 
-def get_all_messages_for_user(user_id: str) -> List[Tuple[str, str]]:
+def get_all_messages_for_user(
+    user_id: str, prefer_replica_read: bool = False
+) -> List[Tuple[str, str]]:
     """
     拉取该用户在所有会话中的全部消息 (role, content)，按 created_at 升序。
     不按 agent 过滤，不限制条数。
     """
-    conn = get_chat_history_connection()
-    # 先取该用户的 chat_id（需访问主库 chats；chat_history 与 chats 同库，此处用同一 conn 无法查 chats，需另查）
-    # get_chat_history_connection 连的是 database.url，与主库相同。chats 在主库。我们需要在 memory_extraction 里查 chats，但 get_chat_history_connection 是 psycopg 连接，可执行任意 SQL，包括对 chats 的查询。所以用 conn 查 chats 也可。
+    conn = None
+    if prefer_replica_read:
+        try:
+            conn = get_chat_history_replica_connection()
+        except psycopg.Error as e:
+            logger.warning(f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}")
+    if conn is None:
+        conn = get_chat_history_connection()
     with conn.cursor() as cur:
         cur.execute(
             "SELECT id FROM chats WHERE user_id = %s AND is_active = true",
@@ -145,11 +155,27 @@ def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
 _USAGE_TYPE_CHAT = "chat"
 
 
+def _get_sync_replica_db_url() -> Optional[str]:
+    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    if not async_replica_url:
+        return None
+    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+
+def _resolve_sync_read_db_url(prefer_replica_read: bool) -> str:
+    primary_url = global_config_loaded_from_config_yaml.database.url
+    if not prefer_replica_read:
+        return primary_url
+    replica_url = _get_sync_replica_db_url()
+    return replica_url or primary_url
+
+
 def _compute_users_to_extract_sync(
     user_to_chats: dict,
     user_to_last: dict,
     thresh_new: int,
     thresh_incr: int,
+    read_db_url: Optional[str] = None,
 ) -> List[str]:
     """
     在工作线程中执行：用 subscription_usage 的 chat 次数筛出待抽取 user_id。
@@ -170,8 +196,19 @@ def _compute_users_to_extract_sync(
         f"(新={len(new_user_ids)}, 已提取={len(old_user_items)})"
     )
 
-    db_url = global_config_loaded_from_config_yaml.database.url
-    conn = psycopg.connect(db_url, autocommit=True)
+    primary_db_url = global_config_loaded_from_config_yaml.database.url
+    db_url = read_db_url or primary_db_url
+    try:
+        conn = psycopg.connect(db_url, autocommit=True)
+    except psycopg.Error as e:
+        if read_db_url and db_url != primary_db_url:
+            # 迁移关键步骤：离线读优先副本，副本不可达时自动回退主库，保证任务可继续执行。
+            logger.warning(
+                f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}"
+            )
+            conn = psycopg.connect(primary_db_url, autocommit=True)
+        else:
+            raise
     try:
         result: List[str] = []
 
@@ -221,7 +258,9 @@ def _compute_users_to_extract_sync(
         conn.close()
 
 
-async def get_users_to_extract(db: AsyncSession) -> List[str]:
+async def get_users_to_extract(
+    db: AsyncSession, prefer_replica_read: bool = False
+) -> List[str]:
     """
     筛选本次需抽取记忆的用户：依据 subscription_usage 的 chat 次数，
     新用户总聊天次数>=trigger_new_user_messages，或已提取用户自上次提取后新增聊天次数>=trigger_incremental_messages。
@@ -262,11 +301,14 @@ async def get_users_to_extract(db: AsyncSession) -> List[str]:
         user_to_last,
         thresh_new,
         thresh_incr,
+        _resolve_sync_read_db_url(prefer_replica_read),
     )
     return result
 
 
-async def extract_and_save(db: AsyncSession, user_id: str) -> None:
+async def extract_and_save(
+    db: AsyncSession, user_id: str, prefer_replica_read: bool = False
+) -> None:
     """
     对 user_id 拉取全量消息、LLM 抽取 Part1、DELETE 旧 memory、INSERT 新 memory 与 memory_extraction_log。
     """
@@ -279,7 +321,9 @@ async def extract_and_save(db: AsyncSession, user_id: str) -> None:
         return
     prompt = _load_prompt()
 
-    messages = await asyncio.to_thread(get_all_messages_for_user, user_id)
+    messages = await asyncio.to_thread(
+        get_all_messages_for_user, user_id, prefer_replica_read
+    )
     msg_count = len(messages)
     if msg_count == 0:
         logger.debug(f"记忆抽取跳过：user_id={user_id} 无消息")
