@@ -174,9 +174,11 @@ def assemble_args(
     festival_name: str,
     festival_date: date,
     prompt_template: str,
+    llm_config: Optional[dict] = None,
 ) -> Tuple[str, str, int, float]:
     """
-    组装 call_openrouter_for_extraction 的调用参数（full_prompt, model, max_tokens, temperature）。
+    组装 chat_completion_for_extraction 的调用参数（full_prompt, model, max_tokens, temperature）。
+    若 llm_config 存在且含 model，则使用其 model、temperature、max_tokens；否则使用全局默认。
     供 extract_festival_and_save 与 extract_festival_to_dict 复用。
     """
     chat_text = _format_chat_for_prompt(messages)
@@ -198,6 +200,20 @@ Festival date: {date_str}
 
 ---
 Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
+    if llm_config and isinstance(llm_config, dict):
+        model_name = (llm_config.get("model") or "").strip()
+        if model_name:
+            try:
+                temperature = float(llm_config.get("temperature", 0.0))
+            except (TypeError, ValueError):
+                temperature = 0.0
+            try:
+                max_tokens = int(llm_config.get("max_tokens", 2000))
+            except (TypeError, ValueError):
+                max_tokens = 2000
+            if max_tokens < 1:
+                max_tokens = 2000
+            return (full_prompt, model_name, max_tokens, temperature)
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
     model_name = (
         cfg.model.strip() if cfg and cfg.model else None
@@ -212,6 +228,7 @@ async def summarize_memory_from_messages_between_user_and_agent(
     festival_date: date,
     prompt_template: str,
     messages_override: Optional[List[Tuple[str, str]]] = None,
+    llm_config: Optional[dict] = None,
 ) -> Optional[Memory]:
     """
     根据 (user_id, agent_id) 拉取会话消息、调用 LLM 抽取节日回忆摘要，并构造（未持久化的）Memory 行。
@@ -230,7 +247,9 @@ async def summarize_memory_from_messages_between_user_and_agent(
     logger.debug(f"节日记忆抽取：user_id={user_id} agent_id={agent_id} 消息数={len(messages)}")
     for msg in messages:
         logger.debug(f"message: {msg}")
-    args = assemble_args(messages, festival_name, festival_date, prompt_template)
+    args = assemble_args(
+        messages, festival_name, festival_date, prompt_template, llm_config
+    )
     try:
         summary, _, _ = await chat_completion_for_extraction(*args)
         if not summary or len(summary.strip()) < 10:
@@ -260,6 +279,7 @@ async def extract_festival_and_save(
     festival_name: str,
     festival_date: date,
     prompt_template: str,
+    llm_config: Optional[dict] = None,
 ) -> bool:
     """
     对 (user_id, agent_id) 拉取该会话消息、按节日提示词调用 LLM 抽取回忆摘要，
@@ -267,7 +287,12 @@ async def extract_festival_and_save(
     返回是否成功。
     """
     memory_row = await summarize_memory_from_messages_between_user_and_agent(
-        user_id, agent_id, festival_name, festival_date, prompt_template
+        user_id,
+        agent_id,
+        festival_name,
+        festival_date,
+        prompt_template,
+        llm_config=llm_config,
     )
     if memory_row is None:
         return False
@@ -338,6 +363,7 @@ async def extract_festival_to_dict(
         festival_date,
         prompt_template,
         messages_override=messages_override,
+        llm_config=None,
     )
     if memory_row is None:
         return None

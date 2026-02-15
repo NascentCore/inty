@@ -9,7 +9,7 @@ CREATED_BY_AGENT
 ## 数据与模型
 
 - **memory 表**：沿用现有表，新增可选列 `festival_name`、`festival_date`、**`delivery_at`**；`memory_type` 取值增加 `festival`。节日记忆语义：`(user_id, agent_id, festival_name, festival_date)` 唯一确定一条，`content` 存该用户与该角色在该节日下的回忆摘要。**`delivery_at`**（DateTime with timezone，可空）：节日记忆提示**首次**投递到会话的时间；`NULL` 表示尚未投递，仅在用户发起聊天或拉取消息列表时按需写入 chat_history 并更新该字段。
-- **festival_memory_config 表**：节日记忆抽取配置，字段：`id`, `festival_name`, `festival_date`, `prompt`, `enabled`, **`timezone`**（节日与执行时间所属时区，IANA 名如 Asia/Shanghai，默认 UTC）, `run_at_date`, `run_at_hour`, **`min_rounds_in_window`**（窗口内最少用户消息轮数，可选，NULL 表示默认 15）, `last_run_at`, `created_at`, `updated_at`。其中 **节日日期与执行日期/时刻均为该 timezone 下的本地值**：`festival_date` 为「该时区下的自然日」，`run_at_date`（执行日期）、`run_at_hour`（该时区下本地小时 0–23）表示该配置的「可执行时间」，须满足 `run_at_date >= festival_date`；定时任务到点判断时将 (run_at_date, run_at_hour, timezone) 转为 UTC 后与当前时间比较。`last_run_at` 为该配置最近一次被定时任务执行的时间（UTC），用于避免同一执行时刻被重复执行。
+- **festival_memory_config 表**：节日记忆抽取配置，字段：`id`, `festival_name`, `festival_date`, `prompt`, `enabled`, **`timezone`**（节日与执行时间所属时区，IANA 名如 Asia/Shanghai，默认 UTC）, `run_at_date`, `run_at_hour`, **`min_rounds_in_window`**（窗口内最少用户消息轮数，可选，NULL 表示默认 15）, **`llm_config`**（JSON，可选，LLM 模型配置；NULL 表示使用全局默认模型与参数）, `last_run_at`, `created_at`, `updated_at`。其中 **节日日期与执行日期/时刻均为该 timezone 下的本地值**；**`llm_config` 读写为完整 JSON 对象**（如 `{"model": "...", "temperature": 0.7, "max_tokens": 2000}`），抽取时若存在则用于调用 LLM，否则使用 config 或默认模型。`festival_date` 为「该时区下的自然日」，`run_at_date`（执行日期）、`run_at_hour`（该时区下本地小时 0–23）表示该配置的「可执行时间」，须满足 `run_at_date >= festival_date`；定时任务到点判断时将 (run_at_date, run_at_hour, timezone) 转为 UTC 后与当前时间比较。`last_run_at` 为该配置最近一次被定时任务执行的时间（UTC），用于避免同一执行时刻被重复执行。
 
 ## 接口
 
@@ -29,16 +29,16 @@ CREATED_BY_AGENT
 ### 管理员 API（仅超级用户）
 
 - **GET** `/api/v1/evaluation/admin/festival-memory-configs`：节日记忆配置列表（支持 skip/limit）。
-- **POST** `/api/v1/evaluation/admin/festival-memory-configs`：创建配置（节日名称、节日日期、提示词、是否启用、**timezone**（默认 UTC）、执行日期、执行时刻（该时区下本地小时）、可选 **min_rounds_in_window**（窗口内最少用户消息轮数，不传则默认 15））；执行日期不能早于节日日期。
-- **PUT** `/api/v1/evaluation/admin/festival-memory-configs/{config_id}`：更新配置（含 timezone、执行日期、执行时刻、min_rounds_in_window）。
+- **POST** `/api/v1/evaluation/admin/festival-memory-configs`：创建配置（节日名称、节日日期、提示词、是否启用、**timezone**（默认 UTC）、执行日期、执行时刻（该时区下本地小时）、可选 **min_rounds_in_window**（窗口内最少用户消息轮数，不传则默认 15）、可选 **llm_config**（LLM 模型配置 JSON，不传或 null 表示使用默认模型））；执行日期不能早于节日日期。
+- **PUT** `/api/v1/evaluation/admin/festival-memory-configs/{config_id}`：更新配置（含 timezone、执行日期、执行时刻、min_rounds_in_window、llm_config；传 llm_config 为 null 表示改为默认模型）。
 - **DELETE** `/api/v1/evaluation/admin/festival-memory-configs/{config_id}`：删除配置。
-- **POST** `/api/v1/evaluation/admin/festival-memory-extraction/run`：立即执行抽取。请求体可传 `config_id` 或直接传 `festival_name`、`festival_date`、`prompt`、可选 `timezone`（未传 config_id 时用于窗口计算，默认 UTC）、可选 `min_rounds_in_window`（未传 config_id 时生效，不传则默认 15）。返回 `total_pairs`、`success_count`、`failed_count`。
+- **POST** `/api/v1/evaluation/admin/festival-memory-extraction/run`：立即执行抽取。请求体可传 `config_id` 或直接传 `festival_name`、`festival_date`、`prompt`、可选 `timezone`（未传 config_id 时用于窗口计算，默认 UTC）、可选 `min_rounds_in_window`（未传 config_id 时生效，不传则默认 15）。使用 config_id 时从配置读取 llm_config 并用于 LLM 调用。返回 `total_pairs`、`success_count`、`failed_count`。
 
 ## 抽取逻辑
 
 1. **筛选**：对每条节日配置按其 `timezone` 与 `festival_date` 确定时间窗：**该时区下节日自然日 00:00 至次日 04:00**（共 28 小时）换算为 UTC 的区间；从 `chats` 与 `chat_history` 统计在该时间窗内每个 (user_id, agent_id) 会话的用户消息数（排除开场白），仅对**该窗口内**消息数 ≥ 配置的 `min_rounds_in_window`（可选，默认 15）的组合进行抽取。
 2. **拉取**：按 (user_id, agent_id) 拉取该用户与该角色的单会话消息，格式与现有记忆抽取一致。
-3. **LLM**：使用配置的提示词 + 节日名称、日期作为上下文，调用 OpenRouter（默认模型 `mistralai/devstral-2512`）抽取该节日相关回忆摘要。
+3. **LLM**：使用配置的提示词 + 节日名称、日期作为上下文，调用 OpenRouter 抽取该节日相关回忆摘要。若配置的 **llm_config** 存在且含 `model`，则使用其 `model`、`temperature`、`max_tokens`；否则使用全局默认（如 `mistralai/devstral-2512`）。
 4. **写入**：同一 (user_id, agent_id, festival_name, festival_date) 先 DELETE 再 INSERT 一条 `memory`（整批替换），**不**在此处写入 chat_history；`delivery_at` 保持 NULL。
 5. **提示消息**：改为按需投递。在用户**发起聊天**或**拉取消息列表**时，对 (user_id, agent_id) 下 `delivery_at IS NULL` 的节日记忆执行投递（写入 chat_history 并更新 `memory.delivery_at`）。详见下文「chat_history 提示消息约定」。
 
@@ -69,7 +69,7 @@ CREATED_BY_AGENT
 ### festival_memory_service 重构
 
 - **可组合函数**：拉消息、拼 prompt、调 LLM、写库 拆分为可复用单元，便于写库与「只出 JSON」两种路径共用。
-- **`assemble_args(messages, festival_name, festival_date, prompt_template)`**：根据会话消息与节日参数组装 `chat_completion_for_extraction`（openai_client）的 (full_prompt, model, max_tokens, temperature)，供 `extract_festival_and_save` 与 `extract_festival_to_dict` 复用。
+- **`assemble_args(messages, festival_name, festival_date, prompt_template, llm_config=None)`**：根据会话消息与节日参数组装 `chat_completion_for_extraction`（openai_client）的 (full_prompt, model, max_tokens, temperature)。若 `llm_config` 存在且含 `model`，则使用其 model/temperature/max_tokens；否则使用全局默认。供 `extract_festival_and_save` 与 `extract_festival_to_dict` 复用。
 - **`summarize_memory_from_messages_between_user_and_agent(user_id, agent_id, festival_name, festival_date, prompt_template)`**：拉取该 (user_id, agent_id) 会话消息 → 调用 LLM 抽取摘要 → 返回**未持久化**的 `Memory` 对象；无消息、摘要过短或 LLM 异常时返回 `None`。写库与 to_dict 均先调此函数再分别做「delete + add + commit」或「转 dict」。
 - **`extract_festival_and_save`**：先 `summarize_memory_from_messages_between_user_and_agent`，若得 `Memory` 则对同 (user_id, agent_id, festival_name, festival_date) 做 DELETE 后 INSERT 并 commit。
 - **`extract_festival_to_dict`**：仅用于离线脚本；先 `summarize_memory_from_messages_between_user_and_agent`，再转为与下文 query 一致的 dict 结构，可选附带 user_name、agent_name。

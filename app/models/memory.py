@@ -16,6 +16,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
 )
@@ -124,6 +125,11 @@ class FestivalMemoryConfig(Base):
         Integer,
         nullable=True,
         comment="窗口内最少用户消息轮数，NULL 表示默认 15",
+    )
+    llm_config = Column(
+        JSON,
+        nullable=True,
+        comment="LLM 模型配置 JSON，null 表示使用全局默认",
     )
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
