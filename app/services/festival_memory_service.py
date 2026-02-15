@@ -6,10 +6,12 @@
 import asyncio
 import json
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 
 from loguru import logger
+
+from app.api.types.llm_config import LLMConfig
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -169,18 +171,30 @@ def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def _normalize_llm_config(
+    llm_config: Optional[Union[LLMConfig, dict]],
+) -> Optional[LLMConfig]:
+    """将 dict 转为 LLMConfig，None 或已是 LLMConfig 则原样返回。"""
+    if llm_config is None:
+        return None
+    if isinstance(llm_config, dict):
+        return LLMConfig.model_validate(llm_config)
+    return llm_config
+
+
 def assemble_args(
     messages: List[Tuple[str, str]],
     festival_name: str,
     festival_date: date,
     prompt_template: str,
-    llm_config: Optional[dict] = None,
-) -> Tuple[str, str, int, float]:
+    llm_config: Optional[Union[LLMConfig, dict]] = None,
+) -> Tuple[str, LLMConfig]:
     """
-    组装 chat_completion_for_extraction 的调用参数（full_prompt, model, max_tokens, temperature）。
-    若 llm_config 存在且含 model，则使用其 model、temperature、max_tokens；否则使用全局默认。
+    组装 chat_completion_for_extraction 的调用参数（full_prompt, LLMConfig）。
+    若 llm_config 存在且含 model，则使用该 LLMConfig；否则使用全局默认（节日抽取：max_tokens=2000, temperature=0.0）。
     供 extract_festival_and_save 与 extract_festival_to_dict 复用。
     """
+    llm_config = _normalize_llm_config(llm_config)
     chat_text = _format_chat_for_prompt(messages)
     date_str = (
         festival_date.isoformat()
@@ -200,25 +214,18 @@ Festival date: {date_str}
 
 ---
 Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
-    if llm_config and isinstance(llm_config, dict):
-        model_name = (llm_config.get("model") or "").strip()
-        if model_name:
-            try:
-                temperature = float(llm_config.get("temperature", 0.0))
-            except (TypeError, ValueError):
-                temperature = 0.0
-            try:
-                max_tokens = int(llm_config.get("max_tokens", 2000))
-            except (TypeError, ValueError):
-                max_tokens = 2000
-            if max_tokens < 1:
-                max_tokens = 2000
-            return (full_prompt, model_name, max_tokens, temperature)
+    if llm_config and (llm_config.model or "").strip():
+        return (full_prompt, llm_config)
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
     model_name = (
         cfg.model.strip() if cfg and cfg.model else None
     ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
-    return (full_prompt, model_name, 2000, 0.0)
+    default_llm_config = LLMConfig(
+        model=model_name,
+        max_tokens=2000,
+        temperature=0.0,
+    )
+    return (full_prompt, default_llm_config)
 
 
 async def summarize_memory_from_messages_between_user_and_agent(
@@ -228,7 +235,7 @@ async def summarize_memory_from_messages_between_user_and_agent(
     festival_date: date,
     prompt_template: str,
     messages_override: Optional[List[Tuple[str, str]]] = None,
-    llm_config: Optional[dict] = None,
+    llm_config: Optional[Union[LLMConfig, dict]] = None,
 ) -> Optional[Memory]:
     """
     根据 (user_id, agent_id) 拉取会话消息、调用 LLM 抽取节日回忆摘要，并构造（未持久化的）Memory 行。
@@ -247,11 +254,13 @@ async def summarize_memory_from_messages_between_user_and_agent(
     logger.debug(f"节日记忆抽取：user_id={user_id} agent_id={agent_id} 消息数={len(messages)}")
     for msg in messages:
         logger.debug(f"message: {msg}")
-    args = assemble_args(
+    full_prompt, ext_llm_config = assemble_args(
         messages, festival_name, festival_date, prompt_template, llm_config
     )
     try:
-        summary, _, _ = await chat_completion_for_extraction(*args)
+        summary, _, _ = await chat_completion_for_extraction(
+            full_prompt, llm_config=ext_llm_config
+        )
         if not summary or len(summary.strip()) < 10:
             return None
         summary = summary.strip()
@@ -279,7 +288,7 @@ async def extract_festival_and_save(
     festival_name: str,
     festival_date: date,
     prompt_template: str,
-    llm_config: Optional[dict] = None,
+    llm_config: Optional[Union[LLMConfig, dict]] = None,
 ) -> bool:
     """
     对 (user_id, agent_id) 拉取该会话消息、按节日提示词调用 LLM 抽取回忆摘要，

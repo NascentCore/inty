@@ -5,6 +5,7 @@ from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 
 from app.services import festival_memory_service
 from app.services.memory_service import get_festival_memories_for_user_agent
@@ -38,7 +39,7 @@ class TestGetFestivalMemoriesForUserAgent:
 
 
 class TestAssembleArgs:
-    """assemble_args 在有无 llm_config 时返回的 model/temperature/max_tokens"""
+    """assemble_args 返回 (full_prompt, LLMConfig)，有无 llm_config 时 model/temperature/max_tokens 来自 LLMConfig"""
 
     def test_with_llm_config_uses_custom_model_and_params(self):
         messages = [("user", "hi"), ("assistant", "hello")]
@@ -47,29 +48,27 @@ class TestAssembleArgs:
             "temperature": 0.5,
             "max_tokens": 4096,
         }
-        full_prompt, model_name, max_tokens, temperature = (
-            festival_memory_service.assemble_args(
-                messages,
-                "春节",
-                date(2026, 2, 1),
-                "Extract memories.",
-                llm_config=llm_config,
-            )
+        full_prompt, ext_llm_config = festival_memory_service.assemble_args(
+            messages,
+            "春节",
+            date(2026, 2, 1),
+            "Extract memories.",
+            llm_config=llm_config,
         )
         assert "春节" in full_prompt and "Extract memories." in full_prompt
-        assert model_name == "anthropic/claude-3.5-sonnet"
-        assert max_tokens == 4096
-        assert temperature == 0.5
+        assert ext_llm_config.model == "anthropic/claude-3.5-sonnet"
+        assert ext_llm_config.max_tokens == 4096
+        assert ext_llm_config.temperature == 0.5
 
-    def test_with_invalid_temperature_or_max_tokens_uses_defaults(self):
-        """Invalid numeric values in llm_config fall back to defaults without raising."""
+    def test_with_invalid_temperature_or_max_tokens_raises_validation_error(self):
+        """非法 numeric 的 dict 经 model_validate 会抛出 ValidationError。"""
         messages = [("user", "hi")]
         llm_config = {
             "model": "some/model",
             "temperature": "not-a-number",
             "max_tokens": "invalid",
         }
-        full_prompt, model_name, max_tokens, temperature = (
+        with pytest.raises(ValidationError):
             festival_memory_service.assemble_args(
                 messages,
                 "春节",
@@ -77,10 +76,6 @@ class TestAssembleArgs:
                 "Prompt.",
                 llm_config=llm_config,
             )
-        )
-        assert model_name == "some/model"
-        assert temperature == 0.0
-        assert max_tokens == 2000
 
     def test_with_empty_model_in_config_falls_back_to_default(self):
         messages = [("user", "hi")]
@@ -90,18 +85,19 @@ class TestAssembleArgs:
             "global_config_loaded_from_config_yaml",
             MagicMock(memory_extraction=MagicMock(model=None)),
         ):
-            full_prompt, model_name, max_tokens, temperature = (
-                festival_memory_service.assemble_args(
-                    messages,
-                    "春节",
-                    date(2026, 2, 1),
-                    "Prompt.",
-                    llm_config=llm_config,
-                )
+            full_prompt, ext_llm_config = festival_memory_service.assemble_args(
+                messages,
+                "春节",
+                date(2026, 2, 1),
+                "Prompt.",
+                llm_config=llm_config,
             )
-        assert model_name == festival_memory_service.DEFAULT_FESTIVAL_EXTRACTION_MODEL
-        assert max_tokens == 2000
-        assert temperature == 0.0
+        assert (
+            ext_llm_config.model
+            == festival_memory_service.DEFAULT_FESTIVAL_EXTRACTION_MODEL
+        )
+        assert ext_llm_config.max_tokens == 2000
+        assert ext_llm_config.temperature == 0.0
 
     def test_without_llm_config_uses_default(self):
         messages = [("user", "hi")]
@@ -110,11 +106,12 @@ class TestAssembleArgs:
             "global_config_loaded_from_config_yaml",
             MagicMock(memory_extraction=MagicMock(model=None)),
         ):
-            full_prompt, model_name, max_tokens, temperature = (
-                festival_memory_service.assemble_args(
-                    messages, "春节", date(2026, 2, 1), "Prompt."
-                )
+            full_prompt, ext_llm_config = festival_memory_service.assemble_args(
+                messages, "春节", date(2026, 2, 1), "Prompt."
             )
-        assert model_name == festival_memory_service.DEFAULT_FESTIVAL_EXTRACTION_MODEL
-        assert max_tokens == 2000
-        assert temperature == 0.0
+        assert (
+            ext_llm_config.model
+            == festival_memory_service.DEFAULT_FESTIVAL_EXTRACTION_MODEL
+        )
+        assert ext_llm_config.max_tokens == 2000
+        assert ext_llm_config.temperature == 0.0

@@ -14,6 +14,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
 from sqlalchemy import or_, select, update
 
+from app.api.types.llm_config import LLMConfig
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal, AsyncSessionLocalReplica
 from app.models.memory import FestivalMemoryConfig
@@ -498,6 +499,7 @@ class PushSchedulerService:
                 async with AsyncSessionLocal() as db:
                     for user_id, agent_id in pairs:
                         try:
+                            raw_llm = getattr(config, "llm_config", None)
                             await festival_memory_service.extract_festival_and_save(
                                 db,
                                 user_id,
@@ -505,7 +507,11 @@ class PushSchedulerService:
                                 config.festival_name,
                                 config.festival_date,
                                 config.prompt,
-                                llm_config=getattr(config, "llm_config", None),
+                                llm_config=(
+                                    LLMConfig.model_validate(raw_llm)
+                                    if raw_llm is not None
+                                    else None
+                                ),
                             )
                         except Exception as e:
                             await db.rollback()

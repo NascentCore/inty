@@ -59,6 +59,21 @@ CREATED_BY_AGENT
 - **节日记忆通知**：push worker 中新增「节日记忆通知」任务（可选配置 `push_notification.festival_memory_enabled`，默认 true）。每 15 分钟扫描存在「未投递且未发过 system notification」的节日记忆的 (user_id, agent_id)，发送 FCM 推送；点击通知进入该角色 **Love Journal 页并定位到对应记忆条目**。投递仍由 GET messages / POST completions 完成，不在 push worker 内写 chat_history。
 - 每轮扫描：取当前 UTC 时间 `now`，查询 `festival_memory_config` 中 `enabled = true` 且 `run_at_date`、`run_at_hour` 均非空的配置；对每条配置将 **(run_at_date, run_at_hour)** 按该配置的 **timezone** 解释为本地日期+时刻，换算为 UTC 得到 `run_at_dt_utc`，仅当 `now >= run_at_dt_utc` 且（`last_run_at` 为 NULL 或 `last_run_at < run_at_dt_utc`）时视为「到点」。对到点配置采用 **先占位再执行**：先执行 `UPDATE festival_memory_config SET last_run_at = now() WHERE id = ? AND (last_run_at IS NULL OR last_run_at < run_at_dt_utc)`，仅当更新行数为 1 时表示本实例抢到执行权，再按该配置的 **timezone** 与 **festival_date** 计算 28 小时窗口、筛选该窗口内 (user, agent) 用户消息数 ≥ `min_rounds_in_window` 的组合并逐个调用抽取；若更新行数不为 1 则跳过该配置（已被其他实例执行或已执行过）。从而多实例下同一 config 在同一执行时刻只会被一个实例执行一次。执行时间不早于节日日期（由创建/更新接口校验 `run_at_date >= festival_date`）。
 
+### llm_config 调用链（新建任务 → Push Worker → LLM）
+
+新建/更新节日提取任务时提供的 **llm_config** 会写入 `festival_memory_config.llm_config`（JSON），并在 **Push Worker 定时执行抽取时被完整使用**。调用链如下：
+
+| 步骤 | 位置 | 说明 |
+|------|------|------|
+| 1 写入 | API 创建/更新 | `body.llm_config` → `model_dump()` 写入 `FestivalMemoryConfig.llm_config` |
+| 2 读取 | Push 定时任务 | `select(FestivalMemoryConfig)` 得到 `config`，对每个 (user_id, agent_id) 取 `config.llm_config` → `LLMConfig.model_validate(raw_llm)` |
+| 3 抽取入口 | `push_scheduler_service` | `extract_festival_and_save(..., llm_config=...)` |
+| 4 摘要生成 | `festival_memory_service` | `summarize_memory_from_messages_between_user_and_agent(..., llm_config)` |
+| 5 拼参 | `assemble_args` | 得到 `(full_prompt, ext_llm_config)`；有配置且含 model 则用该 LLMConfig，否则用全局默认 |
+| 6 LLM 调用 | `openai_client.chat_completion_for_extraction` | `_llm_config_to_create_kwargs(ext_llm_config)` → `client.chat.completions.create(**kwargs)` |
+
+因此：创建任务时传入的 `llm_config`（model、max_tokens、temperature、top_p、presence_penalty、frequency_penalty）会一路传到定时任务中的 LLM 请求。若创建时未传或传 `null`，push 中传 `llm_config=None`，将走 `assemble_args` / `chat_completion_for_extraction` 的全局默认（节日抽取默认 max_tokens=2000、temperature=0.0）。
+
 ## Evaluation 页面
 
 - 路径：evaluation 侧边栏「节日记忆提取」。
@@ -69,7 +84,7 @@ CREATED_BY_AGENT
 ### festival_memory_service 重构
 
 - **可组合函数**：拉消息、拼 prompt、调 LLM、写库 拆分为可复用单元，便于写库与「只出 JSON」两种路径共用。
-- **`assemble_args(messages, festival_name, festival_date, prompt_template, llm_config=None)`**：根据会话消息与节日参数组装 `chat_completion_for_extraction`（openai_client）的 (full_prompt, model, max_tokens, temperature)。若 `llm_config` 存在且含 `model`，则使用其 model/temperature/max_tokens；否则使用全局默认。供 `extract_festival_and_save` 与 `extract_festival_to_dict` 复用。
+- **`assemble_args(messages, festival_name, festival_date, prompt_template, llm_config=None)`**：根据会话消息与节日参数组装 `chat_completion_for_extraction`（openai_client）的 (full_prompt, LLMConfig)。若 `llm_config` 存在且含 `model`，则使用该 LLMConfig；否则使用全局默认（节日抽取：max_tokens=2000, temperature=0.0）。调用方使用 `chat_completion_for_extraction(full_prompt, llm_config=ext_llm_config)`。供 `extract_festival_and_save` 与 `extract_festival_to_dict` 复用。
 - **`summarize_memory_from_messages_between_user_and_agent(user_id, agent_id, festival_name, festival_date, prompt_template)`**：拉取该 (user_id, agent_id) 会话消息 → 调用 LLM 抽取摘要 → 返回**未持久化**的 `Memory` 对象；无消息、摘要过短或 LLM 异常时返回 `None`。写库与 to_dict 均先调此函数再分别做「delete + add + commit」或「转 dict」。
 - **`extract_festival_and_save`**：先 `summarize_memory_from_messages_between_user_and_agent`，若得 `Memory` 则对同 (user_id, agent_id, festival_name, festival_date) 做 DELETE 后 INSERT 并 commit。
 - **`extract_festival_to_dict`**：仅用于离线脚本；先 `summarize_memory_from_messages_between_user_and_agent`，再转为与下文 query 一致的 dict 结构，可选附带 user_name、agent_name。
