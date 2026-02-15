@@ -89,7 +89,8 @@ fastapi-project
 ├── .env
 ├── .gitignore
 ├── logging.ini
-└── alembic.ini
+└── alembic/
+    └── alembic.ini
 ```
 
 1. 将所有领域目录存储在`src`文件夹中
