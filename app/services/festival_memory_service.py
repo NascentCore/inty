@@ -27,7 +27,11 @@ from app.services.chat_history_service import (
     get_chat_history_replica_connection,
 )
 from app.services.chat_service import generate_session_id
-from app.services.memory_service import MEMORY_TYPE_FESTIVAL
+from app.services.memory_service import (
+    MEMORY_TYPE_FESTIVAL,
+    build_festival_memory_metadata,
+    resolve_festival_name_and_date,
+)
 from app.utils.openai_client import chat_completion_for_extraction
 from app.utils.openrouter_memory import (
     DEFAULT_MEMORY_EXTRACTION_MODEL as DEFAULT_FESTIVAL_EXTRACTION_MODEL,
@@ -336,10 +340,43 @@ async def summarize_memory_from_messages_between_user_and_agent(
         memory_type=MEMORY_TYPE_FESTIVAL,
         agent_id=agent_id,
         content=summary,
+        meta_data=build_festival_memory_metadata(festival_name, festival_date),
         extracted_at=extracted_at,
         festival_name=festival_name,
         festival_date=festival_date,
     )
+
+
+async def _find_festival_memory_ids(
+    db: AsyncSession,
+    user_id: str,
+    agent_id: str,
+    festival_name: str,
+    festival_date: date,
+) -> list[int]:
+    """按 metadata 优先 + 旧列回退匹配同一节日记忆，返回待删除 id 列表。"""
+    result = await db.execute(
+        select(
+            Memory.id,
+            Memory.meta_data,
+            Memory.festival_name,
+            Memory.festival_date,
+        ).where(
+            Memory.user_id == user_id,
+            Memory.agent_id == agent_id,
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+        )
+    )
+    rows = result.fetchall()
+    matched_ids: list[int] = []
+    for row in rows:
+        memory_id, metadata, legacy_festival_name, legacy_festival_date = row
+        resolved_name, resolved_date = resolve_festival_name_and_date(
+            metadata, legacy_festival_name, legacy_festival_date
+        )
+        if resolved_name == festival_name and resolved_date == festival_date:
+            matched_ids.append(memory_id)
+    return matched_ids
 
 
 async def extract_festival_and_save(
@@ -368,15 +405,15 @@ async def extract_festival_and_save(
     )
     if memory_row is None:
         return False
-    await db.execute(
-        delete(Memory).where(
-            Memory.user_id == user_id,
-            Memory.agent_id == agent_id,
-            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
-            Memory.festival_name == festival_name,
-            Memory.festival_date == festival_date,
-        )
+    existing_ids = await _find_festival_memory_ids(
+        db, user_id, agent_id, festival_name, festival_date
     )
+    if existing_ids:
+        await db.execute(
+            delete(Memory).where(
+                Memory.id.in_(existing_ids),
+            )
+        )
     db.add(memory_row)
     await db.commit()
     logger.debug(
@@ -439,15 +476,24 @@ async def extract_festival_to_dict(
     )
     if memory_row is None:
         return None
-    fd = memory_row.festival_date
+    festival_name_resolved, festival_date_resolved = resolve_festival_name_and_date(
+        memory_row.meta_data,
+        memory_row.festival_name,
+        memory_row.festival_date,
+    )
+    if festival_name_resolved is None or festival_date_resolved is None:
+        return None
     out = {
         "user_id": memory_row.user_id,
         "agent_id": memory_row.agent_id,
         "memory_type": memory_row.memory_type,
         "content": memory_row.content,
-        "extracted_at": memory_row.extracted_at.isoformat(),
-        "festival_name": memory_row.festival_name,
-        "festival_date": fd.isoformat() if isinstance(fd, date) else str(fd),
+        "festival_name": festival_name_resolved,
+        "festival_date": (
+            festival_date_resolved.isoformat()
+            if isinstance(festival_date_resolved, date)
+            else str(festival_date_resolved)
+        ),
     }
     if db is not None:
         user_name, agent_name = await _get_user_agent_names(db, user_id, agent_id)
@@ -463,25 +509,28 @@ async def query_festival_memories_from_db(
     从主库 memory 表按节日名称与日期查询已有节日记忆，返回与 extract_festival_to_dict
     相同结构的 dict 列表（含 user_name、agent_name）。不写库、不调 LLM。
     """
-    r = await db.execute(
-        select(Memory).where(
-            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
-            Memory.festival_name == festival_name,
-            Memory.festival_date == festival_date,
-        )
-    )
+    r = await db.execute(select(Memory).where(Memory.memory_type == MEMORY_TYPE_FESTIVAL))
     rows = r.scalars().all()
     out: List[dict] = []
     for row in rows:
-        fd = row.festival_date
+        resolved_name, resolved_date = resolve_festival_name_and_date(
+            row.meta_data,
+            row.festival_name,
+            row.festival_date,
+        )
+        if resolved_name != festival_name or resolved_date != festival_date:
+            continue
         d = {
             "user_id": row.user_id,
             "agent_id": row.agent_id,
             "memory_type": row.memory_type,
             "content": row.content,
-            "extracted_at": row.extracted_at.isoformat(),
-            "festival_name": row.festival_name,
-            "festival_date": fd.isoformat() if isinstance(fd, date) else str(fd),
+            "festival_name": resolved_name,
+            "festival_date": (
+                resolved_date.isoformat()
+                if isinstance(resolved_date, date)
+                else str(resolved_date)
+            ),
         }
         user_name, agent_name = await _get_user_agent_names(
             db, row.user_id, row.agent_id

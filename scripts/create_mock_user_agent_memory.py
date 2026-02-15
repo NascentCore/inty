@@ -19,6 +19,10 @@ from app import models
 from app.db.session import AsyncSessionLocal
 from app.models.memory import Memory
 from app.services import chat_history_service, chat_service
+from app.services.memory_service import (
+    build_festival_memory_metadata,
+    resolve_festival_name_and_date,
+)
 
 DEFAULT_MOCK_CONTENT = "这是一条测试记忆。"
 DEFAULT_FESTIVAL_NAME = "测试节日"
@@ -157,20 +161,36 @@ async def _run(
             festival_name_val, festival_date_val = await _get_festival_name_date(
                 db, memory_type, festival_config_id, festival_name, festival_date
             )
-            await db.execute(
-                delete(Memory).where(
+            existing_rows = await db.execute(
+                select(
+                    Memory.id,
+                    Memory.meta_data,
+                    Memory.festival_name,
+                    Memory.festival_date,
+                ).where(
                     Memory.user_id == user_id,
                     Memory.agent_id == agent_id,
                     Memory.memory_type == "festival",
-                    Memory.festival_name == festival_name_val,
-                    Memory.festival_date == festival_date_val,
                 )
             )
+            existing_ids = []
+            for row in existing_rows.fetchall():
+                memory_id, metadata, legacy_festival_name, legacy_festival_date = row
+                resolved_name, resolved_date = resolve_festival_name_and_date(
+                    metadata, legacy_festival_name, legacy_festival_date
+                )
+                if resolved_name == festival_name_val and resolved_date == festival_date_val:
+                    existing_ids.append(memory_id)
+            if existing_ids:
+                await db.execute(delete(Memory).where(Memory.id.in_(existing_ids)))
             memory_row = Memory(
                 user_id=user_id,
                 memory_type="festival",
                 agent_id=agent_id,
                 content=content,
+                meta_data=build_festival_memory_metadata(
+                    festival_name_val, festival_date_val
+                ),
                 extracted_at=extracted_at,
                 festival_name=festival_name_val,
                 festival_date=festival_date_val,

@@ -25,9 +25,15 @@ class TestGetFestivalMemoriesForUserAgent:
         assert out == []
 
     @pytest.mark.asyncio
-    async def test_returns_list_with_festival_date_name_memory(self):
+    async def test_returns_list_with_metadata_festival_data(self):
         mock_db = AsyncMock()
-        mock_row = (42, date(2026, 2, 10), "春节", "用户与角色在春节相关的回忆摘要")
+        mock_row = (
+            42,
+            {"festival_name": "春节", "festival_data": "2026-02-10"},
+            None,
+            None,
+            "用户与角色在春节相关的回忆摘要",
+        )
         mock_result = MagicMock()
         mock_result.fetchall.return_value = [mock_row]
         mock_db.execute = AsyncMock(return_value=mock_result)
@@ -37,6 +43,29 @@ class TestGetFestivalMemoriesForUserAgent:
         assert out[0]["festival_date"] == "2026-02-10"
         assert out[0]["festival_name"] == "春节"
         assert out[0]["memory"] == "用户与角色在春节相关的回忆摘要"
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_legacy_columns_when_metadata_missing(self):
+        mock_db = AsyncMock()
+        mock_row = (
+            100,
+            None,
+            "中秋节",
+            date(2026, 9, 25),
+            "旧字段中的节日记忆",
+        )
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [mock_row]
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        out = await get_festival_memories_for_user_agent(mock_db, "user-2", "agent-2")
+        assert out == [
+            {
+                "memory_id": 100,
+                "festival_date": "2026-09-25",
+                "festival_name": "中秋节",
+                "memory": "旧字段中的节日记忆",
+            }
+        ]
 
 
 class TestAssembleArgs:
