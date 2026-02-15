@@ -649,6 +649,7 @@
     <string name="chat_festival_memory_notify">%1$s left you a secret note in their Love Journal. Tap to read.</string>
     <string name="chat_message_type_unsupported">This message type is not supported in the current version. Please update to the latest version.</string>
     <string name="heartbeat_subtitle">%1$d Love Journals about you</string>
+    <string name="heartbeat_subtitle_from_agent">%1$d Love Journals from %2$s about you</string>
     <string name="heartbeat_empty">No Love Journal yet</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
