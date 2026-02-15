@@ -132,9 +132,11 @@ class FestivalMemoryConfigInDB(BaseModel):
     def _llm_config_from_dict(cls, v: object) -> Optional[LLMConfig]:
         if v is None:
             return None
+        if isinstance(v, LLMConfig):
+            return v
         if isinstance(v, dict):
             return LLMConfig.model_validate(v)
-        return v
+        raise ValueError(f"llm_config must be None, dict, or LLMConfig, got {type(v).__name__}")
 
     class Config:
         from_attributes = True

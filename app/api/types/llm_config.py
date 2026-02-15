@@ -7,11 +7,9 @@ from pydantic import BaseModel, Field
 
 class LLMConfig(BaseModel):
     """LLM 模型配置，供 API 与内部统一使用。"""
-    base_url: Optional[str] = Field(None, description="Base URL for the LLM API provider, usually None as this is set elsewhere")
-    api_key: Optional[str] = Field(None, description="API key for the LLM API provider, usually None as this is set elsewhere")
-    
-    model: Optional[str] = Field(None, description="Model name, e.g. 'gpt-4o', based on base_url"
-     "aggregate provide have <provider>/<model> format"
+    model: Optional[str] = Field(
+        None,
+        description="Model name, e.g. 'gpt-4o'. With aggregate providers (e.g. OpenRouter), use <provider>/<model> format.",
     )
 
     max_tokens: Optional[int] = Field(
