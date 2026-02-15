@@ -3,10 +3,15 @@
 节日记忆抽取：接受与 evaluation 表单相同输入，执行与 POST /evaluation/admin/festival-memory-extraction/run 相同流程，
 结果写入 JSON 文件而非 memory 表。
 
+--messages-output：仅抽取模式下生效，将每对 (user, agent) 的会话消息写入指定 JSON。
+--messages-input：从上述 JSON 读入消息并做抽取，与直接抽取结果一致；与 --query 互斥。
+
 用法: export PYTHONPATH=.
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --timezone Asia/Shanghai --min-rounds 10
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --limit 1
+  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --messages-output msgs.json
+  python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out2.json --messages-input msgs.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name "测试节日20260201" --festival-date 2026-02-01 --prompt-file festival_memory_prompt.txt --output tmp/backend_out.json --timezone America/Los_Angeles --min-rounds 50 --query
 """
 
@@ -65,11 +70,13 @@ async def _run(
     output_path: Path,
     config: Optional[str],
     limit: Optional[int] = None,
+    messages_output_path: Optional[Path] = None,
 ) -> None:
     _ensure_config(config)
     from app.core.config import global_config_loaded_from_config_yaml
     from app.db.session import AsyncSessionLocal
     from app.services.festival_memory_service import (
+        get_messages_for_user_agent_sync,
         get_pairs_with_min_rounds_in_window_sync,
         extract_festival_to_dict,
     )
@@ -81,16 +88,43 @@ async def _run(
     if limit is not None:
         pairs = pairs[:limit]
     memories: list[dict] = []
+    pairs_messages: list[dict] = []
     success = 0
     async with AsyncSessionLocal() as db:
         for user_id, agent_id in pairs:
             logger.debug(f"extracting festival memory for user_id={user_id} agent_id={agent_id}")
+            if messages_output_path is not None:
+                messages = await asyncio.to_thread(
+                    get_messages_for_user_agent_sync, user_id, agent_id
+                )
+                pairs_messages.append({
+                    "user_id": user_id,
+                    "agent_id": agent_id,
+                    "messages": [{"role": r, "content": c} for r, c in messages],
+                })
             d = await extract_festival_to_dict(
                 user_id, agent_id, festival_name, festival_date, prompt, db=db
             )
             if d is not None:
                 memories.append(d)
                 success += 1
+    if messages_output_path is not None:
+        messages_query: dict = {
+            "festival_name": festival_name,
+            "festival_date": festival_date.isoformat(),
+            "timezone": timezone,
+            "min_rounds_in_window": min_rounds,
+        }
+        if limit is not None:
+            messages_query["limit"] = limit
+        messages_payload = {
+            "query": messages_query,
+            "pairs_messages": pairs_messages,
+        }
+        messages_output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(messages_output_path, "w", encoding="utf-8") as f:
+            json.dump(messages_payload, f, ensure_ascii=False, indent=2)
+        print(f"Messages written to {messages_output_path}")
     query: dict = {
         "festival_name": festival_name,
         "festival_date": festival_date.isoformat(),
@@ -113,6 +147,76 @@ async def _run(
         json.dump(payload, f, ensure_ascii=False, indent=2)
     n = len(pairs)
     print(f"Done: {n} pair(s) in window, {success} memory(ies) written to {output_path}")
+
+
+def _load_pairs_messages_from_file(
+    path: Path,
+) -> tuple[list[tuple[str, str]], dict[tuple[str, str], list[tuple[str, str]]], dict]:
+    """读入 --messages-output 写出的 JSON，返回 (pairs 有序列表, (user_id, agent_id) -> messages, query 元数据)。"""
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    if "query" not in data or "pairs_messages" not in data:
+        raise ValueError(f"JSON 缺少 query 或 pairs_messages: {path}")
+    pairs: list[tuple[str, str]] = []
+    messages_map: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for item in data["pairs_messages"]:
+        user_id = item["user_id"]
+        agent_id = item["agent_id"]
+        messages = [(m["role"], m["content"]) for m in item["messages"]]
+        pairs.append((user_id, agent_id))
+        messages_map[(user_id, agent_id)] = messages
+    return pairs, messages_map, data["query"]
+
+
+async def _run_from_messages_file(
+    festival_name: str,
+    festival_date: date,
+    prompt: str,
+    output_path: Path,
+    config: Optional[str],
+    messages_input_path: Path,
+) -> None:
+    """从 --messages-output 写出的 JSON 读入 pairs 与消息，用 messages_override 做抽取，输出格式与 _run 一致。"""
+    _ensure_config(config)
+    pairs, messages_map, file_query = _load_pairs_messages_from_file(messages_input_path)
+    from app.db.session import AsyncSessionLocal
+    from app.services.festival_memory_service import extract_festival_to_dict
+
+    memories: list[dict] = []
+    success = 0
+    async with AsyncSessionLocal() as db:
+        for user_id, agent_id in pairs:
+            messages = messages_map.get((user_id, agent_id), [])
+            logger.debug(f"extracting from messages file for user_id={user_id} agent_id={agent_id}")
+            d = await extract_festival_to_dict(
+                user_id,
+                agent_id,
+                festival_name,
+                festival_date,
+                prompt,
+                db=db,
+                messages_override=messages,
+            )
+            if d is not None:
+                memories.append(d)
+                success += 1
+    query: dict = dict(file_query)
+    query["festival_name"] = festival_name
+    query["festival_date"] = festival_date.isoformat()
+    payload = {
+        "query": query,
+        "summary": {
+            "total_pairs": len(pairs),
+            "success_count": success,
+            "failed_count": len(pairs) - success,
+        },
+        "memories": sorted(memories, key=_memory_sort_key),
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    n = len(pairs)
+    print(f"Done: {n} pair(s) from messages file, {success} memory(ies) written to {output_path}")
 
 
 async def _run_query(
@@ -162,10 +266,21 @@ def main(
         bool,
         cyclopts.Parameter(name="--query", help="仅查询 memory 表已有结果，不执行抽取"),
     ] = False,
+    messages_output: Annotated[
+        Optional[str],
+        cyclopts.Parameter(name="--messages-output", help="将每对 (user, agent) 的会话消息写入该 JSON 文件（仅抽取模式生效）"),
+    ] = None,
+    messages_input: Annotated[
+        Optional[str],
+        cyclopts.Parameter(name="--messages-input", help="从 --messages-output 写出的 JSON 读入消息并用于抽取，与直接抽取结果一致；与 --query 互斥"),
+    ] = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parsed_date = date.fromisoformat(festival_date)
     logger.debug(f"All arguments: {locals()}")
+    if query and messages_input:
+        print("错误: --query 与 --messages-input 不能同时使用", file=sys.stderr)
+        sys.exit(1)
     if query:
         asyncio.run(
             _run_query(
@@ -182,6 +297,18 @@ def main(
     if prompt is None or not prompt:
         print("错误: 请提供 --prompt 或 --prompt-file", file=sys.stderr)
         sys.exit(1)
+    if messages_input:
+        asyncio.run(
+            _run_from_messages_file(
+                festival_name=festival_name,
+                festival_date=parsed_date,
+                prompt=prompt,
+                output_path=Path(output),
+                config=config,
+                messages_input_path=Path(messages_input),
+            )
+        )
+        return
     asyncio.run(
         _run(
             festival_name=festival_name,
@@ -192,6 +319,7 @@ def main(
             output_path=Path(output),
             config=config,
             limit=limit,
+            messages_output_path=Path(messages_output) if messages_output else None,
         )
     )
 

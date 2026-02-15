@@ -211,14 +211,19 @@ async def summarize_memory_from_messages_between_user_and_agent(
     festival_name: str,
     festival_date: date,
     prompt_template: str,
+    messages_override: Optional[List[Tuple[str, str]]] = None,
 ) -> Optional[Memory]:
     """
     根据 (user_id, agent_id) 拉取会话消息、调用 LLM 抽取节日回忆摘要，并构造（未持久化的）Memory 行。
     失败（无消息、无摘要或过短、LLM 异常）时返回 None。
+    若传入 messages_override，则使用该消息列表，不再从 DB 拉取；用于脚本 --messages-input 与直接抽取结果一致。
     """
-    messages = await asyncio.to_thread(
-        get_messages_for_user_agent_sync, user_id, agent_id
-    )
+    if messages_override is not None:
+        messages = messages_override
+    else:
+        messages = await asyncio.to_thread(
+            get_messages_for_user_agent_sync, user_id, agent_id
+        )
     if not messages:
         logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
         return None
@@ -317,16 +322,22 @@ async def extract_festival_to_dict(
     festival_date: date,
     prompt_template: str,
     db: Optional[AsyncSession] = None,
+    messages_override: Optional[List[Tuple[str, str]]] = None,
 ) -> Optional[dict]:
     """
     与 extract_festival_and_save 相同的拉消息、拼 prompt、调 LLM 流程，
     但返回可 JSON 序列化的 dict，不写库。失败返回 None。
     若传入 db，会在返回的 dict 中附带 user_name、agent_name（从主库查 nickname/name）。
-    
+    若传入 messages_override，则使用该消息列表，不再从 DB 拉取；用于脚本 --messages-input。
     这个只用于离线脚本，在线服务不使用本函数。
     """
     memory_row = await summarize_memory_from_messages_between_user_and_agent(
-        user_id, agent_id, festival_name, festival_date, prompt_template
+        user_id,
+        agent_id,
+        festival_name,
+        festival_date,
+        prompt_template,
+        messages_override=messages_override,
     )
     if memory_row is None:
         return None

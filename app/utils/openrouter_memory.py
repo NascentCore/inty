@@ -4,3 +4,4 @@
 """
 
 DEFAULT_MEMORY_EXTRACTION_MODEL = "mistralai/devstral-2512"
+# DEFAULT_MEMORY_EXTRACTION_MODEL = "google/gemini-2.5-flash-lite"
