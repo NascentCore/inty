@@ -8,7 +8,9 @@ import pytest
 
 def _load_push_scheduler_service_module():
     fake_config = types.SimpleNamespace(
-        push_notification=types.SimpleNamespace(enabled=True, festival_memory_enabled=False),
+        push_notification=types.SimpleNamespace(
+            enabled=True, festival_memory_enabled=False, batch_size=128
+        ),
         memory_extraction=types.SimpleNamespace(enabled=True, cron_hour=3),
         user_analytics_report=types.SimpleNamespace(enabled=False),
     )
@@ -138,3 +140,59 @@ async def test_run_memory_extraction_uses_replica_for_read_and_primary_for_write
     assert mock_extract.await_args_list[0].kwargs == {"prefer_replica_read": True}
     assert mock_extract.await_args_list[1].args == (write_db, "u2")
     assert mock_extract.await_args_list[1].kwargs == {"prefer_replica_read": True}
+
+
+@pytest.mark.asyncio
+async def test_discover_new_users_prefers_replica_session_for_reads():
+    replica_db = AsyncMock()
+    primary_db = AsyncMock()
+    mock_discover = AsyncMock(return_value=5)
+
+    with (
+        patch.object(
+            push_scheduler_module,
+            "AsyncSessionLocalReplica",
+            _SessionFactory([replica_db]),
+        ),
+        patch.object(
+            push_scheduler_module,
+            "AsyncSessionLocal",
+            _SessionFactory([primary_db]),
+        ),
+        patch.object(push_scheduler_module, "discover_new_users_for_push", mock_discover),
+    ):
+        scheduler = PushSchedulerService()
+        await scheduler._discover_new_users()
+
+    mock_discover.assert_awaited_once_with(replica_db, batch_size=128)
+
+
+@pytest.mark.asyncio
+async def test_discover_updated_tokens_uses_replica_read_and_primary_write():
+    replica_db = AsyncMock()
+    primary_db = AsyncMock()
+    mock_discover = AsyncMock(return_value=3)
+
+    with (
+        patch.object(
+            push_scheduler_module,
+            "AsyncSessionLocalReplica",
+            _SessionFactory([replica_db]),
+        ),
+        patch.object(
+            push_scheduler_module,
+            "AsyncSessionLocal",
+            _SessionFactory([primary_db]),
+        ),
+        patch.object(
+            push_scheduler_module,
+            "discover_users_with_updated_tokens",
+            mock_discover,
+        ),
+    ):
+        scheduler = PushSchedulerService()
+        await scheduler._discover_users_with_updated_tokens()
+
+    mock_discover.assert_awaited_once()
+    assert mock_discover.await_args.args[0] is replica_db
+    assert mock_discover.await_args.kwargs == {"batch_size": 128, "write_db": primary_db}
