@@ -18,4 +18,20 @@
     <dimen name="moment_go_premium_inner_spacing">8dp</dimen>
     <dimen name="moment_vip_badge_padding_h">6dp</dimen>
     <dimen name="moment_vip_badge_padding_v">2dp</dimen>
+    <!-- Love Journal (Heartbeat) 列表与卡片 -->
+    <dimen name="heartbeat_card_elevation">4dp</dimen>
+    <dimen name="heartbeat_card_padding_horizontal">12dp</dimen>
+    <dimen name="heartbeat_card_padding_vertical">12dp</dimen>
+    <dimen name="heartbeat_card_inner_spacing">8dp</dimen>
+    <dimen name="heartbeat_list_spacing">12dp</dimen>
+    <dimen name="heartbeat_subtitle_bottom">16dp</dimen>
+    <dimen name="heartbeat_list_content_padding_bottom">24dp</dimen>
+    <dimen name="heartbeat_title_underline_height">4dp</dimen>
+    <dimen name="heartbeat_title_underline_spacing">4dp</dimen>
+    <!-- 标题下划线左侧圆角半径 -->
+    <dimen name="heartbeat_title_underline_corner_radius">2dp</dimen>
+    <!-- 顶栏左侧回退按钮占用宽度（padding_medium*2 + 图标宽），用于右侧 Spacer 使标题相对整屏居中 -->
+    <dimen name="heartbeat_top_bar_nav_icon_area_width">48dp</dimen>
+    <!-- More 面板中 Love Journal 项图标尺寸（较默认更大以达到合适视觉效果） -->
+    <dimen name="heartbeat_more_panel_icon_size">42dp</dimen>
 </resources>

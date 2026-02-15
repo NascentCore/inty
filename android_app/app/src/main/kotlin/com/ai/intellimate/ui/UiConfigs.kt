@@ -675,6 +675,9 @@ object UiConfigs {
         /** AI 消息宽度比例（相对于父容器） */
         const val AI_WIDTH_RATIO = 0.9f
 
+        /** Love Journal 通知条宽度比例（相对于父容器），小于 AI 气泡以区分样式 */
+        const val LoveJournalNotifyWidthRatio = 0.76f
+
         /** 用户消息宽度比例（相对于父容器） */
         const val USER_WIDTH_RATIO = 0.3f
 
