@@ -1,9 +1,13 @@
 #!/bin/bash -e
 
+# 脚本所在目录的绝对路径：BASH_SOURCE[0] 为当前脚本路径，dirname 取目录，cd 再 pwd 得到绝对路径。
+# 本地：脚本在 backend/push_worker/，SCRIPT_DIR 为仓库内该目录的绝对路径。
+# Docker：Dockerfile 将本脚本 COPY 到镜像根目录，CMD 执行 /start_push_worker.sh，故 SCRIPT_DIR=/。
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Find repo root (directory containing alembic/alembic.ini). Works when script lives in
-# backend/push_worker/ (local) or when copied to / in Docker.
+# 从 SCRIPT_DIR 向上查找包含 alembic/alembic.ini 的目录作为仓库根 ROOT。
+# 本地：backend/push_worker 下无 alembic/，循环上一级到仓库根即找到。
+# Docker：脚本在 /，镜像中已有 /alembic/alembic.ini（COPY alembic/ alembic/），不进入循环，ROOT 保持为 /。
 ROOT="$SCRIPT_DIR"
 while [ ! -f "$ROOT/alembic/alembic.ini" ] && [ "$ROOT" != "/" ]; do
   ROOT="$(cd "$ROOT/.." && pwd)"
