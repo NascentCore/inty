@@ -399,7 +399,9 @@ class PushSchedulerService:
                 if AsyncSessionLocalReplica is not None
                 else AsyncSessionLocal
             )
-            read_source = "replica" if AsyncSessionLocalReplica is not None else "primary"
+            read_source = (
+                "replica" if AsyncSessionLocalReplica is not None else "primary"
+            )
             logger.info(f"[记忆抽取] 用户筛选与历史读取将优先使用: {read_source}")
 
             async with read_session_factory() as read_db:
@@ -434,7 +436,9 @@ class PushSchedulerService:
                 if AsyncSessionLocalReplica is not None
                 else AsyncSessionLocal
             )
-            read_source = "replica" if AsyncSessionLocalReplica is not None else "primary"
+            read_source = (
+                "replica" if AsyncSessionLocalReplica is not None else "primary"
+            )
             logger.info(f"[节日记忆抽取] 配置与历史读取将优先使用: {read_source}")
 
             async with read_session_factory() as db:

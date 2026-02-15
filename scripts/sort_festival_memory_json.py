@@ -46,6 +46,8 @@ def main(
 
 
 if __name__ == "__main__":
-    app = cyclopts.App(help="按 (user_name, agent_name) 排序节日记忆 JSON 的 memories。")
+    app = cyclopts.App(
+        help="按 (user_name, agent_name) 排序节日记忆 JSON 的 memories。"
+    )
     app.default(main)
     app()

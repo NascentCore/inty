@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class LLMConfig(BaseModel):
     """LLM 模型配置，供 API 与内部统一使用。"""
+
     model: Optional[str] = Field(
         None,
         description="Model name, e.g. 'gpt-4o'. With aggregate providers (e.g. OpenRouter), use <provider>/<model> format.",
@@ -17,7 +18,10 @@ class LLMConfig(BaseModel):
     )
 
     top_p: Optional[float] = Field(
-        0.9, ge=0.0, le=1.0, description="""
+        0.9,
+        ge=0.0,
+        le=1.0,
+        description="""
         Top-P 采样会选择一个概率阈值 $p$（通常在 $0.1$ 到 $0.9$ 之间）。
         模型会将所有候选词按概率降序排列，然后从高到低逐个相加，直到这些词的累积概率之和达到或超过 $p$。
 
@@ -25,10 +29,14 @@ class LLMConfig(BaseModel):
         排序： 将词汇按概率从大到小排列。
         累加： 依次将概率相加：$P_1 + P_2 + \dots + P_n \ge p$。
         截断： 只从这前 $n$ 个词中进行最终采样，其余词被剔除。
-        """)
+        """,
+    )
 
     top_k: Optional[int] = Field(
-        60, ge=40, le=100, description="""
+        60,
+        ge=40,
+        le=100,
+        description="""
         当 LLM 预测下一个词时，它会给词汇表中的每个词分配一个概率分布。
         如果没有限制，模型可能会选到一个概率极低但极其离谱的词，
         导致生成内容断句异常或逻辑崩坏。
@@ -43,10 +51,14 @@ class LLMConfig(BaseModel):
         如果你希望结果有创意、像人类（如写小说、头脑风暴），
         通常设置 $K$ 在 $40$ 到 $100$ 之间，
         并配合 Temperature（温度） 参数一起使用。
-        """)
+        """,
+    )
 
     temperature: Optional[float] = Field(
-        0.7, ge=0.0, le=2.0, description="""
+        0.7,
+        ge=0.0,
+        le=2.0,
+        description="""
         在采样之前，模型会通过一个 Softmax 函数将原始分数（Logits）转化为概率。Temperature () 就在这个公式里：
 
         * **当  趋近于 0（低温）：** 概率分布变得极其“尖锐”。原本概率最高的词（比如 ）会瞬间膨胀到 ，而其他词几乎消失。模型变得极度自信、保守、死板。
@@ -88,11 +100,18 @@ class LLMConfig(BaseModel):
         1. **Top-K：** 限制“人数”（只要前 K 名）。
         2. **Top-P：** 限制“质量”（只要加起来够 P 概率）。
         3. **Temperature：** 改变“心态”（是保守稳重，还是放飞自我）。
-        """)
+        """,
+    )
 
     presence_penalty: Optional[float] = Field(
-        0.3, ge=-2.0, le=2.0, description="只要你提过这个词，我就打压它, higher means more likely to generate new tokens"
+        0.3,
+        ge=-2.0,
+        le=2.0,
+        description="只要你提过这个词，我就打压它, higher means more likely to generate new tokens",
     )
     frequency_penalty: Optional[float] = Field(
-        0.3, ge=-2.0, le=2.0, description="你提这个词次数越多，我打压得越狠。higher means less repetition"
+        0.3,
+        ge=-2.0,
+        le=2.0,
+        description="你提这个词次数越多，我打压得越狠。higher means less repetition",
     )

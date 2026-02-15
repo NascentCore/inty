@@ -297,7 +297,9 @@ async def summarize_memory_from_messages_between_user_and_agent(
     if not messages:
         logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
         return None
-    logger.debug(f"节日记忆抽取：user_id={user_id} agent_id={agent_id} 消息数={len(messages)}")
+    logger.debug(
+        f"节日记忆抽取：user_id={user_id} agent_id={agent_id} 消息数={len(messages)}"
+    )
     for msg in messages:
         logger.debug(f"message: {msg}")
     full_prompt, ext_llm_config = assemble_args(
@@ -468,7 +470,9 @@ async def query_festival_memories_from_db(
             "festival_name": row.festival_name,
             "festival_date": fd.isoformat() if isinstance(fd, date) else str(fd),
         }
-        user_name, agent_name = await _get_user_agent_names(db, row.user_id, row.agent_id)
+        user_name, agent_name = await _get_user_agent_names(
+            db, row.user_id, row.agent_id
+        )
         d["user_name"] = user_name or row.user_id
         d["agent_name"] = agent_name or row.agent_id
         out.append(d)
