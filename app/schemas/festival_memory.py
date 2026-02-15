@@ -2,10 +2,12 @@
 """节日记忆配置与执行相关 schema"""
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Optional
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.api.types.llm_config import LLMConfig
 
 RUN_AT_HOUR_MIN = 0
 RUN_AT_HOUR_MAX = 23
@@ -42,7 +44,7 @@ class FestivalMemoryConfigCreate(BaseModel):
         ge=1,
         description="窗口内最少用户消息轮数，不传则默认 15",
     )
-    llm_config: Optional[dict[str, Any]] = Field(
+    llm_config: Optional[LLMConfig] = Field(
         None,
         description="LLM 模型配置 JSON，null 表示使用全局默认",
     )
@@ -86,7 +88,7 @@ class FestivalMemoryConfigUpdate(BaseModel):
         ge=1,
         description="窗口内最少用户消息轮数，不传则默认 15",
     )
-    llm_config: Optional[dict[str, Any]] = Field(
+    llm_config: Optional[LLMConfig] = Field(
         None,
         description="LLM 模型配置 JSON，不传表示不更新，传 null 表示改为默认模型",
     )
@@ -121,9 +123,18 @@ class FestivalMemoryConfigInDB(BaseModel):
     min_rounds_in_window: Optional[int] = Field(
         None, description="窗口内最少用户消息轮数，NULL 表示默认 15"
     )
-    llm_config: Optional[dict[str, Any]] = Field(
+    llm_config: Optional[LLMConfig] = Field(
         None, description="LLM 模型配置 JSON，null 表示使用全局默认"
     )
+
+    @field_validator("llm_config", mode="before")
+    @classmethod
+    def _llm_config_from_dict(cls, v: object) -> Optional[LLMConfig]:
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return LLMConfig.model_validate(v)
+        return v
 
     class Config:
         from_attributes = True

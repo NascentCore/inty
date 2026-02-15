@@ -81,7 +81,7 @@ async def create_festival_memory_config(
         run_at_date=body.run_at_date,
         run_at_hour=body.run_at_hour,
         min_rounds_in_window=body.min_rounds_in_window,
-        llm_config=body.llm_config,
+        llm_config=body.llm_config.model_dump() if body.llm_config is not None else None,
     )
     db.add(config)
     await db.commit()
@@ -146,7 +146,9 @@ async def update_festival_memory_config(
     if body.min_rounds_in_window is not None:
         config.min_rounds_in_window = body.min_rounds_in_window
     if "llm_config" in body.model_fields_set:
-        config.llm_config = body.llm_config
+        config.llm_config = (
+            body.llm_config.model_dump() if body.llm_config is not None else None
+        )
     if (
         config.run_at_date is not None
         and config.festival_date is not None

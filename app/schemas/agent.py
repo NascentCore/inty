@@ -4,10 +4,13 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator
 
+from app.api.types.llm_config import LLMConfig
 from app.models.agent import AgentSource, AgentStatus, AgentVisibility
 from app.schemas.response import APIResponse, PaginationData
 from app.schemas.user import User
 from app.utils.image import ImageSize
+
+ModelConfig = LLMConfig
 
 
 class AgentMetaData(BaseModel):
@@ -95,44 +98,6 @@ class ExclusivePhotoItem(BaseModel):
     image_url: str = Field(..., description="照片地址（GCS 或 CDN）")
     caption: str = Field(..., description="文案")
     credits_required: int = Field(..., ge=0, description="解锁所需 credit 数量")
-
-
-class ModelConfig(BaseModel):
-    """AI模型配置"""
-
-    model: Optional[str] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-    temperature: Optional[float] = Field(
-        None, ge=0.0, le=2.0, description="Temperature for response generation"
-    )
-    max_tokens: Optional[int] = Field(
-        None, ge=1, le=8192, description="Maximum tokens in response"
-    )
-    top_p: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Top-p sampling parameter"
-    )
-    top_k: Optional[int] = Field(None, ge=1, description="Top-k sampling parameter")
-    frequency_penalty: Optional[float] = Field(
-        None, ge=-2.0, le=2.0, description="Frequency penalty"
-    )
-    presence_penalty: Optional[float] = Field(
-        None, ge=-2.0, le=2.0, description="Presence penalty"
-    )
-
-    @field_validator("temperature")
-    @classmethod
-    def validate_temperature(cls, v):
-        if v is not None and (v < 0.0 or v > 2.0):
-            raise ValueError("Temperature must be between 0.0 and 2.0")
-        return v
-
-    @field_validator("top_p")
-    @classmethod
-    def validate_top_p(cls, v):
-        if v is not None and (v < 0.0 or v > 1.0):
-            raise ValueError("Top-p must be between 0.0 and 1.0")
-        return v
 
 
 class AgentBase(BaseModel):
