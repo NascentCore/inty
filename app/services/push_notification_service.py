@@ -915,9 +915,24 @@ async def discover_new_users_for_push(
         return 0
 
 
+async def _has_updated_device_token_after(
+    db: AsyncSession, user_id: str, fcm_token_invalid_at: datetime.datetime
+) -> bool:
+    """检查用户是否存在晚于 invalid_at 的 device token。"""
+    device_token_stmt = (
+        select(DeviceToken.id)
+        .where(DeviceToken.user_id == user_id)
+        .where(DeviceToken.updated_at > fcm_token_invalid_at)
+        .limit(1)
+    )
+    device_token_result = await db.execute(device_token_stmt)
+    return device_token_result.first() is not None
+
+
 async def discover_users_with_updated_tokens(
     db: AsyncSession,
     batch_size: int = 1000,
+    write_db: Optional[AsyncSession] = None,
 ) -> int:
     """
     发现已更新 token 的用户（之前被标记为无效 token，但现在有新的 token）
@@ -928,12 +943,14 @@ async def discover_users_with_updated_tokens(
     使用循环处理机制，确保所有被标记的用户都能被处理。
 
     Args:
-        db: 数据库会话
+        db: 读数据库会话（可为 replica）
         batch_size: 每次处理的用户数量
+        write_db: 写数据库会话（默认与 db 相同，建议传主库会话）
 
     Returns:
         清除标记的用户数量
     """
+    write_session = write_db or db
     try:
         total_cleared_count = 0
         total_processed_count = 0
@@ -986,28 +1003,41 @@ async def discover_users_with_updated_tokens(
             for user_id, fcm_token_invalid_at in users_with_invalid_tokens:
                 try:
                     # 检查用户是否有新的 device_token（updated_at > fcm_token_invalid_at）
-                    device_token_stmt = (
-                        select(DeviceToken.id)
-                        .where(DeviceToken.user_id == user_id)
-                        .where(DeviceToken.updated_at > fcm_token_invalid_at)
-                        .limit(1)
+                    has_new_token = await _has_updated_device_token_after(
+                        db, user_id, fcm_token_invalid_at
                     )
-                    device_token_result = await db.execute(device_token_stmt)
-                    has_new_token = device_token_result.first() is not None
 
                     if has_new_token:
+                        # 迁移关键步骤：发现类查询可走副本，但写前需在主库二次校验避免副本延迟误判。
+                        if write_session is not db:
+                            has_new_token_on_primary = (
+                                await _has_updated_device_token_after(
+                                    write_session,
+                                    user_id,
+                                    fcm_token_invalid_at,
+                                )
+                            )
+                            if not has_new_token_on_primary:
+                                logger.debug(
+                                    "[token 更新扫描] 主库二次校验未通过，跳过清除标记: "
+                                    f"user_id={user_id}"
+                                )
+                                continue
+
                         # 清除标记
                         update_stmt = (
                             update(User)
                             .where(User.id == user_id)
+                            .where(User.fcm_token_invalid_at == fcm_token_invalid_at)
                             .values(fcm_token_invalid_at=None)
                         )
-                        await db.execute(update_stmt)
-                        batch_cleared_count += 1
-                        logger.debug(
-                            f"[token 更新扫描] 用户已更新 token，清除无效标记: user_id={user_id}, "
-                            f"invalid_at={fcm_token_invalid_at.isoformat()}"
-                        )
+                        update_result = await write_session.execute(update_stmt)
+                        if (update_result.rowcount or 0) > 0:
+                            batch_cleared_count += 1
+                            logger.debug(
+                                "[token 更新扫描] 用户已更新 token，清除无效标记: "
+                                f"user_id={user_id}, invalid_at={fcm_token_invalid_at.isoformat()}"
+                            )
 
                 except Exception as e:
                     logger.error(
@@ -1018,15 +1048,21 @@ async def discover_users_with_updated_tokens(
             # 每批处理完后立即提交事务，确保已处理的用户标记被清除
             if batch_cleared_count > 0:
                 try:
-                    await db.commit()
+                    await write_session.commit()
                     total_cleared_count += batch_cleared_count
                     logger.debug(
                         f"[token 更新扫描] 第 {iteration} 批完成: 清除 {batch_cleared_count} 个用户的无效 token 标记"
                     )
                 except Exception as e:
                     logger.error(f"[token 更新扫描] 提交事务失败: error={str(e)}")
-                    await db.rollback()
+                    await write_session.rollback()
                     # 继续处理下一批，不中断整个流程
+
+            if write_session is not db and batch_cleared_count == 0:
+                logger.info(
+                    "[token 更新扫描] 本批未清除任何标记，可能受副本延迟影响，提前结束本轮扫描"
+                )
+                break
 
             # 如果本批处理的用户数量少于 batch_size，说明已经处理完所有用户
             if batch_processed_count < batch_size:
@@ -1053,7 +1089,7 @@ async def discover_users_with_updated_tokens(
         import traceback
 
         logger.error(traceback.format_exc())
-        await db.rollback()
+        await write_session.rollback()
         return 0
 
 

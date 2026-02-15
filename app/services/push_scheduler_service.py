@@ -341,12 +341,20 @@ class PushSchedulerService:
             config = global_config_loaded_from_config_yaml.push_notification
             batch_size = config.batch_size
 
-            # 创建数据库会话
-            async with AsyncSessionLocal() as db:
+            read_session_factory = (
+                AsyncSessionLocalReplica
+                if AsyncSessionLocalReplica is not None
+                else AsyncSessionLocal
+            )
+            read_source = "replica" if AsyncSessionLocalReplica is not None else "primary"
+            logger.info(f"[新用户发现] 发现类读取将优先使用: {read_source}")
+
+            # 发现类查询只读，优先走副本；副本未配置时退回主库
+            async with read_session_factory() as read_db:
                 try:
                     # 发现新用户
                     new_users_count = await discover_new_users_for_push(
-                        db, batch_size=batch_size
+                        read_db, batch_size=batch_size
                     )
 
                     logger.info(
@@ -372,12 +380,22 @@ class PushSchedulerService:
             config = global_config_loaded_from_config_yaml.push_notification
             batch_size = config.batch_size
 
-            # 创建数据库会话
-            async with AsyncSessionLocal() as db:
+            read_session_factory = (
+                AsyncSessionLocalReplica
+                if AsyncSessionLocalReplica is not None
+                else AsyncSessionLocal
+            )
+            read_source = "replica" if AsyncSessionLocalReplica is not None else "primary"
+            logger.info(f"[token 更新扫描] 发现类读取将优先使用: {read_source}")
+
+            # 发现类读取优先副本，最终状态更新始终走主库
+            async with read_session_factory() as read_db, AsyncSessionLocal() as write_db:
                 try:
                     # 扫描已更新 token 的用户
                     cleared_count = await discover_users_with_updated_tokens(
-                        db, batch_size=batch_size
+                        read_db,
+                        batch_size=batch_size,
+                        write_db=write_db,
                     )
 
                     logger.info(
