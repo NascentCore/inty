@@ -112,6 +112,7 @@ fun Heartbeat(
 
 /**
  * Love Journal 顶栏标题 + 下划线。使用 SubcomposeLayout 先测量标题宽度，再按该宽度绘制下划线，保证与标题等长。
+ * 下划线为横向渐变：左侧为强调色（红橙），向右渐隐至透明，与设计稿一致。
  */
 @Composable
 private fun HeartbeatTitleWithUnderline(
@@ -139,13 +140,21 @@ private fun HeartbeatTitleWithUnderline(
                 .single()
         val underlineHeightPx = with(density) { underlineHeight.toPx().roundToInt() }
         val spacingPx = with(density) { underlineSpacing.toPx().roundToInt() }
+        val widthPx = textPlaceable.width.toFloat()
         val underlinePlaceable =
             subcompose("underline") {
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
                             .height(underlineHeight)
-                            .background(underlineColor),
+                            .background(
+                                brush =
+                                    Brush.linearGradient(
+                                        colors = listOf(underlineColor, Color.Transparent),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(widthPx, 0f),
+                                    ),
+                            ),
                 )
             }
                 .map {
