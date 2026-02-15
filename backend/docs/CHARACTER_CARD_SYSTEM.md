@@ -64,28 +64,6 @@ InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准
 
 ### 导入角色卡
 
-#### 从JSON数据导入
-
-```http
-POST /api/v1/agents/import-character-card
-Content-Type: application/json
-
-{
-  "card_data": {
-    "spec": "chara_card_v2",
-    "spec_version": "2.0",
-    "data": {
-      "name": "角色名称",
-      "description": "角色描述",
-      // ... 其他字段
-    }
-  },
-  "override_existing": false,
-  "import_character_book": true,
-  "import_alternate_greetings": true
-}
-```
-
 #### 从文件导入
 
 ```http
@@ -197,27 +175,9 @@ card_data = CharacterCardDataV2(
 card = CharacterCardV2(data=card_data)
 ```
 
-### 导入角色卡
+### 导入方式说明
 
-```python
-from app.services.character_card_service import character_card_service
-from app.schemas.character_card import CharacterCardImportRequest
-
-# 创建导入请求
-request = CharacterCardImportRequest(
-    card_data=card_data,
-    override_existing=False,
-    import_character_book=True,
-    import_alternate_greetings=True
-)
-
-# 导入角色卡
-result = await character_card_service.import_character_card(
-    request=request,
-    user_id="user_123",
-    db=db_session
-)
-```
+通过 HTTP 使用 `POST /api/v1/ai/agents/import-character-card-file`（multipart/form-data）上传文件即可。程序内：若已有解析好的角色卡数据（如从别处读入的 `CharacterCardImportRequest`），可调用服务层 `character_card_service.import_character_card(request, user_id, db)`；若为文件流，则使用 `character_card_service.import_character_card_from_file(...)`。
 
 ## 错误处理
 

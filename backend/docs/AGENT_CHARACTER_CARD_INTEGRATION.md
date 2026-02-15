@@ -191,7 +191,7 @@
 ## 测试与验证建议
 
 - **单元测试**：覆盖 `CharacterCardMapper` 映射、提示词模板渲染（含变量替换）、用户信息解析。
-- **集成测试**：验证 `import-character-card`、`export-character-card`、`character-card/features` 接口，以及聊天流程中系统消息顺序是否符合预期。
+- **集成测试**：验证 `import-character-card-file`、`export-character-card`、`character-card/features` 接口，以及聊天流程中系统消息顺序是否符合预期。
 - **回归测试**：确保无角色卡字段的旧 Agent 仍能成功聊天，缓存命中后配置变更可通过 `reload_agent` 生效。
 - **监控**：关注 token 消耗、缓存命中率、`AgentManager` 清理日志与异常。
 

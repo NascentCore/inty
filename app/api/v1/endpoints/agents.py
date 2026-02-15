@@ -32,7 +32,6 @@ from app.external_services.text_to_image import (
 )
 from app.schemas.character_card import (
     CharacterCardExportRequest,
-    CharacterCardImportRequest,
     CharacterCardImportResponse,
     CharacterCardValidationResponse,
 )
@@ -876,35 +875,6 @@ async def generate_background(
 
 
 @router.post(
-    "/import-character-card",
-    response_model=APIResponse[CharacterCardImportResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def import_character_card(
-    request: CharacterCardImportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    从JSON数据导入角色卡
-    """
-    try:
-        result = await character_card_service.import_character_card(
-            request=request, user_id=current_user.id, db=db
-        )
-
-        if result.success:
-            return APIResponse.success(data=result)
-        else:
-            return APIResponse.error(message=result.message, data=result)
-
-    except Exception as e:
-        logger.error(f"导入角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to import character card: {str(e)}")
-
-
-@router.post(
     "/import-character-card-file",
     response_model=APIResponse[CharacterCardImportResponse],
     include_in_schema=False,
@@ -941,6 +911,7 @@ async def import_character_card_file(
             return APIResponse.error(message=result.message, data=result)
 
     except Exception as e:
+        # API 边界：将未预期异常统一转为结构化错误响应，避免向调用方暴露 500 与内部细节
         logger.error(f"从文件导入角色卡失败: {str(e)}")
         return APIResponse.error(
             message=f"Failed to import character card from file: {str(e)}"
