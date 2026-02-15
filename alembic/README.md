@@ -1,5 +1,7 @@
 # Alembic - 数据库迁移
 
+配置文件位于 `alembic/alembic.ini`。从仓库根目录执行 alembic 时需指定配置：先 `export ALEMBIC_CONFIG=alembic/alembic.ini`，或使用 `alembic -c alembic/alembic.ini ...`。
+
 ## 增加新的 Alembic version 文件的步骤
 
 ```bash
@@ -8,9 +10,10 @@ docker rm -f -v pg-inty
 docker run --rm --name pg-inty -p 5432:5432 \
     -e POSTGRES_PASSWORD=sxwl666! -e POSTGRES_DB='inty' -d \
     postgres:16
-# 运行 alembic 将数据库升级到最新状态，此时必须确保没有新增的 alembic verison 文件！！！
+# 运行 alembic 将数据库升级到最新状态，此时必须确保没有新增的 alembic version 文件！！！
 cp devops/config.yaml.test config.yaml
 export PYTHONPATH=.
+export ALEMBIC_CONFIG=alembic/alembic.ini
 alembic upgrade head
 alembic revision --autogenerate -m "<revision description>"
 ```

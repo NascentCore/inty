@@ -23,7 +23,6 @@ on:
       - "tests/requirements.txt"
       # Alembic files
       - "alembic/**/*"
-      - "alembic.ini"
       # 这个是测试用配置文件
       - "devops/config.yaml.test"
       # 工作流文件
@@ -99,6 +98,7 @@ jobs:
       - name: Ensure single alembic head
         run: |
           export PYTHONPATH=.
+          export ALEMBIC_CONFIG=alembic/alembic.ini
           heads_count=$(alembic heads | wc -l)
           if [ "$heads_count" -ne 1 ]; then
             echo "Expected exactly one alembic head, got $heads_count:"
