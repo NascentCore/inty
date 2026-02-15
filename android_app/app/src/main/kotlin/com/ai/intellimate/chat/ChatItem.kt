@@ -499,20 +499,35 @@ private fun ChatItemFestivalMemory(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-
-    ChatItem(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.primary.copy(alpha = .5f),
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text =
-                buildAnnotatedString {
-                    append(stringResource(R.string.chat_festival_memory_notify, agentName))
-                },
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
-        )
+        ChatItem(
+            modifier = Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.LoveJournalNotifyWidthRatio),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        ) {
+            Text(
+                text =
+                    buildAnnotatedString {
+                        val fullText = stringResource(R.string.chat_festival_memory_notify, agentName)
+                        val boldPhrase = "Love Journal"
+                        val start = fullText.indexOf(boldPhrase)
+                        if (start >= 0) {
+                            append(fullText.substring(0, start))
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(boldPhrase)
+                            }
+                            append(fullText.substring(start + boldPhrase.length))
+                        } else {
+                            append(fullText)
+                        }
+                    },
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
+            )
+        }
     }
 }
 
