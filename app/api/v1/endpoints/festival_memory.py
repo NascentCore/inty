@@ -220,13 +220,13 @@ async def run_festival_memory_extraction(
         )
         llm_config = None
 
-    from app.core.config import global_config_loaded_from_config_yaml
-
-    db_url = global_config_loaded_from_config_yaml.database.url
+    read_db_url = festival_memory_service.resolve_sync_read_db_url(
+        prefer_replica_read=True
+    )
     pairs = await asyncio.to_thread(
         festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
         festival_date,
-        db_url,
+        read_db_url,
         min_rounds,
         tz_str,
     )
@@ -242,6 +242,7 @@ async def run_festival_memory_extraction(
             festival_date,
             prompt,
             llm_config=llm_config,
+            prefer_replica_read=True,
         )
         if ok:
             success += 1
