@@ -30,7 +30,6 @@ from app.external_services.text_to_image import (
     TextToImageProvider,
     generate_text_to_image,
 )
-from app.schemas.character_card import CharacterCardValidationResponse
 from app.schemas.response import (
     APIResponse,
     BusinessErrorCode,
@@ -904,27 +903,6 @@ async def get_agent_character_card(
     except Exception as e:
         logger.error(f"获取角色卡数据失败: {str(e)}")
         return APIResponse.error(message=f"Failed to get character card data: {str(e)}")
-
-
-@router.post(
-    "/validate-character-card",
-    response_model=APIResponse[CharacterCardValidationResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def validate_character_card(
-    card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
-):
-    """
-    验证角色卡数据格式
-    """
-    try:
-        result = await character_card_service.validate_character_card(card_data)
-        return APIResponse.success(data=result)
-
-    except Exception as e:
-        logger.error(f"验证角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to validate character card: {str(e)}")
 
 
 @router.get(
