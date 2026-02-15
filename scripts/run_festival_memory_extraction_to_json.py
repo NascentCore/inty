@@ -48,6 +48,14 @@ def _ensure_config(config_path: Optional[str]) -> None:
             sys.exit(1)
 
 
+def _memory_sort_key(item: dict) -> tuple[str, str]:
+    """与 sort_festival_memory_json 一致的 (user_name, agent_name) 排序键。"""
+    return (
+        item.get("user_name") or item.get("user_id") or "",
+        item.get("agent_name") or item.get("agent_id") or "",
+    )
+
+
 async def _run(
     festival_name: str,
     festival_date: date,
@@ -98,7 +106,7 @@ async def _run(
             "success_count": success,
             "failed_count": len(pairs) - success,
         },
-        "memories": memories,
+        "memories": sorted(memories, key=_memory_sort_key),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
@@ -129,7 +137,7 @@ async def _run_query(
     payload = {
         "query": query_meta,
         "summary": {"total_count": len(memories)},
-        "memories": memories,
+        "memories": sorted(memories, key=_memory_sort_key),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
