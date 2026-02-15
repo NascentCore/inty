@@ -206,6 +206,46 @@ def test_get_pairs_with_min_rounds_fallbacks_to_primary_when_replica_connect_fai
     assert primary_conn.closed is True
 
 
+def test_get_pairs_with_min_rounds_skips_official_assistant_agent():
+    primary_db_url = "postgresql://primary-host:5432/inty"
+    official_agent_id = festival_memory_service.INTELLIMATE_OFFICIAL_AGENT_ID
+    primary_conn = _FakeConnection(
+        fetchall_results=[
+            [
+                ("user-1", official_agent_id, "chat-official"),
+                ("user-2", "agent-2", "chat-2"),
+            ],
+            [("session-chat-official", 20), ("session-chat-2", 20)],
+        ]
+    )
+
+    with (
+        patch.object(
+            festival_memory_service,
+            "global_config_loaded_from_config_yaml",
+            MagicMock(database=MagicMock(url=primary_db_url)),
+        ),
+        patch.object(
+            festival_memory_service.psycopg,
+            "connect",
+            return_value=primary_conn,
+        ),
+        patch.object(
+            festival_memory_service,
+            "generate_session_id",
+            side_effect=lambda chat_id: f"session-{chat_id}",
+        ),
+    ):
+        pairs = festival_memory_service.get_pairs_with_min_rounds_in_window_sync(
+            festival_date=date(2026, 2, 14),
+            db_url=primary_db_url,
+            min_rounds=15,
+            timezone_str="UTC",
+        )
+
+    assert pairs == [("user-2", "agent-2")]
+
+
 def test_get_messages_for_user_agent_sync_prefers_replica_connection():
     replica_conn = _FakeConnection(
         fetchone_results=[("chat-1",)],

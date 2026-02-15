@@ -36,7 +36,7 @@ CREATED_BY_AGENT
 
 ## 抽取逻辑
 
-1. **筛选**：对每条节日配置按其 `timezone` 与 `festival_date` 确定时间窗：**该时区下节日自然日 00:00 至次日 04:00**（共 28 小时）换算为 UTC 的区间；从 `chats` 与 `chat_history` 统计在该时间窗内每个 (user_id, agent_id) 会话的用户消息数（排除开场白），仅对**该窗口内**消息数 ≥ 配置的 `min_rounds_in_window`（可选，默认 15）的组合进行抽取。
+1. **筛选**：对每条节日配置按其 `timezone` 与 `festival_date` 确定时间窗：**该时区下节日自然日 00:00 至次日 04:00**（共 28 小时）换算为 UTC 的区间；从 `chats` 与 `chat_history` 统计在该时间窗内每个 (user_id, agent_id) 会话的用户消息数（排除开场白），仅对**该窗口内**消息数 ≥ 配置的 `min_rounds_in_window`（可选，默认 15）的组合进行抽取。筛选阶段会跳过官方 IntelliMate Assistant 角色（`INTELLIMATE_AGENT_ID`），仅总结非官方助手角色。
 2. **拉取**：按 (user_id, agent_id) 拉取该用户与该角色的单会话消息，格式与现有记忆抽取一致。
 3. **LLM**：使用配置的提示词 + 节日名称、日期作为上下文，调用 OpenRouter 抽取该节日相关回忆摘要。若配置的 **llm_config** 存在且含 `model`，则使用其 `model`、`temperature`、`max_tokens`；否则使用全局默认（如 `mistralai/devstral-2512`）。
 4. **写入**：同一 (user_id, agent_id, festival_name, festival_date) 先 DELETE 再 INSERT 一条 `memory`（整批替换），**不**在此处写入 chat_history；`delivery_at` 保持 NULL。

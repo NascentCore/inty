@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import psycopg
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.agent.agent_prompt_configs import INTELLIMATE_AGENT_ID
 from app.models.agent import Agent
 from app.models.memory import Memory
 from app.models.user import User
@@ -34,6 +35,12 @@ from app.utils.openrouter_memory import (
 
 _MAX_IN_PARAMS = 5000
 DEFAULT_MIN_ROUNDS_IN_WINDOW = 15
+INTELLIMATE_OFFICIAL_AGENT_ID = INTELLIMATE_AGENT_ID
+
+
+def _should_skip_agent_for_festival_memory_extraction(agent_id: Optional[str]) -> bool:
+    """节日记忆提取中跳过官方助手角色。"""
+    return bool(agent_id) and agent_id == INTELLIMATE_OFFICIAL_AGENT_ID
 
 
 def _get_sync_replica_db_url() -> Optional[str]:
@@ -103,8 +110,14 @@ def get_pairs_with_min_rounds_in_window_sync(
             rows = cur.fetchall()
         if not rows:
             return []
-        chat_to_ua = {(r[2]): (r[0], r[1]) for r in rows}
-        session_ids = [generate_session_id(r[2]) for r in rows]
+        chat_to_ua = {}
+        for user_id, agent_id, chat_id in rows:
+            if _should_skip_agent_for_festival_memory_extraction(agent_id):
+                continue
+            chat_to_ua[chat_id] = (user_id, agent_id)
+        if not chat_to_ua:
+            return []
+        session_ids = [generate_session_id(chat_id) for chat_id in chat_to_ua]
         session_to_count = {}
         for i in range(0, len(session_ids), _MAX_IN_PARAMS):
             chunk = session_ids[i : i + _MAX_IN_PARAMS]
