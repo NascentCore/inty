@@ -62,20 +62,6 @@ InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准
 
 ## API接口
 
-### 导入角色卡
-
-#### 从文件导入
-
-```http
-POST /api/v1/agents/import-character-card-file
-Content-Type: multipart/form-data
-
-file: [角色卡文件]
-override_existing: false
-import_character_book: true
-import_alternate_greetings: true
-```
-
 ### 导出角色卡
 
 #### 导出为角色卡格式
@@ -177,7 +163,7 @@ card = CharacterCardV2(data=card_data)
 
 ### 导入方式说明
 
-通过 HTTP 使用 `POST /api/v1/ai/agents/import-character-card-file`（multipart/form-data）上传文件即可。程序内：若已有解析好的角色卡数据（如从别处读入的 `CharacterCardImportRequest`），可调用服务层 `character_card_service.import_character_card(request, user_id, db)`；若为文件流，则使用 `character_card_service.import_character_card_from_file(...)`。
+程序内：若已有解析好的角色卡数据（如从别处读入的 `CharacterCardImportRequest`），可调用服务层 `character_card_service.import_character_card(request, user_id, db)`。
 
 ## 错误处理
 
