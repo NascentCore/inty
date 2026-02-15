@@ -22,9 +22,9 @@ from app.models.user import User
 from app.services.chat_history_service import get_chat_history_connection
 from app.services.chat_service import generate_session_id
 from app.services.memory_service import MEMORY_TYPE_FESTIVAL
+from app.utils.openai_client import chat_completion_for_extraction
 from app.utils.openrouter_memory import (
     DEFAULT_MEMORY_EXTRACTION_MODEL as DEFAULT_FESTIVAL_EXTRACTION_MODEL,
-    call_openrouter_for_extraction,
 )
 
 _MAX_IN_PARAMS = 5000
@@ -227,7 +227,7 @@ async def summarize_memory_from_messages_between_user_and_agent(
         logger.debug(f"message: {msg}")
     args = assemble_args(messages, festival_name, festival_date, prompt_template)
     try:
-        summary, _, _ = await call_openrouter_for_extraction(*args)
+        summary, _, _ = await chat_completion_for_extraction(*args)
         if not summary or len(summary.strip()) < 10:
             return None
         summary = summary.strip()

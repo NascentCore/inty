@@ -24,7 +24,7 @@ CREATED_BY_AGENT
   - `cron_hour`：UTC 小时，每日执行，默认 `3`
   - `trigger_new_user_messages`：新用户总消息数阈值，默认 `30`
   - `trigger_incremental_messages`：已提取用户自上次后新增消息数阈值，默认 `30`
-- 记忆抽取使用 OpenRouter（`app.utils.openrouter_memory.call_openrouter_for_extraction()`，`agent.base_url` 与 `agent.api_key`）。
+- 记忆抽取使用 OpenRouter（`app.utils.openai_client.chat_completion_for_extraction()`，基于 AsyncOpenAI，`agent.base_url` 与 `agent.api_key`）。
 
 ### 3. 记忆读取服务（`app/services/memory_service.py`）
 
@@ -38,7 +38,7 @@ CREATED_BY_AGENT
   - 新用户：总消息数 ≥ `trigger_new_user_messages`
   - 已提取用户：自上次 `extracted_at` 后新增消息数 ≥ `trigger_incremental_messages`
 - **get_all_messages_for_user(user_id)**：拉取该用户在所有会话中的全部消息 `(role, content)`，按 `created_at` 升序；不按 agent 过滤，不限制条数。
-- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **OpenRouter**（`call_openrouter_for_extraction`，默认模型 `mistralai/devstral-2512`）调用 LLM、从响应 `usage` 读取 token 消耗、记录端到端耗时、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
+- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **OpenRouter**（`app.utils.openai_client.chat_completion_for_extraction`，默认模型 `mistralai/devstral-2512`）调用 LLM、从响应 `usage` 读取 token 消耗、记录端到端耗时、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
 - **提示词**：`app/core/prompting/memory_extraction_prompt.txt`（英文）。
 - **\_extract_part1_summary(full_analysis)**：从 LLM 完整回复中解析 Part 1；支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等中英文 fallback 正则；Part 1 过短（≤50 字）时回退到约 2000 字或全文。
 

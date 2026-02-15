@@ -69,7 +69,7 @@ CREATED_BY_AGENT
 ### festival_memory_service 重构
 
 - **可组合函数**：拉消息、拼 prompt、调 LLM、写库 拆分为可复用单元，便于写库与「只出 JSON」两种路径共用。
-- **`assemble_args(messages, festival_name, festival_date, prompt_template)`**：根据会话消息与节日参数组装 `call_openrouter_for_extraction` 的 (full_prompt, model, max_tokens, temperature)，供 `extract_festival_and_save` 与 `extract_festival_to_dict` 复用。
+- **`assemble_args(messages, festival_name, festival_date, prompt_template)`**：根据会话消息与节日参数组装 `chat_completion_for_extraction`（openai_client）的 (full_prompt, model, max_tokens, temperature)，供 `extract_festival_and_save` 与 `extract_festival_to_dict` 复用。
 - **`summarize_memory_from_messages_between_user_and_agent(user_id, agent_id, festival_name, festival_date, prompt_template)`**：拉取该 (user_id, agent_id) 会话消息 → 调用 LLM 抽取摘要 → 返回**未持久化**的 `Memory` 对象；无消息、摘要过短或 LLM 异常时返回 `None`。写库与 to_dict 均先调此函数再分别做「delete + add + commit」或「转 dict」。
 - **`extract_festival_and_save`**：先 `summarize_memory_from_messages_between_user_and_agent`，若得 `Memory` 则对同 (user_id, agent_id, festival_name, festival_date) 做 DELETE 后 INSERT 并 commit。
 - **`extract_festival_to_dict`**：仅用于离线脚本；先 `summarize_memory_from_messages_between_user_and_agent`，再转为与下文 query 一致的 dict 结构，可选附带 user_name、agent_name。

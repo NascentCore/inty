@@ -9,12 +9,12 @@ Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
 import os
 import threading
 from enum import StrEnum
-from typing import Optional
+from typing import Optional, Tuple
 
 from langchain_core.messages import BaseMessage
 from langsmith import traceable, wrappers
 from loguru import logger
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from typing_extensions import deprecated
 
 from app.core.config import Environment, global_config_loaded_from_config_yaml
@@ -63,6 +63,9 @@ _warn_env_var("LANGSMITH_PROJECT")
 _base_client: Optional[OpenAI] = None
 _client_lock = threading.Lock()
 
+_async_client: Optional[AsyncOpenAI] = None
+_async_client_lock = threading.Lock()
+
 
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
@@ -99,6 +102,62 @@ def get_base_openai_client() -> OpenAI:
                 logger.debug("创建全局基础OpenAI客户端")
                 _base_client = _create_openai_client()
     return _base_client
+
+
+def _create_async_openai_client() -> AsyncOpenAI:
+    """创建 AsyncOpenAI 客户端，与 sync 客户端相同配置（base_url、api_key、OpenRouter headers）。"""
+    # 测试环境也使用真实 AsyncOpenAI；需 mock 的测试会 patch chat_completion_for_extraction。
+    return AsyncOpenAI(
+        base_url=global_config_loaded_from_config_yaml.agent.base_url,
+        api_key=global_config_loaded_from_config_yaml.agent.api_key,
+        default_headers={
+            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",
+            "X-Title": global_config_loaded_from_config_yaml.app.name,
+        },
+        timeout=120.0,
+    )
+
+
+def get_async_openai_client() -> AsyncOpenAI:
+    """
+    获取全局单例的 AsyncOpenAI 客户端。
+    用于记忆抽取等异步调用，与 get_base_openai_client() 配置一致。
+    """
+    global _async_client
+    if _async_client is None:
+        with _async_client_lock:
+            if _async_client is None:
+                logger.debug("创建全局 AsyncOpenAI 客户端")
+                _async_client = _create_async_openai_client()
+    return _async_client
+
+
+async def chat_completion_for_extraction(
+    prompt: str,
+    model: Optional[str] = None,
+    max_tokens: int = 4000,
+    temperature: float = 0.3,
+) -> Tuple[str, int | None, int | None]:
+    """
+    异步调用 chat completions 用于记忆抽取。
+    返回 (content, prompt_tokens, completion_tokens)。
+    """
+    from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
+
+    if model is None:
+        model = DEFAULT_MEMORY_EXTRACTION_MODEL
+    client = get_async_openai_client()
+    response = await client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+    content = (response.choices[0].message.content or "") if response.choices else ""
+    usage = response.usage
+    prompt_tokens = usage.prompt_tokens if usage else None
+    completion_tokens = usage.completion_tokens if usage else None
+    return (content, prompt_tokens, completion_tokens)
 
 
 def wrap_client_with_langsmith(
