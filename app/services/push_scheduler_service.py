@@ -429,7 +429,15 @@ class PushSchedulerService:
         try:
             logger.info("[节日记忆抽取] 开始...")
             now = datetime.datetime.now(dt_timezone.utc)
-            async with AsyncSessionLocal() as db:
+            read_session_factory = (
+                AsyncSessionLocalReplica
+                if AsyncSessionLocalReplica is not None
+                else AsyncSessionLocal
+            )
+            read_source = "replica" if AsyncSessionLocalReplica is not None else "primary"
+            logger.info(f"[节日记忆抽取] 配置与历史读取将优先使用: {read_source}")
+
+            async with read_session_factory() as db:
                 result = await db.execute(
                     select(FestivalMemoryConfig).where(
                         FestivalMemoryConfig.enabled.is_(True),
@@ -488,11 +496,13 @@ class PushSchedulerService:
                     getattr(config, "min_rounds_in_window", None)
                     or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
                 )
-                db_url = global_config_loaded_from_config_yaml.database.url
+                read_db_url = festival_memory_service.resolve_sync_read_db_url(
+                    prefer_replica_read=True
+                )
                 pairs = await asyncio.to_thread(
                     festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
                     config.festival_date,
-                    db_url,
+                    read_db_url,
                     min_rounds,
                     tz_str,
                 )
@@ -512,6 +522,7 @@ class PushSchedulerService:
                                     if raw_llm is not None
                                     else None
                                 ),
+                                prefer_replica_read=True,
                             )
                         except Exception as e:
                             await db.rollback()

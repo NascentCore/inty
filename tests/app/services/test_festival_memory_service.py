@@ -4,6 +4,7 @@
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import psycopg
 import pytest
 from pydantic import ValidationError
 
@@ -115,3 +116,165 @@ class TestAssembleArgs:
         )
         assert ext_llm_config.max_tokens == 2000
         assert ext_llm_config.temperature == 0.0
+
+
+class _FakeCursor:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, query, params=None):
+        self._conn.executed.append((query, params))
+
+    def fetchall(self):
+        if self._conn.fetchall_index >= len(self._conn.fetchall_results):
+            return []
+        result = self._conn.fetchall_results[self._conn.fetchall_index]
+        self._conn.fetchall_index += 1
+        return result
+
+    def fetchone(self):
+        if self._conn.fetchone_index >= len(self._conn.fetchone_results):
+            return None
+        result = self._conn.fetchone_results[self._conn.fetchone_index]
+        self._conn.fetchone_index += 1
+        return result
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+class _FakeConnection:
+    def __init__(self, *, fetchall_results=None, fetchone_results=None):
+        self.fetchall_results = fetchall_results or []
+        self.fetchone_results = fetchone_results or []
+        self.fetchall_index = 0
+        self.fetchone_index = 0
+        self.executed = []
+        self.closed = False
+
+    def cursor(self):
+        return _FakeCursor(self)
+
+    def close(self):
+        self.closed = True
+
+
+def test_get_pairs_with_min_rounds_fallbacks_to_primary_when_replica_connect_fails():
+    replica_db_url = "postgresql://replica-host:5432/inty"
+    primary_db_url = "postgresql://primary-host:5432/inty"
+    primary_conn = _FakeConnection(
+        fetchall_results=[
+            [("user-1", "agent-1", "chat-1"), ("user-2", "agent-2", "chat-2")],
+            [("session-chat-1", 20), ("session-chat-2", 10)],
+        ]
+    )
+
+    with (
+        patch.object(
+            festival_memory_service,
+            "global_config_loaded_from_config_yaml",
+            MagicMock(database=MagicMock(url=primary_db_url)),
+        ),
+        patch.object(
+            festival_memory_service.psycopg,
+            "connect",
+            side_effect=[
+                psycopg.OperationalError("replica down"),
+                primary_conn,
+            ],
+        ) as mock_connect,
+        patch.object(
+            festival_memory_service,
+            "generate_session_id",
+            side_effect=lambda chat_id: f"session-{chat_id}",
+        ),
+    ):
+        pairs = festival_memory_service.get_pairs_with_min_rounds_in_window_sync(
+            festival_date=date(2026, 2, 14),
+            db_url=replica_db_url,
+            min_rounds=15,
+            timezone_str="UTC",
+        )
+
+    assert pairs == [("user-1", "agent-1")]
+    assert mock_connect.call_count == 2
+    assert mock_connect.call_args_list[0].args[0] == replica_db_url
+    assert mock_connect.call_args_list[1].args[0] == primary_db_url
+    assert primary_conn.closed is True
+
+
+def test_get_messages_for_user_agent_sync_prefers_replica_connection():
+    replica_conn = _FakeConnection(
+        fetchone_results=[("chat-1",)],
+        fetchall_results=[
+            [
+                ({"type": "human", "data": {"content": "hi"}},),
+                ({"type": "ai", "data": {"content": "hello"}},),
+            ]
+        ],
+    )
+
+    with (
+        patch.object(
+            festival_memory_service,
+            "get_chat_history_replica_connection",
+            return_value=replica_conn,
+        ) as mock_replica_conn,
+        patch.object(
+            festival_memory_service, "get_chat_history_connection"
+        ) as mock_primary_conn,
+        patch.object(
+            festival_memory_service,
+            "generate_session_id",
+            return_value="session-chat-1",
+        ),
+    ):
+        rows = festival_memory_service.get_messages_for_user_agent_sync(
+            "user-1",
+            "agent-1",
+            prefer_replica_read=True,
+        )
+
+    assert rows == [("user", "hi"), ("assistant", "hello")]
+    mock_replica_conn.assert_called_once()
+    mock_primary_conn.assert_not_called()
+
+
+def test_get_messages_for_user_agent_sync_fallbacks_to_primary_when_replica_fails():
+    primary_conn = _FakeConnection(
+        fetchone_results=[("chat-1",)],
+        fetchall_results=[
+            [
+                ({"type": "human", "data": {"content": "fallback"}},),
+            ]
+        ],
+    )
+
+    with (
+        patch.object(
+            festival_memory_service,
+            "get_chat_history_replica_connection",
+            side_effect=psycopg.OperationalError("replica unavailable"),
+        ),
+        patch.object(
+            festival_memory_service,
+            "get_chat_history_connection",
+            return_value=primary_conn,
+        ) as mock_primary_conn,
+        patch.object(
+            festival_memory_service,
+            "generate_session_id",
+            return_value="session-chat-1",
+        ),
+    ):
+        rows = festival_memory_service.get_messages_for_user_agent_sync(
+            "user-1",
+            "agent-1",
+            prefer_replica_read=True,
+        )
+
+    assert rows == [("user", "fallback")]
+    mock_primary_conn.assert_called_once()

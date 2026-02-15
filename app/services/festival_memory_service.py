@@ -21,7 +21,10 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import Agent
 from app.models.memory import Memory
 from app.models.user import User
-from app.services.chat_history_service import get_chat_history_connection
+from app.services.chat_history_service import (
+    get_chat_history_connection,
+    get_chat_history_replica_connection,
+)
 from app.services.chat_service import generate_session_id
 from app.services.memory_service import MEMORY_TYPE_FESTIVAL
 from app.utils.openai_client import chat_completion_for_extraction
@@ -31,6 +34,21 @@ from app.utils.openrouter_memory import (
 
 _MAX_IN_PARAMS = 5000
 DEFAULT_MIN_ROUNDS_IN_WINDOW = 15
+
+
+def _get_sync_replica_db_url() -> Optional[str]:
+    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    if not async_replica_url:
+        return None
+    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+
+def resolve_sync_read_db_url(prefer_replica_read: bool = False) -> str:
+    primary_url = global_config_loaded_from_config_yaml.database.url
+    if not prefer_replica_read:
+        return primary_url
+    replica_url = _get_sync_replica_db_url()
+    return replica_url or primary_url
 
 
 def _window_for_festival_date(
@@ -66,7 +84,15 @@ def get_pairs_with_min_rounds_in_window_sync(
     """
     window_start, window_end = _window_for_festival_date(festival_date, timezone_str)
     logger.debug(f"connecting to database: {db_url}")
-    conn = psycopg.connect(db_url, autocommit=True)
+    primary_db_url = global_config_loaded_from_config_yaml.database.url
+    try:
+        conn = psycopg.connect(db_url, autocommit=True)
+    except psycopg.Error as e:
+        if db_url != primary_db_url:
+            logger.warning(f"[节日记忆抽取] 副本连接失败，回退主库继续筛选 pairs: {e}")
+            conn = psycopg.connect(primary_db_url, autocommit=True)
+        else:
+            raise
     try:
         with conn.cursor() as cur:
             cur.execute("""
@@ -111,13 +137,28 @@ def get_pairs_with_min_rounds_in_window_sync(
 
 
 def get_messages_for_user_agent_sync(
-    user_id: str, agent_id: str, connection: Optional[Any] = None
+    user_id: str,
+    agent_id: str,
+    connection: Optional[Any] = None,
+    prefer_replica_read: bool = False,
 ) -> List[Tuple[str, str]]:
     """
     拉取该用户与该角色的单会话消息 (role, content)，按 created_at 升序。
-    connection 可选；不传则使用 get_chat_history_connection()（主库）。
+    connection 可选；不传时，prefer_replica_read=true 则优先副本，失败回退主库。
     """
-    conn = connection if connection is not None else get_chat_history_connection()
+    if connection is not None:
+        conn = connection
+    else:
+        conn = None
+        if prefer_replica_read:
+            try:
+                conn = get_chat_history_replica_connection()
+            except psycopg.Error as e:
+                logger.warning(
+                    f"[节日记忆抽取] 获取副本连接失败，回退主库读取会话消息: {e}"
+                )
+        if conn is None:
+            conn = get_chat_history_connection()
     with conn.cursor() as cur:
         cur.execute(
             "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true LIMIT 1",
@@ -236,6 +277,7 @@ async def summarize_memory_from_messages_between_user_and_agent(
     prompt_template: str,
     messages_override: Optional[List[Tuple[str, str]]] = None,
     llm_config: Optional[Union[LLMConfig, dict]] = None,
+    prefer_replica_read: bool = False,
 ) -> Optional[Memory]:
     """
     根据 (user_id, agent_id) 拉取会话消息、调用 LLM 抽取节日回忆摘要，并构造（未持久化的）Memory 行。
@@ -246,7 +288,11 @@ async def summarize_memory_from_messages_between_user_and_agent(
         messages = messages_override
     else:
         messages = await asyncio.to_thread(
-            get_messages_for_user_agent_sync, user_id, agent_id
+            get_messages_for_user_agent_sync,
+            user_id,
+            agent_id,
+            None,
+            prefer_replica_read,
         )
     if not messages:
         logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
@@ -289,6 +335,7 @@ async def extract_festival_and_save(
     festival_date: date,
     prompt_template: str,
     llm_config: Optional[Union[LLMConfig, dict]] = None,
+    prefer_replica_read: bool = False,
 ) -> bool:
     """
     对 (user_id, agent_id) 拉取该会话消息、按节日提示词调用 LLM 抽取回忆摘要，
@@ -302,6 +349,7 @@ async def extract_festival_and_save(
         festival_date,
         prompt_template,
         llm_config=llm_config,
+        prefer_replica_read=prefer_replica_read,
     )
     if memory_row is None:
         return False
