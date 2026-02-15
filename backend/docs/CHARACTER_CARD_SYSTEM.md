@@ -64,20 +64,6 @@ InTy后端支持SillyTavern角色卡V2规范，允许用户导入和导出标准
 
 ### 导出角色卡
 
-#### 导出为角色卡格式
-
-```http
-POST /api/v1/agents/export-character-card
-Content-Type: application/json
-
-{
-  "agent_id": "agent_123",
-  "include_character_book": true,
-  "include_alternate_greetings": true,
-  "include_extensions": true
-}
-```
-
 #### 获取角色卡数据
 
 ```http

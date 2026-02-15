@@ -30,10 +30,7 @@ from app.external_services.text_to_image import (
     TextToImageProvider,
     generate_text_to_image,
 )
-from app.schemas.character_card import (
-    CharacterCardExportRequest,
-    CharacterCardValidationResponse,
-)
+from app.schemas.character_card import CharacterCardValidationResponse
 from app.schemas.response import (
     APIResponse,
     BusinessErrorCode,
@@ -871,39 +868,6 @@ async def generate_background(
 
 
 # ==================== 角色卡相关API端点 ====================
-
-
-@router.post(
-    "/export-character-card",
-    response_model=APIResponse[dict],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def export_character_card(
-    request: CharacterCardExportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    导出Agent为角色卡格式
-    """
-    try:
-        card_data = await character_card_service.export_agent_to_character_card(
-            agent_id=request.agent_id,
-            user_id=current_user.id,
-            db=db,
-            include_character_book=request.include_character_book,
-            include_alternate_greetings=request.include_alternate_greetings,
-            include_extensions=request.include_extensions,
-        )
-
-        return APIResponse.success(data=card_data.dict())
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"导出角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to export character card: {str(e)}")
 
 
 @router.get(
