@@ -26,6 +26,14 @@
 
 ## 软件工程规范
 
+- **代码结构规范**
+  1. Functions should be composable, prefer `func a(), func b(), func c() { a(); b() }`
+     over `func a(), func b() { a() }, func c() { b() }`.
+     Avoid deep nesting of funcation calls.
+  2. Always define types to name input and output, and cleanly separate the codd reading
+     input and writing output, with the abstract data processing and handling that can
+     work with abstract data types. Example:
+     prefer `def write_to_db(data, db) { ... }; def read_from_db() { ... }; def proc() { }` over `def proc() { code reading from db, processing, code writing to db}`
 - **TDD**：采用测试驱动开发方式，首先编写测试来预演目标行为，然后通过迭代代码来使测试通过
   - 使用单元测试作为代码的“可执行规范”，通过测试用例来体现设计目标
   - 使用单元测试作为代码行为的“可执行示例”，通过测试用例来提供具体的代码行为描述

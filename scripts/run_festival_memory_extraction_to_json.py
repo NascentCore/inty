@@ -7,6 +7,7 @@
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --timezone Asia/Shanghai --min-rounds 10
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --limit 1
+  python scripts/run_festival_memory_extraction_to_json.py --festival-name "测试节日20260201" --festival-date 2026-02-01 --prompt-file festival_memory_prompt.txt --output tmp/backend_out.json --timezone America/Los_Angeles --min-rounds 50 --query
 """
 
 from __future__ import annotations
@@ -45,6 +46,14 @@ def _ensure_config(config_path: Optional[str]) -> None:
         if not target.exists():
             print(f"错误: 未指定 --config 且当前目录下不存在 {CONFIG_YAML}", file=sys.stderr)
             sys.exit(1)
+
+
+def _memory_sort_key(item: dict) -> tuple[str, str]:
+    """与 sort_festival_memory_json 一致的 (user_name, agent_name) 排序键。"""
+    return (
+        item.get("user_name") or item.get("user_id") or "",
+        item.get("agent_name") or item.get("agent_id") or "",
+    )
 
 
 async def _run(
@@ -97,13 +106,43 @@ async def _run(
             "success_count": success,
             "failed_count": len(pairs) - success,
         },
-        "memories": memories,
+        "memories": sorted(memories, key=_memory_sort_key),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     n = len(pairs)
     print(f"Done: {n} pair(s) in window, {success} memory(ies) written to {output_path}")
+
+
+async def _run_query(
+    festival_name: str,
+    festival_date: date,
+    timezone: str,
+    output_path: Path,
+    config: Optional[str],
+) -> None:
+    """仅从 memory 表查询已有节日记忆并写 JSON，不执行抽取。"""
+    _ensure_config(config)
+    from app.db.session import AsyncSessionLocal
+    from app.services.festival_memory_service import query_festival_memories_from_db
+
+    async with AsyncSessionLocal() as db:
+        memories = await query_festival_memories_from_db(db, festival_name, festival_date)
+    query_meta: dict = {
+        "festival_name": festival_name,
+        "festival_date": festival_date.isoformat(),
+        "timezone": timezone,
+    }
+    payload = {
+        "query": query_meta,
+        "summary": {"total_count": len(memories)},
+        "memories": sorted(memories, key=_memory_sort_key),
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    print(f"Query done: {len(memories)} memory(ies) written to {output_path}")
 
 
 def main(
@@ -119,15 +158,30 @@ def main(
         cyclopts.Parameter(name="--limit", help="仅处理前 count 个 (user, agent) 对，不传则处理全部；便于测试"),
     ] = None,
     config: Annotated[Optional[str], cyclopts.Parameter(name="--config")] = None,
+    query: Annotated[
+        bool,
+        cyclopts.Parameter(name="--query", help="仅查询 memory 表已有结果，不执行抽取"),
+    ] = False,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    parsed_date = date.fromisoformat(festival_date)
+    logger.debug(f"All arguments: {locals()}")
+    if query:
+        asyncio.run(
+            _run_query(
+                festival_name=festival_name,
+                festival_date=parsed_date,
+                timezone=timezone,
+                output_path=Path(output),
+                config=config,
+            )
+        )
+        return
     if prompt_file is not None:
         prompt = Path(prompt_file).read_text(encoding="utf-8").strip()
     if prompt is None or not prompt:
         print("错误: 请提供 --prompt 或 --prompt-file", file=sys.stderr)
         sys.exit(1)
-    parsed_date = date.fromisoformat(festival_date)
-    logger.debug(f"All arguments: {locals()}")
     asyncio.run(
         _run(
             festival_name=festival_name,

@@ -161,20 +161,6 @@ def get_messages_for_user_agent_sync(
     return out
 
 
-def get_session_id_for_user_agent_sync(user_id: str, agent_id: str) -> Optional[str]:
-    """根据 (user_id, agent_id) 获取该会话的 session_id，无会话则返回 None。"""
-    conn = get_chat_history_connection()
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT id FROM chats WHERE user_id = %s AND agent_id = %s AND is_active = true LIMIT 1",
-            (user_id, agent_id),
-        )
-        row = cur.fetchone()
-    if not row:
-        return None
-    return generate_session_id(row[0])
-
-
 def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     lines = []
     for role, content in messages:
@@ -183,25 +169,16 @@ def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
-async def extract_festival_and_save(
-    db: AsyncSession,
-    user_id: str,
-    agent_id: str,
+def assemble_args(
+    messages: List[Tuple[str, str]],
     festival_name: str,
     festival_date: date,
     prompt_template: str,
-) -> bool:
+) -> Tuple[str, str, int, float]:
     """
-    对 (user_id, agent_id) 拉取该会话消息、按节日提示词调用 LLM 抽取回忆摘要，
-    删除旧节日记忆后写入一条 memory（memory_type=festival）。
-    返回是否成功。
+    组装 call_openrouter_for_extraction 的调用参数（full_prompt, model, max_tokens, temperature）。
+    供 extract_festival_and_save 与 extract_festival_to_dict 复用。
     """
-    messages = await asyncio.to_thread(
-        get_messages_for_user_agent_sync, user_id, agent_id
-    )
-    if not messages:
-        logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
-        return False
     chat_text = _format_chat_for_prompt(messages)
     date_str = (
         festival_date.isoformat()
@@ -221,28 +198,71 @@ Festival date: {date_str}
 
 ---
 Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
-
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
     model_name = (
         cfg.model.strip() if cfg and cfg.model else None
     ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
+    return (full_prompt, model_name, 2000, 0.0)
+
+
+async def summarize_memory_from_messages_between_user_and_agent(
+    user_id: str,
+    agent_id: str,
+    festival_name: str,
+    festival_date: date,
+    prompt_template: str,
+) -> Optional[Memory]:
+    """
+    根据 (user_id, agent_id) 拉取会话消息、调用 LLM 抽取节日回忆摘要，并构造（未持久化的）Memory 行。
+    失败（无消息、无摘要或过短、LLM 异常）时返回 None。
+    """
+    messages = await asyncio.to_thread(
+        get_messages_for_user_agent_sync, user_id, agent_id
+    )
+    if not messages:
+        logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
+        return None
+    args = assemble_args(messages, festival_name, festival_date, prompt_template)
     try:
-        summary, _, _ = await call_openrouter_for_extraction(
-            full_prompt,
-            model=model_name,
-            max_tokens=2000,
-            temperature=0.3,
-        )
+        summary, _, _ = await call_openrouter_for_extraction(*args)
         if not summary or len(summary.strip()) < 10:
-            raise ValueError("Extraction result is too short or empty")
+            return None
         summary = summary.strip()
     except Exception as e:
         logger.warning(
             f"节日记忆 LLM 调用失败 user_id={user_id} agent_id={agent_id}: {e}"
         )
-        return False
-
+        return None
     extracted_at = datetime.now(timezone.utc)
+    return Memory(
+        user_id=user_id,
+        memory_type=MEMORY_TYPE_FESTIVAL,
+        agent_id=agent_id,
+        content=summary,
+        extracted_at=extracted_at,
+        festival_name=festival_name,
+        festival_date=festival_date,
+    )
+
+
+async def extract_festival_and_save(
+    db: AsyncSession,
+    user_id: str,
+    agent_id: str,
+    festival_name: str,
+    festival_date: date,
+    prompt_template: str,
+) -> bool:
+    """
+    对 (user_id, agent_id) 拉取该会话消息、按节日提示词调用 LLM 抽取回忆摘要，
+    删除旧节日记忆后写入一条 memory（memory_type=festival）。
+    返回是否成功。
+    """
+    memory_row = await summarize_memory_from_messages_between_user_and_agent(
+        user_id, agent_id, festival_name, festival_date, prompt_template
+    )
+    if memory_row is None:
+        return False
     await db.execute(
         delete(Memory).where(
             Memory.user_id == user_id,
@@ -251,15 +271,6 @@ Based on the conversation above, extract memories or preferences related to "{fe
             Memory.festival_name == festival_name,
             Memory.festival_date == festival_date,
         )
-    )
-    memory_row = Memory(
-        user_id=user_id,
-        memory_type=MEMORY_TYPE_FESTIVAL,
-        agent_id=agent_id,
-        content=summary,
-        extracted_at=extracted_at,
-        festival_name=festival_name,
-        festival_date=festival_date,
     )
     db.add(memory_row)
     await db.commit()
@@ -308,59 +319,60 @@ async def extract_festival_to_dict(
     与 extract_festival_and_save 相同的拉消息、拼 prompt、调 LLM 流程，
     但返回可 JSON 序列化的 dict，不写库。失败返回 None。
     若传入 db，会在返回的 dict 中附带 user_name、agent_name（从主库查 nickname/name）。
+    
+    这个只用于离线脚本，在线服务不使用本函数。
     """
-    messages = await asyncio.to_thread(
-        get_messages_for_user_agent_sync, user_id, agent_id
+    memory_row = await summarize_memory_from_messages_between_user_and_agent(
+        user_id, agent_id, festival_name, festival_date, prompt_template
     )
-    if not messages:
+    if memory_row is None:
         return None
-    chat_text = _format_chat_for_prompt(messages)
-    date_str = (
-        festival_date.isoformat()
-        if isinstance(festival_date, date)
-        else str(festival_date)
-    )
-    full_prompt = f"""{prompt_template}
-
----
-Festival name: {festival_name}
-Festival date: {date_str}
-
----
-# Conversation between the user and the character
-
-{chat_text}
-
----
-Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
-
-    cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
-    model_name = (
-        cfg.model.strip() if cfg and cfg.model else None
-    ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
-    summary, _, _ = await call_openrouter_for_extraction(
-        full_prompt,
-        model=model_name,
-        max_tokens=2000,
-        temperature=0.3,
-    )
-    if not summary or len(summary.strip()) < 10:
-        return None
-    summary = summary.strip()
-    extracted_at = datetime.now(timezone.utc)
+    fd = memory_row.festival_date
     out = {
-        "user_id": user_id,
-        "agent_id": agent_id,
-        "memory_type": MEMORY_TYPE_FESTIVAL,
-        "content": summary,
-        "extracted_at": extracted_at.isoformat(),
-        "festival_name": festival_name,
-        "festival_date": festival_date.isoformat()
-        if isinstance(festival_date, date)
-        else str(festival_date),
+        "user_id": memory_row.user_id,
+        "agent_id": memory_row.agent_id,
+        "memory_type": memory_row.memory_type,
+        "content": memory_row.content,
+        "extracted_at": memory_row.extracted_at.isoformat(),
+        "festival_name": memory_row.festival_name,
+        "festival_date": fd.isoformat() if isinstance(fd, date) else str(fd),
     }
     if db is not None:
         user_name, agent_name = await _get_user_agent_names(db, user_id, agent_id)
         out["user_name"] = user_name or user_id
         out["agent_name"] = agent_name or agent_id
+    return out
+
+
+async def query_festival_memories_from_db(
+    db: AsyncSession, festival_name: str, festival_date: date
+) -> List[dict]:
+    """
+    从主库 memory 表按节日名称与日期查询已有节日记忆，返回与 extract_festival_to_dict
+    相同结构的 dict 列表（含 user_name、agent_name）。不写库、不调 LLM。
+    """
+    r = await db.execute(
+        select(Memory).where(
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+            Memory.festival_name == festival_name,
+            Memory.festival_date == festival_date,
+        )
+    )
+    rows = r.scalars().all()
+    out: List[dict] = []
+    for row in rows:
+        fd = row.festival_date
+        d = {
+            "user_id": row.user_id,
+            "agent_id": row.agent_id,
+            "memory_type": row.memory_type,
+            "content": row.content,
+            "extracted_at": row.extracted_at.isoformat(),
+            "festival_name": row.festival_name,
+            "festival_date": fd.isoformat() if isinstance(fd, date) else str(fd),
+        }
+        user_name, agent_name = await _get_user_agent_names(db, row.user_id, row.agent_id)
+        d["user_name"] = user_name or row.user_id
+        d["agent_name"] = agent_name or row.agent_id
+        out.append(d)
     return out
