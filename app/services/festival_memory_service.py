@@ -222,6 +222,9 @@ async def summarize_memory_from_messages_between_user_and_agent(
     if not messages:
         logger.debug(f"节日记忆跳过：user_id={user_id} agent_id={agent_id} 无消息")
         return None
+    logger.debug(f"节日记忆抽取：user_id={user_id} agent_id={agent_id} 消息数={len(messages)}")
+    for msg in messages:
+        logger.debug(f"message: {msg}")
     args = assemble_args(messages, festival_name, festival_date, prompt_template)
     try:
         summary, _, _ = await call_openrouter_for_extraction(*args)
