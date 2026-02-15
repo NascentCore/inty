@@ -38,6 +38,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -55,6 +59,7 @@ import androidx.navigation.navOptions
 import androidx.navigation.toRoute
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.viewmodel.HeartbeatViewModel
+import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 
 @Serializable data class Heartbeat(val agentId: String, val memoryId: Long?)
@@ -103,6 +108,64 @@ fun Heartbeat(
     )
 }
 
+/**
+ * Love Journal 顶栏标题 + 下划线。使用 SubcomposeLayout 先测量标题宽度，再按该宽度绘制下划线，保证与标题等长。
+ */
+@Composable
+private fun HeartbeatTitleWithUnderline(
+    title: String,
+    titleColor: Color,
+    underlineHeight: Dp,
+    underlineSpacing: Dp,
+    underlineColor: Color,
+) {
+    val density = LocalDensity.current
+    SubcomposeLayout(modifier = Modifier.fillMaxWidth()) { constraints ->
+        // 用宽松约束测标题，得到文字内在宽度，便于 TopAppBar 将整块居中且下划线与标题等长
+        val textConstraints =
+            Constraints(
+                minWidth = 0,
+                maxWidth = constraints.maxWidth,
+                minHeight = 0,
+                maxHeight = Constraints.Infinity,
+            )
+        val textPlaceable =
+            subcompose("title") {
+                Text(text = title, color = titleColor)
+            }
+                .map { it.measure(textConstraints) }
+                .single()
+        val underlineHeightPx = with(density) { underlineHeight.toPx().roundToInt() }
+        val spacingPx = with(density) { underlineSpacing.toPx().roundToInt() }
+        val underlinePlaceable =
+            subcompose("underline") {
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(underlineHeight)
+                            .background(underlineColor),
+                )
+            }
+                .map {
+                    it.measure(
+                        Constraints(
+                            minWidth = textPlaceable.width,
+                            maxWidth = textPlaceable.width,
+                            minHeight = underlineHeightPx,
+                            maxHeight = underlineHeightPx,
+                        ),
+                    )
+                }
+                .single()
+        val totalHeight = textPlaceable.height + spacingPx + underlinePlaceable.height
+        val contentWidth = textPlaceable.width
+        layout(contentWidth, totalHeight) {
+            textPlaceable.place(0, 0)
+            underlinePlaceable.place(0, textPlaceable.height + spacingPx)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Heartbeat(
@@ -129,19 +192,14 @@ private fun Heartbeat(
                 colors =
                     TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
                 title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = title,
-                            color = cs.loveJournalOnBackground,
-                        )
-                        Spacer(Modifier.height(titleUnderlineSpacing))
-                        Box(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .height(titleUnderlineHeight)
-                                    .background(cs.loveJournalAccent),
-                        )
-                    }
+                    // 用 SubcomposeLayout 先测标题宽度，再按该宽度画下划线，保证等长
+                    HeartbeatTitleWithUnderline(
+                        title = title,
+                        titleColor = cs.loveJournalOnBackground,
+                        underlineHeight = titleUnderlineHeight,
+                        underlineSpacing = titleUnderlineSpacing,
+                        underlineColor = cs.loveJournalAccent,
+                    )
                 },
                 navigationIcon = {
                     Image(
