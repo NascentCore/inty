@@ -45,7 +45,7 @@ CREATED_BY_AGENT
 ### 5. 定时任务（`app/services/push_scheduler_service.py`）
 
 - 当 `memory_extraction.enabled` 为真时，注册 `CronTrigger(hour=cron_hour, minute=0)` 的 `_run_memory_extraction` 任务（id: `run_memory_extraction`），并设置 `next_run_time=datetime.datetime.now()`，故**启动后立即执行一次**，之后每日 UTC `cron_hour:00` 执行。
-- `_run_memory_extraction`：调用 `get_users_to_extract` 后对每个 `user_id` 执行 `extract_and_save`；与 push 调度、`start_push_worker.sh` 等同进程。
+- `_run_memory_extraction`：调用 `get_users_to_extract` 后对每个 `user_id` 执行 `extract_and_save`；与 push 调度、`backend/push_worker/start.sh` 等同进程。
 
 ### 6. 对话与生图注入
 

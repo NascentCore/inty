@@ -50,7 +50,7 @@ COPY backend/ backend/
 COPY alembic/ alembic/
 # Used for manipulate backend system with bundled configurations.
 COPY scripts/ scripts/
-COPY start_push_worker.sh .
+COPY backend/push_worker/start.sh .
 
 # 复制指定的配置文件到 config.yaml
 COPY ${CONFIG_FILE} config.yaml
@@ -61,5 +61,5 @@ COPY --from=frontend-builder /app/static/evaluation/resources/ app/static/evalua
 
 # 推送服务不需要暴露端口（不是 HTTP 服务）
 
-CMD ["/start_push_worker.sh"]
+CMD ["/start.sh"]
 

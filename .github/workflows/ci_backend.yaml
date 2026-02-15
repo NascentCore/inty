@@ -21,6 +21,7 @@ on:
       - "tests/**/*.py"
       - "tests/alembic/test_custom_config.sh"
       - "tests/requirements.txt"
+      - "backend/push_worker/**"
       # Alembic files
       - "alembic/**/*"
       # 这个是测试用配置文件
@@ -134,3 +135,22 @@ jobs:
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
           pytest -m "not noci" -v -s tests/
+
+      - name: Start push worker and verify startup
+        run: |
+          cp devops/config.yaml.test config.yaml
+          ./backend/push_worker/start.sh 2>&1 | tee push_worker.log &
+
+          # Wait for the push worker to be ready (same pattern as main server readiness loop)
+          echo "Waiting for push worker to start..."
+          for i in {1..30}; do
+            if grep -q -E "推送服务初始化完成|推送服务启动成功|推送服务未启用" push_worker.log 2>/dev/null; then
+              echo "Push worker is ready!"
+              break
+            fi
+            echo "Attempt $i: Push worker not ready yet, waiting..."
+            sleep 2
+          done
+
+          # Final check: at least one of the expected messages must appear
+          grep -q -E "推送服务初始化完成|推送服务启动成功|推送服务未启用" push_worker.log
