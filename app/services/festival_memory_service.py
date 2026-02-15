@@ -202,7 +202,7 @@ Based on the conversation above, extract memories or preferences related to "{fe
     model_name = (
         cfg.model.strip() if cfg and cfg.model else None
     ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
-    return (full_prompt, model_name, 2000, 0.3)
+    return (full_prompt, model_name, 2000, 0.0)
 
 
 async def summarize_memory_from_messages_between_user_and_agent(
@@ -341,4 +341,38 @@ async def extract_festival_to_dict(
         user_name, agent_name = await _get_user_agent_names(db, user_id, agent_id)
         out["user_name"] = user_name or user_id
         out["agent_name"] = agent_name or agent_id
+    return out
+
+
+async def query_festival_memories_from_db(
+    db: AsyncSession, festival_name: str, festival_date: date
+) -> List[dict]:
+    """
+    从主库 memory 表按节日名称与日期查询已有节日记忆，返回与 extract_festival_to_dict
+    相同结构的 dict 列表（含 user_name、agent_name）。不写库、不调 LLM。
+    """
+    r = await db.execute(
+        select(Memory).where(
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+            Memory.festival_name == festival_name,
+            Memory.festival_date == festival_date,
+        )
+    )
+    rows = r.scalars().all()
+    out: List[dict] = []
+    for row in rows:
+        fd = row.festival_date
+        d = {
+            "user_id": row.user_id,
+            "agent_id": row.agent_id,
+            "memory_type": row.memory_type,
+            "content": row.content,
+            "extracted_at": row.extracted_at.isoformat(),
+            "festival_name": row.festival_name,
+            "festival_date": fd.isoformat() if isinstance(fd, date) else str(fd),
+        }
+        user_name, agent_name = await _get_user_agent_names(db, row.user_id, row.agent_id)
+        d["user_name"] = user_name or row.user_id
+        d["agent_name"] = agent_name or row.agent_id
+        out.append(d)
     return out
