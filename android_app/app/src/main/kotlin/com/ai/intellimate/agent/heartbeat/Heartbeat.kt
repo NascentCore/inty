@@ -51,6 +51,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -285,6 +286,8 @@ private fun HeartbeatContent(
             text = subtitleText,
             style = MaterialTheme.typography.bodySmall,
             color = cs.loveJournalOnBackground,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
         )
 
         Spacer(Modifier.height(subtitleBottom))
