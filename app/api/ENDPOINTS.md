@@ -47,11 +47,7 @@
 | `/api/v1/ai/agents/generate_background` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/text-to-image` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/creator/{creator_id}/stats` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/import-character-card` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/import-character-card-file` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/export-character-card` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}/character-card` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/validate-character-card` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/character-card/features` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/models/openrouter` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/image-generation/config` | GET | `app/api/v1/endpoints/agents.py` |

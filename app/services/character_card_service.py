@@ -1,10 +1,7 @@
-import base64
 import json
-import os
-import tempfile
 from typing import Any, Dict, Optional
 
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -132,69 +129,6 @@ class CharacterCardService:
                 success=False, message=f"导入失败: {str(e)}"
             )
 
-    async def import_character_card_from_file(
-        self,
-        file: UploadFile,
-        user_id: str,
-        db: AsyncSession,
-        override_existing: bool = False,
-        import_character_book: bool = True,
-        import_alternate_greetings: bool = True,
-    ) -> CharacterCardImportResponse:
-        """
-        从文件导入角色卡
-
-        Args:
-            file: 上传的文件
-            user_id: 用户ID
-            db: 数据库会话
-            override_existing: 是否覆盖现有
-            import_character_book: 是否导入角色书
-            import_alternate_greetings: 是否导入替代问候语
-
-        Returns:
-            导入响应
-        """
-        try:
-            # 读取文件内容
-            file_content = await file.read()
-
-            # 尝试解析角色卡数据
-            card_data = None
-
-            if file.filename.lower().endswith(".json"):
-                # JSON文件
-                card_data = await self._parse_json_file(file_content)
-            elif file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
-                # 图片文件（角色卡可能嵌入在PNG metadata中）
-                card_data = await self._parse_image_file(file_content)
-            else:
-                return CharacterCardImportResponse(
-                    success=False, message="不支持的文件格式，请上传JSON或PNG文件"
-                )
-
-            if not card_data:
-                return CharacterCardImportResponse(
-                    success=False, message="无法从文件中解析角色卡数据"
-                )
-
-            # 创建导入请求
-            request = CharacterCardImportRequest(
-                card_data=card_data,
-                override_existing=override_existing,
-                import_character_book=import_character_book,
-                import_alternate_greetings=import_alternate_greetings,
-            )
-
-            # 导入角色卡
-            return await self.import_character_card(request, user_id, db)
-
-        except Exception as e:
-            logger.error(f"从文件导入角色卡失败: {str(e)}")
-            return CharacterCardImportResponse(
-                success=False, message=f"文件导入失败: {str(e)}"
-            )
-
     async def export_agent_to_character_card(
         self,
         agent_id: str,
@@ -315,70 +249,6 @@ class CharacterCardService:
             warnings=warnings,
             supported_features=self.mapper.get_supported_features(),
         )
-
-    async def _parse_json_file(self, file_content: bytes) -> Optional[Dict[str, Any]]:
-        """
-        解析JSON文件
-
-        Args:
-            file_content: 文件内容
-
-        Returns:
-            解析后的数据
-        """
-        try:
-            content = file_content.decode("utf-8")
-            return json.loads(content)
-        except Exception as e:
-            logger.error(f"解析JSON文件失败: {str(e)}")
-            return None
-
-    async def _parse_image_file(self, file_content: bytes) -> Optional[Dict[str, Any]]:
-        """
-        解析图片文件中的角色卡数据
-
-        Args:
-            file_content: 图片文件内容
-
-        Returns:
-            解析后的角色卡数据
-        """
-        try:
-            # 尝试导入PIL
-            try:
-                from PIL import Image
-            except ImportError:
-                logger.warning("PIL未安装，无法解析图片文件中的角色卡数据")
-                return None
-
-            # 尝试从PNG的tEXt chunk中提取数据
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
-                tmp_file.write(file_content)
-                tmp_file.flush()
-
-                try:
-                    with Image.open(tmp_file.name) as img:
-                        # 检查PNG text数据
-                        if hasattr(img, "text"):
-                            for key, value in img.text.items():
-                                if key.lower() in ["chara", "character", "card"]:
-                                    try:
-                                        # 尝试base64解码
-                                        decoded = base64.b64decode(value)
-                                        return json.loads(decoded.decode("utf-8"))
-                                    except:
-                                        try:
-                                            # 直接解析JSON
-                                            return json.loads(value)
-                                        except:
-                                            continue
-                finally:
-                    os.unlink(tmp_file.name)
-
-            return None
-        except Exception as e:
-            logger.error(f"解析图片文件失败: {str(e)}")
-            return None
 
     async def _check_existing_agent(
         self, name: str, user_id: str, db: AsyncSession

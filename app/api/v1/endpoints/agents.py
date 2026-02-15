@@ -6,7 +6,7 @@ import traceback
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,12 +29,6 @@ from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
     TextToImageProvider,
     generate_text_to_image,
-)
-from app.schemas.character_card import (
-    CharacterCardExportRequest,
-    CharacterCardImportRequest,
-    CharacterCardImportResponse,
-    CharacterCardValidationResponse,
 )
 from app.schemas.response import (
     APIResponse,
@@ -875,111 +869,6 @@ async def generate_background(
 # ==================== 角色卡相关API端点 ====================
 
 
-@router.post(
-    "/import-character-card",
-    response_model=APIResponse[CharacterCardImportResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def import_character_card(
-    request: CharacterCardImportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    从JSON数据导入角色卡
-    """
-    try:
-        result = await character_card_service.import_character_card(
-            request=request, user_id=current_user.id, db=db
-        )
-
-        if result.success:
-            return APIResponse.success(data=result)
-        else:
-            return APIResponse.error(message=result.message, data=result)
-
-    except Exception as e:
-        logger.error(f"导入角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to import character card: {str(e)}")
-
-
-@router.post(
-    "/import-character-card-file",
-    response_model=APIResponse[CharacterCardImportResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def import_character_card_file(
-    file: UploadFile = File(...),
-    override_existing: bool = Query(False, description="是否覆盖现有同名角色"),
-    import_character_book: bool = Query(True, description="是否导入角色书"),
-    import_alternate_greetings: bool = Query(True, description="是否导入替代问候语"),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    从文件导入角色卡（支持JSON和PNG文件）
-    """
-    try:
-        # 验证文件大小 (最大10MB)
-        if file.size and file.size > 10 * 1024 * 1024:
-            return APIResponse.error(message="File size cannot exceed 10MB")
-
-        result = await character_card_service.import_character_card_from_file(
-            file=file,
-            user_id=current_user.id,
-            db=db,
-            override_existing=override_existing,
-            import_character_book=import_character_book,
-            import_alternate_greetings=import_alternate_greetings,
-        )
-
-        if result.success:
-            return APIResponse.success(data=result)
-        else:
-            return APIResponse.error(message=result.message, data=result)
-
-    except Exception as e:
-        logger.error(f"从文件导入角色卡失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to import character card from file: {str(e)}"
-        )
-
-
-@router.post(
-    "/export-character-card",
-    response_model=APIResponse[dict],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def export_character_card(
-    request: CharacterCardExportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    导出Agent为角色卡格式
-    """
-    try:
-        card_data = await character_card_service.export_agent_to_character_card(
-            agent_id=request.agent_id,
-            user_id=current_user.id,
-            db=db,
-            include_character_book=request.include_character_book,
-            include_alternate_greetings=request.include_alternate_greetings,
-            include_extensions=request.include_extensions,
-        )
-
-        return APIResponse.success(data=card_data.dict())
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"导出角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to export character card: {str(e)}")
-
-
 @router.get(
     "/{agent_id}/character-card",
     response_model=APIResponse[dict],
@@ -1014,27 +903,6 @@ async def get_agent_character_card(
     except Exception as e:
         logger.error(f"获取角色卡数据失败: {str(e)}")
         return APIResponse.error(message=f"Failed to get character card data: {str(e)}")
-
-
-@router.post(
-    "/validate-character-card",
-    response_model=APIResponse[CharacterCardValidationResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def validate_character_card(
-    card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
-):
-    """
-    验证角色卡数据格式
-    """
-    try:
-        result = await character_card_service.validate_character_card(card_data)
-        return APIResponse.success(data=result)
-
-    except Exception as e:
-        logger.error(f"验证角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to validate character card: {str(e)}")
 
 
 @router.get(
