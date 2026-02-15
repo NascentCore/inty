@@ -512,6 +512,7 @@ private fun ChatItemFestivalMemory(
                 text =
                     buildAnnotatedString {
                         val fullText = stringResource(R.string.chat_festival_memory_notify, agentName)
+                        // 加粗短语需为 notify 字符串的子串，翻译时需保持一致（如 "Love Journal"）
                         val boldPhrase = stringResource(R.string.heartbeat_journal)
                         val start = fullText.indexOf(boldPhrase)
                         if (start >= 0) {

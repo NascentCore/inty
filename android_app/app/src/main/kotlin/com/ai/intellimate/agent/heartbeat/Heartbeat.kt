@@ -115,6 +115,7 @@ fun Heartbeat(
 /**
  * Love Journal 顶栏标题 + 下划线。使用 SubcomposeLayout 先测量标题宽度，再按该宽度绘制下划线，保证与标题等长。
  * 下划线为横向渐变：左侧为强调色（红橙），向右渐隐至透明；左侧两端带圆角。
+ * 空标题时下划线宽度为 0，不会报错。
  *
  * 可配置项：title、titleColor、underlineHeight、underlineSpacing、underlineColor、underlineCornerRadius。
  */
@@ -253,7 +254,7 @@ private fun Heartbeat(
                             Brush.linearGradient(
                                 colors = listOf(cs.loveJournalBackground, cs.loveJournalBackgroundGradientEnd),
                                 start = Offset.Zero,
-                                end = Offset.Infinite,
+                                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
                             ),
                         ),
             )
