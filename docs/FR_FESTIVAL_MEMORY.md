@@ -64,19 +64,43 @@ CREATED_BY_AGENT
 - 路径：evaluation 侧边栏「节日记忆提取」。
 - 功能：节日配置列表（名称、节日日期、执行日期、执行时刻 UTC、最近执行时间、提示词摘要、启用状态）、新建/编辑/删除配置（表单含执行日期、执行时刻，校验执行日期不早于节日日期）、单条配置「立即执行」、说明「定时任务每 5 分钟扫描，按每条配置的执行时间与 last_run_at 决定是否执行」。
 
+## 服务层重构与离线脚本（实现变更记录）
+
+### festival_memory_service 重构
+
+- **可组合函数**：拉消息、拼 prompt、调 LLM、写库 拆分为可复用单元，便于写库与「只出 JSON」两种路径共用。
+- **`assemble_args(messages, festival_name, festival_date, prompt_template)`**：根据会话消息与节日参数组装 `call_openrouter_for_extraction` 的 (full_prompt, model, max_tokens, temperature)，供 `extract_festival_and_save` 与 `extract_festival_to_dict` 复用。
+- **`summarize_memory_from_messages_between_user_and_agent(user_id, agent_id, festival_name, festival_date, prompt_template)`**：拉取该 (user_id, agent_id) 会话消息 → 调用 LLM 抽取摘要 → 返回**未持久化**的 `Memory` 对象；无消息、摘要过短或 LLM 异常时返回 `None`。写库与 to_dict 均先调此函数再分别做「delete + add + commit」或「转 dict」。
+- **`extract_festival_and_save`**：先 `summarize_memory_from_messages_between_user_and_agent`，若得 `Memory` 则对同 (user_id, agent_id, festival_name, festival_date) 做 DELETE 后 INSERT 并 commit。
+- **`extract_festival_to_dict`**：仅用于离线脚本；先 `summarize_memory_from_messages_between_user_and_agent`，再转为与下文 query 一致的 dict 结构，可选附带 user_name、agent_name。
+- **`query_festival_memories_from_db(db, festival_name, festival_date)`**：从主库 `memory` 表按节日名称与日期查询已有节日记忆，返回与 `extract_festival_to_dict` 相同结构的 dict 列表（含 user_name、agent_name）。不写库、不调 LLM，供离线 `--query` 使用。
+- **移除**：`get_session_id_for_user_agent_sync`（无其他引用）。
+
+### 离线脚本
+
+- **run_festival_memory_extraction_to_json.py**  
+  - 必填 `--festival-name`、`--festival-date`、`--output`；抽取模式需 `--prompt` 或 `--prompt-file`；可选 `--timezone`、`--min-rounds`、`--limit`、`--config`。  
+  - **`--query`**：仅从 memory 表查询已有节日记忆并写入 JSON，不执行抽取。输出中 `memories` 按 (user_name, agent_name) 排序。  
+  - 示例（仅查询）：`python scripts/run_festival_memory_extraction_to_json.py --festival-name "测试节日20260201" --festival-date 2026-02-01 --prompt-file festival_memory_prompt.txt --output tmp/backend_out.json --timezone America/Los_Angeles --min-rounds 50 --query`
+
+- **sort_festival_memory_json.py**（新）  
+  - 对 `run_festival_memory_extraction_to_json` 或 `--query` 输出的 JSON，按 (user_name, agent_name) 排序其中的 `memories` 并写回原文件。  
+  - 用法：`python scripts/sort_festival_memory_json.py tmp/out.json` 或 `python scripts/sort_festival_memory_json.py --input tmp/out.json`
+
 ## 关键文件
 
-| 模块       | 文件                                                                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 模型       | `app/models/memory.py`（Memory 扩展、FestivalMemoryConfig）                                                                                |
-| 迁移       | `alembic/versions/20260204_120000_add_festival_memory_fields_and_config.py`、`alembic/versions/20260213_120000_add_delivery_at_to_memory.py` |
-| 抽取/筛选  | `app/services/festival_memory_service.py`（抽取成功后仅写 memory，不写 chat_history）                                                        |
-| 投递服务   | `app/services/memory_service.py`（get_undelivered_festival_memories、deliver_festival_memories_for_user_agent）                             |
-| 聊天历史   | `app/services/chat_history_service.py`（add_festival_memory_prompt_message_sync、get_festival_memory_prompt_content_for_agent_sync、get_messages_paginated） |
-| 记忆读取   | `app/services/memory_service.py`（get_festival_memories_for_user_agent）                                                                   |
-| 角色详情   | `app/api/v1/endpoints/agents.py`（GET /{agent_id} 附加 features）                                                                          |
-| Schema     | `app/schemas/agent.py`（AgentFeatures、FestivalMemoryItem）、`app/schemas/festival_memory.py`                                              |
-| 管理员 API | `app/api/v1/endpoints/festival_memory.py`                                                                                                  |
-| 定时任务   | `app/services/push_scheduler_service.py`（\_run_festival_memory_extraction）                                                               |
-| 前端页面   | `evaluation/pages/FestivalMemoryPage.tsx`、`evaluation/App.tsx`                                                                            |
-| API 封装   | `evaluation/services/api.ts`（festivalMemoryApi）                                                                                          |
+|模块|文件|
+|----|----|
+|模型|`app/models/memory.py`（Memory 扩展、FestivalMemoryConfig）|
+|迁移|`alembic/versions/20260204_120000_add_festival_memory_fields_and_config.py`、`alembic/versions/20260213_120000_add_delivery_at_to_memory.py`|
+|抽取/筛选|`app/services/festival_memory_service.py`（assemble_args、summarize_memory_from_messages_between_user_and_agent、extract_festival_and_save、extract_festival_to_dict、query_festival_memories_from_db；抽取成功后仅写 memory，不写 chat_history）|
+|投递服务|`app/services/memory_service.py`（get_undelivered_festival_memories、deliver_festival_memories_for_user_agent）|
+|聊天历史|`app/services/chat_history_service.py`（add_festival_memory_prompt_message_sync、get_festival_memory_prompt_content_for_agent_sync、get_messages_paginated）|
+|记忆读取|`app/services/memory_service.py`（get_festival_memories_for_user_agent）|
+|角色详情|`app/api/v1/endpoints/agents.py`（GET /{agent_id} 附加 features）|
+|Schema|`app/schemas/agent.py`（AgentFeatures、FestivalMemoryItem）、`app/schemas/festival_memory.py`|
+|管理员 API|`app/api/v1/endpoints/festival_memory.py`|
+|定时任务|`app/services/push_scheduler_service.py`（\_run_festival_memory_extraction）|
+|前端页面|`evaluation/pages/FestivalMemoryPage.tsx`、`evaluation/App.tsx`|
+|API 封装|`evaluation/services/api.ts`（festivalMemoryApi）|
+|离线脚本|`scripts/run_festival_memory_extraction_to_json.py`（抽取或 --query 写 JSON）、`scripts/sort_festival_memory_json.py`（按 user_name、agent_name 排序 JSON）|
