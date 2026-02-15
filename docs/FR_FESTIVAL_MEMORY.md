@@ -42,6 +42,18 @@ CREATED_BY_AGENT
 4. **写入**：同一 (user_id, agent_id, festival_name, festival_date) 先 DELETE 再 INSERT 一条 `memory`（整批替换），**不**在此处写入 chat_history；`delivery_at` 保持 NULL。
 5. **提示消息**：改为按需投递。在用户**发起聊天**或**拉取消息列表**时，对 (user_id, agent_id) 下 `delivery_at IS NULL` 的节日记忆执行投递（写入 chat_history 并更新 `memory.delivery_at`）。详见下文「chat_history 提示消息约定」。
 
+## 数据库读写分离（副本读）
+
+节日记忆抽取（定时任务 + 手动执行接口）已迁移为**读路径优先使用只读副本**，以减轻主库读压力；写路径始终走主库。
+
+- **读（副本优先，不可用时回退主库）**：
+  - 定时任务：配置列表（`festival_memory_config`）优先用 `AsyncSessionLocalReplica`；pairs 筛选（`chats`、`chat_history` 窗口内统计）与单会话消息拉取使用 `resolve_sync_read_db_url(prefer_replica_read=True)`，在 `get_pairs_with_min_rounds_in_window_sync` / `get_messages_for_user_agent_sync` 中走副本连接。
+  - 手动执行：`POST /festival-memory-extraction/run` 的 pairs 筛选与消息拉取同样使用 `prefer_replica_read=True`。
+- **写（主库）**：
+  - `memory` 表的节日记忆写入（同 key 先 DELETE 再 INSERT）以及定时任务中的 `festival_memory_config.last_run_at` 占位，均通过主库 session（`AsyncSessionLocal` / `get_async_db`）完成。
+
+详见 `backend/项目管理/数据库只读副本迁移.md` 中「P1：节日记忆抽取（定时 + 手动）迁移到副本读」。
+
 ## chat_history 提示消息约定
 
 - **写入时机**：在用户**发起聊天**（`POST /chat/completions/{agent_id}`）或**拉取消息列表**（`GET /api/v1/chats/agents/{agent_id}/messages`）时按需投递：对 (user_id, agent_id) 下 `delivery_at IS NULL` 的节日记忆执行投递（调用 `chat_history_service.add_festival_memory_prompt_message_sync` 写入 chat_history，并更新 `memory.delivery_at`）。发起聊天时，当次响应的 **choices** 中会在主 AI 回复之后追加本次投递的节日提醒（与消息列表中的 `festival_memory_prompt` 结构一致）。
