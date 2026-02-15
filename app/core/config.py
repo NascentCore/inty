@@ -39,7 +39,9 @@ if not os.path.exists(DEFAULT_CONFIG_PATH):
         f"{DEFAULT_CONFIG_PATH} 不存在，倒入本模块前请先创建配置文件"
     )
 global_config_loaded_from_config_yaml = load_config(DEFAULT_CONFIG_PATH)
-logger.debug(f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}")
+logger.debug(
+    f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}"
+)
 _validate_config(global_config_loaded_from_config_yaml)
 
 

@@ -57,6 +57,7 @@ LOGGING_LEVEL_FORMAT = "{level: <8}"
 LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
 LOGGING_MESSAGE_FORMAT = "{message}"
 
+
 @dataclass
 class LoggingConfig:
     level: str = "INFO"
@@ -66,6 +67,7 @@ class LoggingConfig:
     )
     # 是否使用颜色
     colorize: bool = False
+
     def __post_init__(self):
         if self.colorize:
             # 区分四块：时间=绿，级别=按级别着色，位置=品红(含完整路径)，正文=白

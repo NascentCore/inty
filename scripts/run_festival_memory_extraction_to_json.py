@@ -30,6 +30,7 @@ import cyclopts
 
 from app.core.logging import init_logger
 from loguru import logger
+
 init_logger()
 
 CONFIG_YAML = "config.yaml"
@@ -49,7 +50,10 @@ def _ensure_config(config_path: Optional[str]) -> None:
         shutil.copy2(src, target)
     else:
         if not target.exists():
-            print(f"错误: 未指定 --config 且当前目录下不存在 {CONFIG_YAML}", file=sys.stderr)
+            print(
+                f"错误: 未指定 --config 且当前目录下不存在 {CONFIG_YAML}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
 
@@ -92,16 +96,20 @@ async def _run(
     success = 0
     async with AsyncSessionLocal() as db:
         for user_id, agent_id in pairs:
-            logger.debug(f"extracting festival memory for user_id={user_id} agent_id={agent_id}")
+            logger.debug(
+                f"extracting festival memory for user_id={user_id} agent_id={agent_id}"
+            )
             if messages_output_path is not None:
                 messages = await asyncio.to_thread(
                     get_messages_for_user_agent_sync, user_id, agent_id
                 )
-                pairs_messages.append({
-                    "user_id": user_id,
-                    "agent_id": agent_id,
-                    "messages": [{"role": r, "content": c} for r, c in messages],
-                })
+                pairs_messages.append(
+                    {
+                        "user_id": user_id,
+                        "agent_id": agent_id,
+                        "messages": [{"role": r, "content": c} for r, c in messages],
+                    }
+                )
             d = await extract_festival_to_dict(
                 user_id, agent_id, festival_name, festival_date, prompt, db=db
             )
@@ -146,7 +154,9 @@ async def _run(
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     n = len(pairs)
-    print(f"Done: {n} pair(s) in window, {success} memory(ies) written to {output_path}")
+    print(
+        f"Done: {n} pair(s) in window, {success} memory(ies) written to {output_path}"
+    )
 
 
 def _load_pairs_messages_from_file(
@@ -178,7 +188,9 @@ async def _run_from_messages_file(
 ) -> None:
     """从 --messages-output 写出的 JSON 读入 pairs 与消息，用 messages_override 做抽取，输出格式与 _run 一致。"""
     _ensure_config(config)
-    pairs, messages_map, file_query = _load_pairs_messages_from_file(messages_input_path)
+    pairs, messages_map, file_query = _load_pairs_messages_from_file(
+        messages_input_path
+    )
     from app.db.session import AsyncSessionLocal
     from app.services.festival_memory_service import extract_festival_to_dict
 
@@ -187,7 +199,9 @@ async def _run_from_messages_file(
     async with AsyncSessionLocal() as db:
         for user_id, agent_id in pairs:
             messages = messages_map.get((user_id, agent_id), [])
-            logger.debug(f"extracting from messages file for user_id={user_id} agent_id={agent_id}")
+            logger.debug(
+                f"extracting from messages file for user_id={user_id} agent_id={agent_id}"
+            )
             d = await extract_festival_to_dict(
                 user_id,
                 agent_id,
@@ -216,7 +230,9 @@ async def _run_from_messages_file(
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     n = len(pairs)
-    print(f"Done: {n} pair(s) from messages file, {success} memory(ies) written to {output_path}")
+    print(
+        f"Done: {n} pair(s) from messages file, {success} memory(ies) written to {output_path}"
+    )
 
 
 async def _run_query(
@@ -232,7 +248,9 @@ async def _run_query(
     from app.services.festival_memory_service import query_festival_memories_from_db
 
     async with AsyncSessionLocal() as db:
-        memories = await query_festival_memories_from_db(db, festival_name, festival_date)
+        memories = await query_festival_memories_from_db(
+            db, festival_name, festival_date
+        )
     query_meta: dict = {
         "festival_name": festival_name,
         "festival_date": festival_date.isoformat(),
@@ -250,16 +268,29 @@ async def _run_query(
 
 
 def main(
-    festival_name: Annotated[str, cyclopts.Parameter(name="--festival-name", help="节日名称")],
-    festival_date: Annotated[str, cyclopts.Parameter(name="--festival-date", help="节日日期 YYYY-MM-DD")],
-    output: Annotated[str, cyclopts.Parameter(name="--output", help="输出 JSON 文件路径")],
-    prompt: Annotated[Optional[str], cyclopts.Parameter(name="--prompt", help="抽取提示词")] = None,
-    prompt_file: Annotated[Optional[str], cyclopts.Parameter(name="--prompt-file", help="从文件读取提示词")] = None,
+    festival_name: Annotated[
+        str, cyclopts.Parameter(name="--festival-name", help="节日名称")
+    ],
+    festival_date: Annotated[
+        str, cyclopts.Parameter(name="--festival-date", help="节日日期 YYYY-MM-DD")
+    ],
+    output: Annotated[
+        str, cyclopts.Parameter(name="--output", help="输出 JSON 文件路径")
+    ],
+    prompt: Annotated[
+        Optional[str], cyclopts.Parameter(name="--prompt", help="抽取提示词")
+    ] = None,
+    prompt_file: Annotated[
+        Optional[str], cyclopts.Parameter(name="--prompt-file", help="从文件读取提示词")
+    ] = None,
     timezone: Annotated[str, cyclopts.Parameter(name="--timezone")] = "UTC",
     min_rounds: Annotated[int, cyclopts.Parameter(name="--min-rounds")] = 50,
     limit: Annotated[
         Optional[int],
-        cyclopts.Parameter(name="--limit", help="仅处理前 count 个 (user, agent) 对，不传则处理全部；便于测试"),
+        cyclopts.Parameter(
+            name="--limit",
+            help="仅处理前 count 个 (user, agent) 对，不传则处理全部；便于测试",
+        ),
     ] = None,
     config: Annotated[Optional[str], cyclopts.Parameter(name="--config")] = None,
     query: Annotated[
@@ -268,11 +299,17 @@ def main(
     ] = False,
     messages_output: Annotated[
         Optional[str],
-        cyclopts.Parameter(name="--messages-output", help="将每对 (user, agent) 的会话消息写入该 JSON 文件（仅抽取模式生效）"),
+        cyclopts.Parameter(
+            name="--messages-output",
+            help="将每对 (user, agent) 的会话消息写入该 JSON 文件（仅抽取模式生效）",
+        ),
     ] = None,
     messages_input: Annotated[
         Optional[str],
-        cyclopts.Parameter(name="--messages-input", help="从 --messages-output 写出的 JSON 读入消息并用于抽取，与直接抽取结果一致；与 --query 互斥"),
+        cyclopts.Parameter(
+            name="--messages-input",
+            help="从 --messages-output 写出的 JSON 读入消息并用于抽取，与直接抽取结果一致；与 --query 互斥",
+        ),
     ] = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

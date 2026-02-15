@@ -71,7 +71,9 @@ export const FestivalMemoryPage: React.FC = () => {
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form] = Form.useForm();
-  const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>([]);
+  const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>(
+    [],
+  );
   const [modelsLoading, setModelsLoading] = useState(false);
 
   const loadConfigs = useCallback(async () => {
@@ -130,7 +132,9 @@ export const FestivalMemoryPage: React.FC = () => {
         enabled: row.enabled,
         run_at_date: row.run_at_date ? dayjs(row.run_at_date) : null,
         run_at_hour:
-          row.run_at_hour != null && row.run_at_hour >= 0 && row.run_at_hour <= 23
+          row.run_at_hour != null &&
+          row.run_at_hour >= 0 &&
+          row.run_at_hour <= 23
             ? row.run_at_hour
             : 4,
         min_rounds_in_window:
@@ -200,7 +204,8 @@ export const FestivalMemoryPage: React.FC = () => {
           run_at_date: runAtDateStr,
           run_at_hour: hour,
           min_rounds_in_window:
-            values.min_rounds_in_window != null && values.min_rounds_in_window >= 1
+            values.min_rounds_in_window != null &&
+            values.min_rounds_in_window >= 1
               ? Number(values.min_rounds_in_window)
               : undefined,
           llm_config,
@@ -217,7 +222,8 @@ export const FestivalMemoryPage: React.FC = () => {
           run_at_date: runAtDateStr,
           run_at_hour: hour,
           min_rounds_in_window:
-            values.min_rounds_in_window != null && values.min_rounds_in_window >= 1
+            values.min_rounds_in_window != null &&
+            values.min_rounds_in_window >= 1
               ? Number(values.min_rounds_in_window)
               : undefined,
           llm_config,
@@ -382,7 +388,15 @@ export const FestivalMemoryPage: React.FC = () => {
               placeholder="选择时区"
             />
           </Form.Item>
-          <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: -8, marginBottom: 16 }}>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: 12,
+              display: "block",
+              marginTop: -8,
+              marginBottom: 16,
+            }}
+          >
             节日日期与执行日期/时刻均按此时区下的本地值
           </Text>
 
@@ -450,7 +464,15 @@ export const FestivalMemoryPage: React.FC = () => {
           >
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
-          <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: -8, marginBottom: 16 }}>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: 12,
+              display: "block",
+              marginTop: -8,
+              marginBottom: 16,
+            }}
+          >
             不能早于节日日期；定时任务每 5 分钟扫描，到点后执行一次
           </Text>
 
@@ -465,17 +487,22 @@ export const FestivalMemoryPage: React.FC = () => {
             <InputNumber min={0} max={23} style={{ width: "100%" }} />
           </Form.Item>
 
-          <Form.Item
-            name="min_rounds_in_window"
-            label="窗口内最少用户消息数"
-          >
+          <Form.Item name="min_rounds_in_window" label="窗口内最少用户消息数">
             <InputNumber
               min={1}
               placeholder="留空表示默认 15"
               style={{ width: "100%" }}
             />
           </Form.Item>
-          <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: -8, marginBottom: 16 }}>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: 12,
+              display: "block",
+              marginTop: -8,
+              marginBottom: 16,
+            }}
+          >
             留空表示默认 15；仅对窗口内用户消息数达到该值的 (用户, 角色) 抽取
           </Text>
 

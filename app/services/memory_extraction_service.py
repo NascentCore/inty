@@ -202,9 +202,7 @@ def _compute_users_to_extract_sync(
     except psycopg.Error as e:
         if read_db_url and db_url != primary_db_url:
             # 迁移关键步骤：离线读优先副本，副本不可达时自动回退主库，保证任务可继续执行。
-            logger.warning(
-                f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}"
-            )
+            logger.warning(f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}")
             conn = psycopg.connect(primary_db_url, autocommit=True)
         else:
             raise

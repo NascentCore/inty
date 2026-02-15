@@ -65,7 +65,10 @@ def get_chat_history_connection():
     if _connection is None or _connection.closed:
         try:
             import psycopg
-            logger.debug(f"connecting to database: {global_config_loaded_from_config_yaml.database.url}")
+
+            logger.debug(
+                f"connecting to database: {global_config_loaded_from_config_yaml.database.url}"
+            )
             _connection = psycopg.connect(
                 global_config_loaded_from_config_yaml.database.url, autocommit=True
             )
