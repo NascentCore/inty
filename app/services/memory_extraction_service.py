@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import psycopg
 
+from app.api.types.llm_config import LLMConfig
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory, MemoryExtractionLog
 from app.services.chat_history_service import (
@@ -333,13 +334,13 @@ async def extract_and_save(
     start_time = time.perf_counter()
     try:
         model_name = cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+        llm_config = LLMConfig(
+            model=model_name or None,
+            max_tokens=4000,
+            temperature=0.3,
+        )
         full_analysis, prompt_tokens, completion_tokens = (
-            await chat_completion_for_extraction(
-                full_prompt,
-                model=model_name,
-                max_tokens=4000,
-                temperature=0.3,
-            )
+            await chat_completion_for_extraction(full_prompt, llm_config=llm_config)
         )
         if not full_analysis or len(full_analysis.strip()) < 10:
             raise ValueError(

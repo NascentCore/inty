@@ -17,8 +17,10 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 from typing_extensions import deprecated
 
+from app.api.types.llm_config import LLMConfig
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.external_services.fakes.openai import FakeOpenAI
+from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
 
 class Role(StrEnum):
@@ -132,26 +134,47 @@ def get_async_openai_client() -> AsyncOpenAI:
     return _async_client
 
 
+def _default_extraction_llm_config() -> LLMConfig:
+    """默认记忆抽取用 LLM 配置，与原先 chat_completion_for_extraction 行为一致。"""
+    return LLMConfig(
+        model=DEFAULT_MEMORY_EXTRACTION_MODEL,
+        max_tokens=4000,
+        temperature=0.3,
+    )
+
+
+def _llm_config_to_create_kwargs(llm_config: LLMConfig) -> dict:
+    """从 LLMConfig 构建 client.chat.completions.create 的参数字典，仅包含非 None 字段。"""
+    model = (llm_config.model or "").strip() or DEFAULT_MEMORY_EXTRACTION_MODEL
+    kwargs: dict = {
+        "model": model,
+        "max_tokens": llm_config.max_tokens,
+        "temperature": llm_config.temperature,
+    }
+    if llm_config.top_p is not None:
+        kwargs["top_p"] = llm_config.top_p
+    if llm_config.presence_penalty is not None:
+        kwargs["presence_penalty"] = llm_config.presence_penalty
+    if llm_config.frequency_penalty is not None:
+        kwargs["frequency_penalty"] = llm_config.frequency_penalty
+    return kwargs
+
+
 async def chat_completion_for_extraction(
     prompt: str,
-    model: Optional[str] = None,
-    max_tokens: int = 4000,
-    temperature: float = 0.3,
+    llm_config: Optional[LLMConfig] = None,
 ) -> Tuple[str, int | None, int | None]:
     """
     异步调用 chat completions 用于记忆抽取。
     返回 (content, prompt_tokens, completion_tokens)。
+    llm_config 为 None 时使用默认配置（DEFAULT_MEMORY_EXTRACTION_MODEL、max_tokens=4000、temperature=0.3）。
     """
-    from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
-
-    if model is None:
-        model = DEFAULT_MEMORY_EXTRACTION_MODEL
+    cfg = llm_config if llm_config is not None else _default_extraction_llm_config()
     client = get_async_openai_client()
+    create_kwargs = _llm_config_to_create_kwargs(cfg)
     response = await client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
-        model=model,
-        max_tokens=max_tokens,
-        temperature=temperature,
+        **create_kwargs,
     )
     content = (response.choices[0].message.content or "") if response.choices else ""
     usage = response.usage

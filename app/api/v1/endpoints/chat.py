@@ -231,6 +231,9 @@ async def agent_chat_completions(
                 model_override = select_chat_model(
                     user=current_user, is_subscribed=bool(subscription)
                 )
+                logger.debug(
+                    f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={bool(subscription)}"
+                )
                 chat_result = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,

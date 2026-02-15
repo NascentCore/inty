@@ -6,7 +6,12 @@ from app.models import Base
 
 
 class ChatSettings(Base):
-    """聊天设置模型"""
+    """聊天设置模型。
+
+    注意：当前不包含「选择模型」字段。若产品在 chat settings 中提供模型选项，
+    后端尚未落库与参与 chat completion；实际模型选择见 app.core.agent（角色配置）
+    与 app.core.model_selection（订阅层）。
+    """
 
     __tablename__ = "chat_settings"
     __table_args__ = (Index("uq_chat_settings_chat_id", "chat_id", unique=True),)

@@ -59,7 +59,10 @@ class MessageList(BaseModel):
 
 
 class ChatSettingsBase(BaseModel):
-    """聊天设置基础模型"""
+    """聊天设置基础模型。
+
+    当前不包含「选择模型」；模型选择仅由角色配置与订阅层决定，见 agent / model_selection。
+    """
 
     language: str = "en"
     voice_enabled: bool = True  # 个性化语音自动播放开关

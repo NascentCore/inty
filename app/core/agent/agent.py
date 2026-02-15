@@ -160,6 +160,7 @@ def get_agent_model_config(agent_data: dict) -> dict:
             model_config = agent_data["settings"]["model_config"]
 
     # 如果没有自定义配置，使用默认配置
+    # Deprecated: api_key 与 base_url 不再参与 chat；chat 使用全局 client（见 get_base_openai_client）
     if not model_config:
         model_config = {
             "model": global_config_loaded_from_config_yaml.agent.model,
@@ -181,6 +182,7 @@ def get_agent_model_config(agent_data: dict) -> dict:
         }
     else:
         # 如果有自定义配置，但某些字段为空，则使用默认配置补充
+        # Deprecated: api_key / base_url 仅做向后兼容存储，不参与 chat
         if not model_config.get("base_url"):
             model_config["base_url"] = (
                 global_config_loaded_from_config_yaml.agent.base_url
@@ -329,46 +331,8 @@ class Agent:
             thread_name_prefix=f"agent-{agent_id}",
         )
 
-        # 使用配置中的模型设置
-        model_name = model_config.get(
-            "model", global_config_loaded_from_config_yaml.agent.model
-        )
-        api_key = model_config.get(
-            "api_key", global_config_loaded_from_config_yaml.agent.api_key
-        )
-        base_url = model_config.get(
-            "base_url", global_config_loaded_from_config_yaml.agent.base_url
-        )
-
-        # 提取模型参数
-        temperature = model_config.get(
-            "temperature",
-            getattr(global_config_loaded_from_config_yaml.agent, "temperature", 0.5),
-        )
-        max_tokens = model_config.get(
-            "max_tokens",
-            getattr(global_config_loaded_from_config_yaml.agent, "max_tokens", 1000),
-        )
-        top_p = model_config.get("top_p")
-        frequency_penalty = model_config.get("frequency_penalty")
-        presence_penalty = model_config.get("presence_penalty")
-
-        # 构建ChatOpenAI参数
-        chat_params = {
-            "model": model_name,
-            "openai_api_key": api_key,
-            "openai_api_base": base_url,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-
-        # 只有当参数不为None时才添加
-        if top_p is not None:
-            chat_params["top_p"] = top_p
-        if frequency_penalty is not None:
-            chat_params["frequency_penalty"] = frequency_penalty
-        if presence_penalty is not None:
-            chat_params["presence_penalty"] = presence_penalty
+        # 使用配置中的模型设置（model/temperature/max_tokens 等由 self.model_config 在 chat 时读取）
+        # Deprecated: model_config 中的 api_key 与 base_url 不参与 chat，chat 使用全局 client（app.utils.openai_client.get_base_openai_client）
 
     def _is_intellimate_official(self) -> bool:
         return self.agent_id == INTELLIMATE_AGENT_ID
@@ -1006,13 +970,21 @@ class Agent:
                 )
 
                 # API调用（带重试机制）
+                # 模型优先级：角色 model > 订阅层 model_override > 默认。chat_settings 的「选择模型」未接入。
                 api_start = time.time()
-                model_name = model_override or self.model_config.get(
-                    "model", default_model
-                )
+                agent_model = self.model_config.get("model")
+                model_name = agent_model or model_override or default_model
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
+                model_source = (
+                    "agent_config"
+                    if (agent_model and model_name == agent_model)
+                    else "override"
+                )
+                logger.debug(
+                    f"chat completion LLM config: agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
+                )
 
                 try:
                     response = self._call_openai_api_with_retry(
@@ -1300,13 +1272,21 @@ class Agent:
                 )
 
                 # API调用（使用统一的重试和 trace 逻辑）
+                # 模型优先级：角色 model > 订阅层 model_override > 默认。chat_settings 的「选择模型」未接入。
                 api_start = time.time()
-                model_name = model_override or self.model_config.get(
-                    "model", default_model
-                )
+                agent_model = self.model_config.get("model")
+                model_name = agent_model or model_override or default_model
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
+                model_source = (
+                    "agent_config"
+                    if (agent_model and model_name == agent_model)
+                    else "override"
+                )
+                logger.debug(
+                    f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
+                )
 
                 response = self._call_openai_api_with_retry(
                     client=client,
@@ -1408,7 +1388,7 @@ class Agent:
             )
             raise
 
-    @deprecated("替换为流式消息输出，需要调整大模型 API 调用，输出方式等")
+    # TODO：替换为流式消息输出，需要调整大模型 API 调用，输出方式等
     async def chat(
         self,
         user_id: str,
