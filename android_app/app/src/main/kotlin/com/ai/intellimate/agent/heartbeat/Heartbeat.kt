@@ -115,6 +115,8 @@ fun Heartbeat(
 /**
  * Love Journal 顶栏标题 + 下划线。使用 SubcomposeLayout 先测量标题宽度，再按该宽度绘制下划线，保证与标题等长。
  * 下划线为横向渐变：左侧为强调色（红橙），向右渐隐至透明；左侧两端带圆角。
+ *
+ * 可配置项：title、titleColor、underlineHeight、underlineSpacing、underlineColor、underlineCornerRadius。
  */
 @Composable
 private fun HeartbeatTitleWithUnderline(
@@ -123,6 +125,7 @@ private fun HeartbeatTitleWithUnderline(
     underlineHeight: Dp,
     underlineSpacing: Dp,
     underlineColor: Color,
+    underlineCornerRadius: Dp,
 ) {
     val density = LocalDensity.current
     SubcomposeLayout(modifier = Modifier.fillMaxWidth()) { constraints ->
@@ -142,17 +145,16 @@ private fun HeartbeatTitleWithUnderline(
                 .single()
         val underlineHeightPx = with(density) { underlineHeight.toPx().roundToInt() }
         val spacingPx = with(density) { underlineSpacing.toPx().roundToInt() }
-        val widthPx = textPlaceable.width.toFloat()
+        val underlineWidthPx = textPlaceable.width.toFloat()
+        val leftRoundedShape =
+            RoundedCornerShape(
+                topStart = underlineCornerRadius,
+                topEnd = 0.dp,
+                bottomEnd = 0.dp,
+                bottomStart = underlineCornerRadius,
+            )
         val underlinePlaceable =
             subcompose("underline") {
-                val cornerRadius = dimensionResource(R.dimen.heartbeat_title_underline_corner_radius)
-                val leftRoundedShape =
-                    RoundedCornerShape(
-                        topStart = cornerRadius,
-                        topEnd = 0.dp,
-                        bottomEnd = 0.dp,
-                        bottomStart = cornerRadius,
-                    )
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
@@ -162,7 +164,7 @@ private fun HeartbeatTitleWithUnderline(
                                     Brush.linearGradient(
                                         colors = listOf(underlineColor, Color.Transparent),
                                         start = Offset(0f, 0f),
-                                        end = Offset(widthPx, 0f),
+                                        end = Offset(underlineWidthPx, 0f),
                                     ),
                                 shape = leftRoundedShape,
                             ),
@@ -206,6 +208,7 @@ private fun Heartbeat(
     val cs = MaterialTheme.colorScheme
     val titleUnderlineHeight = dimensionResource(R.dimen.heartbeat_title_underline_height)
     val titleUnderlineSpacing = dimensionResource(R.dimen.heartbeat_title_underline_spacing)
+    val titleUnderlineCornerRadius = dimensionResource(R.dimen.heartbeat_title_underline_corner_radius)
     val navIconAreaWidth = dimensionResource(R.dimen.heartbeat_top_bar_nav_icon_area_width)
     Scaffold(
         modifier = modifier,
@@ -222,6 +225,7 @@ private fun Heartbeat(
                         underlineHeight = titleUnderlineHeight,
                         underlineSpacing = titleUnderlineSpacing,
                         underlineColor = cs.loveJournalAccent,
+                        underlineCornerRadius = titleUnderlineCornerRadius,
                     )
                 },
                 navigationIcon = {
