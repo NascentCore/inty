@@ -509,7 +509,6 @@ private fun ChatItemFestivalMemory(
             text =
                 buildAnnotatedString {
                     append(stringResource(R.string.chat_festival_memory_notify, agentName))
-                    append(stringResource(R.string.take_a_look))
                 },
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),

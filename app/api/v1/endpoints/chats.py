@@ -154,33 +154,6 @@ async def initialize_agents(
         raise HTTPException(status_code=500, detail=f"Initialization failed: {str(e)}")
 
 
-@router.delete(
-    "/agents/cleanup",
-    deprecated=True,
-    include_in_schema=False,
-    description="No record of who is using this",
-    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
-)
-async def cleanup_idle_agents(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    Manually cleanup idle Agents (admin function)
-    """
-    try:
-        old_count = agent_manager.get_agent_count()
-        agent_manager._cleanup_idle_agents()
-        new_count = agent_manager.get_agent_count()
-        return {
-            "status": "success",
-            "message": "Idle Agents cleanup completed",
-            "cleaned_count": old_count - new_count,
-            "remaining_agents": new_count,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
-
-
 @router.get(
     "/{chat_id}/detail",
     deprecated=True,
