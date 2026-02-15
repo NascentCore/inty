@@ -67,6 +67,7 @@ val ColorScheme.textOnLightSurface: Color
 
 /** Love Journal 页面配色，供 Heartbeat 等使用 */
 val ColorScheme.loveJournalBackground: Color get() = LoveJournalColors.background
+val ColorScheme.loveJournalBackgroundGradientEnd: Color get() = LoveJournalColors.backgroundGradientEnd
 val ColorScheme.loveJournalCardBackground: Color get() = LoveJournalColors.cardBackground
 val ColorScheme.loveJournalOnBackground: Color get() = LoveJournalColors.onBackground
 val ColorScheme.loveJournalAccent: Color get() = LoveJournalColors.accent

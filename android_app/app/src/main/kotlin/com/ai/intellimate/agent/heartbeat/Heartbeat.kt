@@ -6,6 +6,7 @@ import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.theme.loveJournalAccent
 import ai.sxwl.android.design.theme.loveJournalBackground
+import ai.sxwl.android.design.theme.loveJournalBackgroundGradientEnd
 import ai.sxwl.android.design.theme.loveJournalCardBackground
 import ai.sxwl.android.design.theme.loveJournalOnBackground
 import androidx.compose.foundation.background
@@ -36,6 +37,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -119,7 +122,7 @@ private fun Heartbeat(
     val titleUnderlineSpacing = dimensionResource(R.dimen.heartbeat_title_underline_spacing)
     Scaffold(
         modifier = modifier,
-        containerColor = cs.loveJournalBackground,
+        containerColor = Color.Transparent,
         topBar = {
             CenterAlignedTopAppBar(
                 colors =
@@ -151,19 +154,33 @@ private fun Heartbeat(
             )
         },
     ) { contentPadding ->
-        Box(
-            modifier =
-                Modifier.padding(contentPadding)
-                    .padding(horizontal = dimensionResource(R.dimen.page_padding_horizontal))
-        ) {
-            if (memories.isEmpty()) {
-                HeartbeatEmpty()
-            } else {
-                HeartbeatContent(
-                    memories = memories,
-                    initialId = initialId,
-                    agentFirstName = agentFirstName,
-                )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(cs.loveJournalBackground, cs.loveJournalBackgroundGradientEnd),
+                                start = Offset.Zero,
+                                end = Offset.Infinite,
+                            ),
+                        ),
+            )
+            Box(
+                modifier =
+                    Modifier.padding(contentPadding)
+                        .padding(horizontal = dimensionResource(R.dimen.page_padding_horizontal))
+                        .fillMaxSize(),
+            ) {
+                if (memories.isEmpty()) {
+                    HeartbeatEmpty()
+                } else {
+                    HeartbeatContent(
+                        memories = memories,
+                        initialId = initialId,
+                        agentFirstName = agentFirstName,
+                    )
+                }
             }
         }
     }
