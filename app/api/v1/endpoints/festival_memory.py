@@ -81,6 +81,7 @@ async def create_festival_memory_config(
         run_at_date=body.run_at_date,
         run_at_hour=body.run_at_hour,
         min_rounds_in_window=body.min_rounds_in_window,
+        llm_config=body.llm_config,
     )
     db.add(config)
     await db.commit()
@@ -144,6 +145,8 @@ async def update_festival_memory_config(
         config.run_at_hour = body.run_at_hour
     if body.min_rounds_in_window is not None:
         config.min_rounds_in_window = body.min_rounds_in_window
+    if "llm_config" in body.model_fields_set:
+        config.llm_config = body.llm_config
     if (
         config.run_at_date is not None
         and config.festival_date is not None
@@ -187,6 +190,7 @@ async def run_festival_memory_extraction(
             getattr(config, "min_rounds_in_window", None)
             or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
         )
+        llm_config = getattr(config, "llm_config", None)
     else:
         if (
             body.festival_name is None
@@ -208,6 +212,7 @@ async def run_festival_memory_extraction(
             body.min_rounds_in_window
             or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
         )
+        llm_config = None
 
     from app.core.config import global_config_loaded_from_config_yaml
 
@@ -224,7 +229,13 @@ async def run_festival_memory_extraction(
     failed = 0
     for user_id, agent_id in pairs:
         ok = await festival_memory_service.extract_festival_and_save(
-            db, user_id, agent_id, festival_name, festival_date, prompt
+            db,
+            user_id,
+            agent_id,
+            festival_name,
+            festival_date,
+            prompt,
+            llm_config=llm_config,
         )
         if ok:
             success += 1

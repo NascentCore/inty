@@ -2,7 +2,7 @@
 """节日记忆配置与执行相关 schema"""
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, model_validator
@@ -41,6 +41,10 @@ class FestivalMemoryConfigCreate(BaseModel):
         None,
         ge=1,
         description="窗口内最少用户消息轮数，不传则默认 15",
+    )
+    llm_config: Optional[dict[str, Any]] = Field(
+        None,
+        description="LLM 模型配置 JSON，null 表示使用全局默认",
     )
 
     @model_validator(mode="after")
@@ -82,6 +86,10 @@ class FestivalMemoryConfigUpdate(BaseModel):
         ge=1,
         description="窗口内最少用户消息轮数，不传则默认 15",
     )
+    llm_config: Optional[dict[str, Any]] = Field(
+        None,
+        description="LLM 模型配置 JSON，不传表示不更新，传 null 表示改为默认模型",
+    )
 
     @model_validator(mode="after")
     def validate_timezone_and_run_at(self) -> "FestivalMemoryConfigUpdate":
@@ -112,6 +120,9 @@ class FestivalMemoryConfigInDB(BaseModel):
     )
     min_rounds_in_window: Optional[int] = Field(
         None, description="窗口内最少用户消息轮数，NULL 表示默认 15"
+    )
+    llm_config: Optional[dict[str, Any]] = Field(
+        None, description="LLM 模型配置 JSON，null 表示使用全局默认"
     )
 
     class Config:

@@ -505,6 +505,7 @@ class PushSchedulerService:
                                 config.festival_name,
                                 config.festival_date,
                                 config.prompt,
+                                llm_config=getattr(config, "llm_config", None),
                             )
                         except Exception as e:
                             await db.rollback()

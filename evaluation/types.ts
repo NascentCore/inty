@@ -843,6 +843,8 @@ export interface FestivalMemoryConfigItem {
   last_run_at: string | null;
   /** 窗口内最少用户消息轮数，null 表示默认 15 */
   min_rounds_in_window?: number | null;
+  /** 模型配置 JSON，null 表示使用默认模型 */
+  llm_config?: LLMConfig | null;
 }
 
 export interface FestivalMemoryConfigCreate {
@@ -856,6 +858,8 @@ export interface FestivalMemoryConfigCreate {
   run_at_hour: number; // 0-23
   /** 窗口内最少用户消息轮数，不传则默认 15 */
   min_rounds_in_window?: number | null;
+  /** 模型配置，不传或 null 表示使用默认模型 */
+  llm_config?: LLMConfig | null;
 }
 
 export interface FestivalMemoryConfigUpdate {
@@ -868,6 +872,8 @@ export interface FestivalMemoryConfigUpdate {
   run_at_hour?: number; // 0-23
   /** 窗口内最少用户消息轮数，不传则默认 15 */
   min_rounds_in_window?: number | null;
+  /** 模型配置，不传表示不更新，传 null 表示改为默认模型 */
+  llm_config?: LLMConfig | null;
 }
 
 export interface FestivalMemoryExtractionRunRequest {

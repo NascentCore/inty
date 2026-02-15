@@ -1,14 +1,17 @@
 /**
  * 节日记忆提取管理页
  * 管理员配置节日（名称、日期、提示词），由定时任务抽取 (user, agent) 节日回忆并写入 memory 表
+ * 弹窗由单一 Form 驱动，与 AgentManagePage 一致。
  * CREATED_BY_AGENT
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Button,
   Card,
+  Checkbox,
   DatePicker,
+  Form,
   Input,
   InputNumber,
   message,
@@ -27,10 +30,13 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { festivalMemoryApi } from "../services/api";
+import modelCacheService from "../services/modelCache";
+import LLMConfigForm from "../components/common/LLMConfigForm";
 import type {
   FestivalMemoryConfigItem,
   FestivalMemoryConfigCreate,
   FestivalMemoryConfigUpdate,
+  OpenRouterModel,
 } from "../types";
 
 const { Text, Title } = Typography;
@@ -46,20 +52,27 @@ const FESTIVAL_TIMEZONE_OPTIONS = [
   { value: "Japan", label: "Japan" },
 ];
 
+const DEFAULT_FORM_VALUES = {
+  timezone: "UTC",
+  festival_name: "",
+  festival_date: null as dayjs.Dayjs | null,
+  prompt: "",
+  enabled: true,
+  run_at_date: null as dayjs.Dayjs | null,
+  run_at_hour: 4,
+  min_rounds_in_window: undefined as number | undefined,
+  modelType: "default",
+} as const;
+
 export const FestivalMemoryPage: React.FC = () => {
   const [configs, setConfigs] = useState<FestivalMemoryConfigItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formName, setFormName] = useState("");
-  const [formDate, setFormDate] = useState<dayjs.Dayjs | null>(null);
-  const [formTimezone, setFormTimezone] = useState<string>("UTC");
-  const [formPrompt, setFormPrompt] = useState("");
-  const [formEnabled, setFormEnabled] = useState(true);
-  const [formRunAtDate, setFormRunAtDate] = useState<dayjs.Dayjs | null>(null);
-  const [formRunAtHour, setFormRunAtHour] = useState<number>(4);
-  const [formMinRounds, setFormMinRounds] = useState<number | null>(null);
+  const [form] = Form.useForm();
+  const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -74,103 +87,151 @@ export const FestivalMemoryPage: React.FC = () => {
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadConfigs();
   }, [loadConfigs]);
 
+  const loadModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const models = await modelCacheService.getOpenRouterModels();
+      setOpenRouterModels(models);
+    } catch {
+      setOpenRouterModels([]);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (modalOpen) {
+      loadModels();
+    }
+  }, [modalOpen, loadModels]);
+
   const openCreate = () => {
     setEditingId(null);
-    setFormName("");
-    setFormDate(null);
-    setFormTimezone("UTC");
-    setFormPrompt("");
-    setFormEnabled(true);
-    setFormRunAtDate(null);
-    setFormRunAtHour(4);
-    setFormMinRounds(null);
+    setTimeout(() => {
+      form.setFieldsValue({
+        ...DEFAULT_FORM_VALUES,
+      });
+    }, 0);
     setModalOpen(true);
   };
 
   const openEdit = (row: FestivalMemoryConfigItem) => {
     setEditingId(row.id);
-    setFormName(row.festival_name);
-    setFormDate(row.festival_date ? dayjs(row.festival_date) : null);
-    setFormTimezone(row.timezone ?? "UTC");
-    setFormPrompt(row.prompt);
-    setFormEnabled(row.enabled);
-    setFormRunAtDate(row.run_at_date ? dayjs(row.run_at_date) : null);
-    setFormRunAtHour(
-      row.run_at_hour != null && row.run_at_hour >= 0 && row.run_at_hour <= 23
-        ? row.run_at_hour
-        : 4,
-    );
-    setFormMinRounds(
-      row.min_rounds_in_window != null && row.min_rounds_in_window >= 1
-        ? row.min_rounds_in_window
-        : null,
-    );
+    setTimeout(() => {
+      form.setFieldsValue({
+        timezone: row.timezone ?? "UTC",
+        festival_name: row.festival_name,
+        festival_date: row.festival_date ? dayjs(row.festival_date) : null,
+        prompt: row.prompt,
+        enabled: row.enabled,
+        run_at_date: row.run_at_date ? dayjs(row.run_at_date) : null,
+        run_at_hour:
+          row.run_at_hour != null && row.run_at_hour >= 0 && row.run_at_hour <= 23
+            ? row.run_at_hour
+            : 4,
+        min_rounds_in_window:
+          row.min_rounds_in_window != null && row.min_rounds_in_window >= 1
+            ? row.min_rounds_in_window
+            : undefined,
+        modelType: row.llm_config ? "custom" : "default",
+        ...(row.llm_config
+          ? {
+              model: row.llm_config.model || "",
+              temperature: row.llm_config.temperature ?? 0.7,
+              max_tokens: row.llm_config.max_tokens ?? 2048,
+              top_p: row.llm_config.top_p ?? 1,
+              frequency_penalty: row.llm_config.frequency_penalty ?? 0,
+              presence_penalty: row.llm_config.presence_penalty ?? 0,
+            }
+          : {}),
+      });
+    }, 100);
     setModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!formName.trim()) {
-      message.warning("请输入节日名称");
-      return;
-    }
-    if (!formDate) {
-      message.warning("请选择节日日期");
-      return;
-    }
-    if (!formPrompt.trim()) {
-      message.warning("请输入提示词");
-      return;
-    }
-    if (!formRunAtDate) {
-      message.warning("请选择执行日期");
-      return;
-    }
-    const dateStr = formDate.format("YYYY-MM-DD");
-    const runAtDateStr = formRunAtDate.format("YYYY-MM-DD");
-    if (formRunAtDate.isBefore(formDate, "day")) {
-      message.warning("执行日期不能早于节日日期");
-      return;
-    }
-    const hour = Math.floor(formRunAtHour);
-    if (hour < 0 || hour > 23) {
-      message.warning("执行时刻（该时区本地小时）须为 0–23");
-      return;
-    }
     try {
+      const values = await form.validateFields();
+      const festivalDate = values.festival_date as dayjs.Dayjs | null;
+      const runAtDate = values.run_at_date as dayjs.Dayjs | null;
+      if (!festivalDate) {
+        message.warning("请选择节日日期");
+        return;
+      }
+      if (!runAtDate) {
+        message.warning("请选择执行日期");
+        return;
+      }
+      const dateStr = festivalDate.format("YYYY-MM-DD");
+      const runAtDateStr = runAtDate.format("YYYY-MM-DD");
+      if (runAtDate.isBefore(festivalDate, "day")) {
+        message.warning("执行日期不能早于节日日期");
+        return;
+      }
+      const hour = Math.floor(Number(values.run_at_hour ?? 4));
+      if (hour < 0 || hour > 23) {
+        message.warning("执行时刻（该时区本地小时）须为 0–23");
+        return;
+      }
+      const customModel = (values.model ?? "").toString().trim();
+      const llm_config =
+        values.modelType === "custom" && customModel
+          ? {
+              model: customModel,
+              temperature: Number(values.temperature ?? 0.7),
+              max_tokens: Number(values.max_tokens ?? 2048),
+              top_p: Number(values.top_p ?? 1),
+              frequency_penalty: Number(values.frequency_penalty ?? 0),
+              presence_penalty: Number(values.presence_penalty ?? 0),
+            }
+          : null;
+
       if (editingId != null) {
         const update: FestivalMemoryConfigUpdate = {
-          festival_name: formName.trim(),
+          festival_name: String(values.festival_name ?? "").trim(),
           festival_date: dateStr,
-          prompt: formPrompt.trim(),
-          enabled: formEnabled,
-          timezone: formTimezone,
+          prompt: String(values.prompt ?? "").trim(),
+          enabled: Boolean(values.enabled),
+          timezone: values.timezone ?? "UTC",
           run_at_date: runAtDateStr,
           run_at_hour: hour,
-          min_rounds_in_window: formMinRounds ?? undefined,
+          min_rounds_in_window:
+            values.min_rounds_in_window != null && values.min_rounds_in_window >= 1
+              ? Number(values.min_rounds_in_window)
+              : undefined,
+          llm_config,
         };
         await festivalMemoryApi.updateConfig(editingId, update);
         message.success("更新成功");
       } else {
         const create: FestivalMemoryConfigCreate = {
-          festival_name: formName.trim(),
+          festival_name: String(values.festival_name ?? "").trim(),
           festival_date: dateStr,
-          prompt: formPrompt.trim(),
-          enabled: formEnabled,
-          timezone: formTimezone,
+          prompt: String(values.prompt ?? "").trim(),
+          enabled: Boolean(values.enabled),
+          timezone: values.timezone ?? "UTC",
           run_at_date: runAtDateStr,
           run_at_hour: hour,
-          min_rounds_in_window: formMinRounds ?? undefined,
+          min_rounds_in_window:
+            values.min_rounds_in_window != null && values.min_rounds_in_window >= 1
+              ? Number(values.min_rounds_in_window)
+              : undefined,
+          llm_config,
         };
         await festivalMemoryApi.createConfig(create);
         message.success("创建成功");
       }
       setModalOpen(false);
+      form.resetFields();
       loadConfigs();
-    } catch {
+    } catch (err) {
+      if (err && typeof err === "object" && "errorFields" in err) {
+        return;
+      }
       message.error(editingId != null ? "更新失败" : "创建失败");
     }
   };
@@ -304,142 +365,141 @@ export const FestivalMemoryPage: React.FC = () => {
         width={560}
         okText="保存"
       >
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
-          <div>
-            <Text strong>时区</Text>
-            <br />
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            ...DEFAULT_FORM_VALUES,
+          }}
+        >
+          <Form.Item
+            name="timezone"
+            label="时区"
+            rules={[{ required: true, message: "请选择时区" }]}
+          >
             <Select
-              value={formTimezone}
-              onChange={setFormTimezone}
               options={FESTIVAL_TIMEZONE_OPTIONS}
-              style={{ width: "100%", marginTop: 4 }}
+              placeholder="选择时区"
             />
-            <Text
-              type="secondary"
-              style={{ fontSize: 12, marginTop: 4, display: "block" }}
-            >
-              节日日期与执行日期/时刻均按此时区下的本地值
-            </Text>
-          </div>
-          <div>
-            <Text strong>节日名称</Text>
-            <br />
-            <Input
-              value={formName}
-              onChange={(e) => setFormName(e.target.value)}
-              placeholder="如：春节"
-              style={{ width: "100%", marginTop: 4 }}
-            />
-          </div>
-          <div>
-            <Text strong>节日日期（该时区下的自然日）</Text>
-            <br />
-            <DatePicker
-              value={formDate}
-              onChange={(d) => setFormDate(d)}
-              style={{ width: "100%", marginTop: 4 }}
-            />
-          </div>
-          <div>
-            <Space style={{ marginBottom: 4 }}>
-              <Text strong>执行日期（该时区下本地日期）</Text>
-              <Button
-                type="link"
-                size="small"
-                onClick={() => {
-                  const now = new Date();
-                  try {
-                    const fmt = new Intl.DateTimeFormat("en-CA", {
-                      timeZone: formTimezone,
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      hour12: false,
-                    });
-                    const parts = fmt.formatToParts(now);
-                    const part = (k: string) =>
-                      parts.find((p) => p.type === k)?.value ?? "0";
-                    const y = part("year");
-                    const m = part("month").padStart(2, "0");
-                    const d = part("day").padStart(2, "0");
-                    const h = parseInt(part("hour"), 10);
-                    setFormRunAtDate(dayjs(`${y}-${m}-${d}`));
-                    setFormRunAtHour(h >= 0 && h <= 23 ? h : 0);
-                  } catch {
-                    const utcDateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
-                    setFormRunAtDate(dayjs(utcDateStr));
-                    setFormRunAtHour(now.getUTCHours());
-                  }
-                }}
-              >
-                立刻执行
-              </Button>
-            </Space>
-            <DatePicker
-              value={formRunAtDate}
-              onChange={(d) => setFormRunAtDate(d)}
-              style={{ width: "100%", marginTop: 4 }}
-            />
-            <Text
-              type="secondary"
-              style={{ fontSize: 12, marginTop: 4, display: "block" }}
-            >
-              不能早于节日日期；定时任务每 5 分钟扫描，到点后执行一次
-            </Text>
-          </div>
-          <div>
-            <Text strong>执行时刻（该时区下本地小时 0–23）</Text>
-            <br />
-            <InputNumber
-              min={0}
-              max={23}
-              value={formRunAtHour}
-              onChange={(v) => setFormRunAtHour(v ?? 4)}
-              style={{ width: "100%", marginTop: 4 }}
-            />
-          </div>
-          <div>
-            <Text strong>窗口内最少用户消息数</Text>
-            <br />
+          </Form.Item>
+          <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: -8, marginBottom: 16 }}>
+            节日日期与执行日期/时刻均按此时区下的本地值
+          </Text>
+
+          <Form.Item
+            name="festival_name"
+            label="节日名称"
+            rules={[{ required: true, message: "请输入节日名称" }]}
+          >
+            <Input placeholder="如：春节" />
+          </Form.Item>
+
+          <Form.Item
+            name="festival_date"
+            label="节日日期（该时区下的自然日）"
+            rules={[{ required: true, message: "请选择节日日期" }]}
+          >
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item
+            name="run_at_date"
+            label={
+              <Space>
+                <span>执行日期（该时区下本地日期）</span>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    const timezone = form.getFieldValue("timezone") || "UTC";
+                    const now = new Date();
+                    try {
+                      const fmt = new Intl.DateTimeFormat("en-CA", {
+                        timeZone: timezone,
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        hour12: false,
+                      });
+                      const parts = fmt.formatToParts(now);
+                      const part = (k: string) =>
+                        parts.find((p) => p.type === k)?.value ?? "0";
+                      const y = part("year");
+                      const m = part("month").padStart(2, "0");
+                      const d = part("day").padStart(2, "0");
+                      const h = parseInt(part("hour"), 10);
+                      form.setFieldsValue({
+                        run_at_date: dayjs(`${y}-${m}-${d}`),
+                        run_at_hour: h >= 0 && h <= 23 ? h : 0,
+                      });
+                    } catch {
+                      const utcDateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+                      form.setFieldsValue({
+                        run_at_date: dayjs(utcDateStr),
+                        run_at_hour: now.getUTCHours(),
+                      });
+                    }
+                  }}
+                >
+                  立刻执行
+                </Button>
+              </Space>
+            }
+            rules={[{ required: true, message: "请选择执行日期" }]}
+          >
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+          <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: -8, marginBottom: 16 }}>
+            不能早于节日日期；定时任务每 5 分钟扫描，到点后执行一次
+          </Text>
+
+          <Form.Item
+            name="run_at_hour"
+            label="执行时刻（该时区下本地小时 0–23）"
+            rules={[
+              { required: true, message: "请输入执行时刻" },
+              { type: "number", min: 0, max: 23, message: "须为 0–23" },
+            ]}
+          >
+            <InputNumber min={0} max={23} style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item
+            name="min_rounds_in_window"
+            label="窗口内最少用户消息数"
+          >
             <InputNumber
               min={1}
-              value={formMinRounds ?? undefined}
-              onChange={(v) => setFormMinRounds(v ?? null)}
               placeholder="留空表示默认 15"
-              style={{ width: "100%", marginTop: 4 }}
+              style={{ width: "100%" }}
             />
-            <Text
-              type="secondary"
-              style={{ fontSize: 12, marginTop: 4, display: "block" }}
-            >
-              留空表示默认 15；仅对窗口内用户消息数达到该值的 (用户, 角色) 抽取
-            </Text>
-          </div>
-          <div>
-            <Text strong>抽取提示词</Text>
-            <br />
+          </Form.Item>
+          <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: -8, marginBottom: 16 }}>
+            留空表示默认 15；仅对窗口内用户消息数达到该值的 (用户, 角色) 抽取
+          </Text>
+
+          <Form.Item
+            name="prompt"
+            label="抽取提示词"
+            rules={[{ required: true, message: "请输入提示词" }]}
+          >
             <Input.TextArea
-              value={formPrompt}
-              onChange={(e) => setFormPrompt(e.target.value)}
               placeholder="用于 LLM 抽取该节日相关回忆的提示词"
               rows={6}
-              style={{ width: "100%", marginTop: 4 }}
             />
-          </div>
-          <div>
-            <label>
-              <input
-                type="checkbox"
-                checked={formEnabled}
-                onChange={(e) => setFormEnabled(e.target.checked)}
-              />
-              <Text style={{ marginLeft: 8 }}>
-                启用（定时任务会执行该配置）
-              </Text>
-            </label>
-          </div>
-        </Space>
+          </Form.Item>
+
+          <LLMConfigForm
+            models={openRouterModels}
+            loading={modelsLoading}
+            onRefresh={loadModels}
+          />
+
+          <Form.Item name="enabled" valuePropName="checked" initialValue={true}>
+            <Checkbox>启用（定时任务会执行该配置）</Checkbox>
+          </Form.Item>
+        </Form>
       </Modal>
 
       <Modal
