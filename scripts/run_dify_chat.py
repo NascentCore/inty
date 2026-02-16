@@ -16,8 +16,10 @@ import asyncio
 import json
 import logging
 import os
+import random
 import sys
 from pathlib import Path
+from typing import Any
 
 import cyclopts
 import requests
@@ -31,6 +33,7 @@ from sqlalchemy.orm import sessionmaker
 from app.models.agent import Agent
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+MAX_EXCLUDED_NAMES_IN_PROMPT = 100
 
 app = cyclopts.App()
 
@@ -131,6 +134,78 @@ async def fetch_existing_agent_names(session: AsyncSession) -> list[str]:
     return names
 
 
+def _normalize_name(name: str) -> str:
+    """标准化名称用于去重比对（忽略大小写与首尾空格）"""
+    return " ".join(name.strip().lower().split())
+
+
+def prepare_characters_for_dify(
+    generated_characters: list[dict[str, Any]],
+    existing_names: list[str],
+) -> list[dict[str, str]]:
+    """
+    过滤无效/重复角色，并打散顺序避免每天命中同一批名字。
+
+    - 去除 name/description 缺失项
+    - 去除与数据库现有角色重名（大小写不敏感）
+    - 去除当前批次内重名
+    """
+    existing_name_set = {
+        _normalize_name(name)
+        for name in existing_names
+        if isinstance(name, str) and name.strip()
+    }
+    seen_name_set: set[str] = set()
+    prepared: list[dict[str, str]] = []
+
+    for idx, character in enumerate(generated_characters):
+        if not isinstance(character, dict):
+            logger.warning(f"跳过第 {idx + 1} 个角色：数据格式非法")
+            continue
+
+        name = str(character.get("name", "")).strip()
+        description = str(character.get("description", "")).strip()
+        if not name or not description:
+            logger.warning(f"跳过第 {idx + 1} 个角色：name 或 description 为空")
+            continue
+
+        normalized_name = _normalize_name(name)
+        if normalized_name in existing_name_set:
+            logger.info(f"跳过重名角色（数据库已存在）：{name}")
+            continue
+        if normalized_name in seen_name_set:
+            logger.info(f"跳过重名角色（本批次重复）：{name}")
+            continue
+
+        seen_name_set.add(normalized_name)
+        prepared.append({"name": name, "description": description})
+
+    random.SystemRandom().shuffle(prepared)
+    logger.info(
+        f"候选角色过滤完成：原始 {len(generated_characters)}，可用 {len(prepared)}"
+    )
+    return prepared
+
+
+def build_dify_payload(character: dict[str, str]) -> dict[str, Any]:
+    """构建 Dify 请求体，结构化传递 name/description，避免仅依赖 query 文本解析。"""
+    query = f"{character['description']}, name is {character['name']}"
+    return {
+        "inputs": {
+            "visibility": "PRIVATE",
+            "source": "AUTO_GENERATED",
+            # 兼容不同 Dify 工作流变量命名
+            "name": character["name"],
+            "character_name": character["name"],
+            "description": character["description"],
+            "character_description": character["description"],
+        },
+        "query": query,
+        "response_mode": "blocking",
+        "user": "github-action",
+    }
+
+
 def generate_characters(
     existing_names: list[str],
     model: str = "mistralai/devstral-2512",
@@ -147,9 +222,12 @@ def generate_characters(
     Returns:
         角色列表，每个角色包含 name 和 description
     """
-    excluded_names_text = ", ".join(existing_names[:100]) if existing_names else "none"
-    if len(existing_names) > 100:
-        excluded_names_text += f" (and {len(existing_names) - 100} more)"
+    excluded_name_limit = MAX_EXCLUDED_NAMES_IN_PROMPT
+    excluded_names_text = (
+        ", ".join(existing_names[:excluded_name_limit]) if existing_names else "none"
+    )
+    if len(existing_names) > excluded_name_limit:
+        excluded_names_text += f" (and {len(existing_names) - excluded_name_limit} more)"
 
     prompt = f"""Generate 10 diverse character profiles for an AI companion app. All character must be female and 
 Each character should have:
@@ -215,16 +293,8 @@ def call_dify(dify_api_key: str, character: dict) -> bool:
         "Content-Type": "application/json",
     }
 
-    query = f"{character['description']}, name is {character['name']}"
-    payload = {
-        "inputs": {
-            "visibility": "PRIVATE",
-            "source": "AUTO_GENERATED",
-        },
-        "query": query,
-        "response_mode": "blocking",
-        "user": "github-action",
-    }
+    payload = build_dify_payload(character)
+    query = payload["query"]
 
     logger.info(f"为角色 '{character['name']}' 调用 Dify API...")
     logger.debug(f"query: {query}")
@@ -306,6 +376,14 @@ async def main(
                 model,
                 openrouter_api_key=openrouter_api_key,
             )
+            characters = prepare_characters_for_dify(characters, existing_names)
+            if not characters:
+                logger.error("本次没有可用的新角色可提交到 Dify")
+                return 1
+            if len(characters) < target_count:
+                logger.warning(
+                    f"可用候选角色仅 {len(characters)} 个，低于目标 {target_count} 个"
+                )
 
             # 循环调用 Dify，达到目标数量即停止
             success_count = 0
