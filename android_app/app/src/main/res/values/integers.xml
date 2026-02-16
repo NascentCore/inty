@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Love Journal 叠加层背景遮罩不透明度（百分比 0–100），50 表示 50% 黑色 -->
+    <integer name="heartbeat_overlay_scrim_alpha_percent">50</integer>
+</resources>

@@ -34,6 +34,6 @@
     <dimen name="heartbeat_top_bar_nav_icon_area_width">48dp</dimen>
     <!-- More 面板中 Love Journal 项图标尺寸（较默认更大以达到合适视觉效果） -->
     <dimen name="heartbeat_more_panel_icon_size">42dp</dimen>
-    <!-- 从聊天/推送进入并定位到某条记忆时，叠加层中高亮卡片的发光晕范围（elevation） -->
-    <dimen name="heartbeat_overlay_glow_elevation">24dp</dimen>
+    <!-- 从聊天/推送进入并定位到某条记忆时，叠加层中高亮卡片的发光晕范围（elevation），略大以增强聚光灯感 -->
+    <dimen name="heartbeat_overlay_glow_elevation">28dp</dimen>
 </resources>

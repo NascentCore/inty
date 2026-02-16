@@ -50,7 +50,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.shadow
@@ -208,7 +215,7 @@ private fun HeartbeatJournalCard(
     val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
     val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
     val glowElevation = dimensionResource(R.dimen.heartbeat_overlay_glow_elevation)
-    val accentForGlow = cs.loveJournalAccent.copy(alpha = 0.35f)
+    val accentForGlow = cs.loveJournalAccent.copy(alpha = 0.42f)
     val shape = MaterialTheme.shapes.medium
     val baseModifier =
         if (showGlow) {
@@ -356,26 +363,46 @@ private fun Heartbeat(
                     )
                 }
             }
-            if (showHighlightOverlay) {
-                Box(
-                    modifier =
-                        Modifier.padding(contentPadding)
-                            .padding(horizontal = pagePaddingH)
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f)),
-                )
-            }
-            if (showHighlightOverlay && highlightedEntry != null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    HeartbeatJournalCard(
-                        memory = highlightedEntry,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = pagePaddingH),
-                        showGlow = true,
-                        onClick = { showHighlightOverlay = false },
+            val overlayScrimAlpha =
+                integerResource(R.integer.heartbeat_overlay_scrim_alpha_percent) / 100f
+            AnimatedVisibility(
+                visible = showHighlightOverlay,
+                enter =
+                    fadeIn(animationSpec = tween(220)) +
+                        scaleIn(
+                            initialScale = 0.96f,
+                            animationSpec = tween(220),
+                        ),
+                exit =
+                    fadeOut(animationSpec = tween(180)) +
+                        scaleOut(
+                            targetScale = 0.96f,
+                            animationSpec = tween(180),
+                        ),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier =
+                            Modifier.padding(contentPadding)
+                                .padding(horizontal = pagePaddingH)
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = overlayScrimAlpha)),
                     )
+                    if (highlightedEntry != null) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            HeartbeatJournalCard(
+                                memory = highlightedEntry,
+                                modifier =
+                                    Modifier.fillMaxWidth().padding(horizontal = pagePaddingH),
+                                showGlow = true,
+                                onClick = { showHighlightOverlay = false },
+                            )
+                        }
+                    }
                 }
             }
         }
