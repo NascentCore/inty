@@ -43,7 +43,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -79,14 +78,18 @@ import kotlinx.serialization.Serializable
 
 /** 从聊天/推送打开某条时，高亮卡片外 scrim 的透明度（0=全透明，1=全黑）。 */
 private const val HeartbeatScrimAlpha = 0.5f
+/** 高亮卡片柔光：spot 阴影透明度。 */
+private const val HeartbeatGlowSpotAlpha = 0.45f
+/** 高亮卡片柔光：ambient 阴影透明度。 */
+private const val HeartbeatGlowAmbientAlpha = 0.25f
 
-/** 浮层卡片在根坐标中的位置与尺寸（供 Heartbeat 全屏 scrim 上绘制卡片用）。 */
-private data class HeartbeatOverlayState(
+/** 高亮卡片浮层信息：相对于 Love Journal 屏根 Box 的偏移与尺寸，用于全屏 scrim 上绘制卡片。 */
+private data class HeartbeatOverlayInfo(
+    val offsetXDp: Dp,
+    val offsetYDp: Dp,
+    val widthDp: Dp,
+    val heightDp: Dp,
     val memory: FestivalMemory,
-    val xPx: Float,
-    val yPx: Float,
-    val widthPx: Int,
-    val heightPx: Int,
 )
 
 @Serializable data class Heartbeat(val agentId: String, val memoryId: Long?)
@@ -234,121 +237,114 @@ private fun Heartbeat(
     val titleUnderlineSpacing = dimensionResource(R.dimen.heartbeat_title_underline_spacing)
     val titleUnderlineCornerRadius = dimensionResource(R.dimen.heartbeat_title_underline_corner_radius)
     val navIconAreaWidth = dimensionResource(R.dimen.heartbeat_top_bar_nav_icon_area_width)
-    Scaffold(
-        modifier = modifier,
-        containerColor = Color.Transparent,
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors =
-                    TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
-                title = {
-                    // 用 SubcomposeLayout 先测标题宽度，再按该宽度画下划线，保证等长
-                    HeartbeatTitleWithUnderline(
-                        title = title,
-                        titleColor = cs.loveJournalOnBackground,
-                        underlineHeight = titleUnderlineHeight,
-                        underlineSpacing = titleUnderlineSpacing,
-                        underlineColor = cs.loveJournalAccent,
-                        underlineCornerRadius = titleUnderlineCornerRadius,
-                    )
-                },
-                navigationIcon = {
-                    Image(
-                        modifier =
-                            Modifier.padding(horizontal = dimensionResource(R.dimen.padding_medium))
-                                .noRippleClickable(onClick = onBack),
-                        painter = painterResource(R.drawable.back),
-                        contentDescription = null,
-                        colorFilter = ColorFilter.tint(Color.Black),
-                    )
-                },
-                actions = {
-                    // 右侧等宽 Spacer，使标题槽对称，标题相对整屏视觉居中（补偿左侧回退按钮占用）
-                    Spacer(modifier = Modifier.width(navIconAreaWidth))
-                },
-            )
-        },
-    ) { contentPadding ->
-        var highlightedMemoryId by remember(initialId) { mutableStateOf(initialId) }
-        var overlayState by remember { mutableStateOf<HeartbeatOverlayState?>(null) }
-        var scaffoldContentRootOffset by remember { mutableStateOf(Offset.Zero) }
-        val density = LocalDensity.current
+    var highlightedMemoryId by remember(initialId) { mutableStateOf(initialId) }
+    var overlayInfo by remember { mutableStateOf<HeartbeatOverlayInfo?>(null) }
+    var screenRootOffset by remember { mutableStateOf(Offset.Zero) }
+    val cardElevation = dimensionResource(R.dimen.heartbeat_card_elevation)
+    val cardGlowElevation = dimensionResource(R.dimen.heartbeat_card_glow_elevation)
+    val cardPaddingH = dimensionResource(R.dimen.heartbeat_card_padding_horizontal)
+    val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
+    val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
 
-        Box(
-            modifier =
-                Modifier.fillMaxSize()
-                    .onGloballyPositioned { scaffoldContentRootOffset = it.positionInRoot() },
-        ) {
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(cs.loveJournalBackground, cs.loveJournalBackgroundGradientEnd),
-                                start = Offset.Zero,
-                                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
-                            ),
-                        ),
-            )
-            Box(
-                modifier =
-                    Modifier.padding(contentPadding)
-                        .padding(horizontal = dimensionResource(R.dimen.page_padding_horizontal))
-                        .fillMaxSize(),
-            ) {
-                if (memories.isEmpty()) {
-                    HeartbeatEmpty()
-                } else {
-                    HeartbeatContent(
-                        memories = memories,
-                        initialId = initialId,
-                        agentFirstName = agentFirstName,
-                        highlightedMemoryId = highlightedMemoryId,
-                        onClearHighlight = { highlightedMemoryId = null },
-                        onOverlayStateChange = { overlayState = it },
-                    )
-                }
-            }
-
-            // 全屏 scrim（含顶栏），点击关闭高亮
-            if (highlightedMemoryId != null) {
+    Box(
+        modifier =
+            modifier
+                .then(Modifier.fillMaxSize())
+                .onGloballyPositioned { screenRootOffset = it.positionInRoot() },
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    colors =
+                        TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
+                    title = {
+                        HeartbeatTitleWithUnderline(
+                            title = title,
+                            titleColor = cs.loveJournalOnBackground,
+                            underlineHeight = titleUnderlineHeight,
+                            underlineSpacing = titleUnderlineSpacing,
+                            underlineColor = cs.loveJournalAccent,
+                            underlineCornerRadius = titleUnderlineCornerRadius,
+                        )
+                    },
+                    navigationIcon = {
+                        Image(
+                            modifier =
+                                Modifier.padding(horizontal = dimensionResource(R.dimen.padding_medium))
+                                    .noRippleClickable(onClick = onBack),
+                            painter = painterResource(R.drawable.back),
+                            contentDescription = null,
+                            colorFilter = ColorFilter.tint(Color.Black),
+                        )
+                    },
+                    actions = {
+                        Spacer(modifier = Modifier.width(navIconAreaWidth))
+                    },
+                )
+            },
+        ) { contentPadding ->
+            Box(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier =
                         Modifier.fillMaxSize()
-                            .background(Color.Black.copy(alpha = HeartbeatScrimAlpha))
-                            .clickable { highlightedMemoryId = null },
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(cs.loveJournalBackground, cs.loveJournalBackgroundGradientEnd),
+                                    start = Offset.Zero,
+                                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+                                ),
+                            ),
                 )
-            }
-
-            // 浮层卡片绘在 scrim 之上，使用根坐标换算到当前 Box
-            if (overlayState != null) {
-                val state = overlayState!!
-                val cardXDp: Dp = with(density) { (state.xPx - scaffoldContentRootOffset.x).toDp() }
-                val cardYDp: Dp = with(density) { (state.yPx - scaffoldContentRootOffset.y).toDp() }
-                val cardWidthDp: Dp = with(density) { state.widthPx.toDp() }
-                val cardHeightDp: Dp = with(density) { state.heightPx.toDp() }
-                val cardElevation = dimensionResource(R.dimen.heartbeat_card_elevation)
-                val cardGlowElevation = dimensionResource(R.dimen.heartbeat_card_glow_elevation)
-                val cardPaddingH = dimensionResource(R.dimen.heartbeat_card_padding_horizontal)
-                val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
-                val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
-
                 Box(
                     modifier =
-                        Modifier.offset(x = cardXDp, y = cardYDp)
-                            .size(cardWidthDp, cardHeightDp)
-                            .clickable { /* 点击卡片不关闭高亮 */ },
+                        Modifier.padding(contentPadding)
+                            .padding(horizontal = dimensionResource(R.dimen.page_padding_horizontal))
+                            .fillMaxSize(),
                 ) {
-                    HeartbeatJournalCard(
-                        memory = state.memory,
-                        modifier = Modifier.fillMaxSize(),
-                        cardElevation = cardElevation,
-                        glowElevation = cardGlowElevation,
-                        cardPaddingH = cardPaddingH,
-                        cardPaddingV = cardPaddingV,
-                        cardInnerSpacing = cardInnerSpacing,
-                    )
+                    if (memories.isEmpty()) {
+                        HeartbeatEmpty()
+                    } else {
+                        HeartbeatContent(
+                            memories = memories,
+                            initialId = initialId,
+                            agentFirstName = agentFirstName,
+                            highlightedMemoryId = highlightedMemoryId,
+                            onClearHighlight = { highlightedMemoryId = null },
+                            screenRootOffset = screenRootOffset,
+                            onOverlayInfo = { overlayInfo = it },
+                        )
+                    }
                 }
+            }
+        }
+
+        if (highlightedMemoryId != null) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .background(Color.Black.copy(alpha = HeartbeatScrimAlpha))
+                        .clickable { highlightedMemoryId = null },
+            )
+        }
+
+        overlayInfo?.let { info ->
+            Box(
+                modifier =
+                    Modifier.offset(x = info.offsetXDp, y = info.offsetYDp)
+                        .size(info.widthDp, info.heightDp)
+                        .clickable { /* 点击卡片不关闭高亮，仅点击 scrim 关闭 */ },
+            ) {
+                HeartbeatJournalCard(
+                    memory = info.memory,
+                    modifier = Modifier.fillMaxSize(),
+                    cardElevation = cardElevation,
+                    glowElevation = cardGlowElevation,
+                    cardPaddingH = cardPaddingH,
+                    cardPaddingV = cardPaddingV,
+                    cardInnerSpacing = cardInnerSpacing,
+                )
             }
         }
     }
@@ -366,13 +362,14 @@ private fun HeartbeatJournalCard(
     cardInnerSpacing: Dp,
 ) {
     val cs = MaterialTheme.colorScheme
+    // 柔光：强调色半透明，spot 稍强、ambient 更淡，与 HeartbeatScrimAlpha 一样避免魔法数
     val glowModifier =
         if (glowElevation != null) {
             Modifier.shadow(
                 elevation = glowElevation,
                 shape = MaterialTheme.shapes.medium,
-                spotColor = cs.loveJournalAccent.copy(alpha = 0.45f),
-                ambientColor = cs.loveJournalAccent.copy(alpha = 0.25f),
+                spotColor = cs.loveJournalAccent.copy(alpha = HeartbeatGlowSpotAlpha),
+                ambientColor = cs.loveJournalAccent.copy(alpha = HeartbeatGlowAmbientAlpha),
             )
         } else {
             Modifier
@@ -413,8 +410,9 @@ private fun HeartbeatJournalCard(
 }
 
 /**
- * Love Journal 列表内容：副标题 + 卡片列表。当 highlightedMemoryId != null 时向父组件上报浮层状态，
- * 由父组件绘制全屏 scrim 与浮层卡片；点击 scrim 或高亮卡片滚出可见区后恢复常显。
+ * Love Journal 列表内容：副标题 + 卡片列表。高亮状态由父组件持有；本组件负责在列表内绘制卡片，
+ * 并向父组件上报浮层位置（供父组件在全屏 scrim 上绘制高亮卡片）。
+ * @param screenRootOffset 屏根 Box 的 positionInRoot，用于将卡片位置换算为屏根坐标系。
  */
 @Composable
 private fun HeartbeatContent(
@@ -424,9 +422,11 @@ private fun HeartbeatContent(
     agentFirstName: String? = null,
     highlightedMemoryId: Long?,
     onClearHighlight: () -> Unit,
-    onOverlayStateChange: (HeartbeatOverlayState?) -> Unit,
+    screenRootOffset: Offset,
+    onOverlayInfo: (HeartbeatOverlayInfo?) -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
+    val density = LocalDensity.current
     val initialIndex =
         remember(initialId, memories) {
             memories.indexOfFirst { it.id == initialId }.takeIf { it >= 0 } ?: 0
@@ -434,14 +434,14 @@ private fun HeartbeatContent(
     val count = remember(memories) { memories.size }
     val listState = rememberLazyListState(initialIndex)
 
-    // initialId 不在当前列表中时（如已删或未加载到）取消高亮，避免一直只显示 scrim
-    LaunchedEffect(initialId, memories) {
+    // initialId 不在当前列表中时（如已删或未加载到）取消高亮
+    LaunchedEffect(initialId, memories, highlightedMemoryId) {
         if (highlightedMemoryId != null && memories.none { it.id == highlightedMemoryId }) {
             onClearHighlight()
         }
     }
 
-    // 高亮卡片滚出可见区域时取消高亮，避免浮层位置错乱
+    // 高亮卡片滚出可见区域时取消高亮
     LaunchedEffect(listState, highlightedMemoryId) {
         if (highlightedMemoryId == null) return@LaunchedEffect
         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
@@ -453,7 +453,6 @@ private fun HeartbeatContent(
     }
 
     val cardElevation = dimensionResource(R.dimen.heartbeat_card_elevation)
-    val cardGlowElevation = dimensionResource(R.dimen.heartbeat_card_glow_elevation)
     val cardPaddingH = dimensionResource(R.dimen.heartbeat_card_padding_horizontal)
     val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
     val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
@@ -468,10 +467,39 @@ private fun HeartbeatContent(
             stringResource(R.string.heartbeat_subtitle, count)
         }
 
+    var contentBoxRootOffset by remember { mutableStateOf(Offset.Zero) }
     var lazyColumnRootOffset by remember { mutableStateOf(Offset.Zero) }
     var lazyColumnSizePx by remember { mutableStateOf(IntSize.Zero) }
 
-    Box(modifier = modifier) {
+    val layoutInfo = listState.layoutInfo
+    val itemInfo = if (highlightedMemoryId != null) layoutInfo.visibleItemsInfo.find { it.key == highlightedMemoryId } else null
+    val highlightedMemory = if (highlightedMemoryId != null) memories.find { it.id == highlightedMemoryId } else null
+    val scrollOffset = listState.firstVisibleItemScrollOffset
+    val computedOverlayInfo: HeartbeatOverlayInfo? =
+        if (itemInfo != null && highlightedMemory != null) {
+            val itemH = itemInfo.size
+            val itemW = lazyColumnSizePx.width
+            if (itemW > 0 && itemH > 0) {
+                val itemOffsetY = itemInfo.offset
+                val cardX = lazyColumnRootOffset.x - contentBoxRootOffset.x
+                val cardY = lazyColumnRootOffset.y - contentBoxRootOffset.y - scrollOffset + itemOffsetY
+                val cardRootX = contentBoxRootOffset.x + cardX
+                val cardRootY = contentBoxRootOffset.y + cardY
+                val offsetX = cardRootX - screenRootOffset.x
+                val offsetY = cardRootY - screenRootOffset.y
+                HeartbeatOverlayInfo(
+                    offsetXDp = with(density) { offsetX.toDp() },
+                    offsetYDp = with(density) { offsetY.toDp() },
+                    widthDp = with(density) { itemW.toDp() },
+                    heightDp = with(density) { itemH.toDp() },
+                    memory = highlightedMemory,
+                )
+            } else null
+        } else null
+
+    LaunchedEffect(computedOverlayInfo) { onOverlayInfo(computedOverlayInfo) }
+
+    Box(modifier = modifier.onGloballyPositioned { contentBoxRootOffset = it.positionInRoot() }) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = subtitleText,
@@ -503,31 +531,6 @@ private fun HeartbeatContent(
                         cardInnerSpacing = cardInnerSpacing,
                     )
                 }
-            }
-        }
-
-        // 向父组件上报浮层卡片在根坐标中的位置与尺寸，供全屏 scrim 上绘制
-        val layoutInfo = listState.layoutInfo
-        val itemInfo = layoutInfo.visibleItemsInfo.find { it.key == highlightedMemoryId }
-        val highlightedMemory = if (highlightedMemoryId != null) memories.find { it.id == highlightedMemoryId } else null
-        val itemH = itemInfo?.size ?: 0
-        val itemW = lazyColumnSizePx.width
-        SideEffect {
-            if (highlightedMemoryId == null || itemInfo == null || highlightedMemory == null || itemW <= 0 || itemH <= 0) {
-                onOverlayStateChange(null)
-            } else {
-                val scrollOffset = listState.firstVisibleItemScrollOffset
-                val cardRootX = lazyColumnRootOffset.x
-                val cardRootY = lazyColumnRootOffset.y - scrollOffset + itemInfo.offset
-                onOverlayStateChange(
-                    HeartbeatOverlayState(
-                        memory = highlightedMemory,
-                        xPx = cardRootX,
-                        yPx = cardRootY,
-                        widthPx = itemW,
-                        heightPx = itemH,
-                    ),
-                )
             }
         }
     }
