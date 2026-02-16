@@ -32,6 +32,9 @@
     <string name="settings_user_id_unavailable">Unavailable</string>
     <string name="settings_user_email">User Email</string>
     <string name="settings_user_email_unavailable">Unavailable</string>
+    <string name="settings_debug_mode_title">Debug mode</string>
+    <string name="settings_debug_mode_on">On</string>
+    <string name="settings_debug_mode_off">Off</string>
     <string name="settings_debug_user_time_context_title">User time context reporting</string>
     <string name="settings_debug_user_time_context_on">Enabled</string>
     <string name="settings_debug_user_time_context_off">Disabled</string>

@@ -3,6 +3,7 @@ package com.ai.intellimate.settings
 // import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -73,6 +74,7 @@ fun SettingScreen(
 ) {
     val context = LocalContext.current
     val state = viewModel.state.collectAsState().value
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
 
     fun onLogout(isDelete: Boolean) {
         mainViewModel.logout()
@@ -150,14 +152,16 @@ fun SettingScreen(
                 Spacer(Modifier.height(16.dp))
                 DebugBackendSettingsEntry()
 
-                Spacer(Modifier.height(16.dp))
-                DebugBoostPointsEntry()
+                if (isDebugMode) {
+                    Spacer(Modifier.height(16.dp))
+                    DebugBoostPointsEntry()
 
-                Spacer(Modifier.height(16.dp))
-                DebugVipStatus()
+                    Spacer(Modifier.height(16.dp))
+                    DebugVipStatus()
 
-                Spacer(Modifier.height(16.dp))
-                DebugFcmTokenEntry()
+                    Spacer(Modifier.height(16.dp))
+                    DebugFcmTokenEntry()
+                }
             }
 
             // 对话框

@@ -22,7 +22,7 @@ object DebugBackendEndpointStore {
     fun isRuntimeOverrideSupported(
         buildType: NetworkConfig.BuildType = NetworkConfig.getCurrentBuildType()
     ): Boolean {
-        return AppUtils.isAppDebug() && buildType == NetworkConfig.BuildType.DEBUG
+        return AppUtils.isDebugMode() && buildType == NetworkConfig.BuildType.DEBUG
     }
 
     fun getOverrideInfo(): OverrideInfo? {
