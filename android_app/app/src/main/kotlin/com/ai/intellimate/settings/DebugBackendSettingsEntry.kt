@@ -79,87 +79,85 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 )
             }
 
-            if (uiState.debugModeEnabled) {
-                Spacer(Modifier.height(Spacing.MediumSpacer))
+            Spacer(Modifier.height(Spacing.MediumSpacer))
+            Text(
+                text = "当前后端地址：${uiState.activeBaseUrl}",
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                maxLines = TextConfig.MaxUrlLines,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            Spacer(Modifier.height(Spacing.MediumSpacer))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
+                verticalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
+            ) {
+                viewModel.quickPresets.forEach { (label, url) ->
+                    AssistChip(
+                        onClick = { viewModel.applySelectedOverride(url) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Spacing.MediumSpacer))
+            TextButton(onClick = viewModel::resetOverride) {
+                Text(text = "恢复默认", color = Color.White)
+            }
+
+            // Remix 按钮可见性配置
+            Spacer(Modifier.height(Spacing.MediumSpacer * 2))
+            Text(
+                text = "Remix 按钮可见性",
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Text(
-                    text = "当前后端地址：${uiState.activeBaseUrl}",
+                    text = if (uiState.remixButtonVisible) "可见" else "隐藏",
                     color = Color.White,
                     fontWeight = FontWeight.Medium,
-                    maxLines = TextConfig.MaxUrlLines,
-                    overflow = TextOverflow.Ellipsis,
                 )
+                Switch(
+                    checked = uiState.remixButtonVisible,
+                    onCheckedChange = { viewModel.toggleRemixButton() },
+                )
+            }
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            TextButton(onClick = viewModel::resetRemixButtonOverride) {
+                Text(text = "恢复默认", color = Color.White)
+            }
 
-                Spacer(Modifier.height(Spacing.MediumSpacer))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.ChipSpacing),
-                ) {
-                    viewModel.quickPresets.forEach { (label, url) ->
-                        AssistChip(
-                            onClick = { viewModel.applySelectedOverride(url) },
-                            label = { Text(label) },
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(Spacing.MediumSpacer))
-                TextButton(onClick = viewModel::resetOverride) {
-                    Text(text = "恢复默认", color = Color.White)
-                }
-
-                // Remix 按钮可见性配置
-                Spacer(Modifier.height(Spacing.MediumSpacer * 2))
+            Spacer(Modifier.height(Spacing.MediumSpacer * 2))
+            Text(
+                text = stringResource(R.string.settings_debug_user_time_context_title),
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Text(
-                    text = "Remix 按钮可见性",
-                    color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
-                    style = MaterialTheme.typography.bodySmall,
+                    text =
+                        if (uiState.userTimeContextReportingEnabled) {
+                            stringResource(R.string.settings_debug_user_time_context_on)
+                        } else {
+                            stringResource(R.string.settings_debug_user_time_context_off)
+                        },
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
                 )
-                Spacer(Modifier.height(Spacing.SmallSpacer))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = if (uiState.remixButtonVisible) "可见" else "隐藏",
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Switch(
-                        checked = uiState.remixButtonVisible,
-                        onCheckedChange = { viewModel.toggleRemixButton() },
-                    )
-                }
-                Spacer(Modifier.height(Spacing.SmallSpacer))
-                TextButton(onClick = viewModel::resetRemixButtonOverride) {
-                    Text(text = "恢复默认", color = Color.White)
-                }
-
-                Spacer(Modifier.height(Spacing.MediumSpacer * 2))
-                Text(
-                    text = stringResource(R.string.settings_debug_user_time_context_title),
-                    color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
-                    style = MaterialTheme.typography.bodySmall,
+                Switch(
+                    checked = uiState.userTimeContextReportingEnabled,
+                    onCheckedChange = { viewModel.toggleUserTimeContextReporting() },
                 )
-                Spacer(Modifier.height(Spacing.SmallSpacer))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text =
-                            if (uiState.userTimeContextReportingEnabled) {
-                                stringResource(R.string.settings_debug_user_time_context_on)
-                            } else {
-                                stringResource(R.string.settings_debug_user_time_context_off)
-                            },
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Switch(
-                        checked = uiState.userTimeContextReportingEnabled,
-                        onCheckedChange = { viewModel.toggleUserTimeContextReporting() },
-                    )
-                }
             }
         }
     }
