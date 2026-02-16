@@ -73,11 +73,15 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
 import androidx.navigation.toRoute
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.viewmodel.HeartbeatViewModel
 import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.ui.UiConfigs
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -87,6 +91,42 @@ private const val HeartbeatScrimAlpha = 0.5f
 private const val HeartbeatGlowSpotAlpha = 0.45f
 /** 高亮卡片柔光：ambient 阴影透明度。 */
 private const val HeartbeatGlowAmbientAlpha = 0.25f
+
+// #region agent log
+private const val DEBUG_LOG_INGEST_URL = "http://10.0.2.2:7252/ingest/558b35d0-ae2b-4c5a-a84a-b0ed3789218b"
+private fun heartbeatDebugLog(
+    scope: kotlinx.coroutines.CoroutineScope,
+    location: String,
+    message: String,
+    data: Map<String, Any?>,
+    hypothesisId: String,
+) {
+    scope.launch(Dispatchers.IO) {
+        try {
+            val dataStr = data.mapValues { (_, v) -> v?.toString() ?: "null" }
+            val body =
+                org.json.JSONObject()
+                    .put("location", location)
+                    .put("message", message)
+                    .put("data", org.json.JSONObject(dataStr))
+                    .put("timestamp", System.currentTimeMillis())
+                    .put("hypothesisId", hypothesisId)
+                    .toString()
+            val url = URL(DEBUG_LOG_INGEST_URL)
+            (url.openConnection() as? HttpURLConnection)?.run {
+                requestMethod = "POST"
+                setRequestProperty("Content-Type", "application/json")
+                doOutput = true
+                connectTimeout = 2000
+                readTimeout = 2000
+                outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                responseCode
+                disconnect()
+            }
+        } catch (_: Exception) { }
+    }
+}
+// #endregion
 
 /** 高亮卡片浮层信息：相对于 Love Journal 屏根 Box 的偏移与尺寸，用于全屏 scrim 上绘制卡片。 */
 private data class HeartbeatOverlayInfo(
@@ -319,7 +359,6 @@ private fun Heartbeat(
                             onClearHighlight = { highlightedMemoryId = null },
                             screenRootOffset = screenRootOffset,
                             onOverlayInfo = { overlayInfo = it },
-                            contentPadding = contentPadding,
                         )
                     }
                 }
@@ -419,7 +458,6 @@ private fun HeartbeatJournalCard(
  * Love Journal 列表内容：副标题 + 卡片列表。高亮状态由父组件持有；本组件负责在列表内绘制卡片，
  * 并向父组件上报浮层位置（供父组件在全屏 scrim 上绘制高亮卡片）。
  * @param screenRootOffset 屏根 Box 的 positionInRoot，用于将卡片位置换算为屏根坐标系。
- * @param contentPadding Scaffold 内容区 padding，用于 Back to top 按钮底部间距，与 Explore 页一致。
  */
 @Composable
 private fun HeartbeatContent(
@@ -431,7 +469,6 @@ private fun HeartbeatContent(
     onClearHighlight: () -> Unit,
     screenRootOffset: Offset,
     onOverlayInfo: (HeartbeatOverlayInfo?) -> Unit,
-    contentPadding: PaddingValues = PaddingValues.Zero,
 ) {
     val cs = MaterialTheme.colorScheme
     val density = LocalDensity.current
@@ -514,6 +551,40 @@ private fun HeartbeatContent(
             } else null
         } else null
 
+    // #region agent log
+    if (highlightedMemoryId != null) {
+        heartbeatDebugLog(
+            scope = scope,
+            location = "Heartbeat.kt:HeartbeatContent",
+            message = if (itemInfo != null) "overlay compute" else "overlay compute itemInfo null",
+            data = mapOf(
+                "buildType" to BuildConfig.BUILD_TYPE,
+                "highlightedMemoryId" to highlightedMemoryId,
+                "memoryIds" to memories.map { it.id }.toString(),
+                "visibleKeys" to layoutInfo.visibleItemsInfo.map { it.key }.toString(),
+                "visibleIndices" to layoutInfo.visibleItemsInfo.map { it.index }.toString(),
+                "foundKey" to (itemInfo?.key?.toString()),
+                "foundIndex" to (itemInfo?.index),
+                "foundKeyClass" to (itemInfo?.key?.javaClass?.simpleName),
+                "itemOffset" to (itemInfo?.offset),
+                "itemSize" to (itemInfo?.size?.let { "${it.width}x${it.height}" }),
+                "firstVisibleItemIndex" to listState.firstVisibleItemIndex,
+                "scrollOffset" to scrollOffset,
+                "screenRootX" to screenRootOffset.x,
+                "screenRootY" to screenRootOffset.y,
+                "contentBoxX" to contentBoxRootOffset.x,
+                "contentBoxY" to contentBoxRootOffset.y,
+                "lazyColX" to lazyColumnRootOffset.x,
+                "lazyColY" to lazyColumnRootOffset.y,
+                "lazyColW" to lazyColumnSizePx.width,
+                "lazyColH" to lazyColumnSizePx.height,
+                "highlightedTitle" to (highlightedMemory?.title),
+            ),
+            hypothesisId = "A_B_C_D_E",
+        )
+    }
+    // #endregion
+
     LaunchedEffect(computedOverlayInfo) { onOverlayInfo(computedOverlayInfo) }
 
     Box(modifier = modifier.onGloballyPositioned { contentBoxRootOffset = it.positionInRoot() }) {
@@ -551,15 +622,12 @@ private fun HeartbeatContent(
             }
         }
 
-        // 与 Explore 页一致的回到顶部按钮：不在顶部时显示，点击平滑滚动到列表顶部
+        // 与 Explore 页一致的回到顶部按钮：不在顶部时显示，点击平滑滚动到列表顶部。
+        // 外层 Box 已应用 contentPadding，此处仅保留设计间距，避免重复应用 Scaffold 底部 padding。
         BackToTop(
             modifier =
                 Modifier.align(Alignment.BottomCenter)
-                    .padding(
-                        bottom =
-                            contentPadding.calculateBottomPadding() +
-                                UiConfigs.Spacing.MediumPlus,
-                    ),
+                    .padding(bottom = UiConfigs.Spacing.MediumPlus),
             visible = showBackToTopButton,
             onClick = { scope.launch { listState.animateScrollToItem(0) } },
         )
