@@ -36,7 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -192,6 +194,72 @@ private fun HeartbeatTitleWithUnderline(
     }
 }
 
+/** 单条 Love Journal 卡片：标题 + 正文，可选点击与发光效果。用于列表与叠加层高亮展示。 */
+@Composable
+private fun HeartbeatJournalCard(
+    memory: FestivalMemory,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    showGlow: Boolean = false,
+) {
+    val cs = MaterialTheme.colorScheme
+    val cardElevation = dimensionResource(R.dimen.heartbeat_card_elevation)
+    val cardPaddingH = dimensionResource(R.dimen.heartbeat_card_padding_horizontal)
+    val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
+    val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
+    val glowElevation = dimensionResource(R.dimen.heartbeat_overlay_glow_elevation)
+    val accentForGlow = cs.loveJournalAccent.copy(alpha = 0.35f)
+    val shape = MaterialTheme.shapes.medium
+    val baseModifier =
+        if (showGlow) {
+            Modifier.shadow(
+                elevation = glowElevation,
+                shape = shape,
+                clip = false,
+                ambientColor = accentForGlow,
+                spotColor = accentForGlow,
+            ).shadow(
+                elevation = cardElevation,
+                shape = shape,
+            )
+        } else {
+            Modifier.shadow(elevation = cardElevation, shape = shape)
+        }
+    Surface(
+        modifier =
+            modifier
+                .then(baseModifier)
+                .then(if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier),
+        shape = shape,
+        color = cs.loveJournalCardBackground,
+    ) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = cardPaddingH, vertical = cardPaddingV),
+        ) {
+            Text(
+                text = memory.title,
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
+                color = cs.loveJournalAccent,
+            )
+            Spacer(Modifier.height(cardInnerSpacing))
+            Text(
+                text = memory.memory,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.loveJournalOnBackground,
+            )
+            if (BuildConfig.DEBUG) {
+                Spacer(Modifier.height(cardInnerSpacing))
+                FestivalMemoryDebugMetadata(memory = memory)
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Heartbeat(
@@ -201,6 +269,12 @@ private fun Heartbeat(
     initialId: Long? = null,
     agentFirstName: String? = null,
 ) {
+    val highlightedEntry = remember(initialId, memories) {
+        initialId?.let { id -> memories.find { it.id == id } }
+    }
+    var showHighlightOverlay by remember(initialId, memories) {
+        mutableStateOf(initialId != null && highlightedEntry != null)
+    }
     val title =
         if (agentFirstName != null) {
             stringResource(R.string.heartbeat_journal_title_with_name, agentFirstName)
@@ -212,6 +286,7 @@ private fun Heartbeat(
     val titleUnderlineSpacing = dimensionResource(R.dimen.heartbeat_title_underline_spacing)
     val titleUnderlineCornerRadius = dimensionResource(R.dimen.heartbeat_title_underline_corner_radius)
     val navIconAreaWidth = dimensionResource(R.dimen.heartbeat_top_bar_nav_icon_area_width)
+    val pagePaddingH = dimensionResource(R.dimen.page_padding_horizontal)
     Scaffold(
         modifier = modifier,
         containerColor = Color.Transparent,
@@ -220,7 +295,6 @@ private fun Heartbeat(
                 colors =
                     TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
                 title = {
-                    // 用 SubcomposeLayout 先测标题宽度，再按该宽度画下划线，保证等长
                     HeartbeatTitleWithUnderline(
                         title = title,
                         titleColor = cs.loveJournalOnBackground,
@@ -234,14 +308,21 @@ private fun Heartbeat(
                     Image(
                         modifier =
                             Modifier.padding(horizontal = dimensionResource(R.dimen.padding_medium))
-                                .noRippleClickable(onClick = onBack),
+                                .noRippleClickable(
+                                    onClick = {
+                                        if (showHighlightOverlay) {
+                                            showHighlightOverlay = false
+                                        } else {
+                                            onBack()
+                                        }
+                                    },
+                                ),
                         painter = painterResource(R.drawable.back),
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(Color.Black),
                     )
                 },
                 actions = {
-                    // 右侧等宽 Spacer，使标题槽对称，标题相对整屏视觉居中（补偿左侧回退按钮占用）
                     Spacer(modifier = Modifier.width(navIconAreaWidth))
                 },
             )
@@ -262,7 +343,7 @@ private fun Heartbeat(
             Box(
                 modifier =
                     Modifier.padding(contentPadding)
-                        .padding(horizontal = dimensionResource(R.dimen.page_padding_horizontal))
+                        .padding(horizontal = pagePaddingH)
                         .fillMaxSize(),
             ) {
                 if (memories.isEmpty()) {
@@ -272,6 +353,28 @@ private fun Heartbeat(
                         memories = memories,
                         initialId = initialId,
                         agentFirstName = agentFirstName,
+                    )
+                }
+            }
+            if (showHighlightOverlay) {
+                Box(
+                    modifier =
+                        Modifier.padding(contentPadding)
+                            .padding(horizontal = pagePaddingH)
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                )
+            }
+            if (showHighlightOverlay && highlightedEntry != null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    HeartbeatJournalCard(
+                        memory = highlightedEntry,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = pagePaddingH),
+                        showGlow = true,
+                        onClick = { showHighlightOverlay = false },
                     )
                 }
             }
@@ -293,10 +396,6 @@ private fun HeartbeatContent(
         }
     val count = remember(memories) { memories.size }
     val listState = rememberLazyListState(initialIndex)
-    val cardElevation = dimensionResource(R.dimen.heartbeat_card_elevation)
-    val cardPaddingH = dimensionResource(R.dimen.heartbeat_card_padding_horizontal)
-    val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
-    val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
     val listSpacing = dimensionResource(R.dimen.heartbeat_list_spacing)
     val subtitleBottom = dimensionResource(R.dimen.heartbeat_subtitle_bottom)
     val listPaddingBottom = dimensionResource(R.dimen.heartbeat_list_content_padding_bottom)
@@ -324,39 +423,7 @@ private fun HeartbeatContent(
             verticalArrangement = Arrangement.spacedBy(listSpacing),
         ) {
             items(memories, key = { it.id }) {
-                Surface(
-                    modifier = Modifier.shadow(
-                        elevation = cardElevation,
-                        shape = MaterialTheme.shapes.medium,
-                    ),
-                    shape = MaterialTheme.shapes.medium,
-                    color = cs.loveJournalCardBackground,
-                ) {
-                    Column(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(horizontal = cardPaddingH, vertical = cardPaddingV),
-                    ) {
-                        Text(
-                            text = it.title,
-                            style =
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                            color = cs.loveJournalAccent,
-                        )
-                        Spacer(Modifier.height(cardInnerSpacing))
-                        Text(
-                            text = it.memory,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = cs.loveJournalOnBackground,
-                        )
-                        if (BuildConfig.DEBUG) {
-                            Spacer(Modifier.height(cardInnerSpacing))
-                            FestivalMemoryDebugMetadata(memory = it)
-                        }
-                    }
-                }
+                HeartbeatJournalCard(memory = it)
             }
         }
     }

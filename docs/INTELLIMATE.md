@@ -69,7 +69,7 @@ Click the **Me** or the **right-most** icon
 | Create or edit an iMate | Explore → “Create/+” or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
-| Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. Tapping a “Heartbeat Journal” (festival memory) notification opens that iMate’s Love Journal and the related memory entry. |
+| Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. Tapping a “Heartbeat Journal” (festival memory) notification opens that iMate’s Love Journal and the related memory entry. On that screen the entry is shown in the center with a highlight; tap the highlighted entry to close the popup and see the full list. |
 | Check version info | Settings → About | Version code comes from git commit count. If Play build lags behind, install the QA APK. |
 | Send feedback or report | Chat → ⋮ → Report, or Profile → Feedback | Reports go through the Report Service; attach screenshots when possible. |
 
