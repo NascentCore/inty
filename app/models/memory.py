@@ -50,7 +50,9 @@ class Memory(Base):
         ),
     )
     extracted_at = Column(
-        DateTime(timezone=True), nullable=False, comment="所属抽取批次时间（已废弃，仅兼容历史数据）"
+        DateTime(timezone=True),
+        nullable=False,
+        comment="所属抽取批次时间（已废弃，仅兼容历史数据）",
     )
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

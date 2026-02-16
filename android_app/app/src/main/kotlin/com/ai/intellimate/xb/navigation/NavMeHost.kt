@@ -1,11 +1,11 @@
 package com.ai.intellimate.xb.navigation
 
+import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.compose.runtime.remember
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.agent.report.ReportPage
 import com.ai.intellimate.chat.viewmodel.ChatViewModel

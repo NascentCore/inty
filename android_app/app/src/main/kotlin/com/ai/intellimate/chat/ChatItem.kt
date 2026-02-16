@@ -1,9 +1,13 @@
 package com.ai.intellimate.chat
 
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.character.local.db.FestivalMemory
+import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
@@ -97,12 +101,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import ai.sxwl.android.data.character.local.db.FestivalMemory
-import ai.sxwl.android.data.character.repository.CharacterRepository
-import ai.sxwl.android.data.di.DataModule
-import ai.sxwl.android.common.utils.HeartAppUtils
-import com.ai.intellimate.agent.heartbeat.FestivalMemoryDebugMetadata
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.heartbeat.FestivalMemoryDebugMetadata
 import com.ai.intellimate.agent.heartbeat.toHeartbeat
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
@@ -500,7 +500,8 @@ private fun ChatItemForMomentPreview() {
 }
 
 /**
- * 聊天内节日记忆通知条目。Debug 构建下若提供 agentId 与 festivalMemoryId，会在下方展示该条节日记忆的完整元数据（id、agentId、festivalDate、festivalName、memory、title）。
+ * 聊天内节日记忆通知条目。Debug 构建下若提供 agentId 与
+ * festivalMemoryId，会在下方展示该条节日记忆的完整元数据（id、agentId、festivalDate、festivalName、memory、title）。
  */
 @Composable
 private fun ChatItemFestivalMemory(
@@ -520,14 +521,12 @@ private fun ChatItemFestivalMemory(
             memories = emptyList()
         }
     }
-    val memory = remember(memories, festivalMemoryId) {
-        if (festivalMemoryId == null) null else memories.find { it.id == festivalMemoryId }
-    }
+    val memory =
+        remember(memories, festivalMemoryId) {
+            if (festivalMemoryId == null) null else memories.find { it.id == festivalMemoryId }
+        }
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-    ) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         ChatItem(
             modifier = Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.LoveJournalNotifyWidthRatio),
             color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -537,7 +536,8 @@ private fun ChatItemFestivalMemory(
                 Text(
                     text =
                         buildAnnotatedString {
-                            val fullText = stringResource(R.string.chat_festival_memory_notify, agentName)
+                            val fullText =
+                                stringResource(R.string.chat_festival_memory_notify, agentName)
                             // 加粗短语需为 notify 字符串的子串，翻译时需保持一致（如 "Love Journal"）
                             val boldPhrase = stringResource(R.string.heartbeat_journal)
                             val start = fullText.indexOf(boldPhrase)
@@ -557,7 +557,8 @@ private fun ChatItemFestivalMemory(
                 if (isDebugMode && memory != null) {
                     FestivalMemoryDebugMetadata(
                         memory = memory,
-                        modifier = Modifier.padding(top = dimensionResource(R.dimen.padding_extra_small)),
+                        modifier =
+                            Modifier.padding(top = dimensionResource(R.dimen.padding_extra_small)),
                     )
                 }
             }

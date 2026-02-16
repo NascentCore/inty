@@ -32,11 +32,17 @@ class HeartbeatViewModel : ViewModel() {
         _agentId
             .flatMapLatest { id ->
                 if (id == null) flowOf(null)
-                else repository.observeCharacter(id).map { entity ->
-                    entity?.name?.trim()?.takeIf { it.isNotBlank() }?.let { n ->
-                        n.split(Regex("\\s+")).firstOrNull()?.takeIf { it.isNotBlank() } ?: n
+                else
+                    repository.observeCharacter(id).map { entity ->
+                        entity
+                            ?.name
+                            ?.trim()
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { n ->
+                                n.split(Regex("\\s+")).firstOrNull()?.takeIf { it.isNotBlank() }
+                                    ?: n
+                            }
                     }
-                }
             }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 

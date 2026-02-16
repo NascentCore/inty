@@ -509,7 +509,9 @@ async def query_festival_memories_from_db(
     从主库 memory 表按节日名称与日期查询已有节日记忆，返回与 extract_festival_to_dict
     相同结构的 dict 列表（含 user_name、agent_name）。不写库、不调 LLM。
     """
-    r = await db.execute(select(Memory).where(Memory.memory_type == MEMORY_TYPE_FESTIVAL))
+    r = await db.execute(
+        select(Memory).where(Memory.memory_type == MEMORY_TYPE_FESTIVAL)
+    )
     rows = r.scalars().all()
     out: List[dict] = []
     for row in rows:

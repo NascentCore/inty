@@ -51,7 +51,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -60,6 +59,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -212,7 +212,8 @@ fun ChatMorePanel(
                                 // love journal 图标大小要特别设置以达到合适的视觉效果
                                 // 后面需要修改图标设计使得大小和视觉效果高度一致，同样大小的图标
                                 // 视觉上也会一样大小
-                                iconSize = dimensionResource(R.dimen.heartbeat_more_panel_icon_size),
+                                iconSize =
+                                    dimensionResource(R.dimen.heartbeat_more_panel_icon_size),
                                 onClick = {
                                     // 检查是否已登录
                                     if (

@@ -381,7 +381,8 @@ fun ChatSettingsDrawer(
                                         text = {
                                             Text(
                                                 text = stringResource(option.labelResId),
-                                                color = MaterialTheme.colorScheme.textOnLightSurface,
+                                                color =
+                                                    MaterialTheme.colorScheme.textOnLightSurface,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                         },

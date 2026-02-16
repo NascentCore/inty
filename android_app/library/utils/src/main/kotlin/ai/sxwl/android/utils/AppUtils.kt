@@ -17,13 +17,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
+import kotlin.system.exitProcess
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import kotlin.system.exitProcess
 
 private const val DEBUG_MODE_DATASTORE_NAME = "debug_mode_settings"
 private const val KEY_DEBUG_MODE = "debug_mode"
@@ -69,20 +69,19 @@ object AppUtils {
         if (debugModeOverrideLoaded) {
             return cachedDebugModeOverride ?: isBuildTypeDebug(appContext)
         }
-        val override =
-            runBlocking {
-                appContext.debugModeDataStore.data
-                    .catch { error ->
-                        if (error is IOException) {
-                            Log.e(TAG, "读取 Debug Mode 失败，回退默认值", error)
-                            emit(emptyPreferences())
-                        } else {
-                            throw error
-                        }
+        val override = runBlocking {
+            appContext.debugModeDataStore.data
+                .catch { error ->
+                    if (error is IOException) {
+                        Log.e(TAG, "读取 Debug Mode 失败，回退默认值", error)
+                        emit(emptyPreferences())
+                    } else {
+                        throw error
                     }
-                    .map { preferences -> preferences[DEBUG_MODE_PREF_KEY] }
-                    .first()
-            }
+                }
+                .map { preferences -> preferences[DEBUG_MODE_PREF_KEY] }
+                .first()
+        }
         cachedDebugModeOverride = override
         debugModeOverrideLoaded = true
         return override ?: isBuildTypeDebug(appContext)

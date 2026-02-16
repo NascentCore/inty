@@ -6,7 +6,6 @@
 2. 完成后，打开每日消息，可以用自己的 User ID 搜索语音通话录音
    <img width="600" height="1470" alt="image" src="https://github.com/user-attachments/assets/d4df8f1a-386d-42dd-a836-ee7cb41a75bf" />
 
-
 ## 当前状态
 
 ✅ **后端集成完成** - 评测系统已完全集成到 InTy 后端  

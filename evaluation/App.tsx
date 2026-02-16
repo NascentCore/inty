@@ -424,101 +424,107 @@ const AppContent: React.FC = () => {
               )}
             </div>
 
-          {/* 导航菜单容器 */}
-          <div
-            style={{
-              flex: 1,
-              minHeight: 0,
-              maxHeight: `calc(100vh - ${SIDER_HEADER_HEIGHT_PX}px)`,
-              overflowY: "auto",
-              overflowX: "hidden",
-              paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
-            }}
-          >
-            <Menu
-              mode="inline"
-              selectedKeys={[currentPage]}
+            {/* 导航菜单容器 */}
+            <div
               style={{
-                border: "none",
-                paddingTop: "16px",
-                background: "transparent",
+                flex: 1,
+                minHeight: 0,
+                maxHeight: `calc(100vh - ${SIDER_HEADER_HEIGHT_PX}px)`,
+                overflowY: "auto",
+                overflowX: "hidden",
+                paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
               }}
-              items={navigationItems.map((item) => ({
-                key: item.key,
-                icon: undefined,
-                label: (
-                  <Tooltip
-                    title={collapsed ? item.label : ""}
-                    placement="right"
-                    overlayClassName="collapsed-menu-tooltip"
-                    color="#ffffff"
-                  >
-                    <div
-                      style={{
-                        flex: 1,
-                        minHeight: `${MENU_ROW_MIN_HEIGHT_PX}px`,
-                        display: "flex",
-                        flexDirection: collapsed ? "row" : "column",
-                        alignItems: collapsed ? "center" : "flex-start",
-                        justifyContent: collapsed ? "center" : "flex-start",
-                        width: "100%",
-                      }}
+            >
+              <Menu
+                mode="inline"
+                selectedKeys={[currentPage]}
+                style={{
+                  border: "none",
+                  paddingTop: "16px",
+                  background: "transparent",
+                }}
+                items={navigationItems.map((item) => ({
+                  key: item.key,
+                  icon: undefined,
+                  label: (
+                    <Tooltip
+                      title={collapsed ? item.label : ""}
+                      placement="right"
+                      overlayClassName="collapsed-menu-tooltip"
+                      color="#ffffff"
                     >
-                      <span style={{ flexShrink: 0, display: "inline-flex", marginRight: collapsed ? 0 : 8 }}>
-                        {item.icon}
-                      </span>
-                      {!collapsed && (
-                        <>
-                          <div
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: "500",
-                              lineHeight: "1.4",
-                              color: "rgba(0, 0, 0, 0.85)",
-                              marginBottom: "2px",
-                            }}
-                          >
-                            {item.label}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              lineHeight: "1.3",
-                              color: "rgba(0, 0, 0, 0.45)",
-                              marginTop: "2px",
-                            }}
-                          >
-                            {item.description}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </Tooltip>
-                ),
-                onClick: () => setCurrentPage(item.key),
-                style: {
-                  height: "auto",
-                  lineHeight: "normal",
-                  padding: collapsed ? "12px" : "12px 24px",
-                  marginBottom: "4px",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "flex-start",
-                },
-              }))}
-            />
-          </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          minHeight: `${MENU_ROW_MIN_HEIGHT_PX}px`,
+                          display: "flex",
+                          flexDirection: collapsed ? "row" : "column",
+                          alignItems: collapsed ? "center" : "flex-start",
+                          justifyContent: collapsed ? "center" : "flex-start",
+                          width: "100%",
+                        }}
+                      >
+                        <span
+                          style={{
+                            flexShrink: 0,
+                            display: "inline-flex",
+                            marginRight: collapsed ? 0 : 8,
+                          }}
+                        >
+                          {item.icon}
+                        </span>
+                        {!collapsed && (
+                          <>
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "500",
+                                lineHeight: "1.4",
+                                color: "rgba(0, 0, 0, 0.85)",
+                                marginBottom: "2px",
+                              }}
+                            >
+                              {item.label}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                lineHeight: "1.3",
+                                color: "rgba(0, 0, 0, 0.45)",
+                                marginTop: "2px",
+                              }}
+                            >
+                              {item.description}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </Tooltip>
+                  ),
+                  onClick: () => setCurrentPage(item.key),
+                  style: {
+                    height: "auto",
+                    lineHeight: "normal",
+                    padding: collapsed ? "12px" : "12px 24px",
+                    marginBottom: "4px",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                  },
+                }))}
+              />
+            </div>
 
-          {/* 底部区域 */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: "inherit",
-            }}
-          ></div>
+            {/* 底部区域 */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                background: "inherit",
+              }}
+            ></div>
           </div>
         </Sider>
 

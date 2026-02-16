@@ -138,10 +138,7 @@ class ReportViewModel : BaseVM() {
     }
 
     fun evidenceImagesForDisplay(): List<String> {
-        return mergeEvidenceImageUrls(
-            remoteImages = remoteImages,
-            localImages = localImages,
-        )
+        return mergeEvidenceImageUrls(remoteImages = remoteImages, localImages = localImages)
     }
 
     fun submit() {
