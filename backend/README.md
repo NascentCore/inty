@@ -17,21 +17,6 @@ cp devops/config.yaml.test config.yaml
 ./backend/inty/start.sh --dev
 ```
 
-## 更新 openapi.json【已计划废弃】
-
-```bash
-# 调用脚本更新 app/openapi.json
-export PYTHONPATH=.
-python scripts/generate_openapi_json.py
-
-# 根据 app/openapi.json 更新 app/stainless.yml
-# 包括增加新的 API endpoint、删除 openapi.json 中被删除的 API endpoint 等等
-```
-
-然后，创建 Pull Request，等待 app.stainless.com 启动更新
-
-<img width="480" height="932" alt="image" src="https://github.com/user-attachments/assets/5ba171a1-c387-404d-9ab2-c81c1c85ef74" />
-
 ## GCS 配置
 
 GCS public access

@@ -97,6 +97,9 @@ inty-firebase-key.json
 # 敏感文件
 /.secrets/
 
+# OpenAPI 生成脚本临时输出（generate_kotlin_models_from_openapi.sh）
+.openapi_generated.json
+
 # stainless output sdks
 /app/inty-typescript/
 # Android studio playdebug build type 写 apk/aab 的目录
