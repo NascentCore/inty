@@ -74,6 +74,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
 import androidx.navigation.toRoute
 import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.agent.heartbeat.viewmodel.HeartbeatViewModel
 import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
@@ -281,8 +282,9 @@ private fun Heartbeat(
     val highlightedEntry = remember(initialId, memories) {
         initialId?.let { id -> memories.find { it.id == id } }
     }
-    var showHighlightOverlay by remember(initialId, memories) {
-        mutableStateOf(initialId != null && highlightedEntry != null)
+    // 仅随 initialId 重置，避免 memories 更新时重新执行 remember 导致用户已关闭的叠加层再次出现
+    var showHighlightOverlay by remember(initialId) {
+        mutableStateOf(initialId != null)
     }
     val title =
         if (agentFirstName != null) {
@@ -400,13 +402,15 @@ private fun Heartbeat(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
+                            // 叠加层中弹层卡片宽度见 UiConfigs.Heartbeat.OverlayCardWidthRatio；此处 Box 消费点击以避免点击卡片时关闭叠加层
                             Box(
                                 modifier =
-                                    Modifier.clickable(
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        onClick = { },
-                                    ),
+                                    Modifier.fillMaxWidth(UiConfigs.Heartbeat.OverlayCardWidthRatio)
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            onClick = { },
+                                        ),
                             ) {
                                 HeartbeatJournalCard(
                                     memory = highlightedEntry,

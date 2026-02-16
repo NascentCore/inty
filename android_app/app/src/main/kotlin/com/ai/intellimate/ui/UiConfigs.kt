@@ -700,6 +700,12 @@ object UiConfigs {
         val ActionButtonSpacing = 12.dp
     }
 
+    /** Love Journal (Heartbeat) 页面配置 */
+    object Heartbeat {
+        /** 叠加层中弹层卡片宽度比例（相对于屏幕宽度） */
+        const val OverlayCardWidthRatio = 0.7f
+    }
+
     /** 聊天顶部栏配置 - 适用于聊天页面顶部栏的尺寸、间距、字体等设置 */
     object ChatTopBar {
         /** 头像大小 */
