@@ -137,6 +137,9 @@ def test_festival_memory_delivered_via_chat_completions(
         msg = festival_prompts[0].get("message", {})
         assert "id" in msg, f"Festival memory prompt message must have id, got message={msg}"
         assert isinstance(msg["id"], int), f"Festival memory prompt message id must be int, got {type(msg['id']).__name__}"
+        # 断言：投递后 memory.delivery_at 已更新
+        db_session.refresh(memory)
+        assert memory.delivery_at is not None, "memory.delivery_at should be set after delivery"
     finally:
         db_session.delete(memory)
         db_session.commit()

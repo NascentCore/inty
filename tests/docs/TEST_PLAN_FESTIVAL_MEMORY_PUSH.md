@@ -26,6 +26,7 @@
 
 ## 集成测试
 
+- **deliver_festival_memories_for_user_agent**（`tests/app/services/test_memory_service_deliver_festival_integration.py`）：使用真实 DB，调用投递函数后断言 memory.delivery_at 已设置且 chat_history 中有一条对应 festival_memory_prompt 记录。
 - **process_festival_memory_push_batch**
   - Mock FCM 或使用测试 token，跑一次 `process_festival_memory_push_batch`。
   - 断言：`record_push_history` 被调用（push_type=festival_memory, stage=festival）。
