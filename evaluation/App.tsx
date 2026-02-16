@@ -43,6 +43,9 @@ import { UserInfo } from "./components/UserInfo";
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
+/** Height reserved for the sidebar header (logo + hamburger), used for scroll area max-height. */
+const SIDER_HEADER_HEIGHT_PX = 80;
+
 type PageKey =
   | "evaluation"
   | "history"
@@ -350,66 +353,75 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          {/* Logo区域 - 添加汉堡按钮 */}
           <div
             style={{
-              padding: collapsed ? "16px 12px" : "16px 24px",
-              borderBottom: "1px solid #f0f0f0",
+              height: "100%",
               display: "flex",
-              alignItems: "center",
-              justifyContent: collapsed ? "center" : "space-between",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {collapsed ? (
-                /* 收起状态：显示汉堡按钮 */
+            {/* Logo区域 - 添加汉堡按钮 */}
+            <div
+              style={{
+                padding: collapsed ? "16px 12px" : "16px 24px",
+                borderBottom: "1px solid #f0f0f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: collapsed ? "center" : "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center" }}>
+                {collapsed ? (
+                  /* 收起状态：显示汉堡按钮 */
+                  <Button
+                    type="text"
+                    icon={<MenuUnfoldOutlined />}
+                    onClick={() => handleCollapse(false)}
+                    style={{
+                      padding: "4px 8px",
+                      height: "32px",
+                      width: "32px",
+                      borderRadius: "6px",
+                      color: "#1890ff",
+                      border: "1px solid #d9d9d9",
+                      fontSize: "16px",
+                    }}
+                    title="展开菜单"
+                  />
+                ) : (
+                  /* 展开状态：显示标题 */
+                  <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+                    InTy 评测
+                  </Title>
+                )}
+              </div>
+
+              {/* 汉堡按钮 - 仅在展开状态显示 */}
+              {!collapsed && (
                 <Button
                   type="text"
-                  icon={<MenuUnfoldOutlined />}
-                  onClick={() => handleCollapse(false)}
+                  icon={<MenuFoldOutlined />}
+                  onClick={() => handleCollapse(true)}
                   style={{
                     padding: "4px 8px",
                     height: "32px",
                     width: "32px",
                     borderRadius: "6px",
-                    color: "#1890ff",
+                    color: "#666",
                     border: "1px solid #d9d9d9",
-                    fontSize: "16px",
                   }}
-                  title="展开菜单"
+                  title="收起菜单"
                 />
-              ) : (
-                /* 展开状态：显示标题 */
-                <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
-                  InTy 评测
-                </Title>
               )}
             </div>
-
-            {/* 汉堡按钮 - 仅在展开状态显示 */}
-            {!collapsed && (
-              <Button
-                type="text"
-                icon={<MenuFoldOutlined />}
-                onClick={() => handleCollapse(true)}
-                style={{
-                  padding: "4px 8px",
-                  height: "32px",
-                  width: "32px",
-                  borderRadius: "6px",
-                  color: "#666",
-                  border: "1px solid #d9d9d9",
-                }}
-                title="收起菜单"
-              />
-            )}
-          </div>
 
           {/* 导航菜单容器 */}
           <div
             style={{
               flex: 1,
               minHeight: 0,
+              maxHeight: `calc(100vh - ${SIDER_HEADER_HEIGHT_PX}px)`,
               overflowY: "auto",
               overflowX: "hidden",
               paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
@@ -492,6 +504,7 @@ const AppContent: React.FC = () => {
               background: "inherit",
             }}
           ></div>
+          </div>
         </Sider>
 
         {/* 主内容区域 */}
