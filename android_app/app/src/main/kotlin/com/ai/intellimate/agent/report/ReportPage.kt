@@ -16,15 +16,17 @@ internal fun ReportPage(
     isFeedbackModel: Boolean,
     targetType: String,
     targetId: String,
+    initialEvidenceImageUrl: String,
     viewModel: ReportViewModel = viewModel(),
 ) {
-    LaunchedEffect(isFeedbackModel) {
+    LaunchedEffect(isFeedbackModel, targetType, targetId, initialEvidenceImageUrl) {
         viewModel.isFeedbackMode = isFeedbackModel
         viewModel.updateReasonsForMode()
         if (!isFeedbackModel) {
             viewModel.targetID = targetId
             viewModel.targetType = targetType
         }
+        viewModel.setInitialEvidenceImage(initialEvidenceImageUrl)
     }
 
     LaunchedEffect(Unit) {
@@ -43,7 +45,7 @@ internal fun ReportPage(
     val reasons = viewModel.reasons.collectAsState()
     val selectedReasonCodes = viewModel.selectedReasonCodes
     val description = viewModel.description.collectAsState()
-    val localImages = viewModel.localImages
+    val evidenceImages = viewModel.evidenceImagesForDisplay()
     val isSubmitting = viewModel.isSubmitting.collectAsState()
 
     val galleryLauncher =
@@ -64,7 +66,7 @@ internal fun ReportPage(
         },
         description = description.value,
         onDescriptionChange = { viewModel.setDescription(it) },
-        images = localImages.toList(),
+        images = evidenceImages,
         onClickAddImage = { galleryLauncher.launch("image/*") },
         onSave = { viewModel.submit() },
         isSubmitting = isSubmitting.value,

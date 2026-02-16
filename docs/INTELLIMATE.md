@@ -71,7 +71,7 @@ Click the **Me** or the **right-most** icon
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
 | Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. Tapping a “Heartbeat Journal” (festival memory) notification opens that iMate’s Love Journal and the related memory entry. When opened from chat or a notification, that entry is highlighted with a glow and the rest of the screen is dimmed; tap outside the glowing card to return to the normal list. |
 | Check version info | Settings → About | Version code comes from git commit count. If Play build lags behind, install the QA APK. |
-| Send feedback or report | Chat → ⋮ → Report, or Profile → Feedback | Reports go through the Report Service; attach screenshots when possible. |
+| Send feedback or report | Chat → ⋮ → Report, Profile → Feedback, or Image Viewer → Report | Reports go through the Report Service; when reporting from Image Viewer, the current image is attached automatically and you can add more evidence images. |
 
 ## Feature Deep Dive
 

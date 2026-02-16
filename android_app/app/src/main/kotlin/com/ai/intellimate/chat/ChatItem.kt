@@ -897,7 +897,6 @@ private fun ChatItemAI(
                                 ),
                         ) {
                             val agentId = agentInfo?.id ?: ""
-                            val context = LocalContext.current
                             FullScreenImageViewer(
                                 imageUrl = generatedImageUrl,
                                 onDismiss = { showFullScreenImage = false },
@@ -917,6 +916,12 @@ private fun ChatItemAI(
                                     stringResource(R.string.agent_gallery_set_as_background),
                                 onReport = {
                                     if (agentId.isNotBlank()) {
+                                        navController.currentBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set(
+                                                Routes.Me.ReportInitialEvidenceImageUrlKey,
+                                                generatedImageUrl,
+                                            )
                                         navController.navigate(
                                             Routes.Me.reportPage(false, "AGENT", agentId)
                                         )
