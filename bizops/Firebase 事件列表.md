@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档整理了IntelliMate Android应用中所有实际使用的Firebase Analytics和Performance事件，包含事件名称、参数、使用场景和采样配置。基于实际代码分析，确保信息的准确性和实用性。
+本文档整理了IntelliMate Android应用中所有实际使用的Firebase Analytics和Performance事件，包含事件名称、参数、使用场景和采样配置。基于实际代码分析，确保信息的准确性和实用性。**本文档合并了原 FIREBASE_BUSINESS_EVENTS.md 的业务事件清单与参数说明，作为唯一维护入口。**
 
 ## 采样配置说明
 
@@ -53,6 +53,13 @@
 | `message_to_image_generation_failure` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`（包含异常类型信息，格式：`exception: ClassName, ...`）, `user_type`, `generation_time_ms`, `timestamp` | 图片生成失败（包含错误信息和生成耗时，包括网络错误和异常，异常类型信息在 `error_message` 中，除生成数量上限超标以外的错误） | 🔴 100% |
 | `image_generation_limit_reached` | ChatViewModel.kt | `agent_id`, `agent_name`, `message_id`, `error_code`, `error_message`, `user_type`, `generation_time_ms`, `timestamp` | 图片生成限制达到（免费用户需要订阅或VIP用户达到每日限制，这个限制与其他生图操作累加） | 🔴 100% |
 
+**创建角色头像生成（Avatar）**  
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `avatar_generation_button_clicked` | AvatarGenerateViewModel.kt | 同图片生成类 | 头像生成开始（创建角色时生成头像/背景图） | 🔴 100% |
+| `avatar_generation_success` | AvatarGenerateViewModel.kt | 同图片生成类 | 头像生成成功 | 🔴 100% |
+| `avatar_generation_failure` | AvatarGenerateViewModel.kt | 同图片生成类 | 头像生成失败 | 🔴 100% |
+
 ### 1.6 页面追踪事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
@@ -95,11 +102,15 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `agent_switch` | ChatViewModel.kt | `from_agent_id`, `from_agent_name`, `to_agent_id`, `to_agent_name`, `switch_method`, `user_type`, `timestamp` | Agent切换 | 🔴 100% |
-| `chat_page_click` | ChatViewModel.kt, ChatPage.kt, ChatItem.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`、`message_sent`、`message_to_image`、`image speed up`、`call`、`sidebar`、`more`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `has_generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
+| `chat_page_click` | ChatViewModel.kt, ChatPage.kt, ChatItem.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`、`message_sent`、`message_to_image`、`image speed up`、`call`、`sidebar`、`more`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `message`（可选）, `has_generated_image`（可选）, `generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
 | `chat_sidebar_click` | ChatSettingsDrawer.kt | `click_type`（`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`toggle_chat_list_full_screen`、`toggle_auto_play_animation`、`toggle_text_streaming`、`toggle_show_scene_action_button`、`open_models_menu`、`select_model`、`open_font_size_slider`、`user_manual`、`feedback`、`report`、`font_size_reset`、`font_size_cancel`、`update_font_size`）, `agent_id`（可选）, `enabled`（可选，开关操作时）, `timestamp` | 聊天侧边栏点击 | 🔴 100% |
 | `chat_more_click` | ChatMorePanel.kt | `click_type`（`reply_style`、`report`、`reset`、`change_outfit`、`feedback`、`call`（语音通话，代码常量 CHAT_MORE_CALL））, `agent_id`, `timestamp` | 聊天更多面板点击 | 🔴 100% |
 | `conversations_page_click` | MessagesPage.kt | `click_type`（`MessagesSubscriptionBanner` 等）, `timestamp`（可选） | 会话列表页点击 | 🔴 100% |
 | `push_notification_click` | MainActivity.kt | 推送通知点击 | 🔴 100% |
+| `vip_agent_unlock` | ChatViewModel.kt, ChatPage.kt | `agent_id`, `unlock_method`（`subscription` / `close_dialog` / `credits`）, `owed_credits`（仅 `credits` 时，当前积分） | 聊天页解锁 VIP 角色（含解锁方式；credits 解锁时含当前积分） | 🔴 100% |
+
+**消息点赞/点踩（Thumb up / Thumb down）**  
+使用事件 `chat_page_click`，通过参数 `click_type` 区分：`message_like`（点赞）、`message_dislike`（点踩）。触发位置：ChatViewModel.setMessageVote（likeMessage / dislikeMessage）。参数：`click_type`、`agent_id`、`agent_name`、`message_id`、`message_length`、`message`、`has_generated_image`、`generated_image`、`is_opening`、`user_type`、`timestamp`。无论本地/远程投票成功与否均上报（统计用户点击行为）。
 
 ### 1.9 订阅与计费事件
 
@@ -125,6 +136,7 @@
 | `boost_synced_to_backend` | BoostManager.kt | `agent_id`, `agent_name`, `points` | 积分同步到后端成功 | 🔴 100% |
 | `boost_sync_failed` | BoostManager.kt | `agent_id`, `agent_name`, `points` 等 | 积分同步失败 | 🔴 100% |
 | `boost_sync_exception` | BoostManager.kt | `agent_id`, `agent_name`, `points` 等 | 积分同步异常 | 🔴 100% |
+| `boost_consume` | BoostManager.kt | `source`, `points`, `success` | 积分消耗（如解锁 VIP 角色等） | 🔴 100% |
 
 ### 1.11 网络请求事件
 
@@ -140,6 +152,21 @@
 |---------|---------|------|---------|--------|
 | `app_error` | PageTrackingHelper.kt, UnifiedOkHttpClient.kt | `error`（包含错误类型信息，格式：`errorType: error`）, `current_page`, `page_class`, `timestamp` | 应用错误（错误类型信息在 `error` 中） | 🔴 100% |
 
+### 1.13 其他已使用事件
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `remote_config_applied` | SettingStateManager.kt | `config_key`, `config_value`, `source`（固定为 "remote_config"） | Remote Config 应用默认值时上报（如 Keep Talking、Auto Play Opening Voice），用于验证随机百分比配置 | 随默认采样 |
+
+### 1.14 预留事件（未实际使用）
+
+**Firebase 内置事件**  
+- `SIGN_UP`、`SELECT_CONTENT`、`SHARE`、`SEARCH`、`PURCHASE`  
+- `SCREEN_VIEW`：通过 `PageTrackingHelper.trackPageView()` 自动记录，无需手动调用  
+
+**业务/性能预留**  
+- `PROFILE_UPDATED`、`SETTINGS_CHANGED`：已从代码中移除（未使用）  
+- `VOICE_PLAYBACK_TIME`、`IMAGE_LOAD_TIME`、`PAGE_LOAD_TIME`、`DATABASE_OPERATION_TIME`：性能指标，预留  
 
 ## 2. Firebase Performance 性能监控
 
@@ -284,6 +311,10 @@
 - `image_width`、`image_height`：生成的图片信息（成功时）
 - `generation_time_ms`：图片生成耗时（从发起请求到收到图片URL的完整耗时，毫秒）
 - `error_code`、`error_message`：错误信息（失败时），统一使用 `error_` 前缀，错误类型和异常类型信息在 `error_message` 中
+- `enabled`：开关状态（chat_sidebar_click 事件中开关操作时）
+- `click_type`：点击类型，用于 chat_page_click/chat_sidebar_click/chat_more_click/conversations_page_click；chat_page_click 含 `message_like`、`message_dislike` 等（详见 1.8）
+- `unlock_method`、`owed_credits`：VIP 角色解锁方式（subscription/close_dialog/credits）与 credits 解锁时当前积分（vip_agent_unlock 事件）
+- `config_key`、`config_value`、`source`：Remote Config 应用记录（remote_config_applied 事件），用于验证配置下发
 
 ### 5.2 性能监控参数
 - `duration_ms`、`response_time`：性能指标，用于优化
@@ -303,11 +334,11 @@
 ## 6. 业务价值分析
 
 ### 6.1 核心业务指标
-- **用户行为分析**：页面停留时长、用户交互模式、Agent偏好、Explore页面访问和接口使用情况
+- **用户行为分析**：页面停留时长、用户交互模式、Agent偏好、Explore页面访问和接口使用情况；聊天行为（消息发送频率、会话时长）、功能使用（语音播放、图片查看、消息点赞/点踩）
 - **聊天体验优化**：AI响应时间（API性能）、端到端时间（用户真实感知延迟）、消息发送成功率、语音播放体验
 - **Explore数据统计**：Explore接口请求成功率、当前界面agents总数、接口响应时间、分页加载情况
 - **性能分析**：通过对比API响应时间和端到端时间，可以识别UI处理、网络延迟、本地处理等各个环节的性能瓶颈
-- **商业决策支持**：用户转化路径、功能使用频率、订阅分析、订阅价格变化监控、Explore内容推荐效果
+- **商业决策支持**：用户转化路径、功能使用频率、订阅分析、订阅价格变化监控、Explore内容推荐效果；免费转VIP路径、各功能使用频率与满意度；VIP 角色解锁行为与方式（vip_agent_unlock）
 - **订阅定价分析**：Google Play价格获取情况、UI价格显示情况、价格变化对转化的影响
 - **问题快速发现**：错误监控、网络性能、应用稳定性、价格更新异常、性能瓶颈定位、Explore接口异常
 

@@ -148,8 +148,7 @@
 - [ ] `bizops/TODOS.md`
 - [ ] `bizops/GOOGLE_ADS.md`
 - [ ] `bizops/PHILIPPINES_MARKETING_PLAN.md`
-- [ ] `bizops/FIREBASE_BUSINESS_EVENTS.md`
-- [ ] `bizops/FIREBASE_EVENTS_DOCUMENTATION.md`
+- [ ] `bizops/Firebase 事件列表.md`
 - [ ] `bizops/FIREBASE_PARAMETER_TYPES_GUIDE.md`
 
 ## P4 历史与实验内容

@@ -21,8 +21,7 @@ info@intellimate.app
 
 ### 文档索引
 
-- **[业务事件文档](./FIREBASE_BUSINESS_EVENTS.md)** - 业务事件的统一管理文档，面向产品、运营、数据分析师，关注业务含义和价值
-- **[事件完整文档](./FIREBASE_EVENTS_DOCUMENTATION.md)** - Analytics 和 Performance 事件的完整技术文档，面向开发人员，包含所有技术细节和实现
+- **[Firebase 事件列表](./Firebase%20事件列表.md)** - Firebase Analytics / Performance 事件与业务事件统一文档，包含事件名称、参数、使用位置、采样配置、用户属性、Crashlytics 键及业务价值说明，面向产品、运营、开发与数据分析
 - **[Firebase 参数类型指南](./FIREBASE_PARAMETER_TYPES_GUIDE.md)** - 自定义维度、自定义指标、计算指标的区别和项目参数分类
 - **[Firebase 维度分析](./FIREBASE_DIMENSIONS_ANALYSIS.md)** - 自定义维度使用情况分析和优化建议
 
@@ -39,4 +38,4 @@ info@intellimate.app
 
 **注意**：
 - `chat_session_end` 事件已删除。页面离开场景通过 `page_leave` 事件自动记录（包含停留时长等信息），无需额外的事件统计。
-- `SCREEN_VIEW` 事件包含 `page_source` 参数，用于统计用户从哪个入口进入页面（如 VipCenterActivity、ChatActivity 等），详见 [FIREBASE_BUSINESS_EVENTS.md](./FIREBASE_BUSINESS_EVENTS.md) 和 [FIREBASE_EVENTS_DOCUMENTATION.md](./FIREBASE_EVENTS_DOCUMENTATION.md)。
+- `SCREEN_VIEW` 事件包含 `page_source` 参数，用于统计用户从哪个入口进入页面（如 VipCenterActivity、ChatActivity 等），详见 [Firebase 事件列表](./Firebase%20事件列表.md)。
