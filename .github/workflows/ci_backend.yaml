@@ -14,7 +14,7 @@ on:
       - main
     paths:
       - "pytest.ini"
-      - "start.sh"
+      - "backend/inty/start.sh"
       - "app/**/*.py"
       - "requirements.txt"
       - "scripts/"
@@ -115,8 +115,8 @@ jobs:
       - name: Run python tests
         run: |
           cp devops/config.yaml.test config.yaml
-          # alembic upgrade head: no need to run, as start.sh already includes it
-          ./start.sh --test &
+          # alembic upgrade head: no need to run, as backend/inty/start.sh already includes it
+          ./backend/inty/start.sh --test &
 
           # Wait for the server to be ready with better retry logic
           echo "Waiting for server to start..."

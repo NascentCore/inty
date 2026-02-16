@@ -45,6 +45,8 @@ const { Title, Text } = Typography;
 
 /** Height reserved for the sidebar header (logo + hamburger), used for scroll area max-height. */
 const SIDER_HEADER_HEIGHT_PX = 80;
+/** Minimum height of each sidebar menu row (icon + label area). */
+const MENU_ROW_MIN_HEIGHT_PX = 40;
 
 type PageKey =
   | "evaluation"
@@ -200,7 +202,7 @@ const AppContent: React.FC = () => {
     {
       key: "settings",
       icon: <SettingOutlined />,
-      label: "系统设置",
+      label: "消息生图系统设置",
       description: "配置图片生成等系统参数",
     },
     {
@@ -437,7 +439,7 @@ const AppContent: React.FC = () => {
               }}
               items={navigationItems.map((item) => ({
                 key: item.key,
-                icon: item.icon,
+                icon: undefined,
                 label: (
                   <Tooltip
                     title={collapsed ? item.label : ""}
@@ -448,34 +450,41 @@ const AppContent: React.FC = () => {
                     <div
                       style={{
                         flex: 1,
-                        minHeight: collapsed ? "auto" : "40px",
+                        minHeight: `${MENU_ROW_MIN_HEIGHT_PX}px`,
                         display: "flex",
-                        flexDirection: "column",
+                        flexDirection: collapsed ? "row" : "column",
+                        alignItems: collapsed ? "center" : "flex-start",
                         justifyContent: collapsed ? "center" : "flex-start",
+                        width: "100%",
                       }}
                     >
-                      <div
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: "500",
-                          lineHeight: "1.4",
-                          color: "rgba(0, 0, 0, 0.85)",
-                          marginBottom: collapsed ? "0" : "2px",
-                        }}
-                      >
-                        {item.label}
-                      </div>
+                      <span style={{ flexShrink: 0, display: "inline-flex", marginRight: collapsed ? 0 : 8 }}>
+                        {item.icon}
+                      </span>
                       {!collapsed && (
-                        <div
-                          style={{
-                            fontSize: "11px",
-                            lineHeight: "1.3",
-                            color: "rgba(0, 0, 0, 0.45)",
-                            marginTop: "2px",
-                          }}
-                        >
-                          {item.description}
-                        </div>
+                        <>
+                          <div
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              lineHeight: "1.4",
+                              color: "rgba(0, 0, 0, 0.85)",
+                              marginBottom: "2px",
+                            }}
+                          >
+                            {item.label}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              lineHeight: "1.3",
+                              color: "rgba(0, 0, 0, 0.45)",
+                              marginTop: "2px",
+                            }}
+                          >
+                            {item.description}
+                          </div>
+                        </>
                       )}
                     </div>
                   </Tooltip>

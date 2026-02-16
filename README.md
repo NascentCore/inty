@@ -69,7 +69,7 @@ pip install -r requirements.txt
 # 启动 postgres 数据库
 docker compose up pgvector -d
 # 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
-./start.sh --dev
+./backend/inty/start.sh --dev
 ```
 
 <img width="1028" height="932" alt="image" src="https://github.com/user-attachments/assets/59c52323-9ee3-4042-85ca-39344815b71c" />
@@ -81,7 +81,7 @@ docker compose up pgvector -d
 cp devops/config.yaml.test config.yaml
 
 # 修改相关 py 代码，会自动加载，无需重启
-./start.sh --dev
+./backend/inty/start.sh --dev
 
 # 打开 Android Studio
 # 选择 local build type，编译运行

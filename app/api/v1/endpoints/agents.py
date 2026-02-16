@@ -328,8 +328,8 @@ async def delete_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    # Check permission: only creator can delete
-    if agent.creator_id != current_user.id:
+    # Check permission: creator can delete; superuser can delete any agent
+    if not (is_superuser(current_user) or agent.creator_id == current_user.id):
         raise HTTPException(status_code=403, detail="Permission denied")
 
     deleted_agent = await agent_service.delete_agent(db, db_agent=agent)

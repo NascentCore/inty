@@ -14,7 +14,7 @@ uv pip install -r requirements.txt
 
 # 安装后端服务配置
 cp devops/config.yaml.test config.yaml
-./start.sh --dev
+./backend/inty/start.sh --dev
 ```
 
 ## 更新 openapi.json【已计划废弃】

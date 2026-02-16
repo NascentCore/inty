@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 向举报表插入一条测试数据，便于在「举报与反馈」页面验证列表、详情、永久链接等功能。
-应在数据库迁移与 init_admin_user 之后执行（如 ./start.sh --dev 已包含）。
+应在数据库迁移与 init_admin_user 之后执行（如 ./backend/inty/start.sh --dev 已包含）。
 幂等：若已存在同描述测试数据则跳过。
 CREATED_BY_AGENT
 """
@@ -38,7 +38,7 @@ async def seed_report_test_data(db: AsyncSession) -> None:
     reporter_id = (await db.execute(select(User.id).limit(1))).scalar_one_or_none()
     if not reporter_id:
         print(
-            "未找到任何用户，无法创建举报测试数据。请先运行 init_admin_user（例如 ./start.sh --dev 已包含）。"
+            "未找到任何用户，无法创建举报测试数据。请先运行 init_admin_user（例如 ./backend/inty/start.sh --dev 已包含）。"
         )
         sys.exit(1)
 

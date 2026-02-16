@@ -1060,19 +1060,23 @@ export const chatApi = {
     };
   }> => apiClient.get(`/chats/agents/${agentId}/detail`, params),
 
-  // 获取轻量级消息列表
+  // 获取轻量级消息列表（后端使用 limit/offset；此处兼容 page/size 并转换）
   getMessages: (
     agentId: string,
     params?: {
       page?: number;
       size?: number;
+      limit?: number;
+      offset?: number;
     },
   ): Promise<{
     messages: Array<{
       id: number;
       role: "user" | "assistant" | null;
+      sender_type?: "USER" | "AI" | null;
       content: string;
       timestamp: string;
+      created_at?: string;
       type?: "text" | "image" | "festival_memory_prompt";
       festival_memory_id?: number;
       image_url?: string;
@@ -1096,7 +1100,16 @@ export const chatApi = {
     offset: number;
     has_more: boolean;
     page: number;
-  }> => apiClient.get(`/chats/agents/${agentId}/messages`, params),
+  }> => {
+    const size = params?.size ?? params?.limit ?? 100;
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? size;
+    const offset = params?.offset ?? (page - 1) * size;
+    return apiClient.get(`/chats/agents/${agentId}/messages`, {
+      limit,
+      offset,
+    });
+  },
 
   // 更新消息投票
   updateMessageVote: (

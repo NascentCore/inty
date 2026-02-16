@@ -59,7 +59,7 @@ COPY docs/INTELLIMATE.md docs/INTELLIMATE.md
 # IntelliMate 变更日志，用来给 IntelliMate 官方助手角色提供功能更新提示词
 COPY android_app/docs/CHANGE_LOGS.md android_app/docs/CHANGE_LOGS.md
 # 启动脚本
-COPY start.sh .
+COPY backend/inty/start.sh .
 
 # 复制指定的配置文件到 config.yaml
 COPY ${CONFIG_FILE} config.yaml
