@@ -495,6 +495,10 @@ def _pcm_to_wav(audio_data: bytes, *, mime_type: str) -> bytes:
     return header + audio_data
 
 
+# 公开接口，供 live chat 等将 PCM 转为 WAV 时复用
+pcm_to_wav = _pcm_to_wav
+
+
 def _looks_like_gemini_voice_name(voice_id: str) -> bool:
     """
     兼容旧字段：如果上层仍沿用 voice_id 字段，但存的是 Gemini 预置音色名（如 Zephyr），

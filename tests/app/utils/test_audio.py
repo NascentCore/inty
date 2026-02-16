@@ -90,6 +90,5 @@ def test_build_interleaved_pcm_24k_interleaved():
         ai_sample_rate=24000,
     )
     assert len(out) == 6 + 4
-    user_resampled = out[:6]
     ai_part = out[6:]
     assert ai_part == ai_chunk

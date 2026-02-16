@@ -1083,7 +1083,7 @@ class LiveChatService:
             )
             if not pcm_24k:
                 return
-            wav_bytes = voice_tts_api._pcm_to_wav(
+            wav_bytes = voice_tts_api.pcm_to_wav(
                 pcm_24k, mime_type="audio/L16;rate=24000"
             )
             temp_dir = self._config.audio_temp_dir or tempfile.gettempdir()

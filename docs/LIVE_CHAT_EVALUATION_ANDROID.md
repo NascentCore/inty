@@ -36,13 +36,10 @@
 
 ## 4. 评测平台展示保存的语音通话录音
 
-**可以**通过修改评测前端来展示并播放保存的录音。
+评测前端已支持展示并播放保存的录音。
 
 - **数据链路**：后端 `get_session_messages`（`/evaluation/user-analytics/session-messages`）已返回每条消息的 `audio_url`；live chat 保存的录音会写入对应用户/AI 消息的 `audio_url`，评测前端拿到的消息结构已包含该字段。
-- **当前前端**：`evaluation/pages/UserDailyMessagesPage.tsx` 在存在 `msg.audio_url` 时仅展示「语音消息」Tag，**没有**播放按钮或可点击链接。
-- **建议改动**：在会话消息展示处（如 UserDailyMessagesPage）对 `msg.audio_url` 增加可播放/可打开入口，例如：
-  - 使用 `<audio src={msg.audio_url} controls />` 内嵌播放，或
-  - 提供「播放」「打开录音」按钮/链接（新开标签或弹窗播放）。
+- **当前前端**：`evaluation/pages/UserDailyMessagesPage.tsx` 在存在 `msg.audio_url` 时展示「语音消息」Tag、「打开录音」链接（新开标签）及内嵌 `<audio controls />` 播放器；语音通话页在通话结束后显示「查看录音」按钮，可跳转到「用户每日消息」查看该会话录音。
 - 若需区分「语音通话整段录音」与单条 TTS，可利用 `meta_data.is_voice`、`meta_data.voice_session_id` 等（若后端有写）做标签或筛选。
 
 详见 `app/services/user_analytics_service.py` 中 `get_session_messages` 的返回结构及 `evaluation/types.ts` 中 `ChatMessageResponse`。
