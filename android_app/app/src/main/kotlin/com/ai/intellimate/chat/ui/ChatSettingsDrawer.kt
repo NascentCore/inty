@@ -4,6 +4,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.design.theme.textOnLightSurface
 import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
@@ -366,16 +367,21 @@ fun ChatSettingsDrawer(
                                 },
                             )
 
+                            // 显式设置浅色背景，保证弹层与 textOnLightSurface 文字对比度一致
                             DropdownMenu(
                                 expanded = showModelMenu,
                                 onDismissRequest = { showModelMenu = false },
+                                modifier =
+                                    Modifier.background(
+                                        MaterialTheme.colorScheme.surfaceContainerLowest
+                                    ),
                             ) {
                                 CHAT_MODEL_OPTIONS.forEach { option ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
                                                 text = stringResource(option.labelResId),
-                                                color = MaterialTheme.colorScheme.onSurface,
+                                                color = MaterialTheme.colorScheme.textOnLightSurface,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                         },
