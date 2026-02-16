@@ -1,6 +1,7 @@
 package com.ai.intellimate.agent.heartbeat
 
 import ai.sxwl.android.data.character.local.db.FestivalMemory
+import ai.sxwl.android.common.utils.HeartAppUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.sp
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 
 /** Debug 用节日记忆元数据块：背景透明度。 */
@@ -37,7 +37,7 @@ fun FestivalMemoryDebugMetadata(
     memory: FestivalMemory,
     modifier: Modifier = Modifier,
 ) {
-    if (!BuildConfig.DEBUG) return
+    if (!HeartAppUtils.isAppDebugMode()) return
 
     val lines =
         listOf(

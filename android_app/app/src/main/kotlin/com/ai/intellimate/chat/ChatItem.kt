@@ -100,7 +100,7 @@ import coil3.request.ImageRequest
 import ai.sxwl.android.data.character.local.db.FestivalMemory
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.di.DataModule
-import com.ai.intellimate.BuildConfig
+import ai.sxwl.android.common.utils.HeartAppUtils
 import com.ai.intellimate.agent.heartbeat.FestivalMemoryDebugMetadata
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.toHeartbeat
@@ -510,10 +510,11 @@ private fun ChatItemFestivalMemory(
     agentId: String? = null,
     festivalMemoryId: Long? = null,
 ) {
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
     var memories by remember { mutableStateOf<List<FestivalMemory>>(emptyList()) }
     val characterRepository: CharacterRepository = remember { DataModule.getCharacterRepository() }
-    LaunchedEffect(BuildConfig.DEBUG, agentId, festivalMemoryId) {
-        if (BuildConfig.DEBUG && agentId != null && !agentId.isBlank() && festivalMemoryId != null) {
+    LaunchedEffect(isDebugMode, agentId, festivalMemoryId) {
+        if (isDebugMode && agentId != null && !agentId.isBlank() && festivalMemoryId != null) {
             characterRepository.getFestivalMemories(agentId).collect { memories = it }
         } else {
             memories = emptyList()
@@ -553,7 +554,7 @@ private fun ChatItemFestivalMemory(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
                 )
-                if (BuildConfig.DEBUG && memory != null) {
+                if (isDebugMode && memory != null) {
                     FestivalMemoryDebugMetadata(
                         memory = memory,
                         modifier = Modifier.padding(top = dimensionResource(R.dimen.padding_extra_small)),
@@ -582,6 +583,7 @@ private fun ChatItemAI(
     messageFontSizeSp: Float,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
     val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
     val messageFontSize = messageFontSizeSp.sp
     val agentInfo by viewModel.agentInfo.collectAsState()
@@ -945,7 +947,7 @@ private fun ChatItemAI(
                     )
                 }
 
-                if (BuildConfig.DEBUG) {
+                if (isDebugMode) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         DebugMessageMetadata(
                             item = item,
@@ -990,6 +992,7 @@ private fun ChatItemAI(
 /** 用户消息气泡布局，靠右对齐。 */
 @Composable
 private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
             Row(
@@ -1032,7 +1035,7 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
             }
         }
         .also {
-            if (BuildConfig.DEBUG) {
+            if (isDebugMode) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     DebugMessageMetadata(
                         item = item,
@@ -1116,7 +1119,7 @@ private fun ChatItemSystemTips(item: MessageEntity, chatViewModel: ChatViewModel
 
 @Composable
 private fun DebugMessageMetadata(item: MessageEntity, modifier: Modifier = Modifier) {
-    if (!BuildConfig.DEBUG) return
+    if (!HeartAppUtils.isAppDebugMode()) return
 
     val metadataLines =
         remember(item) {

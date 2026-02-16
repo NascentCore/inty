@@ -1,6 +1,7 @@
 package com.ai.intellimate.agent.heartbeat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.character.local.db.FestivalMemory
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.IntelliMateTheme
@@ -68,7 +69,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.ai.intellimate.BuildConfig
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
@@ -407,7 +407,7 @@ private fun HeartbeatJournalCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = cs.loveJournalOnBackground,
             )
-            if (BuildConfig.DEBUG) {
+            if (HeartAppUtils.isAppDebugMode()) {
                 Spacer(Modifier.height(cardInnerSpacing))
                 FestivalMemoryDebugMetadata(memory = memory)
             }

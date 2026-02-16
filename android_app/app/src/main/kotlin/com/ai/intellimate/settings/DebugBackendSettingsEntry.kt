@@ -54,6 +54,33 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.height(Spacing.SmallSpacer))
             Text(
+                text = stringResource(R.string.settings_debug_mode_title),
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text =
+                        if (uiState.debugModeEnabled) {
+                            stringResource(R.string.settings_debug_mode_on)
+                        } else {
+                            stringResource(R.string.settings_debug_mode_off)
+                        },
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                )
+                Switch(
+                    checked = uiState.debugModeEnabled,
+                    onCheckedChange = viewModel::setDebugModeEnabled,
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.MediumSpacer))
+            Text(
                 text = "当前后端地址：${uiState.activeBaseUrl}",
                 color = Color.White,
                 fontWeight = FontWeight.Medium,
