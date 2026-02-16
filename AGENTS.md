@@ -81,7 +81,7 @@
 
 ## Android App
 
-- 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。
+- Android 发布新版本后将 version code 写入 [Prod 后端配置文件](devops/config.yaml.prod) `google_play.current_version_code`
 
 ## CloudFlare
 
