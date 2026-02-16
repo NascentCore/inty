@@ -13,14 +13,14 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_async_db
-from app.api.v1.router import api_router
-from app.core.agent.agent import agent_manager
-
 # ！！！ 这个 import 必须在所有导入其他应用代码之前。
 # 因为这里设置了 LangSmith 环境变量
 # 如果不在最前面，有可能导致环境变量未注入导致 LangSmith tracing 获得空的环境变量，从而失效
 from app.core.config import global_config_loaded_from_config_yaml
+
+from app.api.deps import get_async_db
+from app.api.v1.router import api_router
+from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase
 from app.middleware.error_handler import (
