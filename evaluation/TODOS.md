@@ -36,7 +36,7 @@
 
 - [ ] 分层与目录规范：`components/`、`pages/`、`services/`、`hooks/`、`utils/` 职责边界清晰 **【工程量：1-2 人天】**
   - _依据：主要是代码重构和目录整理，相对简单_
-- [ ] API 单一真源：基于 `openapi.json`/`stainless.yml` 生成 TS SDK 并接入 **【工程量：2-3 人天】**
+- [ ] API 单一真源：基于 OpenAPI 规范生成 TS SDK 并接入 **【工程量：2-3 人天】**
   - _依据：需要配置 SDK 生成，替换现有 API 调用_
 - [ ] 环境与配置：`import.meta.env` 统一 dev/staging/prod 基础 URL 与功能开关 **【工程量：1 人天】**
   - _依据：主要是配置管理，相对简单_

@@ -7,10 +7,9 @@ usage() {
 Usage:
   scripts/generate_kotlin_models_from_openapi.sh [--out <dir>] [--package <pkg>] [--model-package <pkg>]
                                                 [--serialization <kotlinx_serialization|jackson>]
-                                                [--commit-openapi]
 
 What it does:
-  1) Use scripts/generate_openapi_json.py to refresh app/openapi.json
+  1) Generate OpenAPI spec from FastAPI app (in memory, no committed file)
   2) Use OpenAPI Generator (Docker) to generate Kotlin models only
 
 Defaults:
@@ -20,8 +19,6 @@ Defaults:
   --serialization   kotlinx_serialization
 
 Notes:
-  - By default this script refreshes openapi.json WITHOUT creating a git commit.
-    Use --commit-openapi if you want to keep the old "auto-commit openapi.json" behavior.
   - Override generator image via env OPENAPI_GENERATOR_IMAGE (default: openapitools/openapi-generator-cli:latest)
 EOF
 }
@@ -30,7 +27,6 @@ OUT_DIR="generated/kotlin_openapi_models"
 PACKAGE_NAME="ai.sxwl.inty.openapi"
 MODEL_PACKAGE="ai.sxwl.inty.openapi.model"
 SERIALIZATION_LIBRARY="kotlinx_serialization"
-COMMIT_OPENAPI="false"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,10 +46,6 @@ while [[ $# -gt 0 ]]; do
       SERIALIZATION_LIBRARY="${2:?missing value for --serialization}"
       shift 2
       ;;
-    --commit-openapi)
-      COMMIT_OPENAPI="true"
-      shift 1
-      ;;
     -h|--help)
       usage
       exit 0
@@ -72,8 +64,8 @@ if [[ "${SERIALIZATION_LIBRARY}" != "kotlinx_serialization" && "${SERIALIZATION_
 fi
 
 ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-OPENAPI_JSON_PATH="${ROOT_DIR}/app/openapi.json"
 OUT_ABS="${ROOT_DIR}/${OUT_DIR}"
+OPENAPI_TEMP="${ROOT_DIR}/.openapi_generated.json"
 
 OPENAPI_GENERATOR_IMAGE="${OPENAPI_GENERATOR_IMAGE:-openapitools/openapi-generator-cli:latest}"
 
@@ -86,12 +78,16 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Refreshing OpenAPI spec: ${OPENAPI_JSON_PATH}"
-if [[ "${COMMIT_OPENAPI}" == "true" ]]; then
-  python3 "${ROOT_DIR}/scripts/generate_openapi_json.py" --output "${OPENAPI_JSON_PATH}"
-else
-  python3 "${ROOT_DIR}/scripts/generate_openapi_json.py" --output "${OPENAPI_JSON_PATH}" --no-commit
-fi
+# 任意退出时删除临时 OpenAPI 文件（含 Python 或 docker 失败时）
+trap 'rm -f "${OPENAPI_TEMP}"' EXIT
+
+echo "==> Generating OpenAPI spec from FastAPI app"
+(cd "${ROOT_DIR}" && PYTHONPATH="${ROOT_DIR}" python3 -c "
+import json
+from backend.inty.main import app
+with open('${OPENAPI_TEMP}', 'w', encoding='utf-8') as f:
+    json.dump(app.openapi(), f, indent=2)
+")
 
 echo "==> Cleaning output dir: ${OUT_ABS}"
 rm -rf "${OUT_ABS}"
@@ -101,7 +97,7 @@ echo "==> Generating Kotlin models (image: ${OPENAPI_GENERATOR_IMAGE})"
 docker run --rm \
   -v "${ROOT_DIR}:/local" \
   "${OPENAPI_GENERATOR_IMAGE}" generate \
-  -i "/local/app/openapi.json" \
+  -i "/local/.openapi_generated.json" \
   -g kotlin \
   -o "/local/${OUT_DIR}" \
   --global-property "models,modelDocs=false,modelTests=false,apis=false,apiDocs=false,apiTests=false,supportingFiles=false" \

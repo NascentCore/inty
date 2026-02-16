@@ -14,8 +14,8 @@ pushd "${SCRIPT_DIR}/inty_sdk" >/dev/null
 # 这在 CI 环境中很重要，因为 yarn 可能会检查整个工作区的依赖
 mkdir -p dist
 
-# tsc-multi 通过 tarball 安装，避免 yarn 解析问题
-yarn add -D tsc-multi@https://github.com/stainless-api/tsc-multi/releases/download/v1.1.9/tsc-multi.tgz
+# tsc-multi 从 npm 安装，用于 inty_sdk 多目标构建
+yarn add -D tsc-multi
 yarn install
 NODE_OPTIONS="--max-old-space-size=4096" yarn run build
 popd >/dev/null

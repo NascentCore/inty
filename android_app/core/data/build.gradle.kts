@@ -50,7 +50,7 @@ android {
 
 dependencies {
 
-    // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
+    // ===== Inty SDK（由 OpenAPI 生成的 Kotlin 客户端，见 android_app/library/inty_sdk）=====
     // 注意：版本必须与 app/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理
     implementation(libs.inty.kotlin)
 
