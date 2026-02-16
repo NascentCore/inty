@@ -73,15 +73,11 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
 import androidx.navigation.toRoute
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.viewmodel.HeartbeatViewModel
 import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.ui.UiConfigs
-import java.net.HttpURLConnection
-import java.net.URL
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -91,42 +87,6 @@ private const val HeartbeatScrimAlpha = 0.5f
 private const val HeartbeatGlowSpotAlpha = 0.45f
 /** 高亮卡片柔光：ambient 阴影透明度。 */
 private const val HeartbeatGlowAmbientAlpha = 0.25f
-
-// #region agent log
-private const val DEBUG_LOG_INGEST_URL = "http://10.0.2.2:7252/ingest/558b35d0-ae2b-4c5a-a84a-b0ed3789218b"
-private fun heartbeatDebugLog(
-    scope: kotlinx.coroutines.CoroutineScope,
-    location: String,
-    message: String,
-    data: Map<String, Any?>,
-    hypothesisId: String,
-) {
-    scope.launch(Dispatchers.IO) {
-        try {
-            val dataStr = data.mapValues { (_, v) -> v?.toString() ?: "null" }
-            val body =
-                org.json.JSONObject()
-                    .put("location", location)
-                    .put("message", message)
-                    .put("data", org.json.JSONObject(dataStr))
-                    .put("timestamp", System.currentTimeMillis())
-                    .put("hypothesisId", hypothesisId)
-                    .toString()
-            val url = URL(DEBUG_LOG_INGEST_URL)
-            (url.openConnection() as? HttpURLConnection)?.run {
-                requestMethod = "POST"
-                setRequestProperty("Content-Type", "application/json")
-                doOutput = true
-                connectTimeout = 2000
-                readTimeout = 2000
-                outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                responseCode
-                disconnect()
-            }
-        } catch (_: Exception) { }
-    }
-}
-// #endregion
 
 /** 高亮卡片浮层信息：相对于 Love Journal 屏根 Box 的偏移与尺寸，用于全屏 scrim 上绘制卡片。 */
 private data class HeartbeatOverlayInfo(
@@ -492,12 +452,13 @@ private fun HeartbeatContent(
         }
     }
 
-    // 高亮卡片滚出可见区域时取消高亮
-    LaunchedEffect(listState, highlightedMemoryId) {
-        if (highlightedMemoryId == null) return@LaunchedEffect
+    // 高亮卡片滚出可见区域时取消高亮（按 index 判断，与 overlay 查找一致，避免 release 下 key 匹配异常）
+    val highlightedIndex = if (highlightedMemoryId != null) memories.indexOfFirst { it.id == highlightedMemoryId }.takeIf { it >= 0 } else null
+    LaunchedEffect(listState, highlightedMemoryId, highlightedIndex) {
+        if (highlightedIndex == null) return@LaunchedEffect
         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
             .collect { visibleItems ->
-                if (visibleItems.none { it.key == highlightedMemoryId }) {
+                if (visibleItems.none { it.index == highlightedIndex }) {
                     onClearHighlight()
                 }
             }
@@ -526,19 +487,18 @@ private fun HeartbeatContent(
     var lazyColumnSizePx by remember { mutableStateOf(IntSize.Zero) }
 
     val layoutInfo = listState.layoutInfo
-    val itemInfo = if (highlightedMemoryId != null) layoutInfo.visibleItemsInfo.find { it.key == highlightedMemoryId } else null
+    // 按 index 查找可见项，避免 release 构建下 it.key == highlightedMemoryId 匹配失败或匹配到错误项
+    val itemInfo = if (highlightedIndex != null) layoutInfo.visibleItemsInfo.find { it.index == highlightedIndex } else null
     val highlightedMemory = if (highlightedMemoryId != null) memories.find { it.id == highlightedMemoryId } else null
-    val scrollOffset = listState.firstVisibleItemScrollOffset
+    // LazyListItemInfo.offset 是相对于可见 viewport 的偏移，不是相对于可滚动内容起点；故直接用 lazyColumnRootOffset + offset 得到 root 坐标。
     val computedOverlayInfo: HeartbeatOverlayInfo? =
         if (itemInfo != null && highlightedMemory != null) {
             val itemH = itemInfo.size
             val itemW = lazyColumnSizePx.width
             if (itemW > 0 && itemH > 0) {
                 val itemOffsetY = itemInfo.offset
-                val cardX = lazyColumnRootOffset.x - contentBoxRootOffset.x
-                val cardY = lazyColumnRootOffset.y - contentBoxRootOffset.y - scrollOffset + itemOffsetY
-                val cardRootX = contentBoxRootOffset.x + cardX
-                val cardRootY = contentBoxRootOffset.y + cardY
+                val cardRootX = lazyColumnRootOffset.x
+                val cardRootY = lazyColumnRootOffset.y + itemOffsetY
                 val offsetX = cardRootX - screenRootOffset.x
                 val offsetY = cardRootY - screenRootOffset.y
                 HeartbeatOverlayInfo(
@@ -550,40 +510,6 @@ private fun HeartbeatContent(
                 )
             } else null
         } else null
-
-    // #region agent log
-    if (highlightedMemoryId != null) {
-        heartbeatDebugLog(
-            scope = scope,
-            location = "Heartbeat.kt:HeartbeatContent",
-            message = if (itemInfo != null) "overlay compute" else "overlay compute itemInfo null",
-            data = mapOf(
-                "buildType" to BuildConfig.BUILD_TYPE,
-                "highlightedMemoryId" to highlightedMemoryId,
-                "memoryIds" to memories.map { it.id }.toString(),
-                "visibleKeys" to layoutInfo.visibleItemsInfo.map { it.key }.toString(),
-                "visibleIndices" to layoutInfo.visibleItemsInfo.map { it.index }.toString(),
-                "foundKey" to (itemInfo?.key?.toString()),
-                "foundIndex" to (itemInfo?.index),
-                "foundKeyClass" to (itemInfo?.key?.javaClass?.simpleName),
-                "itemOffset" to (itemInfo?.offset),
-                "itemSize" to (itemInfo?.size?.let { "${it.width}x${it.height}" }),
-                "firstVisibleItemIndex" to listState.firstVisibleItemIndex,
-                "scrollOffset" to scrollOffset,
-                "screenRootX" to screenRootOffset.x,
-                "screenRootY" to screenRootOffset.y,
-                "contentBoxX" to contentBoxRootOffset.x,
-                "contentBoxY" to contentBoxRootOffset.y,
-                "lazyColX" to lazyColumnRootOffset.x,
-                "lazyColY" to lazyColumnRootOffset.y,
-                "lazyColW" to lazyColumnSizePx.width,
-                "lazyColH" to lazyColumnSizePx.height,
-                "highlightedTitle" to (highlightedMemory?.title),
-            ),
-            hypothesisId = "A_B_C_D_E",
-        )
-    }
-    // #endregion
 
     LaunchedEffect(computedOverlayInfo) { onOverlayInfo(computedOverlayInfo) }
 
