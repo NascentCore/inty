@@ -185,8 +185,6 @@ class ChatMessageRepository(
         userVote: MessageEntity.UserVote,
     ) {
         withContext(Dispatchers.IO) {
-            val preMessage = localDataSource.getMessage(agentId, messageId)
-
             try {
                 localDataSource.setMessageVote(agentId, messageId, userVote)
 
@@ -196,7 +194,9 @@ class ChatMessageRepository(
                     throw Exception(result.message)
                 }
             } catch (error: Exception) {
-                localDataSource.setMessageVote(agentId, messageId, preMessage?.userVote)
+                // 不再回滚本地状态：远程投票失败时保留用户已选的 like/dislike，避免 UI 闪一下又恢复
+                // 只提示错误日志，不抛出异常
+                LogUtils.e("Vote message remote failure (local vote kept): ${error.message}")
                 throw error
             }
         }

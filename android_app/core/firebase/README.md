@@ -448,7 +448,7 @@ CrashlyticsTest.recordTestException(Exception("Test exception"))
 
 - **限制事件共享**：`IMAGE_GENERATION_LIMIT_REACHED` 是共享事件，两种场景都会触发，限制是累加的
 
-详细事件列表和参数说明见：`bizops/FIREBASE_EVENTS_DOCUMENTATION.md`
+详细事件列表和参数说明见：`bizops/Firebase 事件列表.md`
 
 ## 预定义用户属性
 
