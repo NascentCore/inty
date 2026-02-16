@@ -146,19 +146,16 @@ async def get_festival_memories_for_user_agent(
     获取指定用户与指定角色的节日记忆列表，供角色详情 features.festival_memories 使用。
     返回列表元素：{"memory_id": int, "festival_date": "YYYY-MM-DD", "festival_name": str, "memory": str}
     """
-    stmt = (
-        select(
-            Memory.id,
-            Memory.meta_data,
-            Memory.festival_name,
-            Memory.festival_date,
-            Memory.content,
-        )
-        .where(
-            Memory.user_id == user_id,
-            Memory.agent_id == agent_id,
-            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
-        )
+    stmt = select(
+        Memory.id,
+        Memory.meta_data,
+        Memory.festival_name,
+        Memory.festival_date,
+        Memory.content,
+    ).where(
+        Memory.user_id == user_id,
+        Memory.agent_id == agent_id,
+        Memory.memory_type == MEMORY_TYPE_FESTIVAL,
     )
     result = await db.execute(stmt)
     rows = result.fetchall()
@@ -183,7 +180,12 @@ async def get_festival_memories_for_user_agent(
                 "memory": content,
             }
         )
-    items.sort(key=lambda item: (_festival_date_sort_key(item["_festival_date_obj"]), item["memory_id"]))
+    items.sort(
+        key=lambda item: (
+            _festival_date_sort_key(item["_festival_date_obj"]),
+            item["memory_id"],
+        )
+    )
     return [
         {
             "memory_id": item["memory_id"],
@@ -293,19 +295,16 @@ async def get_undelivered_festival_memories(
     查询 (user_id, agent_id) 下尚未投递的节日记忆（delivery_at IS NULL）。
     返回列表元素：{"id": int, "festival_name": str, "festival_date": date}
     """
-    stmt = (
-        select(
-            Memory.id,
-            Memory.meta_data,
-            Memory.festival_name,
-            Memory.festival_date,
-        )
-        .where(
-            Memory.user_id == user_id,
-            Memory.agent_id == agent_id,
-            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
-            Memory.delivery_at.is_(None),
-        )
+    stmt = select(
+        Memory.id,
+        Memory.meta_data,
+        Memory.festival_name,
+        Memory.festival_date,
+    ).where(
+        Memory.user_id == user_id,
+        Memory.agent_id == agent_id,
+        Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+        Memory.delivery_at.is_(None),
     )
     result = await db.execute(stmt)
     rows = result.fetchall()
@@ -324,7 +323,9 @@ async def get_undelivered_festival_memories(
                 "festival_date": festival_date,
             }
         )
-    items.sort(key=lambda item: (_festival_date_sort_key(item["festival_date"]), item["id"]))
+    items.sort(
+        key=lambda item: (_festival_date_sort_key(item["festival_date"]), item["id"])
+    )
     return items
 
 

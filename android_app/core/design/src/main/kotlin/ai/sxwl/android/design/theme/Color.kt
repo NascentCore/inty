@@ -273,10 +273,7 @@ object VibeModeColors {
  * - 背景为深色夜空渐变（紫/深蓝/墨绿），前景为高饱和霓虹与金色高光。
  * - 适配“极其吸睛、非常 splashy”的氛围：强对比、强辉光、强节日感。
  */
-/**
- * Love Journal 页面设计配色（与设计稿一致）。
- * 屏幕背景、卡片、主文字与强调色（标题下划线、日期）。
- */
+/** Love Journal 页面设计配色（与设计稿一致）。 屏幕背景、卡片、主文字与强调色（标题下划线、日期）。 */
 object LoveJournalColors {
     /** 屏幕背景渐变起点（左上）：暖浅米/粉米（设计稿 #F7E5DE） */
     val background = Color(0xFFF7E5DE)

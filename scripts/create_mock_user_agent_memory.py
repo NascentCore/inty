@@ -179,7 +179,10 @@ async def _run(
                 resolved_name, resolved_date = resolve_festival_name_and_date(
                     metadata, legacy_festival_name, legacy_festival_date
                 )
-                if resolved_name == festival_name_val and resolved_date == festival_date_val:
+                if (
+                    resolved_name == festival_name_val
+                    and resolved_date == festival_date_val
+                ):
                     existing_ids.append(memory_id)
             if existing_ids:
                 await db.execute(delete(Memory).where(Memory.id.in_(existing_ids)))

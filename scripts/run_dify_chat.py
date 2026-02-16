@@ -227,7 +227,9 @@ def generate_characters(
         ", ".join(existing_names[:excluded_name_limit]) if existing_names else "none"
     )
     if len(existing_names) > excluded_name_limit:
-        excluded_names_text += f" (and {len(existing_names) - excluded_name_limit} more)"
+        excluded_names_text += (
+            f" (and {len(existing_names) - excluded_name_limit} more)"
+        )
 
     prompt = f"""Generate 10 diverse character profiles for an AI companion app. All character must be female and 
 Each character should have:

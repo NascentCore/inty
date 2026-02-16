@@ -155,7 +155,10 @@ fun SettingsSwitchItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
+                    color =
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = SETTINGS_ITEM_CONTENT_ALPHA
+                        ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -295,7 +298,10 @@ fun SettingsArrowItem(
                         fontSize = 14.sp,
                         lineHeight = 22.sp,
                         fontWeight = FontWeight(400),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
+                        color =
+                            MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = SETTINGS_ITEM_CONTENT_ALPHA
+                            ),
                         maxLines = contentMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Right,
@@ -308,7 +314,10 @@ fun SettingsArrowItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
+                    color =
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = SETTINGS_ITEM_CONTENT_ALPHA
+                        ),
                     maxLines = contentMaxLines,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Right,

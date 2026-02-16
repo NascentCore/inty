@@ -10,10 +10,9 @@ import ai.sxwl.android.design.theme.loveJournalBackground
 import ai.sxwl.android.design.theme.loveJournalBackgroundGradientEnd
 import ai.sxwl.android.design.theme.loveJournalCardBackground
 import ai.sxwl.android.design.theme.loveJournalOnBackground
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -48,25 +48,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -145,8 +145,7 @@ fun Heartbeat(
 
 /**
  * Love Journal 顶栏标题 + 下划线。使用 SubcomposeLayout 先测量标题宽度，再按该宽度绘制下划线，保证与标题等长。
- * 下划线为横向渐变：左侧为强调色（红橙），向右渐隐至透明；左侧两端带圆角。
- * 空标题时下划线宽度为 0，不会报错。
+ * 下划线为横向渐变：左侧为强调色（红橙），向右渐隐至透明；左侧两端带圆角。 空标题时下划线宽度为 0，不会报错。
  *
  * 可配置项：title、titleColor、underlineHeight、underlineSpacing、underlineColor、underlineCornerRadius。
  */
@@ -170,9 +169,7 @@ private fun HeartbeatTitleWithUnderline(
                 maxHeight = Constraints.Infinity,
             )
         val textPlaceable =
-            subcompose("title") {
-                Text(text = title, color = titleColor)
-            }
+            subcompose("title") { Text(text = title, color = titleColor) }
                 .map { it.measure(textConstraints) }
                 .single()
         val underlineHeightPx = with(density) { underlineHeight.toPx().roundToInt() }
@@ -187,21 +184,21 @@ private fun HeartbeatTitleWithUnderline(
             )
         val underlinePlaceable =
             subcompose("underline") {
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(underlineHeight)
-                            .background(
-                                brush =
-                                    Brush.linearGradient(
-                                        colors = listOf(underlineColor, Color.Transparent),
-                                        start = Offset(0f, 0f),
-                                        end = Offset(underlineWidthPx, 0f),
-                                    ),
-                                shape = leftRoundedShape,
-                            ),
-                )
-            }
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .height(underlineHeight)
+                                .background(
+                                    brush =
+                                        Brush.linearGradient(
+                                            colors = listOf(underlineColor, Color.Transparent),
+                                            start = Offset(0f, 0f),
+                                            end = Offset(underlineWidthPx, 0f),
+                                        ),
+                                    shape = leftRoundedShape,
+                                )
+                    )
+                }
                 .map {
                     it.measure(
                         Constraints(
@@ -209,7 +206,7 @@ private fun HeartbeatTitleWithUnderline(
                             maxWidth = textPlaceable.width,
                             minHeight = underlineHeightPx,
                             maxHeight = underlineHeightPx,
-                        ),
+                        )
                     )
                 }
                 .single()
@@ -240,7 +237,8 @@ private fun Heartbeat(
     val cs = MaterialTheme.colorScheme
     val titleUnderlineHeight = dimensionResource(R.dimen.heartbeat_title_underline_height)
     val titleUnderlineSpacing = dimensionResource(R.dimen.heartbeat_title_underline_spacing)
-    val titleUnderlineCornerRadius = dimensionResource(R.dimen.heartbeat_title_underline_corner_radius)
+    val titleUnderlineCornerRadius =
+        dimensionResource(R.dimen.heartbeat_title_underline_corner_radius)
     val navIconAreaWidth = dimensionResource(R.dimen.heartbeat_top_bar_nav_icon_area_width)
     var highlightedMemoryId by remember(initialId) { mutableStateOf(initialId) }
     var overlayInfo by remember { mutableStateOf<HeartbeatOverlayInfo?>(null) }
@@ -253,9 +251,9 @@ private fun Heartbeat(
 
     Box(
         modifier =
-            modifier
-                .then(Modifier.fillMaxSize())
-                .onGloballyPositioned { screenRootOffset = it.positionInRoot() },
+            modifier.then(Modifier.fillMaxSize()).onGloballyPositioned {
+                screenRootOffset = it.positionInRoot()
+            }
     ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -263,7 +261,8 @@ private fun Heartbeat(
             topBar = {
                 CenterAlignedTopAppBar(
                     colors =
-                        TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
+                        TopAppBarDefaults.topAppBarColors()
+                            .copy(containerColor = Color.Transparent),
                     title = {
                         HeartbeatTitleWithUnderline(
                             title = title,
@@ -277,16 +276,16 @@ private fun Heartbeat(
                     navigationIcon = {
                         Image(
                             modifier =
-                                Modifier.padding(horizontal = dimensionResource(R.dimen.padding_medium))
+                                Modifier.padding(
+                                        horizontal = dimensionResource(R.dimen.padding_medium)
+                                    )
                                     .noRippleClickable(onClick = onBack),
                             painter = painterResource(R.drawable.back),
                             contentDescription = null,
                             colorFilter = ColorFilter.tint(Color.Black),
                         )
                     },
-                    actions = {
-                        Spacer(modifier = Modifier.width(navIconAreaWidth))
-                    },
+                    actions = { Spacer(modifier = Modifier.width(navIconAreaWidth)) },
                 )
             },
         ) { contentPadding ->
@@ -296,17 +295,23 @@ private fun Heartbeat(
                         Modifier.fillMaxSize()
                             .background(
                                 Brush.linearGradient(
-                                    colors = listOf(cs.loveJournalBackground, cs.loveJournalBackgroundGradientEnd),
+                                    colors =
+                                        listOf(
+                                            cs.loveJournalBackground,
+                                            cs.loveJournalBackgroundGradientEnd,
+                                        ),
                                     start = Offset.Zero,
                                     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
-                                ),
-                            ),
+                                )
+                            )
                 )
                 Box(
                     modifier =
                         Modifier.padding(contentPadding)
-                            .padding(horizontal = dimensionResource(R.dimen.page_padding_horizontal))
-                            .fillMaxSize(),
+                            .padding(
+                                horizontal = dimensionResource(R.dimen.page_padding_horizontal)
+                            )
+                            .fillMaxSize()
                 ) {
                     if (memories.isEmpty()) {
                         HeartbeatEmpty()
@@ -330,7 +335,7 @@ private fun Heartbeat(
                 modifier =
                     Modifier.fillMaxSize()
                         .background(Color.Black.copy(alpha = HeartbeatScrimAlpha))
-                        .clickable { highlightedMemoryId = null },
+                        .clickable { highlightedMemoryId = null }
             )
         }
 
@@ -339,7 +344,7 @@ private fun Heartbeat(
                 modifier =
                     Modifier.offset(x = info.offsetXDp, y = info.offsetYDp)
                         .size(info.widthDp, info.heightDp)
-                        .clickable { /* 点击卡片不关闭高亮，仅点击 scrim 关闭 */ },
+                        .clickable { /* 点击卡片不关闭高亮，仅点击 scrim 关闭 */ }
             ) {
                 HeartbeatJournalCard(
                     memory = info.memory,
@@ -380,24 +385,20 @@ private fun HeartbeatJournalCard(
             Modifier
         }
     Surface(
-        modifier = modifier.then(glowModifier).shadow(
-            elevation = cardElevation,
-            shape = MaterialTheme.shapes.medium,
-        ),
+        modifier =
+            modifier
+                .then(glowModifier)
+                .shadow(elevation = cardElevation, shape = MaterialTheme.shapes.medium),
         shape = MaterialTheme.shapes.medium,
         color = cs.loveJournalCardBackground,
     ) {
         Column(
             modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = cardPaddingH, vertical = cardPaddingV),
+                Modifier.fillMaxWidth().padding(horizontal = cardPaddingH, vertical = cardPaddingV)
         ) {
             Text(
                 text = memory.title,
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                    ),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = cs.loveJournalAccent,
             )
             Spacer(Modifier.height(cardInnerSpacing))
@@ -415,8 +416,8 @@ private fun HeartbeatJournalCard(
 }
 
 /**
- * Love Journal 列表内容：副标题 + 卡片列表。高亮状态由父组件持有；本组件负责在列表内绘制卡片，
- * 并向父组件上报浮层位置（供父组件在全屏 scrim 上绘制高亮卡片）。
+ * Love Journal 列表内容：副标题 + 卡片列表。高亮状态由父组件持有；本组件负责在列表内绘制卡片， 并向父组件上报浮层位置（供父组件在全屏 scrim 上绘制高亮卡片）。
+ *
  * @param screenRootOffset 屏根 Box 的 positionInRoot，用于将卡片位置换算为屏根坐标系。
  */
 @Composable
@@ -453,7 +454,10 @@ private fun HeartbeatContent(
     }
 
     // 高亮卡片滚出可见区域时取消高亮（按 index 判断，与 overlay 查找一致，避免 release 下 key 匹配异常）
-    val highlightedIndex = if (highlightedMemoryId != null) memories.indexOfFirst { it.id == highlightedMemoryId }.takeIf { it >= 0 } else null
+    val highlightedIndex =
+        if (highlightedMemoryId != null)
+            memories.indexOfFirst { it.id == highlightedMemoryId }.takeIf { it >= 0 }
+        else null
     LaunchedEffect(listState, highlightedMemoryId, highlightedIndex) {
         if (highlightedIndex == null) return@LaunchedEffect
         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
@@ -487,9 +491,14 @@ private fun HeartbeatContent(
 
     val layoutInfo = listState.layoutInfo
     // 按 index 查找可见项，避免 release 构建下 it.key == highlightedMemoryId 匹配失败或匹配到错误项
-    val itemInfo = if (highlightedIndex != null) layoutInfo.visibleItemsInfo.find { it.index == highlightedIndex } else null
-    val highlightedMemory = if (highlightedMemoryId != null) memories.find { it.id == highlightedMemoryId } else null
-    // LazyListItemInfo.offset 是相对于可见 viewport 的偏移，不是相对于可滚动内容起点；故直接用 lazyColumnRootOffset + offset 得到 root 坐标。
+    val itemInfo =
+        if (highlightedIndex != null)
+            layoutInfo.visibleItemsInfo.find { it.index == highlightedIndex }
+        else null
+    val highlightedMemory =
+        if (highlightedMemoryId != null) memories.find { it.id == highlightedMemoryId } else null
+    // LazyListItemInfo.offset 是相对于可见 viewport 的偏移，不是相对于可滚动内容起点；故直接用 lazyColumnRootOffset + offset
+    // 得到 root 坐标。
     val computedOverlayInfo: HeartbeatOverlayInfo? =
         if (itemInfo != null && highlightedMemory != null) {
             val itemH = itemInfo.size

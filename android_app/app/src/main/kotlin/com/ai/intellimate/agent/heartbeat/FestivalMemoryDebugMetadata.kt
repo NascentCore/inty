@@ -1,7 +1,7 @@
 package com.ai.intellimate.agent.heartbeat
 
-import ai.sxwl.android.data.character.local.db.FestivalMemory
 import ai.sxwl.android.common.utils.HeartAppUtils
+import ai.sxwl.android.data.character.local.db.FestivalMemory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,17 +26,14 @@ private val DEBUG_METADATA_FONT_SIZE = 10.sp
 private val DEBUG_METADATA_LINE_HEIGHT = 12.sp
 
 /**
- * Debug 构建下展示单条节日记忆的全部元数据（id、agentId、festivalDate、festivalName、memory、title）。
- * 用于 Love Journal 卡片底部与聊天页节日记忆通知条，非 debug 不渲染。
+ * Debug 构建下展示单条节日记忆的全部元数据（id、agentId、festivalDate、festivalName、memory、title）。 用于 Love Journal
+ * 卡片底部与聊天页节日记忆通知条，非 debug 不渲染。
  *
  * @param memory 节日记忆实体
  * @param modifier 可选布局修饰
  */
 @Composable
-fun FestivalMemoryDebugMetadata(
-    memory: FestivalMemory,
-    modifier: Modifier = Modifier,
-) {
+fun FestivalMemoryDebugMetadata(memory: FestivalMemory, modifier: Modifier = Modifier) {
     if (!HeartAppUtils.isAppDebugMode()) return
 
     val lines =

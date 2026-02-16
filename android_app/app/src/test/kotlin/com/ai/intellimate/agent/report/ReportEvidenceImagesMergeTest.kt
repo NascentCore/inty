@@ -27,11 +27,7 @@ class ReportEvidenceImagesMergeTest {
         val result =
             mergeEvidenceImageUrls(
                 remoteImages =
-                    listOf(
-                        "  https://cdn.example.com/evidence-initial.jpg  ",
-                        "",
-                        "   ",
-                    ),
+                    listOf("  https://cdn.example.com/evidence-initial.jpg  ", "", "   "),
                 localImages =
                     listOf(
                         "content://media/external/images/media/42",
