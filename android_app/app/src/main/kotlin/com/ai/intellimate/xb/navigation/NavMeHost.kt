@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.compose.runtime.remember
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.agent.report.ReportPage
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -61,9 +62,22 @@ fun NavGraphBuilder.meGraph(
             ),
     ) { backStackEntry ->
         val isFeedback = backStackEntry.arguments?.getBoolean("isFeedback")
-        val targetType = backStackEntry.arguments?.getString("showBoost")
+        val targetType = backStackEntry.arguments?.getString("targetType")
         val targetId = backStackEntry.arguments?.getString("targetId")
-        ReportPage(navController, isFeedback ?: false, targetType ?: "", targetId ?: "USER")
+        val initialEvidenceImageUrl =
+            remember(backStackEntry) {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.remove<String>(Routes.Me.ReportInitialEvidenceImageUrlKey)
+                    .orEmpty()
+            }
+        ReportPage(
+            navController = navController,
+            isFeedbackModel = isFeedback ?: false,
+            targetType = targetType ?: "USER",
+            targetId = targetId ?: "",
+            initialEvidenceImageUrl = initialEvidenceImageUrl,
+        )
     }
 
     uploadSelfieScreen(onBack = { navController.navigateUp() })

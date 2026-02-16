@@ -18,6 +18,7 @@ import com.inty.api.models.api.v1.report.ReportCreateParams
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.LinkedHashSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +54,24 @@ internal fun buildReportDescriptionWithAppVersion(
     }
     val separator = if (userDescription.endsWith("\n")) "\n" else "\n\n"
     return userDescription + separator + suffix
+}
+
+internal fun mergeEvidenceImageUrls(
+    remoteImages: Collection<String>,
+    localImages: Collection<String>,
+): List<String> {
+    val mergedImageUrls = LinkedHashSet<String>()
+    remoteImages
+        .asSequence()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .forEach { mergedImageUrls.add(it) }
+    localImages
+        .asSequence()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .forEach { mergedImageUrls.add(it) }
+    return mergedImageUrls.toList()
 }
 
 class ReportViewModel : BaseVM() {
@@ -109,6 +128,20 @@ class ReportViewModel : BaseVM() {
 
     fun setDescription(text: String) {
         _description.value = text
+    }
+
+    fun setInitialEvidenceImage(imageUrl: String) {
+        val normalizedUrl = imageUrl.trim()
+        if (normalizedUrl.isNotEmpty()) {
+            remoteImages.add(normalizedUrl)
+        }
+    }
+
+    fun evidenceImagesForDisplay(): List<String> {
+        return mergeEvidenceImageUrls(
+            remoteImages = remoteImages,
+            localImages = localImages,
+        )
     }
 
     fun submit() {
@@ -189,7 +222,10 @@ class ReportViewModel : BaseVM() {
     }
 
     fun onAddImage(imageUri: Uri) {
-        localImages.add(imageUri.toString())
+        val normalizedUri = imageUri.toString().trim()
+        if (normalizedUri.isNotEmpty()) {
+            localImages.add(normalizedUri)
+        }
     }
 
     private suspend fun uploadImageWithCompression(
