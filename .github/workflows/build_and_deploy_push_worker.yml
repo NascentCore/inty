@@ -25,8 +25,12 @@ on:
         required: true
         default: dev
 
+  schedule:
+    # 美西凌晨 3 点 UTC（Pacific）：11 AM UTC = 3:00 PST（冬令时），夏令时期间为当地 4:00
+    - cron: "0 11 * * *"
+
 concurrency:
-  group: inty-deploy-push-worker-${{ inputs.environment || 'dev' }}
+  group: inty-deploy-push-worker-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
   cancel-in-progress: false
 
 env:
@@ -35,18 +39,20 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
 
     permissions:
       packages: write
       contents: write
 
-    environment: ${{ inputs.environment || 'dev' }}
+    # 自动运行的情况下，inputs.environment 为空；schedule 固定为 prod，push 为 dev
+    environment: ${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
 
     steps:
       - id: prep
         run: |
-          echo "environment=${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
-          echo "image_tag=${{ github.ref_name }}-${{ inputs.environment || 'dev' }}" >> $GITHUB_OUTPUT
+          echo "environment=${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ github.ref_name }}-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
 
       - name: Check prep output
         run: |
