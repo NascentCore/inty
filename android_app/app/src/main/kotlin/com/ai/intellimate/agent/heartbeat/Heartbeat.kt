@@ -38,9 +38,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -73,7 +75,10 @@ import androidx.navigation.navOptions
 import androidx.navigation.toRoute
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.viewmodel.HeartbeatViewModel
+import com.ai.intellimate.chat.ui.BackToTop
+import com.ai.intellimate.ui.UiConfigs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 /** 从聊天/推送打开某条时，高亮卡片外 scrim 的透明度（0=全透明，1=全黑）。 */
@@ -314,6 +319,7 @@ private fun Heartbeat(
                             onClearHighlight = { highlightedMemoryId = null },
                             screenRootOffset = screenRootOffset,
                             onOverlayInfo = { overlayInfo = it },
+                            contentPadding = contentPadding,
                         )
                     }
                 }
@@ -413,6 +419,7 @@ private fun HeartbeatJournalCard(
  * Love Journal 列表内容：副标题 + 卡片列表。高亮状态由父组件持有；本组件负责在列表内绘制卡片，
  * 并向父组件上报浮层位置（供父组件在全屏 scrim 上绘制高亮卡片）。
  * @param screenRootOffset 屏根 Box 的 positionInRoot，用于将卡片位置换算为屏根坐标系。
+ * @param contentPadding Scaffold 内容区 padding，用于 Back to top 按钮底部间距，与 Explore 页一致。
  */
 @Composable
 private fun HeartbeatContent(
@@ -424,6 +431,7 @@ private fun HeartbeatContent(
     onClearHighlight: () -> Unit,
     screenRootOffset: Offset,
     onOverlayInfo: (HeartbeatOverlayInfo?) -> Unit,
+    contentPadding: PaddingValues = PaddingValues.Zero,
 ) {
     val cs = MaterialTheme.colorScheme
     val density = LocalDensity.current
@@ -433,6 +441,12 @@ private fun HeartbeatContent(
         }
     val count = remember(memories) { memories.size }
     val listState = rememberLazyListState(initialIndex)
+    val scope = rememberCoroutineScope()
+    val showBackToTopButton by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0
+        }
+    }
 
     // initialId 不在当前列表中时（如已删或未加载到）取消高亮
     LaunchedEffect(initialId, memories, highlightedMemoryId) {
@@ -459,6 +473,9 @@ private fun HeartbeatContent(
     val listSpacing = dimensionResource(R.dimen.heartbeat_list_spacing)
     val subtitleBottom = dimensionResource(R.dimen.heartbeat_subtitle_bottom)
     val listPaddingBottom = dimensionResource(R.dimen.heartbeat_list_content_padding_bottom)
+    // 与 Explore 页一致：列表底部留出 Back to top 按钮高度 + 间距，避免最后一项被遮挡
+    val backToTopAreaHeight =
+        UiConfigs.ChatPage.FloatingScrollButton.ButtonSize + UiConfigs.Spacing.MediumPlus
 
     val subtitleText =
         if (agentFirstName != null) {
@@ -518,7 +535,7 @@ private fun HeartbeatContent(
                         lazyColumnRootOffset = it.positionInRoot()
                         lazyColumnSizePx = it.size
                     },
-                contentPadding = PaddingValues(bottom = listPaddingBottom),
+                contentPadding = PaddingValues(bottom = listPaddingBottom + backToTopAreaHeight),
                 verticalArrangement = Arrangement.spacedBy(listSpacing),
             ) {
                 items(memories, key = { it.id }) { memory ->
@@ -533,6 +550,19 @@ private fun HeartbeatContent(
                 }
             }
         }
+
+        // 与 Explore 页一致的回到顶部按钮：不在顶部时显示，点击平滑滚动到列表顶部
+        BackToTop(
+            modifier =
+                Modifier.align(Alignment.BottomCenter)
+                    .padding(
+                        bottom =
+                            contentPadding.calculateBottomPadding() +
+                                UiConfigs.Spacing.MediumPlus,
+                    ),
+            visible = showBackToTopButton,
+            onClick = { scope.launch { listState.animateScrollToItem(0) } },
+        )
     }
 }
 
