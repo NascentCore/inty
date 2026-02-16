@@ -6,9 +6,9 @@
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/` | GET | `app/main.py` |
-| `/evaluation` | GET | `app/main.py` |
-| `/evaluation/{path:path}` | GET | `app/main.py` |
+| `/` | GET | `backend/inty/main.py` |
+| `/evaluation` | GET | `backend/inty/main.py` |
+| `/evaluation/{path:path}` | GET | `backend/inty/main.py` |
 
 ## API v1 端点 (`/api/v1`)
 

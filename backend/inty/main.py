@@ -134,7 +134,8 @@ app.include_router(api_router)
 # 配置静态文件服务 - 用于评测系统前端
 import os
 
-static_dir = os.path.join(os.path.dirname(__file__), "static")
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+static_dir = os.path.join(_ROOT, "app", "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 

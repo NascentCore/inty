@@ -4,7 +4,7 @@ import subprocess
 
 import cyclopts
 
-from app.main import app
+from backend.inty.main import app
 
 
 def main(output: str = "app/openapi.json", no_commit: bool = False) -> None:

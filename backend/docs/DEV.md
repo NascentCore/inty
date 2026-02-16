@@ -41,7 +41,7 @@ All table definitions must be added to `app/models` directory for consistency.
 
 | Layer             | Key Modules                                | Notes                                                                                                          |
 | ----------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| **Entry point**   | [`app/main.py`](../../app/main.py)               | Configures FastAPI, CORS, error handlers, and startup tasks (e.g., agent initialization, Keep Talking service) |
+| **Entry point**   | [`backend/inty/main.py`](../inty/main.py)        | Configures FastAPI, CORS, error handlers, and startup tasks (e.g., agent initialization, Keep Talking service) |
 | **API layer**     | [`app/api/v1`](../../app/api/v1)                 | Router modules for agents, chats, auth, subscriptions, etc. provide REST endpoints                             |
 | **Configuration** | [`app/core/config.py`](../../app/core/config.py) | Settings defined with dataclasses and loaded from `config.yaml` via `load_config`                              |
 | **Models**        | [`app/models`](../../app/models)                 | SQLAlchemy models (e.g., `User`) map database tables and relationships                                         |
