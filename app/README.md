@@ -1,11 +1,5 @@
 # app - 后端服务
 
-## Tips
-
-```bash
-# 进入交互环境，只需要 mount config.yaml 即可
-docker run --volume /opt/inty-pre-prod/config.yaml:/config.yaml -it ghcr.io/nascentcore/inty-backend/inty-server:<tag> bash
-```
 
 ## Stainless OpenAPI generator
 
