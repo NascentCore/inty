@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -151,7 +152,7 @@ fun SettingsSwitchItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = Color(0x8CFFFFFF),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -291,7 +292,7 @@ fun SettingsArrowItem(
                         fontSize = 14.sp,
                         lineHeight = 22.sp,
                         fontWeight = FontWeight(400),
-                        color = Color(0x8CFFFFFF),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                         maxLines = contentMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Right,
@@ -304,7 +305,7 @@ fun SettingsArrowItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = Color(0x8CFFFFFF),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                     maxLines = contentMaxLines,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Right,
@@ -440,7 +441,7 @@ fun SettingsIconArrowItem(item: SettingsItemData.IconItemData, onItemClick: () -
             fontSize = 14.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight(400),
-            color = Color(0x8CFFFFFF),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Right,

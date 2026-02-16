@@ -369,13 +369,17 @@ fun ChatSettingsDrawer(
                             DropdownMenu(
                                 expanded = showModelMenu,
                                 onDismissRequest = { showModelMenu = false },
+                                modifier =
+                                    Modifier.background(
+                                        MaterialTheme.colorScheme.surfaceContainerLowest
+                                    ),
                             ) {
                                 CHAT_MODEL_OPTIONS.forEach { option ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
                                                 text = stringResource(option.labelResId),
-                                                color = MaterialTheme.colorScheme.onSurface,
+                                                color = MaterialTheme.colorScheme.textOnLightSurface,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                         },
