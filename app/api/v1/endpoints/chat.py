@@ -2,7 +2,7 @@ import time
 import uuid
 from typing import Optional, TypeAlias, Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -141,6 +141,7 @@ async def agent_chat_completions(
     agent_id: str,
     request: ChatCompletionRequest,
     current_user: schemas.User = Depends(deps.get_current_active_user),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ):
     """
     基于Agent ID的OpenAI风格聊天接口
@@ -371,8 +372,13 @@ async def agent_chat_completions(
             user_message_id=user_message_id,
         )
 
-        # 若有本次投递的节日提醒，追加到 choices，message 结构与普通 AI 消息一致（含 id、meta_data、timestamp、audio_url）
-        if delivered_prompts:
+        # 若有本次投递的节日提醒且客户端版本满足要求，追加到 choices（与 GET messages / GET agent 一致的版本门控）
+        min_ver = (
+            global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        )
+        if delivered_prompts and (
+            app_version_code is None or app_version_code >= min_ver
+        ):
             msg_ids = [
                 item["message_id"]
                 for item in delivered_prompts

@@ -136,6 +136,7 @@ class TestClient:
         messages: Optional[Iterable[dict]] = None,
         *,
         language: str = "en",
+        headers: Optional[dict] = None,
     ) -> dict:
         if not self.token:
             raise RuntimeError(
@@ -153,9 +154,11 @@ class TestClient:
             "language": language,
         }
 
+        request_headers = {**self.client.headers, **(headers or {})}
         response = self.client.post(
             f"{self.base_url}/api/v1/chat/completions/{agent_id}",
             json=payload,
+            headers=request_headers,
         )
 
         assert response.status_code == 200, response.text
@@ -179,6 +182,7 @@ class TestClient:
         order: str = "desc",
         *,
         include_festival_memory: bool = True,
+        headers: Optional[dict] = None,
     ) -> dict:
         """GET /api/v1/chats/agents/{agent_id}/messages. Returns response JSON (asserts 200)."""
         if not self.token:
@@ -186,15 +190,35 @@ class TestClient:
                 "call create_user() before getting agent chat messages"
             )
         params = {"limit": limit, "offset": offset, "order": order}
-        headers = (
-            self.headers_for_festival_memory()
-            if include_festival_memory
-            else self.client.headers
-        )
+        if headers is not None:
+            request_headers = {**self.client.headers, **headers}
+        else:
+            request_headers = (
+                self.headers_for_festival_memory()
+                if include_festival_memory
+                else self.client.headers
+            )
         response = self.client.get(
             f"{self.base_url}/api/v1/chats/agents/{agent_id}/messages",
             params=params,
-            headers=headers,
+            headers=request_headers,
+        )
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    def get_agent(
+        self,
+        agent_id: str,
+        *,
+        headers: Optional[dict] = None,
+    ) -> dict:
+        """GET /api/v1/ai/agents/{agent_id}. Returns response JSON (asserts 200)."""
+        if not self.token:
+            raise RuntimeError("call create_user() before getting agent")
+        request_headers = {**self.client.headers, **(headers or {})}
+        response = self.client.get(
+            f"{self.base_url}/api/v1/ai/agents/{agent_id}",
+            headers=request_headers,
         )
         assert response.status_code == 200, response.text
         return response.json()

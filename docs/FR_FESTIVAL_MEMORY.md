@@ -24,6 +24,7 @@ CREATED_BY_AGENT
 - 当请求头 **appVersionCode** **小于**该配置时：
   - **消息列表**（`GET /agents/{agent_id}/messages`、`GET /agents/{agent_id}/detail`、`GET /{chat_id}/detail`）：不返回 `type === "festival_memory_prompt"` 的消息（仅过滤当前页，total 不减少，旧版客户端看到的 total 可能包含被隐藏的条数）。
   - **角色详情**（`GET /api/v1/ai/agents/{agent_id}`）：不返回 `features.festival_memories`（或返回空列表）。
+  - **聊天补全**（`POST /api/v1/chat/completions/{agent_id}`）：响应中不包含 `festival_memory_prompt` 类型的 choice（即 choices 中不返回节日记忆提醒）。
 - **版本号未传**时视为不限制，照常返回（避免未带版本的客户端被误判为旧版）。
 
 ### 管理员 API（仅超级用户）
