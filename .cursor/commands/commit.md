@@ -6,7 +6,7 @@ Write 1 sentence commit title and bullet points of changes and git commit all ch
 
 ## Steps
 
-1. **Write 1 senteence commit title**
+1. **Write 1 sentence commit title**
 2. **Write bullet points of changes**
 3. **Git Commit --all**
 

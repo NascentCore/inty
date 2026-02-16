@@ -482,7 +482,6 @@ private fun HeartbeatContent(
             stringResource(R.string.heartbeat_subtitle, count)
         }
 
-    var contentBoxRootOffset by remember { mutableStateOf(Offset.Zero) }
     var lazyColumnRootOffset by remember { mutableStateOf(Offset.Zero) }
     var lazyColumnSizePx by remember { mutableStateOf(IntSize.Zero) }
 
@@ -513,7 +512,7 @@ private fun HeartbeatContent(
 
     LaunchedEffect(computedOverlayInfo) { onOverlayInfo(computedOverlayInfo) }
 
-    Box(modifier = modifier.onGloballyPositioned { contentBoxRootOffset = it.positionInRoot() }) {
+    Box(modifier = modifier) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = subtitleText,
