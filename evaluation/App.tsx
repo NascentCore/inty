@@ -299,7 +299,13 @@ const AppContent: React.FC = () => {
       case "chat":
         return <ChatPage />;
       case "voice-chat":
-        return <VoiceChatPage />;
+        return (
+          <VoiceChatPage
+            onNavigateToUserDailyMessages={() =>
+              setCurrentPage("user-daily-messages")
+            }
+          />
+        );
       case "agents":
         return <AgentManagePage />;
       case "character-themes":

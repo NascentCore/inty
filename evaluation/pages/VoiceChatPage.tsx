@@ -51,7 +51,14 @@ const STATUS_LABELS: Record<string, { text: string; color: string }> = {
   error: { text: "连接错误", color: "error" },
 };
 
-export const VoiceChatPage: React.FC = () => {
+export interface VoiceChatPageProps {
+  /** 通话结束后可调用以跳转到「用户每日消息」查看录音 */
+  onNavigateToUserDailyMessages?: () => void;
+}
+
+export const VoiceChatPage: React.FC<VoiceChatPageProps> = ({
+  onNavigateToUserDailyMessages,
+}) => {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const transcriptsEndRef = useRef<HTMLDivElement>(null);
 
@@ -509,6 +516,42 @@ export const VoiceChatPage: React.FC = () => {
                       </Space>
                     </div>
                   )}
+
+                  {/* 通话结束后提示：可前往用户每日消息查看录音 */}
+                  {status === "disconnected" &&
+                    onNavigateToUserDailyMessages && (
+                      <div
+                        style={{
+                          marginTop: 16,
+                          padding: "12px 16px",
+                          background: "rgba(255,255,255,0.2)",
+                          borderRadius: 8,
+                          textAlign: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "rgba(255,255,255,0.95)",
+                            marginRight: 8,
+                          }}
+                        >
+                          Call saved. View or play the recording in User Daily
+                          Messages.
+                        </Text>
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={onNavigateToUserDailyMessages}
+                          style={{
+                            background: "#fff",
+                            color: "#667eea",
+                            borderColor: "#fff",
+                          }}
+                        >
+                          View recording
+                        </Button>
+                      </div>
+                    )}
                 </div>
 
                 {/* 转录文本显示区域 */}

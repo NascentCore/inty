@@ -851,8 +851,44 @@ export const UserDailyMessagesPage: React.FC = () => {
                                 )}
                               </div>
                               {msg.audio_url && (
-                                <div style={{ marginTop: 4 }}>
-                                  <Tag color="purple">语音消息</Tag>
+                                <div style={{ marginTop: 8 }}>
+                                  <div style={{ marginBottom: 6 }}>
+                                    <Tag color="purple">Voice message</Tag>
+                                    <a
+                                      href={msg.audio_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title="Open recording in new tab"
+                                      style={{
+                                        marginLeft: 8,
+                                        fontSize: 12,
+                                      }}
+                                    >
+                                      Open recording
+                                    </a>
+                                  </div>
+                                  <audio
+                                    src={msg.audio_url}
+                                    controls
+                                    preload="metadata"
+                                    style={{
+                                      width: "100%",
+                                      maxWidth: 320,
+                                      height: 32,
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      marginTop: 6,
+                                      fontSize: 11,
+                                      fontFamily: "monospace",
+                                      color: "#666",
+                                      wordBreak: "break-all",
+                                    }}
+                                    title={msg.audio_url}
+                                  >
+                                    GCS: {msg.audio_url}
+                                  </div>
                                 </div>
                               )}
                               {/* 显示独立图片消息（type="image"） */}

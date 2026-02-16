@@ -444,6 +444,8 @@ class GeminiLiveConfig:
     sub_user_max_session_duration: int = 120  # 订阅用户单次会话最大时长（秒）
     free_user_total_duration_24h: int = 300  # 免费用户 24h 总时长限制（秒）
     sub_user_total_duration_24h: int = 1800  # 订阅用户 24h 总时长限制（秒）
+    # Live chat 音频落盘临时目录，None 或空时使用 tempfile.gettempdir()
+    audio_temp_dir: Optional[str] = None
 
 
 @dataclass

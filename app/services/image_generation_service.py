@@ -93,10 +93,13 @@ def _fill_serialized_gemini_response(out: Dict[str, Any], response: Any) -> None
 
 
 def _log_image_generation_failure(prompt: Optional[str], response: Any) -> None:
-    """生图失败时在日志中记录完整提示词与 Gemini 返回结果。"""
-    logger.error("生图失败 - 完整提示词: %s", prompt if prompt is not None else "(无)")
+    """生图失败时在日志中记录完整提示词与 Gemini 返回结果。loguru 使用 {} 占位符。"""
     logger.error(
-        "生图失败 - Gemini 返回: %s",
+        "生图失败 - 完整提示词: {}",
+        prompt if prompt is not None else "(无)",
+    )
+    logger.error(
+        "生图失败 - Gemini 返回: {}",
         _serialize_gemini_response_for_log(response),
     )
 

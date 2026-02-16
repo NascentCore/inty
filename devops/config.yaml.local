@@ -15,7 +15,7 @@ app:
     subscribed_user_image_gen_24h_limit: 8
     free_user_agent_creation_24h_limit: 1
     subscribed_user_agent_creation_24h_limit: 2
-  gcp_service_account_key: ".secrets/gcp-service-account-key.json"
+  gcp_service_account_key: ".secrets/inty-backend-key.json"
 
 sentry:
   # dev-inty/default
