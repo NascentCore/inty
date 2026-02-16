@@ -1,4 +1,4 @@
-name: Release - Inty Backend
+name: Release - Inty 后端
 
 on:
   push:
