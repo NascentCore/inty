@@ -150,3 +150,128 @@ def test_festival_memory_delivery_at_set_and_second_get_idempotent(
     finally:
         db_session.delete(memory)
         db_session.commit()
+
+
+def test_festival_memory_messages_gated_by_app_version(
+    integration_client: TestClient, db_session
+):
+    """
+    当 appVersionCode 低于 min_app_version_code_for_festival_memory 时，
+    GET messages 响应中不包含 festival_memory_prompt 类型的消息。
+    """
+    min_ver = (
+        global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+    )
+    if min_ver == 0:
+        pytest.skip(
+            "min_app_version_code_for_festival_memory is 0, version gating not in effect"
+        )
+
+    agent_id = integration_client.create_agent()
+    user_id = _decode_user_id_from_token(integration_client.token)
+
+    memory = Memory(
+        user_id=user_id,
+        agent_id=agent_id,
+        memory_type="festival",
+        content="E2E test memory for messages gate",
+        meta_data={
+            "festival_name": "E2ETestFestMessagesGate",
+            "festival_data": date.today().isoformat(),
+        },
+        extracted_at=datetime.now(timezone.utc),
+        festival_name="E2ETestFestMessagesGate",
+        festival_date=date.today(),
+        delivery_at=None,
+    )
+    db_session.add(memory)
+    db_session.commit()
+    db_session.refresh(memory)
+
+    try:
+        # 先触发投递并确认列表中有该提示
+        integration_client.get_agent_chat_messages(agent_id)
+        db_session.refresh(memory)
+        assert memory.delivery_at is not None
+
+        # 低版本 header 拉取：应不返回 festival_memory_prompt
+        data = integration_client.get_agent_chat_messages(
+            agent_id,
+            headers={"appVersionCode": str(min_ver - 1)},
+        )
+        messages = data.get("messages", [])
+        festival_in_messages = [
+            m for m in messages if m.get("type") == "festival_memory_prompt"
+        ]
+        assert (
+            len(festival_in_messages) == 0
+        ), f"Expected no festival_memory_prompt when appVersionCode < min_ver, got {festival_in_messages}"
+    finally:
+        db_session.delete(memory)
+        db_session.commit()
+
+
+def test_festival_memory_agent_detail_gated_by_app_version(
+    integration_client: TestClient, db_session
+):
+    """
+    当 appVersionCode 满足/低于 min_app_version_code_for_festival_memory 时，
+    GET agent 响应中 features.festival_memories 应有/无。
+    """
+    min_ver = (
+        global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+    )
+    if min_ver == 0:
+        pytest.skip(
+            "min_app_version_code_for_festival_memory is 0, version gating not in effect"
+        )
+
+    agent_id = integration_client.create_agent()
+    user_id = _decode_user_id_from_token(integration_client.token)
+
+    memory = Memory(
+        user_id=user_id,
+        agent_id=agent_id,
+        memory_type="festival",
+        content="E2E test memory for agent detail gate",
+        meta_data={
+            "festival_name": "E2ETestFestAgentGate",
+            "festival_data": date.today().isoformat(),
+        },
+        extracted_at=datetime.now(timezone.utc),
+        festival_name="E2ETestFestAgentGate",
+        festival_date=date.today(),
+        delivery_at=None,
+    )
+    db_session.add(memory)
+    db_session.commit()
+
+    try:
+        # 高版本：应返回 festival_memories
+        resp_high = integration_client.get_agent(
+            agent_id,
+            headers=integration_client.headers_for_festival_memory(),
+        )
+        assert resp_high.get("code") == 200, resp_high
+        data_high = resp_high.get("data", {})
+        features_high = data_high.get("features") or {}
+        festival_list_high = features_high.get("festival_memories") or []
+        assert (
+            len(festival_list_high) >= 1
+        ), f"Expected festival_memories when appVersionCode >= min_ver, got features={features_high}"
+
+        # 低版本：不返回 festival_memories（或为空）
+        resp_low = integration_client.get_agent(
+            agent_id,
+            headers={"appVersionCode": str(min_ver - 1)},
+        )
+        assert resp_low.get("code") == 200, resp_low
+        data_low = resp_low.get("data", {})
+        features_low = data_low.get("features") or {}
+        festival_list_low = features_low.get("festival_memories") or []
+        assert (
+            len(festival_list_low) == 0
+        ), f"Expected no festival_memories when appVersionCode < min_ver, got festival_memories={festival_list_low}"
+    finally:
+        db_session.delete(memory)
+        db_session.commit()

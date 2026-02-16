@@ -143,3 +143,70 @@ def test_festival_memory_delivered_via_chat_completions(
     finally:
         db_session.delete(memory)
         db_session.commit()
+
+
+def test_festival_memory_chat_completions_gated_by_app_version(
+    integration_client: TestClient, agent_ids_to_cleanup, db_session
+):
+    """
+    当 appVersionCode 低于 min_app_version_code_for_festival_memory 时，
+    POST chat completions 响应中不包含 festival_memory_prompt 类型的 choice。
+    """
+    min_ver = (
+        global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+    )
+    if min_ver == 0:
+        pytest.skip(
+            "min_app_version_code_for_festival_memory is 0, version gating not in effect"
+        )
+
+    agent_id = integration_client.create_agent(
+        name="Test Agent Festival Gated",
+        gender="MALE",
+        visibility="PUBLIC",
+    )
+    agent_ids_to_cleanup.append(agent_id)
+    user_id = _decode_user_id_from_token(integration_client.token)
+
+    memory = Memory(
+        user_id=user_id,
+        agent_id=agent_id,
+        memory_type="festival",
+        content="E2E test memory for version gating",
+        meta_data={
+            "festival_name": "E2ETestFestGated",
+            "festival_data": date.today().isoformat(),
+        },
+        extracted_at=datetime.now(timezone.utc),
+        festival_name="E2ETestFestGated",
+        festival_date=date.today(),
+        delivery_at=None,
+    )
+    db_session.add(memory)
+    db_session.commit()
+    db_session.refresh(memory)
+
+    try:
+        response = integration_client.chat_completions(
+            agent_id,
+            [{"role": "user", "content": "Hi"}],
+            language="en",
+            headers={"appVersionCode": str(min_ver - 1)},
+        )
+        assert response.get("code") == 200, response
+        data = response.get("data", {})
+        choices = data.get("choices", [])
+        festival_prompts = [
+            c
+            for c in choices
+            if c.get("message", {}).get("type") == "festival_memory_prompt"
+        ]
+        assert (
+            len(festival_prompts) == 0
+        ), f"Expected no festival_memory_prompt when appVersionCode < min_ver, got {festival_prompts}"
+        # 投递仍会执行，GET messages 可见
+        db_session.refresh(memory)
+        assert memory.delivery_at is not None
+    finally:
+        db_session.delete(memory)
+        db_session.commit()
