@@ -46,6 +46,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** 设置项内容/副标题文字在深色背景上的不透明度，用于与主题 onSurface 组合保证可读性 */
+private const val SETTINGS_ITEM_CONTENT_ALPHA = 0.9f
+
 /** 应用项目封装的items */
 @Composable
 fun SettingsCheckBoxItem(
@@ -152,7 +155,7 @@ fun SettingsSwitchItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -292,7 +295,7 @@ fun SettingsArrowItem(
                         fontSize = 14.sp,
                         lineHeight = 22.sp,
                         fontWeight = FontWeight(400),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
                         maxLines = contentMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Right,
@@ -305,7 +308,7 @@ fun SettingsArrowItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
                     maxLines = contentMaxLines,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Right,
@@ -441,7 +444,7 @@ fun SettingsIconArrowItem(item: SettingsItemData.IconItemData, onItemClick: () -
             fontSize = 14.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight(400),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Right,
