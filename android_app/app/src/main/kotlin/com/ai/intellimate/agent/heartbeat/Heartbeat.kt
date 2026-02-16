@@ -319,7 +319,6 @@ private fun Heartbeat(
                             onClearHighlight = { highlightedMemoryId = null },
                             screenRootOffset = screenRootOffset,
                             onOverlayInfo = { overlayInfo = it },
-                            contentPadding = contentPadding,
                         )
                     }
                 }
@@ -419,7 +418,6 @@ private fun HeartbeatJournalCard(
  * Love Journal 列表内容：副标题 + 卡片列表。高亮状态由父组件持有；本组件负责在列表内绘制卡片，
  * 并向父组件上报浮层位置（供父组件在全屏 scrim 上绘制高亮卡片）。
  * @param screenRootOffset 屏根 Box 的 positionInRoot，用于将卡片位置换算为屏根坐标系。
- * @param contentPadding Scaffold 内容区 padding，用于 Back to top 按钮底部间距，与 Explore 页一致。
  */
 @Composable
 private fun HeartbeatContent(
@@ -431,7 +429,6 @@ private fun HeartbeatContent(
     onClearHighlight: () -> Unit,
     screenRootOffset: Offset,
     onOverlayInfo: (HeartbeatOverlayInfo?) -> Unit,
-    contentPadding: PaddingValues = PaddingValues.Zero,
 ) {
     val cs = MaterialTheme.colorScheme
     val density = LocalDensity.current
@@ -455,12 +452,13 @@ private fun HeartbeatContent(
         }
     }
 
-    // 高亮卡片滚出可见区域时取消高亮
-    LaunchedEffect(listState, highlightedMemoryId) {
-        if (highlightedMemoryId == null) return@LaunchedEffect
+    // 高亮卡片滚出可见区域时取消高亮（按 index 判断，与 overlay 查找一致，避免 release 下 key 匹配异常）
+    val highlightedIndex = if (highlightedMemoryId != null) memories.indexOfFirst { it.id == highlightedMemoryId }.takeIf { it >= 0 } else null
+    LaunchedEffect(listState, highlightedMemoryId, highlightedIndex) {
+        if (highlightedIndex == null) return@LaunchedEffect
         snapshotFlow { listState.layoutInfo.visibleItemsInfo }
             .collect { visibleItems ->
-                if (visibleItems.none { it.key == highlightedMemoryId }) {
+                if (visibleItems.none { it.index == highlightedIndex }) {
                     onClearHighlight()
                 }
             }
@@ -484,24 +482,22 @@ private fun HeartbeatContent(
             stringResource(R.string.heartbeat_subtitle, count)
         }
 
-    var contentBoxRootOffset by remember { mutableStateOf(Offset.Zero) }
     var lazyColumnRootOffset by remember { mutableStateOf(Offset.Zero) }
     var lazyColumnSizePx by remember { mutableStateOf(IntSize.Zero) }
 
     val layoutInfo = listState.layoutInfo
-    val itemInfo = if (highlightedMemoryId != null) layoutInfo.visibleItemsInfo.find { it.key == highlightedMemoryId } else null
+    // 按 index 查找可见项，避免 release 构建下 it.key == highlightedMemoryId 匹配失败或匹配到错误项
+    val itemInfo = if (highlightedIndex != null) layoutInfo.visibleItemsInfo.find { it.index == highlightedIndex } else null
     val highlightedMemory = if (highlightedMemoryId != null) memories.find { it.id == highlightedMemoryId } else null
-    val scrollOffset = listState.firstVisibleItemScrollOffset
+    // LazyListItemInfo.offset 是相对于可见 viewport 的偏移，不是相对于可滚动内容起点；故直接用 lazyColumnRootOffset + offset 得到 root 坐标。
     val computedOverlayInfo: HeartbeatOverlayInfo? =
         if (itemInfo != null && highlightedMemory != null) {
             val itemH = itemInfo.size
             val itemW = lazyColumnSizePx.width
             if (itemW > 0 && itemH > 0) {
                 val itemOffsetY = itemInfo.offset
-                val cardX = lazyColumnRootOffset.x - contentBoxRootOffset.x
-                val cardY = lazyColumnRootOffset.y - contentBoxRootOffset.y - scrollOffset + itemOffsetY
-                val cardRootX = contentBoxRootOffset.x + cardX
-                val cardRootY = contentBoxRootOffset.y + cardY
+                val cardRootX = lazyColumnRootOffset.x
+                val cardRootY = lazyColumnRootOffset.y + itemOffsetY
                 val offsetX = cardRootX - screenRootOffset.x
                 val offsetY = cardRootY - screenRootOffset.y
                 HeartbeatOverlayInfo(
@@ -516,7 +512,7 @@ private fun HeartbeatContent(
 
     LaunchedEffect(computedOverlayInfo) { onOverlayInfo(computedOverlayInfo) }
 
-    Box(modifier = modifier.onGloballyPositioned { contentBoxRootOffset = it.positionInRoot() }) {
+    Box(modifier = modifier) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = subtitleText,
@@ -551,15 +547,12 @@ private fun HeartbeatContent(
             }
         }
 
-        // 与 Explore 页一致的回到顶部按钮：不在顶部时显示，点击平滑滚动到列表顶部
+        // 与 Explore 页一致的回到顶部按钮：不在顶部时显示，点击平滑滚动到列表顶部。
+        // 外层 Box 已应用 contentPadding，此处仅保留设计间距，避免重复应用 Scaffold 底部 padding。
         BackToTop(
             modifier =
                 Modifier.align(Alignment.BottomCenter)
-                    .padding(
-                        bottom =
-                            contentPadding.calculateBottomPadding() +
-                                UiConfigs.Spacing.MediumPlus,
-                    ),
+                    .padding(bottom = UiConfigs.Spacing.MediumPlus),
             visible = showBackToTopButton,
             onClick = { scope.launch { listState.animateScrollToItem(0) } },
         )
