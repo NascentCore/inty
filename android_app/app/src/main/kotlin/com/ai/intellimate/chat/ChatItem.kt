@@ -97,6 +97,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import ai.sxwl.android.data.character.local.db.FestivalMemory
+import ai.sxwl.android.data.character.repository.CharacterRepository
+import ai.sxwl.android.data.di.DataModule
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.toHeartbeat
@@ -168,6 +171,8 @@ fun ChatItem(
             "festival_memory_prompt" ->
                 ChatItemFestivalMemory(
                     agentName = agentName.orEmpty(),
+                    agentId = item.metaData.agentId,
+                    festivalMemoryId = item.festivalMemoryId,
                     onClick = {
                         FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
                             "click_type" to "heartbeat",
@@ -493,12 +498,30 @@ private fun ChatItemForMomentPreview() {
     }
 }
 
+/**
+ * 聊天内节日记忆通知条目。Debug 构建下若提供 agentId 与 festivalMemoryId，会在下方展示该条节日记忆的完整元数据（id、agentId、festivalDate、festivalName、memory、title）。
+ */
 @Composable
 private fun ChatItemFestivalMemory(
     agentName: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    agentId: String? = null,
+    festivalMemoryId: Long? = null,
 ) {
+    var memories by remember { mutableStateOf<List<FestivalMemory>>(emptyList()) }
+    val characterRepository: CharacterRepository = remember { DataModule.getCharacterRepository() }
+    LaunchedEffect(BuildConfig.DEBUG, agentId, festivalMemoryId) {
+        if (BuildConfig.DEBUG && agentId != null && !agentId.isBlank() && festivalMemoryId != null) {
+            characterRepository.getFestivalMemories(agentId).collect { memories = it }
+        } else {
+            memories = emptyList()
+        }
+    }
+    val memory = remember(memories, festivalMemoryId) {
+        if (festivalMemoryId == null) null else memories.find { it.id == festivalMemoryId }
+    }
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
@@ -508,27 +531,77 @@ private fun ChatItemFestivalMemory(
             color = MaterialTheme.colorScheme.tertiaryContainer,
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
         ) {
-            Text(
-                text =
-                    buildAnnotatedString {
-                        val fullText = stringResource(R.string.chat_festival_memory_notify, agentName)
-                        // 加粗短语需为 notify 字符串的子串，翻译时需保持一致（如 "Love Journal"）
-                        val boldPhrase = stringResource(R.string.heartbeat_journal)
-                        val start = fullText.indexOf(boldPhrase)
-                        if (start >= 0) {
-                            append(fullText.substring(0, start))
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                                append(boldPhrase)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text =
+                        buildAnnotatedString {
+                            val fullText = stringResource(R.string.chat_festival_memory_notify, agentName)
+                            // 加粗短语需为 notify 字符串的子串，翻译时需保持一致（如 "Love Journal"）
+                            val boldPhrase = stringResource(R.string.heartbeat_journal)
+                            val start = fullText.indexOf(boldPhrase)
+                            if (start >= 0) {
+                                append(fullText.substring(0, start))
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append(boldPhrase)
+                                }
+                                append(fullText.substring(start + boldPhrase.length))
+                            } else {
+                                append(fullText)
                             }
-                            append(fullText.substring(start + boldPhrase.length))
-                        } else {
-                            append(fullText)
-                        }
-                    },
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
-            )
+                        },
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
+                )
+                if (BuildConfig.DEBUG && memory != null) {
+                    ChatItemFestivalMemoryDebugMetadata(
+                        memory = memory,
+                        modifier = Modifier.padding(top = dimensionResource(R.dimen.padding_extra_small)),
+                    )
+                }
+            }
         }
+    }
+}
+
+/**
+ * Debug 构建下在聊天页节日记忆通知底部展示单条节日记忆的全部元数据（id、agentId、festivalDate、festivalName、memory、title）。非 debug 不渲染。
+ */
+@Composable
+private fun ChatItemFestivalMemoryDebugMetadata(
+    memory: FestivalMemory,
+    modifier: Modifier = Modifier,
+) {
+    if (!BuildConfig.DEBUG) return
+
+    val lines =
+        listOf(
+            "id=${memory.id}",
+            "agentId=${memory.agentId}",
+            "festivalDate=${memory.festivalDate}",
+            "festivalName=${memory.festivalName ?: "null"}",
+            "memory=${memory.memory}",
+            "title=${memory.title}",
+        )
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(
+                    Color.White.copy(alpha = 0.08f),
+                    RoundedCornerShape(dimensionResource(R.dimen.heartbeat_card_inner_spacing)),
+                )
+                .padding(
+                    horizontal = dimensionResource(R.dimen.padding_small),
+                    vertical = dimensionResource(R.dimen.padding_extra_small),
+                )
+    ) {
+        Text(
+            text = lines.joinToString(separator = "\n"),
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            color = Color(0xFF8DF0FF),
+        )
     }
 }
 
