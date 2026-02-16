@@ -79,6 +79,7 @@ class GCSService:
     ) -> Optional[str]:
         """
         上传 live chat 单路 WAV 到 GCS，路径为 {user_id}/{agent_id}/{session_id}.wav。
+        上传失败时捕获异常并返回 None，避免影响调用方流程。
         """
         try:
             path = f"live_chat/{user_id}/{agent_id}/{session_id}.wav"
@@ -95,7 +96,7 @@ class GCSService:
                 logger.info(f"Live chat 音频上传成功: {path}")
                 return public_url
             return None
-        except Exception as e:
+        except Exception as e:  # 有意捕获所有上传异常，统一返回 None 并打日志
             logger.error(f"Live chat 音频上传失败: {str(e)}")
             return None
 

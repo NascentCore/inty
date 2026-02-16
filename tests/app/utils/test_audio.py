@@ -57,6 +57,17 @@ def test_build_interleaved_pcm_24k_user_only_16k():
     assert len(out) == 6
 
 
+def test_build_interleaved_pcm_24k_user_only_24k():
+    # user @ 24k 不重采样，直接追加
+    user_chunk = struct.pack("<hhh", 1, 2, 3)
+    out = build_interleaved_pcm_24k(
+        [("user", user_chunk)],
+        user_sample_rate=24000,
+        ai_sample_rate=24000,
+    )
+    assert out == user_chunk
+
+
 def test_build_interleaved_pcm_24k_ai_only():
     ai_chunk = struct.pack("<hhh", 10, 20, 30)
     out = build_interleaved_pcm_24k(

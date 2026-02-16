@@ -43,7 +43,7 @@ def build_interleaved_pcm_24k(
     按 conversation_chunks 顺序（用户–AI–用户–AI…）拼接为一段 24k、16-bit 单声道 PCM。
 
     - ("user", data): 视为 user_sample_rate（默认 16k），重采样到 24k 后追加。
-    - ("ai", data): 视为 ai_sample_rate（默认 24k），直接追加。
+    - 其他 role（如 "ai"）: 视为 ai_sample_rate（默认 24k），直接追加。
     """
     out = bytearray()
     for role, data in conversation_chunks:
@@ -58,8 +58,6 @@ def build_interleaved_pcm_24k(
                 # 非 16k 时暂不重采样，仅 16k→24k 已实现
                 out.extend(data)
         else:
-            if ai_sample_rate == 24000:
-                out.extend(data)
-            else:
-                out.extend(data)
+            # AI 轨：24k 直接追加；其他采样率暂不重采样，直接追加
+            out.extend(data)
     return bytes(out)

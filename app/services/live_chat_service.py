@@ -1092,14 +1092,13 @@ class LiveChatService:
             )
             temp_path.parent.mkdir(parents=True, exist_ok=True)
             temp_path.write_bytes(wav_bytes)
-            wav_for_upload = temp_path.read_bytes()
 
             gcs_service = GCSService()
             gcs_url = await gcs_service.upload_live_chat_audio(
                 str(session.user_id),
                 session.agent_id,
                 session.session_id,
-                wav_for_upload,
+                wav_bytes,
             )
             if not gcs_url:
                 logger.warning("Live chat 音频上传 GCS 未返回 URL，跳过写表")

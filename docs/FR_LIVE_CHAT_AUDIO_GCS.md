@@ -28,3 +28,8 @@ CREATED_BY_AGENT
 - WAV 生成：复用 `app.core.voice.tts_api._pcm_to_wav`。
 - 上传：`app/services/gcs_service.py`（`upload_live_chat_audio`）。
 - 写表：`app/services/chat_history_service.update_message_audio_url`。
+
+## 参见
+
+- **测试步骤**：`tests/docs/TEST_STEPS_LIVE_CHAT_AUDIO_GCS.md`（单元测试命令与集成/人工测试步骤）。
+- **评测平台与 Android 端**：`docs/LIVE_CHAT_EVALUATION_ANDROID.md`（技术对比、为何评测端体验更好、评测平台展示/播放保存录音的说明）。
