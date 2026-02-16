@@ -443,38 +443,37 @@ export const ChatPage: React.FC = () => {
           .getIntyClient()
           .api.v1.chats.agents.getSettings(agent.id);
         console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
-        // 先尝试获取现有的聊天详情和消息历史
-        const chatData = await api.chat.getChatDetail(agent.id, {
-          page: 1,
-          size: 100,
+        // 使用聊天消息接口获取历史（GET /chats/agents/{agent_id}/messages）
+        const messagesResponse = await api.chat.getMessages(agent.id, {
+          limit: 100,
+          offset: 0,
         });
 
-        // 转换消息格式（支持文本和图片消息）
-        const convertedMessages: ChatMessage[] = (chatData.messages || []).map(
-          (msg, index) => ({
-            id: `msg_${chatData.chat_info?.id || "unknown"}_${index}_${Date.now()}`,
-            role:
-              msg.type === "festival_memory_prompt" &&
-              (msg.role == null || String(msg.role) === "")
-                ? "assistant"
-                : (msg.role ??
-                  (msg.sender_type === "USER" ? "user" : "assistant")), // 优先使用 role，fallback 到 sender_type
-            content: msg.content || "",
-            timestamp:
-              msg.timestamp || msg.created_at || new Date().toISOString(),
-            remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
-            type: msg.type || "text",
-            festival_memory_id: msg.festival_memory_id,
-            image_url: msg.image_url,
-            user_vote: msg.user_vote || null,
-            meta_data: msg.meta_data,
-          }),
-        );
+        const msgList = messagesResponse.messages ?? [];
 
-        console.log("获取到的聊天数据:", chatData);
-        console.log("消息数量:", chatData.messages?.length);
-        if (chatData.messages && chatData.messages.length > 0) {
-          console.log("第一条消息示例:", chatData.messages[0]);
+        // 转换消息格式（支持文本和图片消息）
+        const convertedMessages: ChatMessage[] = msgList.map((msg, index) => ({
+          id: `msg_${agent.id}_${index}_${Date.now()}`,
+          role:
+            msg.type === "festival_memory_prompt" &&
+            (msg.role == null || String(msg.role) === "")
+              ? "assistant"
+              : (msg.role ??
+                (msg.sender_type === "USER" ? "user" : "assistant")), // 优先使用 role，fallback 到 sender_type
+          content: msg.content || "",
+          timestamp:
+            msg.timestamp || msg.created_at || new Date().toISOString(),
+          remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
+          type: msg.type || "text",
+          festival_memory_id: msg.festival_memory_id,
+          image_url: msg.image_url,
+          user_vote: msg.user_vote || null,
+          meta_data: msg.meta_data,
+        }));
+
+        console.log("获取到的消息数量:", msgList.length);
+        if (msgList.length > 0) {
+          console.log("第一条消息示例:", msgList[0]);
         }
         console.log("转换后的消息:", convertedMessages);
 
@@ -499,14 +498,13 @@ export const ChatPage: React.FC = () => {
           uniqueMessages.filter((m) => m.type === "image").length,
         );
 
-        // 创建会话对象
+        // 创建会话对象（消息接口不返回 chat_info，使用 agent 维度的临时 id）
         const session: ChatSession = {
-          id: chatData.chat_info?.id || `temp_${Date.now()}`,
+          id: `temp_${agent.id}`,
           agent_id: agent.id,
           agent_name: agent.name,
           messages: uniqueMessages,
-          created_at:
-            chatData.chat_info?.created_at || new Date().toISOString(),
+          created_at: new Date().toISOString(),
         };
 
         setCurrentSession(session);

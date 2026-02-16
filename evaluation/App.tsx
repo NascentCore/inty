@@ -200,7 +200,7 @@ const AppContent: React.FC = () => {
     {
       key: "settings",
       icon: <SettingOutlined />,
-      label: "系统设置",
+      label: "消息生图系统设置",
       description: "配置图片生成等系统参数",
     },
     {
