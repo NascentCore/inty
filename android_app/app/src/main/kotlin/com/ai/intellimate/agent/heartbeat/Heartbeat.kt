@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.ai.intellimate.BuildConfig
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
@@ -350,6 +351,10 @@ private fun HeartbeatContent(
                             style = MaterialTheme.typography.bodyMedium,
                             color = cs.loveJournalOnBackground,
                         )
+                        if (BuildConfig.DEBUG) {
+                            Spacer(Modifier.height(cardInnerSpacing))
+                            FestivalMemoryDebugMetadata(memory = it)
+                        }
                     }
                 }
             }
