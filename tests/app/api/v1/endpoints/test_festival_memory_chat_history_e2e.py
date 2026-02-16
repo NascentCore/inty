@@ -56,6 +56,10 @@ def test_festival_memory_delivered_via_chat_history_api(
         agent_id=agent_id,
         memory_type="festival",
         content="E2E test memory content",
+        meta_data={
+            "festival_name": "E2ETestFest",
+            "festival_data": date.today().isoformat(),
+        },
         extracted_at=datetime.now(timezone.utc),
         festival_name="E2ETestFest",
         festival_date=date.today(),

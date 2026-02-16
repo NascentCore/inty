@@ -101,6 +101,10 @@ def test_festival_memory_delivered_via_chat_completions(
         agent_id=agent_id,
         memory_type="festival",
         content="E2E test memory for chat completions",
+        meta_data={
+            "festival_name": "E2ETestFestCompletions",
+            "festival_data": date.today().isoformat(),
+        },
         extracted_at=datetime.now(timezone.utc),
         festival_name="E2ETestFestCompletions",
         festival_date=date.today(),
