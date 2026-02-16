@@ -5,7 +5,7 @@ Based on [AGENTS.md](https://agents.md/)
 ## 本地服务启动
 
 - 首次运行前启动数据库依赖：`docker compose up pgvector -d`
-- 启动后端服务：`./start.sh --dev`
+- 启动后端服务：`./backend/inty/start.sh --dev`
 - 启动推送服务：`./backend/push_worker/start.sh`
 - 本地服务启动成功后，可通过 `https://localhost:8000/` 访问并供测试调用
 

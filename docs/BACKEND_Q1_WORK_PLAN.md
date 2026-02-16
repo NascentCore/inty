@@ -69,7 +69,7 @@
 
 - **方案 A（推荐）**：启用多 worker 模式 + 健康检查
 
-  - 修改 [`start.sh`](../start.sh) 使用 `gunicorn + uvicorn workers`
+  - 修改 [`backend/inty/start.sh`](../backend/inty/start.sh) 使用 `gunicorn + uvicorn workers`
   - nginx 配置健康检查，新容器就绪后再切流量
 
 - **方案 B**：Blue-Green 部署

@@ -3,7 +3,14 @@
 DEV=false
 TEST=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+# 当脚本位于 backend/inty 时从仓库根目录运行，以便 alembic/scripts/evaluation 等路径正确；Docker 中 COPY 到 / 时 SCRIPT_DIR=/ 仍 cd /
+if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
+  REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+  cd "$REPO_ROOT"
+else
+  REPO_ROOT="$SCRIPT_DIR"
+  cd "$REPO_ROOT"
+fi
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -16,6 +23,13 @@ while [[ $# -gt 0 ]]; do
       DEV=true
       TEST=true
       shift
+      ;;
+    --help|-h)
+      echo "Usage: $0 [--dev] [--test]"
+      echo "  --dev   Dev mode: build evaluation frontend, seed test user/data, uvicorn --reload"
+      echo "  --test  Test mode: like --dev but skip evaluation frontend build (e.g. for CI)"
+      echo "Run from repository root. Default: run migrations and start uvicorn without reload."
+      exit 0
       ;;
     *)
       echo "Unknown option: $1"
@@ -31,7 +45,7 @@ done
 # Run database migrations
 echo "Starting database migrations..."
 export PYTHONPATH=.
-export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${SCRIPT_DIR}/alembic/alembic.ini}"
+export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/alembic/alembic.ini}"
 # 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
 # 所有预置角色均由这个用户创建。也支持管理系统的登录。
 # 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。

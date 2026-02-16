@@ -11,10 +11,10 @@ docker run --rm --name pg-vec-inty -p 5432:5432 \
 cp devops/config.yaml.test config.yaml
 
 # 启动后端服务
-./start.sh --dev &
+./backend/inty/start.sh --dev &
 
 # 运行测试
 pytest -m "not noci" -v -s tests/
 ```
 
-依赖本地后端与 `config.yaml` 的 E2E（如节日记忆 Chat History 投递）需先启动服务（如 `./start.sh --dev`）后再运行；单独运行该 E2E：`pytest tests/app/api/v1/endpoints/test_festival_memory_chat_history_e2e.py -v -s`。节日记忆投递还由集成测试覆盖：`deliver_festival_memories_for_user_agent` 会写入 chat_history 并更新 memory.delivery_at（见 `tests/app/services/test_memory_service_deliver_festival_integration.py`）。
+依赖本地后端与 `config.yaml` 的 E2E（如节日记忆 Chat History 投递）需先启动服务（如 `./backend/inty/start.sh --dev`）后再运行；单独运行该 E2E：`pytest tests/app/api/v1/endpoints/test_festival_memory_chat_history_e2e.py -v -s`。节日记忆投递还由集成测试覆盖：`deliver_festival_memories_for_user_agent` 会写入 chat_history 并更新 memory.delivery_at（见 `tests/app/services/test_memory_service_deliver_festival_integration.py`）。
