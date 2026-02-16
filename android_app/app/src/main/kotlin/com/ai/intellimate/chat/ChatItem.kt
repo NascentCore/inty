@@ -101,6 +101,7 @@ import ai.sxwl.android.data.character.local.db.FestivalMemory
 import ai.sxwl.android.data.character.repository.CharacterRepository
 import ai.sxwl.android.data.di.DataModule
 import com.ai.intellimate.BuildConfig
+import com.ai.intellimate.agent.heartbeat.FestivalMemoryDebugMetadata
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.toHeartbeat
 import com.ai.intellimate.audio.AudioInfo
@@ -553,55 +554,13 @@ private fun ChatItemFestivalMemory(
                     modifier = Modifier.fillMaxWidth().noRippleClickable(onClick = onClick),
                 )
                 if (BuildConfig.DEBUG && memory != null) {
-                    ChatItemFestivalMemoryDebugMetadata(
+                    FestivalMemoryDebugMetadata(
                         memory = memory,
                         modifier = Modifier.padding(top = dimensionResource(R.dimen.padding_extra_small)),
                     )
                 }
             }
         }
-    }
-}
-
-/**
- * Debug 构建下在聊天页节日记忆通知底部展示单条节日记忆的全部元数据（id、agentId、festivalDate、festivalName、memory、title）。非 debug 不渲染。
- */
-@Composable
-private fun ChatItemFestivalMemoryDebugMetadata(
-    memory: FestivalMemory,
-    modifier: Modifier = Modifier,
-) {
-    if (!BuildConfig.DEBUG) return
-
-    val lines =
-        listOf(
-            "id=${memory.id}",
-            "agentId=${memory.agentId}",
-            "festivalDate=${memory.festivalDate}",
-            "festivalName=${memory.festivalName ?: "null"}",
-            "memory=${memory.memory}",
-            "title=${memory.title}",
-        )
-
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(
-                    Color.White.copy(alpha = 0.08f),
-                    RoundedCornerShape(dimensionResource(R.dimen.heartbeat_card_inner_spacing)),
-                )
-                .padding(
-                    horizontal = dimensionResource(R.dimen.padding_small),
-                    vertical = dimensionResource(R.dimen.padding_extra_small),
-                )
-    ) {
-        Text(
-            text = lines.joinToString(separator = "\n"),
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
-            color = Color(0xFF8DF0FF),
-        )
     }
 }
 

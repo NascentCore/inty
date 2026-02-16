@@ -55,7 +55,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.BuildConfig
@@ -354,55 +353,12 @@ private fun HeartbeatContent(
                         )
                         if (BuildConfig.DEBUG) {
                             Spacer(Modifier.height(cardInnerSpacing))
-                            HeartbeatFestivalMemoryDebugMetadata(memory = it)
+                            FestivalMemoryDebugMetadata(memory = it)
                         }
                     }
                 }
             }
         }
-    }
-}
-
-/**
- * Debug 构建下在 Love Journal 卡片底部展示单条节日记忆的全部元数据（id、agentId、festivalDate、festivalName、memory、title）。
- * 非 debug 构建不渲染。
- */
-@Composable
-private fun HeartbeatFestivalMemoryDebugMetadata(
-    memory: FestivalMemory,
-    modifier: Modifier = Modifier,
-) {
-    if (!BuildConfig.DEBUG) return
-
-    val lines =
-        listOf(
-            "id=${memory.id}",
-            "agentId=${memory.agentId}",
-            "festivalDate=${memory.festivalDate}",
-            "festivalName=${memory.festivalName ?: "null"}",
-            "memory=${memory.memory}",
-            "title=${memory.title}",
-        )
-
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(
-                    Color.White.copy(alpha = 0.08f),
-                    RoundedCornerShape(dimensionResource(R.dimen.heartbeat_card_inner_spacing)),
-                )
-                .padding(
-                    horizontal = dimensionResource(R.dimen.padding_small),
-                    vertical = dimensionResource(R.dimen.padding_extra_small),
-                )
-    ) {
-        Text(
-            text = lines.joinToString(separator = "\n"),
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
-            color = Color(0xFF8DF0FF),
-        )
     }
 }
 
