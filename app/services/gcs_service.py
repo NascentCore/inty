@@ -75,14 +75,18 @@ class GCSService:
         user_id: str,
         agent_id: str,
         session_id: str,
+        voice_session_id: str,
         wav_bytes: bytes,
     ) -> Optional[str]:
         """
-        上传 live chat 单路 WAV 到 GCS，路径为 {user_id}/{agent_id}/{session_id}.wav。
+        上传 live chat 单路 WAV 到 GCS，路径为 live_chat/{user_id}/{agent_id}/{session_id}_{voice_session_id}.wav。
         上传失败时捕获异常并返回 None，避免影响调用方流程。
+        voice_session_id 应由调用方保证非空（通常为单次通话的 UUID），以保证多次通话不覆盖。
+        Returns:
+            成功时返回公开 URL，失败时返回 None。
         """
         try:
-            path = f"live_chat/{user_id}/{agent_id}/{session_id}.wav"
+            path = f"live_chat/{user_id}/{agent_id}/{session_id}_{voice_session_id}.wav"
             logger.debug(
                 f"GCS 上传 live chat 音频: {path}, 大小: {len(wav_bytes)} bytes"
             )

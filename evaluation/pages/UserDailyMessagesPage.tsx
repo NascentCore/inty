@@ -877,6 +877,18 @@ export const UserDailyMessagesPage: React.FC = () => {
                                       height: 32,
                                     }}
                                   />
+                                  <div
+                                    style={{
+                                      marginTop: 6,
+                                      fontSize: 11,
+                                      fontFamily: "monospace",
+                                      color: "#666",
+                                      wordBreak: "break-all",
+                                    }}
+                                    title={msg.audio_url}
+                                  >
+                                    GCS: {msg.audio_url}
+                                  </div>
                                 </div>
                               )}
                               {/* 显示独立图片消息（type="image"） */}

@@ -9,6 +9,7 @@ import types
 import pytest
 
 from app.external_services.fakes.gcs import FakeGCSClient
+from app.external_services.gcs import get_bucket_and_path_from_gcs_url
 from app.services.gcs_service import GCSService
 
 
@@ -41,13 +42,15 @@ async def test_upload_live_chat_audio_success(fake_gcs: FakeGCSClient, stub_conf
     wav_bytes = b"fake-wav-content"
     service = GCSService()
     url = await service.upload_live_chat_audio(
-        "user1", "agent1", "sess1", wav_bytes
+        "user1", "agent1", "sess1", "voice1", wav_bytes
     )
 
-    expected_url = "https://storage.googleapis.com/test-bucket/live_chat/user1/agent1/sess1.wav"
+    expected_url = "https://storage.googleapis.com/test-bucket/live_chat/user1/agent1/sess1_voice1.wav"
     assert url == expected_url
 
-    blob = fake_gcs.bucket("test-bucket").blob("live_chat/user1/agent1/sess1.wav")
+    blob = fake_gcs.bucket("test-bucket").blob(
+        "live_chat/user1/agent1/sess1_voice1.wav"
+    )
     assert blob.exists() is True
     assert blob.download_as_bytes() == wav_bytes
 
@@ -60,6 +63,23 @@ async def test_upload_live_chat_audio_returns_none_on_upload_failure(stub_config
     with patch("app.services.gcs_service.upload_to_gcs", side_effect=Exception("fake error")):
         service = GCSService()
         url = await service.upload_live_chat_audio(
-            "user1", "agent1", "sess1", b"wav"
+            "user1", "agent1", "sess1", "voice1", b"wav"
         )
     assert url is None
+
+
+@pytest.mark.asyncio
+async def test_upload_live_chat_audio_e2e_download_by_url(
+    fake_gcs: FakeGCSClient, stub_config
+):
+    """端到端：上传后按返回 URL 用 FakeGCS 下载，验证路径正确且文件可检索。"""
+    wav_bytes = b"fake-wav-content"
+    service = GCSService()
+    url = await service.upload_live_chat_audio(
+        "user1", "agent1", "sess1", "voice1", wav_bytes
+    )
+    assert url is not None
+
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(url)
+    downloaded = fake_gcs.bucket(bucket_name).blob(gcs_path).download_as_bytes()
+    assert downloaded == wav_bytes

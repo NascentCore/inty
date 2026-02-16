@@ -1098,6 +1098,7 @@ class LiveChatService:
                 str(session.user_id),
                 session.agent_id,
                 session.session_id,
+                session.voice_session_id,
                 wav_bytes,
             )
             if not gcs_url:

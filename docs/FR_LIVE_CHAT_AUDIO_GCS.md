@@ -9,7 +9,7 @@ CREATED_BY_AGENT
 ## 存储形式
 
 - **单文件**：每个会话对应一个 WAV 文件，内容为按时间顺序交织的用户与 AI 音频（用户 16k PCM 重采样为 24k 后与 AI 24k PCM 拼接）。
-- **GCS 路径**：`live_chat/{user_id}/{agent_id}/{session_id}.wav`。
+- **GCS 路径**：`live_chat/{user_id}/{agent_id}/{session_id}_{voice_session_id}.wav`。
 - **表记录**：当次会话产生的两条消息（一条用户、一条 AI）的 `audio_url` 字段均指向该 GCS URL；`meta_data.audioDuration` 为整段 WAV 的总时长（秒）。
 
 ## 流程简述
