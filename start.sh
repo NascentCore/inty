@@ -54,8 +54,8 @@ if [ "$DEV" = true ]; then
   fi
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   python scripts/seed_report_test_data.py
-  uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."
-  uvicorn app.main:app --host 0.0.0.0 --port 8000
+  uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000
 fi

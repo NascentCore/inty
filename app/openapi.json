@@ -474,7 +474,7 @@
                     "NOT_USED"
                 ],
                 "summary": "Create Report",
-                "description": "Submit report",
+                "description": "\u63d0\u4ea4\u4e3e\u62a5\u6216\u53cd\u9988\uff0c\u4efb\u610f\u5df2\u767b\u5f55\u7528\u6237\u53ef\u8c03\u7528",
                 "operationId": "create_report_api_v1_report__post",
                 "security": [
                     {
@@ -516,6 +516,53 @@
             }
         },
         "/api/v1/report/{report_id}": {
+            "get": {
+                "tags": [
+                    "report",
+                    "web_app"
+                ],
+                "summary": "Get Report",
+                "description": "\u6309 id \u83b7\u53d6\u5355\u6761\u4e3e\u62a5\u8be6\u60c5\uff08\u7528\u4e8e\u6c38\u4e45\u94fe\u63a5\u6253\u5f00\uff09\u3002",
+                "operationId": "get_report_api_v1_report__report_id__get",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Report Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReportOut"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "delete": {
                 "tags": [
                     "report",
@@ -546,6 +593,65 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/APIResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/report/{report_id}/github-issue": {
+            "put": {
+                "tags": [
+                    "report",
+                    "web_app"
+                ],
+                "summary": "Update Report Github Issue",
+                "description": "\u66f4\u65b0\u4e3e\u62a5\u8bb0\u5f55\u5173\u8054\u7684 GitHub issue URL\u3002",
+                "operationId": "update_report_github_issue_api_v1_report__report_id__github_issue_put",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Report Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReportGithubIssueUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReportOut"
                                 }
                             }
                         }
@@ -940,6 +1046,22 @@
                         "schema": {
                             "type": "string",
                             "title": "Agent Id"
+                        }
+                    },
+                    {
+                        "name": "appVersionCode",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Appversioncode"
                         }
                     }
                 ],
@@ -1554,6 +1676,22 @@
                             "title": "Order"
                         },
                         "description": "Sort order: asc=old messages first, desc=new messages first"
+                    },
+                    {
+                        "name": "appVersionCode",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Appversioncode"
+                        }
                     }
                 ],
                 "responses": {
@@ -1578,57 +1716,6 @@
                         }
                     }
                 }
-            }
-        },
-        "/api/v1/chats/messages/vote": {
-            "post": {
-                "tags": [
-                    "chats",
-                    "android_app",
-                    "web_app",
-                    "evaluation",
-                    "NOT_USED"
-                ],
-                "summary": "Update Message Vote",
-                "description": "Set, toggle, or remove vote (like/dislike) for a message. Only AI messages can be voted.",
-                "operationId": "update_message_vote_api_v1_chats_messages_vote_post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/MessageVoteRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse_Dict_str__Any__"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ]
             }
         },
         "/api/v1/chats/agents/{agent_id}/messages/{message_id}/voice": {
@@ -1868,66 +1955,6 @@
                 }
             }
         },
-        "/api/v1/chats/agents/{agent_id}/clear-messages": {
-            "post": {
-                "tags": [
-                    "chats",
-                    "evaluation",
-                    "NOT_USED"
-                ],
-                "summary": "Clear Agent Chat Messages",
-                "description": "Clear chat messages by Agent ID, currently used by inty-eval, probably will be used by inty app as well.",
-                "operationId": "clear_agent_chat_messages_api_v1_chats_agents__agent_id__clear_messages_post",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ClearMessagesRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ClearMessagesResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/chat/completions/{agent_id}": {
             "post": {
                 "tags": [
@@ -1936,10 +1963,9 @@
                     "web_app",
                     "evaluation"
                 ],
-                "summary": "[Deprecated use /api/v2/chat/completions/{agent_id} instead] \u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
+                "summary": "\u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
                 "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
                 "operationId": "agent_chat_completions_api_v1_chat_completions__agent_id__post",
-                "deprecated": true,
                 "security": [
                     {
                         "Bearer": []
@@ -2776,148 +2802,6 @@
                         "Bearer": []
                     }
                 ]
-            }
-        },
-        "/api/v2/chat/completions/{agent_id}": {
-            "post": {
-                "tags": [
-                    "chat",
-                    "NOT_USED"
-                ],
-                "summary": "\u3010\u76ee\u524d\u8fd8\u672a\u5b8c\u6210\u3011\u8fd4\u56de\u4e0e\u6307\u5b9a Agent \u804a\u5929\u7684\u4e0b\u4e00\u6761\u6d88\u606f",
-                "description": "\u53ef\u4ee5\u5904\u7406\u5305\u62ec\u56fe\u7247\u5728\u5185\u7684\u5404\u79cd\u6d88\u606f\u7c7b\u578b\uff0c\u5a92\u4f53\u7c7b\u578b\u5e94\u8be5\u5148\u4e0a\u4f20\uff0c\u7136\u540e\u5c06 URL \u4f5c\u4e3a\u7d22\u5f15\u53d1\u9001\u5230\u6b64 API",
-                "operationId": "agent_chat_completions_api_v2_chat_completions__agent_id__post",
-                "deprecated": true,
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "agent_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "title": "Agent Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ChatCompletionRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/APIResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v2/ai/agents/recommend": {
-            "get": {
-                "tags": [
-                    "agents",
-                    "NOT_USED"
-                ],
-                "summary": "\u83b7\u53d6\u63a8\u8350 AI \u89d2\u8272\u5217\u8868\uff08v2\uff09",
-                "description": "\u8fd4\u56de\u516c\u5f00\u4e14\u5ba1\u6838\u901a\u8fc7\u7684 AI \u89d2\u8272\u5217\u8868\uff0c\u652f\u6301\u6309\u521b\u5efa\u65f6\u95f4\u3001\u968f\u673a\u6216\u57fa\u4e8e\u8bc4\u5206\u7684\u968f\u673a\u6392\u5e8f\u3002\u82e5 sort \u4e3a random \u6216 score_based_random\uff0c\u9700\u8981\u63d0\u4f9b sort_seed \u4ee5\u4fdd\u8bc1\u8fd4\u56de\u987a\u5e8f\u7a33\u5b9a\u3002",
-                "operationId": "recommend_agents_v2_api_v2_ai_agents_recommend_get",
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "page",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "default": 1,
-                            "title": "Page"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "maximum": 100,
-                            "minimum": 1,
-                            "default": 10,
-                            "title": "Page Size"
-                        }
-                    },
-                    {
-                        "name": "sort",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "$ref": "#/components/schemas/AgentSortOption",
-                            "default": "created_desc"
-                        }
-                    },
-                    {
-                        "name": "sort_seed",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "default": "",
-                            "title": "Sort Seed"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/AgentRecommendationResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     },
@@ -3768,6 +3652,21 @@
                         ],
                         "title": "Photos"
                     },
+                    "exclusive_photos": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "$ref": "#/components/schemas/ExclusivePhotoItem"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Exclusive Photos",
+                        "description": "\u8fd0\u8425\u4e0a\u4f20\u7684\u4e13\u5c5e\u89d2\u8272\u7167\uff1aimage_url, caption, credits_required"
+                    },
                     "category": {
                         "anyOf": [
                             {
@@ -3952,7 +3851,7 @@
                     "llm_config": {
                         "anyOf": [
                             {
-                                "$ref": "#/components/schemas/ModelConfig"
+                                "$ref": "#/components/schemas/LLMConfig"
                             },
                             {
                                 "type": "null"
@@ -4053,6 +3952,17 @@
                                 "type": "null"
                             }
                         ]
+                    },
+                    "features": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AgentFeatures"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "\u53ef\u6269\u5c55\u529f\u80fd\u6570\u636e\uff0c\u5982\u8282\u65e5\u8bb0\u5fc6\u7b49"
                     },
                     "avatar_size": {
                         "anyOf": [
@@ -4231,6 +4141,21 @@
                         ],
                         "title": "Photos"
                     },
+                    "exclusive_photos": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "$ref": "#/components/schemas/ExclusivePhotoItem"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Exclusive Photos",
+                        "description": "\u8fd0\u8425\u4e0a\u4f20\u7684\u4e13\u5c5e\u89d2\u8272\u7167\uff1aimage_url, caption, credits_required"
+                    },
                     "category": {
                         "anyOf": [
                             {
@@ -4415,7 +4340,7 @@
                     "llm_config": {
                         "anyOf": [
                             {
-                                "$ref": "#/components/schemas/ModelConfig"
+                                "$ref": "#/components/schemas/LLMConfig"
                             },
                             {
                                 "type": "null"
@@ -4453,6 +4378,21 @@
                 "title": "AgentCreate",
                 "description": "\u521b\u5efaAI\u89d2\u8272\n\n\u63a8\u8350\u4f7f\u7528\u65b9\u5f0f\uff1a\n1. \u4f7f\u7528personality + scenario\u5b57\u6bb5\u6784\u5efa\u89d2\u8272\n2. \u6dfb\u52a0first_message\u4f5c\u4e3a\u5f00\u573a\u767d\n3. \u53ef\u9009\u6dfb\u52a0message_example\u5c55\u793a\u5bf9\u8bdd\u98ce\u683c\n\n\u517c\u5bb9\u6027\u8bf4\u660e\uff1a\n - \u4ecd\u652f\u6301\u4f7f\u7528prompt\u5b57\u6bb5 (legacy\u6a21\u5f0f)\n - \u4f18\u5148\u7ea7\uff1a\u89d2\u8272\u5361\u5b57\u6bb5 > prompt\u5b57\u6bb5"
             },
+            "AgentFeatures": {
+                "properties": {
+                    "festival_memories": {
+                        "items": {
+                            "$ref": "#/components/schemas/FestivalMemoryItem"
+                        },
+                        "type": "array",
+                        "title": "Festival Memories",
+                        "description": "\u5f53\u524d\u7528\u6237\u4e0e\u8be5\u89d2\u8272\u7684\u8282\u65e5\u8bb0\u5fc6\u5217\u8868"
+                    }
+                },
+                "type": "object",
+                "title": "AgentFeatures",
+                "description": "\u89d2\u8272\u8be6\u60c5\u53ef\u6269\u5c55\u7684 features\uff0c\u5f53\u524d\u5305\u542b\u8282\u65e5\u8bb0\u5fc6"
+            },
             "AgentMetaData": {
                 "properties": {
                     "score": {
@@ -4484,33 +4424,6 @@
                 "type": "object",
                 "title": "AgentMetaData",
                 "description": "Agent \u5143\u6570\u636e\u6a21\u578b"
-            },
-            "AgentRecommendationResponse": {
-                "properties": {
-                    "code": {
-                        "type": "integer",
-                        "title": "Code",
-                        "default": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message",
-                        "default": "success"
-                    },
-                    "data": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/PaginationData_Agent_"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    }
-                },
-                "type": "object",
-                "title": "AgentRecommendationResponse",
-                "description": "V2 AI\u89d2\u8272\u63a8\u8350\u54cd\u5e94"
             },
             "AgentSortOption": {
                 "type": "string",
@@ -4706,6 +4619,21 @@
                         ],
                         "title": "Photos"
                     },
+                    "exclusive_photos": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "$ref": "#/components/schemas/ExclusivePhotoItem"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Exclusive Photos",
+                        "description": "\u8fd0\u8425\u4e0a\u4f20\u7684\u4e13\u5c5e\u89d2\u8272\u7167\uff1aimage_url, caption, credits_required"
+                    },
                     "category": {
                         "anyOf": [
                             {
@@ -4884,7 +4812,7 @@
                     "llm_config": {
                         "anyOf": [
                             {
-                                "$ref": "#/components/schemas/ModelConfig"
+                                "$ref": "#/components/schemas/LLMConfig"
                             },
                             {
                                 "type": "null"
@@ -5336,6 +5264,16 @@
                         ],
                         "title": "Request Id"
                     },
+                    "time_context": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/UserTimeContext"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
                     "message_id": {
                         "anyOf": [
                             {
@@ -5466,6 +5404,17 @@
                             }
                         ],
                         "title": "Generation Time Ms"
+                    },
+                    "model_fallback_due_to_429": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Model Fallback Due To 429"
                     }
                 },
                 "type": "object",
@@ -5631,114 +5580,6 @@
                 "title": "ChatSettingsUpdate",
                 "description": "\u66f4\u65b0\u804a\u5929\u8bbe\u7f6e"
             },
-            "ClearMessagesRequest": {
-                "properties": {
-                    "message_id": {
-                        "anyOf": [
-                            {
-                                "type": "integer"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Message Id"
-                    },
-                    "timestamp": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Timestamp"
-                    },
-                    "request_id": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Request Id"
-                    }
-                },
-                "type": "object",
-                "title": "ClearMessagesRequest",
-                "description": "\u6e05\u9664\u6d88\u606f\u8bf7\u6c42\uff08\u8f6f\u5220\u9664\uff09\n\n\u652f\u6301\u4e09\u79cd\u6a21\u5f0f\uff1a\n1. \u63d0\u4f9b message_id\uff1a\u6e05\u9664\u8be5ID\u53ca\u5176\u4e4b\u540e\u7684\u6240\u6709\u6d88\u606f\n2. \u63d0\u4f9b timestamp\uff1a\u6e05\u9664\u8be5\u65f6\u95f4\u4e4b\u540e\u7684\u6240\u6709\u6d88\u606f\n3. \u90fd\u4e0d\u63d0\u4f9b\uff1a\u6e05\u9664\u5168\u90e8\u6d88\u606f\n\n\u6ce8\u610f\uff1amessage_id \u548c timestamp \u4e0d\u80fd\u540c\u65f6\u63d0\u4f9b",
-                "examples": [
-                    {
-                        "message_id": 123
-                    },
-                    {
-                        "timestamp": "2024-01-01T10:00:00Z"
-                    },
-                    {}
-                ]
-            },
-            "ClearMessagesResponse": {
-                "properties": {
-                    "success": {
-                        "type": "boolean",
-                        "title": "Success"
-                    },
-                    "message": {
-                        "type": "string",
-                        "title": "Message"
-                    },
-                    "deleted_count": {
-                        "type": "integer",
-                        "title": "Deleted Count"
-                    },
-                    "target_message": {
-                        "anyOf": [
-                            {
-                                "additionalProperties": true,
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Target Message"
-                    },
-                    "deleted_time_range": {
-                        "anyOf": [
-                            {
-                                "additionalProperties": true,
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Deleted Time Range"
-                    },
-                    "cutoff_timestamp": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Cutoff Timestamp"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "success",
-                    "message",
-                    "deleted_count"
-                ],
-                "title": "ClearMessagesResponse",
-                "description": "\u6e05\u9664\u6d88\u606f\u54cd\u5e94"
-            },
             "DeletionCheckResponse": {
                 "properties": {
                     "can_delete": {
@@ -5782,6 +5623,34 @@
                     "can_delete": false,
                     "error_message": "\u5b58\u5728\u6d3b\u8dc3\u8ba2\u9605\uff0c\u8bf7\u5148\u53d6\u6d88\u8ba2\u9605\u540e\u518d\u5220\u9664\u8d26\u6237"
                 }
+            },
+            "ExclusivePhotoItem": {
+                "properties": {
+                    "image_url": {
+                        "type": "string",
+                        "title": "Image Url",
+                        "description": "\u7167\u7247\u5730\u5740\uff08GCS \u6216 CDN\uff09"
+                    },
+                    "caption": {
+                        "type": "string",
+                        "title": "Caption",
+                        "description": "\u6587\u6848"
+                    },
+                    "credits_required": {
+                        "type": "integer",
+                        "minimum": 0.0,
+                        "title": "Credits Required",
+                        "description": "\u89e3\u9501\u6240\u9700 credit \u6570\u91cf"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "image_url",
+                    "caption",
+                    "credits_required"
+                ],
+                "title": "ExclusivePhotoItem",
+                "description": "\u8fd0\u8425\u4e0a\u4f20\u7684\u4e13\u5c5e\u89d2\u8272\u7167\u5355\u6761"
             },
             "FeatureInfo": {
                 "properties": {
@@ -5833,6 +5702,39 @@
                 ],
                 "title": "FeatureInfo",
                 "description": "\u6743\u76ca\u529f\u80fd\u4fe1\u606f"
+            },
+            "FestivalMemoryItem": {
+                "properties": {
+                    "memory_id": {
+                        "type": "integer",
+                        "title": "Memory Id",
+                        "description": "memory \u8868\u4e3b\u952e id"
+                    },
+                    "festival_date": {
+                        "type": "string",
+                        "title": "Festival Date",
+                        "description": "\u8282\u65e5\u65e5\u671f\uff0c\u5982 YYYY-MM-DD"
+                    },
+                    "festival_name": {
+                        "type": "string",
+                        "title": "Festival Name",
+                        "description": "\u8282\u65e5\u540d\u79f0"
+                    },
+                    "memory": {
+                        "type": "string",
+                        "title": "Memory",
+                        "description": "\u7528\u6237\u4e0e\u8be5\u89d2\u8272\u5728\u6b64\u8282\u65e5\u4e0b\u7684\u56de\u5fc6\u6458\u8981"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "memory_id",
+                    "festival_date",
+                    "festival_name",
+                    "memory"
+                ],
+                "title": "FestivalMemoryItem",
+                "description": "\u89d2\u8272\u8be6\u60c5 features \u4e2d\u7684\u5355\u6761\u8282\u65e5\u8bb0\u5fc6"
             },
             "Gender": {
                 "type": "string",
@@ -6031,6 +5933,115 @@
                 "title": "ImageSize",
                 "description": "Image size"
             },
+            "LLMConfig": {
+                "properties": {
+                    "model": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Model",
+                        "description": "Model name, e.g. 'gpt-4o'. With aggregate providers (e.g. OpenRouter), use <provider>/<model> format."
+                    },
+                    "max_tokens": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "maximum": 8192.0,
+                                "minimum": 1.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Max Tokens",
+                        "description": "Maximum tokens in response",
+                        "default": 2048
+                    },
+                    "top_p": {
+                        "anyOf": [
+                            {
+                                "type": "number",
+                                "maximum": 1.0,
+                                "minimum": 0.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Top P",
+                        "description": "\n        Top-P \u91c7\u6837\u4f1a\u9009\u62e9\u4e00\u4e2a\u6982\u7387\u9608\u503c $p$\uff08\u901a\u5e38\u5728 $0.1$ \u5230 $0.9$ \u4e4b\u95f4\uff09\u3002\n        \u6a21\u578b\u4f1a\u5c06\u6240\u6709\u5019\u9009\u8bcd\u6309\u6982\u7387\u964d\u5e8f\u6392\u5217\uff0c\u7136\u540e\u4ece\u9ad8\u5230\u4f4e\u9010\u4e2a\u76f8\u52a0\uff0c\u76f4\u5230\u8fd9\u4e9b\u8bcd\u7684\u7d2f\u79ef\u6982\u7387\u4e4b\u548c\u8fbe\u5230\u6216\u8d85\u8fc7 $p$\u3002\n\n        \u64cd\u4f5c\u6d41\u7a0b\uff1a\n        \u6392\u5e8f\uff1a \u5c06\u8bcd\u6c47\u6309\u6982\u7387\u4ece\u5927\u5230\u5c0f\u6392\u5217\u3002\n        \u7d2f\u52a0\uff1a \u4f9d\u6b21\u5c06\u6982\u7387\u76f8\u52a0\uff1a$P_1 + P_2 + \\dots + P_n \\ge p$\u3002\n        \u622a\u65ad\uff1a \u53ea\u4ece\u8fd9\u524d $n$ \u4e2a\u8bcd\u4e2d\u8fdb\u884c\u6700\u7ec8\u91c7\u6837\uff0c\u5176\u4f59\u8bcd\u88ab\u5254\u9664\u3002\n        ",
+                        "default": 0.9
+                    },
+                    "top_k": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "maximum": 100.0,
+                                "minimum": 40.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Top K",
+                        "description": "\n        \u5f53 LLM \u9884\u6d4b\u4e0b\u4e00\u4e2a\u8bcd\u65f6\uff0c\u5b83\u4f1a\u7ed9\u8bcd\u6c47\u8868\u4e2d\u7684\u6bcf\u4e2a\u8bcd\u5206\u914d\u4e00\u4e2a\u6982\u7387\u5206\u5e03\u3002\n        \u5982\u679c\u6ca1\u6709\u9650\u5236\uff0c\u6a21\u578b\u53ef\u80fd\u4f1a\u9009\u5230\u4e00\u4e2a\u6982\u7387\u6781\u4f4e\u4f46\u6781\u5176\u79bb\u8c31\u7684\u8bcd\uff0c\n        \u5bfc\u81f4\u751f\u6210\u5185\u5bb9\u65ad\u53e5\u5f02\u5e38\u6216\u903b\u8f91\u5d29\u574f\u3002\n        \n        Top-K \u7684\u64cd\u4f5c\u6d41\u7a0b\uff1a\u6392\u5e8f\uff1a \u5c06\u6240\u6709\u53ef\u80fd\u7684\u4e0b\u4e00\u8bcd\u6309\u6982\u7387\u4ece\u9ad8\u5230\u4f4e\u6392\u5e8f\u3002\n        \u622a\u65ad\uff1a \u53ea\u4fdd\u7559\u6982\u7387\u6700\u9ad8\u7684\u524d $K$ \u4e2a\u8bcd\u3002\n        \u91cd\u65b0\u5206\u914d\uff1a \u5c06\u8fd9 $K$ \u4e2a\u8bcd\u4e4b\u5916\u7684\u6982\u7387\u5168\u90e8\u5f52\u96f6\uff0c\u5e76\u5728\u5269\u4e0b\u7684\u8bcd\u4e2d\u91cd\u65b0\u8ba1\u7b97\u6982\u7387\u5206\u5e03\u8fdb\u884c\u91c7\u6837\u3002\n\n        \u5728\u8c03\u6574\u6a21\u578b\u53c2\u6570\u65f6\uff1a\n        \u5982\u679c\u4f60\u5e0c\u671b\u7ed3\u679c\u4e25\u8c28\u3001\u786e\u5b9a\uff08\u5982\u5199\u4ee3\u7801\u3001\u7b97\u7b97\u672f\uff09\uff0c\n        \u53ef\u4ee5\u8c03\u4f4e $K$ \u6216\u76f4\u63a5\u7528 $K=1$\u3002\n        \u5982\u679c\u4f60\u5e0c\u671b\u7ed3\u679c\u6709\u521b\u610f\u3001\u50cf\u4eba\u7c7b\uff08\u5982\u5199\u5c0f\u8bf4\u3001\u5934\u8111\u98ce\u66b4\uff09\uff0c\n        \u901a\u5e38\u8bbe\u7f6e $K$ \u5728 $40$ \u5230 $100$ \u4e4b\u95f4\uff0c\n        \u5e76\u914d\u5408 Temperature\uff08\u6e29\u5ea6\uff09 \u53c2\u6570\u4e00\u8d77\u4f7f\u7528\u3002\n        ",
+                        "default": 60
+                    },
+                    "temperature": {
+                        "anyOf": [
+                            {
+                                "type": "number",
+                                "maximum": 2.0,
+                                "minimum": 0.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Temperature",
+                        "description": "\n        \u5728\u91c7\u6837\u4e4b\u524d\uff0c\u6a21\u578b\u4f1a\u901a\u8fc7\u4e00\u4e2a Softmax \u51fd\u6570\u5c06\u539f\u59cb\u5206\u6570\uff08Logits\uff09\u8f6c\u5316\u4e3a\u6982\u7387\u3002Temperature () \u5c31\u5728\u8fd9\u4e2a\u516c\u5f0f\u91cc\uff1a\n\n        * **\u5f53  \u8d8b\u8fd1\u4e8e 0\uff08\u4f4e\u6e29\uff09\uff1a** \u6982\u7387\u5206\u5e03\u53d8\u5f97\u6781\u5176\u201c\u5c16\u9510\u201d\u3002\u539f\u672c\u6982\u7387\u6700\u9ad8\u7684\u8bcd\uff08\u6bd4\u5982 \uff09\u4f1a\u77ac\u95f4\u81a8\u80c0\u5230 \uff0c\u800c\u5176\u4ed6\u8bcd\u51e0\u4e4e\u6d88\u5931\u3002\u6a21\u578b\u53d8\u5f97\u6781\u5ea6\u81ea\u4fe1\u3001\u4fdd\u5b88\u3001\u6b7b\u677f\u3002\n        * **\u5f53 \uff08\u6807\u51c6\uff09\uff1a** \u6a21\u578b\u6309\u539f\u59cb\u751f\u6210\u7684\u6982\u7387\u5206\u5e03\u8fdb\u884c\u91c7\u6837\u3002\n        * **\u5f53 \uff08\u9ad8\u6e29\uff09\uff1a** \u6982\u7387\u5206\u5e03\u53d8\u5f97\u201c\u5e73\u5766\u201d\u3002\u9ad8\u6982\u7387\u8bcd\u548c\u4f4e\u6982\u7387\u8bcd\u4e4b\u95f4\u7684\u5dee\u8ddd\u7f29\u5c0f\u3002\u6a21\u578b\u53d8\u5f97\u201c\u559d\u9189\u4e86\u201d\u4e00\u6837\uff0c\u5f00\u59cb\u5c1d\u8bd5\u5404\u79cd\u51b7\u95e8\u8bcd\u6c47\uff0c\u6781\u5177\u521b\u610f\u4f46\u4e5f\u5bb9\u6613\u80e1\u8a00\u4e71\u8bed\u3002\n\n        ---\n\n        ### 2. Temperature \u4e0e Top-P \u7684\u534f\u540c\u4f5c\u6218\n\n        \u5728\u5b9e\u9645\u63a8\u7406\u4e2d\uff0c\u8fd9\u4e24\u8005\u901a\u5e38\u662f**\u4e32\u8054**\u5de5\u4f5c\u7684\uff1a\n\n        1. **\u7b2c\u4e00\u6b65\uff1aTemperature \u91cd\u5851\u5206\u5e03\u3002** \u5982\u679c\u4f60\u8bbe\u7f6e \uff0c\u90a3\u4e9b\u539f\u672c\u53ea\u6709  \u6982\u7387\u7684\u8bcd\u53ef\u80fd\u4f1a\u88ab\u201c\u62ac\u201d\u5230 \u3002\n        2. **\u7b2c\u4e8c\u6b65\uff1aTop-P \u6267\u884c\u622a\u65ad\u3002** \u63a5\u7740 Top-P\uff08\u5982 \uff09\u767b\u573a\uff0c\u628a\u91cd\u5851\u540e\u7684\u5206\u5e03\u91cc\u7d2f\u79ef\u6982\u7387\u8d85\u8fc7  \u4ee5\u5916\u7684\u8bcd\u5168\u90e8\u780d\u6389\u3002\n\n        #### **\u5b9e\u6218\u573a\u666f\u5bf9\u6bd4\uff1a**\n\n        | \u7ec4\u5408\u65b9\u6848 | \u9002\u7528\u573a\u666f | \u6700\u7ec8\u6548\u679c |\n        | --- | --- | --- |\n        | **\u4f4e  (0.1-0.3) + \u9ad8  (1.0)** | \u4ee3\u7801\u7f16\u5199\u3001\u4e8b\u5b9e\u95ee\u7b54\u3001\u63d0\u53d6\u6458\u8981 | \u6781\u5176\u7a33\u5b9a\uff0c\u51e0\u4e4e\u6bcf\u6b21\u56de\u7b54\u90fd\u4e00\u6837\uff0c\u9075\u5faa\u201c\u6807\u51c6\u7b54\u6848\u201d\u3002 |\n        | **\u4e2d  (0.7-0.8) + \u4e2d  (0.9)** | \u65e5\u5e38\u5bf9\u8bdd\u3001\u90ae\u4ef6\u5199\u4f5c | \u65e2\u6709\u903b\u8f91\u53c8\u4e0d\u663e\u5f97\u590d\u8bfb\u673a\uff0c\u6700\u63a5\u8fd1\u4eba\u7c7b\u8bf4\u8bdd\u3002 |\n        | **\u9ad8  (1.2-1.5) + \u4f4e  (0.5)** | \u8bd7\u6b4c\u521b\u4f5c\u3001\u79d1\u5e7b\u8111\u6d1e | \u5f3a\u5236\u6a21\u578b\u5728\u7ecf\u8fc7\u5927\u5e45\u201c\u5e73\u6ed1\u201d\u540e\u7684\u9ad8\u6982\u7387\u8bcd\u4e2d\u968f\u673a\u8df3\u8dc3\uff0c\u5145\u6ee1\u60ca\u559c\u3002 |\n\n        ---\n\n        ### 3. \u4e3a\u4ec0\u4e48\u201c\u4e0d\u8981\u540c\u65f6\u5927\u5e45\u8c03\u8282\u4e24\u8005\u201d\uff1f\n\n        \u8fd9\u662f\u5f00\u53d1\u8005\u6700\u5e38\u72af\u7684\u9519\u8bef\u3002\n\n        * \u5982\u679c\u4f60\u628a **Temperature \u8c03\u5f97\u6781\u9ad8**\uff08\u8ba9\u5206\u5e03\u53d8\u5e73\u5766\uff09\uff0c\u540c\u65f6\u53c8\u628a **Top-P \u8c03\u5f97\u6781\u4f4e**\uff08\u53ea\u53d6\u524d\u51e0\u4e2a\u8bcd\uff09\uff0c\u8fd9\u4e24\u8005\u5c31\u4f1a\u4e92\u76f8\u6253\u67b6\uff1aTemperature \u62fc\u547d\u60f3\u8ba9\u66f4\u591a\u8bcd\u6709\u620f\uff0cTop-P \u5374\u5728\u95e8\u53e3\u62fc\u547d\u8d76\u4eba\u3002\n        * **\u6700\u4f73\u5b9e\u8df5\uff1a**\n        * \u5982\u679c\u4f60\u60f3\u8981**\u6539\u53d8\u591a\u6837\u6027**\uff0c\u4f18\u5148\u8c03\u8282 **Temperature**\u3002\n        * \u5982\u679c\u4f60\u53d1\u73b0\u6a21\u578b\u5076\u5c14\u4f1a\u5192\u51fa**\u5b8c\u5168\u4e0d\u901a\u987a\u7684\u8bcd**\uff0c\u5fae\u8c03 **Top-P** \u6765\u6536\u7a84\u8fb9\u754c\u3002\n\n        ---\n\n        ### 4. \u603b\u7ed3\uff1a\u63a8\u7406\u53c2\u6570\u7684\u201c\u4e09\u5251\u5ba2\u201d\n\n        1. **Top-K\uff1a** \u9650\u5236\u201c\u4eba\u6570\u201d\uff08\u53ea\u8981\u524d K \u540d\uff09\u3002\n        2. **Top-P\uff1a** \u9650\u5236\u201c\u8d28\u91cf\u201d\uff08\u53ea\u8981\u52a0\u8d77\u6765\u591f P \u6982\u7387\uff09\u3002\n        3. **Temperature\uff1a** \u6539\u53d8\u201c\u5fc3\u6001\u201d\uff08\u662f\u4fdd\u5b88\u7a33\u91cd\uff0c\u8fd8\u662f\u653e\u98de\u81ea\u6211\uff09\u3002\n        ",
+                        "default": 0.7
+                    },
+                    "presence_penalty": {
+                        "anyOf": [
+                            {
+                                "type": "number",
+                                "maximum": 2.0,
+                                "minimum": -2.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Presence Penalty",
+                        "description": "\u53ea\u8981\u4f60\u63d0\u8fc7\u8fd9\u4e2a\u8bcd\uff0c\u6211\u5c31\u6253\u538b\u5b83, higher means more likely to generate new tokens",
+                        "default": 0.3
+                    },
+                    "frequency_penalty": {
+                        "anyOf": [
+                            {
+                                "type": "number",
+                                "maximum": 2.0,
+                                "minimum": -2.0
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Frequency Penalty",
+                        "description": "\u4f60\u63d0\u8fd9\u4e2a\u8bcd\u6b21\u6570\u8d8a\u591a\uff0c\u6211\u6253\u538b\u5f97\u8d8a\u72e0\u3002higher means less repetition",
+                        "default": 0.3
+                    }
+                },
+                "type": "object",
+                "title": "LLMConfig",
+                "description": "LLM \u6a21\u578b\u914d\u7f6e\uff0c\u4f9b API \u4e0e\u5185\u90e8\u7edf\u4e00\u4f7f\u7528\u3002"
+            },
             "LoginResponse": {
                 "properties": {
                     "token": {
@@ -6146,170 +6157,6 @@
                 ],
                 "title": "LoginUserResponse",
                 "description": "\u767b\u5f55\u7528\u6237\u54cd\u5e94"
-            },
-            "MessageVoteRequest": {
-                "properties": {
-                    "agent_id": {
-                        "type": "string",
-                        "title": "Agent Id"
-                    },
-                    "message_id": {
-                        "type": "integer",
-                        "title": "Message Id"
-                    },
-                    "vote": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Vote"
-                    },
-                    "request_id": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Request Id"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "agent_id",
-                    "message_id"
-                ],
-                "title": "MessageVoteRequest",
-                "description": "\u6d88\u606f\u6295\u7968\u8bf7\u6c42"
-            },
-            "ModelConfig": {
-                "properties": {
-                    "model": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Model"
-                    },
-                    "api_key": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Api Key"
-                    },
-                    "base_url": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Base Url"
-                    },
-                    "temperature": {
-                        "anyOf": [
-                            {
-                                "type": "number",
-                                "maximum": 2.0,
-                                "minimum": 0.0
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Temperature",
-                        "description": "Temperature for response generation"
-                    },
-                    "max_tokens": {
-                        "anyOf": [
-                            {
-                                "type": "integer",
-                                "maximum": 8192.0,
-                                "minimum": 1.0
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Max Tokens",
-                        "description": "Maximum tokens in response"
-                    },
-                    "top_p": {
-                        "anyOf": [
-                            {
-                                "type": "number",
-                                "maximum": 1.0,
-                                "minimum": 0.0
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Top P",
-                        "description": "Top-p sampling parameter"
-                    },
-                    "top_k": {
-                        "anyOf": [
-                            {
-                                "type": "integer",
-                                "minimum": 1.0
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Top K",
-                        "description": "Top-k sampling parameter"
-                    },
-                    "frequency_penalty": {
-                        "anyOf": [
-                            {
-                                "type": "number",
-                                "maximum": 2.0,
-                                "minimum": -2.0
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Frequency Penalty",
-                        "description": "Frequency penalty"
-                    },
-                    "presence_penalty": {
-                        "anyOf": [
-                            {
-                                "type": "number",
-                                "maximum": 2.0,
-                                "minimum": -2.0
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Presence Penalty",
-                        "description": "Presence penalty"
-                    }
-                },
-                "type": "object",
-                "title": "ModelConfig",
-                "description": "AI\u6a21\u578b\u914d\u7f6e"
             },
             "NotificationItem": {
                 "properties": {
@@ -6697,6 +6544,24 @@
                 "title": "ReportCreate",
                 "description": "Report API \u7aef\u70b9\u7684\u8bf7\u6c42\u6570\u636e\u7ed3\u6784\u3002"
             },
+            "ReportGithubIssueUpdate": {
+                "properties": {
+                    "github_issue": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Github Issue",
+                        "description": "GitHub issue URL associated with this report"
+                    }
+                },
+                "type": "object",
+                "title": "ReportGithubIssueUpdate"
+            },
             "ReportOut": {
                 "properties": {
                     "id": {
@@ -6747,6 +6612,17 @@
                         ],
                         "title": "Description"
                     },
+                    "github_issue": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Github Issue"
+                    },
                     "status": {
                         "type": "string",
                         "title": "Status"
@@ -6778,6 +6654,7 @@
                     "reason_codes",
                     "image_urls",
                     "description",
+                    "github_issue",
                     "status",
                     "report_type",
                     "created_at"
@@ -7970,6 +7847,46 @@
                 ],
                 "title": "UserSubscription",
                 "description": "\u7528\u6237\u8ba2\u9605\u54cd\u5e94\u6a21\u578b"
+            },
+            "UserTimeContext": {
+                "properties": {
+                    "local_time": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Local Time"
+                    },
+                    "timezone": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Timezone"
+                    },
+                    "utc_offset_minutes": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Utc Offset Minutes"
+                    }
+                },
+                "type": "object",
+                "title": "UserTimeContext",
+                "description": "\u7528\u6237\u65f6\u95f4\u4e0a\u4e0b\u6587\uff08\u6765\u81ea\u5ba2\u6237\u7aef\uff09"
             },
             "UserUpdate": {
                 "properties": {
