@@ -20,6 +20,8 @@
     <dimen name="moment_vip_badge_padding_v">2dp</dimen>
     <!-- Love Journal (Heartbeat) 列表与卡片 -->
     <dimen name="heartbeat_card_elevation">4dp</dimen>
+    <!-- 从聊天/推送打开某条时，该卡片外圈柔光效果（约 8–10px 视觉宽度） -->
+    <dimen name="heartbeat_card_glow_elevation">12dp</dimen>
     <dimen name="heartbeat_card_padding_horizontal">12dp</dimen>
     <dimen name="heartbeat_card_padding_vertical">12dp</dimen>
     <dimen name="heartbeat_card_inner_spacing">8dp</dimen>
