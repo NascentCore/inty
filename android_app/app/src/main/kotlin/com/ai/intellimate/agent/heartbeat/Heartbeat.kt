@@ -11,6 +11,7 @@ import ai.sxwl.android.design.theme.loveJournalCardBackground
 import ai.sxwl.android.design.theme.loveJournalOnBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +21,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,14 +39,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -52,6 +61,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,6 +76,18 @@ import com.ai.intellimate.R
 import com.ai.intellimate.agent.heartbeat.viewmodel.HeartbeatViewModel
 import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
+
+/** 从聊天/推送打开某条时，高亮卡片外 scrim 的透明度（0=全透明，1=全黑）。 */
+private const val HeartbeatScrimAlpha = 0.5f
+
+/** 浮层卡片在根坐标中的位置与尺寸（供 Heartbeat 全屏 scrim 上绘制卡片用）。 */
+private data class HeartbeatOverlayState(
+    val memory: FestivalMemory,
+    val xPx: Float,
+    val yPx: Float,
+    val widthPx: Int,
+    val heightPx: Int,
+)
 
 @Serializable data class Heartbeat(val agentId: String, val memoryId: Long?)
 
@@ -247,7 +269,16 @@ private fun Heartbeat(
             )
         },
     ) { contentPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        var highlightedMemoryId by remember(initialId) { mutableStateOf(initialId) }
+        var overlayState by remember { mutableStateOf<HeartbeatOverlayState?>(null) }
+        var scaffoldContentRootOffset by remember { mutableStateOf(Offset.Zero) }
+        val density = LocalDensity.current
+
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .onGloballyPositioned { scaffoldContentRootOffset = it.positionInRoot() },
+        ) {
             Box(
                 modifier =
                     Modifier.fillMaxSize()
@@ -272,6 +303,50 @@ private fun Heartbeat(
                         memories = memories,
                         initialId = initialId,
                         agentFirstName = agentFirstName,
+                        highlightedMemoryId = highlightedMemoryId,
+                        onClearHighlight = { highlightedMemoryId = null },
+                        onOverlayStateChange = { overlayState = it },
+                    )
+                }
+            }
+
+            // 全屏 scrim（含顶栏），点击关闭高亮
+            if (highlightedMemoryId != null) {
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .background(Color.Black.copy(alpha = HeartbeatScrimAlpha))
+                            .clickable { highlightedMemoryId = null },
+                )
+            }
+
+            // 浮层卡片绘在 scrim 之上，使用根坐标换算到当前 Box
+            if (overlayState != null) {
+                val state = overlayState!!
+                val cardXDp: Dp = with(density) { (state.xPx - scaffoldContentRootOffset.x).toDp() }
+                val cardYDp: Dp = with(density) { (state.yPx - scaffoldContentRootOffset.y).toDp() }
+                val cardWidthDp: Dp = with(density) { state.widthPx.toDp() }
+                val cardHeightDp: Dp = with(density) { state.heightPx.toDp() }
+                val cardElevation = dimensionResource(R.dimen.heartbeat_card_elevation)
+                val cardGlowElevation = dimensionResource(R.dimen.heartbeat_card_glow_elevation)
+                val cardPaddingH = dimensionResource(R.dimen.heartbeat_card_padding_horizontal)
+                val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
+                val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
+
+                Box(
+                    modifier =
+                        Modifier.offset(x = cardXDp, y = cardYDp)
+                            .size(cardWidthDp, cardHeightDp)
+                            .clickable { /* 点击卡片不关闭高亮 */ },
+                ) {
+                    HeartbeatJournalCard(
+                        memory = state.memory,
+                        modifier = Modifier.fillMaxSize(),
+                        cardElevation = cardElevation,
+                        glowElevation = cardGlowElevation,
+                        cardPaddingH = cardPaddingH,
+                        cardPaddingV = cardPaddingV,
+                        cardInnerSpacing = cardInnerSpacing,
                     )
                 }
             }
@@ -279,12 +354,77 @@ private fun Heartbeat(
     }
 }
 
+/** 单条 Love Journal 卡片：标题 + 正文，可选柔光效果。用于列表与浮层复用。 */
+@Composable
+private fun HeartbeatJournalCard(
+    memory: FestivalMemory,
+    modifier: Modifier = Modifier,
+    cardElevation: Dp,
+    glowElevation: Dp? = null,
+    cardPaddingH: Dp,
+    cardPaddingV: Dp,
+    cardInnerSpacing: Dp,
+) {
+    val cs = MaterialTheme.colorScheme
+    val glowModifier =
+        if (glowElevation != null) {
+            Modifier.shadow(
+                elevation = glowElevation,
+                shape = MaterialTheme.shapes.medium,
+                spotColor = cs.loveJournalAccent.copy(alpha = 0.45f),
+                ambientColor = cs.loveJournalAccent.copy(alpha = 0.25f),
+            )
+        } else {
+            Modifier
+        }
+    Surface(
+        modifier = modifier.then(glowModifier).shadow(
+            elevation = cardElevation,
+            shape = MaterialTheme.shapes.medium,
+        ),
+        shape = MaterialTheme.shapes.medium,
+        color = cs.loveJournalCardBackground,
+    ) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = cardPaddingH, vertical = cardPaddingV),
+        ) {
+            Text(
+                text = memory.title,
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
+                color = cs.loveJournalAccent,
+            )
+            Spacer(Modifier.height(cardInnerSpacing))
+            Text(
+                text = memory.memory,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.loveJournalOnBackground,
+            )
+            if (BuildConfig.DEBUG) {
+                Spacer(Modifier.height(cardInnerSpacing))
+                FestivalMemoryDebugMetadata(memory = memory)
+            }
+        }
+    }
+}
+
+/**
+ * Love Journal 列表内容：副标题 + 卡片列表。当 highlightedMemoryId != null 时向父组件上报浮层状态，
+ * 由父组件绘制全屏 scrim 与浮层卡片；点击 scrim 或高亮卡片滚出可见区后恢复常显。
+ */
 @Composable
 private fun HeartbeatContent(
     memories: List<FestivalMemory>,
     modifier: Modifier = Modifier,
     initialId: Long? = null,
     agentFirstName: String? = null,
+    highlightedMemoryId: Long?,
+    onClearHighlight: () -> Unit,
+    onOverlayStateChange: (HeartbeatOverlayState?) -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val initialIndex =
@@ -293,7 +433,27 @@ private fun HeartbeatContent(
         }
     val count = remember(memories) { memories.size }
     val listState = rememberLazyListState(initialIndex)
+
+    // initialId 不在当前列表中时（如已删或未加载到）取消高亮，避免一直只显示 scrim
+    LaunchedEffect(initialId, memories) {
+        if (highlightedMemoryId != null && memories.none { it.id == highlightedMemoryId }) {
+            onClearHighlight()
+        }
+    }
+
+    // 高亮卡片滚出可见区域时取消高亮，避免浮层位置错乱
+    LaunchedEffect(listState, highlightedMemoryId) {
+        if (highlightedMemoryId == null) return@LaunchedEffect
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+            .collect { visibleItems ->
+                if (visibleItems.none { it.key == highlightedMemoryId }) {
+                    onClearHighlight()
+                }
+            }
+    }
+
     val cardElevation = dimensionResource(R.dimen.heartbeat_card_elevation)
+    val cardGlowElevation = dimensionResource(R.dimen.heartbeat_card_glow_elevation)
     val cardPaddingH = dimensionResource(R.dimen.heartbeat_card_padding_horizontal)
     val cardPaddingV = dimensionResource(R.dimen.heartbeat_card_padding_vertical)
     val cardInnerSpacing = dimensionResource(R.dimen.heartbeat_card_inner_spacing)
@@ -307,56 +467,67 @@ private fun HeartbeatContent(
         } else {
             stringResource(R.string.heartbeat_subtitle, count)
         }
-    Column(modifier = modifier) {
-        Text(
-            text = subtitleText,
-            style = MaterialTheme.typography.bodySmall,
-            color = cs.loveJournalOnBackground,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-        )
 
-        Spacer(Modifier.height(subtitleBottom))
+    var lazyColumnRootOffset by remember { mutableStateOf(Offset.Zero) }
+    var lazyColumnSizePx by remember { mutableStateOf(IntSize.Zero) }
 
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(bottom = listPaddingBottom),
-            verticalArrangement = Arrangement.spacedBy(listSpacing),
-        ) {
-            items(memories, key = { it.id }) {
-                Surface(
-                    modifier = Modifier.shadow(
-                        elevation = cardElevation,
-                        shape = MaterialTheme.shapes.medium,
-                    ),
-                    shape = MaterialTheme.shapes.medium,
-                    color = cs.loveJournalCardBackground,
-                ) {
-                    Column(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(horizontal = cardPaddingH, vertical = cardPaddingV),
-                    ) {
-                        Text(
-                            text = it.title,
-                            style =
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                            color = cs.loveJournalAccent,
-                        )
-                        Spacer(Modifier.height(cardInnerSpacing))
-                        Text(
-                            text = it.memory,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = cs.loveJournalOnBackground,
-                        )
-                        if (BuildConfig.DEBUG) {
-                            Spacer(Modifier.height(cardInnerSpacing))
-                            FestivalMemoryDebugMetadata(memory = it)
-                        }
-                    }
+    Box(modifier = modifier) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = subtitleText,
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.loveJournalOnBackground,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(Modifier.height(subtitleBottom))
+
+            LazyColumn(
+                state = listState,
+                modifier =
+                    Modifier.onGloballyPositioned {
+                        lazyColumnRootOffset = it.positionInRoot()
+                        lazyColumnSizePx = it.size
+                    },
+                contentPadding = PaddingValues(bottom = listPaddingBottom),
+                verticalArrangement = Arrangement.spacedBy(listSpacing),
+            ) {
+                items(memories, key = { it.id }) { memory ->
+                    HeartbeatJournalCard(
+                        memory = memory,
+                        cardElevation = cardElevation,
+                        glowElevation = null,
+                        cardPaddingH = cardPaddingH,
+                        cardPaddingV = cardPaddingV,
+                        cardInnerSpacing = cardInnerSpacing,
+                    )
                 }
+            }
+        }
+
+        // 向父组件上报浮层卡片在根坐标中的位置与尺寸，供全屏 scrim 上绘制
+        val layoutInfo = listState.layoutInfo
+        val itemInfo = layoutInfo.visibleItemsInfo.find { it.key == highlightedMemoryId }
+        val highlightedMemory = if (highlightedMemoryId != null) memories.find { it.id == highlightedMemoryId } else null
+        val itemH = itemInfo?.size ?: 0
+        val itemW = lazyColumnSizePx.width
+        SideEffect {
+            if (highlightedMemoryId == null || itemInfo == null || highlightedMemory == null || itemW <= 0 || itemH <= 0) {
+                onOverlayStateChange(null)
+            } else {
+                val scrollOffset = listState.firstVisibleItemScrollOffset
+                val cardRootX = lazyColumnRootOffset.x
+                val cardRootY = lazyColumnRootOffset.y - scrollOffset + itemInfo.offset
+                onOverlayStateChange(
+                    HeartbeatOverlayState(
+                        memory = highlightedMemory,
+                        xPx = cardRootX,
+                        yPx = cardRootY,
+                        widthPx = itemW,
+                        heightPx = itemH,
+                    ),
+                )
             }
         }
     }
