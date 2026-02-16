@@ -1,5 +1,7 @@
 # Sentry 集成
 
+https://github.com/pydantic/logfire
+
 ## OpenRouter 发送 trace 到 Sentry
 
 <img width="3022" height="1072" alt="image" src="https://github.com/user-attachments/assets/7e444366-b08e-4a8d-9aa1-786d59465e0e" />
