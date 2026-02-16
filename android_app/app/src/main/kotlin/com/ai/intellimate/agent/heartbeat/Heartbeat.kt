@@ -10,6 +10,8 @@ import ai.sxwl.android.design.theme.loveJournalBackgroundGradientEnd
 import ai.sxwl.android.design.theme.loveJournalCardBackground
 import ai.sxwl.android.design.theme.loveJournalOnBackground
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -381,7 +383,11 @@ private fun Heartbeat(
                         ),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .clickable { showHighlightOverlay = false },
+                ) {
                     Box(
                         modifier =
                             Modifier.padding(contentPadding)
@@ -394,13 +400,22 @@ private fun Heartbeat(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            HeartbeatJournalCard(
-                                memory = highlightedEntry,
+                            Box(
                                 modifier =
-                                    Modifier.fillMaxWidth().padding(horizontal = pagePaddingH),
-                                showGlow = true,
-                                onClick = { showHighlightOverlay = false },
-                            )
+                                    Modifier.clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        onClick = { },
+                                    ),
+                            ) {
+                                HeartbeatJournalCard(
+                                    memory = highlightedEntry,
+                                    modifier =
+                                        Modifier.fillMaxWidth().padding(horizontal = pagePaddingH),
+                                    showGlow = true,
+                                    onClick = null,
+                                )
+                            }
                         }
                     }
                 }

@@ -12,7 +12,7 @@
 
 ## 功能
 
-- **Love Journal（Heartbeat）**：从聊天内节日记忆通知或推送点击进入且带有 `memoryId` 时，会先以叠加层展示：当前页（列表 + 顶栏）为 dimmed 背景，目标记忆条目居中并带暖色光晕；用户点击该高亮卡片或顶栏返回键可关闭叠加层，恢复正常列表。详见 `app/src/main/kotlin/com/ai/intellimate/agent/heartbeat/Heartbeat.kt`。
+- **Love Journal（Heartbeat）**：从聊天内节日记忆通知或推送点击进入且带有 `memoryId` 时，会先以叠加层展示：当前页（列表 + 顶栏）为 dimmed 背景，目标记忆条目居中并带暖色光晕；用户点击叠加层中卡片以外区域或顶栏返回键可关闭叠加层，恢复正常列表。详见 `app/src/main/kotlin/com/ai/intellimate/agent/heartbeat/Heartbeat.kt`。
 - [intellimate_tips.json](app/src/main/assets/intellimate_tips.json) 可以添加用户指南让用户看到
   <img width="300" height="736" alt="image" src="https://github.com/user-attachments/assets/06d2c224-5ab9-4abb-a072-5715ec813a35" />
 
