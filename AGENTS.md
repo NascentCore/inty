@@ -29,6 +29,8 @@
 
 ## 软件工程规范
 
+- **Dev Mode**:
+  - 默认为开发阶段，不需要考虑 backward compatibility
 - **代码结构规范**
   1. Functions should be composable, prefer `func a(), func b(), func c() { a(); b() }`
      over `func a(), func b() { a() }, func c() { b() }`.
