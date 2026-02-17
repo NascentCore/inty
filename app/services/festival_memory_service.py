@@ -271,9 +271,7 @@ Festival date: {date_str}
 # Conversation between the user and the character
 
 {chat_text}
-
----
-Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
+"""
     if llm_config and (llm_config.model or "").strip():
         return (full_prompt, llm_config)
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)

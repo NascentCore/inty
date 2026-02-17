@@ -3,6 +3,8 @@
 节日记忆抽取：接受与 evaluation 表单相同输入，执行与 POST /evaluation/admin/festival-memory-extraction/run 相同流程，
 结果写入 JSON 文件而非 memory 表。
 
+--output 不传时，根据节日名、日期、prompt 来源、模式及可选参数自动生成可识别的输出路径，便于从文件名看出所用参数。
+
 输出格式（breaking change）：每条记忆为 { user_id, agent_id, memory_type, content, metadata, user_name?, agent_name? }。
 metadata 为 FestivalMemoryMetadata（festival_name, festival_date, llm_config）；不再包含顶级的 festival_name、festival_date、llm_config。
 
@@ -14,6 +16,8 @@ metadata 为 FestivalMemoryMetadata（festival_name, festival_date, llm_config�
 用法: export PYTHONPATH=.
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --timezone Asia/Shanghai --min-rounds 10
+  python scripts/run_festival_memory_extraction_to_json.py --festival-name "2026 Valentine's Day" --festival-date 2026-02-14 --prompt-file festival_memory_prompt_1.txt
+  # 上例不传 --output 时写入当前目录，如 2026_valentines_day_2026-02-14_festival_memory_prompt_1.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --limit 1
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --messages-output msgs.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out2.json --messages-input msgs.json
@@ -27,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import shutil
 import sys
 from datetime import date
@@ -71,6 +76,66 @@ def _memory_sort_key(item: dict) -> tuple[str, str]:
         item.get("user_name") or item.get("user_id") or "",
         item.get("agent_name") or item.get("agent_id") or "",
     )
+
+
+def _sanitize_slug(s: str, max_len: int = 60) -> str:
+    """Replace path-unsafe or awkward chars with underscore, collapse/strip, cap length."""
+    if not s or not isinstance(s, str):
+        return ""
+    # Replace space, apostrophe, path separators and common unsafe chars with underscore
+    out = re.sub(r"[\s'\/\\:*?\"<>|]+", "_", s)
+    out = re.sub(r"_+", "_", out).strip("_")
+    if len(out) > max_len:
+        out = out[:max_len].rstrip("_")
+    return out
+
+
+def _derive_output_path(
+    festival_name: str,
+    festival_date: date,
+    *,
+    query: bool = False,
+    messages_input: Optional[str] = None,
+    prompt_file: Optional[str] = None,
+    llm: Optional[str] = None,
+    parallel_workers: Optional[int] = None,
+    limit: Optional[int] = None,
+) -> Path:
+    """
+    根据 main 参数拼出可识别的输出文件名，放在当前工作目录。
+    格式: {festival_slug}_{date}[_mode_or_prompt][_llm_...][_wN][_limitN].json
+    """
+    slug = _sanitize_slug(festival_name)
+    date_str = (
+        festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date)
+    )
+    parts = [slug, date_str]
+    if query:
+        parts.append("query")
+    elif messages_input:
+        stem = Path(messages_input).stem
+        if stem:
+            parts.append(_sanitize_slug(stem, max_len=40))
+        else:
+            parts.append("messages")
+    else:
+        if prompt_file:
+            stem = Path(prompt_file).stem
+            parts.append(_sanitize_slug(stem, max_len=40) if stem else "inline")
+        else:
+            parts.append("inline")
+    if llm and llm.strip():
+        # Short model id: last segment after /, then sanitize
+        raw = llm.strip().split("/")[-1] if "/" in llm else llm.strip()
+        parts.append("llm_" + _sanitize_slug(raw, max_len=40))
+    if parallel_workers is not None and parallel_workers >= 2:
+        parts.append(f"w{parallel_workers}")
+    if limit is not None:
+        parts.append(f"limit{limit}")
+    basename = "_".join(parts) + ".json"
+    return Path.cwd() / "tmp" / basename
 
 
 async def _run(
@@ -386,8 +451,12 @@ def main(
         str, cyclopts.Parameter(name="--festival-date", help="节日日期 YYYY-MM-DD")
     ],
     output: Annotated[
-        str, cyclopts.Parameter(name="--output", help="输出 JSON 文件路径")
-    ],
+        Optional[str],
+        cyclopts.Parameter(
+            name="--output",
+            help="输出 JSON 文件路径；不传则根据节日名、日期、prompt 来源等参数自动生成可识别的文件名",
+        ),
+    ] = None,
     prompt: Annotated[
         Optional[str], cyclopts.Parameter(name="--prompt", help="抽取提示词")
     ] = None,
@@ -446,13 +515,27 @@ def main(
     if parallel_workers is not None and parallel_workers < 1:
         print("错误: --parallel-workers 必须 >= 1", file=sys.stderr)
         sys.exit(1)
+    output_path = (
+        Path(output)
+        if output is not None
+        else _derive_output_path(
+            festival_name=festival_name,
+            festival_date=parsed_date,
+            query=query,
+            messages_input=messages_input,
+            prompt_file=prompt_file,
+            llm=llm,
+            parallel_workers=parallel_workers,
+            limit=limit,
+        )
+    )
     if query:
         asyncio.run(
             _run_query(
                 festival_name=festival_name,
                 festival_date=parsed_date,
                 timezone=timezone,
-                output_path=Path(output),
+                output_path=output_path,
                 config=config,
             )
         )
@@ -468,7 +551,7 @@ def main(
                 festival_name=festival_name,
                 festival_date=parsed_date,
                 prompt=prompt,
-                output_path=Path(output),
+                output_path=output_path,
                 config=config,
                 messages_input_path=Path(messages_input),
                 parallel_workers=parallel_workers,
@@ -483,7 +566,7 @@ def main(
             prompt=prompt,
             timezone=timezone,
             min_rounds=min_rounds,
-            output_path=Path(output),
+            output_path=output_path,
             config=config,
             limit=limit,
             messages_output_path=Path(messages_output) if messages_output else None,
