@@ -38,6 +38,7 @@ private fun getCommitCount(project: Project): Int {
 internal fun ApplicationExtension.commonAppConfig(project: Project) {
     defaultConfig {
         versionName = ProjectConfig.VERSION_NAME
+        // 修改此处来手动修改 apk/aab Version Code
         versionCode = getCommitCount(project)
         targetSdk = ProjectConfig.TARGET_VERSION
 
