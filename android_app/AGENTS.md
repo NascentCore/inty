@@ -2,6 +2,7 @@
 
 - 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
   [MMKV](https://github.com/Tencent/MMKV) 已计划废弃
+- 从后端拿到的数据结构中忽略不理解的数据类型，而不是报错，比如聊天消息类型出现了 AI User 以外的类型，直接忽略，这样在后端发布新功能时更加具有容错性。
 
 ## Design
 
@@ -24,8 +25,6 @@
 - 无需使用 linter 检查修改代码
 - 对我提出的指示、完成基础要求，不要处理未提及的复杂场景，不要使用 defensive programming
 - 优先使用 material 3 icons 和其他来自 material 3 的素材 https://fonts.google.com/icons?icon.query=generate&icon.size=24&icon.color=%231f1f1f&icon.platform=android
-- 代码注释使用简体中文
-- 默认日志登记是 debug
 - 新增 UI Composeable 组件要有详细的注释说明其使用范围场景和预期视觉效果，及可配置项；关键配置项要编写为输入参数
 
 ## 适用范围与平台约束

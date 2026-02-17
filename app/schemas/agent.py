@@ -103,7 +103,7 @@ class ExclusivePhotoItem(BaseModel):
 class AgentBase(BaseModel):
     """AI角色基础模型"""
 
-    name: str
+    name: str = Field(..., max_length=256, description="角色名称，最长 256 字符")
     gender: str
     avatar: Optional[str] = None
     background: Optional[str] = None
