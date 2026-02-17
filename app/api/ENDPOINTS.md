@@ -44,7 +44,6 @@
 | `/api/v1/ai/agents/{agent_id}` | PUT | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}/generate-background-animated` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/generate_background` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/text-to-image` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/creator/{creator_id}/stats` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}/character-card` | GET | `app/api/v1/endpoints/agents.py` |
