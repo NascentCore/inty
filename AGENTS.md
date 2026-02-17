@@ -9,11 +9,11 @@
   - iMate 是提供情感陪伴体验的主体，IntelliMate 无法通过人工设计来满足用户需求，只能通过 iMate 让用户通过与其互动来持续获得和优化的情感陪伴体验
   - Character/Agent/iMate 通常指同一概念，Agent 沿用自后端、指一个独立的逻辑概念来指代一个独立的抽象角色
   - Character（角色）沿用自业界的统称，一般来自 Character.ai
+- **用户手册**：IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
+  - app/（后端）改动不改动[用户手册](docs/INTELLIMATE.md)
 
 ## 代码库内的一般性约定
 
-- **用户手册**：IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
-  - app/（后端）改动不改动[用户手册](docs/INTELLIMATE.md)
 - **语言**：
   - Must use English for texts viewable to public users
   - 所有可自然语言表达的输出统一使用中文（普通话）。代码、命令、标识符不受该限制。
@@ -43,14 +43,8 @@
   - 生成代码中要在其注释中总结你的关键中间步骤，如 app/core/voice/tts_api.py 记录了你如何从官方文档页面收集数据并处理
 - **Git 工作流**：
   - 每完成一次改动，生成一句话总结、详细描述
-
-## Alembic
-
-- 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
-- 修改数据库表 schema 应该**单独**进行，不要与其他改动混合：保证 alembic version 可以快速同步，避免多人并行产生非线性迁移链。
-  - 例如：当前 alembic head revision 为 1，改动 A 与改动 B 同时修改 DB，则可能出现两个并行 version 文件都依赖 revision 1。
-
-## 文档维护
+ 
+### 工程文档维护
 
 - 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
 - 你应该维护的 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
@@ -58,6 +52,12 @@
 - 修改后务必回看 diff，确认无误再提交/交付。
 - 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
+
+## Alembic
+
+- 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
+- 修改数据库表 schema 应该**单独**进行，不要与其他改动混合：保证 alembic version 可以快速同步，避免多人并行产生非线性迁移链。
+  - 例如：当前 alembic head revision 为 1，改动 A 与改动 B 同时修改 DB，则可能出现两个并行 version 文件都依赖 revision 1。
 
 ## Python-Kotlin HTTP APIs 数据类型定义
 
@@ -75,15 +75,11 @@
 - 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
 - 禁止使用 `__main__.py` 这种范式，使用显式的 `main.py` 入口文件
 
-### 测试（仓库级）
-
-- `pytest` 配置在 `pytest.ini`，默认收集 `app/` 与 `tests/` 下的 `test_*.py`。
-
 ## Android App
 
 - Android 发布新版本后将 version code 写入 [Prod 后端配置文件](devops/config.yaml.prod) `google_play.current_version_code`
 
-## CloudFlare
+## CloudFlare CDN（用于支持媒体文件分发：image audio 等）
 
 - @<https://developers.cloudflare.com/llms.txt>
 - @<https://developers.cloudflare.com/workers/prompt.txt>
