@@ -24,6 +24,7 @@ MEMORY_TYPE_FESTIVAL = "festival"
 FESTIVAL_METADATA_NAME_KEY = "festival_name"
 FESTIVAL_METADATA_DATE_KEY = "festival_data"
 FESTIVAL_METADATA_DATE_FALLBACK_KEY = "festival_date"
+FESTIVAL_METADATA_LLM_KEY = "llm"
 
 
 def _normalize_memory_metadata(raw_metadata: object) -> dict:
@@ -32,19 +33,27 @@ def _normalize_memory_metadata(raw_metadata: object) -> dict:
     return {}
 
 
-def build_festival_memory_metadata(festival_name: str, festival_date: date) -> dict:
-    """构造节日记忆 metadata；festival_data 使用 ISO 日期字符串。"""
+def build_festival_memory_metadata(
+    festival_name: str,
+    festival_date: date,
+    llm: Optional[str] = None,
+) -> dict:
+    """构造节日记忆 metadata；festival_data 使用 ISO 日期字符串；llm 非空时写入模型标识。"""
     festival_date_str = (
         festival_date.isoformat()
         if isinstance(festival_date, date)
         else str(festival_date)
     )
-    return {
+    out = {
         FESTIVAL_METADATA_NAME_KEY: festival_name,
         FESTIVAL_METADATA_DATE_KEY: festival_date_str,
         # 兼容历史代码中可能误用的 key。
         FESTIVAL_METADATA_DATE_FALLBACK_KEY: festival_date_str,
     }
+    llm_stripped = (llm or "").strip()
+    if llm_stripped:
+        out[FESTIVAL_METADATA_LLM_KEY] = llm_stripped
+    return out
 
 
 def _parse_festival_date(raw_festival_date: object) -> Optional[date]:

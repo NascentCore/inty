@@ -72,6 +72,24 @@ def test_build_festival_memory_metadata_contains_required_keys():
     }
 
 
+def test_build_festival_memory_metadata_includes_llm_when_provided():
+    out = service.build_festival_memory_metadata(
+        "Easter", date(2026, 4, 5), llm="mistralai/devstral-2512"
+    )
+    assert out.get("llm") == "mistralai/devstral-2512"
+    assert "festival_name" in out
+    assert "festival_data" in out
+
+
+def test_build_festival_memory_metadata_omits_llm_when_none_or_empty():
+    out_none = service.build_festival_memory_metadata("Xmas", date(2026, 12, 25), llm=None)
+    assert "llm" not in out_none
+    out_empty = service.build_festival_memory_metadata("New Year", date(2027, 1, 1), llm="")
+    assert "llm" not in out_empty
+    out_blank = service.build_festival_memory_metadata("Day", date(2027, 1, 2), llm="   ")
+    assert "llm" not in out_blank
+
+
 def test_resolve_festival_name_and_date_prefers_metadata():
     name, day = service.resolve_festival_name_and_date(
         {"festival_name": "New Year", "festival_data": "2026-01-01"},

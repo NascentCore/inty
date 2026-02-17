@@ -50,7 +50,9 @@
 | `delivery_at` | datetime(tz) \| NULL | 首次投递到会话的时间，NULL 表示未投递 |
 | `system_notification_sent_at` | datetime(tz) \| NULL | 节日记忆 system 推送发送时间 |
 
+- **metadata**（JSON）：节日记忆含 `festival_name`、`festival_data`（及兼容用 `festival_date`）；可选 `llm`（抽取时使用的 LLM 模型标识，如 `mistralai/devstral-2512`）。
 - 同一 (user_id, agent_id, festival_name, festival_date) 在抽取时**先 DELETE 再 INSERT**，仅保留最新一条。
+- 离线脚本 `run_festival_memory_extraction_to_json.py` 导出的每条记忆 dict 及 `query_festival_memories_from_db`（`--query`）返回的每条记录均包含顶级的 **`llm`** 字段（值来自 metadata，旧数据可为 null）。
 
 ---
 

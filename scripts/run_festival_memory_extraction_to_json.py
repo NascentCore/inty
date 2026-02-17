@@ -5,6 +5,7 @@
 
 --messages-output：仅抽取模式下生效，将每对 (user, agent) 的会话消息写入指定 JSON。
 --messages-input：从上述 JSON 读入消息并做抽取，与直接抽取结果一致；与 --query 互斥。
+--parallel-workers N：运行最多 N 个并发抽取（OpenAI 调用）；不传或 1 为顺序执行。
 
 用法: export PYTHONPATH=.
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
@@ -13,6 +14,7 @@
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out.json --messages-output msgs.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out2.json --messages-input msgs.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name "测试节日20260201" --festival-date 2026-02-01 --prompt-file festival_memory_prompt.txt --output tmp/backend_out.json --timezone America/Los_Angeles --min-rounds 50 --query
+  python scripts/run_festival_memory_extraction_to_json.py ... --parallel-workers 4
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ import shutil
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Tuple
 
 import cyclopts
 
@@ -75,6 +77,7 @@ async def _run(
     config: Optional[str],
     limit: Optional[int] = None,
     messages_output_path: Optional[Path] = None,
+    parallel_workers: Optional[int] = None,
 ) -> None:
     _ensure_config(config)
     from app.core.config import global_config_loaded_from_config_yaml
@@ -94,28 +97,74 @@ async def _run(
     memories: list[dict] = []
     pairs_messages: list[dict] = []
     success = 0
-    async with AsyncSessionLocal() as db:
-        for user_id, agent_id in pairs:
-            logger.debug(
-                f"extracting festival memory for user_id={user_id} agent_id={agent_id}"
-            )
-            if messages_output_path is not None:
-                messages = await asyncio.to_thread(
-                    get_messages_for_user_agent_sync, user_id, agent_id
-                )
-                pairs_messages.append(
-                    {
-                        "user_id": user_id,
-                        "agent_id": agent_id,
-                        "messages": [{"role": r, "content": c} for r, c in messages],
-                    }
-                )
-            d = await extract_festival_to_dict(
-                user_id, agent_id, festival_name, festival_date, prompt, db=db
-            )
+    use_parallel = parallel_workers is not None and parallel_workers >= 2
+    if use_parallel:
+        sem = asyncio.Semaphore(parallel_workers)
+
+        async def _extract_one(
+            user_id: str, agent_id: str
+        ) -> Tuple[Optional[dict], Optional[dict]]:
+            async with sem:
+                async with AsyncSessionLocal() as db:
+                    logger.debug(
+                        f"extracting festival memory for user_id={user_id} agent_id={agent_id}"
+                    )
+                    pair_message: Optional[dict] = None
+                    if messages_output_path is not None:
+                        messages = await asyncio.to_thread(
+                            get_messages_for_user_agent_sync, user_id, agent_id
+                        )
+                        pair_message = {
+                            "user_id": user_id,
+                            "agent_id": agent_id,
+                            "messages": [
+                                {"role": r, "content": c} for r, c in messages
+                            ],
+                        }
+                    d = await extract_festival_to_dict(
+                        user_id,
+                        agent_id,
+                        festival_name,
+                        festival_date,
+                        prompt,
+                        db=db,
+                    )
+                    return (d, pair_message)
+
+        results = await asyncio.gather(
+            *[_extract_one(uid, aid) for uid, aid in pairs]
+        )
+        for d, pair_message in results:
             if d is not None:
                 memories.append(d)
                 success += 1
+            if pair_message is not None:
+                pairs_messages.append(pair_message)
+    else:
+        async with AsyncSessionLocal() as db:
+            for user_id, agent_id in pairs:
+                logger.debug(
+                    f"extracting festival memory for user_id={user_id} agent_id={agent_id}"
+                )
+                if messages_output_path is not None:
+                    messages = await asyncio.to_thread(
+                        get_messages_for_user_agent_sync, user_id, agent_id
+                    )
+                    pairs_messages.append(
+                        {
+                            "user_id": user_id,
+                            "agent_id": agent_id,
+                            "messages": [
+                                {"role": r, "content": c} for r, c in messages
+                            ],
+                        }
+                    )
+                d = await extract_festival_to_dict(
+                    user_id, agent_id, festival_name, festival_date, prompt, db=db
+                )
+                if d is not None:
+                    memories.append(d)
+                    success += 1
     if messages_output_path is not None:
         messages_query: dict = {
             "festival_name": festival_name,
@@ -185,6 +234,7 @@ async def _run_from_messages_file(
     output_path: Path,
     config: Optional[str],
     messages_input_path: Path,
+    parallel_workers: Optional[int] = None,
 ) -> None:
     """从 --messages-output 写出的 JSON 读入 pairs 与消息，用 messages_override 做抽取，输出格式与 _run 一致。"""
     _ensure_config(config)
@@ -196,24 +246,58 @@ async def _run_from_messages_file(
 
     memories: list[dict] = []
     success = 0
-    async with AsyncSessionLocal() as db:
-        for user_id, agent_id in pairs:
-            messages = messages_map.get((user_id, agent_id), [])
-            logger.debug(
-                f"extracting from messages file for user_id={user_id} agent_id={agent_id}"
-            )
-            d = await extract_festival_to_dict(
-                user_id,
-                agent_id,
-                festival_name,
-                festival_date,
-                prompt,
-                db=db,
-                messages_override=messages,
-            )
+    use_parallel = parallel_workers is not None and parallel_workers >= 2
+    if use_parallel:
+        sem = asyncio.Semaphore(parallel_workers)
+
+        async def _extract_one_from_messages(
+            user_id: str, agent_id: str
+        ) -> Optional[dict]:
+            async with sem:
+                async with AsyncSessionLocal() as db:
+                    messages = messages_map.get((user_id, agent_id), [])
+                    logger.debug(
+                        f"extracting from messages file for user_id={user_id} agent_id={agent_id}"
+                    )
+                    return await extract_festival_to_dict(
+                        user_id,
+                        agent_id,
+                        festival_name,
+                        festival_date,
+                        prompt,
+                        db=db,
+                        messages_override=messages,
+                    )
+
+        results = await asyncio.gather(
+            *[
+                _extract_one_from_messages(uid, aid)
+                for uid, aid in pairs
+            ]
+        )
+        for d in results:
             if d is not None:
                 memories.append(d)
                 success += 1
+    else:
+        async with AsyncSessionLocal() as db:
+            for user_id, agent_id in pairs:
+                messages = messages_map.get((user_id, agent_id), [])
+                logger.debug(
+                    f"extracting from messages file for user_id={user_id} agent_id={agent_id}"
+                )
+                d = await extract_festival_to_dict(
+                    user_id,
+                    agent_id,
+                    festival_name,
+                    festival_date,
+                    prompt,
+                    db=db,
+                    messages_override=messages,
+                )
+                if d is not None:
+                    memories.append(d)
+                    success += 1
     query: dict = dict(file_query)
     query["festival_name"] = festival_name
     query["festival_date"] = festival_date.isoformat()
@@ -311,12 +395,22 @@ def main(
             help="从 --messages-output 写出的 JSON 读入消息并用于抽取，与直接抽取结果一致；与 --query 互斥",
         ),
     ] = None,
+    parallel_workers: Annotated[
+        Optional[int],
+        cyclopts.Parameter(
+            name="--parallel-workers",
+            help="Run up to N concurrent extractions (OpenAI calls). Omit or 1 for sequential.",
+        ),
+    ] = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parsed_date = date.fromisoformat(festival_date)
     logger.debug(f"All arguments: {locals()}")
     if query and messages_input:
         print("错误: --query 与 --messages-input 不能同时使用", file=sys.stderr)
+        sys.exit(1)
+    if parallel_workers is not None and parallel_workers < 1:
+        print("错误: --parallel-workers 必须 >= 1", file=sys.stderr)
         sys.exit(1)
     if query:
         asyncio.run(
@@ -343,6 +437,7 @@ def main(
                 output_path=Path(output),
                 config=config,
                 messages_input_path=Path(messages_input),
+                parallel_workers=parallel_workers,
             )
         )
         return
@@ -357,6 +452,7 @@ def main(
             config=config,
             limit=limit,
             messages_output_path=Path(messages_output) if messages_output else None,
+            parallel_workers=parallel_workers,
         )
     )
 

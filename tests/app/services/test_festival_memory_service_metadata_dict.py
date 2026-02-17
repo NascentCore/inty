@@ -145,7 +145,11 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
         agent_id="a-1",
         memory_type="festival",
         content="summary",
-        meta_data={"festival_name": "Easter", "festival_data": "2026-04-05"},
+        meta_data={
+            "festival_name": "Easter",
+            "festival_data": "2026-04-05",
+            "llm": "fake-model",
+        },
         festival_name="Legacy Easter",
         festival_date=date(2026, 4, 6),
     )
@@ -164,6 +168,7 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
     assert out is not None
     assert out["festival_name"] == "Easter"
     assert out["festival_date"] == "2026-04-05"
+    assert out["llm"] == "fake-model"
     assert "extracted_at" not in out
 
 
@@ -193,3 +198,5 @@ async def test_extract_festival_to_dict_falls_back_to_legacy_columns():
     assert out is not None
     assert out["festival_name"] == "Legacy Festival"
     assert out["festival_date"] == "2026-08-08"
+    assert "llm" in out
+    assert out["llm"] is None

@@ -322,6 +322,7 @@ async def summarize_memory_from_messages_between_user_and_agent(
     full_prompt, ext_llm_config = assemble_args(
         messages, festival_name, festival_date, prompt_template, llm_config
     )
+    model_name = (ext_llm_config.model or "").strip() or None
     try:
         summary, _, _ = await chat_completion_for_extraction(
             full_prompt, llm_config=ext_llm_config
@@ -340,7 +341,9 @@ async def summarize_memory_from_messages_between_user_and_agent(
         memory_type=MEMORY_TYPE_FESTIVAL,
         agent_id=agent_id,
         content=summary,
-        meta_data=build_festival_memory_metadata(festival_name, festival_date),
+        meta_data=build_festival_memory_metadata(
+            festival_name, festival_date, llm=model_name
+        ),
         extracted_at=extracted_at,
         festival_name=festival_name,
         festival_date=festival_date,
@@ -494,6 +497,7 @@ async def extract_festival_to_dict(
             if isinstance(festival_date_resolved, date)
             else str(festival_date_resolved)
         ),
+        "llm": (memory_row.meta_data or {}).get("llm"),
     }
     if db is not None:
         user_name, agent_name = await _get_user_agent_names(db, user_id, agent_id)
@@ -533,6 +537,7 @@ async def query_festival_memories_from_db(
                 if isinstance(resolved_date, date)
                 else str(resolved_date)
             ),
+            "llm": (row.meta_data or {}).get("llm"),
         }
         user_name, agent_name = await _get_user_agent_names(
             db, row.user_id, row.agent_id
