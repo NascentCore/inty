@@ -11,6 +11,7 @@ from langchain_core.messages import BaseMessage
 from langsmith import traceable
 from loguru import logger
 from openai import AsyncOpenAI, OpenAI
+from pydantic import BaseModel, ValidationError
 
 from app.api.types.llm_config import LLMConfig
 from app.external_services.fakes.openai import FakeOpenAI
@@ -201,35 +202,57 @@ def wrap_client_with_langsmith(
     return client
 
 
+def _is_pydantic_model_class(obj: object) -> bool:
+    """True if obj is a Pydantic BaseModel class (used for structured parse)."""
+    return isinstance(obj, type) and issubclass(obj, BaseModel)
+
+
 @traceable
 def openrouter_chat_completion(
     *,
+    api_key: str | None = None,
     model: str,
     prompt: str,
+    response_format: object = None,
 ) -> str:
     """
     Call OpenRouter (or any OpenAI-compatible) chat API and return content text.
     Raises ValueError on refusal or empty content.
+
+    When response_format is a Pydantic model class, uses the SDK parse() API so
+    the response is validated and message.parsed is populated. When it is a dict
+    (e.g. OpenRouter json_schema), uses create() and returns raw message.content.
     """
     from app.core.config import global_config_loaded_from_config_yaml as global_config
-    api_key = global_config.agent.api_key
+    if api_key is None:
+        api_key = global_config.agent.api_key
     from app.utils.config import OPENROUTER_BASE_URL
     base_url = OPENROUTER_BASE_URL
     client = OpenAI(api_key=api_key, base_url=base_url)
     create_kwargs: dict = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
     }
-    response = client.chat.completions.create(**create_kwargs)
+    if response_format is not None:
+        print(f"response_format: {response_format}")
+        create_kwargs["response_format"] = response_format
+        response = client.beta.chat.completions.parse(**create_kwargs)
+        print(f"with response_format response: {response}")
+    else:
+        response = client.chat.completions.create(**create_kwargs)
+        print(f"without response_format response: {response}")
     message = response.choices[0].message
     refusal = getattr(message, "refusal", None)
     if refusal:
         raise ValueError(f"OpenRouter 模型拒绝输出结构化结果: {refusal}")
-    text = (message.content or "").strip()
-    if not text:
-        raise ValueError("OpenRouter 返回空响应")
-    return text
+    if response_format is not None and _is_pydantic_model_class(response_format):
+        parsed = getattr(message, "parsed", None)
+        if parsed is not None:
+            if hasattr(parsed, "final_answer"):
+                return parsed.final_answer
+            return parsed.model_dump_json()
+        return message.content or ""
+    return message.content or ""
 
 
 def create_openai_client(chat_name: str, labels: dict[str, str]):
@@ -269,15 +292,26 @@ def langchain_message_to_openai_message(
 def main(prompt: str = "Hello, world!"):
     """
     调用 API 来验证 langsmith 调用正常工作，需要找到对应的 LangSmith API Key
-    写入本地 config.yaml 文件，完成后到 LangSmith Web UI 检查 Trace 记录
+    写入本地 config.yaml 文件，完成后到 LangSmith Web UI 检查 Trace 记录。
+    Structured output 需传入 Pydantic 模型类（而非 schema dict），且 prompt 需符合 schema（如要求返回 name/description）。
     """
+    class Output(BaseModel):
+        name: str
+        description: str
     # 必须在调用任何 @traceable 函数之前加载 config，否则 LANGSMITH_TRACING_V2 / LANGCHAIN_API_KEY 未设置，LangSmith 不会上报 trace。
     from app.core.config import global_config_loaded_from_config_yaml  # noqa: F401
-    response = openrouter_chat_completion(
-        model="openai/gpt-3.5-turbo",
-        prompt=prompt,
+    # 传入模型类才能让 SDK 填充 message.parsed；若 prompt 不要求返回 name/description，模型可能返回自然语言，parsed 仍为 None
+    default_structured_prompt = (
+        "Reply with a single character: give a name and a one-sentence description. "
+        "Example: name=Alice, description=She is a friendly engineer."
     )
-    print(response)
+    effective_prompt = default_structured_prompt if prompt == "Hello, world!" else prompt
+    response = openrouter_chat_completion(
+        model="google/gemini-2.5-flash-lite",
+        prompt=effective_prompt,
+        response_format=Output,
+    )
+    print(f"response: {response}")
     # 确保 trace 在进程退出前已上报（LangSmith 使用后台线程发送）
     try:
         from langsmith import Client
