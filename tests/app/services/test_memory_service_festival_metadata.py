@@ -120,8 +120,6 @@ class _FakeMemory:
     agent_id = _FakeColumn()
     memory_type = _FakeColumn()
     meta_data = _FakeColumn()
-    festival_name = _FakeColumn()
-    festival_date = _FakeColumn()
     content = _FakeColumn()
     delivery_at = _FakeColumn()
     system_notification_sent_at = _FakeColumn()
@@ -198,52 +196,33 @@ def test_metadata_to_llm_config_output_none_when_neither():
     assert service.metadata_to_llm_config_output({"festival_name": "Y"}) is None
 
 
-def test_resolve_festival_name_and_date_prefers_metadata():
+def test_resolve_festival_name_and_date_from_metadata():
     name, day = service.resolve_festival_name_and_date(
         {"festival_name": "New Year", "festival_data": "2026-01-01"},
-        "Legacy New Year",
-        date(2026, 1, 2),
     )
     assert name == "New Year"
     assert day == date(2026, 1, 1)
 
 
-def test_resolve_festival_name_and_date_falls_back_to_legacy_columns():
-    name, day = service.resolve_festival_name_and_date(
-        None,
-        "Legacy Festival",
-        date(2026, 2, 2),
-    )
-    assert name == "Legacy Festival"
-    assert day == date(2026, 2, 2)
-
-
 @pytest.mark.asyncio
-async def test_get_festival_memories_for_user_agent_reads_metadata_and_fallback():
+async def test_get_festival_memories_for_user_agent_reads_metadata():
     mock_db = AsyncMock()
     mock_result = MagicMock()
-    # row format:
-    # (id, metadata, legacy_festival_name, legacy_festival_date, content)
+    # row format: (id, metadata, content)
     mock_result.fetchall.return_value = [
         (
             2,
             {"festival_name": "Christmas", "festival_data": "2026-12-25"},
-            "Legacy Christmas",
-            date(2026, 12, 24),
             "From metadata",
         ),
         (
             1,
             None,
-            "Valentine",
-            date(2026, 2, 14),
             "From legacy columns",
         ),
         (
             3,
             {"festival_name": "Broken", "festival_data": "bad-date"},
-            None,
-            None,
             "Should skip due to missing valid date",
         ),
     ]
@@ -256,13 +235,8 @@ async def test_get_festival_memories_for_user_agent_reads_metadata_and_fallback(
         mock_db, "user-1", "agent-1"
     )
 
+    # Rows with None metadata or invalid date are skipped; only metadata with valid date.
     assert out == [
-        {
-            "memory_id": 1,
-            "festival_date": "2026-02-14",
-            "festival_name": "Valentine",
-            "memory": "From legacy columns",
-        },
         {
             "memory_id": 2,
             "festival_date": "2026-12-25",
@@ -276,14 +250,13 @@ async def test_get_festival_memories_for_user_agent_reads_metadata_and_fallback(
 async def test_get_undelivered_festival_memories_reads_metadata():
     mock_db = AsyncMock()
     mock_result = MagicMock()
+    # row format: (id, metadata)
     mock_result.fetchall.return_value = [
         (
             8,
             {"festival_name": "Mother's Day", "festival_data": "2026-05-10"},
-            None,
-            None,
         ),
-        (9, None, "Father's Day", date(2026, 6, 21)),
+        (9, None),
     ]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
@@ -291,15 +264,11 @@ async def test_get_undelivered_festival_memories_reads_metadata():
     service.select = lambda *args, **kwargs: _DummyQuery()
 
     out = await service.get_undelivered_festival_memories(mock_db, "u1", "a1")
+    # Row with None metadata yields (None, None) and is skipped.
     assert out == [
         {
             "id": 8,
             "festival_name": "Mother's Day",
             "festival_date": date(2026, 5, 10),
-        },
-        {
-            "id": 9,
-            "festival_name": "Father's Day",
-            "festival_date": date(2026, 6, 21),
         },
     ]

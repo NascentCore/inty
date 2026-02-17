@@ -17,8 +17,8 @@ def _build_festival_metadata(festival_name: str, festival_date: date) -> dict:
     }
 
 
-def _resolve_festival_name_and_date(metadata, legacy_name, legacy_date):
-    """Fake: 与 memory_service.resolve_festival_name_and_date 一致，仅读 festival_data。"""
+def _resolve_festival_name_and_date(metadata):
+    """Fake: 与 memory_service.resolve_festival_name_and_date 一致，仅读 metadata。"""
     name = None
     day = None
     if isinstance(metadata, dict):
@@ -31,10 +31,6 @@ def _resolve_festival_name_and_date(metadata, legacy_name, legacy_date):
                 day = date.fromisoformat(raw_day)
             except ValueError:
                 day = None
-    if name is None and isinstance(legacy_name, str) and legacy_name.strip():
-        name = legacy_name.strip()
-    if day is None and isinstance(legacy_date, date):
-        day = legacy_date
     return name, day
 
 
@@ -93,8 +89,6 @@ def _load_festival_memory_service_module():
         content = object()
         meta_data = object()
         extracted_at = object()
-        festival_name = object()
-        festival_date = object()
 
         def __init__(self, **kwargs):
             for k, v in kwargs.items():
@@ -175,8 +169,6 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
             "festival_data": "2026-04-05",
             "llm_config": llm_config_stored,
         },
-        festival_name="Legacy Easter",
-        festival_date=date(2026, 4, 6),
     )
     service.summarize_memory_from_messages_between_user_and_agent = AsyncMock(
         return_value=fake_memory
@@ -202,15 +194,14 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
 
 
 @pytest.mark.asyncio
-async def test_extract_festival_to_dict_falls_back_to_legacy_columns():
+async def test_extract_festival_to_dict_returns_none_when_metadata_empty():
+    """meta_data 为空时无法解析节日名/日期，extract_festival_to_dict 返回 None。"""
     fake_memory = types.SimpleNamespace(
         user_id="u-2",
         agent_id="a-2",
         memory_type="festival",
         content="legacy summary",
         meta_data=None,
-        festival_name="Legacy Festival",
-        festival_date=date(2026, 8, 8),
     )
     service.summarize_memory_from_messages_between_user_and_agent = AsyncMock(
         return_value=fake_memory
@@ -224,14 +215,7 @@ async def test_extract_festival_to_dict_falls_back_to_legacy_columns():
         prompt_template="prompt",
     )
 
-    assert out is not None
-    assert "metadata" in out
-    assert out["metadata"]["festival_name"] == "Legacy Festival"
-    assert out["metadata"]["festival_date"] == "2026-08-08"
-    assert "llm_config" not in out["metadata"] or out["metadata"].get("llm_config") is None
-    assert "festival_name" not in out
-    assert "festival_date" not in out
-    assert "llm_config" not in out
+    assert out is None
 
 
 @pytest.mark.asyncio
@@ -249,8 +233,6 @@ async def test_extract_festival_to_dict_passes_llm_config_to_summarizer():
             "festival_data": "2026-02-14",
             "llm_config": llm_config,
         },
-        festival_name="Valentine",
-        festival_date=date(2026, 2, 14),
     )
     summarizer_calls = []
 

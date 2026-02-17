@@ -150,12 +150,6 @@ class Memory(Base):
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    festival_name = Column(
-        String, nullable=True, comment="节日名称，仅 memory_type=festival 时使用"
-    )
-    festival_date = Column(
-        Date, nullable=True, comment="节日日期，仅 memory_type=festival 时使用"
-    )
     delivery_at = Column(
         DateTime(timezone=True),
         nullable=True,

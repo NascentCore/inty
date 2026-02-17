@@ -114,8 +114,6 @@ def test_festival_memory_delivered_via_chat_completions(
             "festival_data": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFestCompletions",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)
@@ -187,8 +185,6 @@ def test_festival_memory_chat_completions_gated_by_app_version(
             "festival_data": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFestGated",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)
@@ -256,8 +252,6 @@ def test_festival_memory_old_app_version_completions_delivery_at_stays_null(
             "festival_data": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFestCompletionsNull",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)

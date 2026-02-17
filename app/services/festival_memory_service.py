@@ -344,8 +344,6 @@ async def summarize_memory_from_messages_between_user_and_agent(
             festival_name, festival_date, llm_config=ext_llm_config
         ),
         extracted_at=extracted_at,
-        festival_name=festival_name,
-        festival_date=festival_date,
     )
 
 
@@ -356,13 +354,11 @@ async def _find_festival_memory_ids(
     festival_name: str,
     festival_date: date,
 ) -> list[int]:
-    """按 metadata 优先 + 旧列回退匹配同一节日记忆，返回待删除 id 列表。"""
+    """按 metadata 匹配同一节日记忆，返回待删除 id 列表。"""
     result = await db.execute(
         select(
             Memory.id,
             Memory.meta_data,
-            Memory.festival_name,
-            Memory.festival_date,
         ).where(
             Memory.user_id == user_id,
             Memory.agent_id == agent_id,
@@ -372,10 +368,8 @@ async def _find_festival_memory_ids(
     rows = result.fetchall()
     matched_ids: list[int] = []
     for row in rows:
-        memory_id, metadata, legacy_festival_name, legacy_festival_date = row
-        resolved_name, resolved_date = resolve_festival_name_and_date(
-            metadata, legacy_festival_name, legacy_festival_date
-        )
+        memory_id, metadata = row
+        resolved_name, resolved_date = resolve_festival_name_and_date(metadata)
         if resolved_name == festival_name and resolved_date == festival_date:
             matched_ids.append(memory_id)
     return matched_ids
@@ -507,9 +501,7 @@ async def extract_festival_to_dict(
     if memory_row is None:
         return None
     festival_name_resolved, festival_date_resolved = resolve_festival_name_and_date(
-        memory_row.meta_data,
-        memory_row.festival_name,
-        memory_row.festival_date,
+        memory_row.meta_data
     )
     if festival_name_resolved is None or festival_date_resolved is None:
         return None
@@ -545,11 +537,7 @@ async def query_festival_memories_from_db(
     rows = r.scalars().all()
     out: List[dict] = []
     for row in rows:
-        resolved_name, resolved_date = resolve_festival_name_and_date(
-            row.meta_data,
-            row.festival_name,
-            row.festival_date,
-        )
+        resolved_name, resolved_date = resolve_festival_name_and_date(row.meta_data)
         if resolved_name != festival_name or resolved_date != festival_date:
             continue
         meta_dict_row = _memory_row_meta_to_output_metadata(

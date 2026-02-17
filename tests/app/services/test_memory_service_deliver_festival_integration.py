@@ -101,8 +101,6 @@ async def test_deliver_festival_memories_for_user_agent_writes_chat_history_and_
             "festival_data": festival_date.isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name=festival_name,
-        festival_date=festival_date,
         delivery_at=None,
     )
 

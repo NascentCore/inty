@@ -119,24 +119,12 @@ def _parse_festival_date(raw_festival_date: object) -> Optional[date]:
         return None
 
 
-def resolve_festival_name_and_date(
-    raw_metadata: object,
-    legacy_festival_name: object,
-    legacy_festival_date: object,
-) -> tuple[Optional[str], Optional[date]]:
-    """metadata 优先读取节日名称/日期，缺失时回退旧列。使用 FestivalMemoryMetadata.model_validate_from_db。"""
+def resolve_festival_name_and_date(raw_metadata: object) -> tuple[Optional[str], Optional[date]]:
+    """从 memory.meta_data 读取节日名称/日期。使用 FestivalMemoryMetadata.model_validate_from_db。"""
     metadata = _normalize_memory_metadata(raw_metadata)
     meta = FestivalMemoryMetadata.model_validate_from_db(metadata)
-
-    festival_name = meta.festival_name
-    if festival_name is None and isinstance(legacy_festival_name, str):
-        festival_name = legacy_festival_name.strip() or None
-
     festival_date = _parse_festival_date(meta.festival_date)
-    if festival_date is None:
-        festival_date = _parse_festival_date(legacy_festival_date)
-
-    return festival_name, festival_date
+    return meta.festival_name, festival_date
 
 
 def _festival_date_sort_key(festival_date: Optional[date]) -> tuple[int, date]:
@@ -201,8 +189,6 @@ async def get_festival_memories_for_user_agent(
     stmt = select(
         Memory.id,
         Memory.meta_data,
-        Memory.festival_name,
-        Memory.festival_date,
         Memory.content,
     ).where(
         Memory.user_id == user_id,
@@ -213,10 +199,8 @@ async def get_festival_memories_for_user_agent(
     rows = result.fetchall()
     items: list[dict] = []
     for row in rows:
-        memory_id, metadata, legacy_festival_name, legacy_festival_date, content = row
-        festival_name, festival_date = resolve_festival_name_and_date(
-            metadata, legacy_festival_name, legacy_festival_date
-        )
+        memory_id, metadata, content = row
+        festival_name, festival_date = resolve_festival_name_and_date(metadata)
         if festival_date is None or festival_name is None or content is None:
             continue
         items.append(
@@ -277,8 +261,6 @@ async def get_pairs_with_undelivered_festival_memories(
         Memory.agent_id,
         Memory.id,
         Memory.meta_data,
-        Memory.festival_name,
-        Memory.festival_date,
     ).where(
         Memory.memory_type == MEMORY_TYPE_FESTIVAL,
         Memory.delivery_at.is_(None),
@@ -288,12 +270,10 @@ async def get_pairs_with_undelivered_festival_memories(
     rows = result.fetchall()
     first_by_pair: dict[tuple[str, str], dict] = {}
     for row in rows:
-        user_id, agent_id, memory_id, metadata, legacy_name, legacy_date = row
+        user_id, agent_id, memory_id, metadata = row
         if not user_id or not agent_id or memory_id is None:
             continue
-        _, resolved_festival_date = resolve_festival_name_and_date(
-            metadata, legacy_name, legacy_date
-        )
+        _, resolved_festival_date = resolve_festival_name_and_date(metadata)
         key = (user_id, agent_id)
         sort_key = (_festival_date_sort_key(resolved_festival_date), memory_id)
         selected = first_by_pair.get(key)
@@ -350,8 +330,6 @@ async def get_undelivered_festival_memories(
     stmt = select(
         Memory.id,
         Memory.meta_data,
-        Memory.festival_name,
-        Memory.festival_date,
     ).where(
         Memory.user_id == user_id,
         Memory.agent_id == agent_id,
@@ -362,10 +340,8 @@ async def get_undelivered_festival_memories(
     rows = result.fetchall()
     items: list[dict] = []
     for row in rows:
-        memory_id, metadata, legacy_festival_name, legacy_festival_date = row
-        festival_name, festival_date = resolve_festival_name_and_date(
-            metadata, legacy_festival_name, legacy_festival_date
-        )
+        memory_id, metadata = row
+        festival_name, festival_date = resolve_festival_name_and_date(metadata)
         if festival_name is None or festival_date is None:
             continue
         items.append(
