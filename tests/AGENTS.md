@@ -1,7 +1,6 @@
 # AGENTS.md · tests/（测试）
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `tests/`。
-
-## 约定
 - Python 后端测试遵循 `pytest` 命名：`test_*.py`；仅调用公开接口，避免依赖实现细节。
-- 新功能或修复必须附带测试；保持测试独立可重复、无外部状态依赖。
+- 新功能或修复必须附带测试
+- 测试时假设本地已有测试用后端服务器运行在 http://localhost:8000/；(../.github/workflows/ci_backend.yaml) 中提供了该测试环境；
+  服务器启动流程：`cp devops/config.yaml.test config.yaml && backend/inty/start.sh --test`
