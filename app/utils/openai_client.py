@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import Optional, Tuple
 
 from langchain_core.messages import BaseMessage
-from langsmith import traceable, wrappers
+from langsmith import traceable
 from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
@@ -201,12 +201,6 @@ def wrap_client_with_langsmith(
     return client
 
 
-def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = "A"):
-    import json
-    with open("/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug.log", "a") as f:
-        f.write(json.dumps({"location": location, "message": message, "data": data, "hypothesisId": hypothesis_id, "timestamp": __import__("time").time()}) + "\n")
-
-
 @traceable
 def openrouter_chat_completion(
     *,
@@ -217,13 +211,7 @@ def openrouter_chat_completion(
     Call OpenRouter (or any OpenAI-compatible) chat API and return content text.
     Raises ValueError on refusal or empty content.
     """
-    # #region agent log
-    _debug_log("openai_client.py:openrouter_chat_completion:entry", "env before config load", {"LANGSMITH_TRACING_V2": os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_PROJECT": os.getenv("LANGSMITH_PROJECT"), "LANGCHAIN_API_KEY_set": bool(os.getenv("LANGCHAIN_API_KEY"))}, "A")
-    # #endregion
     from app.core.config import global_config_loaded_from_config_yaml as global_config
-    # #region agent log
-    _debug_log("openai_client.py:openrouter_chat_completion:after_config", "env after config load", {"LANGSMITH_TRACING_V2": os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_PROJECT": os.getenv("LANGSMITH_PROJECT"), "LANGCHAIN_API_KEY_set": bool(os.getenv("LANGCHAIN_API_KEY"))}, "A")
-    # #endregion
     api_key = global_config.agent.api_key
     from app.utils.config import OPENROUTER_BASE_URL
     base_url = OPENROUTER_BASE_URL
@@ -290,11 +278,4 @@ def main(prompt: str = "Hello, world!"):
     print(response)
 
 if __name__ == "__main__":
-    # #region agent log
-    _debug_log("openai_client.py:__main__:before_cyclopts", "env before cyclopts.run(main)", {"LANGSMITH_TRACING_V2": os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_PROJECT": os.getenv("LANGSMITH_PROJECT"), "LANGCHAIN_API_KEY_set": bool(os.getenv("LANGCHAIN_API_KEY"))}, "B")
-    # #endregion
     cyclopts.run(main)
-    response = openrouter_chat_completion(
-        model="openai/gpt-3.5-turbo",
-        prompt="Hello, world!",
-    )

@@ -235,7 +235,7 @@ class AgentConfig:
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
     # fal 已停用（政策原因），默认用 Vertex；配置里写 fal 模型也会在运行时被替换为 vertex
     free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
-    sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_ULTRA
+    sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
