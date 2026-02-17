@@ -25,7 +25,8 @@ CREATED_BY_AGENT
   - **消息列表**（`GET /agents/{agent_id}/messages`、`GET /agents/{agent_id}/detail`、`GET /{chat_id}/detail`）：不返回 `type === "festival_memory_prompt"` 的消息（仅过滤当前页，total 不减少，旧版客户端看到的 total 可能包含被隐藏的条数）。
   - **角色详情**（`GET /api/v1/ai/agents/{agent_id}`）：不返回 `features.festival_memories`（或返回空列表）。
   - **聊天补全**（`POST /api/v1/chat/completions/{agent_id}`）：响应中不包含 `festival_memory_prompt` 类型的 choice（即 choices 中不返回节日记忆提醒）。
-- **版本号未传**时视为不限制，照常返回（避免未带版本的客户端被误判为旧版）。
+  - **投递行为**：服务端不执行投递（不写入 chat_history、不更新 `memory.delivery_at`），故该请求下 `delivery_at` 保持 null，待版本满足的客户端发起聊天或拉取消息时再投递。
+- **版本号未传**时不执行投递；对已有内容的返回不做版本过滤、照常返回。
 
 ### 管理员 API（仅超级用户）
 
@@ -57,7 +58,7 @@ CREATED_BY_AGENT
 
 ## chat_history 提示消息约定
 
-- **写入时机**：在用户**发起聊天**（`POST /chat/completions/{agent_id}`）或**拉取消息列表**（`GET /api/v1/chats/agents/{agent_id}/messages`）时按需投递：对 (user_id, agent_id) 下 `delivery_at IS NULL` 的节日记忆执行投递（调用 `chat_history_service.add_festival_memory_prompt_message_sync` 写入 chat_history，并更新 `memory.delivery_at`）。发起聊天时，当次响应的 **choices** 中会在主 AI 回复之后追加本次投递的节日提醒（与消息列表中的 `festival_memory_prompt` 结构一致）。
+- **写入时机**：在用户**发起聊天**（`POST /chat/completions/{agent_id}`）或**拉取消息列表**（`GET /api/v1/chats/agents/{agent_id}/messages`）时，仅当请求头 **appVersionCode** 已提供且大于等于配置值时才按需投递（未传则不投递）；对 (user_id, agent_id) 下 `delivery_at IS NULL` 的节日记忆执行投递（调用 `chat_history_service.add_festival_memory_prompt_message_sync` 写入 chat_history，并更新 `memory.delivery_at`）。发起聊天时，当次响应的 **choices** 中会在主 AI 回复之后追加本次投递的节日提醒（与消息列表中的 `festival_memory_prompt` 结构一致）。
 - **幂等**：按 (session_id, agent_id, festival_name, festival_date) 幂等：若该会话下已存在同角色、同节日的提示消息则不再插入，直接返回已有消息 id；已投递（`delivery_at` 非空）的 memory 不再重复写入 chat_history。
 - **消息结构**：
   - `message.type`：`"ai"`（与现有 AI 消息一致，role 为 assistant）。

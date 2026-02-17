@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models, schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
+from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
@@ -350,17 +351,19 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"获取最新用户消息ID失败: {str(e)}")
 
-        # 按需投递节日记忆提示：写入 chat_history、更新 delivery_at，并收集本次投递项用于 choices
-        try:
-            with log_time(
-                f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
-            ):
-                delivered_prompts = await deliver_festival_memories_for_user_agent(
-                    db, current_user.id, agent_id
-                )
-        except Exception as e:
-            logger.warning(f"投递节日记忆提示失败: {e}")
-            delivered_prompts = []
+        # 仅当客户端提供版本且满足最低要求时按需投递；未传版本或旧版不投递，delivery_at 保持 null
+        delivered_prompts = []
+        if is_festival_memory_enabled(app_version_code):
+            try:
+                with log_time(
+                    f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
+                ):
+                    delivered_prompts = await deliver_festival_memories_for_user_agent(
+                        db, current_user.id, agent_id
+                    )
+            except Exception as e:
+                logger.warning(f"投递节日记忆提示失败: {e}")
+                delivered_prompts = []
 
         # 构建响应
         data = _build_chat_response(
@@ -372,13 +375,8 @@ async def agent_chat_completions(
             user_message_id=user_message_id,
         )
 
-        # 若有本次投递的节日提醒且客户端版本满足要求，追加到 choices（与 GET messages / GET agent 一致的版本门控）
-        min_ver = (
-            global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
-        )
-        if delivered_prompts and (
-            app_version_code is None or app_version_code >= min_ver
-        ):
+        # 若有本次投递的节日提醒，追加到 choices（仅当 is_festival_memory_enabled 时才会投递，故此处不必再判版本）
+        if delivered_prompts:
             msg_ids = [
                 item["message_id"]
                 for item in delivered_prompts

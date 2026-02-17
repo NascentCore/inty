@@ -17,6 +17,7 @@ from app.api.tags import (
     NOT_USED_TAG,
     WEB_APP_TAG,
 )
+from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
@@ -172,23 +173,21 @@ async def get_agent_chat_messages(
         # Use unified session_id generation rule
         session_id = generate_session_id(chat.id)
 
-        # 按需投递节日记忆提示，再拉取消息列表（新投递的提示会出现在列表中）
-        try:
-            await deliver_festival_memories_for_user_agent(
-                db, current_user.id, agent_id
-            )
-        except Exception as e:
-            logger.warning(f"投递节日记忆提示失败: {e}")
+        # 仅当客户端提供版本且满足最低要求时按需投递；未传版本或旧版不投递，delivery_at 保持 null
+        if is_festival_memory_enabled(app_version_code):
+            try:
+                await deliver_festival_memories_for_user_agent(
+                    db, current_user.id, agent_id
+                )
+            except Exception as e:
+                logger.warning(f"投递节日记忆提示失败: {e}")
 
         # 获取分页消息
         messages_data = chat_history_service.get_messages_paginated(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
-        min_ver = (
-            global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
-        )
-        if app_version_code is not None and app_version_code < min_ver:
+        if app_version_code is not None and not is_festival_memory_enabled(app_version_code):
             messages_data["messages"] = [
                 m
                 for m in messages_data["messages"]
