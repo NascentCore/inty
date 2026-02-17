@@ -56,6 +56,29 @@
 - 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
 
+### README.md AGENTS.md 内容
+
+
+```text:https://app.monosketch.io/?id=02-AA-p-YYNmJ9TDuzP6YdRCnaWois
+                 Human developers、human product          
+README.md        designer etc                            
+                                                         
+    △            ────────────────────────────────────────
+    │                                                    
+    │                                                    
+    │                                                    
+    │ Higher                                             
+    │ abstraction────────────────────────────────────────
+    │ Higher                                             
+    │ intuitivity                                        
+    │                                                    
+    │                                                    
+    │            ────────────────────────────────────────
+                                                         
+AGENTS.md        AI                                      
+                                                         
+```
+
 ## Alembic
 
 - 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
