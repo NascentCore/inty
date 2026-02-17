@@ -10,22 +10,22 @@ from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetada
 
 
 def _build_festival_metadata(festival_name: str, festival_date: date) -> dict:
-    day = festival_date.isoformat()
+    """Fake: 与 memory_service.build_festival_memory_metadata 一致，仅 festival_name、festival_data。"""
     return {
         "festival_name": festival_name,
-        "festival_data": day,
-        "festival_date": day,
+        "festival_data": festival_date.isoformat(),
     }
 
 
 def _resolve_festival_name_and_date(metadata, legacy_name, legacy_date):
+    """Fake: 与 memory_service.resolve_festival_name_and_date 一致，仅读 festival_data。"""
     name = None
     day = None
     if isinstance(metadata, dict):
         raw_name = metadata.get("festival_name")
         if isinstance(raw_name, str) and raw_name.strip():
             name = raw_name.strip()
-        raw_day = metadata.get("festival_data") or metadata.get("festival_date")
+        raw_day = metadata.get("festival_data")
         if isinstance(raw_day, str):
             try:
                 day = date.fromisoformat(raw_day)
@@ -39,7 +39,7 @@ def _resolve_festival_name_and_date(metadata, legacy_name, legacy_date):
 
 
 def _metadata_to_llm_config_output(meta_data: dict):
-    """Fake: 与 memory_service.metadata_to_llm_config_output 行为一致。"""
+    """Fake: 与 memory_service.metadata_to_llm_config_output 一致，仅支持 llm_config。"""
     if not isinstance(meta_data, dict):
         return None
     stored = meta_data.get("llm_config")
@@ -48,13 +48,6 @@ def _metadata_to_llm_config_output(meta_data: dict):
             "model": (stored.get("model") or "").strip(),
             "temperature": stored.get("temperature", 0.0),
             "max_tokens": stored.get("max_tokens", 2000),
-        }
-    legacy = meta_data.get("llm")
-    if isinstance(legacy, str) and legacy.strip():
-        return {
-            "model": legacy.strip(),
-            "temperature": 0.0,
-            "max_tokens": 2000,
         }
     return None
 

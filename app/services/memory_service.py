@@ -24,8 +24,6 @@ MEMORY_TYPE_USER_COMMON = "user_common"
 MEMORY_TYPE_FESTIVAL = "festival"
 FESTIVAL_METADATA_NAME_KEY = "festival_name"
 FESTIVAL_METADATA_DATE_KEY = "festival_data"
-FESTIVAL_METADATA_DATE_FALLBACK_KEY = "festival_date"
-FESTIVAL_METADATA_LLM_KEY = "llm"
 FESTIVAL_METADATA_LLM_CONFIG_KEY = "llm_config"
 
 # 节日抽取输出 llm_config 时，仅含 model 时的默认参数（与 assemble_args 默认一致）

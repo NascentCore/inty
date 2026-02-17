@@ -50,7 +50,7 @@
 | `delivery_at` | datetime(tz) \| NULL | 首次投递到会话的时间，NULL 表示未投递 |
 | `system_notification_sent_at` | datetime(tz) \| NULL | 节日记忆 system 推送发送时间 |
 
-- **metadata**（JSON）：节日记忆含 `festival_name`、`festival_data`（及兼容用 `festival_date`）；可选 **`llm_config`**（对象：`model`、`temperature`、`max_tokens`，抽取时使用的 LLM 配置）；历史字段 `llm`（string）仅用于回退。
+- **metadata**（JSON）：节日记忆含 `festival_name`、`festival_data`；可选 **`llm_config`**（对象：`model`、`temperature`、`max_tokens`，抽取时使用的 LLM 配置）。
 - 同一 (user_id, agent_id, festival_name, festival_date) 在抽取时**先 DELETE 再 INSERT**，仅保留最新一条。
 - **离线脚本输出格式（breaking change）**：`run_festival_memory_extraction_to_json.py` 导出的每条记忆及 `query_festival_memories_from_db`（`--query`）返回的每条记录为 `{ user_id, agent_id, memory_type, content, metadata, user_name?, agent_name? }`。**`metadata`** 为单一对象（FestivalMemoryMetadata：`festival_name`、`festival_date`、`llm_config`）；顶级的 `festival_name`、`festival_date`、`llm_config` 已移除，消费者需从 `metadata` 读取。
 

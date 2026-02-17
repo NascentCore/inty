@@ -11,7 +11,7 @@ from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetada
 
 
 def test_festival_memory_metadata_model_dump_for_db():
-    """FestivalMemoryMetadata.model_dump_for_db 输出 festival_data、festival_date、可选 llm_config。"""
+    """FestivalMemoryMetadata.model_dump_for_db 输出 festival_name、festival_data、可选 llm_config（无 festival_date key）。"""
     meta = RealFestivalMemoryMetadata(
         festival_name="Easter",
         festival_date="2026-04-05",
@@ -20,7 +20,7 @@ def test_festival_memory_metadata_model_dump_for_db():
     out = meta.model_dump_for_db()
     assert out["festival_name"] == "Easter"
     assert out["festival_data"] == "2026-04-05"
-    assert out["festival_date"] == "2026-04-05"
+    assert "festival_date" not in out
     assert "llm_config" not in out
 
     meta_with_llm = RealFestivalMemoryMetadata(
@@ -43,7 +43,7 @@ def test_festival_memory_metadata_model_dump_for_db():
 
 
 def test_festival_memory_metadata_model_validate_from_db():
-    """FestivalMemoryMetadata.model_validate_from_db 支持 festival_data/festival_date 与 legacy llm。"""
+    """FestivalMemoryMetadata.model_validate_from_db 仅读取 festival_name、festival_data、llm_config。"""
     meta = RealFestivalMemoryMetadata.model_validate_from_db(
         {"festival_name": "New Year", "festival_data": "2027-01-01"}
     )
@@ -51,15 +51,23 @@ def test_festival_memory_metadata_model_validate_from_db():
     assert meta.festival_date == "2027-01-01"
     assert meta.llm_config is None
 
-    meta_legacy = RealFestivalMemoryMetadata.model_validate_from_db(
-        {"festival_name": "Valentine", "llm": "mistralai/devstral-2512"}
+    meta_with_llm = RealFestivalMemoryMetadata.model_validate_from_db(
+        {
+            "festival_name": "Valentine",
+            "festival_data": "2027-02-14",
+            "llm_config": {
+                "model": "mistralai/devstral-2512",
+                "temperature": 0.0,
+                "max_tokens": 2000,
+            },
+        }
     )
-    assert meta_legacy.festival_name == "Valentine"
-    assert meta_legacy.festival_date is None
-    assert meta_legacy.llm_config is not None
-    assert meta_legacy.llm_config.model == "mistralai/devstral-2512"
-    assert meta_legacy.llm_config.temperature == 0.0
-    assert meta_legacy.llm_config.max_tokens == 2000
+    assert meta_with_llm.festival_name == "Valentine"
+    assert meta_with_llm.festival_date == "2027-02-14"
+    assert meta_with_llm.llm_config is not None
+    assert meta_with_llm.llm_config.model == "mistralai/devstral-2512"
+    assert meta_with_llm.llm_config.temperature == 0.0
+    assert meta_with_llm.llm_config.max_tokens == 2000
 
     empty = RealFestivalMemoryMetadata.model_validate_from_db({})
     assert empty.festival_name is None
@@ -129,7 +137,6 @@ def test_build_festival_memory_metadata_contains_required_keys():
     assert out == {
         "festival_name": "Thanksgiving",
         "festival_data": "2026-11-26",
-        "festival_date": "2026-11-26",
     }
 
 
@@ -180,15 +187,9 @@ def test_metadata_to_llm_config_output_from_llm_config():
     }
 
 
-def test_metadata_to_llm_config_output_from_legacy_llm():
-    """metadata 仅有 llm（string）时返回 model + 抽取默认 temperature/max_tokens。"""
-    meta = {"festival_name": "X", "llm": "mistralai/devstral-2512"}
-    out = service.metadata_to_llm_config_output(meta)
-    assert out == {
-        "model": "mistralai/devstral-2512",
-        "temperature": 0.0,
-        "max_tokens": 2000,
-    }
+def test_metadata_to_llm_config_output_none_when_no_llm_config():
+    """metadata 无 llm_config 时返回 None（不再支持 legacy llm 字符串）。"""
+    assert service.metadata_to_llm_config_output({"festival_name": "X"}) is None
 
 
 def test_metadata_to_llm_config_output_none_when_neither():
