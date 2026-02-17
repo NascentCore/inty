@@ -271,11 +271,19 @@ def main(prompt: str = "Hello, world!"):
     调用 API 来验证 langsmith 调用正常工作，需要找到对应的 LangSmith API Key
     写入本地 config.yaml 文件，完成后到 LangSmith Web UI 检查 Trace 记录
     """
+    # 必须在调用任何 @traceable 函数之前加载 config，否则 LANGSMITH_TRACING_V2 / LANGCHAIN_API_KEY 未设置，LangSmith 不会上报 trace。
+    from app.core.config import global_config_loaded_from_config_yaml  # noqa: F401
     response = openrouter_chat_completion(
         model="openai/gpt-3.5-turbo",
         prompt=prompt,
     )
     print(response)
+    # 确保 trace 在进程退出前已上报（LangSmith 使用后台线程发送）
+    try:
+        from langsmith import Client
+        Client().flush()
+    except Exception:
+        pass
 
 if __name__ == "__main__":
     cyclopts.run(main)
