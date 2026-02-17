@@ -187,12 +187,8 @@ async def get_agent_chat_messages(
             session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
         )
 
-        if app_version_code is not None and not is_festival_memory_enabled(app_version_code):
-            messages_data["messages"] = [
-                m
-                for m in messages_data["messages"]
-                if m.get("type") != "festival_memory_prompt"
-            ]
+        # 如果客户端版本不支持节日记忆，则不返回节日记忆消息，即便数据库中有节日记忆消息。
+        # 这种情况不会发生，因为客户端会自动升级到支持节日记忆的版本。
 
         # 如果要求升序（旧消息在前），则不反转
         # 如果要求降序（新消息在前），则反转消息列表

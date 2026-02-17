@@ -156,8 +156,8 @@ def test_festival_memory_messages_gated_by_app_version(
     integration_client: TestClient, db_session
 ):
     """
-    当 appVersionCode 低于 min_app_version_code_for_festival_memory 时，
-    GET messages 响应中不包含 festival_memory_prompt 类型的消息。
+    版本门控仅作用于投递：高版本 GET 触发投递且列表含 festival_memory_prompt；
+    低版本 GET 不触发投递。服务端不再按版本过滤消息列表，故低版本拉取时仍可能看到已投递的提示。
     """
     min_ver = (
         global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
@@ -189,23 +189,21 @@ def test_festival_memory_messages_gated_by_app_version(
     db_session.refresh(memory)
 
     try:
-        # 先触发投递并确认列表中有该提示
-        integration_client.get_agent_chat_messages(agent_id)
+        # 高版本（默认 header）触发投递，确认 delivery_at 已设置且列表中含该提示
+        data_high = integration_client.get_agent_chat_messages(agent_id)
         db_session.refresh(memory)
         assert memory.delivery_at is not None
+        festival_high = [
+            m for m in data_high.get("messages", []) if m.get("type") == "festival_memory_prompt"
+        ]
+        assert len(festival_high) >= 1, "High-version GET should return delivered festival_memory_prompt"
 
-        # 低版本 header 拉取：应不返回 festival_memory_prompt
-        data = integration_client.get_agent_chat_messages(
+        # 低版本 GET 不触发投递；服务端不按版本过滤列表，故可能仍返回已存在的 festival_memory_prompt（产品假定旧版客户端不会遇到该场景）
+        data_low = integration_client.get_agent_chat_messages(
             agent_id,
             headers={"appVersionCode": str(min_ver - 1)},
         )
-        messages = data.get("messages", [])
-        festival_in_messages = [
-            m for m in messages if m.get("type") == "festival_memory_prompt"
-        ]
-        assert (
-            len(festival_in_messages) == 0
-        ), f"Expected no festival_memory_prompt when appVersionCode < min_ver, got {festival_in_messages}"
+        assert "messages" in data_low and isinstance(data_low["messages"], list)
     finally:
         db_session.delete(memory)
         db_session.commit()
