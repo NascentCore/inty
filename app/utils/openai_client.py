@@ -1,9 +1,5 @@
 """
-Wrapper of OpenAI API, used to wrap the OpenAI API with LangSmith.
-"""
-
-"""
-Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
+OpenAI client, used to wrap the OpenAI API with LangSmith.
 """
 
 import os
@@ -15,13 +11,12 @@ from langchain_core.messages import BaseMessage
 from langsmith import traceable, wrappers
 from loguru import logger
 from openai import AsyncOpenAI, OpenAI
-from typing_extensions import deprecated
 
 from app.api.types.llm_config import LLMConfig
-from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.external_services.fakes.openai import FakeOpenAI
 from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
+import cyclopts
 
 class Role(StrEnum):
     USER = "user"
@@ -72,20 +67,21 @@ _async_client_lock = threading.Lock()
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
     # 在测试环境使用 FakeOpenAI
-    from app.core.config import Environment
+    from app.utils.config import Environment
 
-    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+    from app.core.config import global_config_loaded_from_config_yaml as global_config
+    if global_config.app.environment == Environment.TEST:
         logger.info("Using FakeOpenAI in test environment")
         return FakeOpenAI()
 
     return OpenAI(
-        base_url=global_config_loaded_from_config_yaml.agent.base_url,
-        api_key=global_config_loaded_from_config_yaml.agent.api_key,
+        base_url=global_config.agent.base_url,
+        api_key=global_config.agent.api_key,
         # Extra headers used for tracking on openrouter.ai.
         default_headers={
             # This appears as app name on openrouter.ai's activity page.
-            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
-            "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
+            "HTTP-Referer": f"{global_config.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
+            "X-Title": global_config.app.name,  # Optional. Site title for rankings on openrouter.ai.
         },
     )
 
@@ -205,18 +201,47 @@ def wrap_client_with_langsmith(
     return client
 
 
-@deprecated(
-    "Demo function do not use, this is only for demo @traceable "
-    "This also mapps user->Human and assistant->AI"
-    "We want to have it logging the raw messages, but langsmith insists on"
-    "mapping user->Human and assistant->AI"
-)
+def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = "A"):
+    import json
+    with open("/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug.log", "a") as f:
+        f.write(json.dumps({"location": location, "message": message, "data": data, "hypothesisId": hypothesis_id, "timestamp": __import__("time").time()}) + "\n")
+
+
 @traceable
-def chat_completions(messages: list[dict[str, str]], **kwargs):
+def openrouter_chat_completion(
+    *,
+    model: str,
+    prompt: str,
+) -> str:
     """
-    Return an OpenAI client without LangSmith tracing.
+    Call OpenRouter (or any OpenAI-compatible) chat API and return content text.
+    Raises ValueError on refusal or empty content.
     """
-    return _create_openai_client().chat.completions.create(messages=messages, **kwargs)
+    # #region agent log
+    _debug_log("openai_client.py:openrouter_chat_completion:entry", "env before config load", {"LANGSMITH_TRACING_V2": os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_PROJECT": os.getenv("LANGSMITH_PROJECT"), "LANGCHAIN_API_KEY_set": bool(os.getenv("LANGCHAIN_API_KEY"))}, "A")
+    # #endregion
+    from app.core.config import global_config_loaded_from_config_yaml as global_config
+    # #region agent log
+    _debug_log("openai_client.py:openrouter_chat_completion:after_config", "env after config load", {"LANGSMITH_TRACING_V2": os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_PROJECT": os.getenv("LANGSMITH_PROJECT"), "LANGCHAIN_API_KEY_set": bool(os.getenv("LANGCHAIN_API_KEY"))}, "A")
+    # #endregion
+    api_key = global_config.agent.api_key
+    from app.utils.config import OPENROUTER_BASE_URL
+    base_url = OPENROUTER_BASE_URL
+    client = OpenAI(api_key=api_key, base_url=base_url)
+    create_kwargs: dict = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+    }
+    response = client.chat.completions.create(**create_kwargs)
+    message = response.choices[0].message
+    refusal = getattr(message, "refusal", None)
+    if refusal:
+        raise ValueError(f"OpenRouter 模型拒绝输出结构化结果: {refusal}")
+    text = (message.content or "").strip()
+    if not text:
+        raise ValueError("OpenRouter 返回空响应")
+    return text
 
 
 def create_openai_client(chat_name: str, labels: dict[str, str]):
@@ -253,16 +278,23 @@ def langchain_message_to_openai_message(
     return res
 
 
-if __name__ == "__main__":
+def main(prompt: str = "Hello, world!"):
     """
-    Test the openai client.
+    调用 API 来验证 langsmith 调用正常工作，需要找到对应的 LangSmith API Key
+    写入本地 config.yaml 文件，完成后到 LangSmith Web UI 检查 Trace 记录
     """
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    client = create_openai_client()
-    response = client.chat.completions.create(
+    response = openrouter_chat_completion(
         model="openai/gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "Hello, world!"}],
+        prompt=prompt,
     )
     print(response)
+
+if __name__ == "__main__":
+    # #region agent log
+    _debug_log("openai_client.py:__main__:before_cyclopts", "env before cyclopts.run(main)", {"LANGSMITH_TRACING_V2": os.getenv("LANGSMITH_TRACING_V2"), "LANGSMITH_PROJECT": os.getenv("LANGSMITH_PROJECT"), "LANGCHAIN_API_KEY_set": bool(os.getenv("LANGCHAIN_API_KEY"))}, "B")
+    # #endregion
+    cyclopts.run(main)
+    response = openrouter_chat_completion(
+        model="openai/gpt-3.5-turbo",
+        prompt="Hello, world!",
+    )

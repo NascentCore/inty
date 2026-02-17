@@ -24,15 +24,17 @@ from typing import Any
 import cyclopts
 import requests
 import yaml
-from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.agent.prompt_template import (
+    OPENROUTER_GENERATE_10_CHARACTERS_PROMPT_TEMPLATE,
+    render_prompt_jinja2_template,
+)
 from app.models.agent import Agent
-
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+from app.utils.openai_client import openrouter_chat_completion
 MAX_EXCLUDED_NAMES_IN_PROMPT = 100
 
 app = cyclopts.App()
@@ -206,7 +208,20 @@ def build_dify_payload(character: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def generate_characters(
+# 供 scripts/run_dify_chat.py 调用 OpenRouter 生成 10 个角色时使用；占位符：excluded_names_text
+OPENROUTER_GENERATE_10_CHARACTERS_PROMPT_TEMPLATE = """Generate 10 diverse character profiles for an AI companion app. All character must be female and
+Each character should have:
+- name: A unique first name and a unique last name, name should match the cultural background of the character, like a French person should have a French name etc.
+- description: A sentence description that includes:
+  1. How the user encounters her (a specific, direct, romantic or conflict-ridden scenario based on real American life)
+  2. This description should immediately motivate users to choose this character.
+
+Make the characters diverse in name and scenario.
+
+IMPORTANT: Do NOT use any of these existing names: {{ excluded_names_text }}"""
+
+
+def generate_10_characters_by_openrouter_llm(
     existing_names: list[str],
     model: str = "mistralai/devstral-2512",
     *,
@@ -231,16 +246,12 @@ def generate_characters(
             f" (and {len(existing_names) - excluded_name_limit} more)"
         )
 
-    prompt = f"""Generate 10 diverse character profiles for an AI companion app. All character must be female and 
-Each character should have:
-- name: A unique first name and a unique last name, name should match the cultural background of the character, like a Franch person should have a Franch name etc.
-- description: A sentence description that includes:
-  1. How the user encounters her (a specific, direct, romantic or conflict-ridden scenario based on real American life)
-  2. This description should immediately motivate users to choose this character.
-
-Make the characters diverse in name and scenario.
-
-IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
+    prompt = render_prompt_jinja2_template(
+        OPENROUTER_GENERATE_10_CHARACTERS_PROMPT_TEMPLATE,
+        char="",
+        user="",
+        excluded_names_text=excluded_names_text,
+    )
 
     if "/" not in model:
         raise ValueError(
@@ -251,22 +262,13 @@ IMPORTANT: Do NOT use any of these existing names: {excluded_names_text}"""
             "使用 OpenRouter 模型时需设置 OPENROUTER_API_KEY 或 OPENAI_API_KEY"
         )
     logger.info(f"调用 OpenRouter 生成角色，model={model}")
-    client = OpenAI(api_key=openrouter_api_key, base_url=OPENROUTER_BASE_URL)
     try:
-        response = client.chat.completions.create(
+        text = openrouter_chat_completion(
             model=model,
-            messages=[{"role": "user", "content": prompt}],
+            prompt=prompt,
+            api_key=openrouter_api_key,
             response_format=OPENAI_CHARACTER_RESPONSE_FORMAT,
-            stream=False,
         )
-        message = response.choices[0].message
-        refusal = getattr(message, "refusal", None)
-        if refusal:
-            raise ValueError(f"OpenRouter 模型拒绝输出结构化结果: {refusal}")
-
-        text = (message.content or "").strip()
-        if not text:
-            raise ValueError("OpenRouter 返回空响应")
     except Exception as e:
         logger.error(f"OpenRouter 调用失败: {e}")
         raise
@@ -373,7 +375,7 @@ async def main(
             existing_names = await fetch_existing_agent_names(session)
 
             # 生成 10 个角色
-            characters = generate_characters(
+            characters = generate_10_characters_by_openrouter_llm(
                 existing_names,
                 model,
                 openrouter_api_key=openrouter_api_key,

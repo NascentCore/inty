@@ -45,16 +45,17 @@
 
 ## 当前状态
 
+**fal.ai 当前不在生产环境使用**（政策原因：审核过严）。模型选择与 agents 端点会将 fal 模型统一替换为 Vertex / Gemini，不发起任何 fal API 调用。客户端、统一 API、配置与类型均保留，作为多 provider 接入的基础，便于日后重新启用。
+
 ✅ **已完成**：
 - fal.ai 客户端封装
 - 统一图片生成 API 框架
 - 支持多提供商路由
 - 测试基础设施
+- 模型选择与端点层“永不返回/使用 fal”，仅走 Vertex / Gemini
 
-❌ **未完成**：
-- 未接入实际业务 API 端点
-- 当前后端仍使用 Google Imagen（见 `app/api/v1/endpoints/agents.py` 中的 `text_to_image` 函数）
-- 配置中未设置 fal.ai 模型（见 `app/core/config.py`）
+❌ **未完成**（有意搁置）：
+- 生产环境不调用 fal API；配置中若写 fal 模型会在运行时被替换为 Vertex / gemini
 
 ## 使用方式
 

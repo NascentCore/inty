@@ -233,8 +233,9 @@ class AgentConfig:
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
+    # fal 已停用（政策原因），默认用 Vertex；配置里写 fal 模型也会在运行时被替换为 vertex
     free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
-    sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4
+    sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_ULTRA
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
@@ -409,6 +410,7 @@ class PushNotificationConfig:
 class FalConfig:
     """fal.ai 生图服务配置"""
 
+    enabled: bool = True  # 为 false 时不使用 fal，免费用户改用 vertex imagen
     api_key: str = ""  # fal.ai API key
 
 
