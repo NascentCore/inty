@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetadata
+
 
 def _build_festival_metadata(festival_name: str, festival_date: date) -> dict:
     day = festival_date.isoformat()
@@ -34,6 +36,27 @@ def _resolve_festival_name_and_date(metadata, legacy_name, legacy_date):
     if day is None and isinstance(legacy_date, date):
         day = legacy_date
     return name, day
+
+
+def _metadata_to_llm_config_output(meta_data: dict):
+    """Fake: 与 memory_service.metadata_to_llm_config_output 行为一致。"""
+    if not isinstance(meta_data, dict):
+        return None
+    stored = meta_data.get("llm_config")
+    if isinstance(stored, dict) and (stored.get("model") or "").strip():
+        return {
+            "model": (stored.get("model") or "").strip(),
+            "temperature": stored.get("temperature", 0.0),
+            "max_tokens": stored.get("max_tokens", 2000),
+        }
+    legacy = meta_data.get("llm")
+    if isinstance(legacy, str) and legacy.strip():
+        return {
+            "model": legacy.strip(),
+            "temperature": 0.0,
+            "max_tokens": 2000,
+        }
+    return None
 
 
 def _load_festival_memory_service_module():
@@ -86,6 +109,7 @@ def _load_festival_memory_service_module():
 
     fake_memory_model_module = types.ModuleType("app.models.memory")
     fake_memory_model_module.Memory = _Memory
+    fake_memory_model_module.FestivalMemoryMetadata = RealFestivalMemoryMetadata
 
     fake_user_model_module = types.ModuleType("app.models.user")
     fake_user_model_module.User = type("User", (), {"nickname": object()})
@@ -100,6 +124,9 @@ def _load_festival_memory_service_module():
     fake_memory_service_module = types.ModuleType("app.services.memory_service")
     fake_memory_service_module.MEMORY_TYPE_FESTIVAL = "festival"
     fake_memory_service_module.build_festival_memory_metadata = _build_festival_metadata
+    fake_memory_service_module.metadata_to_llm_config_output = (
+        _metadata_to_llm_config_output
+    )
     fake_memory_service_module.resolve_festival_name_and_date = (
         _resolve_festival_name_and_date
     )
@@ -140,6 +167,11 @@ service = _load_festival_memory_service_module()
 
 @pytest.mark.asyncio
 async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
+    llm_config_stored = {
+        "model": "fake-model",
+        "temperature": 0.0,
+        "max_tokens": 2000,
+    }
     fake_memory = types.SimpleNamespace(
         user_id="u-1",
         agent_id="a-1",
@@ -148,7 +180,7 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
         meta_data={
             "festival_name": "Easter",
             "festival_data": "2026-04-05",
-            "llm": "fake-model",
+            "llm_config": llm_config_stored,
         },
         festival_name="Legacy Easter",
         festival_date=date(2026, 4, 6),
@@ -166,9 +198,13 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
     )
 
     assert out is not None
-    assert out["festival_name"] == "Easter"
-    assert out["festival_date"] == "2026-04-05"
-    assert out["llm"] == "fake-model"
+    assert "metadata" in out
+    assert out["metadata"]["festival_name"] == "Easter"
+    assert out["metadata"]["festival_date"] == "2026-04-05"
+    assert out["metadata"]["llm_config"] == llm_config_stored
+    assert "festival_name" not in out
+    assert "festival_date" not in out
+    assert "llm_config" not in out
     assert "extracted_at" not in out
 
 
@@ -196,7 +232,54 @@ async def test_extract_festival_to_dict_falls_back_to_legacy_columns():
     )
 
     assert out is not None
-    assert out["festival_name"] == "Legacy Festival"
-    assert out["festival_date"] == "2026-08-08"
-    assert "llm" in out
-    assert out["llm"] is None
+    assert "metadata" in out
+    assert out["metadata"]["festival_name"] == "Legacy Festival"
+    assert out["metadata"]["festival_date"] == "2026-08-08"
+    assert "llm_config" not in out["metadata"] or out["metadata"].get("llm_config") is None
+    assert "festival_name" not in out
+    assert "festival_date" not in out
+    assert "llm_config" not in out
+
+
+@pytest.mark.asyncio
+async def test_extract_festival_to_dict_passes_llm_config_to_summarizer():
+    """extract_festival_to_dict 传入 llm_config 时，summarize 被以该 config 调用，且返回 dict 的 llm_config 与之一致。"""
+    custom_model = "openrouter/anthropic/claude-3.5-sonnet"
+    llm_config = {"model": custom_model, "temperature": 0.0, "max_tokens": 2000}
+    fake_memory = types.SimpleNamespace(
+        user_id="u-3",
+        agent_id="a-3",
+        memory_type="festival",
+        content="summary with custom model",
+        meta_data={
+            "festival_name": "Valentine",
+            "festival_data": "2026-02-14",
+            "llm_config": llm_config,
+        },
+        festival_name="Valentine",
+        festival_date=date(2026, 2, 14),
+    )
+    summarizer_calls = []
+
+    async def _capture_summarize(*args, **kwargs):
+        summarizer_calls.append({"args": args, "kwargs": kwargs})
+        return fake_memory
+
+    service.summarize_memory_from_messages_between_user_and_agent = _capture_summarize
+
+    out = await service.extract_festival_to_dict(
+        user_id="u-3",
+        agent_id="a-3",
+        festival_name="Valentine",
+        festival_date=date(2026, 2, 14),
+        prompt_template="prompt",
+        llm_config=llm_config,
+    )
+
+    assert out is not None
+    assert "metadata" in out
+    assert out["metadata"].get("llm_config") == llm_config
+    assert "festival_name" not in out
+    assert "llm_config" not in out
+    assert len(summarizer_calls) == 1
+    assert summarizer_calls[0]["kwargs"].get("llm_config") == llm_config

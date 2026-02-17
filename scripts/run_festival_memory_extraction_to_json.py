@@ -3,9 +3,13 @@
 节日记忆抽取：接受与 evaluation 表单相同输入，执行与 POST /evaluation/admin/festival-memory-extraction/run 相同流程，
 结果写入 JSON 文件而非 memory 表。
 
+输出格式（breaking change）：每条记忆为 { user_id, agent_id, memory_type, content, metadata, user_name?, agent_name? }。
+metadata 为 FestivalMemoryMetadata（festival_name, festival_date, llm_config）；不再包含顶级的 festival_name、festival_date、llm_config。
+
 --messages-output：仅抽取模式下生效，将每对 (user, agent) 的会话消息写入指定 JSON。
 --messages-input：从上述 JSON 读入消息并做抽取，与直接抽取结果一致；与 --query 互斥。
 --parallel-workers N：运行最多 N 个并发抽取（OpenAI 调用）；不传或 1 为顺序执行。
+--llm <openrouter-model-id>：覆盖用于摘要的模型（如 openrouter/...）；不传则用配置/默认模型。
 
 用法: export PYTHONPATH=.
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt "..." --output out.json
@@ -15,6 +19,7 @@
   python scripts/run_festival_memory_extraction_to_json.py --festival-name 春节 --festival-date 2025-01-29 --prompt-file prompt.txt --output out2.json --messages-input msgs.json
   python scripts/run_festival_memory_extraction_to_json.py --festival-name "测试节日20260201" --festival-date 2026-02-01 --prompt-file festival_memory_prompt.txt --output tmp/backend_out.json --timezone America/Los_Angeles --min-rounds 50 --query
   python scripts/run_festival_memory_extraction_to_json.py ... --parallel-workers 4
+  python scripts/run_festival_memory_extraction_to_json.py ... --llm openrouter/anthropic/claude-3.5-sonnet
 """
 
 from __future__ import annotations
@@ -30,6 +35,7 @@ from typing import Annotated, Optional, Tuple
 
 import cyclopts
 
+from app.api.types.llm_config import LLMConfig
 from app.core.logging import init_logger
 from loguru import logger
 
@@ -78,6 +84,7 @@ async def _run(
     limit: Optional[int] = None,
     messages_output_path: Optional[Path] = None,
     parallel_workers: Optional[int] = None,
+    llm_model_id: Optional[str] = None,
 ) -> None:
     _ensure_config(config)
     from app.core.config import global_config_loaded_from_config_yaml
@@ -88,6 +95,11 @@ async def _run(
         extract_festival_to_dict,
     )
 
+    llm_config = (
+        LLMConfig(model=llm_model_id.strip())
+        if (llm_model_id and llm_model_id.strip())
+        else None
+    )
     db_url = global_config_loaded_from_config_yaml.database.url
     pairs = get_pairs_with_min_rounds_in_window_sync(
         festival_date, db_url, min_rounds=min_rounds, timezone_str=timezone
@@ -128,6 +140,7 @@ async def _run(
                         festival_date,
                         prompt,
                         db=db,
+                        llm_config=llm_config,
                     )
                     return (d, pair_message)
 
@@ -160,7 +173,13 @@ async def _run(
                         }
                     )
                 d = await extract_festival_to_dict(
-                    user_id, agent_id, festival_name, festival_date, prompt, db=db
+                    user_id,
+                    agent_id,
+                    festival_name,
+                    festival_date,
+                    prompt,
+                    db=db,
+                    llm_config=llm_config,
                 )
                 if d is not None:
                     memories.append(d)
@@ -235,6 +254,7 @@ async def _run_from_messages_file(
     config: Optional[str],
     messages_input_path: Path,
     parallel_workers: Optional[int] = None,
+    llm_model_id: Optional[str] = None,
 ) -> None:
     """从 --messages-output 写出的 JSON 读入 pairs 与消息，用 messages_override 做抽取，输出格式与 _run 一致。"""
     _ensure_config(config)
@@ -244,6 +264,11 @@ async def _run_from_messages_file(
     from app.db.session import AsyncSessionLocal
     from app.services.festival_memory_service import extract_festival_to_dict
 
+    llm_config = (
+        LLMConfig(model=llm_model_id.strip())
+        if (llm_model_id and llm_model_id.strip())
+        else None
+    )
     memories: list[dict] = []
     success = 0
     use_parallel = parallel_workers is not None and parallel_workers >= 2
@@ -267,6 +292,7 @@ async def _run_from_messages_file(
                         prompt,
                         db=db,
                         messages_override=messages,
+                        llm_config=llm_config,
                     )
 
         results = await asyncio.gather(
@@ -294,6 +320,7 @@ async def _run_from_messages_file(
                     prompt,
                     db=db,
                     messages_override=messages,
+                    llm_config=llm_config,
                 )
                 if d is not None:
                     memories.append(d)
@@ -402,6 +429,13 @@ def main(
             help="Run up to N concurrent extractions (OpenAI calls). Omit or 1 for sequential.",
         ),
     ] = None,
+    llm: Annotated[
+        Optional[str],
+        cyclopts.Parameter(
+            name="--llm",
+            help="OpenRouter model id for summarization (e.g. openrouter/anthropic/claude-3.5-sonnet). Omit to use config/default.",
+        ),
+    ] = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parsed_date = date.fromisoformat(festival_date)
@@ -438,6 +472,7 @@ def main(
                 config=config,
                 messages_input_path=Path(messages_input),
                 parallel_workers=parallel_workers,
+                llm_model_id=llm,
             )
         )
         return
@@ -453,6 +488,7 @@ def main(
             limit=limit,
             messages_output_path=Path(messages_output) if messages_output else None,
             parallel_workers=parallel_workers,
+            llm_model_id=llm,
         )
     )
 

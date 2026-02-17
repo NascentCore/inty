@@ -7,6 +7,9 @@ memory: 存储抽取后的记忆内容，支持多种类型（user_common=与所
 memory_extraction_log: 抽取历史，用于触发判断与可观测性。
 """
 
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
 from sqlalchemy import (
     Boolean,
     Column,
@@ -22,7 +25,109 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 
+from app.api.types.llm_config import LLMConfig
 from app.models import Base
+
+
+# DB 存储用 key；model_validate_from_db 读取时使用
+_FESTIVAL_METADATA_DATE_KEY = "festival_data"
+_FESTIVAL_METADATA_DATE_FALLBACK_KEY = "festival_date"
+_FESTIVAL_METADATA_LLM_KEY = "llm"
+_FESTIVAL_METADATA_LLM_CONFIG_KEY = "llm_config"
+_FESTIVAL_METADATA_NAME_KEY = "festival_name"
+
+# 从 legacy "llm" 推导 llm_config 时的默认参数
+_LEGACY_LLM_DEFAULT_TEMPERATURE = 0.0
+_LEGACY_LLM_DEFAULT_MAX_TOKENS = 2000
+
+
+class FestivalMemoryMetadata(BaseModel):
+    """
+    节日记忆扩展字段（Memory.meta_data）的 Pydantic 类型。
+    """
+
+    festival_name: Optional[str] = Field(None, description="节日名称")
+    festival_date: Optional[str] = Field(
+        None, description="节日日期，与 festival_data 同义，兼容用"
+    )
+    llm_config: Optional[LLMConfig] = Field(
+        None, description="抽取时使用的 LLM 配置"
+    )
+
+    def model_dump_for_db(self) -> dict[str, Any]:
+        """
+        序列化为 memory.meta_data 列存储的 dict。
+        包含 festival_name, festival_data, festival_date（兼容），llm_config 仅在有值时写入。
+        """
+        out: dict[str, Any] = {}
+        if self.festival_name is not None:
+            out[_FESTIVAL_METADATA_NAME_KEY] = self.festival_name
+        date_str = (self.festival_date or "").strip() or None
+        if date_str is not None:
+            out[_FESTIVAL_METADATA_DATE_KEY] = date_str
+            out[_FESTIVAL_METADATA_DATE_FALLBACK_KEY] = date_str
+        if self.llm_config is not None:
+            raw = self.llm_config.model_dump()
+            model = (raw.get("model") or "").strip() or None
+            if model is not None:
+                out[_FESTIVAL_METADATA_LLM_CONFIG_KEY] = {
+                    "model": model,
+                    "temperature": raw.get("temperature")
+                    if raw.get("temperature") is not None
+                    else _LEGACY_LLM_DEFAULT_TEMPERATURE,
+                    "max_tokens": raw.get("max_tokens")
+                    if raw.get("max_tokens") is not None
+                    else _LEGACY_LLM_DEFAULT_MAX_TOKENS,
+                }
+        return out
+
+    @classmethod
+    def model_validate_from_db(cls, d: dict[str, Any]) -> "FestivalMemoryMetadata":
+        """
+        从 memory.meta_data 原始 dict 反序列化。
+        支持 festival_data / festival_date 作为日期；legacy key "llm"（string）转为 llm_config。
+        """
+        if not isinstance(d, dict):
+            return cls()
+        festival_name = d.get(_FESTIVAL_METADATA_NAME_KEY)
+        if isinstance(festival_name, str):
+            festival_name = festival_name.strip() or None
+        else:
+            festival_name = None
+        date_str = d.get(_FESTIVAL_METADATA_DATE_KEY) or d.get(
+            _FESTIVAL_METADATA_DATE_FALLBACK_KEY
+        )
+        if isinstance(date_str, str):
+            date_str = date_str.strip() or None
+        else:
+            date_str = None
+        llm_config = None
+        stored = d.get(_FESTIVAL_METADATA_LLM_CONFIG_KEY)
+        if isinstance(stored, dict) and (stored.get("model") or "").strip():
+            llm_config = LLMConfig.model_validate(
+                {
+                    "model": (stored.get("model") or "").strip(),
+                    "temperature": stored.get("temperature")
+                    if stored.get("temperature") is not None
+                    else _LEGACY_LLM_DEFAULT_TEMPERATURE,
+                    "max_tokens": stored.get("max_tokens")
+                    if stored.get("max_tokens") is not None
+                    else _LEGACY_LLM_DEFAULT_MAX_TOKENS,
+                }
+            )
+        if llm_config is None:
+            legacy_llm = d.get(_FESTIVAL_METADATA_LLM_KEY)
+            if isinstance(legacy_llm, str) and legacy_llm.strip():
+                llm_config = LLMConfig(
+                    model=legacy_llm.strip(),
+                    temperature=_LEGACY_LLM_DEFAULT_TEMPERATURE,
+                    max_tokens=_LEGACY_LLM_DEFAULT_MAX_TOKENS,
+                )
+        return cls(
+            festival_name=festival_name,
+            festival_date=date_str,
+            llm_config=llm_config,
+        )
 
 
 class Memory(Base):
@@ -46,7 +151,7 @@ class Memory(Base):
         JSON,
         nullable=True,
         comment=(
-            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_data': 'YYYY-MM-DD', 'llm': str 可选，抽取所用模型标识}"
+            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_data': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens} 可选；'llm' 为历史字段}"
         ),
     )
     extracted_at = Column(

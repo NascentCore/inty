@@ -148,8 +148,8 @@ class TestAssembleArgs:
 
 
 @pytest.mark.asyncio
-async def test_summarize_memory_from_messages_includes_llm_in_metadata():
-    """summarize_memory_from_messages_between_user_and_agent 返回的 Memory.meta_data 包含 llm。"""
+async def test_summarize_memory_from_messages_includes_llm_config_in_metadata():
+    """summarize_memory_from_messages_between_user_and_agent 返回的 Memory.meta_data 包含 llm_config（model、temperature、max_tokens）。"""
     with (
         patch.object(
             festival_memory_service,
@@ -177,7 +177,11 @@ async def test_summarize_memory_from_messages_includes_llm_in_metadata():
         )
     assert memory is not None
     assert memory.meta_data is not None
-    assert memory.meta_data.get("llm") == festival_memory_service.DEFAULT_FESTIVAL_EXTRACTION_MODEL
+    llm_config = memory.meta_data.get("llm_config")
+    assert isinstance(llm_config, dict)
+    assert isinstance(llm_config.get("model"), str) and len(llm_config["model"]) > 0
+    assert llm_config.get("temperature") == 0.0
+    assert llm_config.get("max_tokens") == 2000
 
 
 class _FakeCursor:

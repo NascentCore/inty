@@ -6,6 +6,66 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.api.types.llm_config import LLMConfig
+from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetadata
+
+
+def test_festival_memory_metadata_model_dump_for_db():
+    """FestivalMemoryMetadata.model_dump_for_db 输出 festival_data、festival_date、可选 llm_config。"""
+    meta = RealFestivalMemoryMetadata(
+        festival_name="Easter",
+        festival_date="2026-04-05",
+        llm_config=None,
+    )
+    out = meta.model_dump_for_db()
+    assert out["festival_name"] == "Easter"
+    assert out["festival_data"] == "2026-04-05"
+    assert out["festival_date"] == "2026-04-05"
+    assert "llm_config" not in out
+
+    meta_with_llm = RealFestivalMemoryMetadata(
+        festival_name="Xmas",
+        festival_date="2026-12-25",
+        llm_config=LLMConfig(
+            model="openrouter/foo",
+            temperature=0.0,
+            max_tokens=2000,
+        ),
+    )
+    out2 = meta_with_llm.model_dump_for_db()
+    assert out2["festival_name"] == "Xmas"
+    assert out2["festival_data"] == "2026-12-25"
+    assert out2["llm_config"] == {
+        "model": "openrouter/foo",
+        "temperature": 0.0,
+        "max_tokens": 2000,
+    }
+
+
+def test_festival_memory_metadata_model_validate_from_db():
+    """FestivalMemoryMetadata.model_validate_from_db 支持 festival_data/festival_date 与 legacy llm。"""
+    meta = RealFestivalMemoryMetadata.model_validate_from_db(
+        {"festival_name": "New Year", "festival_data": "2027-01-01"}
+    )
+    assert meta.festival_name == "New Year"
+    assert meta.festival_date == "2027-01-01"
+    assert meta.llm_config is None
+
+    meta_legacy = RealFestivalMemoryMetadata.model_validate_from_db(
+        {"festival_name": "Valentine", "llm": "mistralai/devstral-2512"}
+    )
+    assert meta_legacy.festival_name == "Valentine"
+    assert meta_legacy.festival_date is None
+    assert meta_legacy.llm_config is not None
+    assert meta_legacy.llm_config.model == "mistralai/devstral-2512"
+    assert meta_legacy.llm_config.temperature == 0.0
+    assert meta_legacy.llm_config.max_tokens == 2000
+
+    empty = RealFestivalMemoryMetadata.model_validate_from_db({})
+    assert empty.festival_name is None
+    assert empty.festival_date is None
+    assert empty.llm_config is None
+
 
 def _load_memory_service_module():
     fake_agent_module = types.ModuleType("app.core.agent.agent")
@@ -13,6 +73,7 @@ def _load_memory_service_module():
 
     fake_memory_module = types.ModuleType("app.models.memory")
     fake_memory_module.Memory = type("Memory", (), {})
+    fake_memory_module.FestivalMemoryMetadata = RealFestivalMemoryMetadata
 
     fake_chat_history_module = types.ModuleType("app.services.chat_history_service")
     fake_chat_history_module.add_festival_memory_prompt_message_sync = lambda *args, **kwargs: None
@@ -72,22 +133,68 @@ def test_build_festival_memory_metadata_contains_required_keys():
     }
 
 
-def test_build_festival_memory_metadata_includes_llm_when_provided():
+def test_build_festival_memory_metadata_includes_llm_config_when_provided():
+    llm_config = {
+        "model": "mistralai/devstral-2512",
+        "temperature": 0.0,
+        "max_tokens": 2000,
+    }
     out = service.build_festival_memory_metadata(
-        "Easter", date(2026, 4, 5), llm="mistralai/devstral-2512"
+        "Easter", date(2026, 4, 5), llm_config=llm_config
     )
-    assert out.get("llm") == "mistralai/devstral-2512"
+    assert out.get("llm_config") == llm_config
     assert "festival_name" in out
     assert "festival_data" in out
 
 
-def test_build_festival_memory_metadata_omits_llm_when_none_or_empty():
-    out_none = service.build_festival_memory_metadata("Xmas", date(2026, 12, 25), llm=None)
-    assert "llm" not in out_none
-    out_empty = service.build_festival_memory_metadata("New Year", date(2027, 1, 1), llm="")
-    assert "llm" not in out_empty
-    out_blank = service.build_festival_memory_metadata("Day", date(2027, 1, 2), llm="   ")
-    assert "llm" not in out_blank
+def test_build_festival_memory_metadata_omits_llm_config_when_none_or_empty_model():
+    out_none = service.build_festival_memory_metadata(
+        "Xmas", date(2026, 12, 25), llm_config=None
+    )
+    assert "llm_config" not in out_none
+    out_empty = service.build_festival_memory_metadata(
+        "New Year", date(2027, 1, 1), llm_config={}
+    )
+    assert "llm_config" not in out_empty
+    out_blank = service.build_festival_memory_metadata(
+        "Day", date(2027, 1, 2), llm_config={"model": "   "}
+    )
+    assert "llm_config" not in out_blank
+
+
+def test_metadata_to_llm_config_output_from_llm_config():
+    """metadata 含 llm_config（dict）时返回其规范化副本。"""
+    meta = {
+        "festival_name": "X",
+        "llm_config": {
+            "model": "google/gemini-2.5-flash-lite",
+            "temperature": 0.0,
+            "max_tokens": 2000,
+        },
+    }
+    out = service.metadata_to_llm_config_output(meta)
+    assert out == {
+        "model": "google/gemini-2.5-flash-lite",
+        "temperature": 0.0,
+        "max_tokens": 2000,
+    }
+
+
+def test_metadata_to_llm_config_output_from_legacy_llm():
+    """metadata 仅有 llm（string）时返回 model + 抽取默认 temperature/max_tokens。"""
+    meta = {"festival_name": "X", "llm": "mistralai/devstral-2512"}
+    out = service.metadata_to_llm_config_output(meta)
+    assert out == {
+        "model": "mistralai/devstral-2512",
+        "temperature": 0.0,
+        "max_tokens": 2000,
+    }
+
+
+def test_metadata_to_llm_config_output_none_when_neither():
+    """metadata 无 llm_config 且无 llm 时返回 None。"""
+    assert service.metadata_to_llm_config_output({}) is None
+    assert service.metadata_to_llm_config_output({"festival_name": "Y"}) is None
 
 
 def test_resolve_festival_name_and_date_prefers_metadata():
