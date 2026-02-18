@@ -11,7 +11,7 @@ from google import genai
 from google.genai import types
 
 
-from app.core.gemini.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
+from app.core.google_genai.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
 from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 
