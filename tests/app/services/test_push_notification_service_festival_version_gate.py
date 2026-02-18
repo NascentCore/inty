@@ -85,6 +85,8 @@ async def test_user_satisfies_festival_memory_version_gate_with_real_config():
     """Gate uses real is_festival_memory_enabled; only config min is patched."""
     fake_config = MagicMock()
     fake_config.app.min_app_version_code_for_festival_memory = MIN_VERSION_FOR_TESTS
+    # Patch where the name is used (feature_gating), not the source (app.core.config),
+    # so the already-imported reference in is_festival_memory_enabled gets the fake.
     with patch(
         "app.api.utils.feature_gating.global_config_loaded_from_config_yaml",
         fake_config,
