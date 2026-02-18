@@ -568,22 +568,24 @@ class ImageGenerationService:
                 max_output_tokens=8192,
                 response_modalities=["IMAGE"],  # 只返回图片
                 safety_settings=[
-                    types.SafetySetting(
-                        category="HARM_CATEGORY_HATE_SPEECH",
-                        threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    ),
-                    types.SafetySetting(
-                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                        threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    ),
-                    types.SafetySetting(
-                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    ),
-                    types.SafetySetting(
-                        category="HARM_CATEGORY_HARASSMENT",
-                        threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    ),
+                    # TODO：暂时取消安全过滤，避免生成图片被拦截，观察前端效果；目前生图失败率极高
+                    # 使用同等提示词在 vertex ai studio 测试没有问题；于是尝试。
+                    # types.SafetySetting(
+                    #     category="HARM_CATEGORY_HATE_SPEECH",
+                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
+                    # ),
+                    # types.SafetySetting(
+                    #     category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
+                    # ),
+                    # types.SafetySetting(
+                    #     category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
+                    # ),
+                    # types.SafetySetting(
+                    #     category="HARM_CATEGORY_HARASSMENT",
+                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
+                    # ),
                 ],
                 image_config=types.ImageConfig(
                     aspect_ratio="9:16",
