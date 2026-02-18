@@ -484,10 +484,11 @@ class ImageGenerationService:
             user_info = ""
             user_photo_url = None
             if user_id:
+                # TODO：是否可以缓存？
                 user_info = await build_user_info_prompt_block(db, user_id)
                 # 查询用户的自拍照片
                 from app.models.user import User
-
+                # TODO：是否可以缓存？
                 user_result = await db.execute(
                     select(User.user_photo).where(User.id == user_id)
                 )

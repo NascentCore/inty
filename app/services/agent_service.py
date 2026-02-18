@@ -242,6 +242,7 @@ async def get_agent(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+# TODO: 返回值应该为 Agent 模型，而不是字典
 async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
     """
     获取聊天专用的轻量级Agent数据（高性能版本）
@@ -319,8 +320,9 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             "_complete_data": True,  # 标记为完整数据
         }
 
-        # 4. 缓存完整的Agent数据（30分钟过期）
-        cache_service.set_agent_config(agent_id, agent_data, ttl=1800)
+        # 4. 缓存完整的Agent数据；agent 数据极少更新，因此缓存时间较长
+        AGENT_CONFIG_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60  # 7天
+        cache_service.set_agent_config(agent_id, agent_data, ttl=AGENT_CONFIG_CACHE_TTL_SECONDS)
 
         logger.debug(f"获取并缓存Agent聊天数据: {agent_data['name']}")
         return agent_data

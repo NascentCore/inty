@@ -324,6 +324,7 @@ def text_to_image(
         if enhanced_prompt:
             prompt = enhance_prompt(prompt, gender)
         response = client.models.generate_images(
+            # TODO: 这里的 fallback 逻辑是否需要？外层已经有多处 fallback，这里是否重复？
             model=model
             or global_config_loaded_from_config_yaml.agent.vertex_image_model,
             prompt=prompt,
