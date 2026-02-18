@@ -5,9 +5,22 @@ on:
   push:
     branches:
       - main
-    # https://docs.github.com/zh/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore
-    paths-ignore:
-      - "**/*.md"
+    paths:
+      - "pytest.ini"
+      - "backend/inty/start.sh"
+      - "app/**/*.py"
+      - "requirements.txt"
+      - "scripts/"
+      - "tests/**/*.py"
+      - "tests/alembic/test_custom_config.sh"
+      - "tests/requirements.txt"
+      - "backend/push_worker/**"
+      # Alembic files
+      - "alembic/**/*"
+      # 这个是测试用配置文件
+      - "devops/config.yaml.test"
+      # 工作流文件
+      - ".github/workflows/ci_backend.yaml"
 
   pull_request:
     branches:
