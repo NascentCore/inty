@@ -10,14 +10,14 @@ from app.api.types.llm_config import LLMConfig
 from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetadata
 
 
-def test_festival_memory_metadata_model_dump_for_db():
-    """FestivalMemoryMetadata.model_dump_for_db 输出 festival_name、festival_date、可选 llm_config（无 festival_data key）。"""
+def test_festival_memory_metadata_dump_exclude_none():
+    """FestivalMemoryMetadata.model_dump(exclude_none=True) 输出 festival_name、festival_date、可选 llm_config（无 festival_data key）。"""
     meta = RealFestivalMemoryMetadata(
         festival_name="Easter",
         festival_date="2026-04-05",
         llm_config=None,
     )
-    out = meta.model_dump_for_db()
+    out = meta.model_dump(exclude_none=True)
     assert out["festival_name"] == "Easter"
     assert out["festival_date"] == "2026-04-05"
     assert "festival_data" not in out
@@ -32,26 +32,25 @@ def test_festival_memory_metadata_model_dump_for_db():
             max_tokens=2000,
         ),
     )
-    out2 = meta_with_llm.model_dump_for_db()
+    out2 = meta_with_llm.model_dump(exclude_none=True)
     assert out2["festival_name"] == "Xmas"
     assert out2["festival_date"] == "2026-12-25"
-    assert out2["llm_config"] == {
-        "model": "openrouter/foo",
-        "temperature": 0.0,
-        "max_tokens": 2000,
-    }
+    assert "llm_config" in out2
+    assert out2["llm_config"]["model"] == "openrouter/foo"
+    assert out2["llm_config"]["temperature"] == 0.0
+    assert out2["llm_config"]["max_tokens"] == 2000
 
 
-def test_festival_memory_metadata_model_validate_from_db():
-    """FestivalMemoryMetadata.model_validate_from_db 读取 festival_name、festival_date、llm_config。"""
-    meta = RealFestivalMemoryMetadata.model_validate_from_db(
+def test_festival_memory_metadata_model_validate():
+    """FestivalMemoryMetadata.model_validate 读取 festival_name、festival_date、llm_config。"""
+    meta = RealFestivalMemoryMetadata.model_validate(
         {"festival_name": "New Year", "festival_date": "2027-01-01"}
     )
     assert meta.festival_name == "New Year"
     assert meta.festival_date == "2027-01-01"
     assert meta.llm_config is None
 
-    meta_with_llm = RealFestivalMemoryMetadata.model_validate_from_db(
+    meta_with_llm = RealFestivalMemoryMetadata.model_validate(
         {
             "festival_name": "Valentine",
             "festival_date": "2027-02-14",
@@ -69,7 +68,7 @@ def test_festival_memory_metadata_model_validate_from_db():
     assert meta_with_llm.llm_config.temperature == 0.0
     assert meta_with_llm.llm_config.max_tokens == 2000
 
-    empty = RealFestivalMemoryMetadata.model_validate_from_db({})
+    empty = RealFestivalMemoryMetadata.model_validate({})
     assert empty.festival_name is None
     assert empty.festival_date is None
     assert empty.llm_config is None
@@ -82,8 +81,6 @@ def _load_memory_service_module():
     fake_memory_module = types.ModuleType("app.models.memory")
     fake_memory_module.Memory = type("Memory", (), {})
     fake_memory_module.FestivalMemoryMetadata = RealFestivalMemoryMetadata
-    fake_memory_module.FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE = 0.0
-    fake_memory_module.FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS = 2000
 
     fake_chat_history_module = types.ModuleType("app.services.chat_history_service")
     fake_chat_history_module.add_festival_memory_prompt_message_sync = lambda *args, **kwargs: None
@@ -149,9 +146,12 @@ def test_build_festival_memory_metadata_includes_llm_config_when_provided():
     out = service.build_festival_memory_metadata(
         "Easter", date(2026, 4, 5), llm_config=llm_config
     )
-    assert out.get("llm_config") == llm_config
     assert "festival_name" in out
     assert "festival_date" in out
+    assert "llm_config" in out
+    assert out["llm_config"]["model"] == "mistralai/devstral-2512"
+    assert out["llm_config"]["temperature"] == 0.0
+    assert out["llm_config"]["max_tokens"] == 2000
 
 
 def test_build_festival_memory_metadata_omits_llm_config_when_none_or_empty_model():
@@ -170,7 +170,7 @@ def test_build_festival_memory_metadata_omits_llm_config_when_none_or_empty_mode
 
 
 def test_metadata_to_llm_config_output_from_llm_config():
-    """metadata 含 llm_config（dict）时返回其规范化副本。"""
+    """metadata 含 llm_config（dict）时返回完整 model_dump（含默认值）。"""
     meta = {
         "festival_name": "X",
         "llm_config": {
@@ -180,11 +180,10 @@ def test_metadata_to_llm_config_output_from_llm_config():
         },
     }
     out = service.metadata_to_llm_config_output(meta)
-    assert out == {
-        "model": "google/gemini-2.5-flash-lite",
-        "temperature": 0.0,
-        "max_tokens": 2000,
-    }
+    assert out is not None
+    assert out["model"] == "google/gemini-2.5-flash-lite"
+    assert out["temperature"] == 0.0
+    assert out["max_tokens"] == 2000
 
 
 def test_metadata_to_llm_config_output_none_when_no_llm_config():

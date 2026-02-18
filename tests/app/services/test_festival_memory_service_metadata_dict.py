@@ -186,7 +186,11 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
     assert "metadata" in out
     assert out["metadata"]["festival_name"] == "Easter"
     assert out["metadata"]["festival_date"] == "2026-04-05"
-    assert out["metadata"]["llm_config"] == llm_config_stored
+    # llm_config 为完整 LLMConfig.model_dump()，至少包含传入的 model/temperature/max_tokens
+    out_llm = out["metadata"]["llm_config"]
+    assert out_llm["model"] == llm_config_stored["model"]
+    assert out_llm["temperature"] == llm_config_stored["temperature"]
+    assert out_llm["max_tokens"] == llm_config_stored["max_tokens"]
     assert "festival_name" not in out
     assert "festival_date" not in out
     assert "llm_config" not in out
@@ -253,7 +257,12 @@ async def test_extract_festival_to_dict_passes_llm_config_to_summarizer():
 
     assert out is not None
     assert "metadata" in out
-    assert out["metadata"].get("llm_config") == llm_config
+    # 返回的 metadata.llm_config 为完整 model_dump()，至少包含传入的 model/temperature/max_tokens
+    out_llm = out["metadata"].get("llm_config")
+    assert out_llm is not None
+    assert out_llm["model"] == llm_config["model"]
+    assert out_llm["temperature"] == llm_config["temperature"]
+    assert out_llm["max_tokens"] == llm_config["max_tokens"]
     assert "festival_name" not in out
     assert "llm_config" not in out
     assert len(summarizer_calls) == 1

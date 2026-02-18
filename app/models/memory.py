@@ -9,7 +9,7 @@ memory_extraction_log: 抽取历史，用于触发判断与可观测性。
 
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
     Boolean,
     Column,
@@ -29,19 +29,32 @@ from app.api.types.llm_config import LLMConfig
 from app.models import Base
 
 
-_FESTIVAL_METADATA_DATE_KEY = "festival_date"
-_FESTIVAL_METADATA_LLM_CONFIG_KEY = "llm_config"
-_FESTIVAL_METADATA_NAME_KEY = "festival_name"
+def _strip_optional_str(v: Any) -> Optional[str]:
+    """Strip string and coerce empty string to None; non-str/None unchanged."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return v.strip() or None
+    return None
 
-# llm_config 存储/读取时缺省 temperature/max_tokens 的单一来源（与 memory_service 输出一致）
-FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE = 0.0
-FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS = 2000
+
+def _validate_llm_config_from_dict(v: Any) -> Optional[LLMConfig]:
+    """None/LLMConfig pass through; dict only valid when model non-empty."""
+    if v is None:
+        return None
+    if isinstance(v, LLMConfig):
+        return v
+    if isinstance(v, dict):
+        if not (v.get("model") or "").strip():
+            return None
+        return LLMConfig.model_validate(v)
+    return None
 
 
 class FestivalMemoryMetadata(BaseModel):
     """
     节日记忆扩展字段（Memory.meta_data）的 Pydantic 类型。
-    序列化到 DB 使用 key festival_date；反序列化读 festival_date。
+    序列化用 model_dump(exclude_none=True)；反序列化用 model_validate(d)。
     """
 
     festival_name: Optional[str] = Field(None, description="节日名称")
@@ -52,69 +65,15 @@ class FestivalMemoryMetadata(BaseModel):
         None, description="抽取时使用的 LLM 配置"
     )
 
-    def model_dump_for_db(self) -> dict[str, Any]:
-        """
-        序列化为 memory.meta_data 列存储的 dict。
-        包含 festival_name, festival_date；llm_config 仅在有值时写入。
-        """
-        out: dict[str, Any] = {}
-        if self.festival_name is not None:
-            out[_FESTIVAL_METADATA_NAME_KEY] = self.festival_name
-        date_str = (self.festival_date or "").strip() or None
-        if date_str is not None:
-            out[_FESTIVAL_METADATA_DATE_KEY] = date_str
-        if self.llm_config is not None:
-            raw = self.llm_config.model_dump()
-            model = (raw.get("model") or "").strip() or None
-            if model is not None:
-                out[_FESTIVAL_METADATA_LLM_CONFIG_KEY] = {
-                    "model": model,
-                    "temperature": raw.get("temperature")
-                    if raw.get("temperature") is not None
-                    else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
-                    "max_tokens": raw.get("max_tokens")
-                    if raw.get("max_tokens") is not None
-                    else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
-                }
-        return out
-
+    @field_validator("festival_name", "festival_date", mode="before")
     @classmethod
-    def model_validate_from_db(cls, d: dict[str, Any]) -> "FestivalMemoryMetadata":
-        """
-        从 memory.meta_data 原始 dict 反序列化。
-        读取 festival_name, festival_date, llm_config。
-        """
-        if not isinstance(d, dict):
-            return cls()
-        festival_name = d.get(_FESTIVAL_METADATA_NAME_KEY)
-        if isinstance(festival_name, str):
-            festival_name = festival_name.strip() or None
-        else:
-            festival_name = None
-        date_str = d.get(_FESTIVAL_METADATA_DATE_KEY)
-        if isinstance(date_str, str):
-            date_str = date_str.strip() or None
-        else:
-            date_str = None
-        llm_config = None
-        stored = d.get(_FESTIVAL_METADATA_LLM_CONFIG_KEY)
-        if isinstance(stored, dict) and (stored.get("model") or "").strip():
-            llm_config = LLMConfig.model_validate(
-                {
-                    "model": (stored.get("model") or "").strip(),
-                    "temperature": stored.get("temperature")
-                    if stored.get("temperature") is not None
-                    else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
-                    "max_tokens": stored.get("max_tokens")
-                    if stored.get("max_tokens") is not None
-                    else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
-                }
-            )
-        return cls(
-            festival_name=festival_name,
-            festival_date=date_str,
-            llm_config=llm_config,
-        )
+    def _strip_optional_str_fields(cls, v: Any) -> Optional[str]:
+        return _strip_optional_str(v)
+
+    @field_validator("llm_config", mode="before")
+    @classmethod
+    def _validate_llm_config_field(cls, v: Any) -> Optional[LLMConfig]:
+        return _validate_llm_config_from_dict(v)
 
 
 class Memory(Base):

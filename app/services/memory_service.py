@@ -11,12 +11,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import get_sync_engine
-from app.models.memory import (
-    FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
-    FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
-    FestivalMemoryMetadata,
-    Memory,
-)
+from app.models.memory import FestivalMemoryMetadata, Memory
 from app.services.chat_history_service import (
     add_festival_memory_prompt_message_sync,
     get_chat_history_connection,
@@ -38,72 +33,43 @@ def _normalize_memory_metadata(raw_metadata: object) -> dict:
     return {}
 
 
-def _llm_config_to_metadata_dict(
-    llm_config: Union[LLMConfig, dict],
-) -> dict:
-    """将 LLMConfig 或 dict 转为仅含 model/temperature/max_tokens 的 dict，用于 metadata 存储。"""
-    if isinstance(llm_config, LLMConfig):
-        raw = llm_config.model_dump()
-    else:
-        raw = dict(llm_config)
-    return {
-        "model": (raw.get("model") or "").strip() or None,
-        "temperature": raw.get("temperature")
-        if raw.get("temperature") is not None
-        else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
-        "max_tokens": raw.get("max_tokens")
-        if raw.get("max_tokens") is not None
-        else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
-    }
-
-
 def build_festival_memory_metadata(
     festival_name: str,
     festival_date: date,
     llm_config: Optional[Union[LLMConfig, dict]] = None,
 ) -> dict:
-    """构造节日记忆 metadata；使用 FestivalMemoryMetadata 序列化为 DB 格式。"""
+    """构造节日记忆 metadata；使用 FestivalMemoryMetadata 序列化为 DB 格式（model_dump(exclude_none=True)）。"""
     festival_date_str = (
         festival_date.isoformat()
         if isinstance(festival_date, date)
         else str(festival_date)
     )
-    llm_config_model = None
+    llm_config_model: Optional[LLMConfig] = None
     if llm_config is not None:
-        cfg_dict = _llm_config_to_metadata_dict(llm_config)
-        if cfg_dict.get("model"):
-            llm_config_model = LLMConfig.model_validate(cfg_dict)
+        if isinstance(llm_config, LLMConfig):
+            if (llm_config.model or "").strip():
+                llm_config_model = llm_config
+        else:
+            cfg = LLMConfig.model_validate(llm_config)
+            if (cfg.model or "").strip():
+                llm_config_model = cfg
     meta = FestivalMemoryMetadata(
         festival_name=festival_name,
         festival_date=festival_date_str,
         llm_config=llm_config_model,
     )
-    return meta.model_dump_for_db()
+    return meta.model_dump(exclude_none=True)
 
 
 def metadata_to_llm_config_output(meta_data: dict) -> Optional[dict]:
     """
-    从节日记忆 metadata 得到输出用 llm_config 对象。
-    委托 FestivalMemoryMetadata.model_validate_from_db，返回 llm_config 的 dict 或 None。
+    从节日记忆 metadata 得到输出用 llm_config 对象（完整 model_dump，含默认值）。
+    委托 FestivalMemoryMetadata.model_validate，返回 llm_config.model_dump() 或 None。
     """
-    meta = FestivalMemoryMetadata.model_validate_from_db(
-        meta_data if isinstance(meta_data, dict) else {}
-    )
+    meta = FestivalMemoryMetadata.model_validate(meta_data or {})
     if meta.llm_config is None:
         return None
-    raw = meta.llm_config.model_dump()
-    model = (raw.get("model") or "").strip()
-    if not model:
-        return None
-    return {
-        "model": model,
-        "temperature": raw.get("temperature")
-        if raw.get("temperature") is not None
-        else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
-        "max_tokens": raw.get("max_tokens")
-        if raw.get("max_tokens") is not None
-        else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
-    }
+    return meta.llm_config.model_dump()
 
 
 def _parse_festival_date(raw_festival_date: object) -> Optional[date]:
@@ -121,9 +87,9 @@ def _parse_festival_date(raw_festival_date: object) -> Optional[date]:
 
 
 def resolve_festival_name_and_date(raw_metadata: object) -> tuple[Optional[str], Optional[date]]:
-    """从 memory.meta_data 读取节日名称/日期。使用 FestivalMemoryMetadata.model_validate_from_db。"""
+    """从 memory.meta_data 读取节日名称/日期。使用 FestivalMemoryMetadata.model_validate。"""
     metadata = _normalize_memory_metadata(raw_metadata)
-    meta = FestivalMemoryMetadata.model_validate_from_db(metadata)
+    meta = FestivalMemoryMetadata.model_validate(metadata)
     festival_date = _parse_festival_date(meta.festival_date)
     return meta.festival_name, festival_date
 

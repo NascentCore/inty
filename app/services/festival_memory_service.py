@@ -31,7 +31,6 @@ from app.models.memory import FestivalMemoryMetadata
 from app.services.memory_service import (
     MEMORY_TYPE_FESTIVAL,
     build_festival_memory_metadata,
-    metadata_to_llm_config_output,
     resolve_festival_name_and_date,
 )
 from app.utils.openai_client import chat_completion_for_extraction
@@ -454,7 +453,7 @@ def _memory_row_meta_to_output_metadata(
     从 memory 行的 meta_data 与已解析的节日名/日期，构造输出用 metadata dict
     （与 extract_festival_to_dict / query_festival_memories_from_db 的 metadata 字段一致）。
     """
-    meta = FestivalMemoryMetadata.model_validate_from_db(raw_meta_data or {})
+    meta = FestivalMemoryMetadata.model_validate(raw_meta_data or {})
     if meta.festival_name is None or meta.festival_date is None:
         date_str = (
             resolved_festival_date.isoformat()
@@ -466,10 +465,7 @@ def _memory_row_meta_to_output_metadata(
             festival_date=meta.festival_date or date_str,
             llm_config=meta.llm_config,
         )
-    result: dict[str, Any] = meta.model_dump(exclude_none=True)
-    if "llm_config" in result and isinstance(result["llm_config"], dict):
-        result["llm_config"] = metadata_to_llm_config_output(raw_meta_data or {})
-    return result
+    return meta.model_dump(exclude_none=True)
 
 
 async def extract_festival_to_dict(
