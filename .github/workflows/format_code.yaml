@@ -88,7 +88,15 @@ jobs:
       - name: Enable auto-merge for Pull Request
         if: steps.create-pr.outputs.pull-request-number
         run: |
-          gh pr merge --auto --squash ${{ steps.create-pr.outputs.pull-request-number }}
+          PR_NUMBER="${{ steps.create-pr.outputs.pull-request-number }}"
+
+          if gh pr merge --auto --squash "$PR_NUMBER"; then
+            echo "Auto-merge enabled for PR #$PR_NUMBER"
+          else
+            echo "::warning::Failed to enable auto-merge for PR #$PR_NUMBER; closing the pull request."
+            gh pr close "$PR_NUMBER" --comment "Auto-merge failed in CI, so this automated formatting PR is being closed." || \
+              echo "::warning::Failed to close PR #$PR_NUMBER after auto-merge failure."
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
