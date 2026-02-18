@@ -211,9 +211,7 @@ async def _run(
                     )
                     return (d, pair_message)
 
-        results = await asyncio.gather(
-            *[_extract_one(uid, aid) for uid, aid in pairs]
-        )
+        results = await asyncio.gather(*[_extract_one(uid, aid) for uid, aid in pairs])
         for d, pair_message in results:
             if d is not None:
                 memories.append(d)
@@ -363,10 +361,7 @@ async def _run_from_messages_file(
                     )
 
         results = await asyncio.gather(
-            *[
-                _extract_one_from_messages(uid, aid)
-                for uid, aid in pairs
-            ]
+            *[_extract_one_from_messages(uid, aid) for uid, aid in pairs]
         )
         for d in results:
             if d is not None:

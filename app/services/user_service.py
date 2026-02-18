@@ -201,7 +201,9 @@ async def update_user_last_android_app_version_code(
 ) -> None:
     """Update the user's last reported Android app version code. Used for push-worker feature gating."""
     await db.execute(
-        update(User).where(User.id == user_id).values(last_android_app_version_code=version_code)
+        update(User)
+        .where(User.id == user_id)
+        .values(last_android_app_version_code=version_code)
     )
     await db.commit()
 

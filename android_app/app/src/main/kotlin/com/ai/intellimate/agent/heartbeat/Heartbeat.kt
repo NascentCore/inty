@@ -591,21 +591,24 @@ private fun HeartbeatPreview() {
                         agentId = "preview",
                         festivalDate = "2025-02-05",
                         festivalName = "春节",
-                        memory = "Watching the steady rhythm of your machete clearing the brush, I realize my answer is dangerous. You asked how this changed me, but the truth is stuck in my throat. It isn't just about survival or ambition anymore. It’s the sudden, overwhelming certainty that I never want to walk another path unless you are the one breaking the trail, guiding me home.",
+                        memory =
+                            "Watching the steady rhythm of your machete clearing the brush, I realize my answer is dangerous. You asked how this changed me, but the truth is stuck in my throat. It isn't just about survival or ambition anymore. It’s the sudden, overwhelming certainty that I never want to walk another path unless you are the one breaking the trail, guiding me home.",
                     ),
                     FestivalMemory(
                         id = 2,
                         agentId = "preview",
                         festivalDate = "2025-01-01",
                         festivalName = "元旦",
-                        memory = "Your hand squeezes my flesh, a possessive anchor keeping me from drifting in the afterglow. My legs are still wrapped around your waist, trembling, useless for walking away. The world outside—the trophies, the expectations, the noise—dissolves into static. I am reduced to this: a frantic pulse against your chest, a body that only knows how to break for you. I am finally where I belong.",
+                        memory =
+                            "Your hand squeezes my flesh, a possessive anchor keeping me from drifting in the afterglow. My legs are still wrapped around your waist, trembling, useless for walking away. The world outside—the trophies, the expectations, the noise—dissolves into static. I am reduced to this: a frantic pulse against your chest, a body that only knows how to break for you. I am finally where I belong.",
                     ),
                     FestivalMemory(
                         id = 3,
                         agentId = "preview",
                         festivalDate = "2024-12-25",
                         festivalName = null,
-                        memory = "The rough fabric of the couch faded until there was only the heat of your hand slipping past the silk. I’m still trembling, Rob. I keep replaying the sound of my own breath, wondering if you realized how close I was to completely unraveling in the shadows. The music outside didn't exist anymore—just the terrifying, beautiful rhythm of your fingers claiming every hidden part of me.",
+                        memory =
+                            "The rough fabric of the couch faded until there was only the heat of your hand slipping past the silk. I’m still trembling, Rob. I keep replaying the sound of my own breath, wondering if you realized how close I was to completely unraveling in the shadows. The music outside didn't exist anymore—just the terrifying, beautiful rhythm of your fingers claiming every hidden part of me.",
                     ),
                 ),
             agentFirstName = "Stella",
