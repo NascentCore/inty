@@ -82,11 +82,16 @@ def _extract_part1_summary(full_analysis: str) -> str:
 
 
 def get_all_messages_for_user(
-    user_id: str, prefer_replica_read: bool = False
+    user_id: str, prefer_replica_read: bool = False, max_messages: Optional[int] = None
 ) -> List[Tuple[str, str]]:
     """
     拉取该用户在所有会话中的全部消息 (role, content)，按 created_at 升序。
-    不按 agent 过滤，不限制条数。
+    不按 agent 过滤。
+    
+    Args:
+        user_id: 用户 ID
+        prefer_replica_read: 是否优先使用副本数据库
+        max_messages: 最大消息数量限制，None 表示不限制。当消息总数超过此限制时，保留最新的 max_messages 条消息。
     """
     conn = None
     if prefer_replica_read:
@@ -106,15 +111,36 @@ def get_all_messages_for_user(
         return []
     session_ids = [generate_session_id(cid) for cid in chat_ids]
     placeholders = ",".join("%s" for _ in session_ids)
-    query = f"""
-        SELECT message
-        FROM chat_history
-        WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
-        ORDER BY created_at ASC
-    """
+    
+    # 构建查询：先按 created_at 升序获取所有消息，如有 max_messages 限制则取最新的 N 条
+    if max_messages is not None and max_messages > 0:
+        # 使用子查询先按升序排列，然后取最后 N 条（最新的消息）
+        query = f"""
+            SELECT * FROM (
+                SELECT message
+                FROM chat_history
+                WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
+                ORDER BY created_at ASC
+            ) AS all_messages
+            ORDER BY created_at DESC
+            LIMIT %s
+        """
+        query_params = session_ids + [max_messages]
+        # 注意：此查询会返回降序结果，需要在 Python 中反转以保持时间升序
+        reverse_result = True
+    else:
+        query = f"""
+            SELECT message
+            FROM chat_history
+            WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
+            ORDER BY created_at ASC
+        """
+        query_params = session_ids
+        reverse_result = False
+    
     out: List[Tuple[str, str]] = []
     with conn.cursor() as cur:
-        cur.execute(query, session_ids)
+        cur.execute(query, query_params)
         for row in cur.fetchall():
             raw = row[0]
             try:
@@ -140,6 +166,11 @@ def get_all_messages_for_user(
                 content = data["content"] or ""
             role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
             out.append((role, str(content)))
+    
+    # 如果使用了 LIMIT 并按降序获取，需要反转结果以保持时间升序
+    if reverse_result:
+        out.reverse()
+    
     return out
 
 
@@ -307,7 +338,7 @@ async def extract_and_save(
     db: AsyncSession, user_id: str, prefer_replica_read: bool = False
 ) -> None:
     """
-    对 user_id 拉取全量消息、LLM 抽取 Part1、DELETE 旧 memory、INSERT 新 memory 与 memory_extraction_log。
+    对 user_id 拉取消息（受 max_messages_for_extraction 限制）、LLM 抽取 Part1、DELETE 旧 memory、INSERT 新 memory 与 memory_extraction_log。
     """
     cfg = getattr(
         global_config_loaded_from_config_yaml,
@@ -318,8 +349,9 @@ async def extract_and_save(
         return
     prompt = _load_prompt()
 
+    max_messages = getattr(cfg, "max_messages_for_extraction", None)
     messages = await asyncio.to_thread(
-        get_all_messages_for_user, user_id, prefer_replica_read
+        get_all_messages_for_user, user_id, prefer_replica_read, max_messages
     )
     msg_count = len(messages)
     if msg_count == 0:

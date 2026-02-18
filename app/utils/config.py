@@ -360,6 +360,9 @@ class MemoryExtractionConfig:
     trigger_incremental_messages: int = (
         30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
     )
+    max_messages_for_extraction: int = (
+        1000  # 单次记忆抽取允许的最大消息数，避免超过 LLM token 限制
+    )
 
 
 @dataclass
