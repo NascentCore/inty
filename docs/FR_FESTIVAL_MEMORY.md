@@ -8,7 +8,7 @@ CREATED_BY_AGENT
 
 ## 数据与模型
 
-- **memory 表**：沿用现有表，新增 JSON 列 **`metadata`**（节日记忆存储 `{"festival_name": string, "festival_data": "YYYY-MM-DD"}`，兼容 `festival_date` key），`memory_type` 取值包含 `festival`。节日记忆语义：`(user_id, agent_id, festival_name, festival_date)` 唯一确定一条，`content` 存该用户与该角色在该节日下的回忆摘要。`festival_name`/`festival_date` 旧列保留用于回退兼容；读取时优先 `metadata`。**`delivery_at`**（DateTime with timezone，可空）：节日记忆提示**首次**投递到会话的时间；`NULL` 表示尚未投递，仅在用户发起聊天或拉取消息列表时按需写入 chat_history 并更新该字段。`extracted_at` 已废弃，不再作为读路径依赖字段。
+- **memory 表**：沿用现有表，新增 JSON 列 **`metadata`**（节日记忆存储 `{"festival_name": string, "festival_date": "YYYY-MM-DD", "llm_config": {model, temperature, max_tokens} 可选}`，`memory_type` 取值包含 `festival`。节日记忆语义：`(user_id, agent_id, festival_name, festival_date)` 唯一确定一条，`content` 存该用户与该角色在该节日下的回忆摘要。节日名称/日期仅存于 `meta_data`；历史列 `festival_name`/`festival_date` 已通过迁移移除。**`delivery_at`**（DateTime with timezone，可空）：节日记忆提示**首次**投递到会话的时间；`NULL` 表示尚未投递，仅在用户发起聊天或拉取消息列表时按需写入 chat_history 并更新该字段。`extracted_at` 已废弃，不再作为读路径依赖字段。
 - **festival_memory_config 表**：节日记忆抽取配置，字段：`id`, `festival_name`, `festival_date`, `prompt`, `enabled`, **`timezone`**（节日与执行时间所属时区，IANA 名如 Asia/Shanghai，默认 UTC）, `run_at_date`, `run_at_hour`, **`min_rounds_in_window`**（窗口内最少用户消息轮数，可选，NULL 表示默认 15）, **`llm_config`**（JSON，可选，LLM 模型配置；NULL 表示使用全局默认模型与参数）, `last_run_at`, `created_at`, `updated_at`。其中 **节日日期与执行日期/时刻均为该 timezone 下的本地值**；**`llm_config` 读写为完整 JSON 对象**（如 `{"model": "...", "temperature": 0.7, "max_tokens": 2000}`），抽取时若存在则用于调用 LLM，否则使用 config 或默认模型。`festival_date` 为「该时区下的自然日」，`run_at_date`（执行日期）、`run_at_hour`（该时区下本地小时 0–23）表示该配置的「可执行时间」，须满足 `run_at_date >= festival_date`；定时任务到点判断时将 (run_at_date, run_at_hour, timezone) 转为 UTC 后与当前时间比较。`last_run_at` 为该配置最近一次被定时任务执行的时间（UTC），用于避免同一执行时刻被重复执行。
 
 ## 接口

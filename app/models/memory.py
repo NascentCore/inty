@@ -7,6 +7,9 @@ memory: 存储抽取后的记忆内容，支持多种类型（user_common=与所
 memory_extraction_log: 抽取历史，用于触发判断与可观测性。
 """
 
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
     Boolean,
     Column,
@@ -22,7 +25,55 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 
+from app.api.types.llm_config import LLMConfig
 from app.models import Base
+
+
+def _strip_optional_str(v: Any) -> Optional[str]:
+    """Strip string and coerce empty string to None; non-str/None unchanged."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return v.strip() or None
+    return None
+
+
+def _validate_llm_config_from_dict(v: Any) -> Optional[LLMConfig]:
+    """None/LLMConfig pass through; dict only valid when model non-empty."""
+    if v is None:
+        return None
+    if isinstance(v, LLMConfig):
+        return v
+    if isinstance(v, dict):
+        if not (v.get("model") or "").strip():
+            return None
+        return LLMConfig.model_validate(v)
+    return None
+
+
+class FestivalMemoryMetadata(BaseModel):
+    """
+    节日记忆扩展字段（Memory.meta_data）的 Pydantic 类型。
+    序列化用 model_dump(exclude_none=True)；反序列化用 model_validate(d)。
+    """
+
+    festival_name: Optional[str] = Field(None, description="节日名称")
+    festival_date: Optional[str] = Field(
+        None, description="节日日期（DB 存为 festival_date）"
+    )
+    llm_config: Optional[LLMConfig] = Field(
+        None, description="抽取时使用的 LLM 配置"
+    )
+
+    @field_validator("festival_name", "festival_date", mode="before")
+    @classmethod
+    def _strip_optional_str_fields(cls, v: Any) -> Optional[str]:
+        return _strip_optional_str(v)
+
+    @field_validator("llm_config", mode="before")
+    @classmethod
+    def _validate_llm_config_field(cls, v: Any) -> Optional[LLMConfig]:
+        return _validate_llm_config_from_dict(v)
 
 
 class Memory(Base):
@@ -46,7 +97,7 @@ class Memory(Base):
         JSON,
         nullable=True,
         comment=(
-            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_data': 'YYYY-MM-DD'}"
+            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_date': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens} 可选}"
         ),
     )
     extracted_at = Column(
@@ -56,12 +107,6 @@ class Memory(Base):
     )
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    festival_name = Column(
-        String, nullable=True, comment="节日名称，仅 memory_type=festival 时使用"
-    )
-    festival_date = Column(
-        Date, nullable=True, comment="节日日期，仅 memory_type=festival 时使用"
     )
     delivery_at = Column(
         DateTime(timezone=True),

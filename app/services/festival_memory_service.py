@@ -27,6 +27,7 @@ from app.services.chat_history_service import (
     get_chat_history_replica_connection,
 )
 from app.services.chat_service import generate_session_id
+from app.models.memory import FestivalMemoryMetadata
 from app.services.memory_service import (
     MEMORY_TYPE_FESTIVAL,
     build_festival_memory_metadata,
@@ -269,9 +270,7 @@ Festival date: {date_str}
 # Conversation between the user and the character
 
 {chat_text}
-
----
-Based on the conversation above, extract memories or preferences related to "{festival_name}" for this user and character. Output a concise summary in one short paragraph. Output the summary in English only. Do not include any other format or text."""
+"""
     if llm_config and (llm_config.model or "").strip():
         return (full_prompt, llm_config)
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
@@ -340,10 +339,10 @@ async def summarize_memory_from_messages_between_user_and_agent(
         memory_type=MEMORY_TYPE_FESTIVAL,
         agent_id=agent_id,
         content=summary,
-        meta_data=build_festival_memory_metadata(festival_name, festival_date),
+        meta_data=build_festival_memory_metadata(
+            festival_name, festival_date, llm_config=ext_llm_config
+        ),
         extracted_at=extracted_at,
-        festival_name=festival_name,
-        festival_date=festival_date,
     )
 
 
@@ -354,13 +353,11 @@ async def _find_festival_memory_ids(
     festival_name: str,
     festival_date: date,
 ) -> list[int]:
-    """按 metadata 优先 + 旧列回退匹配同一节日记忆，返回待删除 id 列表。"""
+    """按 metadata 匹配同一节日记忆，返回待删除 id 列表。"""
     result = await db.execute(
         select(
             Memory.id,
             Memory.meta_data,
-            Memory.festival_name,
-            Memory.festival_date,
         ).where(
             Memory.user_id == user_id,
             Memory.agent_id == agent_id,
@@ -370,10 +367,8 @@ async def _find_festival_memory_ids(
     rows = result.fetchall()
     matched_ids: list[int] = []
     for row in rows:
-        memory_id, metadata, legacy_festival_name, legacy_festival_date = row
-        resolved_name, resolved_date = resolve_festival_name_and_date(
-            metadata, legacy_festival_name, legacy_festival_date
-        )
+        memory_id, metadata = row
+        resolved_name, resolved_date = resolve_festival_name_and_date(metadata)
         if resolved_name == festival_name and resolved_date == festival_date:
             matched_ids.append(memory_id)
     return matched_ids
@@ -449,6 +444,30 @@ async def _get_user_agent_names(
     return user_name, agent_name
 
 
+def _memory_row_meta_to_output_metadata(
+    raw_meta_data: Optional[dict],
+    resolved_festival_name: str,
+    resolved_festival_date: date,
+) -> dict[str, Any]:
+    """
+    从 memory 行的 meta_data 与已解析的节日名/日期，构造输出用 metadata dict
+    （与 extract_festival_to_dict / query_festival_memories_from_db 的 metadata 字段一致）。
+    """
+    meta = FestivalMemoryMetadata.model_validate(raw_meta_data or {})
+    if meta.festival_name is None or meta.festival_date is None:
+        date_str = (
+            resolved_festival_date.isoformat()
+            if isinstance(resolved_festival_date, date)
+            else str(resolved_festival_date)
+        )
+        meta = FestivalMemoryMetadata(
+            festival_name=meta.festival_name or resolved_festival_name,
+            festival_date=meta.festival_date or date_str,
+            llm_config=meta.llm_config,
+        )
+    return meta.model_dump(exclude_none=True)
+
+
 async def extract_festival_to_dict(
     user_id: str,
     agent_id: str,
@@ -457,13 +476,14 @@ async def extract_festival_to_dict(
     prompt_template: str,
     db: Optional[AsyncSession] = None,
     messages_override: Optional[List[Tuple[str, str]]] = None,
+    llm_config: Optional[Union[LLMConfig, dict]] = None,
 ) -> Optional[dict]:
     """
     与 extract_festival_and_save 相同的拉消息、拼 prompt、调 LLM 流程，
     但返回可 JSON 序列化的 dict，不写库。失败返回 None。
     若传入 db，会在返回的 dict 中附带 user_name、agent_name（从主库查 nickname/name）。
     若传入 messages_override，则使用该消息列表，不再从 DB 拉取；用于脚本 --messages-input。
-    这个只用于离线脚本，在线服务不使用本函数。
+    若传入 llm_config（含 model），则用于抽取；否则用全局默认。仅用于离线脚本。
     """
     memory_row = await summarize_memory_from_messages_between_user_and_agent(
         user_id,
@@ -472,28 +492,26 @@ async def extract_festival_to_dict(
         festival_date,
         prompt_template,
         messages_override=messages_override,
-        llm_config=None,
+        llm_config=llm_config,
     )
     if memory_row is None:
         return None
     festival_name_resolved, festival_date_resolved = resolve_festival_name_and_date(
-        memory_row.meta_data,
-        memory_row.festival_name,
-        memory_row.festival_date,
+        memory_row.meta_data
     )
     if festival_name_resolved is None or festival_date_resolved is None:
         return None
+    meta_dict = _memory_row_meta_to_output_metadata(
+        memory_row.meta_data,
+        festival_name_resolved,
+        festival_date_resolved,
+    )
     out = {
         "user_id": memory_row.user_id,
         "agent_id": memory_row.agent_id,
         "memory_type": memory_row.memory_type,
         "content": memory_row.content,
-        "festival_name": festival_name_resolved,
-        "festival_date": (
-            festival_date_resolved.isoformat()
-            if isinstance(festival_date_resolved, date)
-            else str(festival_date_resolved)
-        ),
+        "metadata": meta_dict,
     }
     if db is not None:
         user_name, agent_name = await _get_user_agent_names(db, user_id, agent_id)
@@ -515,24 +533,18 @@ async def query_festival_memories_from_db(
     rows = r.scalars().all()
     out: List[dict] = []
     for row in rows:
-        resolved_name, resolved_date = resolve_festival_name_and_date(
-            row.meta_data,
-            row.festival_name,
-            row.festival_date,
-        )
+        resolved_name, resolved_date = resolve_festival_name_and_date(row.meta_data)
         if resolved_name != festival_name or resolved_date != festival_date:
             continue
+        meta_dict_row = _memory_row_meta_to_output_metadata(
+            row.meta_data, resolved_name, resolved_date
+        )
         d = {
             "user_id": row.user_id,
             "agent_id": row.agent_id,
             "memory_type": row.memory_type,
             "content": row.content,
-            "festival_name": resolved_name,
-            "festival_date": (
-                resolved_date.isoformat()
-                if isinstance(resolved_date, date)
-                else str(resolved_date)
-            ),
+            "metadata": meta_dict_row,
         }
         user_name, agent_name = await _get_user_agent_names(
             db, row.user_id, row.agent_id

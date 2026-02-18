@@ -67,11 +67,9 @@ def test_festival_memory_delivered_via_chat_history_api(
         content="E2E test memory content",
         meta_data={
             "festival_name": "E2ETestFest",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFest",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)
@@ -116,11 +114,9 @@ def test_festival_memory_delivery_at_set_and_second_get_idempotent(
         content="E2E idempotent test memory",
         meta_data={
             "festival_name": "E2ETestFestIdem",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFestIdem",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)
@@ -177,11 +173,9 @@ def test_festival_memory_messages_gated_by_app_version(
         content="E2E test memory for messages gate",
         meta_data={
             "festival_name": "E2ETestFestMessagesGate",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFestMessagesGate",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)
@@ -234,11 +228,9 @@ def test_festival_memory_old_app_version_get_messages_delivery_at_stays_null(
         content="E2E test memory for old app delivery_at null",
         meta_data={
             "festival_name": "E2ETestFestOldAppNull",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFestOldAppNull",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)
@@ -291,11 +283,9 @@ def test_festival_memory_agent_detail_gated_by_app_version(
         content="E2E test memory for agent detail gate",
         meta_data={
             "festival_name": "E2ETestFestAgentGate",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
-        festival_name="E2ETestFestAgentGate",
-        festival_date=date.today(),
         delivery_at=None,
     )
     db_session.add(memory)

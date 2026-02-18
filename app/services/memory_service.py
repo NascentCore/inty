@@ -5,25 +5,26 @@
 
 import asyncio
 from datetime import date, datetime, timezone
-from typing import Optional
+from typing import Optional, Union
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import get_sync_engine
-from app.models.memory import Memory
+from app.models.memory import FestivalMemoryMetadata, Memory
 from app.services.chat_history_service import (
     add_festival_memory_prompt_message_sync,
     get_chat_history_connection,
     get_festival_memory_prompt_content_for_agent_sync,
 )
+from app.api.types.llm_config import LLMConfig
 from app.services.chat_service import generate_session_id
 
 MEMORY_TYPE_USER_COMMON = "user_common"
 MEMORY_TYPE_FESTIVAL = "festival"
 FESTIVAL_METADATA_NAME_KEY = "festival_name"
-FESTIVAL_METADATA_DATE_KEY = "festival_data"
-FESTIVAL_METADATA_DATE_FALLBACK_KEY = "festival_date"
+FESTIVAL_METADATA_DATE_KEY = "festival_date"
+FESTIVAL_METADATA_LLM_CONFIG_KEY = "llm_config"
 
 
 def _normalize_memory_metadata(raw_metadata: object) -> dict:
@@ -32,19 +33,43 @@ def _normalize_memory_metadata(raw_metadata: object) -> dict:
     return {}
 
 
-def build_festival_memory_metadata(festival_name: str, festival_date: date) -> dict:
-    """构造节日记忆 metadata；festival_data 使用 ISO 日期字符串。"""
+def build_festival_memory_metadata(
+    festival_name: str,
+    festival_date: date,
+    llm_config: Optional[Union[LLMConfig, dict]] = None,
+) -> dict:
+    """构造节日记忆 metadata；使用 FestivalMemoryMetadata 序列化为 DB 格式（model_dump(exclude_none=True)）。"""
     festival_date_str = (
         festival_date.isoformat()
         if isinstance(festival_date, date)
         else str(festival_date)
     )
-    return {
-        FESTIVAL_METADATA_NAME_KEY: festival_name,
-        FESTIVAL_METADATA_DATE_KEY: festival_date_str,
-        # 兼容历史代码中可能误用的 key。
-        FESTIVAL_METADATA_DATE_FALLBACK_KEY: festival_date_str,
-    }
+    llm_config_model: Optional[LLMConfig] = None
+    if llm_config is not None:
+        if isinstance(llm_config, LLMConfig):
+            if (llm_config.model or "").strip():
+                llm_config_model = llm_config
+        else:
+            cfg = LLMConfig.model_validate(llm_config)
+            if (cfg.model or "").strip():
+                llm_config_model = cfg
+    meta = FestivalMemoryMetadata(
+        festival_name=festival_name,
+        festival_date=festival_date_str,
+        llm_config=llm_config_model,
+    )
+    return meta.model_dump(exclude_none=True)
+
+
+def metadata_to_llm_config_output(meta_data: dict) -> Optional[dict]:
+    """
+    从节日记忆 metadata 得到输出用 llm_config 对象（完整 model_dump，含默认值）。
+    委托 FestivalMemoryMetadata.model_validate，返回 llm_config.model_dump() 或 None。
+    """
+    meta = FestivalMemoryMetadata.model_validate(meta_data or {})
+    if meta.llm_config is None:
+        return None
+    return meta.llm_config.model_dump()
 
 
 def _parse_festival_date(raw_festival_date: object) -> Optional[date]:
@@ -61,30 +86,12 @@ def _parse_festival_date(raw_festival_date: object) -> Optional[date]:
         return None
 
 
-def resolve_festival_name_and_date(
-    raw_metadata: object,
-    legacy_festival_name: object,
-    legacy_festival_date: object,
-) -> tuple[Optional[str], Optional[date]]:
-    """metadata 优先读取节日名称/日期，缺失时回退旧列。"""
+def resolve_festival_name_and_date(raw_metadata: object) -> tuple[Optional[str], Optional[date]]:
+    """从 memory.meta_data 读取节日名称/日期。使用 FestivalMemoryMetadata.model_validate。"""
     metadata = _normalize_memory_metadata(raw_metadata)
-
-    festival_name = metadata.get(FESTIVAL_METADATA_NAME_KEY)
-    if isinstance(festival_name, str):
-        festival_name = festival_name.strip() or None
-    else:
-        festival_name = None
-    if festival_name is None and isinstance(legacy_festival_name, str):
-        festival_name = legacy_festival_name.strip() or None
-
-    metadata_festival_date = metadata.get(FESTIVAL_METADATA_DATE_KEY)
-    if metadata_festival_date is None:
-        metadata_festival_date = metadata.get(FESTIVAL_METADATA_DATE_FALLBACK_KEY)
-    festival_date = _parse_festival_date(metadata_festival_date)
-    if festival_date is None:
-        festival_date = _parse_festival_date(legacy_festival_date)
-
-    return festival_name, festival_date
+    meta = FestivalMemoryMetadata.model_validate(metadata)
+    festival_date = _parse_festival_date(meta.festival_date)
+    return meta.festival_name, festival_date
 
 
 def _festival_date_sort_key(festival_date: Optional[date]) -> tuple[int, date]:
@@ -149,8 +156,6 @@ async def get_festival_memories_for_user_agent(
     stmt = select(
         Memory.id,
         Memory.meta_data,
-        Memory.festival_name,
-        Memory.festival_date,
         Memory.content,
     ).where(
         Memory.user_id == user_id,
@@ -161,10 +166,8 @@ async def get_festival_memories_for_user_agent(
     rows = result.fetchall()
     items: list[dict] = []
     for row in rows:
-        memory_id, metadata, legacy_festival_name, legacy_festival_date, content = row
-        festival_name, festival_date = resolve_festival_name_and_date(
-            metadata, legacy_festival_name, legacy_festival_date
-        )
+        memory_id, metadata, content = row
+        festival_name, festival_date = resolve_festival_name_and_date(metadata)
         if festival_date is None or festival_name is None or content is None:
             continue
         items.append(
@@ -225,8 +228,6 @@ async def get_pairs_with_undelivered_festival_memories(
         Memory.agent_id,
         Memory.id,
         Memory.meta_data,
-        Memory.festival_name,
-        Memory.festival_date,
     ).where(
         Memory.memory_type == MEMORY_TYPE_FESTIVAL,
         Memory.delivery_at.is_(None),
@@ -236,12 +237,10 @@ async def get_pairs_with_undelivered_festival_memories(
     rows = result.fetchall()
     first_by_pair: dict[tuple[str, str], dict] = {}
     for row in rows:
-        user_id, agent_id, memory_id, metadata, legacy_name, legacy_date = row
+        user_id, agent_id, memory_id, metadata = row
         if not user_id or not agent_id or memory_id is None:
             continue
-        _, resolved_festival_date = resolve_festival_name_and_date(
-            metadata, legacy_name, legacy_date
-        )
+        _, resolved_festival_date = resolve_festival_name_and_date(metadata)
         key = (user_id, agent_id)
         sort_key = (_festival_date_sort_key(resolved_festival_date), memory_id)
         selected = first_by_pair.get(key)
@@ -298,8 +297,6 @@ async def get_undelivered_festival_memories(
     stmt = select(
         Memory.id,
         Memory.meta_data,
-        Memory.festival_name,
-        Memory.festival_date,
     ).where(
         Memory.user_id == user_id,
         Memory.agent_id == agent_id,
@@ -310,10 +307,8 @@ async def get_undelivered_festival_memories(
     rows = result.fetchall()
     items: list[dict] = []
     for row in rows:
-        memory_id, metadata, legacy_festival_name, legacy_festival_date = row
-        festival_name, festival_date = resolve_festival_name_and_date(
-            metadata, legacy_festival_name, legacy_festival_date
-        )
+        memory_id, metadata = row
+        festival_name, festival_date = resolve_festival_name_and_date(metadata)
         if festival_name is None or festival_date is None:
             continue
         items.append(
