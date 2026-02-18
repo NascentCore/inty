@@ -4,7 +4,8 @@ app:
   # 4000 远远大于现在的 commit count，这样相当于禁止功能；这样方便测试后端：
   # https://github.com/NascentCore/inty/blob/130596ee989fce0bd4db863d1030274950cd4bf6/devops/config.yaml.dev#L16C45-L16C49
   # app 发布上线之前，这个数值要调整回 dev 环境的数值：3345
-  min_app_version_code_for_festival_memory: 4000
+  min_app_version_code_for_festival_memory: 3585
+
   limits:
     guest_user_chat_24h_limit: 10
     free_user_chat_24h_limit: 100
@@ -78,7 +79,7 @@ google_play:
   enable_version_check: true
   min_supported_version: 100
   # 设置为 0 时从 Google Play API 动态获取
-  current_version_code: 3277
+  current_version_code: 3585
 
 elevenlabs:
   api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
