@@ -29,25 +29,24 @@ from app.api.types.llm_config import LLMConfig
 from app.models import Base
 
 
-# DB 存储用 key；model_validate_from_db 读取时使用
-_FESTIVAL_METADATA_DATE_KEY = "festival_data"
+_FESTIVAL_METADATA_DATE_KEY = "festival_date"
 _FESTIVAL_METADATA_LLM_CONFIG_KEY = "llm_config"
 _FESTIVAL_METADATA_NAME_KEY = "festival_name"
 
-# llm_config 存储时缺省 temperature/max_tokens 时使用的默认值
-_LLM_CONFIG_DEFAULT_TEMPERATURE = 0.0
-_LLM_CONFIG_DEFAULT_MAX_TOKENS = 2000
+# llm_config 存储/读取时缺省 temperature/max_tokens 的单一来源（与 memory_service 输出一致）
+FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE = 0.0
+FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS = 2000
 
 
 class FestivalMemoryMetadata(BaseModel):
     """
     节日记忆扩展字段（Memory.meta_data）的 Pydantic 类型。
-    序列化到 DB 时仅使用 key festival_data（不含 festival_date）；反序列化只读 festival_data。
+    序列化到 DB 使用 key festival_date；反序列化读 festival_date。
     """
 
     festival_name: Optional[str] = Field(None, description="节日名称")
     festival_date: Optional[str] = Field(
-        None, description="节日日期（DB 存为 festival_data）"
+        None, description="节日日期（DB 存为 festival_date）"
     )
     llm_config: Optional[LLMConfig] = Field(
         None, description="抽取时使用的 LLM 配置"
@@ -56,7 +55,7 @@ class FestivalMemoryMetadata(BaseModel):
     def model_dump_for_db(self) -> dict[str, Any]:
         """
         序列化为 memory.meta_data 列存储的 dict。
-        包含 festival_name, festival_data；llm_config 仅在有值时写入。
+        包含 festival_name, festival_date；llm_config 仅在有值时写入。
         """
         out: dict[str, Any] = {}
         if self.festival_name is not None:
@@ -72,10 +71,10 @@ class FestivalMemoryMetadata(BaseModel):
                     "model": model,
                     "temperature": raw.get("temperature")
                     if raw.get("temperature") is not None
-                    else _LLM_CONFIG_DEFAULT_TEMPERATURE,
+                    else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
                     "max_tokens": raw.get("max_tokens")
                     if raw.get("max_tokens") is not None
-                    else _LLM_CONFIG_DEFAULT_MAX_TOKENS,
+                    else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
                 }
         return out
 
@@ -83,7 +82,7 @@ class FestivalMemoryMetadata(BaseModel):
     def model_validate_from_db(cls, d: dict[str, Any]) -> "FestivalMemoryMetadata":
         """
         从 memory.meta_data 原始 dict 反序列化。
-        读取 festival_name, festival_data, llm_config。
+        读取 festival_name, festival_date, llm_config。
         """
         if not isinstance(d, dict):
             return cls()
@@ -105,10 +104,10 @@ class FestivalMemoryMetadata(BaseModel):
                     "model": (stored.get("model") or "").strip(),
                     "temperature": stored.get("temperature")
                     if stored.get("temperature") is not None
-                    else _LLM_CONFIG_DEFAULT_TEMPERATURE,
+                    else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
                     "max_tokens": stored.get("max_tokens")
                     if stored.get("max_tokens") is not None
-                    else _LLM_CONFIG_DEFAULT_MAX_TOKENS,
+                    else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
                 }
             )
         return cls(
@@ -139,7 +138,7 @@ class Memory(Base):
         JSON,
         nullable=True,
         comment=(
-            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_data': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens} 可选}"
+            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_date': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens} 可选}"
         ),
     )
     extracted_at = Column(

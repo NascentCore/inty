@@ -11,7 +11,7 @@ from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetada
 
 
 def test_festival_memory_metadata_model_dump_for_db():
-    """FestivalMemoryMetadata.model_dump_for_db 输出 festival_name、festival_data、可选 llm_config（无 festival_date key）。"""
+    """FestivalMemoryMetadata.model_dump_for_db 输出 festival_name、festival_date、可选 llm_config（无 festival_data key）。"""
     meta = RealFestivalMemoryMetadata(
         festival_name="Easter",
         festival_date="2026-04-05",
@@ -19,8 +19,8 @@ def test_festival_memory_metadata_model_dump_for_db():
     )
     out = meta.model_dump_for_db()
     assert out["festival_name"] == "Easter"
-    assert out["festival_data"] == "2026-04-05"
-    assert "festival_date" not in out
+    assert out["festival_date"] == "2026-04-05"
+    assert "festival_data" not in out
     assert "llm_config" not in out
 
     meta_with_llm = RealFestivalMemoryMetadata(
@@ -34,7 +34,7 @@ def test_festival_memory_metadata_model_dump_for_db():
     )
     out2 = meta_with_llm.model_dump_for_db()
     assert out2["festival_name"] == "Xmas"
-    assert out2["festival_data"] == "2026-12-25"
+    assert out2["festival_date"] == "2026-12-25"
     assert out2["llm_config"] == {
         "model": "openrouter/foo",
         "temperature": 0.0,
@@ -43,9 +43,9 @@ def test_festival_memory_metadata_model_dump_for_db():
 
 
 def test_festival_memory_metadata_model_validate_from_db():
-    """FestivalMemoryMetadata.model_validate_from_db 仅读取 festival_name、festival_data、llm_config。"""
+    """FestivalMemoryMetadata.model_validate_from_db 读取 festival_name、festival_date、llm_config。"""
     meta = RealFestivalMemoryMetadata.model_validate_from_db(
-        {"festival_name": "New Year", "festival_data": "2027-01-01"}
+        {"festival_name": "New Year", "festival_date": "2027-01-01"}
     )
     assert meta.festival_name == "New Year"
     assert meta.festival_date == "2027-01-01"
@@ -54,7 +54,7 @@ def test_festival_memory_metadata_model_validate_from_db():
     meta_with_llm = RealFestivalMemoryMetadata.model_validate_from_db(
         {
             "festival_name": "Valentine",
-            "festival_data": "2027-02-14",
+            "festival_date": "2027-02-14",
             "llm_config": {
                 "model": "mistralai/devstral-2512",
                 "temperature": 0.0,
@@ -82,6 +82,8 @@ def _load_memory_service_module():
     fake_memory_module = types.ModuleType("app.models.memory")
     fake_memory_module.Memory = type("Memory", (), {})
     fake_memory_module.FestivalMemoryMetadata = RealFestivalMemoryMetadata
+    fake_memory_module.FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE = 0.0
+    fake_memory_module.FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS = 2000
 
     fake_chat_history_module = types.ModuleType("app.services.chat_history_service")
     fake_chat_history_module.add_festival_memory_prompt_message_sync = lambda *args, **kwargs: None
@@ -134,7 +136,7 @@ def test_build_festival_memory_metadata_contains_required_keys():
     out = service.build_festival_memory_metadata("Thanksgiving", date(2026, 11, 26))
     assert out == {
         "festival_name": "Thanksgiving",
-        "festival_data": "2026-11-26",
+        "festival_date": "2026-11-26",
     }
 
 
@@ -149,7 +151,7 @@ def test_build_festival_memory_metadata_includes_llm_config_when_provided():
     )
     assert out.get("llm_config") == llm_config
     assert "festival_name" in out
-    assert "festival_data" in out
+    assert "festival_date" in out
 
 
 def test_build_festival_memory_metadata_omits_llm_config_when_none_or_empty_model():
@@ -198,7 +200,7 @@ def test_metadata_to_llm_config_output_none_when_neither():
 
 def test_resolve_festival_name_and_date_from_metadata():
     name, day = service.resolve_festival_name_and_date(
-        {"festival_name": "New Year", "festival_data": "2026-01-01"},
+        {"festival_name": "New Year", "festival_date": "2026-01-01"},
     )
     assert name == "New Year"
     assert day == date(2026, 1, 1)
@@ -212,7 +214,7 @@ async def test_get_festival_memories_for_user_agent_reads_metadata():
     mock_result.fetchall.return_value = [
         (
             2,
-            {"festival_name": "Christmas", "festival_data": "2026-12-25"},
+            {"festival_name": "Christmas", "festival_date": "2026-12-25"},
             "From metadata",
         ),
         (
@@ -222,7 +224,7 @@ async def test_get_festival_memories_for_user_agent_reads_metadata():
         ),
         (
             3,
-            {"festival_name": "Broken", "festival_data": "bad-date"},
+            {"festival_name": "Broken", "festival_date": "bad-date"},
             "Should skip due to missing valid date",
         ),
     ]
@@ -254,7 +256,7 @@ async def test_get_undelivered_festival_memories_reads_metadata():
     mock_result.fetchall.return_value = [
         (
             8,
-            {"festival_name": "Mother's Day", "festival_data": "2026-05-10"},
+            {"festival_name": "Mother's Day", "festival_date": "2026-05-10"},
         ),
         (9, None),
     ]

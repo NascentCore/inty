@@ -111,7 +111,7 @@ def test_festival_memory_delivered_via_chat_completions(
         content="E2E test memory for chat completions",
         meta_data={
             "festival_name": "E2ETestFestCompletions",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
         delivery_at=None,
@@ -182,7 +182,7 @@ def test_festival_memory_chat_completions_gated_by_app_version(
         content="E2E test memory for version gating",
         meta_data={
             "festival_name": "E2ETestFestGated",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
         delivery_at=None,
@@ -249,7 +249,7 @@ def test_festival_memory_old_app_version_completions_delivery_at_stays_null(
         content="E2E test memory for old app completions delivery_at null",
         meta_data={
             "festival_name": "E2ETestFestCompletionsNull",
-            "festival_data": date.today().isoformat(),
+            "festival_date": date.today().isoformat(),
         },
         extracted_at=datetime.now(timezone.utc),
         delivery_at=None,

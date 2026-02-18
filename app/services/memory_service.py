@@ -11,7 +11,12 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import get_sync_engine
-from app.models.memory import FestivalMemoryMetadata, Memory
+from app.models.memory import (
+    FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
+    FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
+    FestivalMemoryMetadata,
+    Memory,
+)
 from app.services.chat_history_service import (
     add_festival_memory_prompt_message_sync,
     get_chat_history_connection,
@@ -23,12 +28,8 @@ from app.services.chat_service import generate_session_id
 MEMORY_TYPE_USER_COMMON = "user_common"
 MEMORY_TYPE_FESTIVAL = "festival"
 FESTIVAL_METADATA_NAME_KEY = "festival_name"
-FESTIVAL_METADATA_DATE_KEY = "festival_data"
+FESTIVAL_METADATA_DATE_KEY = "festival_date"
 FESTIVAL_METADATA_LLM_CONFIG_KEY = "llm_config"
-
-# 节日抽取输出 llm_config 时，仅含 model 时的默认参数（与 assemble_args 默认一致）
-_FESTIVAL_EXTRACTION_DEFAULT_TEMPERATURE = 0.0
-_FESTIVAL_EXTRACTION_DEFAULT_MAX_TOKENS = 2000
 
 
 def _normalize_memory_metadata(raw_metadata: object) -> dict:
@@ -49,10 +50,10 @@ def _llm_config_to_metadata_dict(
         "model": (raw.get("model") or "").strip() or None,
         "temperature": raw.get("temperature")
         if raw.get("temperature") is not None
-        else _FESTIVAL_EXTRACTION_DEFAULT_TEMPERATURE,
+        else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
         "max_tokens": raw.get("max_tokens")
         if raw.get("max_tokens") is not None
-        else _FESTIVAL_EXTRACTION_DEFAULT_MAX_TOKENS,
+        else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
     }
 
 
@@ -98,10 +99,10 @@ def metadata_to_llm_config_output(meta_data: dict) -> Optional[dict]:
         "model": model,
         "temperature": raw.get("temperature")
         if raw.get("temperature") is not None
-        else _FESTIVAL_EXTRACTION_DEFAULT_TEMPERATURE,
+        else FESTIVAL_METADATA_LLM_DEFAULT_TEMPERATURE,
         "max_tokens": raw.get("max_tokens")
         if raw.get("max_tokens") is not None
-        else _FESTIVAL_EXTRACTION_DEFAULT_MAX_TOKENS,
+        else FESTIVAL_METADATA_LLM_DEFAULT_MAX_TOKENS,
     }
 
 

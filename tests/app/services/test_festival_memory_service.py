@@ -30,7 +30,7 @@ class TestGetFestivalMemoriesForUserAgent:
         # row format: (id, meta_data, content)
         mock_row = (
             42,
-            {"festival_name": "春节", "festival_data": "2026-02-10"},
+            {"festival_name": "春节", "festival_date": "2026-02-10"},
             "用户与角色在春节相关的回忆摘要",
         )
         mock_result = MagicMock()

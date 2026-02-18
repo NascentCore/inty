@@ -10,10 +10,10 @@ from app.models.memory import FestivalMemoryMetadata as RealFestivalMemoryMetada
 
 
 def _build_festival_metadata(festival_name: str, festival_date: date) -> dict:
-    """Fake: 与 memory_service.build_festival_memory_metadata 一致，仅 festival_name、festival_data。"""
+    """Fake: 与 memory_service.build_festival_memory_metadata 一致，仅 festival_name、festival_date。"""
     return {
         "festival_name": festival_name,
-        "festival_data": festival_date.isoformat(),
+        "festival_date": festival_date.isoformat(),
     }
 
 
@@ -25,7 +25,7 @@ def _resolve_festival_name_and_date(metadata):
         raw_name = metadata.get("festival_name")
         if isinstance(raw_name, str) and raw_name.strip():
             name = raw_name.strip()
-        raw_day = metadata.get("festival_data")
+        raw_day = metadata.get("festival_date")
         if isinstance(raw_day, str):
             try:
                 day = date.fromisoformat(raw_day)
@@ -166,7 +166,7 @@ async def test_extract_festival_to_dict_uses_metadata_and_omits_extracted_at():
         content="summary",
         meta_data={
             "festival_name": "Easter",
-            "festival_data": "2026-04-05",
+            "festival_date": "2026-04-05",
             "llm_config": llm_config_stored,
         },
     )
@@ -230,7 +230,7 @@ async def test_extract_festival_to_dict_passes_llm_config_to_summarizer():
         content="summary with custom model",
         meta_data={
             "festival_name": "Valentine",
-            "festival_data": "2026-02-14",
+            "festival_date": "2026-02-14",
             "llm_config": llm_config,
         },
     )
