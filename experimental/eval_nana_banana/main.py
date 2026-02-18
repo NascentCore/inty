@@ -3,6 +3,7 @@
 Quota 等等问题
 """
 import base64
+import cyclopts
 import datetime
 import json
 import os
@@ -215,7 +216,7 @@ def save_inline_image_to_jpeg(response, path: str) -> bool:
   return False
 
 
-if __name__ == "__main__":
+def main():
   start_time = datetime.datetime.now()
   result = generate(SAMPLE_PROMPT)
   duration = datetime.datetime.now() - start_time
@@ -236,3 +237,7 @@ if __name__ == "__main__":
     print(f"Saved response JSON to {out_json}")
   else:
     print("Could not serialize response to JSON")
+
+
+if __name__ == "__main__":
+  cyclopts.run(main)
