@@ -56,9 +56,36 @@ from dotenv import load_dotenv
 # Load environment variables from .env file at the start of the script
 load_dotenv()
 
+
+NURSE_CHAR_AVATAR_PATH = "tests/files/nurse_char.jpg"
+ZUNLONG_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
+
+
+def get_image_part(avatar_path: str):
+  """
+  返回图片的 Part 对象，作为 GenAI client 输入的一部分。
+  """
+  with open(avatar_path, "rb") as f:
+    bytes = f.read()
+  return types.Part.from_bytes(
+    data=bytes,
+    mime_type="image/jpeg",
+  )
+
+
+def get_text_part(text: str):
+  """
+  返回文本的 Part 对象，作为 GenAI client 输入的一部分。
+  """
+  return types.Part.from_text(text=text)
+
+
+# TODO: Change to using AsyncClient and update this to be async as well.
+# https://googleapis.github.io/python-genai/genai.html#genai.client.AsyncClient
 def generate(prompt: str):
   client = genai.Client(
     vertexai=True,
+    # 这个只用于测试，生产环境使用 key.json 文件
     api_key=os.environ.get("GOOGLE_CLOUD_API_KEY"),
     # NOTES:
     # 1. api_key and location are mutually exclusive.
@@ -67,31 +94,25 @@ def generate(prompt: str):
     # location="global",
   )
 
-  nurse_path = "tests/files/nurse_char.jpg"
-  zunlong_path = "tests/files/zunlong.jpg"
+  
 
-  msg1_text1 = types.Part.from_text(text=prompt)
-  with open(nurse_path, "rb") as f:
-    nurse_bytes = f.read()
-  msg1_image1 = types.Part.from_bytes(
-      data=nurse_bytes,
-      mime_type="image/jpeg",
-  )
-  with open(zunlong_path, "rb") as f:
-    zunlong_bytes = f.read()
-  msg1_image2 = types.Part.from_bytes(
-      data=zunlong_bytes,
-      mime_type="image/jpeg",
-  )
+  user_prompt = get_text_part(prompt)
+  nurse_char_image = get_image_part(NURSE_CHAR_AVATAR_PATH)
+  zunlong_user_image = get_image_part(ZUNLONG_USER_AVATAR_PATH)
   si_text1 = R_RATED_ROMANCE_DIRECTOR_PROMPT
   model = NANO_BANANA_PRO.id_on_provider
   contents = [
     types.Content(
       role="user",
+      # NanoBananaPro:
+      # - zunlong_user_image, nurse_char_image, user_prompt
+      # - 或者 nurse_char_image, zunlong_user_image, user_prompt
+      # 这种顺序，每次都会被 block IMAGE_SAFETY
+      # user_prompt 第一则没问题
       parts=[
-        msg1_text1,
-        msg1_image1,
-        msg1_image2
+        zunlong_user_image,
+        nurse_char_image,
+        user_prompt,
       ]
     ),
   ]
