@@ -16,7 +16,7 @@
 
 ## Android App 版本功能门控
 
-- Users 数据表中每个用户会注册自己的 `last_android_app_version_code`, 用于进行版本门控
+- Users 数据表中每个用户会注册自己的 `last_android_app_version_code` 用于进行版本门控
 - 版本门控代码示例：
   - 添加配置项到 app/utils/config.py 中的配置对应功能的最小 app version code；后端在 app/api/utils/feature_gating.py 添加与之对应的判断函数
     例子： app/utils/config.py 中的 min_app_version_code_for_festival_memory，
