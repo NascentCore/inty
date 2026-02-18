@@ -63,6 +63,52 @@ class FakeGooglePlayService:
 
 
 @pytest.fixture
+def version_app(monkeypatch: pytest.MonkeyPatch):
+    """Provide a FastAPI app mounting only the version router (no real DB)."""
+    app = FastAPI()
+    app.include_router(version.router, prefix="/api/v1")
+
+    async def override_current_active_user():
+        return _make_user()
+
+    async def override_get_async_db():
+        yield None
+
+    app.dependency_overrides[deps.get_current_active_user] = (
+        override_current_active_user
+    )
+    app.dependency_overrides[deps.get_async_db] = override_get_async_db
+
+    fake_service = FakeGooglePlayService()
+    app.state.fake_google_play_service = fake_service
+    monkeypatch.setattr(version, "google_play_service", fake_service)
+
+    try:
+        yield app
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_version_check_returns_google_play_result(version_app: FastAPI):
+    """Ensure /api/v1/version/check returns the payload from Google Play service."""
+    headers = {
+        "appVersionCode": "150",
+        "appVersionName": "1.5.0",
+    }
+
+    with TestClient(version_app) as client:
+        response = client.post("/api/v1/version/check", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == 200
+    assert body["data"]["current_version"] == "150"
+    assert body["data"]["latest_version"] == "200"
+    assert body["data"]["reminder_action"] == VersionReminderAction.POP_UP_REMINDER.value
+    assert version_app.state.fake_google_play_service.last_call == 150
+
+
+@pytest.fixture
 def db_session():
     """Sync DB session using config.yaml database.url; used to prepare data and assert."""
     engine = create_engine(global_config_loaded_from_config_yaml.database.url)
