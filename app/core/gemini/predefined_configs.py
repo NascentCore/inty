@@ -1,4 +1,6 @@
-
+"""
+Predefined generation content configurations for Gemini APIs.
+"""
 from google.genai import types
 
 

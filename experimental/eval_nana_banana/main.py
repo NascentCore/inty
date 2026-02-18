@@ -11,6 +11,7 @@ from google import genai
 from google.genai import types
 
 
+from app.core.gemini.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
 from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 
@@ -144,12 +145,7 @@ def generate(prompt: str):
     response_modalities = ["IMAGE"],
     # safety_settings = LOWEST_SAFETY_SETTINGS,
     system_instruction=[types.Part.from_text(text=si_text1)],
-    image_config=types.ImageConfig(
-      aspect_ratio="9:16",
-      image_size="1K",
-      # NOTE: output_mime_type is not supported on Gemini APIs.
-      # output_mime_type="image/jpeg",
-    ),
+    image_config=DEFAULT_9_16_1K_IMAGE_CONFIG,
   )
 
   result = client.models.generate_content(
