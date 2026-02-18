@@ -7,6 +7,13 @@
 - API endpoints 返回给调用方的信息必须用英文，因为用户都是美国用户
 - 新增或修改 API endpoints 必须添加端到端测试，假设测试用后端可在 localhost:8000 访问
 
+## AI 生成内容元数据
+
+在设计 AI 内容生成功能时、AI 生成内容的元数据需要保留在数据库中；包括：
+
+- 模型配置：app/api/types/llm_config.py
+- 提示词：生成该内容的提示词、与上面的模型配置一起，就可以复现生成内容
+
 ## Feature gating
 
 1. 添加配置项到 app/utils/config.py 中的配置对应功能的最小 app version code；后端在 app/api/utils/feature_gating.py 添加与之对应的判断函数
