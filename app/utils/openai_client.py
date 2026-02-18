@@ -2,9 +2,11 @@
 Wrapper of OpenAI API, used to wrap the OpenAI API with LangSmith.
 """
 
-"""
-Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
-"""
+# TODO: 写一个 Wrapper 来完成常见功能，包括：
+# 1. langsmith tracing
+# 2. structured output
+# 3. system_prompt, prompt, 单一 text 输出及结构和输出
+# 之前尝试：https://github.com/NascentCore/inty/pull/2310 没有完成
 
 import os
 import threading
