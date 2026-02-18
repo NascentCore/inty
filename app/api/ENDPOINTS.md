@@ -162,6 +162,8 @@
 |------|------|----------|
 | `/api/v1/version/check` | POST | `app/api/v1/endpoints/version.py` |
 
+> **`/api/v1/version/check` 行为说明**：该端点会将客户端上报的 Android 应用版本代码（Header `appVersionCode`）写入 `users.last_android_app_version_code`，用于 **push worker 的 feature gating**（worker 可根据该值决定是否发送或如何构造 push）。字段命名为 Android 专用，因后端未来可能服务 iOS 应用。
+
 ### 角色主题 (Character Themes)
 
 | 路径 | 方法 | 实现文件 |

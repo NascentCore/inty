@@ -106,6 +106,13 @@ class User(Base):
         comment="FCM token 无效时间，如果为 None 表示用户有有效 token 或未检查，如果有值表示在这个时间点发现用户所有 token 都无效",
     )
 
+    # 用于 push worker 的 feature gating：worker 根据此值决定是否发送或如何构造 push
+    last_android_app_version_code = Column(
+        Integer,
+        nullable=True,
+        comment="Last Android app version code reported by client on POST /api/v1/version/check; used for feature gating in the push worker. Android-specific because backend may serve iOS in the future.",
+    )
+
     # 关系
     agents = relationship("Agent", back_populates="creator")
     following_agents = relationship(
