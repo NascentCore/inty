@@ -116,8 +116,8 @@ def get_all_messages_for_user(
     if max_messages is not None and max_messages > 0:
         # 使用子查询先按升序排列，然后取最后 N 条（最新的消息）
         query = f"""
-            SELECT * FROM (
-                SELECT message
+            SELECT message FROM (
+                SELECT message, created_at
                 FROM chat_history
                 WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
                 ORDER BY created_at ASC
