@@ -773,14 +773,6 @@ class ImageGenerationService:
             # 转换为CDN URL
             cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
-            # 构建图片元数据
-            image_metadata = {
-                "width": width,
-                "height": height,
-                "format": image_format.lower(),
-                "byte_size": len(image_data),
-            }
-
             # 更新消息的 meta_data，将图片信息存储在其中
             metadata_update = {
                 "generated_image": {
