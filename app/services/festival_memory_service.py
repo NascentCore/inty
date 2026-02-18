@@ -34,13 +34,16 @@ from app.services.memory_service import (
     resolve_festival_name_and_date,
 )
 from app.utils.openai_client import chat_completion_for_extraction
-from app.utils.openrouter_memory import (
-    DEFAULT_MEMORY_EXTRACTION_MODEL as DEFAULT_FESTIVAL_EXTRACTION_MODEL,
-)
 
 _MAX_IN_PARAMS = 5000
 DEFAULT_MIN_ROUNDS_IN_WINDOW = 15
 INTELLIMATE_OFFICIAL_AGENT_ID = INTELLIMATE_AGENT_ID
+DEFAULT_FESTIVAL_EXTRACTION_MODEL = "google/gemini-3-pro-preview"
+DEFAULT_FESTIVAL_EXTRACTION_MAX_TOKENS = 2048
+DEFAULT_FESTIVAL_EXTRACTION_TEMPERATURE = 0.0
+DEFAULT_FESTIVAL_EXTRACTION_TOP_P = 0.9
+DEFAULT_FESTIVAL_EXTRACTION_FREQUENCY_PENALTY = 0.3
+DEFAULT_FESTIVAL_EXTRACTION_PRESENCE_PENALTY = 0.3
 
 
 def _should_skip_agent_for_festival_memory_extraction(agent_id: Optional[str]) -> bool:
@@ -250,7 +253,9 @@ def assemble_args(
 ) -> Tuple[str, LLMConfig]:
     """
     组装 chat_completion_for_extraction 的调用参数（full_prompt, LLMConfig）。
-    若 llm_config 存在且含 model，则使用该 LLMConfig；否则使用全局默认（节日抽取：max_tokens=2000, temperature=0.0）。
+    若 llm_config 存在且含 model，则使用该 LLMConfig；
+    否则使用节日抽取默认（model=google/gemini-3-pro-preview, temperature=0.0,
+    max_tokens=2048, top_p=0.9, frequency_penalty=0.3, presence_penalty=0.3）。
     供 extract_festival_and_save 与 extract_festival_to_dict 复用。
     """
     llm_config = _normalize_llm_config(llm_config)
@@ -279,8 +284,11 @@ Festival date: {date_str}
     ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
     default_llm_config = LLMConfig(
         model=model_name,
-        max_tokens=2000,
-        temperature=0.0,
+        max_tokens=DEFAULT_FESTIVAL_EXTRACTION_MAX_TOKENS,
+        temperature=DEFAULT_FESTIVAL_EXTRACTION_TEMPERATURE,
+        top_p=DEFAULT_FESTIVAL_EXTRACTION_TOP_P,
+        frequency_penalty=DEFAULT_FESTIVAL_EXTRACTION_FREQUENCY_PENALTY,
+        presence_penalty=DEFAULT_FESTIVAL_EXTRACTION_PRESENCE_PENALTY,
     )
     return (full_prompt, default_llm_config)
 

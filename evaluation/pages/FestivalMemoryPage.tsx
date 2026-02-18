@@ -52,6 +52,15 @@ const FESTIVAL_TIMEZONE_OPTIONS = [
   { value: "Japan", label: "Japan" },
 ];
 
+const DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG = {
+  model: "google/gemini-3-pro-preview",
+  temperature: 0,
+  max_tokens: 2048,
+  top_p: 0.9,
+  frequency_penalty: 0.3,
+  presence_penalty: 0.3,
+} as const;
+
 const DEFAULT_FORM_VALUES = {
   timezone: "UTC",
   festival_name: "",
@@ -61,7 +70,8 @@ const DEFAULT_FORM_VALUES = {
   run_at_date: null as dayjs.Dayjs | null,
   run_at_hour: 4,
   min_rounds_in_window: undefined as number | undefined,
-  modelType: "default",
+  modelType: "custom",
+  ...DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG,
 } as const;
 
 export const FestivalMemoryPage: React.FC = () => {
@@ -142,16 +152,20 @@ export const FestivalMemoryPage: React.FC = () => {
             ? row.min_rounds_in_window
             : undefined,
         modelType: row.llm_config ? "custom" : "default",
-        ...(row.llm_config
-          ? {
-              model: row.llm_config.model || "",
-              temperature: row.llm_config.temperature ?? 0.7,
-              max_tokens: row.llm_config.max_tokens ?? 2048,
-              top_p: row.llm_config.top_p ?? 1,
-              frequency_penalty: row.llm_config.frequency_penalty ?? 0,
-              presence_penalty: row.llm_config.presence_penalty ?? 0,
-            }
-          : {}),
+        model: row.llm_config?.model || DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.model,
+        temperature:
+          row.llm_config?.temperature ??
+          DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.temperature,
+        max_tokens:
+          row.llm_config?.max_tokens ??
+          DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.max_tokens,
+        top_p: row.llm_config?.top_p ?? DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.top_p,
+        frequency_penalty:
+          row.llm_config?.frequency_penalty ??
+          DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.frequency_penalty,
+        presence_penalty:
+          row.llm_config?.presence_penalty ??
+          DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.presence_penalty,
       });
     }, 100);
     setModalOpen(true);
@@ -186,11 +200,21 @@ export const FestivalMemoryPage: React.FC = () => {
         values.modelType === "custom" && customModel
           ? {
               model: customModel,
-              temperature: Number(values.temperature ?? 0.7),
-              max_tokens: Number(values.max_tokens ?? 2048),
-              top_p: Number(values.top_p ?? 1),
-              frequency_penalty: Number(values.frequency_penalty ?? 0),
-              presence_penalty: Number(values.presence_penalty ?? 0),
+              temperature: Number(
+                values.temperature ?? DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.temperature,
+              ),
+              max_tokens: Number(
+                values.max_tokens ?? DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.max_tokens,
+              ),
+              top_p: Number(values.top_p ?? DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.top_p),
+              frequency_penalty: Number(
+                values.frequency_penalty ??
+                  DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.frequency_penalty,
+              ),
+              presence_penalty: Number(
+                values.presence_penalty ??
+                  DEFAULT_FESTIVAL_MEMORY_LLM_CONFIG.presence_penalty,
+              ),
             }
           : null;
 

@@ -97,7 +97,7 @@ class Memory(Base):
         JSON,
         nullable=True,
         comment=(
-            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_date': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens} 可选}"
+            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_date': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens, top_p, frequency_penalty, presence_penalty} 可选}"
         ),
     )
     extracted_at = Column(
