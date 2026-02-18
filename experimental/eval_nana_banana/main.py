@@ -56,6 +56,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file at the start of the script
 load_dotenv()
 
+
+# TODO: Change to using AsyncClient and update this to be async as well.
+# https://googleapis.github.io/python-genai/genai.html#genai.client.AsyncClient
 def generate(prompt: str):
   client = genai.Client(
     vertexai=True,
