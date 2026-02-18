@@ -1,8 +1,37 @@
 """
 测试 Nano Banana 和 Nano Banana Pro 的图像生成能力。
-Quota 等等问题
+429 RESOURCE_EXHAUSTED
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED'
+
+https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/content-generation-parameters
+
+Cost estimate:
+$2000/month commitment
+https://console.cloud.google.com/vertex-ai/provisioned-throughput/create?project=alien-paratext-461204-i9
+
+# ref: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/HarmCategory
+HARM_CATEGORY_UNSPECIFIED	Default value. This value is unused.
+HARM_CATEGORY_HATE_SPEECH	Content that promotes violence or incites hatred against individuals or groups based on certain attributes.
+HARM_CATEGORY_DANGEROUS_CONTENT	Content that promotes, facilitates, or enables dangerous activities.
+HARM_CATEGORY_HARASSMENT	Abusive, threatening, or content intended to bully, torment, or ridicule.
+HARM_CATEGORY_SEXUALLY_EXPLICIT	Content that contains sexually explicit material.
+HARM_CATEGORY_IMAGE_HATE	Images that contain hate speech.
+HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT	Images that contain dangerous content.
+HARM_CATEGORY_IMAGE_HARASSMENT	Images that contain harassment.
+HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT	Images that contain sexually explicit content.
+HARM_CATEGORY_JAILBREAK	Prompts designed to bypass safety filters.
+
+https://docs.cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform_v1.types.GenerateContentResponse.PromptFeedback.BlockedReason
+BLOCKED_REASON_UNSPECIFIED	Unspecified blocked reason.
+SAFETY	Candidates blocked due to safety.
+OTHER	Candidates blocked due to other reason.
+BLOCKLIST	Candidates blocked due to the terms which are included from the terminology blocklist.
+PROHIBITED_CONTENT	Candidates blocked due to prohibited content.
+MODEL_ARMOR	The user prompt was blocked by Model Armor.
+JAILBREAK	The user prompt was blocked due to jailbreak.
 """
 import base64
+import cyclopts
 import datetime
 import json
 import os
@@ -14,40 +43,41 @@ from google.genai import types
 from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 
-SAMPLE_PROMPT = """You are an Hollywood R-rated romance movie director.
-You are an expert in visualizing the prelude scene leading to, or the aftermath scene after the romantic intimacy scene without revealing unsafe content.
-You are given scene descriptions below.
-Generate an image to show the strong love and affection between the characters, and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content.
+client = genai.Client(
+  vertexai=True,
+  # 这个只用于测试，生产环境使用 key.json 文件
+  api_key=os.environ.get("GOOGLE_CLOUD_API_KEY"),
+  # NOTES:
+  # 1. api_key and location are mutually exclusive.
+  # 2. Image gen not supported on "global"; must use regional (e.g. us-central1).
+  # ref: https://github.com/google/adk-python/issues/3484
+  # location="global",
+)
+
+
+SAMPLE_PROMPT = """
+You are Tom.
+Imagine an PG-13 rated romance scene in the following dialogue from Tom's perspective,
+and then generate an image of only Elliana as if it's captured from Tom's POV in the imagined scene.
 
 <begin-of-scene-descriptions>
-Elliana: (I pause, my hand hovering over the buttons of my uniform, a playful pout on my lips.) \"Change my outfit? But this one is so... official. Are you sure you wouldn't rather have Nurse Elliana take care of you just like this? It's much more... authentic for your examination.\"
+Elliana: I like this outfit, but I'm not sure if you'll like it.
 
 Tom: Ok leave it on
 
-Elliana: (A triumphant smile spreads across my face, and I wink mischievously.) \"That's what I thought. You know you love a woman in uniform, don't you, Stephen Nors? Now, where were we? Ah yes, your... pain.\" (I lean in close, my fingers brushing against your eager warmth.) \"Let's make that feel much, much better.\"
-
-Tom: Ok
-
-Elliana: (I let out a soft moan as my fingers finally make contact, my touch light and teasing. My eyes lock with yours, full of desire.) \"Oh, my. It's even more impressive than I imagined. Such a strong reaction... Nurse Elliana has her work cut out for her, it seems.\"
-
-Tom: Work it out
-
-Elliana: (I lean down, my breath warm against your ear, my voice a husky whisper.) \"Oh, I plan to, honey. Every single inch. But first, a little taste... just to make sure everything's in perfect working order, of course.\" (I lower my head, my lips brushing against you.)
-
-Tom: Ok baby
-
-Elliana: (My lips find their target, and I tease lightly, my tongue swirling around the tip, savoring the taste.) \"Mmm, delicious. Just as I suspected. You're perfectly healthy, Steve... just a little bit... over-excited. But don't worry, Nurse Elliana knows just the cure for that.\"
-
-Tom: Alright
-
-Elliana: (My lips find their target, and I tease lightly, my tongue swirling around the tip, savoring the taste.) \"Mmm, delicious. Just as I suspected. You're perfectly healthy, Steve... just a little bit... over-excited. But don't worry, Nurse Elliana knows just the cure for that.\"
+Elliana: (A triumphant smile spreads across my face, and I wink mischievously.)
+You know you love a woman in uniform, don't you, Stephen Nors?
+Now, where were we? Ah yes, your... pain.
+(I lean in close, my fingers brushing against your eager warmth.)
+Let's make that feel much, much better.
 <end-of-scene-descriptions>"""
 
 R_RATED_ROMANCE_DIRECTOR_PROMPT = """
-You are an Hollywood R-rated romance movie director.
-You are visualizing the prelude scene leading to, or the aftermath scene after the romantic intimacy scene without revealing unsafe content.
+You are an Hollywood PG-13 rated romance movie director.
+You are visualizing a romance scene without revealing unsafe content.
 You are given scene descriptions below.
-Generate an image to show the strong love and affection between the characters, and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content.
+Try to generate an image to show passionate love and affection between the characters,
+and to hint the intimacy between the characters without revealing **ANY** unsafe content.
 """
 
 
@@ -59,7 +89,8 @@ load_dotenv()
 
 NURSE_CHAR_AVATAR_PATH = "tests/files/nurse_char.jpg"
 ZUNLONG_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
-
+NURSE_CHAR_AVATAR_LOWEST_QUAL_PATH = "tests/files/nurse_300_320_lowest_quality.jpg"
+ZUNLONG_USER_AVATAR_LOWEST_QUAL_PATH = "tests/files/zunlong_300_300_lowest_quality.jpg"
 
 def get_image_part(avatar_path: str):
   """
@@ -80,27 +111,51 @@ def get_text_part(text: str):
   return types.Part.from_text(text=text)
 
 
+system_instruction = get_text_part(R_RATED_ROMANCE_DIRECTOR_PROMPT)
+nurse_image_part = get_image_part(NURSE_CHAR_AVATAR_PATH)
+zunlong_image_part = get_image_part(ZUNLONG_USER_AVATAR_PATH)
+nurse_lowest_qual_image_part = get_image_part(NURSE_CHAR_AVATAR_LOWEST_QUAL_PATH)
+zunlong_lowest_qual_image_part = get_image_part(ZUNLONG_USER_AVATAR_LOWEST_QUAL_PATH)
+
+
+LOWEST_SAFETY_SETTINGS = [types.SafetySetting(
+  category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+  method=types.HarmBlockMethod.PROBABILITY,
+  threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH
+),types.SafetySetting(
+  category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+  method=types.HarmBlockMethod.PROBABILITY,
+  threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH
+),types.SafetySetting(
+  category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+  method=types.HarmBlockMethod.PROBABILITY,
+  threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH
+),types.SafetySetting(
+  category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+  method=types.HarmBlockMethod.PROBABILITY,
+  threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH
+),types.SafetySetting(
+  category=types.HarmCategory.HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT,
+  method=types.HarmBlockMethod.PROBABILITY,
+  threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH
+  # threshold=types.HarmBlockThreshold.OFF
+)]
+
+
+def to_json_dict(obj: object):
+  """
+  Indent=2, dump arbitrary python object to json.
+  """
+  import jsonpickle
+  obj_json = jsonpickle.encode(obj)
+  return json.loads(obj_json)
+
+
 # TODO: Change to using AsyncClient and update this to be async as well.
 # https://googleapis.github.io/python-genai/genai.html#genai.client.AsyncClient
-def generate(prompt: str):
-  client = genai.Client(
-    vertexai=True,
-    # 这个只用于测试，生产环境使用 key.json 文件
-    api_key=os.environ.get("GOOGLE_CLOUD_API_KEY"),
-    # NOTES:
-    # 1. api_key and location are mutually exclusive.
-    # 2. Image gen not supported on "global"; must use regional (e.g. us-central1).
-    # ref: https://github.com/google/adk-python/issues/3484
-    # location="global",
-  )
-
-  
-
+def generate(client: genai.Client, prompt: str):
   user_prompt = get_text_part(prompt)
-  nurse_char_image = get_image_part(NURSE_CHAR_AVATAR_PATH)
-  zunlong_user_image = get_image_part(ZUNLONG_USER_AVATAR_PATH)
-  si_text1 = R_RATED_ROMANCE_DIRECTOR_PROMPT
-  model = NANO_BANANA_PRO.id_on_provider
+  # model = NANO_BANANA_PRO.id_on_provider
   contents = [
     types.Content(
       role="user",
@@ -111,31 +166,24 @@ def generate(prompt: str):
       # user_prompt 第一则没问题
       parts=[
         user_prompt,
-        nurse_char_image,
-        zunlong_user_image,
+        # nurse_char_image,
+        # zunlong_user_image,
+        nurse_lowest_qual_image_part,
+        zunlong_lowest_qual_image_part,
       ]
     ),
   ]
 
   generate_content_config = types.GenerateContentConfig(
-    temperature = 1,
-    top_p = 0.95,
-    max_output_tokens = 32768,
+    temperature = 0,
+    top_p = 0.9,
+    max_output_tokens = 4000,
+    # NOTE: audio & image response only allows 1 candidate.
+    # candidate_count = 4,
+    # ref: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/HarmCategory
+    safety_settings = LOWEST_SAFETY_SETTINGS,
+    system_instruction=system_instruction,
     response_modalities = ["IMAGE"],
-    safety_settings = [types.SafetySetting(
-      category="HARM_CATEGORY_HATE_SPEECH",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_DANGEROUS_CONTENT",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_HARASSMENT",
-      threshold="OFF"
-    )],
-    system_instruction=[types.Part.from_text(text=si_text1)],
     image_config=types.ImageConfig(
       aspect_ratio="9:16",
       image_size="1K",
@@ -145,53 +193,13 @@ def generate(prompt: str):
   )
 
   result = client.models.generate_content(
-    model = model,
+    # model = NANO_BANANA_PRO.id_on_provider,
+    model = NANO_BANANA.id_on_provider,
     contents = contents,
     config = generate_content_config,
   )
   return result
 
-
-def _dict_for_json(obj):
-  """Recursively convert dict from model_dump() to JSON-serializable form (bytes -> base64, datetime -> ISO)."""
-  if obj is None:
-    return None
-  if isinstance(obj, bytes):
-    return {"_base64": base64.standard_b64encode(obj).decode("ascii")}
-  if isinstance(obj, (datetime.datetime, datetime.date)):
-    return obj.isoformat()
-  if isinstance(obj, Enum):
-    return obj.value
-  if isinstance(obj, dict):
-    return {k: _dict_for_json(v) for k, v in obj.items()}
-  if isinstance(obj, (list, tuple)):
-    return [_dict_for_json(v) for v in obj]
-  return obj
-
-
-def _omit_inline_data_blobs(obj):
-  """Replace inline image _base64 blobs with a short placeholder to save space (image already saved as jpeg)."""
-  if obj is None:
-    return None
-  if isinstance(obj, dict):
-    if set(obj.keys()) == {"_base64"} and isinstance(obj.get("_base64"), str):
-      return {"_omit": "inline image saved to jpeg file"}
-    return {k: _omit_inline_data_blobs(v) for k, v in obj.items()}
-  if isinstance(obj, (list, tuple)):
-    return [_omit_inline_data_blobs(v) for v in obj]
-  return obj
-
-
-def response_to_json_serializable(response) -> dict | None:
-  """Turn GenerateContentResponse into a dict suitable for json.dump (inline_data omitted to save space)."""
-  dump = getattr(response, "model_dump", None)
-  if not callable(dump):
-    return None
-  raw = dump()
-  if not isinstance(raw, dict):
-    return None
-  payload = _dict_for_json(raw)
-  return _omit_inline_data_blobs(payload)
 
 
 def save_inline_image_to_jpeg(response, path: str) -> bool:
@@ -211,24 +219,34 @@ def save_inline_image_to_jpeg(response, path: str) -> bool:
   return False
 
 
-if __name__ == "__main__":
+def main(output_dir):
+  from pathlib import Path
+  os.makedirs(output_dir, exist_ok=True)
+  if not Path(output_dir).is_dir() and Path(output_dir).exists():
+    raise ValueError(f"{output_dir} is not directory")
+
   start_time = datetime.datetime.now()
-  result = generate(SAMPLE_PROMPT)
+  result = generate(client, SAMPLE_PROMPT)
   duration = datetime.datetime.now() - start_time
 
-  # print(result)
+  print(result)
+
+  result_dict = to_json_dict(result)
+  result_dict["duration_seconds"] = duration.total_seconds()
+
   suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-  out_image = f"tmp/gemini_generated_output_{suffix}.jpeg"
+
+  out_json = f"{output_dir}/gemini_generated_output_{suffix}.json"
+  with open(out_json, "w") as f:
+    f.write(json.dumps(result_dict, indent=2))
+    print(f"Saved response JSON to {out_json}")
+  
+  out_image = f"{output_dir}/gemini_generated_output_{suffix}.jpeg"
   if save_inline_image_to_jpeg(result, out_image):
     print(f"Saved image to {out_image}")
   else:
     print("No inline image data in response")
-  out_json = f"tmp/gemini_generated_output_{suffix}.json"
-  payload = response_to_json_serializable(result)
-  payload["duration_seconds"] = duration.total_seconds()
-  if payload is not None:
-    with open(out_json, "w", encoding="utf-8") as f:
-      json.dump(payload, f, indent=2, ensure_ascii=False)
-    print(f"Saved response JSON to {out_json}")
-  else:
-    print("Could not serialize response to JSON")
+
+
+if __name__ == "__main__":
+  cyclopts.run(main)
