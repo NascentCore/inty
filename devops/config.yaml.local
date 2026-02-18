@@ -51,6 +51,7 @@ verification:
 logging:
   level: "DEBUG"
   colorize: true
+  json: false
 
 firebase:
   service_account_path: ".secrets/firebase-service-account-key.json"

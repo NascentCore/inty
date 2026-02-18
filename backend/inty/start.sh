@@ -53,6 +53,7 @@ export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/alembic/alembic.ini}"
 # 但 alembic upgrade head 需要 init_admin_user.py 运行完成生成的默认管理员 id。
 # python scripts/init_admin_user.py
 alembic -c "$ALEMBIC_CONFIG" upgrade head
+echo "Database migrations completed."
 
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
 python scripts/init_subscription_plans_simple.py

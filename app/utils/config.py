@@ -63,8 +63,11 @@ class LoggingConfig:
     format: str = (
         f"{LOGGING_TIME_FORMAT} | {LOGGING_LEVEL_FORMAT} | {LOGGING_FILE_FORMAT} - {LOGGING_MESSAGE_FORMAT}"
     )
-    # 是否使用颜色
+    # 是否使用颜色；默认关闭（适合非本地环境）
     colorize: bool = False
+    # 是否输出为 JSON 行格式（每行一个 JSON 对象，便于日志聚合/解析）
+    # 默认打开（适合非本地环境）
+    json: bool = True
 
     def __post_init__(self):
         if self.colorize:

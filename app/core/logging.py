@@ -48,14 +48,23 @@ def init_logger():
     # 配置默认的 request_id，避免在非请求上下文中出错
     logger.configure(extra={"request_id": "-"})
 
-    # 添加控制台输出；colorize=True 时格式中的 <level>/<green> 等标签才会变为 ANSI 颜色
-    logger.add(
-        sys.stderr,
-        level=global_config_loaded_from_config_yaml.logging.level,
-        format=global_config_loaded_from_config_yaml.logging.format,
-        # 不指定这个参数，也没影响命令行颜色输出，但是保险起见，就加上了
-        colorize=global_config_loaded_from_config_yaml.logging.colorize,
-    )
+    # 添加控制台输出
+    log_cfg = global_config_loaded_from_config_yaml.logging
+    if log_cfg.json:
+        # JSON 行格式：每行一个 JSON 对象，便于日志聚合/解析；serialize=True 时 format/colorize 被忽略
+        logger.add(
+            sys.stderr,
+            level=log_cfg.level,
+            serialize=True,
+        )
+    else:
+        # 人类可读格式；colorize=True 时格式中的 <level>/<green> 等标签才会变为 ANSI 颜色
+        logger.add(
+            sys.stderr,
+            level=log_cfg.level,
+            format=log_cfg.format,
+            colorize=log_cfg.colorize,
+        )
 
     # 拦截标准 logging 的日志（例如 FastAPI/uvicorn）
     intercept_handler = InterceptHandler()
