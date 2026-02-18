@@ -278,12 +278,8 @@ Festival date: {date_str}
 """
     if llm_config and (llm_config.model or "").strip():
         return (full_prompt, llm_config)
-    cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
-    model_name = (
-        cfg.model.strip() if cfg and cfg.model else None
-    ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
     default_llm_config = LLMConfig(
-        model=model_name,
+        model=DEFAULT_FESTIVAL_EXTRACTION_MODEL,
         max_tokens=DEFAULT_FESTIVAL_EXTRACTION_MAX_TOKENS,
         temperature=DEFAULT_FESTIVAL_EXTRACTION_TEMPERATURE,
         top_p=DEFAULT_FESTIVAL_EXTRACTION_TOP_P,
