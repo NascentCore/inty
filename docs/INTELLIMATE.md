@@ -66,6 +66,7 @@ Click the **Me** or the **right-most** icon
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
 | Find or follow iMates | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
 | Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
+| Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
 | Create or edit an iMate | Explore → “Create/+” or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
@@ -88,6 +89,7 @@ Click the **Me** or the **right-most** icon
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
 - VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
+- Fullscreen image viewer includes a VIP **Upscale** action (next to Share) with **1x / 2x / 4x** options. Non-subscribed users can still use it by spending **10 credits** once per open viewer session.
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/0326fd90-1bbe-4207-9e9f-1c71c4608847" />
 

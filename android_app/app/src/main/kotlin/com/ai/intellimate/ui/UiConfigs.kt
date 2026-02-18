@@ -317,6 +317,9 @@ object UiConfigs {
     object Credits {
         /** VIP 角色聊天每条消息消耗的积分 */
         const val VipChatMessageCost = 1
+
+        /** VIP 图片高清放大功能（非订阅用户）单次解锁积分 */
+        const val VipImageUpscaleCost = 10
     }
 
     /** URL 配置 - 适用于外部链接，如社交媒体邀请链接、帮助中心等 */
