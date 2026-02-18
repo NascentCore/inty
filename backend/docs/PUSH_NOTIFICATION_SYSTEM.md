@@ -63,7 +63,7 @@
 ### 推送类型（push_type）
 
 - `no_chat` / `recent_chat`：分阶段聊天推送，`stage` 为 10min / 30min / 2h / 24h / 48h 等。
-- **`festival_memory`**：节日记忆通知。扫描存在「未投递且未发过 system notification」的节日记忆的 (user_id, agent_id)，发送 FCM；去重以 `memory.system_notification_sent_at` 为准，发送成功后更新该字段；可选并存 `PushNotificationHistory`（`push_type = "festival_memory"`，`stage = "festival"`）便于审计。点击通知进入该角色 Love Journal 页并定位到对应记忆条目。
+- **`festival_memory`**：节日记忆通知。扫描存在「未投递且未发过 system notification」的节日记忆的 (user_id, agent_id)，发送 FCM；**按版本门控**：仅当用户 `last_android_app_version_code` ≥ `min_app_version_code_for_festival_memory` 时发送（与 in-app 节日记忆门控一致）。去重以 `memory.system_notification_sent_at` 为准，发送成功后更新该字段；可选并存 `PushNotificationHistory`（`push_type = "festival_memory"`，`stage = "festival"`）便于审计。点击通知进入该角色 Love Journal 页并定位到对应记忆条目。
 
 ## 消息生成
 

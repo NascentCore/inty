@@ -28,11 +28,12 @@
 ## 节日记忆系统通知（Festival Memory System Notification）
 
 - **发送方**：**Push worker**（`backend/push_worker`），不是 inty 主后端 API 服务。Push worker 启动时调用 `push_scheduler_service.start()`，调度器内注册“节日记忆通知”任务。
-- **是否按版本号门控**：**否**。节日记忆的 **系统 push（FCM）** 当前不按 app version code 过滤；只要用户有待推送的节日记忆且满足下文条件就会发。按版本门控的是 **应用内投递**（GET messages、chat completions、agent detail 等），使用 `min_app_version_code_for_festival_memory` 与 `is_festival_memory_enabled(app_version_code)`。
+- **是否按版本号门控**：**是**。节日记忆的 **系统 push（FCM）** 与 **应用内投递**（GET messages、chat completions、agent detail）使用同一门控：仅当用户的 `users.last_android_app_version_code` 已知且 ≥ `min_app_version_code_for_festival_memory` 时才发送。未上报版本（NULL）或版本低于配置值的用户不会收到该 FCM。
 - **何时发送**：每 15 分钟执行一次 + 调度器启动时执行一次；且需 `push_notification.enabled` 与 `push_notification.festival_memory_enabled`（默认 true）为真。
 - **对单次发送的条件**（对每个 (user_id, agent_id)）：
   - 存在未投递且未发过 system notification 的节日记忆（`memory_type == festival`，`delivery_at` 与 `system_notification_sent_at` 均为 NULL）；
   - 用户有有效 device token（见下）；
+  - 用户满足版本门控：`last_android_app_version_code` ≥ `min_app_version_code_for_festival_memory`（由 `_user_satisfies_festival_memory_version_gate` / `is_festival_memory_enabled` 判定）；
   - 尚未对该 (user_id, agent_id) 发过节日记忆 push（无对应 `PushNotificationHistory`）；
   - Agent 存在；
   - FCM 发送成功。
@@ -46,4 +47,4 @@
 - **逻辑**：  
   1. 查 `users.fcm_token_invalid_at`；若非 NULL，视为该用户 FCM 无效，返回 False。  
   2. 查 `device_tokens` 中是否存在该 `user_id` 的任意一行（按 `updated_at` 降序取一条即可）；存在则返回 True，否则 False。
-- **与版本号**：该函数本身不读、不写 app version。若要支持“按记录的应用版本做 push 门控”，可在现有数据上扩展：例如在 `device_tokens` 或 `users` 上增加版本字段，在 token 注册或 version/check 时写入；push 逻辑在判断“有 token”之后，再根据该版本与 `min_app_version_code_for_*` 等决定是否发送或如何构造推送。
+- **与版本号**：节日记忆 FCM 在判断“有 token”之后会再检查 `users.last_android_app_version_code` 与 `min_app_version_code_for_festival_memory`（见上文节日记忆系统通知）。其他 push 类型当前不按版本门控。
