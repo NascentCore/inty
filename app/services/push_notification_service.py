@@ -41,6 +41,7 @@ from app.services.chat_history_service import (
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.image_transform_service import image_transform_service
+from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.services.memory_service import (
     get_pairs_with_undelivered_festival_memories,
     mark_system_notification_sent_for_user_agent,
@@ -284,6 +285,20 @@ async def _check_user_has_device_token(
     except Exception as e:
         logger.error(f"检查用户 device_token 失败: user_id={user_id}, error={str(e)}")
         return False
+
+
+async def _user_satisfies_festival_memory_version_gate(
+    db: AsyncSession,
+    user_id: str,
+) -> bool:
+    """
+    检查用户的 last_android_app_version_code 是否满足节日记忆推送的版本门控。
+    用于 push worker 发送节日记忆 FCM 时与 in-app 行为一致（仅向版本 >= min 的用户发送）。
+    """
+    stmt = select(User.last_android_app_version_code).where(User.id == user_id)
+    result = await db.execute(stmt)
+    version_code = result.scalar_one_or_none()
+    return is_festival_memory_enabled(version_code)
 
 
 async def _query_users_by_unread_count(
@@ -2523,6 +2538,13 @@ async def process_festival_memory_push_batch(
                 if not await _check_user_has_device_token(db, user_id):
                     logger.debug(
                         f"[节日记忆推送] 用户无 device_token，跳过: user_id={user_id}"
+                    )
+                    fail_count += 1
+                    continue
+                if not await _user_satisfies_festival_memory_version_gate(db, user_id):
+                    logger.debug(
+                        "[节日记忆推送] 用户版本不满足门控（未上报或低于 min_app_version_code_for_festival_memory），跳过: user_id=%s",
+                        user_id,
                     )
                     fail_count += 1
                     continue
