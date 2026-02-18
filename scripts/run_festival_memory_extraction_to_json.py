@@ -1,7 +1,9 @@
-#!/usr/bin/env python3
 """
 节日记忆抽取：接受与 evaluation 表单相同输入，执行与 POST /evaluation/admin/festival-memory-extraction/run 相同流程，
 结果写入 JSON 文件而非 memory 表。
+
+注意⚠️：由于时间有限，本脚本只是使用了与 POST /evaluation/admin/festival-memory-extraction/run 完全一样的代码，
+实际上生成的结果要与其完全一致，需要更多的修改来确定输入完全一致，目前还做不到。
 
 --output 不传时，根据节日名、日期、prompt 来源、模式及可选参数自动生成可识别的输出路径，便于从文件名看出所用参数。
 
