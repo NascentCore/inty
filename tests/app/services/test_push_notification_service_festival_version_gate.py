@@ -10,6 +10,9 @@ from app.services.push_notification_service import (
     process_festival_memory_push_batch,
 )
 
+# Min version used in "at min" / "below min" tests; matches config under patch.
+MIN_VERSION_FOR_TESTS = 100
+
 
 def _make_result_mock(scalar_value):
     result = MagicMock()
@@ -39,10 +42,12 @@ async def test_user_satisfies_festival_memory_version_gate_below_min():
     ) as mock_enabled:
         mock_enabled.return_value = False
         db = AsyncMock()
-        db.execute = AsyncMock(return_value=_make_result_mock(50))
+        db.execute = AsyncMock(
+            return_value=_make_result_mock(MIN_VERSION_FOR_TESTS - 50)
+        )
         out = await _user_satisfies_festival_memory_version_gate(db, "user-1")
     assert out is False
-    mock_enabled.assert_called_once_with(50)
+    mock_enabled.assert_called_once_with(MIN_VERSION_FOR_TESTS - 50)
 
 
 @pytest.mark.asyncio
@@ -53,10 +58,10 @@ async def test_user_satisfies_festival_memory_version_gate_at_min():
     ) as mock_enabled:
         mock_enabled.return_value = True
         db = AsyncMock()
-        db.execute = AsyncMock(return_value=_make_result_mock(100))
+        db.execute = AsyncMock(return_value=_make_result_mock(MIN_VERSION_FOR_TESTS))
         out = await _user_satisfies_festival_memory_version_gate(db, "user-1")
     assert out is True
-    mock_enabled.assert_called_once_with(100)
+    mock_enabled.assert_called_once_with(MIN_VERSION_FOR_TESTS)
 
 
 @pytest.mark.asyncio
@@ -67,10 +72,34 @@ async def test_user_satisfies_festival_memory_version_gate_above_min():
     ) as mock_enabled:
         mock_enabled.return_value = True
         db = AsyncMock()
-        db.execute = AsyncMock(return_value=_make_result_mock(200))
+        db.execute = AsyncMock(
+            return_value=_make_result_mock(MIN_VERSION_FOR_TESTS + 100)
+        )
         out = await _user_satisfies_festival_memory_version_gate(db, "user-1")
     assert out is True
-    mock_enabled.assert_called_once_with(200)
+    mock_enabled.assert_called_once_with(MIN_VERSION_FOR_TESTS + 100)
+
+
+@pytest.mark.asyncio
+async def test_user_satisfies_festival_memory_version_gate_with_real_config():
+    """Gate uses real is_festival_memory_enabled; only config min is patched."""
+    fake_config = MagicMock()
+    fake_config.app.min_app_version_code_for_festival_memory = MIN_VERSION_FOR_TESTS
+    with patch(
+        "app.api.utils.feature_gating.global_config_loaded_from_config_yaml",
+        fake_config,
+    ):
+        db = AsyncMock()
+        db.execute = AsyncMock(
+            return_value=_make_result_mock(MIN_VERSION_FOR_TESTS - 1)
+        )
+        out_below = await _user_satisfies_festival_memory_version_gate(db, "user-1")
+        db.execute = AsyncMock(
+            return_value=_make_result_mock(MIN_VERSION_FOR_TESTS)
+        )
+        out_at = await _user_satisfies_festival_memory_version_gate(db, "user-1")
+    assert out_below is False
+    assert out_at is True
 
 
 @pytest.mark.asyncio

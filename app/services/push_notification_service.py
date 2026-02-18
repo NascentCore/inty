@@ -15,6 +15,7 @@ from sqlalchemy import Integer, and_, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
+from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_model
@@ -41,7 +42,6 @@ from app.services.chat_history_service import (
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.image_transform_service import image_transform_service
-from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.services.memory_service import (
     get_pairs_with_undelivered_festival_memories,
     mark_system_notification_sent_for_user_agent,
