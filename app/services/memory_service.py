@@ -86,7 +86,9 @@ def _parse_festival_date(raw_festival_date: object) -> Optional[date]:
         return None
 
 
-def resolve_festival_name_and_date(raw_metadata: object) -> tuple[Optional[str], Optional[date]]:
+def resolve_festival_name_and_date(
+    raw_metadata: object,
+) -> tuple[Optional[str], Optional[date]]:
     """从 memory.meta_data 读取节日名称/日期。使用 FestivalMemoryMetadata.model_validate。"""
     metadata = _normalize_memory_metadata(raw_metadata)
     meta = FestivalMemoryMetadata.model_validate(metadata)

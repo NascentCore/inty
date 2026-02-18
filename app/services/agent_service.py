@@ -322,7 +322,9 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
 
         # 4. 缓存完整的Agent数据；agent 数据极少更新，因此缓存时间较长
         AGENT_CONFIG_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60  # 7天
-        cache_service.set_agent_config(agent_id, agent_data, ttl=AGENT_CONFIG_CACHE_TTL_SECONDS)
+        cache_service.set_agent_config(
+            agent_id, agent_data, ttl=AGENT_CONFIG_CACHE_TTL_SECONDS
+        )
 
         logger.debug(f"获取并缓存Agent聊天数据: {agent_data['name']}")
         return agent_data

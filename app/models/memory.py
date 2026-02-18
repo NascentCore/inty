@@ -61,9 +61,7 @@ class FestivalMemoryMetadata(BaseModel):
     festival_date: Optional[str] = Field(
         None, description="节日日期（DB 存为 festival_date）"
     )
-    llm_config: Optional[LLMConfig] = Field(
-        None, description="抽取时使用的 LLM 配置"
-    )
+    llm_config: Optional[LLMConfig] = Field(None, description="抽取时使用的 LLM 配置")
 
     @field_validator("festival_name", "festival_date", mode="before")
     @classmethod
