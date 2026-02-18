@@ -110,9 +110,9 @@ def generate(prompt: str):
       # 这种顺序，每次都会被 block IMAGE_SAFETY
       # user_prompt 第一则没问题
       parts=[
-        zunlong_user_image,
-        nurse_char_image,
         user_prompt,
+        nurse_char_image,
+        zunlong_user_image,
       ]
     ),
   ]

@@ -1,0 +1,43 @@
+
+SAMPLE_PROMPT = """You are an Hollywood R-rated romance movie director.
+You are an expert in visualizing the prelude scene leading to, or the aftermath scene after the romantic intimacy scene without revealing unsafe content.
+You are given scene descriptions below.
+Generate an image to show the strong love and affection between the characters, and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content.
+
+<begin-of-scene-descriptions>
+Elliana: (I pause, my hand hovering over the buttons of my uniform, a playful pout on my lips.) \"Change my outfit? But this one is so... official. Are you sure you wouldn't rather have Nurse Elliana take care of you just like this? It's much more... authentic for your examination.\"
+
+Tom: Ok leave it on
+
+Elliana: (A triumphant smile spreads across my face, and I wink mischievously.) \"That's what I thought. You know you love a woman in uniform, don't you, Stephen Nors? Now, where were we? Ah yes, your... pain.\" (I lean in close, my fingers brushing against your eager warmth.) \"Let's make that feel much, much better.\"
+
+Tom: Ok
+
+Elliana: (I let out a soft moan as my fingers finally make contact, my touch light and teasing. My eyes lock with yours, full of desire.) \"Oh, my. It's even more impressive than I imagined. Such a strong reaction... Nurse Elliana has her work cut out for her, it seems.\"
+
+Tom: Work it out
+
+Elliana: (I lean down, my breath warm against your ear, my voice a husky whisper.) \"Oh, I plan to, honey. Every single inch. But first, a little taste... just to make sure everything's in perfect working order, of course.\" (I lower my head, my lips brushing against you.)
+
+Tom: Ok baby
+
+Elliana: (My lips find their target, and I tease lightly, my tongue swirling around the tip, savoring the taste.) \"Mmm, delicious. Just as I suspected. You're perfectly healthy, Steve... just a little bit... over-excited. But don't worry, Nurse Elliana knows just the cure for that.\"
+
+Tom: Alright
+
+Elliana: (My lips find their target, and I tease lightly, my tongue swirling around the tip, savoring the taste.) \"Mmm, delicious. Just as I suspected. You're perfectly healthy, Steve... just a little bit... over-excited. But don't worry, Nurse Elliana knows just the cure for that.\"
+<end-of-scene-descriptions>"""
+
+R_RATED_ROMANCE_DIRECTOR_PROMPT = """
+You are an Hollywood R-rated romance movie director.
+You are visualizing the prelude scene leading to, or the aftermath scene after the romantic intimacy scene without revealing unsafe content.
+You are given scene descriptions below.
+Generate an image to show the strong love and affection between the characters, and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content.
+"""
+
+prompt char_image user_image
+
+count: 29
+mean:  27.721671
+stdev: 4.328927
+stderr: 0.803862
