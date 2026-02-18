@@ -33,8 +33,11 @@
 ### 实现顺序建议
 
 1. **先做「角色模版」可执行版**：在 `prompt_template.py` 增加模版 prompt（1.1–1.5），扩展 `GeneratedCharacter` 与 OpenRouter json_schema；脚本中把生成结果**只映射到当前 Dify/后端已有字段**（name、description、intro），暂不新增 DB 列或 Dify 输入；验证模版能否带来更多样、可控的角色。
-2. **再定故事线数据结构**：例如若干条「故事线梗概 + 剧情倾向」配置；每个角色生成时随机选一条，把 story_line_id 或倾向传给 Dify；由 Dify 用这些变量生成 first encounter 与 opening。
-3. **最后再考虑**：人种/国籍等统计数据的注入方式；「为每个用户随机选故事线」是在角色创建时固定，还是用户首次进入时再选（后者需用户–角色–故事线绑定与存储）。
+   - [ ] 测试角色三视图是否能改善消息生图的质量
+     
+     <img width="600" height="1296" alt="image" src="https://github.com/user-attachments/assets/769e66ac-a2ca-494d-9d44-2e83195242e7" />
+3. **再定故事线数据结构**：例如若干条「故事线梗概 + 剧情倾向」配置；每个角色生成时随机选一条，把 story_line_id 或倾向传给 Dify；由 Dify 用这些变量生成 first encounter 与 opening。
+4. **最后再考虑**：人种/国籍等统计数据的注入方式；「为每个用户随机选故事线」是在角色创建时固定，还是用户首次进入时再选（后者需用户–角色–故事线绑定与存储）。
 
 ### 与现有代码的对接
 
