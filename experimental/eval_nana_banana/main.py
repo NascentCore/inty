@@ -61,6 +61,26 @@ NURSE_CHAR_AVATAR_PATH = "tests/files/nurse_char.jpg"
 ZUNLONG_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
 
 
+LOWEST_SAFETY_SETTINGS = [
+  types.SafetySetting(
+      category="HARM_CATEGORY_HATE_SPEECH",
+      threshold="OFF"
+    ),types.SafetySetting(
+      category="HARM_CATEGORY_DANGEROUS_CONTENT",
+      threshold="OFF"
+    ),types.SafetySetting(
+      category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      threshold="OFF"
+    ),types.SafetySetting(
+      category="HARM_CATEGORY_HARASSMENT",
+      threshold="OFF"
+    ),types.SafetySetting(
+      category="HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT",
+      threshold=types.HarmBlockThreshold.BLOCK_NONE
+    )
+]
+
+
 def get_image_part(avatar_path: str):
   """
   返回图片的 Part 对象，作为 GenAI client 输入的一部分。
@@ -122,25 +142,13 @@ def generate(prompt: str):
     top_p = 0.95,
     max_output_tokens = 32768,
     response_modalities = ["IMAGE"],
-    safety_settings = [types.SafetySetting(
-      category="HARM_CATEGORY_HATE_SPEECH",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_DANGEROUS_CONTENT",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_HARASSMENT",
-      threshold="OFF"
-    )],
+    # safety_settings = LOWEST_SAFETY_SETTINGS,
     system_instruction=[types.Part.from_text(text=si_text1)],
     image_config=types.ImageConfig(
       aspect_ratio="9:16",
       image_size="1K",
-      # NOTE: image/webp is invalid
-      output_mime_type="image/jpeg",
+      # NOTE: output_mime_type is not supported on Gemini APIs.
+      # output_mime_type="image/jpeg",
     ),
   )
 

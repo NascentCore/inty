@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.gemini.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
 from app.external_services.gcs import upload_to_gcs
 from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
@@ -589,9 +590,7 @@ class ImageGenerationService:
                     #     threshold="BLOCK_MEDIUM_AND_ABOVE",
                     # ),
                 ],
-                image_config=types.ImageConfig(
-                    aspect_ratio="9:16",
-                ),
+                image_config=DEFAULT_9_16_1K_IMAGE_CONFIG,
             )
 
             gemini_model = model or "gemini-2.5-flash-image"
