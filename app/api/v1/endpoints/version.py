@@ -2,14 +2,17 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, WEB_APP_TAG
 from app.api.utils.logger_route import LoggerRoute
+from app.db.session import get_async_db
 from app.external_services.globals import google_play_service
 from app.schemas.response import APIResponse
 from app.schemas.version import VersionCheckResponse, VersionReminderAction
+from app.services import user_service
 
 router = APIRouter(prefix="/version", route_class=LoggerRoute)
 
@@ -28,14 +31,28 @@ async def check_version(
         None, alias="appVersionName", description="应用版本名称（向后兼容，忽略）"
     ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> Any:
     """
     检查应用版本更新
 
     通过HTTP头传递版本信息：
-    - appVersionCode: 应用版本代码（必填，整数）
+    - appVersionCode: 应用版本代码（必填，整数），**保留给 Android 应用**；当前仅处理此头。
     - appVersionName: 应用版本名称（可选，后端会忽略，保留向后兼容）
+
+    若未来需支持 iOS 应用，应新增独立 Header（如 iosAppVersionCode / ios_app_version_code），
+    以区分 iOS 与 Android 客户端，并可按平台分别写入 users 表（如 last_ios_app_version_code）。
     """
+    try:
+        await user_service.update_user_last_android_app_version_code(
+            db, current_user.id, app_version_code
+        )
+    except Exception as persist_err:
+        logger.warning(
+            "Failed to persist last_android_app_version_code for user %s: %s, continue anyway to check version",
+            current_user.id,
+            persist_err,
+        )
     try:
         # 直接使用注入的版本参数
         client_version_code = app_version_code

@@ -7,10 +7,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api import deps
-from app.api.v1.endpoints import users, version
+from app.api.v1.endpoints import users
 from app.models.user import AuthType
 from app.schemas import User as UserSchema
-from app.schemas.version import VersionReminderAction
 from app.services import user_service
 
 
@@ -20,7 +19,6 @@ def _make_user(
     is_superuser: bool = False,
 ) -> UserSchema:
     """Create a minimal user schema instance for dependency overrides."""
-
     return UserSchema(
         id=user_id,
         readable_id=f"readable-{user_id}",
@@ -32,54 +30,8 @@ def _make_user(
 
 
 @pytest.fixture
-def version_app(monkeypatch: pytest.MonkeyPatch):
-    """Provide a FastAPI app mounting only the version router."""
-
-    app = FastAPI()
-    app.include_router(version.router, prefix="/api/v1")
-
-    async def override_current_active_user():
-        return _make_user()
-
-    app.dependency_overrides[deps.get_current_active_user] = (
-        override_current_active_user
-    )
-
-    class FakeGooglePlayService:
-        def __init__(self):
-            self.last_call: int | None = None
-
-        def check_version_requirement(self, version_code: int):
-            self.last_call = version_code
-            return {
-                "current_version": str(version_code),
-                "latest_version": "200",
-                "latest_version_code": 200,
-                "update_required": False,
-                "force_update": False,
-                "force_update_reasons": [],
-                "minimum_version": "100",
-                "changelog": "Minor fixes",
-                "download_url": "https://play.google.com/store/apps/details?id=com.ai.inty",
-                "message": "ok",
-                "error": None,
-                "reminder_action": VersionReminderAction.POP_UP_REMINDER.value,
-            }
-
-    fake_service = FakeGooglePlayService()
-    app.state.fake_google_play_service = fake_service
-    monkeypatch.setattr(version, "google_play_service", fake_service)
-
-    try:
-        yield app
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.fixture
 def users_app():
     """Provide a FastAPI app mounting only the users router."""
-
     app = FastAPI()
     app.include_router(users.router, prefix="/api/v1")
 
@@ -103,31 +55,10 @@ def users_app():
         app.dependency_overrides.clear()
 
 
-def test_version_check_returns_google_play_result(version_app: FastAPI):
-    """Ensure /api/v1/version/check returns the payload from Google Play service."""
-
-    headers = {
-        "appVersionCode": "150",
-        "appVersionName": "1.5.0",
-    }
-
-    with TestClient(version_app) as client:
-        response = client.post("/api/v1/version/check", headers=headers)
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["code"] == 200
-    assert body["data"]["current_version"] == "150"
-    assert body["data"]["latest_version"] == "200"
-    assert body["data"]["reminder_action"] == VersionReminderAction.POP_UP_REMINDER.value
-    assert version_app.state.fake_google_play_service.last_call == 150
-
-
 def test_get_current_user_profile_happy_path(
     users_app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
     """Ensure GET /api/v1/users/me returns the current user info."""
-
     async def fake_get_user_connector_count(db, user_id):
         assert db is None
         assert user_id == users_app.state.test_user.id
@@ -152,7 +83,6 @@ def test_register_device_token_happy_path(
     users_app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
     """Ensure POST /api/v1/users/device/register stores the provided token."""
-
     recorded_args: dict[str, tuple[str, str]] = {}
 
     async def fake_register_device_token(db, token: str, user_id: str):

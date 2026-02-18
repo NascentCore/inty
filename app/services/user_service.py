@@ -196,6 +196,16 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         raise e
 
 
+async def update_user_last_android_app_version_code(
+    db: AsyncSession, user_id: str, version_code: int
+) -> None:
+    """Update the user's last reported Android app version code. Used for push-worker feature gating."""
+    await db.execute(
+        update(User).where(User.id == user_id).values(last_android_app_version_code=version_code)
+    )
+    await db.commit()
+
+
 def generate_avatar_path(user_id: str, filename: str) -> str:
     ext = filename.split(".")[-1].lower()
     if ext not in ["jpg", "jpeg", "png", "webp"]:
