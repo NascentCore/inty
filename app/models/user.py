@@ -17,7 +17,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, validates
 
 from app.models import Base
-from app.models.associations import agent_followers
 
 
 class AuthType(str, enum.Enum):
@@ -115,9 +114,6 @@ class User(Base):
 
     # 关系
     agents = relationship("Agent", back_populates="creator")
-    following_agents = relationship(
-        "Agent", secondary=agent_followers, back_populates="followers"
-    )
     messages = relationship("Message", back_populates="sender")
     chat_settings = relationship("ChatSettings", back_populates="user")
     chats = relationship("Chat", back_populates="user")

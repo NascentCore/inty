@@ -505,3 +505,78 @@ async def test_get_user_agents_validation_limit_invalid():
     with pytest.raises(HTTPException) as exc_info2:
         await get_user_agents(mock_db, mock_user, skip=0, limit=1001)
     assert exc_info2.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_get_agent_follow_fields_are_defaults_without_follow_table(db_session):
+    """get_agent 不再依赖 agent_followers，关注字段返回默认值。"""
+    creator = models.User(
+        id=str(uuid.uuid4()),
+        readable_id=str(uuid.uuid4().int)[:8],
+        auth_type=models.AuthType.PHONE,
+        nickname="creator",
+        email=f"creator-{uuid.uuid4().hex[:8]}@example.com",
+        system_language="en",
+        is_superuser=False,
+    )
+    viewer = models.User(
+        id=str(uuid.uuid4()),
+        readable_id=str(uuid.uuid4().int)[:8],
+        auth_type=models.AuthType.PHONE,
+        nickname="viewer",
+        email=f"viewer-{uuid.uuid4().hex[:8]}@example.com",
+        system_language="en",
+        is_superuser=False,
+    )
+    db_session.add_all([creator, viewer])
+    await db_session.flush()
+
+    agent = models.Agent(
+        id=str(uuid.uuid4()),
+        readable_id=str(uuid.uuid4().int)[:8],
+        name=f"agent-{uuid.uuid4().hex[:6]}",
+        gender=models.Gender.FEMALE,
+        visibility=AgentVisibility.PUBLIC,
+        creator_id=creator.id,
+    )
+    db_session.add(agent)
+    await db_session.flush()
+
+    chat = models.Chat(
+        id=str(uuid.uuid4()),
+        user_id=viewer.id,
+        agent_id=agent.id,
+        is_active=True,
+    )
+    db_session.add(chat)
+    await db_session.commit()
+
+    loaded_agent = await agent_service.get_agent(
+        db_session, agent_id=agent.id, current_user_id=viewer.id
+    )
+    assert loaded_agent is not None
+    assert loaded_agent.follower_count == 0
+    assert loaded_agent.is_followed is False
+    assert loaded_agent.connector_count == 1
+
+
+@pytest.mark.asyncio
+async def test_follow_unfollow_agent_returns_410():
+    """关注相关接口已下线，返回 410。"""
+    for action in [agent_service.follow_agent, agent_service.unfollow_agent]:
+        with pytest.raises(HTTPException) as exc_info:
+            await action(db=None, agent_id="a", user_id="u")  # type: ignore[arg-type]
+        assert exc_info.value.status_code == 410
+
+
+@pytest.mark.asyncio
+async def test_get_user_followed_agents_returns_410():
+    """用户关注列表接口已下线，返回 410。"""
+    with pytest.raises(HTTPException) as exc_info:
+        await agent_service.get_user_followed_agents(  # type: ignore[arg-type]
+            db=None,
+            user_id="u",
+            page=1,
+            page_size=10,
+        )
+    assert exc_info.value.status_code == 410
