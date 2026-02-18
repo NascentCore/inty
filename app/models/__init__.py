@@ -17,7 +17,6 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 from app.models.agent import Agent as Agent
-from app.models.associations import agent_followers as agent_followers
 from app.models.character_theme import CharacterTheme as CharacterTheme
 from app.models.character_theme import CharacterThemeAgent as CharacterThemeAgent
 from app.models.chat import Chat as Chat

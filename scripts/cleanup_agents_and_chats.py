@@ -6,7 +6,6 @@
 - 所有agent记录
 - 所有chat记录
 - 所有message记录
-- agent_followers关联关系
 - user_subscriptions中的相关记录（如果必要）
 
 保留的数据：
@@ -47,7 +46,6 @@ class AgentChatCleanup:
             "messages",
             "chat_settings",
             "chats",
-            "agent_followers",
             "agents",
             "users",
             "subscription_plans",
@@ -106,12 +104,7 @@ class AgentChatCleanup:
             result = await self.session.execute(text("DELETE FROM chats"))
             logger.info(f"删除了 {result.rowcount} 条对话记录")
 
-            # 6. 删除agent_followers表（依赖user_id和agent_id）
-            logger.info("删除所有agent关注关系...")
-            result = await self.session.execute(text("DELETE FROM agent_followers"))
-            logger.info(f"删除了 {result.rowcount} 条关注关系")
-
-            # 7. 删除agents表
+            # 6. 删除agents表
             logger.info("删除所有agent记录...")
             result = await self.session.execute(text("DELETE FROM agents"))
             logger.info(f"删除了 {result.rowcount} 条agent记录")
@@ -128,7 +121,6 @@ class AgentChatCleanup:
                 after_counts["messages"] == 0
                 and after_counts["chat_settings"] == 0
                 and after_counts["chats"] == 0
-                and after_counts["agent_followers"] == 0
                 and after_counts["agents"] == 0
             ):
                 logger.success("✅ 所有agent和chat数据已成功清理！")
@@ -147,7 +139,7 @@ class AgentChatCleanup:
             else:
                 logger.error("❌ 数据清理可能不完整，请检查！")
                 logger.error(
-                    f"剩余数据: messages={after_counts['messages']}, chat_settings={after_counts['chat_settings']}, chats={after_counts['chats']}, agent_followers={after_counts['agent_followers']}, agents={after_counts['agents']}"
+                    f"剩余数据: messages={after_counts['messages']}, chat_settings={after_counts['chat_settings']}, chats={after_counts['chats']}, agents={after_counts['agents']}"
                 )
                 return False
 
@@ -171,7 +163,6 @@ class AgentChatCleanup:
                 print("  • 所有对话(chat)记录")
                 print("  • 所有消息(message)记录")
                 print("  • 所有对话设置(chat_settings)记录")
-                print("  • 所有agent关注关系")
                 print("  • 相关的举报和通知记录")
                 print("\n保留的数据：")
                 print("  • 用户账户信息")

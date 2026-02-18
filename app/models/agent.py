@@ -5,7 +5,6 @@ from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.models import Base
-from app.models.associations import agent_followers
 from app.models.user import Gender
 
 
@@ -116,9 +115,6 @@ class Agent(Base):
 
     # 关系
     creator = relationship("User", back_populates="agents")
-    followers = relationship(
-        "User", secondary=agent_followers, back_populates="following_agents"
-    )
     messages = relationship("Message", back_populates="agent")
     chat_settings = relationship("ChatSettings", back_populates="agent")
     chats = relationship("Chat", back_populates="agent")
