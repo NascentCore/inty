@@ -115,7 +115,6 @@ class Agent(Base):
 
     # 关系
     creator = relationship("User", back_populates="agents")
-    messages = relationship("Message", back_populates="agent")
     chat_settings = relationship("ChatSettings", back_populates="agent")
     chats = relationship("Chat", back_populates="agent")
     resources = relationship("Resource", back_populates="agent")
