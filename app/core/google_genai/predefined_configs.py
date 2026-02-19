@@ -7,6 +7,9 @@ from google.genai import types
 from app.core.agent.prompts import R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
 from app.core.google_genai.utils import get_text_part
 
+from app.core.agent.prompts import R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
+from app.core.google_genai.utils import get_text_part
+
 IMAGE_CONFIG_9_16_1K = types.ImageConfig(
     aspect_ratio="9:16",
     image_size="1K",

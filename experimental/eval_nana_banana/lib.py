@@ -12,7 +12,7 @@ from google.genai import types
 from google.cloud import storage
 
 
-from app.core.google_genai.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
+from app.core.google_genai.predefined_configs import IMAGE_CONFIG_9_16_1K
 from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 
@@ -85,25 +85,6 @@ LOWEST_SAFETY_SETTINGS = [
       threshold=types.HarmBlockThreshold.BLOCK_NONE
     )
 ]
-
-
-def get_image_part(avatar_path: str):
-  """
-  返回图片的 Part 对象，作为 GenAI client 输入的一部分。
-  """
-  with open(avatar_path, "rb") as f:
-    bytes = f.read()
-  return types.Part.from_bytes(
-    data=bytes,
-    mime_type="image/jpeg",
-  )
-
-
-def get_text_part(text: str):
-  """
-  返回文本的 Part 对象，作为 GenAI client 输入的一部分。
-  """
-  return types.Part.from_text(text=text)
 
 
 def _upload_file_to_gcs(
@@ -181,7 +162,7 @@ def generate(
     # <img width="600" alt="safety_settings_default_off" src="https://github.com/user-attachments/assets/276d6e85-408e-4b61-b62d-b7f43e3cae5b" />
     # safety_settings = LOWEST_SAFETY_SETTINGS,
     system_instruction=[types.Part.from_text(text=si_text1)],
-    image_config=DEFAULT_9_16_1K_IMAGE_CONFIG,
+    image_config=IMAGE_CONFIG_9_16_1K,
   )
 
   start_time = datetime.datetime.now()
