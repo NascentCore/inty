@@ -17,7 +17,7 @@
 
 ## 代码库内的一般性约定
 
-- **语言**：
+- **非代码类文字**：
   - Must use English for texts viewable to public users
   - 所有可自然语言表达的输出统一使用中文（普通话）。代码、命令、标识符不受该限制。
     只包含文档的目录用中文命名、方便理解，包含代码的目录必须用 English 以方便调用。
@@ -31,6 +31,8 @@
 
 - **Dev Mode**:
   - 默认为开发阶段，不需要考虑 backward compatibility
+  - 尽量不使用默认参数
+  - 当函数的参数数量在 3 个以上时，可以考虑使用结构体来组合参数
 - **代码结构规范**
   1. Functions should be composable, prefer `func a(), func b(), func c() { a(); b() }`
      over `func a(), func b() { a() }, func c() { b() }`.
