@@ -1,23 +1,10 @@
-import enum
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
-class MessageType(str, enum.Enum):
-    """消息类型"""
-
-    TEXT = "TEXT"
-    VOICE = "VOICE"
-    IMAGE = "IMAGE"
-
-
-class SenderType(str, enum.Enum):
-    """发送者类型"""
-
-    USER = "USER"
-    AI = "AI"
+from app.models.message import MessageType, SenderType
 
 
 class MessageBase(BaseModel):

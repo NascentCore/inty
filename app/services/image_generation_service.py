@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.google_genai.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
+from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
 from app.external_services.gcs import upload_to_gcs
 from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
@@ -26,6 +26,7 @@ from app.services.resource_service import async_create_image_resource
 from app.services.user_service import build_user_info_prompt_block
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
+from app.utils.models_catalog import NANO_BANANA
 
 
 def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
@@ -106,7 +107,7 @@ def _log_image_generation_failure(prompt: Optional[str], response: Any) -> None:
 
 
 class ImageGenerationService:
-    """图片生成服务 - 使用 Gemini 2.5 Flash Image"""
+    """图片生成服务，是提供了内部服务中间件抽象的对 Gemini 图像生成的封装"""
 
     def build_image_prompt(
         self,
@@ -130,6 +131,10 @@ class ImageGenerationService:
         # 提取角色背景信息
         agent_background = agent_data.get("scenario", "")
         agent_personality = agent_data.get("personality", "")
+
+        # TODO: 需要使用 jinja2 template 渲染 agent_background 和 agent_personality
+        # 来填充 {{ char }} 和 {{ user }} 变量。
+        # 目前不太好弄，因为传入的对象类型是 dict，而不是 Agent 对象，不好分辨。
 
         # 如果没有scenario，尝试使用intro
         if not agent_background:
@@ -240,6 +245,7 @@ class ImageGenerationService:
             - generated_at: 生成时间（created_at）
         """
         try:
+            # TODO：如何确保 Cache 可以稳定的在数据库更新后获得更新从而拿到最新数据？
             from app import models
 
             # 构建查询条件
@@ -564,40 +570,11 @@ class ImageGenerationService:
                 )
             ]
 
-            # 配置生成参数
-            generate_config = types.GenerateContentConfig(
-                temperature=1.0,
-                top_p=0.95,
-                max_output_tokens=8192,
-                response_modalities=["IMAGE"],  # 只返回图片
-                safety_settings=[
-                    # TODO：暂时取消安全过滤，避免生成图片被拦截，观察前端效果；目前生图失败率极高
-                    # 使用同等提示词在 vertex ai studio 测试没有问题；于是尝试。
-                    # types.SafetySetting(
-                    #     category="HARM_CATEGORY_HATE_SPEECH",
-                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    # ),
-                    # types.SafetySetting(
-                    #     category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    # ),
-                    # types.SafetySetting(
-                    #     category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    # ),
-                    # types.SafetySetting(
-                    #     category="HARM_CATEGORY_HARASSMENT",
-                    #     threshold="BLOCK_MEDIUM_AND_ABOVE",
-                    # ),
-                ],
-                image_config=DEFAULT_9_16_1K_IMAGE_CONFIG,
-            )
-
-            gemini_model = model or "gemini-2.5-flash-image"
+            gemini_model = model or NANO_BANANA.id_on_provider
             response = client.models.generate_content(
                 model=gemini_model,
                 contents=contents,
-                config=generate_config,
+                config=GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
             )
 
             # 检查 prompt_feedback（响应级别的反馈）
