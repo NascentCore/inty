@@ -13,13 +13,13 @@ Review the code in context (current file, selection, or diff) and then propose a
 
 2. **Enhance**
    - Suggest and implement improvements: readability, structure, naming, tests, and docs.
-   - Prefer small, clear edits; avoid changing behavior unless the user asks.
-   - After edits: re-read the diff, run relevant tests, and fix any new linter/CI issues.
+   - Prefer small, clear edits.
+   - Avoid changing behavior unless the user asks.
+   - After edits: re-read the diff, run relevant tests, and fix any new broken tests.
 
 ## Checklist
 
 - [ ] Behavior and edge cases understood
 - [ ] No unintended side effects or API changes
 - [ ] Follows project style and AGENTS.md
-- [ ] Sensitive data and secrets not exposed
 - [ ] Tests/docs updated if behavior or contract changed
