@@ -14,6 +14,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 
+
+// TODO: 确认该测试确实已经运行并且调用了后端
 class ChatCompletionsBizActionsApiTest {
     private val client = OkHttpClient()
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
