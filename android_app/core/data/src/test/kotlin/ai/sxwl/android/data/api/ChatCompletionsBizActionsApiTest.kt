@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.junit.Assume.assumeTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -20,6 +21,10 @@ class ChatCompletionsBizActionsApiTest {
 
     @Test
     fun chatCompletions_returnsBusinessActionsList() {
+        assumeTrue(
+            "This localhost integration test is opt-in. Set RUN_LOCALHOST_CHAT_COMPLETIONS_TEST=1 to run.",
+            System.getenv(RUN_LOCALHOST_CHAT_COMPLETIONS_TEST) == "1",
+        )
         val token = createGuestToken()
         val agentId = createAgent(token)
 
@@ -168,6 +173,7 @@ class ChatCompletionsBizActionsApiTest {
     private data class CreateAgentApiData(val id: String = "")
 
     private companion object {
+        const val RUN_LOCALHOST_CHAT_COMPLETIONS_TEST = "RUN_LOCALHOST_CHAT_COMPLETIONS_TEST"
         const val baseUrl: String = "http://localhost:8000"
         val jsonMediaType = "application/json; charset=utf-8".toMediaType()
     }
