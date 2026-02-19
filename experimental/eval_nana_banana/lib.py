@@ -9,6 +9,7 @@ import os
 from enum import Enum
 from google import genai
 from google.genai import types
+from google.cloud import storage
 
 
 from app.core.google_genai.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
@@ -105,6 +106,23 @@ def get_text_part(text: str):
   return types.Part.from_text(text=text)
 
 
+def _upload_file_to_gcs(
+  local_path: str,
+  bucket_name: str,
+  gcs_object_path: str,
+  content_type: str,
+) -> str:
+  """
+  将本地文件上传到 GCS，返回 public URL。
+  使用 Application Default Credentials，不依赖 app 配置。
+  """
+  client = storage.Client()
+  bucket = client.bucket(bucket_name)
+  blob = bucket.blob(gcs_object_path)
+  blob.upload_from_filename(local_path, content_type=content_type)
+  return blob.public_url
+
+
 # TODO: Change to using AsyncClient and update this to be async as well.
 # https://googleapis.github.io/python-genai/genai.html#genai.client.AsyncClient
 def generate(
@@ -113,9 +131,13 @@ def generate(
   user_avatar_path: str = ZUNLONG_USER_AVATAR_PATH,
   model: str = NANO_BANANA_PRO.id_on_provider,
   output_dir: str = "tmp",
+  gcs_prefix: str = "eval_nana_banana",
+  gcs_bucket: str | None = None,
 ) -> types.GenerateContentResponse | None:
   """
   Generate an image based on the prompt and the character and user avatar paths.
+  When gcs_bucket is set, also upload the generated image and JSON result to GCS
+  under the given gcs_prefix (e.g. eval_nana_banana/).
   """
   # logger.debug(f"Generating image for prompt: {prompt}")
   client = genai.Client(
@@ -170,6 +192,17 @@ def generate(
   )
   duration = datetime.datetime.now() - start_time
   out_image, out_json = save_result_to_files(result, output_dir, duration)
+  if gcs_bucket is not None:
+    prefix = gcs_prefix.strip("/")
+    image_gcs_path = f"{prefix}/{os.path.basename(out_image)}"
+    json_gcs_path = f"{prefix}/{os.path.basename(out_json)}"
+    image_url = _upload_file_to_gcs(
+      out_image, gcs_bucket, image_gcs_path, "image/jpeg"
+    )
+    json_url = _upload_file_to_gcs(
+      out_json, gcs_bucket, json_gcs_path, "application/json"
+    )
+    logger.debug("Uploaded to GCS: image=%s json=%s", image_url, json_url)
   return out_image, out_json
 
 
