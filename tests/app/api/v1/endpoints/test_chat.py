@@ -80,6 +80,11 @@ def test_agent_chat_completions_with_sdk(
     assert message is not None
     assert "id" in message
     assert isinstance(message["id"], int)
+    business_actions = data.get("business_actions")
+    assert isinstance(business_actions, list) and len(business_actions) > 0
+    assert all(
+        isinstance(action, str) and action.strip() for action in business_actions
+    ), f"Invalid business_actions payload: {business_actions}"
 
 
 def test_festival_memory_delivered_via_chat_completions(

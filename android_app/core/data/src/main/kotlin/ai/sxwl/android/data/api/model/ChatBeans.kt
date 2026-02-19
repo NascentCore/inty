@@ -15,6 +15,7 @@ data class SendMsgResponse(
         val error_code: String? = null,
         val description: String? = null,
         val user_message_id: Long = 0,
+        @Json(name = "business_actions") val businessActions: List<String> = emptyList(),
         val choices: List<Choice> = listOf(),
         val created: Int = 0,
         val id: String = "",
