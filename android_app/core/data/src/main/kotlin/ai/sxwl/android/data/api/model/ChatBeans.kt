@@ -5,6 +5,16 @@ import ai.sxwl.android.utils.TimeUtils
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
+/**
+ * 单条业务动作（如 subscription_popup），用于 chat completions。
+ * 注意：biz action 仍处于探索阶段，尚未确定使用。
+ */
+@JsonClass(generateAdapter = true)
+data class BizAction(
+    @Json(name = "action_type") val actionType: String = "none",
+    val message: String = "",
+)
+
 @JsonClass(generateAdapter = true)
 data class SendMsgResponse(
     val code: Int? = null,
@@ -15,6 +25,8 @@ data class SendMsgResponse(
         val error_code: String? = null,
         val description: String? = null,
         val user_message_id: Long = 0,
+        /** biz action：探索阶段，尚未确定使用。 */
+        @Json(name = "business_actions") val businessActions: List<BizAction> = emptyList(),
         val choices: List<Choice> = listOf(),
         val created: Int = 0,
         val id: String = "",

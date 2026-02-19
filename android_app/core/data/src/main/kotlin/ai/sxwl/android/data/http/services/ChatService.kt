@@ -56,15 +56,38 @@ object ChatService {
                 val errorData = response.data()?.asUsageLimitExceeded()!!
                 val errorCodeStr = errorData.errorCode()
 
-                // 将errorCode映射到业务错误码
+                // 将 error_code 映射到业务错误码（与后端 app/schemas/response.py 一致）
                 val businessCode =
                     when (errorCodeStr) {
+                        "SUBSCRIPTION_REQUIRED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                .toLong()
                         "IMAGE_GENERATION_LIMIT_REACHED" ->
                             ai.sxwl.android.data.http.BusinessErrorCodes
                                 .IMAGE_GENERATION_LIMIT_REACHED_CODE
                                 .toLong()
-                        "SUBSCRIPTION_REQUIRED" ->
-                            ai.sxwl.android.data.http.BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                        "AGENT_CREATION_LIMIT_REACHED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes
+                                .AGENT_CREATION_LIMIT_REACHED_CODE
+                                .toLong()
+                        "VOICE_GENERATION_LIMIT_REACHED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes
+                                .VOICE_GENERATION_LIMIT_REACHED_CODE
+                                .toLong()
+                        "GUEST_LOGIN_REQUIRED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes.GUEST_LOGIN_REQUIRED_CODE
+                                .toLong()
+                        "IMAGE_GENERATION_BLOCKED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes
+                                .IMAGE_GENERATION_BLOCKED_CODE
+                                .toLong()
+                        "LIVE_CHAT_AGENT_LIMIT_REACHED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes
+                                .LIVE_CHAT_AGENT_LIMIT_REACHED_CODE
+                                .toLong()
+                        "LIVE_CHAT_DURATION_LIMIT_REACHED" ->
+                            ai.sxwl.android.data.http.BusinessErrorCodes
+                                .LIVE_CHAT_DURATION_LIMIT_REACHED_CODE
                                 .toLong()
                         else -> errorData.code()
                     }

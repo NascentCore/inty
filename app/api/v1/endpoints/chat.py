@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models, schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
+from app.schemas.biz_action import ActionType, BizAction, BusinessActions
 from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
@@ -101,6 +102,12 @@ def _build_chat_response(
 ) -> dict:
     """构建聊天响应数据"""
     message = {"role": "assistant", "content": response_content}
+    # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
+    default_business_actions = BusinessActions(
+        subscription_actions=[
+            BizAction(action_type=ActionType.NONE, message=""),
+        ]
+    )
 
     if latest_message_info:
         message["id"] = latest_message_info["id"]
@@ -119,6 +126,7 @@ def _build_chat_response(
         "created": int(time.time()),
         "model": request.model,
         "user_message_id": user_message_id,
+        "business_actions": [a.model_dump() for a in default_business_actions.subscription_actions],
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
         "usage": {
             "prompt_tokens": len(last_user_message.split()),

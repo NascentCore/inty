@@ -2,16 +2,30 @@
 
 import json
 from datetime import date, datetime, timezone
+from types import SimpleNamespace
 
 import pytest
+from fastapi import FastAPI
 from jose import jwt
 from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.api import deps
+from app.api.v1.endpoints import chat as chat_v1
+from app.core.agent import agent as agent_module
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
+from app.models.user import AuthType
+from app.schemas.response import BusinessErrorCode, UsageLimitExceeded
+from app.services import agent_service, chat_history_service, chat_service
+from app.services.global_services import subscription_service
 from tests.app.api.test_client import TestClient
+from tests.app.api.v1.endpoints.conftest import (
+    _client_with_user,
+    _create_mock_db_session,
+    _make_user,
+)
 
 
 @pytest.fixture(scope="function")
@@ -42,6 +56,161 @@ def agent_ids_to_cleanup(integration_client: TestClient):
         logger.info(f"Deleting agent: {agent_id}")
         integration_client.delete_agent(agent_id)
         logger.info(f"Deleted agent: {agent_id}")
+
+
+@pytest.fixture
+def chat_business_error_app() -> FastAPI:
+    app = FastAPI()
+    app.include_router(chat_v1.router, prefix="/api/v1")
+
+    async def override_db():
+        mock_db = _create_mock_db_session()
+        yield mock_db
+
+    app.dependency_overrides[deps.get_async_db] = override_db
+
+    yield app
+
+    app.dependency_overrides.clear()
+
+
+def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    class DummyAgent:
+        async def chat(self, *args, **kwargs):  # pragma: no cover - not reached
+            return "ok"
+
+    async def fake_get_agent(agent_data):
+        return DummyAgent()
+
+    async def fake_check_chat_limit(db, user):
+        return False, 5, 5
+
+    def fake_add_user_message(session_id, message, meta_data=None):
+        return None
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_module.agent_manager,
+        "get_agent",
+        fake_get_agent,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "add_user_message",
+        fake_add_user_message,
+    )
+
+
+def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
+    async def fake_generate_chat_image(*args, **kwargs):
+        return UsageLimitExceeded(
+            code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"],
+            error_code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"],
+            message=BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
+            used_count=4,
+            daily_limit=4,
+        )
+
+    monkeypatch.setattr(chat_service, "generate_chat_image", fake_generate_chat_image)
+
+
+def test_v1_chat_completions_guest_requires_login(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_chat_completion_dependencies(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GUEST)
+
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "zh",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.GUEST_LOGIN_REQUIRED["code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+    )
+    assert body["data"]["used_count"] == 5
+    assert body["data"]["daily_limit"] == 5
+
+
+def test_v1_chat_completions_subscription_required(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_chat_completion_dependencies(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "zh",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
+    )
+    assert body["data"]["used_count"] == 5
+    assert body["data"]["daily_limit"] == 5
+
+
+def test_v1_chat_generate_image_wraps_business_error(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_generate_chat_image(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/chat/images/agent-1",
+            json={"message_id": 1},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
+    )
+    assert body["data"]["used_count"] == 4
+    assert body["data"]["daily_limit"] == 4
 
 
 @pytest.mark.noci
@@ -80,6 +249,13 @@ def test_agent_chat_completions_with_sdk(
     assert message is not None
     assert "id" in message
     assert isinstance(message["id"], int)
+    business_actions = data.get("business_actions")
+    assert isinstance(business_actions, list) and len(business_actions) > 0
+    for action in business_actions:
+        assert isinstance(action, dict), f"Each business_actions item must be a dict: {action}"
+        assert "action_type" in action and "message" in action, (
+            f"Each business_actions item must have action_type and message: {action}"
+        )
 
 
 def test_festival_memory_delivered_via_chat_completions(

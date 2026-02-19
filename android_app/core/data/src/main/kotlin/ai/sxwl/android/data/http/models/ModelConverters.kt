@@ -6,9 +6,12 @@ import ai.sxwl.android.data.api.model.UserProfile
 import com.inty.api.models.api.v1.ai.agents.Agent as IntyAgent
 import com.inty.api.models.api.v1.users.profile.User as IntyUser
 
-/** 数据模型转换工具 将Inty SDK的模型转换为业务层模型 */
+/** 数据模型转换工具 将 Stainless 生成的 Inty SDK 的模型转换为业务层模型
+ * 由于 Stainless 已弃用，因此这个不再维护
+*/
 
 /** 将Inty SDK的User对象转换为UserProfile对象 */
+@Deprecated("Stainless 已弃用，因此这个不再维护")
 fun IntyUser.toUserProfile(): UserProfile {
     return UserProfile(
         id = this.id(),
@@ -35,6 +38,7 @@ fun IntyUser.toUserProfile(): UserProfile {
 }
 
 /** 将Inty SDK的Agent对象转换为AgentInfo对象 */
+@Deprecated("Stainless 已弃用，因此这个不再维护")
 fun IntyAgent.toAgentInfo(): AgentInfo {
     val creator =
         this.creator()?.let {
