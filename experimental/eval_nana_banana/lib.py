@@ -112,6 +112,7 @@ def generate(
   char_avatar_path: str = NURSE_CHAR_AVATAR_PATH,
   user_avatar_path: str = ZUNLONG_USER_AVATAR_PATH,
   model: str = NANO_BANANA_PRO.id_on_provider,
+  output_dir: str = "tmp",
 ) -> types.GenerateContentResponse | None:
   """
   Generate an image based on the prompt and the character and user avatar paths.
@@ -161,12 +162,15 @@ def generate(
     image_config=DEFAULT_9_16_1K_IMAGE_CONFIG,
   )
 
+  start_time = datetime.datetime.now()
   result = client.models.generate_content(
     model = model,
     contents = contents,
     config = generate_content_config,
   )
-  return result
+  duration = datetime.datetime.now() - start_time
+  out_image, out_json = save_result_to_files(result, output_dir, duration)
+  return out_image, out_json
 
 
 def _dict_for_json(obj):
@@ -247,3 +251,5 @@ def save_result_to_files(result, files_prefix: str, duration: datetime.timedelta
     print(f"Saved response JSON to {out_json} for files_prefix: {files_prefix}")
   else:
     print("Could not serialize response to JSON")
+
+  return out_image, out_json

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from langsmith.run_helpers import trace
+from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 
 _THIS_DIR = Path(__file__).resolve().parent
@@ -18,7 +19,7 @@ APP_ICON_PATH = _THIS_DIR / "app_icon.png"
 ZUN_LONG_PHOTO_PATH = _THIS_DIR / "尊龙.png"
 COMPANION_PROFILE_DIR = _THIS_DIR / "companion_profile"
 
-RECENT_MESSAGES_FOR_IMAGE = 10
+RECENT_MESSAGES_FOR_IMAGE = 6
 RECENT_MESSAGES_FOR_LIVE = 10
 RECENT_MESSAGES_FOR_SCENE = 10
 
@@ -186,23 +187,20 @@ def execute_generate_image(
     )
     prompt = (input or "").strip() or _prompt_from_messages(recent)
     try:
-        image_bytes = generate_image_from_messages(client=client, prompt=prompt)
+        from experimental.eval_nana_banana.lib import generate
+        out_image, out_json = generate(
+            prompt=prompt,
+            char_avatar_path="experimental/agentic_ai_companion/companion_profile/avatar.jpg",
+            user_avatar_path="experimental/agentic_ai_companion/companion_profile/avatar.jpg",
+            output_dir="tmp",
+        )
+        logger.debug(f"generate_image result: {out_image}, {out_json}")
+        image_bytes = out_image.generated_images[0].image_bytes
+        return ("generate_image: Image generated.", out_image)
     except (ValueError, OSError, AttributeError) as e:
         if _logger is not None:
             _logger.warning("generate_image 失败: %s", e)
         return (f"generate_image: Failed ({e}).", None)
-    suffix = ".jpg"
-    if image_bytes[:2] == b"\xff\xd8":
-        suffix = ".jpg"
-    elif image_bytes[:8] == b"\x89PNG\r\n\x1a\n":
-        suffix = ".png"
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = DATA_DIR / f"generated_{int(time.time() * 1000)}{suffix}"
-    out_path.write_bytes(image_bytes)
-    path_str = str(out_path.resolve())
-    if _logger is not None:
-        _logger.info("generate_image 成功，已写入: %s", path_str)
-    return ("generate_image: Image generated.", path_str)
 
 
 def execute_text_to_speech(
@@ -410,7 +408,7 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ToolDefinition(
             # generate_image is non-TERMINAL: after execution LLM continues to output text (e.g. interpretation or emotion) for the generated image.
             name="generate_image",
-            description="Generate an image based on the input prompt. When the user requests an image, extract or summarize their description into the input parameter.",
+            description="Generate an image based on the input prompt. When the user requests an image, or want to see the character or user, or visulize their dialogues, extract or summarize their description into the input parameter.",
             parameters={
                 "type": "object",
                 "properties": {

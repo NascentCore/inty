@@ -14,11 +14,15 @@ IMAGEN_4_FAST_MODEL = "imagen-4.0-fast-generate-001"
 RECENT_MESSAGES_LIMIT = 10
 
 
+from loguru import logger
+
+
 def _prompt_from_messages(messages: list[dict[str, Any]]) -> str:
     """
     策略 A：使用最后一条 role="user" 的 content 作为 Imagen 的 prompt。
     Imagen 仅接受单条文本且约 480 token 上限；若无 user 消息则退回默认描述。
     """
+    logger.debug(f"Generating image from messages: {messages}")
     for i in range(len(messages) - 1, -1, -1):
         msg = messages[i]
         if msg.get("role") == "user":
@@ -26,7 +30,7 @@ def _prompt_from_messages(messages: list[dict[str, Any]]) -> str:
             if isinstance(content, str) and content.strip():
                 return content.strip()[:2000]
             break
-    return "A scene inspired by the conversation."
+    return "A described by the dialogues: {dialogues}."
 
 
 def _trace_output_image(data: bytes | None) -> dict:
