@@ -40,6 +40,10 @@ import { loadSelfAgentList } from "../services/agentListService";
 import type { Agent, GeneratedImage } from "../types";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
 import { rankAgentsByGeneratedImageCount } from "../utils/generatedImagesRanking";
+import {
+  GENERATED_IMAGE_COUNT_BADGE_OVERFLOW_COUNT,
+  normalizeGeneratedImageCount,
+} from "../utils/generatedImageCountDisplay";
 
 const { Text, Paragraph, Title } = Typography;
 const { Search } = Input;
@@ -232,60 +236,68 @@ const GeneratedImagesPage: React.FC = () => {
                 <Spin spinning={loadingAgents}>
                   <List
                     dataSource={filteredAgents}
-                    renderItem={(agent) => (
-                      <List.Item
-                        onClick={() => setSelectedAgent(agent)}
-                        style={{
-                          cursor: "pointer",
-                          padding: "8px 12px",
-                          borderRadius: 8,
-                          backgroundColor:
-                            selectedAgent?.id === agent.id
-                              ? "#e6f4ff"
-                              : "transparent",
-                          marginBottom: 4,
-                          border:
-                            selectedAgent?.id === agent.id
-                              ? "1px solid #91caff"
-                              : "1px solid transparent",
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        <List.Item.Meta
-                          avatar={
-                            <Avatar
-                              src={agent.avatar}
-                              icon={<UserOutlined />}
-                              size={40}
-                            />
-                          }
-                          title={
-                            <Text
-                              strong={selectedAgent?.id === agent.id}
-                              style={{ fontSize: 14 }}
-                            >
-                              {agent.name}
-                            </Text>
-                          }
-                          description={
-                            <Space size={4}>
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                {agent.visibility === "PUBLIC"
-                                  ? "公开"
-                                  : "私有"}
+                    renderItem={(agent) => {
+                      const generatedImageCount = normalizeGeneratedImageCount(
+                        imageCounts[agent.id],
+                      );
+                      return (
+                        <List.Item
+                          onClick={() => setSelectedAgent(agent)}
+                          style={{
+                            cursor: "pointer",
+                            padding: "8px 12px",
+                            borderRadius: 8,
+                            backgroundColor:
+                              selectedAgent?.id === agent.id
+                                ? "#e6f4ff"
+                                : "transparent",
+                            marginBottom: 4,
+                            border:
+                              selectedAgent?.id === agent.id
+                                ? "1px solid #91caff"
+                                : "1px solid transparent",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          <List.Item.Meta
+                            avatar={
+                              <Avatar
+                                src={agent.avatar}
+                                icon={<UserOutlined />}
+                                size={40}
+                              />
+                            }
+                            title={
+                              <Text
+                                strong={selectedAgent?.id === agent.id}
+                                style={{ fontSize: 14 }}
+                              >
+                                {agent.name}
                               </Text>
-                              {imageCounts[agent.id] > 0 && (
-                                <Badge
-                                  count={imageCounts[agent.id]}
-                                  style={{ backgroundColor: "#52c41a" }}
-                                  size="small"
-                                />
-                              )}
-                            </Space>
-                          }
-                        />
-                      </List.Item>
-                    )}
+                            }
+                            description={
+                              <Space size={4}>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {agent.visibility === "PUBLIC"
+                                    ? "公开"
+                                    : "私有"}
+                                </Text>
+                                {generatedImageCount > 0 && (
+                                  <Badge
+                                    count={generatedImageCount}
+                                    overflowCount={
+                                      GENERATED_IMAGE_COUNT_BADGE_OVERFLOW_COUNT
+                                    }
+                                    style={{ backgroundColor: "#52c41a" }}
+                                    size="small"
+                                  />
+                                )}
+                              </Space>
+                            }
+                          />
+                        </List.Item>
+                      );
+                    }}
                   />
                 </Spin>
               )}
