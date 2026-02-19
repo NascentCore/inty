@@ -102,6 +102,7 @@ def _build_chat_response(
 ) -> dict:
     """构建聊天响应数据"""
     message = {"role": "assistant", "content": response_content}
+    # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
     default_business_actions = BusinessActions(
         subscription_actions=[
             BizAction(action_type=ActionType.NONE, message=""),

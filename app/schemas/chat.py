@@ -346,6 +346,7 @@ class ChatCompletionResponse(BaseModel):
     object: str = "chat.completion"
     created: int
     model: str
+    # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
     business_actions: List[BizAction] = Field(default_factory=list)
     choices: List[dict]
     usage: dict
