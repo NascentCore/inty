@@ -108,6 +108,9 @@ class GenAIModel(BaseModel):
         这个地址需要与第三方平台上的模型名称一致。比如 Google 的模型名称是 gemini-2.5-flash，
         那么在该平台上名字是 google/gemini-2.5-flash。""")
 
+    notes: str = Field(description="""
+        模型的一些备注信息，比如模型的使用技巧和功能限制、注意事项等。""")
+
 
 GEMINI_2_5_FLASH_LITE = GenAIModel(
     nickname="Gemini 2.5 Flash Lite",
@@ -160,6 +163,7 @@ NANO_BANANA_PRO = GenAIModel(
         https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-3
     """,
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
+    notes="""最多支持 14 张参考图片。""",
 )
 
 
