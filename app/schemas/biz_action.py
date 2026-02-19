@@ -30,7 +30,9 @@ class BizAction(BaseModel):
     message: str = Field(..., description="展示给用户的消息")
 
 
-ActionType = BizAction.ActionType  # 便于调用方 from app.schemas.biz_action import ActionType
+ActionType = (
+    BizAction.ActionType
+)  # 便于调用方 from app.schemas.biz_action import ActionType
 
 
 class BusinessActions(BaseModel):

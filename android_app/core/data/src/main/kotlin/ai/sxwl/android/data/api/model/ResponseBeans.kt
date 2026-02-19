@@ -31,11 +31,7 @@ data class PagedResponse<T>(
 )
 
 @JsonClass(generateAdapter = true)
-data class APIResponse<T>(
-    val code: Int = 200,
-    val message: String = "success",
-    val data: T? = null,
-)
+data class APIResponse<T>(val code: Int = 200, val message: String = "success", val data: T? = null)
 
 typealias PaginationResponse = APIResponse<PaginationData<*>>
 
@@ -56,8 +52,8 @@ data class UsageLimitExceeded(
 )
 
 /**
- * 业务错误码枚举，与 app/schemas/response.py BusinessErrorCodeEnum 取值一致。
- * code / message 映射见 BusinessErrorCodes.kt，此处仅作占位。
+ * 业务错误码枚举，与 app/schemas/response.py BusinessErrorCodeEnum 取值一致。 code / message 映射见
+ * BusinessErrorCodes.kt，此处仅作占位。
  */
 enum class BusinessErrorCodeEnum(val value: String) {
     SUBSCRIPTION_REQUIRED("SUBSCRIPTION_REQUIRED"),

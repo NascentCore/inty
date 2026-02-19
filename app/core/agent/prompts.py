@@ -274,6 +274,9 @@ AI Attribution: Do not assist users in misrepresenting AI-generated content as b
 """
 
 PORTRAIT_FRONTAL = "A studio portrait of this person against white, in profile looking frontal facing the camera"
-PORTRAIT_FACING_RIGHT = "A studio portrait of this person against white, in profile facing right"
-PORTRAIT_FACING_LEFT = "A studio portrait of this person against white, in profile facing left"
-
+PORTRAIT_FACING_RIGHT = (
+    "A studio portrait of this person against white, in profile facing right"
+)
+PORTRAIT_FACING_LEFT = (
+    "A studio portrait of this person against white, in profile facing left"
+)

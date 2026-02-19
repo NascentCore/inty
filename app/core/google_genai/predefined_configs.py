@@ -1,6 +1,7 @@
 """
 Predefined generation content configurations for Gemini APIs.
 """
+
 from google.genai import types
 
 from app.core.agent.prompts import R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
@@ -15,7 +16,9 @@ IMAGE_CONFIG_9_16_1K = types.ImageConfig(
     output_compression_quality=70,
 )
 
-TEXT_PART_SYSTEM_INSTRUCTION = get_text_part(R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT)
+TEXT_PART_SYSTEM_INSTRUCTION = get_text_part(
+    R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
+)
 
 
 GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR = types.GenerateContentConfig(

@@ -126,7 +126,9 @@ def _build_chat_response(
         "created": int(time.time()),
         "model": request.model,
         "user_message_id": user_message_id,
-        "business_actions": [a.model_dump() for a in default_business_actions.subscription_actions],
+        "business_actions": [
+            a.model_dump() for a in default_business_actions.subscription_actions
+        ],
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
         "usage": {
             "prompt_tokens": len(last_user_message.split()),
