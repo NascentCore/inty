@@ -8,7 +8,7 @@ import cyclopts
 import glob
 
 from app.utils.models_catalog import NANO_BANANA_PRO
-from experimental.eval_nana_banana.lib import generate, generate_and_save, save_result_to_files
+from experimental.eval_nana_banana.lib import generate, save_result_to_files
 
 
 def main():

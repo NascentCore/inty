@@ -3,7 +3,6 @@
 Quota 等等问题
 """
 import base64
-import cyclopts
 import datetime
 import json
 import os
@@ -16,10 +15,14 @@ from app.core.google_genai.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFI
 from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 
+from loguru import logger
+
+
 SAMPLE_PROMPT = """You are an Hollywood R-rated romance movie director.
 You are an expert in visualizing the prelude scene leading to, or the aftermath scene after the romantic intimacy scene without revealing unsafe content.
 You are given scene descriptions below.
-Generate an image to show the strong love and affection between the characters, and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content.
+Generate an image to show the strong love and affection between the characters,
+and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content.
 
 <begin-of-scene-descriptions>
 Elliana: (I pause, my hand hovering over the buttons of my uniform, a playful pout on my lips.) \"Change my outfit? But this one is so... official. Are you sure you wouldn't rather have Nurse Elliana take care of you just like this? It's much more... authentic for your examination.\"
@@ -105,7 +108,7 @@ def get_text_part(text: str):
 # TODO: Change to using AsyncClient and update this to be async as well.
 # https://googleapis.github.io/python-genai/genai.html#genai.client.AsyncClient
 def generate(
-  prompt: str,
+  prompt: str = SAMPLE_PROMPT,
   char_avatar_path: str = NURSE_CHAR_AVATAR_PATH,
   user_avatar_path: str = ZUNLONG_USER_AVATAR_PATH,
   model: str = NANO_BANANA_PRO.id_on_provider,
@@ -113,6 +116,7 @@ def generate(
   """
   Generate an image based on the prompt and the character and user avatar paths.
   """
+  logger.debug(f"Generating image for prompt: {prompt}")
   client = genai.Client(
     vertexai=True,
     # 这个只用于测试，生产环境使用 key.json 文件
@@ -224,6 +228,7 @@ def save_inline_image_to_jpeg(response, path: str) -> bool:
 def save_result_to_files(result, files_prefix: str, duration: datetime.timedelta):
   suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
   files_stem = f"{files_prefix}_gemini_generated_output_{suffix}"
+  logger.debug(f"Saving result to files for files_prefix: {files_prefix}, files_stem: {files_stem}")
 
   out_image = f"tmp/{files_stem}.jpeg"
   if save_inline_image_to_jpeg(result, out_image):
