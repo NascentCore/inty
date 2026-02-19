@@ -12,16 +12,26 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 
 // TODO: 确认该测试确实已经运行并且调用了后端
+/**
+ * Integration test for chat completions API returning business_actions.
+ * Only runs when backend is available and RUN_LOCALHOST_CHAT_COMPLETIONS_TEST=true,
+ * so CI (no backend) skips it without failure.
+ */
 class ChatCompletionsBizActionsApiTest {
     private val client = OkHttpClient()
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     @Test
     fun chatCompletions_returnsBusinessActionsList() {
+        assumeTrue(
+            "Skipped: set RUN_LOCALHOST_CHAT_COMPLETIONS_TEST=true to run against local backend",
+            System.getenv(RUN_LOCALHOST_CHAT_COMPLETIONS_TEST) == "true",
+        )
         val token = createGuestToken()
         val agentId = createAgent(token)
 
@@ -135,7 +145,7 @@ class ChatCompletionsBizActionsApiTest {
     private fun executeAndReadBody(request: Request): String {
         client.newCall(request).execute().use { response ->
             val responseBody = response.body?.string()
-            assertEquals(responseBody ?: "", 200, response.code)
+            assertEquals("Expected HTTP 200", 200, response.code)
             assertNotNull(responseBody)
             return responseBody!!
         }

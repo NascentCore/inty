@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel
@@ -66,7 +66,7 @@ class UsageLimitExceeded(BizError):
 
 # TODO：需要与前端确认错误码和错误消息是否一致，使用 enum 方便 Stainless SDK 自动生成错误码和错误消息
 # 代码仍在开发中，目前无效
-class WIPBusinessErrorCodeEnum(str, Enum):
+class BusinessErrorCodeEnum(StrEnum):
     """业务错误码枚举类型，用于返回错误信息给前端"""
 
     SUBSCRIPTION_REQUIRED = "SUBSCRIPTION_REQUIRED"
@@ -159,14 +159,6 @@ class BusinessErrorCode:
         "error_code": "LIVE_CHAT_DURATION_LIMIT_REACHED",
         "message": "Live chat duration limit reached",
     }
-
-
-# 业务错误消息定义
-BUSINESS_ERROR_MESSAGES = {
-    BusinessErrorCode.SUBSCRIPTION_REQUIRED[
-        "code"
-    ]: BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
-}
 
 
 def create_business_error_response(
