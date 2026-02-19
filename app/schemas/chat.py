@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_valid
 
 from app.schemas.biz_action import BizAction
 
+
 class MessageType(str, enum.Enum):
     """消息类型"""
 

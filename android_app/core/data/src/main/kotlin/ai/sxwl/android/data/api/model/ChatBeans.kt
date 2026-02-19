@@ -5,10 +5,7 @@ import ai.sxwl.android.utils.TimeUtils
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
-/**
- * 单条业务动作（如 subscription_popup），用于 chat completions。
- * 注意：biz action 仍处于探索阶段，尚未确定使用。
- */
+/** 单条业务动作（如 subscription_popup），用于 chat completions。 注意：biz action 仍处于探索阶段，尚未确定使用。 */
 @JsonClass(generateAdapter = true)
 data class BizAction(
     @Json(name = "action_type") val actionType: String = "none",

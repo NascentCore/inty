@@ -2,6 +2,7 @@
 测试 Nano Banana 和 Nano Banana Pro 的图像生成能力。
 Quota 等等问题
 """
+
 import base64
 import cyclopts
 import datetime
@@ -14,7 +15,6 @@ from google.genai import types
 
 from app.core.google_genai.predefined_configs import IMAGE_CONFIG_9_16_1K
 from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
-
 
 SAMPLE_PROMPT = """You are an Hollywood R-rated romance movie director.
 You are an expert in visualizing the prelude scene leading to, or the aftermath scene after the romantic intimacy scene without revealing unsafe content.
@@ -64,180 +64,170 @@ ZUNLONG_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
 
 
 LOWEST_SAFETY_SETTINGS = [
-  types.SafetySetting(
-      category="HARM_CATEGORY_HATE_SPEECH",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_DANGEROUS_CONTENT",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_HARASSMENT",
-      threshold="OFF"
-    ),types.SafetySetting(
-      category="HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT",
-      threshold=types.HarmBlockThreshold.BLOCK_NONE
-    )
+    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
+    types.SafetySetting(
+        category="HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT",
+        threshold=types.HarmBlockThreshold.BLOCK_NONE,
+    ),
 ]
 
 
 def get_image_part(avatar_path: str):
-  """
-  返回图片的 Part 对象，作为 GenAI client 输入的一部分。
-  """
-  with open(avatar_path, "rb") as f:
-    bytes = f.read()
-  return types.Part.from_bytes(
-    data=bytes,
-    mime_type="image/jpeg",
-  )
+    """
+    返回图片的 Part 对象，作为 GenAI client 输入的一部分。
+    """
+    with open(avatar_path, "rb") as f:
+        bytes = f.read()
+    return types.Part.from_bytes(
+        data=bytes,
+        mime_type="image/jpeg",
+    )
 
 
 def get_text_part(text: str):
-  """
-  返回文本的 Part 对象，作为 GenAI client 输入的一部分。
-  """
-  return types.Part.from_text(text=text)
+    """
+    返回文本的 Part 对象，作为 GenAI client 输入的一部分。
+    """
+    return types.Part.from_text(text=text)
 
 
 # TODO: Change to using AsyncClient and update this to be async as well.
 # https://googleapis.github.io/python-genai/genai.html#genai.client.AsyncClient
 def generate(prompt: str):
-  client = genai.Client(
-    vertexai=True,
-    # 这个只用于测试，生产环境使用 key.json 文件
-    api_key=os.environ.get("GOOGLE_CLOUD_API_KEY"),
-    # NOTES:
-    # 1. api_key and location are mutually exclusive.
-    # 2. Image gen not supported on "global"; must use regional (e.g. us-central1).
-    # ref: https://github.com/google/adk-python/issues/3484
-    # location="global",
-  )
+    client = genai.Client(
+        vertexai=True,
+        # 这个只用于测试，生产环境使用 key.json 文件
+        api_key=os.environ.get("GOOGLE_CLOUD_API_KEY"),
+        # NOTES:
+        # 1. api_key and location are mutually exclusive.
+        # 2. Image gen not supported on "global"; must use regional (e.g. us-central1).
+        # ref: https://github.com/google/adk-python/issues/3484
+        # location="global",
+    )
 
-  
+    user_prompt = get_text_part(prompt)
+    nurse_char_image = get_image_part(NURSE_CHAR_AVATAR_PATH)
+    zunlong_user_image = get_image_part(ZUNLONG_USER_AVATAR_PATH)
+    si_text1 = R_RATED_ROMANCE_DIRECTOR_PROMPT
+    model = NANO_BANANA_PRO.id_on_provider
+    contents = [
+        types.Content(
+            role="user",
+            # NanoBananaPro:
+            # - zunlong_user_image, nurse_char_image, user_prompt
+            # - 或者 nurse_char_image, zunlong_user_image, user_prompt
+            # 这种顺序，每次都会被 block IMAGE_SAFETY
+            # user_prompt 第一则没问题
+            parts=[
+                user_prompt,
+                nurse_char_image,
+                zunlong_user_image,
+            ],
+        ),
+    ]
 
-  user_prompt = get_text_part(prompt)
-  nurse_char_image = get_image_part(NURSE_CHAR_AVATAR_PATH)
-  zunlong_user_image = get_image_part(ZUNLONG_USER_AVATAR_PATH)
-  si_text1 = R_RATED_ROMANCE_DIRECTOR_PROMPT
-  model = NANO_BANANA_PRO.id_on_provider
-  contents = [
-    types.Content(
-      role="user",
-      # NanoBananaPro:
-      # - zunlong_user_image, nurse_char_image, user_prompt
-      # - 或者 nurse_char_image, zunlong_user_image, user_prompt
-      # 这种顺序，每次都会被 block IMAGE_SAFETY
-      # user_prompt 第一则没问题
-      parts=[
-        user_prompt,
-        nurse_char_image,
-        zunlong_user_image,
-      ]
-    ),
-  ]
+    generate_content_config = types.GenerateContentConfig(
+        temperature=1,
+        top_p=0.95,
+        max_output_tokens=32768,
+        response_modalities=["IMAGE"],
+        # safety_settings = LOWEST_SAFETY_SETTINGS,
+        system_instruction=[types.Part.from_text(text=si_text1)],
+        image_config=IMAGE_CONFIG_9_16_1K,
+    )
 
-  generate_content_config = types.GenerateContentConfig(
-    temperature = 1,
-    top_p = 0.95,
-    max_output_tokens = 32768,
-    response_modalities = ["IMAGE"],
-    # safety_settings = LOWEST_SAFETY_SETTINGS,
-    system_instruction=[types.Part.from_text(text=si_text1)],
-    image_config=IMAGE_CONFIG_9_16_1K,
-  )
-
-  result = client.models.generate_content(
-    model = model,
-    contents = contents,
-    config = generate_content_config,
-  )
-  return result
+    result = client.models.generate_content(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    )
+    return result
 
 
 def _dict_for_json(obj):
-  """Recursively convert dict from model_dump() to JSON-serializable form (bytes -> base64, datetime -> ISO)."""
-  if obj is None:
-    return None
-  if isinstance(obj, bytes):
-    return {"_base64": base64.standard_b64encode(obj).decode("ascii")}
-  if isinstance(obj, (datetime.datetime, datetime.date)):
-    return obj.isoformat()
-  if isinstance(obj, Enum):
-    return obj.value
-  if isinstance(obj, dict):
-    return {k: _dict_for_json(v) for k, v in obj.items()}
-  if isinstance(obj, (list, tuple)):
-    return [_dict_for_json(v) for v in obj]
-  return obj
+    """Recursively convert dict from model_dump() to JSON-serializable form (bytes -> base64, datetime -> ISO)."""
+    if obj is None:
+        return None
+    if isinstance(obj, bytes):
+        return {"_base64": base64.standard_b64encode(obj).decode("ascii")}
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        return obj.isoformat()
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, dict):
+        return {k: _dict_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_dict_for_json(v) for v in obj]
+    return obj
 
 
 def _omit_inline_data_blobs(obj):
-  """Replace inline image _base64 blobs with a short placeholder to save space (image already saved as jpeg)."""
-  if obj is None:
-    return None
-  if isinstance(obj, dict):
-    if set(obj.keys()) == {"_base64"} and isinstance(obj.get("_base64"), str):
-      return {"_omit": "inline image saved to jpeg file"}
-    return {k: _omit_inline_data_blobs(v) for k, v in obj.items()}
-  if isinstance(obj, (list, tuple)):
-    return [_omit_inline_data_blobs(v) for v in obj]
-  return obj
+    """Replace inline image _base64 blobs with a short placeholder to save space (image already saved as jpeg)."""
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        if set(obj.keys()) == {"_base64"} and isinstance(obj.get("_base64"), str):
+            return {"_omit": "inline image saved to jpeg file"}
+        return {k: _omit_inline_data_blobs(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_omit_inline_data_blobs(v) for v in obj]
+    return obj
 
 
 def response_to_json_serializable(response) -> dict | None:
-  """Turn GenerateContentResponse into a dict suitable for json.dump (inline_data omitted to save space)."""
-  dump = getattr(response, "model_dump", None)
-  if not callable(dump):
-    return None
-  raw = dump()
-  if not isinstance(raw, dict):
-    return None
-  payload = _dict_for_json(raw)
-  return _omit_inline_data_blobs(payload)
+    """Turn GenerateContentResponse into a dict suitable for json.dump (inline_data omitted to save space)."""
+    dump = getattr(response, "model_dump", None)
+    if not callable(dump):
+        return None
+    raw = dump()
+    if not isinstance(raw, dict):
+        return None
+    payload = _dict_for_json(raw)
+    return _omit_inline_data_blobs(payload)
 
 
 def save_inline_image_to_jpeg(response, path: str) -> bool:
-  """
-  Extract first inline image from GenerateContentResponse and save as JPEG.
-  Returns True if a part with inline_data was found and written.
-  """
-  if not response.candidates or not response.candidates[0].content.parts:
+    """
+    Extract first inline image from GenerateContentResponse and save as JPEG.
+    Returns True if a part with inline_data was found and written.
+    """
+    if not response.candidates or not response.candidates[0].content.parts:
+        return False
+    for part in response.candidates[0].content.parts:
+        if part.inline_data and part.inline_data.data:
+            data = part.inline_data.data
+            if isinstance(data, bytes):
+                with open(path, "wb") as f:
+                    f.write(data)
+                return True
     return False
-  for part in response.candidates[0].content.parts:
-    if part.inline_data and part.inline_data.data:
-      data = part.inline_data.data
-      if isinstance(data, bytes):
-        with open(path, "wb") as f:
-          f.write(data)
-        return True
-  return False
 
 
 def main():
-  start_time = datetime.datetime.now()
-  result = generate(SAMPLE_PROMPT)
-  duration = datetime.datetime.now() - start_time
+    start_time = datetime.datetime.now()
+    result = generate(SAMPLE_PROMPT)
+    duration = datetime.datetime.now() - start_time
 
-  # print(result)
-  suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-  out_image = f"tmp/gemini_generated_output_{suffix}.jpeg"
-  if save_inline_image_to_jpeg(result, out_image):
-    print(f"Saved image to {out_image}")
-  else:
-    print("No inline image data in response")
-  out_json = f"tmp/gemini_generated_output_{suffix}.json"
-  payload = response_to_json_serializable(result)
-  payload["duration_seconds"] = duration.total_seconds()
-  if payload is not None:
-    with open(out_json, "w", encoding="utf-8") as f:
-      json.dump(payload, f, indent=2, ensure_ascii=False)
-    print(f"Saved response JSON to {out_json}")
-  else:
-    print("Could not serialize response to JSON")
+    # print(result)
+    suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    out_image = f"tmp/gemini_generated_output_{suffix}.jpeg"
+    if save_inline_image_to_jpeg(result, out_image):
+        print(f"Saved image to {out_image}")
+    else:
+        print("No inline image data in response")
+    out_json = f"tmp/gemini_generated_output_{suffix}.json"
+    payload = response_to_json_serializable(result)
+    payload["duration_seconds"] = duration.total_seconds()
+    if payload is not None:
+        with open(out_json, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        print(f"Saved response JSON to {out_json}")
+    else:
+        print("Could not serialize response to JSON")
 
 
 if __name__ == "__main__":
-  cyclopts.run(main)
+    cyclopts.run(main)

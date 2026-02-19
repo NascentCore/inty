@@ -4,18 +4,13 @@ package ai.sxwl.android.data.http
  * 业务错误码常量。与后端 `app/schemas/response.py`（BusinessErrorCode 及 API 响应规则）保持一致。
  *
  * ## 规则：HTTP 状态码 / body.code / data.error_code
- *
- * - **HTTP status（HTTP 状态码）**：仅用于请求或基础设施失败（4xx/5xx）。
- *   服务端抛出 HTTPException 时，响应为该状态码且 body 常为 `{"detail": "..."}`。
- *   不要用 HTTP 状态码判断业务错误（如需要订阅）。
- *
- * - **Body code（响应 body 的 code）**：成功 = 200。业务错误使用数字码（如 [SUBSCRIPTION_REQUIRED_CODE]）。
- *   响应通常为 HTTP 200；根据解析后的 body 的 `code` 与 `data.error_code` 分支。
- *   NetServiceMgr 的 wrapper 将 body code 200 视为成功。
- *
- * - **data.error_code**：当 body 的 `code` != 200 时，`data` 可能包含字符串
- *   `error_code`（如 [SUBSCRIPTION_REQUIRED_ERROR_CODE]）及可选 `description`。
- *   用 `data.error_code` 做业务错误类型分支；用 body 的 `code` 做数字匹配，`message` 做展示。
+ * - **HTTP status（HTTP 状态码）**：仅用于请求或基础设施失败（4xx/5xx）。 服务端抛出 HTTPException 时，响应为该状态码且 body 常为
+ *   `{"detail": "..."}`。 不要用 HTTP 状态码判断业务错误（如需要订阅）。
+ * - **Body code（响应 body 的 code）**：成功 = 200。业务错误使用数字码（如 [SUBSCRIPTION_REQUIRED_CODE]）。 响应通常为 HTTP
+ *   200；根据解析后的 body 的 `code` 与 `data.error_code` 分支。 NetServiceMgr 的 wrapper 将 body code 200 视为成功。
+ * - **data.error_code**：当 body 的 `code` != 200 时，`data` 可能包含字符串 `error_code`（如
+ *   [SUBSCRIPTION_REQUIRED_ERROR_CODE]）及可选 `description`。 用 `data.error_code` 做业务错误类型分支；用 body 的
+ *   `code` 做数字匹配，`message` 做展示。
  */
 object BusinessErrorCodes {
 

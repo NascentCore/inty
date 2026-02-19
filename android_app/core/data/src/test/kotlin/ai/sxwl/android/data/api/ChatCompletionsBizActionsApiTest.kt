@@ -15,12 +15,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 
-
 // TODO: 确认该测试确实已经运行并且调用了后端
 /**
- * Integration test for chat completions API returning business_actions.
- * Only runs when backend is available and RUN_LOCALHOST_CHAT_COMPLETIONS_TEST=true,
- * so CI (no backend) skips it without failure.
+ * Integration test for chat completions API returning business_actions. Only runs when backend is
+ * available and RUN_LOCALHOST_CHAT_COMPLETIONS_TEST=true, so CI (no backend) skips it without
+ * failure.
  *
  * 注意：biz action 仍处于探索阶段，尚未确定使用。
  */
