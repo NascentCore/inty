@@ -339,13 +339,14 @@ class ChatCompletionRequest(BaseModel):
         return self
 
 
-class ChatCompletionResponse(BizAction):
+class ChatCompletionResponse(BaseModel):
     """聊天完成响应模型"""
 
     id: str
     object: str = "chat.completion"
     created: int
     model: str
+    business_actions: List[BizAction] = Field(default_factory=list)
     choices: List[dict]
     usage: dict
 

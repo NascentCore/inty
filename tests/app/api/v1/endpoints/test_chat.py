@@ -82,9 +82,11 @@ def test_agent_chat_completions_with_sdk(
     assert isinstance(message["id"], int)
     business_actions = data.get("business_actions")
     assert isinstance(business_actions, list) and len(business_actions) > 0
-    assert all(
-        isinstance(action, str) and action.strip() for action in business_actions
-    ), f"Invalid business_actions payload: {business_actions}"
+    for action in business_actions:
+        assert isinstance(action, dict), f"Each business_actions item must be a dict: {action}"
+        assert "action_type" in action and "message" in action, (
+            f"Each business_actions item must have action_type and message: {action}"
+        )
 
 
 def test_festival_memory_delivered_via_chat_completions(

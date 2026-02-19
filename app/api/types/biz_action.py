@@ -1,7 +1,9 @@
+from enum import StrEnum
 from typing import List
 
 from pydantic import BaseModel, Field
 
+# Reserved copy for subscription_popup actions; use when building SUBSCRIPTION_POPUP BizAction.
 GENERAL_SUBSCRIPTION_POPUP_MESSAGES = (
     "Unlock unlimited chats with Premium.",
     "Get richer voices and priority replies with Premium.",
@@ -11,16 +13,22 @@ GENERAL_SUBSCRIPTION_POPUP_MESSAGES = (
 
 
 class BizAction(BaseModel):
-    """General business actions for growth and subscription prompts."""
+    """Business actions for business prompts."""
 
-    # AI 工作总结：
-    # 1) 将通用订阅弹窗文案集中为一个后端类型，避免分散在不同 endpoint。
-    # 2) 用标准字段 business_actions 统一向 Android 客户端透出文案列表。
-    business_actions: List[str] = Field(
-        default_factory=lambda: list(GENERAL_SUBSCRIPTION_POPUP_MESSAGES),
-        min_length=1,
-        description=(
-            "General short messages for subscription popup prompts when users chat with AI "
-            "characters."
-        ),
-    )
+    class ActionType(StrEnum):
+        # 什么也不做，作为占位符，某些场合用得上
+        NONE = "none"
+        # 显示订阅弹窗
+        SUBSCRIPTION_POPUP = "subscription_popup"
+
+    action_type: ActionType
+    message: str = Field(..., description="The message to display to the user")
+
+
+ActionType = BizAction.ActionType  # 便于调用方 from app.api.types.biz_action import ActionType
+
+
+class BusinessActions(BaseModel):
+    """Container for a list of biz actions (e.g. subscription_actions)."""
+
+    subscription_actions: List[BizAction]

@@ -37,10 +37,10 @@ class ChatCompletionsBizActionsApiTest {
 
             val businessActions = data?.businessActions ?: emptyList()
             assertFalse("businessActions should not be empty", businessActions.isEmpty())
-            assertFalse(
-                "businessActions should not contain blank items",
-                businessActions.any { it.isBlank() },
-            )
+            businessActions.forEach { action ->
+                assertNotNull("action_type must be non-null", action.actionType)
+                assertNotNull("message must be non-null", action.message)
+            }
         } finally {
             deleteAgent(token, agentId)
         }
