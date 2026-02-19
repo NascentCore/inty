@@ -116,7 +116,7 @@ def generate(
   """
   Generate an image based on the prompt and the character and user avatar paths.
   """
-  logger.debug(f"Generating image for prompt: {prompt}")
+  # logger.debug(f"Generating image for prompt: {prompt}")
   client = genai.Client(
     vertexai=True,
     # 这个只用于测试，生产环境使用 key.json 文件

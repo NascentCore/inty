@@ -7,7 +7,7 @@ import datetime
 import cyclopts
 import glob
 
-from app.utils.models_catalog import NANO_BANANA_PRO
+from app.utils.models_catalog import NANO_BANANA
 from experimental.eval_nana_banana.lib import generate, save_result_to_files
 
 
@@ -19,7 +19,7 @@ def main():
     with open(prompt_file, "r") as f:
       prompt = f.read()
     start_time = datetime.datetime.now()
-    result = generate(prompt, model=NANO_BANANA_PRO.id_on_provider)
+    result = generate(prompt, model=NANO_BANANA.id_on_provider)
     duration = datetime.datetime.now() - start_time
     save_result_to_files(result, files_prefix, duration)
 
