@@ -109,7 +109,8 @@ class GenAIModel(BaseModel):
         那么在该平台上名字是 google/gemini-2.5-flash。""")
 
     notes: str = Field(description="""
-        模型的一些备注信息，比如模型的使用技巧和功能限制、注意事项等。""")
+        模型的一些备注信息，比如模型的使用技巧和功能限制、注意事项等。""",
+        default="")
 
 
 GEMINI_2_5_FLASH_LITE = GenAIModel(

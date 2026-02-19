@@ -188,15 +188,14 @@ def execute_generate_image(
     prompt = (input or "").strip() or _prompt_from_messages(recent)
     try:
         from experimental.eval_nana_banana.lib import generate
-        out_image, out_json = generate(
+        out_image_path, out_json_path = generate(
             prompt=prompt,
             char_avatar_path="experimental/agentic_ai_companion/companion_profile/avatar.jpg",
             user_avatar_path="experimental/agentic_ai_companion/companion_profile/avatar.jpg",
             output_dir="tmp",
         )
-        logger.debug(f"generate_image result: {out_image}, {out_json}")
-        image_bytes = out_image.generated_images[0].image_bytes
-        return ("generate_image: Image generated.", out_image)
+        logger.debug(f"generate_image result: {out_image_path}, {out_json_path}")
+        return ("generate_image: Image generated.", out_image_path)
     except (ValueError, OSError, AttributeError) as e:
         if _logger is not None:
             _logger.warning("generate_image 失败: %s", e)

@@ -104,6 +104,18 @@ def _upload_file_to_gcs(
   return blob.public_url
 
 
+def _get_image_part(avatar_path: str) -> types.Part:
+  """返回图片的 Part 对象，作为 GenAI client 输入的一部分。"""
+  with open(avatar_path, "rb") as f:
+    data = f.read()
+  return types.Part.from_bytes(data=data, mime_type="image/jpeg")
+
+
+def _get_text_part(text: str) -> types.Part:
+  """返回文本的 Part 对象，作为 GenAI client 输入的一部分。"""
+  return types.Part.from_text(text=text)
+
+
 # TODO: Change to using AsyncClient and update this to be async as well.
 # https://googleapis.github.io/python-genai/genai.html#genai.client.AsyncClient
 def generate(
@@ -112,11 +124,13 @@ def generate(
   user_avatar_path: str = ZUNLONG_USER_AVATAR_PATH,
   model: str = NANO_BANANA_PRO.id_on_provider,
   output_dir: str = "tmp",
+  files_prefix: str = "generated",
   gcs_prefix: str = "eval_nana_banana",
   gcs_bucket: str | None = None,
-) -> types.GenerateContentResponse | None:
+) -> tuple[str, str]:
   """
   Generate an image based on the prompt and the character and user avatar paths.
+  Saves image and JSON to output_dir with the given files_prefix; returns (out_image path, out_json path).
   When gcs_bucket is set, also upload the generated image and JSON result to GCS
   under the given gcs_prefix (e.g. eval_nana_banana/).
   """
@@ -132,9 +146,9 @@ def generate(
     # location="global",
   )
 
-  user_prompt = get_text_part(prompt)
-  nurse_char_image = get_image_part(char_avatar_path)
-  zunlong_user_image = get_image_part(user_avatar_path)
+  user_prompt = _get_text_part(prompt)
+  nurse_char_image = _get_image_part(char_avatar_path)
+  zunlong_user_image = _get_image_part(user_avatar_path)
   si_text1 = R_RATED_ROMANCE_DIRECTOR_PROMPT
   contents = [
     types.Content(
@@ -172,7 +186,7 @@ def generate(
     config = generate_content_config,
   )
   duration = datetime.datetime.now() - start_time
-  out_image, out_json = save_result_to_files(result, output_dir, duration)
+  out_image, out_json = save_result_to_files(result, files_prefix, duration, output_dir=output_dir)
   if gcs_bucket is not None:
     prefix = gcs_prefix.strip("/")
     image_gcs_path = f"{prefix}/{os.path.basename(out_image)}"
@@ -246,17 +260,23 @@ def save_inline_image_to_jpeg(response, path: str) -> bool:
   return False
 
 
-def save_result_to_files(result, files_prefix: str, duration: datetime.timedelta):
+def save_result_to_files(
+  result,
+  files_prefix: str,
+  duration: datetime.timedelta,
+  output_dir: str = "tmp",
+) -> tuple[str, str]:
+  os.makedirs(output_dir, exist_ok=True)
   suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
   files_stem = f"{files_prefix}_gemini_generated_output_{suffix}"
   logger.debug(f"Saving result to files for files_prefix: {files_prefix}, files_stem: {files_stem}")
 
-  out_image = f"tmp/{files_stem}.jpeg"
+  out_image = os.path.join(output_dir, f"{files_stem}.jpeg")
   if save_inline_image_to_jpeg(result, out_image):
     print(f"Saved image to {out_image} for files_prefix: {files_prefix}")
   else:
     print("No inline image data in response")
-  out_json = f"tmp/{files_stem}.json"
+  out_json = os.path.join(output_dir, f"{files_stem}.json")
   payload = response_to_json_serializable(result)
   payload["duration_seconds"] = duration.total_seconds()
   if payload is not None:

@@ -30,7 +30,7 @@ def _prompt_from_messages(messages: list[dict[str, Any]]) -> str:
             if isinstance(content, str) and content.strip():
                 return content.strip()[:2000]
             break
-    return "A described by the dialogues: {dialogues}."
+    return "A scene inspired by the conversation."
 
 
 def _trace_output_image(data: bytes | None) -> dict:
