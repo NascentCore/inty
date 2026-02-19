@@ -116,7 +116,7 @@ class TtsManager private constructor(private val context: Context) {
 
                 when (response) {
                     is HttpResult.Success -> {
-                        if (response.data.code == BusinessErrorCodes.VOICE_TTS_LIMIT_CODE) {
+                        if (response.data.code == BusinessErrorCodes.VOICE_GENERATION_LIMIT_REACHED_CODE) {
                             // 音频生成到达次数限制，需要给用户toast提示文案
                             ToastUtils.showShort("${response.data.message}")
                             LogUtils.e("音频LOG测试 TTS 生成次数到达限制 (Agent: $agentId)")

@@ -1,17 +1,27 @@
 import uuid
 
 import pytest
+from fastapi import FastAPI
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.api import deps
+from app.api.v1.endpoints import agents as agents_v1
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token
 from app.core.uuid import get_new_user_id
 from app.models.agent import Agent
 from app.models.subscription import SubscriptionUsage
 from app.models.user import AuthType, Gender, User
+from app.schemas.response import BusinessErrorCode
 from app.services.user_service import generate_next_readable_id_sync
+from app.services.global_services import subscription_service
 from tests.app.api.test_client import TestClient
+from tests.app.api.v1.endpoints.conftest import (
+    _client_with_user,
+    _create_mock_db_session,
+    _make_user,
+)
 
 
 def test_chat_completions_endpoint(integration_client: TestClient):
@@ -50,6 +60,92 @@ def db_session():
     session = Session()
     yield session
     session.close()
+
+
+@pytest.fixture
+def agents_business_error_app() -> FastAPI:
+    app = FastAPI()
+    app.include_router(agents_v1.router, prefix="/api/v1")
+
+    async def override_db():
+        mock_db = _create_mock_db_session()
+        yield mock_db
+
+    app.dependency_overrides[deps.get_async_db] = override_db
+
+    yield app
+
+    app.dependency_overrides.clear()
+
+
+def test_create_agent_limit_returns_business_error(
+    monkeypatch: pytest.MonkeyPatch, agents_business_error_app: FastAPI
+):
+    async def fake_check_agent_creation_limit(db, current_user):
+        return False, 6, 6
+
+    monkeypatch.setattr(
+        subscription_service,
+        "check_agent_creation_limit",
+        fake_check_agent_creation_limit,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(agents_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/ai/agents",
+            json={"name": "Test Agent", "gender": "FEMALE", "visibility": "PUBLIC"},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["code"]
+    assert body["message"] == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["message"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.AGENT_CREATION_LIMIT_REACHED["error_code"]
+    )
+    assert body["data"]["used_count"] == 6
+    assert body["data"]["limit"] == 6
+    assert body["data"]["feature"] == "agent_creation"
+
+
+def test_text_to_image_limit_returns_business_error(
+    monkeypatch: pytest.MonkeyPatch, agents_business_error_app: FastAPI
+):
+    async def fake_check_image_gen_limit(db, current_user):
+        return False, 3, 3
+
+    monkeypatch.setattr(
+        subscription_service,
+        "check_image_gen_limit",
+        fake_check_image_gen_limit,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(agents_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/ai/agents/text-to-image",
+            json={"prompt": "generate image", "count": 1},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["code"]
+    assert (
+        body["message"] == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["message"]
+    )
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.IMAGE_GENERATION_LIMIT_REACHED["error_code"]
+    )
+    assert body["data"]["used_count"] == 3
+    assert body["data"]["limit"] == 3
+    assert body["data"]["feature"] == "background_generation"
 
 
 def test_text_to_image_endpoint(integration_client: TestClient, db_session):
