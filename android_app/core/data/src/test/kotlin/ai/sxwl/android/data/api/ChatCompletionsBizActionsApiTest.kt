@@ -21,6 +21,8 @@ import org.junit.Test
  * Integration test for chat completions API returning business_actions.
  * Only runs when backend is available and RUN_LOCALHOST_CHAT_COMPLETIONS_TEST=true,
  * so CI (no backend) skips it without failure.
+ *
+ * 注意：biz action 仍处于探索阶段，尚未确定使用。
  */
 class ChatCompletionsBizActionsApiTest {
     private val client = OkHttpClient()
