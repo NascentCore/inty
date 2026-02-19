@@ -12,7 +12,7 @@ from google import genai
 from google.genai import types
 
 
-from app.core.google_genai.predefined_configs import DEFAULT_9_16_1K_IMAGE_CONFIG
+from app.core.google_genai.predefined_configs import IMAGE_CONFIG_9_16_1K
 from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 
@@ -146,7 +146,7 @@ def generate(prompt: str):
     response_modalities = ["IMAGE"],
     # safety_settings = LOWEST_SAFETY_SETTINGS,
     system_instruction=[types.Part.from_text(text=si_text1)],
-    image_config=DEFAULT_9_16_1K_IMAGE_CONFIG,
+    image_config=IMAGE_CONFIG_9_16_1K,
   )
 
   result = client.models.generate_content(
