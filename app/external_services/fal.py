@@ -61,6 +61,9 @@ class FalTextToVideoResult:
     raw: dict[str, Any]
 
 
+IMAGE_SIZE_PORTRAIT_16_9 = "portrait_16_9"
+
+
 class FalAIClient:
     """
     Minimal fal.ai client wrapper using the official `fal_client` package.
@@ -118,7 +121,7 @@ class FalAIClient:
         self,
         *,
         model: str,
-        image_url: str,
+        image_urls: list[str],
         prompt: str,
         strength: float = 0.75,
         num_images: int = 1,
@@ -130,7 +133,7 @@ class FalAIClient:
 
         Args:
             model: fal 模型名，如 "fal-ai/z-image/turbo/image-to-image"
-            image_url: 参考图 URL
+            image_urls: 参考图 URL 列表
             prompt: 生成提示词
             strength: 变换强度 (0-1)，值越大变化越大
             num_images: 生成图片数量
@@ -140,17 +143,22 @@ class FalAIClient:
         Returns:
             FalTextToImageResult 包含生成的图片信息
         """
+        if not image_urls:
+            raise ValueError("image_urls must not be empty")
+
         arguments: dict[str, Any] = {
             "prompt": prompt,
         }
 
         # 根据模型类型选择正确的参数格式
-        # gpt-image-1.5/edit 使用 image_urls（数组格式）
+        # gpt-image-1.5/edit、bytedance/seedream/v4.5/edit 等使用 image_urls（数组格式）
         # 其他模型使用 image_url（单数）
-        if "gpt-image" in model.lower():
-            arguments["image_urls"] = [image_url]
+        if "gpt-image" in model.lower() or "seedream" in model.lower():
+            arguments["image_urls"] = image_urls
         else:
-            arguments["image_url"] = image_url
+            if len(image_urls) > 1:
+                raise ValueError("Only one image URL is supported for non-gpt-image/seedream models")
+            arguments["image_url"] = image_urls[0]
             arguments["strength"] = strength
             arguments["num_images"] = num_images
 

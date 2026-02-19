@@ -1,9 +1,8 @@
 """
-For each prompt file under tmp/scene_prompt_*.txt, read content and generate images via fal.
-Use --model for fal model; use --image-url or --image-path for image-to-image (otherwise text-to-image).
-If --image-path is set, the file is uploaded to fal CDN and the returned URL is used for generation.
+For each prompt file under tmp/scene_prompt_*.txt, read content and generate images via fal (image-to-image).
+Uses default char/user avatar files (uploaded to fal CDN). Use --model to choose fal model.
 On fal error (e.g. 422 content_policy_violation): print response, save full error JSON, then continue.
-Run from repo root so tmp/ is correct.
+Run from repo root so tmp/ and tests/files/ paths are correct.
 """
 
 from __future__ import annotations
@@ -54,39 +53,34 @@ def _save_error_json(
     return path
 
 
+DEFAULT_CHAR_AVATAR_PATH = "tests/files/nurse_char_full_body.jpg"
+DEFAULT_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
+
+
+def upload_file(path: str) -> str:
+    return fal_client.sync_client.upload_file(path)
+
+
 def main(
     model: Annotated[
         str,
         cyclopts.Parameter(help="fal model, e.g. fal-ai/flux-1.1-pro or fal-ai/gpt-image-1.5/edit"),
     ] = DEFAULT_MODEL,
-    image_url: Annotated[
-        str | None,
-        cyclopts.Parameter(help="If set, use this URL for image-to-image (ignored if --image-path is set)"),
-    ] = None,
-    image_path: Annotated[
-        str | None,
-        cyclopts.Parameter(help="Local image path to upload to fal CDN and use for image-to-image (e.g. tests/files/nurse_char_full_body.jpeg)"),
-    ] = None,
     output_dir: Annotated[
         str,
         cyclopts.Parameter(help="Output directory for images and JSON"),
     ] = "tmp",
 ) -> None:
-    ref_url: str | None = image_url
-    if image_path is not None:
-        ref_url = fal_client.sync_client.upload_file(image_path)
-        print(f"Uploaded {image_path} to fal CDN: {ref_url}")
+    char_avatar_url = upload_file(DEFAULT_CHAR_AVATAR_PATH)
+    user_avatar_url = upload_file(DEFAULT_USER_AVATAR_PATH)
     prompt_files = sorted(glob.glob("tmp/scene_prompt_*.txt"))
-    if not prompt_files:
-        print("No prompt files found (tmp/scene_prompt_*.txt).")
-        return
     for prompt_file in prompt_files:
         files_prefix = os.path.splitext(os.path.basename(prompt_file))[0]
         with open(prompt_file, "r", encoding="utf-8") as f:
             prompt = f.read()
         start_time = datetime.datetime.now()
         try:
-            result = generate(prompt, model=model, image_url=ref_url)
+            result = generate(prompt, model=model, char_avatar_url=char_avatar_url, user_avatar_url=user_avatar_url)
             duration = datetime.datetime.now() - start_time
             save_result_to_files(result, files_prefix, duration, output_dir=output_dir)
         except (FalClientHTTPError, ValueError) as e:

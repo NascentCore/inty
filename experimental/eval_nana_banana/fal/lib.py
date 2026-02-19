@@ -12,47 +12,33 @@ import os
 import urllib.request
 from typing import Any
 
-from app.external_services.fal import FalAIClient, FalTextToImageResult
-
-DEFAULT_FAL_IMAGE_SIZE = "landscape_4_3"
-DEFAULT_FAL_OUTPUT_FORMAT = "jpeg"
-
+from app.external_services.fal import IMAGE_SIZE_PORTRAIT_16_9, FalAIClient, FalTextToImageResult
 
 def generate(
     prompt: str,
     model: str,
-    image_url: str | None = None,
+    char_avatar_url: str,
+    user_avatar_url: str,
     *,
     strength: float = 0.75,
     num_images: int = 1,
-    image_size: str = DEFAULT_FAL_IMAGE_SIZE,
-    output_format: str = DEFAULT_FAL_OUTPUT_FORMAT,
-    api_key: str | None = None,
-    extra_args: dict[str, Any] | None = None,
+    image_size: str = IMAGE_SIZE_PORTRAIT_16_9,
+    output_format: str = "jpeg",
 ) -> FalTextToImageResult:
     """
-    Generate image via fal: text-to-image if image_url is None, else image-to-image.
+    Generate image via fal image-to-image using char and user avatar URLs.
     Caller is responsible for timing and calling save_result_to_files.
     """
-    client = FalAIClient(api_key=api_key)
-    if image_url:
-        return client.image_to_image(
-            model=model,
-            image_url=image_url,
-            prompt=prompt,
-            strength=strength,
-            num_images=num_images,
-            extra_args=extra_args,
-        )
-    arguments: dict[str, Any] = {
-        "prompt": prompt,
-        "num_images": num_images,
-        "image_size": image_size,
-        "output_format": output_format,
-    }
-    if extra_args:
-        arguments.update(extra_args)
-    return client.text_to_image(model=model, arguments=arguments)
+    client = FalAIClient()
+    extra = {"image_size": image_size, "output_format": output_format}
+    return client.image_to_image(
+        model=model,
+        image_urls=[char_avatar_url, user_avatar_url],
+        prompt=prompt,
+        strength=strength,
+        num_images=num_images,
+        extra_args=extra,
+    )
 
 
 def save_result_to_files(

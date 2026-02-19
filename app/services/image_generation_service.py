@@ -942,7 +942,7 @@ class ImageGenerationService:
 
             fal_result = client.image_to_image(
                 model=model,
-                image_url=reference_url,
+                image_urls=[reference_url],
                 prompt=prompt,
                 strength=0.75,
                 num_images=1,
