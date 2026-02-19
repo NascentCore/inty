@@ -1,8 +1,8 @@
-# Unit tests for app.api.types.biz_action (BizAction, BusinessActions, ActionType, constant)
+# Unit tests for app.schemas.biz_action (BizAction, BusinessActions, ActionType, constant)
 
 import pytest
 
-from app.api.types.biz_action import (
+from app.schemas.biz_action import (
     GENERAL_SUBSCRIPTION_POPUP_MESSAGES,
     ActionType,
     BizAction,

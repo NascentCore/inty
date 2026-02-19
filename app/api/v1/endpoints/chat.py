@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models, schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
-from app.api.types.biz_action import ActionType, BizAction, BusinessActions
+from app.schemas.biz_action import ActionType, BizAction, BusinessActions
 from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager

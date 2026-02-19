@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
-from app.api.types.biz_action import BizAction
+from app.schemas.biz_action import BizAction
 
 class MessageType(str, enum.Enum):
     """消息类型"""
