@@ -207,26 +207,11 @@ def save_inline_image_to_jpeg(response, path: str) -> bool:
 
 
 def main():
-    start_time = datetime.datetime.now()
-    result = generate(SAMPLE_PROMPT)
-    duration = datetime.datetime.now() - start_time
+  start_time = datetime.datetime.now()
+  result = generate(SAMPLE_PROMPT, model=NANO_BANANA_PRO.id_on_provider)
+  duration = datetime.datetime.now() - start_time
 
-    # print(result)
-    suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    out_image = f"tmp/gemini_generated_output_{suffix}.jpeg"
-    if save_inline_image_to_jpeg(result, out_image):
-        print(f"Saved image to {out_image}")
-    else:
-        print("No inline image data in response")
-    out_json = f"tmp/gemini_generated_output_{suffix}.json"
-    payload = response_to_json_serializable(result)
-    payload["duration_seconds"] = duration.total_seconds()
-    if payload is not None:
-        with open(out_json, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-        print(f"Saved response JSON to {out_json}")
-    else:
-        print("Could not serialize response to JSON")
+  save_result_to_files(result, "sample", duration)
 
 
 if __name__ == "__main__":
