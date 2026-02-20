@@ -340,53 +340,58 @@ private fun ProfileHeader(
 
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
-            AsyncImage(
-                modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.DiscordInvite.toUri())
-                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
-                            }
-                        }
-                    },
-                model = R.drawable.ic_discord,
-                contentDescription = stringResource(R.string.me_icons_row_discord),
-            )
-
-            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
-
-            AsyncImage(
-                modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
-                                    )
-                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
-                            }
-                        }
-                    },
-                model = R.drawable.ic_whatsapp,
-                contentDescription = stringResource(R.string.me_icons_row_whatsapp),
-            )
-            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
+            /*
+             * 按需求临时隐藏：
+             * - 右上角 Discord 入口图标
+             * - 右上角 WhatsApp 入口图标
+             */
+            // AsyncImage(
+            //     modifier =
+            //         Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
+            //             val currentTime = System.currentTimeMillis()
+            //             if (AntiClick.isValidClick(lastClickTime)) {
+            //                 lastClickTime = currentTime
+            //                 try {
+            //                     val intent =
+            //                         Intent(Intent.ACTION_VIEW, UiConfigs.Urls.DiscordInvite.toUri())
+            //                     // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+            //                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            //                     context.startActivity(intent)
+            //                 } catch (e: Exception) {
+            //                     ToastUtils.showLargeText(e.toString())
+            //                 }
+            //             }
+            //         },
+            //     model = R.drawable.ic_discord,
+            //     contentDescription = stringResource(R.string.me_icons_row_discord),
+            // )
+            //
+            // Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
+            //
+            // AsyncImage(
+            //     modifier =
+            //         Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
+            //             val currentTime = System.currentTimeMillis()
+            //             if (AntiClick.isValidClick(lastClickTime)) {
+            //                 lastClickTime = currentTime
+            //                 try {
+            //                     val intent =
+            //                         Intent(
+            //                             Intent.ACTION_VIEW,
+            //                             UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
+            //                         )
+            //                     // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+            //                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            //                     context.startActivity(intent)
+            //                 } catch (e: Exception) {
+            //                     ToastUtils.showLargeText(e.toString())
+            //                 }
+            //             }
+            //         },
+            //     model = R.drawable.ic_whatsapp,
+            //     contentDescription = stringResource(R.string.me_icons_row_whatsapp),
+            // )
+            // Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
             Icon(
                 modifier =
