@@ -114,14 +114,15 @@ describe("buildDailyUsageSeries", () => {
 });
 
 describe("buildDailyImageUsageSeries", () => {
-  it("按日期升序输出生图请求与成功曲线，并过滤周报", () => {
+  it("按日期升序输出生图请求、成功与成功率曲线，并过滤周报", () => {
     const reports = [
       buildReport({
         id: "r2",
         report_date: "2026-02-02",
         stats: buildStats({
           total_image_generation_requests: 12,
-          total_image_generation_success: 10,
+          total_image_generation_success: 9,
+          image_generation_success_rate: 99,
         }),
       }),
       buildReport({
@@ -129,7 +130,8 @@ describe("buildDailyImageUsageSeries", () => {
         report_date: "2026-02-01",
         stats: buildStats({
           total_image_generation_requests: 8,
-          total_image_generation_success: 7,
+          total_image_generation_success: 6,
+          image_generation_success_rate: 1,
         }),
       }),
       buildReport({
@@ -150,7 +152,10 @@ describe("buildDailyImageUsageSeries", () => {
       8, 12,
     ]);
     expect(series?.valuesByMetric.total_image_generation_success).toEqual([
-      7, 10,
+      6, 9,
+    ]);
+    expect(series?.valuesByMetric.image_generation_success_rate).toEqual([
+      75, 75,
     ]);
   });
 
@@ -245,7 +250,7 @@ describe("buildRollingDailyUsageSeries", () => {
 });
 
 describe("buildRollingDailyImageUsageSeries", () => {
-  it("按日期输出每日近7天生图请求与成功滚动和", () => {
+  it("按日期输出每日近7天生图请求、成功滚动和与成功率", () => {
     const reports = Array.from({ length: 8 }, (_, index) => {
       const day = String(index + 1).padStart(2, "0");
       const value = index + 1;
@@ -255,6 +260,7 @@ describe("buildRollingDailyImageUsageSeries", () => {
         stats: buildStats({
           total_image_generation_requests: value * 3,
           total_image_generation_success: value * 2,
+          image_generation_success_rate: 10 + value,
         }),
       });
     });
@@ -267,6 +273,12 @@ describe("buildRollingDailyImageUsageSeries", () => {
     expect(series?.valuesByMetric.total_image_generation_success).toEqual([
       2, 6, 12, 20, 30, 42, 56, 70,
     ]);
+    const successRateValues =
+      series?.valuesByMetric.image_generation_success_rate ?? [];
+    expect(successRateValues).toHaveLength(8);
+    successRateValues.forEach((value) => {
+      expect(value).toBeCloseTo(66.6666667, 6);
+    });
     expect(series?.dates[series.dates.length - 1]).toBe("2026-02-08");
   });
 
@@ -278,6 +290,7 @@ describe("buildRollingDailyImageUsageSeries", () => {
         stats: buildStats({
           total_image_generation_requests: 10,
           total_image_generation_success: 8,
+          image_generation_success_rate: 10,
         }),
       }),
       buildReport({
@@ -286,6 +299,7 @@ describe("buildRollingDailyImageUsageSeries", () => {
         stats: buildStats({
           total_image_generation_requests: 20,
           total_image_generation_success: 15,
+          image_generation_success_rate: 20,
         }),
       }),
       buildReport({
@@ -294,6 +308,7 @@ describe("buildRollingDailyImageUsageSeries", () => {
         stats: buildStats({
           total_image_generation_requests: 30,
           total_image_generation_success: 24,
+          image_generation_success_rate: 30,
         }),
       }),
       buildReport({
@@ -316,6 +331,15 @@ describe("buildRollingDailyImageUsageSeries", () => {
     expect(series?.valuesByMetric.total_image_generation_success).toEqual([
       8, 23, 39,
     ]);
+    expect(
+      series?.valuesByMetric.image_generation_success_rate[0] ?? 0,
+    ).toBeCloseTo(80, 6);
+    expect(
+      series?.valuesByMetric.image_generation_success_rate[1] ?? 0,
+    ).toBeCloseTo(76.6666667, 6);
+    expect(
+      series?.valuesByMetric.image_generation_success_rate[2] ?? 0,
+    ).toBeCloseTo(78, 6);
   });
 
   it("没有日报数据时返回空值", () => {

@@ -64,6 +64,12 @@ export const DAILY_IMAGE_USAGE_CHART_METRICS = [
     color: "#1677ff",
     axis: "y",
   },
+  {
+    key: "image_generation_success_rate",
+    label: "生图成功率",
+    color: "#faad14",
+    axis: "y2",
+  },
 ] as const satisfies ReadonlyArray<UsageMetricConfig>;
 
 export const DAILY_USAGE_METRICS = DAILY_USAGE_CHART_METRICS.filter(
@@ -79,6 +85,15 @@ export const DAILY_USAGE_SECONDARY_AXIS_TITLE =
 export const DAILY_USAGE_SECONDARY_AXIS_COLOR =
   DAILY_USAGE_CHART_METRICS.find((metric) => metric.axis === "y2")?.color ??
   "#ff4d4f";
+export const DAILY_IMAGE_USAGE_HAS_SECONDARY_AXIS =
+  DAILY_IMAGE_USAGE_CHART_METRICS.some((metric) => metric.axis === "y2");
+export const DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE =
+  DAILY_IMAGE_USAGE_CHART_METRICS.filter((metric) => metric.axis === "y2")
+    .map((metric) => metric.label)
+    .join(" / ");
+export const DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR =
+  DAILY_IMAGE_USAGE_CHART_METRICS.find((metric) => metric.axis === "y2")
+    ?.color ?? "#faad14";
 
 const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 const WEEKDAY_LABELS = [
@@ -156,6 +171,37 @@ const buildRollingSums = (values: number[], windowDays: number): number[] => {
   return rollingSums;
 };
 
+const toImageGenerationSuccessRate = (
+  totalImageGenerationSuccess: number,
+  totalImageGenerationRequests: number,
+): number => {
+  if (totalImageGenerationRequests <= 0) {
+    return 0;
+  }
+  return (totalImageGenerationSuccess / totalImageGenerationRequests) * 100;
+};
+
+const withImageGenerationSuccessRate = (
+  series: DailyImageUsageSeries | null,
+): DailyImageUsageSeries | null => {
+  if (!series) {
+    return null;
+  }
+  const requestValues = series.valuesByMetric.total_image_generation_requests;
+  const successValues = series.valuesByMetric.total_image_generation_success;
+  const imageGenerationSuccessRateValues = successValues.map(
+    (successValue, index) =>
+      toImageGenerationSuccessRate(successValue, requestValues[index] ?? 0),
+  );
+  return {
+    ...series,
+    valuesByMetric: {
+      ...series.valuesByMetric,
+      image_generation_success_rate: imageGenerationSuccessRateValues,
+    },
+  };
+};
+
 const buildMetricValuesByMetricKey = <
   MetricKey extends keyof UserAnalyticsStatsResponse,
 >(
@@ -215,10 +261,10 @@ export const buildRollingDailyUsageSeries = (
 export const buildDailyImageUsageSeries = (
   reports: UserAnalyticsReportItem[],
 ): DailyImageUsageSeries | null =>
-  buildUsageSeries(
-    reports,
-    DAILY_IMAGE_USAGE_CHART_METRICS,
-    (dailyValues) => dailyValues,
+  withImageGenerationSuccessRate(
+    buildUsageSeries(reports, DAILY_IMAGE_USAGE_CHART_METRICS, (dailyValues) =>
+      dailyValues,
+    ),
   );
 
 export const buildRollingDailyImageUsageSeries = (
@@ -226,8 +272,10 @@ export const buildRollingDailyImageUsageSeries = (
   windowDays: number = WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 ): DailyImageUsageSeries | null => {
   const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
-  return buildUsageSeries(reports, DAILY_IMAGE_USAGE_CHART_METRICS, (values) =>
-    buildRollingSums(values, normalizedWindowDays),
+  return withImageGenerationSuccessRate(
+    buildUsageSeries(reports, DAILY_IMAGE_USAGE_CHART_METRICS, (values) =>
+      buildRollingSums(values, normalizedWindowDays),
+    ),
   );
 };
 
