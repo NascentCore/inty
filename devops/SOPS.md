@@ -30,6 +30,8 @@
 ## 创建新的 api key 给特定用户 id
 
 ```bash
+ssh inty # 登录生产服务器
+docker exec -it inty-backend-prod bash # 进入生产环境后端容器
 # 每次运行都会生成新的 api key
 # 生产环境，360 指有效的天数
 python3 scripts/generate_prod_token.py --env prod  user-01JWZ34Y4D1C92GD86A5R6EWYJ  360
