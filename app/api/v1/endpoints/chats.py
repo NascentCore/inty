@@ -648,6 +648,92 @@ async def delete_agent_chats(
 
 
 @router.post(
+    "/agents/{agent_id}/clear-messages",
+    response_model=schemas.ClearMessagesResponse,
+    include_in_schema=True,
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
+    summary="Clear Agent Chat Messages",
+    description="Clear chat messages by Agent ID, currently used by inty-eval, probably will be used by inty app as well.",
+)
+async def clear_agent_chat_messages(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: schemas.ClearMessagesRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    清除指定Agent聊天会话中的消息记录（软删除）
+    支持三种方式：
+    1. 通过消息ID清除该ID之后的所有消息
+    2. 通过时间戳清除该时间之后的所有消息
+    3. 不传参数时清除全部消息
+    """
+    try:
+        logger.info(
+            f"清除Agent聊天消息 - Agent ID: {agent_id}, User ID: {current_user.id}"
+        )
+
+        # 验证请求参数：不能同时提供 message_id 和 timestamp
+        if request.message_id and request.timestamp:
+            raise HTTPException(
+                status_code=400,
+                detail="Provide either message_id or timestamp, not both",
+            )
+
+        # 验证Agent是否存在
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        # 获取用户与该Agent的聊天会话
+        chat = await chat_service.get_chat_by_user_and_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+
+        if not chat:
+            raise HTTPException(
+                status_code=404, detail="Chat session for this agent was not found"
+            )
+
+        # 生成session_id
+        session_id = generate_session_id(chat.id)
+
+        # 执行清除操作
+        if request.message_id is not None:
+            # 按消息ID清除
+            result = chat_history_service.clear_messages_after_id(
+                session_id=session_id, message_id=request.message_id
+            )
+        elif request.timestamp is not None:
+            # 按时间戳清除
+            result = chat_history_service.clear_messages_after_timestamp(
+                session_id=session_id, timestamp=request.timestamp
+            )
+        else:
+            # 清除全部消息
+            result = chat_history_service.clear_all_messages(session_id=session_id)
+
+        # 如果清除操作成功，同时清空 debug_messages 字段
+        if result.get("success", False):
+            chat.debug_messages = None
+            await db.commit()
+            logger.debug(f"已清空 debug_messages 字段 - Chat ID: {chat.id}")
+
+        logger.info(f"消息清除操作完成 - Agent ID: {agent_id}, 结果: {result}")
+
+        return schemas.ClearMessagesResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"清除Agent聊天消息失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to clear messages: {str(e)}"
+        )
+
+
+@router.post(
     "/agents/{agent_id}/generate-image",
     deprecated=True,
     include_in_schema=False,
