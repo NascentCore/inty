@@ -556,7 +556,7 @@ class ImageGenerationService:
             )
 
             # 复用现有的 Gemini 客户端（自动从 service account 读取配置）
-            client = get_genai_client()
+            client = get_genai_client(output_modality="image")
 
             # 准备输入：参考图 + 文字提示
             reference_image = types.Part.from_uri(

@@ -340,7 +340,7 @@ def _get_google_genai_client():
     # Lazy import to avoid importing Inty config on module import.
     from app.utils.gemini import get_genai_client
 
-    return get_genai_client()
+    return get_genai_client(output_modality="image")
 
 
 def _build_google_generate_images_config(

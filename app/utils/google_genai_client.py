@@ -11,12 +11,49 @@ except ImportError:
     langsmith_wrappers = None
 
 
+LANGSMITH_MODALITY_TAG_TEXT = "text"
+LANGSMITH_MODALITY_TAG_IMAGE = "image"
+_LANGSMITH_MODALITY_TAGS = {
+    LANGSMITH_MODALITY_TAG_TEXT,
+    LANGSMITH_MODALITY_TAG_IMAGE,
+}
+
+
+def _normalize_google_genai_tracing_tags(
+    *,
+    tags: Optional[list[str]],
+    output_modality: str,
+) -> list[str]:
+    normalized_tags = [str(tag) for tag in (tags or [])]
+
+    normalized_output_modality = str(output_modality).strip().lower()
+    if normalized_output_modality == LANGSMITH_MODALITY_TAG_IMAGE:
+        modality_tag = LANGSMITH_MODALITY_TAG_IMAGE
+    else:
+        if normalized_output_modality not in (
+            "",
+            LANGSMITH_MODALITY_TAG_TEXT,
+        ):
+            logger.warning(
+                "Unknown Google GenAI output modality '{}', fallback to text tag",
+                output_modality,
+            )
+        modality_tag = LANGSMITH_MODALITY_TAG_TEXT
+
+    tags_without_modality = [
+        tag for tag in normalized_tags if tag not in _LANGSMITH_MODALITY_TAGS
+    ]
+    tags_without_modality.append(modality_tag)
+    return tags_without_modality
+
+
 def wrap_google_genai_client_with_langsmith(
     client: Any,
     *,
     tags: Optional[list[str]] = None,
     metadata: Optional[dict[str, Any]] = None,
     chat_name: Optional[str] = None,
+    output_modality: str = LANGSMITH_MODALITY_TAG_TEXT,
 ) -> Any:
     """
     使用 LangSmith 包装 google.genai 客户端。
@@ -41,8 +78,10 @@ def wrap_google_genai_client_with_langsmith(
         return client
 
     tracing_extra: dict[str, Any] = {}
-    if tags:
-        tracing_extra["tags"] = [str(tag) for tag in tags]
+    tracing_extra["tags"] = _normalize_google_genai_tracing_tags(
+        tags=tags,
+        output_modality=output_modality,
+    )
 
     normalized_metadata = normalize_langsmith_metadata(metadata)
     if normalized_metadata:

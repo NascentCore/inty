@@ -65,9 +65,67 @@ def test_wrap_google_genai_client_passes_tracing_extra(monkeypatch):
     args, kwargs = call_args
     assert args == (original_client,)
     assert kwargs["chat_name"] == "gemini-chat"
-    assert kwargs["tracing_extra"]["tags"] == ["google-genai", "42"]
+    assert kwargs["tracing_extra"]["tags"] == ["google-genai", "42", "text"]
     assert kwargs["tracing_extra"]["metadata"]["when"] == "2026-02-20T08:30:00"
     assert kwargs["tracing_extra"]["metadata"]["nested"] == {"enabled": True}
+
+
+def test_wrap_google_genai_client_sets_image_modality_tag(monkeypatch):
+    original_client = object()
+    fake_wrap = Mock(return_value="wrapped-client")
+
+    monkeypatch.setattr(
+        google_genai_client.global_config_loaded_from_config_yaml.app,
+        "environment",
+        Environment.DEV,
+    )
+    monkeypatch.setattr(
+        google_genai_client,
+        "langsmith_wrappers",
+        SimpleNamespace(wrap_gemini=fake_wrap),
+    )
+
+    wrapped = google_genai_client.wrap_google_genai_client_with_langsmith(
+        original_client,
+        tags=["google-genai", "text"],
+        output_modality="image",
+    )
+
+    assert wrapped == "wrapped-client"
+    fake_wrap.assert_called_once()
+    args, kwargs = fake_wrap.call_args
+    assert args == (original_client,)
+    assert kwargs["tracing_extra"]["tags"] == ["google-genai", "image"]
+
+
+def test_wrap_google_genai_client_defaults_to_text_tag_when_modality_unknown(
+    monkeypatch,
+):
+    original_client = object()
+    fake_wrap = Mock(return_value="wrapped-client")
+
+    monkeypatch.setattr(
+        google_genai_client.global_config_loaded_from_config_yaml.app,
+        "environment",
+        Environment.DEV,
+    )
+    monkeypatch.setattr(
+        google_genai_client,
+        "langsmith_wrappers",
+        SimpleNamespace(wrap_gemini=fake_wrap),
+    )
+
+    wrapped = google_genai_client.wrap_google_genai_client_with_langsmith(
+        original_client,
+        tags=["google-genai", "image"],
+        output_modality="video",
+    )
+
+    assert wrapped == "wrapped-client"
+    fake_wrap.assert_called_once()
+    args, kwargs = fake_wrap.call_args
+    assert args == (original_client,)
+    assert kwargs["tracing_extra"]["tags"] == ["google-genai", "text"]
 
 
 def test_wrap_google_genai_client_falls_back_to_legacy_signature(monkeypatch):
