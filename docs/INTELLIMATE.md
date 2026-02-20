@@ -81,6 +81,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 ### 1. Explore
 - Double-tap the header to rewind to the top and refresh.
 - Avatars/backgrounds preload so cards stay visible even on slow networks.
+- The top banner section includes **Newly iMates** with subtitle **“Newly crafted based on your preference”**, showing up to 10 most recently created characters.
 - Switch between Recommended, Favorites, Created by Me.
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/526e12a9-f0ef-4735-9ec9-ec32da978639" />
