@@ -127,9 +127,25 @@ class VoiceService:
                 )
                 return None
 
-        # 清理文本内容，移除心理和动作描写
+        # Resolve voice_id so we know whether to skip cleaning (prompted Gemini
+        # uses full text with parentheticals for delivery).
+        _voice_id_for_decision = voice_id
+        if not _voice_id_for_decision:
+            _voice_id_for_decision = (
+                GENDER_VOICE_MAPPING.get(agent_gender)
+                if agent_gender
+                else self.config.voice_id
+            )
+        use_prompted_gemini = (
+            is_gemini_voice(_voice_id_for_decision)
+            and global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
+        )
+        voice_id = _voice_id_for_decision
+
+        # 清理文本内容，移除心理和动作描写（prompted Gemini 不清理，保留括号内舞台说明）
         original_text = text
-        text = self._clean_text_for_voice(text)
+        if not use_prompted_gemini:
+            text = self._clean_text_for_voice(text)
 
         if not text.strip():
             logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
@@ -145,20 +161,11 @@ class VoiceService:
             text = text[: self.config.max_text_length]
 
         try:
-            # 确定使用的voice_id
             if not voice_id:
-                # 根据性别选择默认音色ID
-                voice_id = (
-                    GENDER_VOICE_MAPPING.get(agent_gender)
-                    if agent_gender
-                    else self.config.voice_id
+                logger.warning(
+                    f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
                 )
-
-                if not voice_id:
-                    logger.warning(
-                        f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
-                    )
-                    return None
+                return None
 
             model = model or self.config.model
 
@@ -332,7 +339,18 @@ class VoiceService:
             )
 
             if use_gemini:
-                tts_result = await self.gemini_tts_api.synthesize(req)
+                use_prompted = (
+                    global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
+                )
+                if use_prompted:
+                    tts_result = (
+                        await self.gemini_tts_api.synthesize_with_roleplay_prompt(req)
+                    )
+                else:
+                    tts_result = await self.gemini_tts_api.synthesize(req)
+                logger.debug(
+                    f"Gemini TTS 路径: use_gemini_prompted_tts={use_prompted}"
+                )
                 if not tts_result:
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
                     logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")

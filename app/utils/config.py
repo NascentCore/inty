@@ -446,6 +446,10 @@ class GeminiLiveConfig:
     audio_temp_dir: Optional[str] = None
 
 
+class TTSConfig:
+    """语音播报配置"""
+    use_gemini_prompted_tts: bool = True
+
 @dataclass
 class Config:
     app: AppConfig
@@ -471,6 +475,7 @@ class Config:
     )
     fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
+    tts: TTSConfig = field(default_factory=TTSConfig)
 
 
 def load_config(path: str) -> Config:
@@ -523,6 +528,7 @@ def load_config(path: str) -> Config:
         ),
         fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
+        tts=TTSConfig(**data.get("tts", {})),
     )
 
 
