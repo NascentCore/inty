@@ -44,8 +44,11 @@ import {
   DAILY_USAGE_CHART_METRICS,
   DAILY_IMAGE_USAGE_CHART_METRICS,
   DAILY_USAGE_HAS_SECONDARY_AXIS,
+  DAILY_IMAGE_USAGE_HAS_SECONDARY_AXIS,
   DAILY_USAGE_SECONDARY_AXIS_COLOR,
   DAILY_USAGE_SECONDARY_AXIS_TITLE,
+  DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR,
+  DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE,
   buildDailyImageUsageSeries,
   buildDailyUsageSeries,
   buildRollingDailyImageUsageSeries,
@@ -863,6 +866,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       mode: "lines+markers",
       marker: { size: USAGE_MARKER_SIZE, color: metric.color },
       line: { color: metric.color },
+      ...(metric.axis === "y2" ? { yaxis: "y2" } : {}),
     }));
   }, [imageUsageSeries]);
   const dailyImageUsageXAxisTickText = useMemo(() => {
@@ -971,6 +975,26 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                   ticktext: dailyImageUsageXAxisTickText,
                 },
                 yaxis: { title: "生图次数" },
+                ...(DAILY_IMAGE_USAGE_HAS_SECONDARY_AXIS
+                  ? {
+                      yaxis2: {
+                        title: {
+                          text: DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE,
+                          font: { color: DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR },
+                        },
+                        tickfont: {
+                          color: DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR,
+                        },
+                        ticksuffix: "%",
+                        side: "right",
+                        overlaying: "y",
+                        rangemode: "tozero",
+                        showgrid: false,
+                        zeroline: false,
+                      },
+                      margin: { r: 80 },
+                    }
+                  : {}),
                 legend: { orientation: "h" },
               }}
               style={{ width: "100%", height: "100%" }}
