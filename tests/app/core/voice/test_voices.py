@@ -28,7 +28,7 @@ def test_list_gemini_voices_returns_voice_metadata():
     assert hasattr(first, "keywords")
     assert isinstance(first.voice_id, str)
     assert isinstance(first.name, str)
-    assert first.voice_id == first.name  # Gemini 预置音色 voice_id 与 name 一致
+    assert first.voice_id == f"google/{first.name}"  # voice_id 带 provider 前缀
     assert first.provider == "gemini"
     assert first.category == "prebuilt"
     assert first.source == "preset"

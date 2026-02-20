@@ -28,6 +28,7 @@ from google.genai import types
 from loguru import logger
 
 from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
+from app.utils.models_catalog import ModelBuilder
 
 DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY_BOOST = 0.5
@@ -37,6 +38,10 @@ DEFAULT_GEMINI_TTS_TEMPERATURE = 1.3
 
 TTS_PROVIDER_GEMINI = "gemini"
 TTS_PROVIDER_ELEVENLABS = "elevenlabs"
+
+# 对外 voice_id 前缀（列表返回、客户端存储与解析一致）
+VOICE_ID_PREFIX_GEMINI = ModelBuilder.GOOGLE.value
+VOICE_ID_PREFIX_ELEVENLABS = ModelBuilder.ELEVENLABS.value
 
 # Prompted TTS: instruction so Gemini acts as voice actor; parentheticals = stage directions.
 # Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
@@ -48,8 +53,8 @@ TTS_ROLEPLAY_INSTRUCTION = (
     "match tone and pace to the scene.\n\n"
     "In the scene description: "
     "non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses (); "
-    "the rest are the actual dialogue that you must speak. "
-    "example: <begin-of-example>(whispering) I won the lottery!!!.<end-of-example>\n\n"
+    "audible dialogue is enclosed in double quotes (\")."
+    "example: <begin-of-example>(whispering) \"I won the lottery!!!\"<end-of-example>\n\n"
     "You must:\n"
     "1. In your speech: use the non-audible descriptions to inform the delivery, "
     "strictly adhere to the non-audible descriptions.\n"
@@ -416,16 +421,39 @@ USE_CASES_SHORTLIST: Dict[str, List[str]] = {
 _GEMINI_VOICE_NAMES: Set[str] = {v["voice_id"] for v in GEMINI_PREBUILT_VOICES}
 
 
+def parse_voice_id(voice_id: str) -> Tuple[str, str]:
+    """
+    解析 voice_id 为 (prefix, raw)。
+    仅按第一个 '/' 分割；无 '/' 则 prefix 为空字符串（兼容旧数据）。
+    例：parse_voice_id("google/Zephyr") -> ("google", "Zephyr")；parse_voice_id("Zephyr") -> ("", "Zephyr")。
+    """
+    if not voice_id:
+        return ("", "")
+    if "/" not in voice_id:
+        return ("", voice_id)
+    parts = voice_id.split("/", 1)
+    return (parts[0], parts[1])
+
+
 def is_gemini_voice(voice_id: Optional[str]) -> bool:
-    """判断给定的 voice_id 是否为 Gemini TTS 预置音色"""
+    """判断给定的 voice_id 是否为 Gemini TTS 预置音色（支持 provider 前缀与无前缀兼容）"""
     if not voice_id:
         return False
-    return voice_id in _GEMINI_VOICE_NAMES
+    prefix, raw = parse_voice_id(voice_id)
+    if prefix == VOICE_ID_PREFIX_GEMINI:
+        return True
+    if prefix == VOICE_ID_PREFIX_ELEVENLABS:
+        return False
+    # 无前缀：兼容旧 DB/配置，按 raw 是否在预置集合
+    return raw in _GEMINI_VOICE_NAMES
 
 
 def get_gemini_voices() -> List[Dict[str, Any]]:
-    """获取 Gemini TTS 预置音色列表（返回副本，避免外部修改）"""
-    return [v.copy() for v in GEMINI_PREBUILT_VOICES]
+    """获取 Gemini TTS 预置音色列表（返回副本，voice_id 带 google/ 前缀）"""
+    result = [v.copy() for v in GEMINI_PREBUILT_VOICES]
+    for voice in result:
+        voice["voice_id"] = f"{VOICE_ID_PREFIX_GEMINI}/{voice['voice_id']}"
+    return result
 
 
 @dataclass(frozen=True)
@@ -523,16 +551,17 @@ pcm_to_wav = _pcm_to_wav
 
 def _looks_like_gemini_voice_name(voice_id: str) -> bool:
     """
-    兼容旧字段：如果上层仍沿用 voice_id 字段，但存的是 Gemini 预置音色名（如 Zephyr），
-    这里允许直接复用；否则回退到默认音色。
-
-    优先使用精确匹配（is_gemini_voice），回退到启发式判断（纯字母 + 长度限制）。
+    仅在 voice_id 没有 provider/ 前缀时由调用方使用；用于无前缀且看起来像 Gemini 名的兼容。
+    有前缀时直接 return False（不应依赖此启发式）。
     """
     if not voice_id:
         return False
-    if is_gemini_voice(voice_id):
+    prefix, raw = parse_voice_id(voice_id)
+    if prefix != "":
+        return False
+    if raw in _GEMINI_VOICE_NAMES:
         return True
-    return voice_id.isalpha() and 2 <= len(voice_id) <= 32
+    return raw.isalpha() and 2 <= len(raw) <= 32
 
 
 def _collect_gemini_tts_stream(
@@ -641,11 +670,18 @@ class GeminiTTSAPI:
             logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
             return None
 
-        voice_name = (
-            request.voice_id
-            if _looks_like_gemini_voice_name(request.voice_id)
-            else self._default_voice_name
-        )
+        prefix, raw = parse_voice_id(request.voice_id)
+        if prefix == VOICE_ID_PREFIX_GEMINI:
+            voice_name = raw
+        elif prefix == "":
+            voice_name = (
+                request.voice_id
+                if _looks_like_gemini_voice_name(request.voice_id)
+                else self._default_voice_name
+            )
+        else:
+            logger.error(f"Unknown voice_id: {request.voice_id}")
+            voice_name = self._default_voice_name
 
         contents = [
             types.Content(
@@ -708,11 +744,17 @@ class GeminiTTSAPI:
             logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
             return None
 
-        voice_name = (
-            request.voice_id
-            if _looks_like_gemini_voice_name(request.voice_id)
-            else self._default_voice_name
-        )
+        prefix, raw = parse_voice_id(request.voice_id)
+        if prefix == VOICE_ID_PREFIX_GEMINI:
+            voice_name = raw
+        elif prefix == "":
+            voice_name = (
+                request.voice_id
+                if _looks_like_gemini_voice_name(request.voice_id)
+                else self._default_voice_name
+            )
+        else:
+            voice_name = self._default_voice_name
 
         prompted_text = TTS_ROLEPLAY_INSTRUCTION + request.text
         contents = [
@@ -771,6 +813,11 @@ class ElevenLabsTTSAPI:
 
     async def synthesize(self, request: TTSRequest) -> Optional[TTSResult]:
         try:
+            prefix, raw = parse_voice_id(request.voice_id)
+            elevenlabs_voice_id = (
+                raw if prefix == VOICE_ID_PREFIX_ELEVENLABS else request.voice_id
+            )
+
             voice_settings = VoiceSettings(
                 stability=request.stability,
                 similarity_boost=request.similarity_boost,
@@ -778,7 +825,7 @@ class ElevenLabsTTSAPI:
 
             kwargs: Dict[str, Any] = {
                 "text": request.text,
-                "voice_id": request.voice_id,
+                "voice_id": elevenlabs_voice_id,
                 "model_id": request.model_id,
                 "output_format": request.output_format,
                 "voice_settings": voice_settings,
