@@ -59,6 +59,8 @@ Click the **Explore** icon to open the Explore iMates page.
 
 Click the **Me** or the **right-most** icon
 
+Top-right quick actions currently include **Help**, **Daily Check-in**, and **Settings**.
+
 ## Where do I go to…?
 
 | Task | App path | Tips & references |
