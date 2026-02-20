@@ -188,4 +188,5 @@ done
 - 页面：`evaluation/pages/UserAnalyticsReportsPage.tsx`
 - 路由 key：`user-analytics-reports`
 - 菜单位置：用户数据分析 与 用户每日消息 之间
+- 曲线面板：每日/每周用量曲线；每日/每周生图用量（生图请求数、生图成功数）
 - 图表：用户注册结构、Top 20 热门角色、对话轮数分布（按 Session/用户）、达到聊天限制的用户趋势
