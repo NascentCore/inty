@@ -31,6 +31,7 @@ from app.services import agent_service, chat_history_service
 from app.services.chat_service import generate_session_id, get_or_create_chat_by_agent
 from app.services.gcs_service import GCSService
 from app.utils.audio import build_interleaved_pcm_24k
+from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
 
 # 语音通话默认音色映射（按性别选择 Gemini 预置音色）
 GENDER_TO_GEMINI_VOICE_MAPPING = {
@@ -121,10 +122,20 @@ class LiveChatService:
                 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_key_path
                 logger.debug(f"设置 GCP 凭证: {gcp_key_path}")
 
-            self._client = genai.Client(
+            base_client = genai.Client(
                 vertexai=True,
                 project=self._config.project_id,
                 location=self._config.location,
+            )
+            self._client = wrap_google_genai_client_with_langsmith(
+                base_client,
+                tags=["google-genai", "gemini-live", "app-services-live-chat"],
+                metadata={
+                    "source": "app.services.live_chat_service",
+                    "project_id": self._config.project_id,
+                    "location": self._config.location,
+                },
+                chat_name="Inty_GeminiLive",
             )
             logger.info(
                 f"Gemini Live 客户端已初始化 - project: {self._config.project_id}, "

@@ -27,6 +27,8 @@ from elevenlabs.client import ElevenLabs
 from google.genai import types
 from loguru import logger
 
+from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
+
 DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY_BOOST = 0.5
 DEFAULT_GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
@@ -552,10 +554,20 @@ class GeminiTTSAPI:
                 logger.debug(f"Gemini TTS 设置 GCP 凭证: {gcp_key_path}")
 
             gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
-            self._client = genai.Client(
+            base_client = genai.Client(
                 vertexai=True,
                 project=gemini_live_config.project_id,
                 location=gemini_live_config.location,
+            )
+            self._client = wrap_google_genai_client_with_langsmith(
+                base_client,
+                tags=["google-genai", "gemini-tts", "app-core-voice"],
+                metadata={
+                    "source": "app.core.voice.tts_api",
+                    "project_id": gemini_live_config.project_id,
+                    "location": gemini_live_config.location,
+                },
+                chat_name="Inty_GeminiTTS",
             )
             logger.info(
                 f"Gemini TTS 客户端已初始化 - project: {gemini_live_config.project_id}, "
