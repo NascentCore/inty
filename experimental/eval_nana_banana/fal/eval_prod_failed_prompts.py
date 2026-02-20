@@ -71,7 +71,9 @@ def upload_file(path: str) -> str:
 def main(
     model: Annotated[
         str,
-        cyclopts.Parameter(help="fal model, e.g. fal-ai/flux-1.1-pro or fal-ai/gpt-image-1.5/edit"),
+        cyclopts.Parameter(
+            help="fal model, e.g. fal-ai/flux-1.1-pro or fal-ai/gpt-image-1.5/edit"
+        ),
     ] = DEFAULT_MODEL,
     output_dir: Annotated[
         str,
@@ -87,9 +89,16 @@ def main(
             prompt = f.read()
         start_time = datetime.datetime.now()
         try:
-            result = generate(prompt, model=model, char_avatar_url=char_avatar_url, user_avatar_url=user_avatar_url)
+            result = generate(
+                prompt,
+                model=model,
+                char_avatar_url=char_avatar_url,
+                user_avatar_url=user_avatar_url,
+            )
             duration = datetime.datetime.now() - start_time
-            save_result_to_files(result, files_prefix, duration, model=model, output_dir=output_dir)
+            save_result_to_files(
+                result, files_prefix, duration, model=model, output_dir=output_dir
+            )
         except (FalClientHTTPError, ValueError) as e:
             duration = datetime.datetime.now() - start_time
             error_payload = {
@@ -107,7 +116,9 @@ def main(
             if hasattr(e, "response") and e.response is not None:
                 try:
                     error_payload["response_json"] = (
-                        e.response.json() if hasattr(e.response, "json") else str(e.response)
+                        e.response.json()
+                        if hasattr(e.response, "json")
+                        else str(e.response)
                     )
                 except (ValueError, TypeError, AttributeError, OSError):
                     error_payload["response_raw"] = str(e.response)

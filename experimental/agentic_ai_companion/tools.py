@@ -188,6 +188,7 @@ def execute_generate_image(
     prompt = (input or "").strip() or _prompt_from_messages(recent)
     try:
         from experimental.eval_nana_banana.lib import generate
+
         out_image_path, out_json_path = generate(
             prompt=prompt,
             char_avatar_path="experimental/agentic_ai_companion/companion_profile/avatar.jpg",

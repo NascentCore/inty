@@ -116,7 +116,9 @@ def main(
             if hasattr(e, "response") and e.response is not None:
                 try:
                     error_payload["response_json"] = (
-                        e.response.json() if hasattr(e.response, "json") else str(e.response)
+                        e.response.json()
+                        if hasattr(e.response, "json")
+                        else str(e.response)
                     )
                 except (ValueError, TypeError, AttributeError, OSError):
                     error_payload["response_raw"] = str(e.response)

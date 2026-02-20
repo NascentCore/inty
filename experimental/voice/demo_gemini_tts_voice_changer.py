@@ -151,7 +151,9 @@ def main() -> None:
         DEFAULT_ELEVENLABS_TARGET_VOICE_ID,
     )
 
-    output_paths = get_output_paths(Path(__file__).resolve().parent, ELEVENLABS_OUTPUT_FORMAT)
+    output_paths = get_output_paths(
+        Path(__file__).resolve().parent, ELEVENLABS_OUTPUT_FORMAT
+    )
 
     print("Step 1/2: generating audio with Gemini TTS ...")
     gemini_client = genai.Client(api_key=gemini_api_key)

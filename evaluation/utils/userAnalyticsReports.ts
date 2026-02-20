@@ -9,7 +9,8 @@ import type {
 type DailyUsageAxis = "y" | "y2";
 
 interface UsageMetricConfig<
-  MetricKey extends keyof UserAnalyticsStatsResponse = keyof UserAnalyticsStatsResponse,
+  MetricKey extends keyof UserAnalyticsStatsResponse =
+    keyof UserAnalyticsStatsResponse,
 > {
   key: MetricKey;
   label: string;
@@ -122,8 +123,7 @@ interface UsageSeries<MetricKey extends keyof UserAnalyticsStatsResponse> {
 }
 
 export interface DailyUsageSeries extends UsageSeries<DailyUsageMetricKey> {}
-export interface DailyImageUsageSeries
-  extends UsageSeries<DailyImageUsageMetricKey> {}
+export interface DailyImageUsageSeries extends UsageSeries<DailyImageUsageMetricKey> {}
 
 export const WEEKLY_USAGE_ROLLING_WINDOW_DAYS = 7;
 
@@ -207,10 +207,8 @@ export const buildRollingDailyUsageSeries = (
   windowDays: number = WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 ): DailyUsageSeries | null => {
   const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
-  return buildUsageSeries(
-    reports,
-    DAILY_USAGE_CHART_METRICS,
-    (values) => buildRollingSums(values, normalizedWindowDays),
+  return buildUsageSeries(reports, DAILY_USAGE_CHART_METRICS, (values) =>
+    buildRollingSums(values, normalizedWindowDays),
   );
 };
 
@@ -228,10 +226,8 @@ export const buildRollingDailyImageUsageSeries = (
   windowDays: number = WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 ): DailyImageUsageSeries | null => {
   const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
-  return buildUsageSeries(
-    reports,
-    DAILY_IMAGE_USAGE_CHART_METRICS,
-    (values) => buildRollingSums(values, normalizedWindowDays),
+  return buildUsageSeries(reports, DAILY_IMAGE_USAGE_CHART_METRICS, (values) =>
+    buildRollingSums(values, normalizedWindowDays),
   );
 };
 

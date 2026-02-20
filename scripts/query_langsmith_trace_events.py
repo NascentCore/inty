@@ -55,7 +55,9 @@ def _collect_event_summaries(events: Any) -> list[dict[str, Any]]:
             event_message = event.get("message")
         else:
             event_name = getattr(event, "name", None) or getattr(event, "event", None)
-            event_time = getattr(event, "time", None) or getattr(event, "timestamp", None)
+            event_time = getattr(event, "time", None) or getattr(
+                event, "timestamp", None
+            )
             event_message = getattr(event, "message", None)
 
         summaries.append(

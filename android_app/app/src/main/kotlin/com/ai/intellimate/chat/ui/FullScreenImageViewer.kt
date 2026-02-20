@@ -312,19 +312,22 @@ internal fun FullScreenImageViewer(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Box(modifier = Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize)) {
+                    Box(
+                        modifier =
+                            Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize)
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.ZoomIn,
                             contentDescription =
                                 stringResource(R.string.upscale_image_content_description),
                             modifier =
-                                Modifier.align(Alignment.Center).size(
-                                    UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize
-                                ),
+                                Modifier.align(Alignment.Center)
+                                    .size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
                             tint = Color.White,
                         )
                         Image(
-                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 1.dp),
+                            modifier =
+                                Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 1.dp),
                             painter = painterResource(R.drawable.ic_vip_badge),
                             contentDescription = null,
                         )
@@ -409,7 +412,10 @@ internal fun FullScreenImageViewer(
                     }
                 },
                 title = {
-                    Text(text = stringResource(R.string.image_upscale_locked_title), color = Color.White)
+                    Text(
+                        text = stringResource(R.string.image_upscale_locked_title),
+                        color = Color.White,
+                    )
                 },
                 text = {
                     Text(
@@ -501,7 +507,12 @@ internal fun FullScreenImageViewer(
         if (showUpscaleOptionsDialog) {
             AlertDialog(
                 onDismissRequest = { showUpscaleOptionsDialog = false },
-                title = { Text(text = stringResource(R.string.image_upscale_dialog_title), color = Color.White) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.image_upscale_dialog_title),
+                        color = Color.White,
+                    )
+                },
                 text = {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
