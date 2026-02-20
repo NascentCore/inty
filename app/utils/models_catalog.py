@@ -312,7 +312,9 @@ GPT_IMAGE_1_5 = GenAIModel(
     pricing=Pricing(
         inputs=[],
         outputs=[PriceInfo(price=0.01, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE)],
-        notes="测试中，4k 输出，80 张话费 $6.59，合 $0.082375/张图片"
+        notes="""测试中，fal.ai 4k 输出，80 张话费 $6.59，合 $0.082375/图片
+        原生 openai api platform 0.04/图片
+        """,
     ),
     notes="价格列表：https://fal.ai/models/fal-ai/gpt-image-1.5/edit",
     playground_url="https://platform.openai.com/playground/images",
