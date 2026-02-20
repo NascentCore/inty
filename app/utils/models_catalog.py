@@ -73,6 +73,7 @@ class Pricing(BaseModel):
     """
     inputs: list[PriceInfo] = Field(description="模型输入价格信息列表，用于计算用量和成本。")
     outputs: list[PriceInfo] = Field(description="模型输出价格信息列表，用于计算用量和成本。")
+    notes: str = Field(description="模型价格的一些备注信息", default="")
 
 class ModelAPIProvider(StrEnum):
     """
