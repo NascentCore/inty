@@ -5,10 +5,12 @@ import { describe, it, expect } from "vitest";
 import {
   buildDailyUsageSeries,
   buildDailyImageUsageSeries,
+  buildDailyTopAgentsTrendSeries,
   buildRollingDailyUsageSeries,
   buildRollingDailyImageUsageSeries,
   buildDailyUsageTickText,
   sortReportsByDateDesc,
+  DAILY_TOP_AGENTS_LIMIT,
   WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 } from "../utils/userAnalyticsReports";
 import type {
@@ -51,6 +53,8 @@ const buildReport = (
   report_type: overrides.report_type ?? "daily",
   report_date: overrides.report_date ?? "2026-02-01",
   stats: overrides.stats ?? buildStats(),
+  daily_top_agents_by_rounds: overrides.daily_top_agents_by_rounds ?? [],
+  daily_most_discussed_agent: overrides.daily_most_discussed_agent ?? null,
   charts: overrides.charts ?? null,
   created_at: overrides.created_at ?? null,
 });
@@ -378,5 +382,125 @@ describe("sortReportsByDateDesc", () => {
     const sorted = sortReportsByDateDesc(reports);
 
     expect(sorted.map((report) => report.id)).toEqual(["r2", "r1", "r3"]);
+  });
+});
+
+describe("buildDailyTopAgentsTrendSeries", () => {
+  it("按日期聚合日报 Top 角色并输出连线数据", () => {
+    const reports = [
+      buildReport({
+        id: "r2",
+        report_date: "2026-02-02",
+        daily_top_agents_by_rounds: [
+          {
+            rank: 1,
+            agent_name: "Role B",
+            total_rounds: 30,
+            user_count: 4,
+            total_sessions: 5,
+            active_sessions: 4,
+          },
+          {
+            rank: 2,
+            agent_name: "Role A",
+            total_rounds: 18,
+            user_count: 3,
+            total_sessions: 4,
+            active_sessions: 3,
+          },
+        ],
+      }),
+      buildReport({
+        id: "r1",
+        report_date: "2026-02-01",
+        daily_top_agents_by_rounds: [
+          {
+            rank: 1,
+            agent_name: "Role A",
+            total_rounds: 24,
+            user_count: 5,
+            total_sessions: 6,
+            active_sessions: 5,
+          },
+          {
+            rank: 2,
+            agent_name: "Role C",
+            total_rounds: 12,
+            user_count: 2,
+            total_sessions: 3,
+            active_sessions: 2,
+          },
+        ],
+      }),
+    ];
+
+    const trend = buildDailyTopAgentsTrendSeries(reports);
+
+    expect(trend?.dates).toEqual(["2026-02-01", "2026-02-02"]);
+    expect(trend?.dailyTopAgentsByDate["2026-02-01"]?.length).toBe(2);
+    expect(trend?.lines.find((line) => line.agent_name === "Role A")?.points).toEqual(
+      [
+        {
+          date: "2026-02-01",
+          rank: 1,
+          agent_name: "Role A",
+          total_rounds: 24,
+          user_count: 5,
+        },
+        {
+          date: "2026-02-02",
+          rank: 2,
+          agent_name: "Role A",
+          total_rounds: 18,
+          user_count: 3,
+        },
+      ],
+    );
+  });
+
+  it("支持限制每日 Top 数量", () => {
+    const reports = [
+      buildReport({
+        id: "r1",
+        report_date: "2026-02-01",
+        daily_top_agents_by_rounds: [
+          {
+            rank: 1,
+            agent_name: "Role A",
+            total_rounds: 20,
+            user_count: 3,
+            total_sessions: 4,
+            active_sessions: 3,
+          },
+          {
+            rank: 2,
+            agent_name: "Role B",
+            total_rounds: 18,
+            user_count: 2,
+            total_sessions: 3,
+            active_sessions: 2,
+          },
+        ],
+      }),
+    ];
+
+    const trend = buildDailyTopAgentsTrendSeries(reports, 1);
+    expect(trend?.dailyTopAgentsByDate["2026-02-01"]).toEqual([
+      {
+        date: "2026-02-01",
+        rank: 1,
+        agent_name: "Role A",
+        total_rounds: 20,
+        user_count: 3,
+      },
+    ]);
+  });
+
+  it("没有日报 Top 角色数据时返回空值", () => {
+    const trend = buildDailyTopAgentsTrendSeries([
+      buildReport({ report_type: "weekly", report_date: "2026-W05" }),
+    ]);
+    expect(trend).toBeNull();
+    expect(DAILY_TOP_AGENTS_LIMIT).toBe(10);
   });
 });

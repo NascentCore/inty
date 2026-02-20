@@ -17,6 +17,7 @@ import {
   Space,
   Row,
   Col,
+  Avatar,
   Statistic,
   Collapse,
   Table,
@@ -49,6 +50,8 @@ import {
   DAILY_USAGE_SECONDARY_AXIS_TITLE,
   DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR,
   DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE,
+  DAILY_TOP_AGENTS_LIMIT,
+  buildDailyTopAgentsTrendSeries,
   buildDailyImageUsageSeries,
   buildDailyUsageSeries,
   buildRollingDailyImageUsageSeries,
@@ -84,6 +87,20 @@ const USAGE_MARKER_SIZE = 6;
 const REPORTS_LIMIT = 30;
 const DAILY_LATEST_LIMIT = 1;
 const DAILY_GENERATED_IMAGES_PREVIEW_LIMIT = 60;
+const TOP_AGENTS_TREND_CHART_HEIGHT = 420;
+const TOP_AGENT_MARKER_SIZE = 20;
+const TOP_AGENT_TREND_COLORS = [
+  "#1677ff",
+  "#52c41a",
+  "#faad14",
+  "#eb2f96",
+  "#13c2c2",
+  "#722ed1",
+  "#fa541c",
+  "#2f54eb",
+  "#a0d911",
+  "#f759ab",
+];
 
 function computeRoundsDistributionBySession(
   conversationRounds: UserAnalyticsReportCharts["conversation_rounds"],
@@ -159,6 +176,23 @@ function computeUsersHittingLimitTrend(
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function getAgentIconLabel(agentName: string): string {
+  const normalizedName = agentName.trim();
+  if (!normalizedName) {
+    return "?";
+  }
+  return normalizedName.slice(0, 1).toUpperCase();
+}
+
+function getAgentTrendColor(agentName: string): string {
+  let hash = 0;
+  for (let index = 0; index < agentName.length; index += 1) {
+    hash = (hash * 31 + agentName.charCodeAt(index)) % 2147483647;
+  }
+  const colorIndex = Math.abs(hash) % TOP_AGENT_TREND_COLORS.length;
+  return TOP_AGENT_TREND_COLORS[colorIndex];
+}
+
 function ReportContent({
   stats,
   charts,
@@ -190,6 +224,7 @@ function ReportContent({
   const newUsers = charts?.new_users ?? [];
   const popularAgents = charts?.popular_agents ?? [];
   const generatedImages = charts?.generated_images ?? [];
+  const dailyMostDiscussedAgent = charts?.daily_most_discussed_agent ?? null;
   const previewGeneratedImages = generatedImages.slice(
     0,
     DAILY_GENERATED_IMAGES_PREVIEW_LIMIT,
@@ -198,6 +233,34 @@ function ReportContent({
   return (
     <>
       <StatsCards stats={stats} />
+      {reportType === "daily" && (
+        <Card title="当日聊天轮数最高角色" style={{ marginTop: "24px" }}>
+          {dailyMostDiscussedAgent ? (
+            <Space size={12} align="center">
+              <Avatar
+                style={{
+                  backgroundColor: getAgentTrendColor(
+                    dailyMostDiscussedAgent.agent_name,
+                  ),
+                }}
+              >
+                {getAgentIconLabel(dailyMostDiscussedAgent.agent_name)}
+              </Avatar>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ fontWeight: 600 }}>
+                  {dailyMostDiscussedAgent.agent_name}
+                </div>
+                <div style={{ color: "#999", fontSize: 12 }}>
+                  聊天轮数 {dailyMostDiscussedAgent.total_rounds}，发起聊天人数{" "}
+                  {dailyMostDiscussedAgent.user_count}
+                </div>
+              </div>
+            </Space>
+          ) : (
+            <Empty description="当天暂无聊天角色热度数据" />
+          )}
+        </Card>
+      )}
       {reportType === "daily" && (
         <Card
           title={`当天生成图片（${generatedImages.length}）`}
@@ -875,6 +938,53 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     }
     return buildDailyUsageTickText(imageUsageSeries.dates);
   }, [imageUsageSeries]);
+  const dailyTopAgentsTrendSeries = useMemo(
+    () => buildDailyTopAgentsTrendSeries(usageReports, DAILY_TOP_AGENTS_LIMIT),
+    [usageReports],
+  );
+  const dailyTopAgentsPlotData = useMemo(() => {
+    if (!dailyTopAgentsTrendSeries) {
+      return [];
+    }
+    return dailyTopAgentsTrendSeries.lines.map((line) => {
+      const traceColor = getAgentTrendColor(line.agent_name);
+      return {
+        x: line.points.map((point) => point.date),
+        y: line.points.map((point) => point.rank),
+        customdata: line.points.map((point) => [
+          point.total_rounds,
+          point.user_count,
+        ]),
+        name: line.agent_name,
+        type: "scatter",
+        mode: "lines+markers+text",
+        text: line.points.map(() => getAgentIconLabel(line.agent_name)),
+        textposition: "middle center",
+        textfont: {
+          color: "#ffffff",
+          size: 10,
+        },
+        marker: {
+          size: TOP_AGENT_MARKER_SIZE,
+          color: traceColor,
+          line: { color: "#ffffff", width: 1 },
+        },
+        line: { color: traceColor, width: 2 },
+        hovertemplate:
+          "角色: %{fullData.name}<br>" +
+          "日期: %{x}<br>" +
+          "当日排名: #%{y}<br>" +
+          "聊天轮数: %{customdata[0]}<br>" +
+          "发起聊天人数: %{customdata[1]}<extra></extra>",
+      };
+    });
+  }, [dailyTopAgentsTrendSeries]);
+  const dailyTopAgentsXAxisTickText = useMemo(() => {
+    if (!dailyTopAgentsTrendSeries) {
+      return [];
+    }
+    return buildDailyUsageTickText(dailyTopAgentsTrendSeries.dates);
+  }, [dailyTopAgentsTrendSeries]);
 
   const items = useMemo(
     () =>
@@ -1003,6 +1113,141 @@ export const UserAnalyticsReportsPage: React.FC = () => {
             <div style={{ height: USAGE_CHART_HEIGHT }} />
           ) : (
             <Empty description={usageEmptyDescription} />
+          )}
+        </Spin>
+      </Card>
+      <Card
+        title="每日最受欢迎角色（Top 10，按聊天轮数）"
+        style={{ marginBottom: "24px" }}
+      >
+        <Spin spinning={loadingUsage}>
+          {dailyTopAgentsTrendSeries ? (
+            <>
+              <div style={{ color: "#999", fontSize: 12, marginBottom: 8 }}>
+                折线连接同一角色在不同日期的排名变化；图标取角色名称首字母。
+              </div>
+              <Plot
+                data={dailyTopAgentsPlotData}
+                layout={{
+                  height: TOP_AGENTS_TREND_CHART_HEIGHT,
+                  hovermode: "closest",
+                  xaxis: {
+                    title: "日期",
+                    tickmode: "array",
+                    tickvals: dailyTopAgentsTrendSeries.dates,
+                    ticktext: dailyTopAgentsXAxisTickText,
+                  },
+                  yaxis: {
+                    title: "排名（1最高）",
+                    autorange: "reversed",
+                    dtick: 1,
+                    tick0: 1,
+                    range: [DAILY_TOP_AGENTS_LIMIT + 0.5, 0.5],
+                  },
+                  showlegend: false,
+                  margin: { t: 20 },
+                }}
+                style={{ width: "100%", height: "100%" }}
+              />
+              <div style={{ color: "#999", fontSize: 12, margin: "8px 0" }}>
+                每日 Top 10 列表（右侧数字为聊天轮数）
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridAutoFlow: "column",
+                  gridAutoColumns: "minmax(180px, 1fr)",
+                  gap: 12,
+                  overflowX: "auto",
+                  paddingBottom: 6,
+                }}
+              >
+                {dailyTopAgentsTrendSeries.dates.map((date) => {
+                  const dailyTopAgents =
+                    dailyTopAgentsTrendSeries.dailyTopAgentsByDate[date] ?? [];
+                  return (
+                    <div
+                      key={date}
+                      style={{
+                        border: "1px solid #f0f0f0",
+                        borderRadius: 8,
+                        padding: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          marginBottom: 8,
+                          fontSize: 12,
+                        }}
+                      >
+                        {date}
+                      </div>
+                      {dailyTopAgents.length > 0 ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 6,
+                          }}
+                        >
+                          {dailyTopAgents.map((agent) => (
+                            <div
+                              key={`${date}-${agent.agent_name}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <span style={{ color: "#999", fontSize: 12, width: 24 }}>
+                                #{agent.rank}
+                              </span>
+                              <Avatar
+                                size={20}
+                                style={{
+                                  backgroundColor: getAgentTrendColor(
+                                    agent.agent_name,
+                                  ),
+                                  fontSize: 10,
+                                }}
+                              >
+                                {getAgentIconLabel(agent.agent_name)}
+                              </Avatar>
+                              <span
+                                title={agent.agent_name}
+                                style={{
+                                  fontSize: 12,
+                                  flex: 1,
+                                  minWidth: 0,
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {agent.agent_name}
+                              </span>
+                              <span style={{ color: "#999", fontSize: 12 }}>
+                                {agent.total_rounds}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <Empty
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          description="暂无数据"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : loadingUsage ? (
+            <div style={{ height: TOP_AGENTS_TREND_CHART_HEIGHT }} />
+          ) : (
+            <Empty description="暂无日报角色热度数据" />
           )}
         </Spin>
       </Card>

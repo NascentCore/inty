@@ -3,6 +3,7 @@
  */
 import type {
   UserAnalyticsReportItem,
+  UserAnalyticsReportDailyTopAgentItem,
   UserAnalyticsStatsResponse,
 } from "../types";
 
@@ -139,8 +140,25 @@ interface UsageSeries<MetricKey extends keyof UserAnalyticsStatsResponse> {
 
 export interface DailyUsageSeries extends UsageSeries<DailyUsageMetricKey> {}
 export interface DailyImageUsageSeries extends UsageSeries<DailyImageUsageMetricKey> {}
+export interface DailyTopAgentPoint {
+  date: string;
+  rank: number;
+  agent_name: string;
+  total_rounds: number;
+  user_count: number;
+}
+export interface DailyTopAgentTrendLine {
+  agent_name: string;
+  points: DailyTopAgentPoint[];
+}
+export interface DailyTopAgentsTrendSeries {
+  dates: string[];
+  dailyTopAgentsByDate: Record<string, DailyTopAgentPoint[]>;
+  lines: DailyTopAgentTrendLine[];
+}
 
 export const WEEKLY_USAGE_ROLLING_WINDOW_DAYS = 7;
+export const DAILY_TOP_AGENTS_LIMIT = 10;
 
 const getSortedDailyReports = (
   reports: UserAnalyticsReportItem[],
@@ -305,3 +323,101 @@ export const sortReportsByDateDesc = (
   reports: UserAnalyticsReportItem[],
 ): UserAnalyticsReportItem[] =>
   reports.slice().sort((a, b) => b.report_date.localeCompare(a.report_date));
+
+const toFiniteNumber = (value: unknown): number => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+};
+
+const normalizeDailyTopAgents = (
+  reportDate: string,
+  dailyTopAgents: UserAnalyticsReportDailyTopAgentItem[],
+  topN: number,
+): DailyTopAgentPoint[] => {
+  const normalizedAgents = dailyTopAgents
+    .filter(
+      (item) =>
+        Boolean(item) &&
+        typeof item.agent_name === "string" &&
+        item.agent_name.length > 0,
+    )
+    .map((item, index) => ({
+      date: reportDate,
+      rank: Math.max(1, Math.floor(toFiniteNumber(item.rank) || index + 1)),
+      agent_name: item.agent_name,
+      total_rounds: Math.max(0, Math.floor(toFiniteNumber(item.total_rounds))),
+      user_count: Math.max(0, Math.floor(toFiniteNumber(item.user_count))),
+    }))
+    .sort((a, b) => {
+      if (a.rank !== b.rank) {
+        return a.rank - b.rank;
+      }
+      if (a.total_rounds !== b.total_rounds) {
+        return b.total_rounds - a.total_rounds;
+      }
+      return a.agent_name.localeCompare(b.agent_name);
+    })
+    .slice(0, topN);
+
+  return normalizedAgents.map((item, index) => ({
+    ...item,
+    rank: index + 1,
+  }));
+};
+
+export const buildDailyTopAgentsTrendSeries = (
+  reports: UserAnalyticsReportItem[],
+  topN: number = DAILY_TOP_AGENTS_LIMIT,
+): DailyTopAgentsTrendSeries | null => {
+  const normalizedTopN = Math.max(1, Math.floor(topN));
+  const dailyReports = getSortedDailyReports(reports);
+  if (dailyReports.length === 0) {
+    return null;
+  }
+
+  const dates: string[] = [];
+  const dailyTopAgentsByDate: Record<string, DailyTopAgentPoint[]> = {};
+  const pointsByAgent = new Map<string, DailyTopAgentPoint[]>();
+
+  dailyReports.forEach((report) => {
+    const points = normalizeDailyTopAgents(
+      report.report_date,
+      report.daily_top_agents_by_rounds ?? [],
+      normalizedTopN,
+    );
+    if (points.length === 0) {
+      return;
+    }
+    dates.push(report.report_date);
+    dailyTopAgentsByDate[report.report_date] = points;
+    points.forEach((point) => {
+      const existingPoints = pointsByAgent.get(point.agent_name) ?? [];
+      existingPoints.push(point);
+      pointsByAgent.set(point.agent_name, existingPoints);
+    });
+  });
+
+  if (dates.length === 0) {
+    return null;
+  }
+
+  const lines = Array.from(pointsByAgent.entries())
+    .map(([agent_name, points]) => ({
+      agent_name,
+      points: points.slice().sort((a, b) => a.date.localeCompare(b.date)),
+    }))
+    .sort((a, b) => {
+      const aRank = a.points[0]?.rank ?? Number.MAX_SAFE_INTEGER;
+      const bRank = b.points[0]?.rank ?? Number.MAX_SAFE_INTEGER;
+      if (aRank !== bRank) {
+        return aRank - bRank;
+      }
+      return a.agent_name.localeCompare(b.agent_name);
+    });
+
+  return {
+    dates,
+    dailyTopAgentsByDate,
+    lines,
+  };
+};

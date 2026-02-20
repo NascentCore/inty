@@ -378,6 +378,17 @@ class UserAnalyticsReportGeneratedImageItem(BaseModel):
     created_at: Optional[str] = Field(None, description="创建时间")
 
 
+class UserAnalyticsReportDailyTopAgentItem(BaseModel):
+    """日报中按聊天轮数排序的角色项"""
+
+    rank: int = Field(description="当日排名（1 开始）")
+    agent_name: str = Field(description="角色名称")
+    total_rounds: int = Field(description="总聊天轮数")
+    user_count: int = Field(description="真实发起聊天人数", default=0)
+    total_sessions: int = Field(description="浏览会话数", default=0)
+    active_sessions: int = Field(description="有用户消息的会话数", default=0)
+
+
 class UserAnalyticsReportCharts(BaseModel):
     """用户数据分析预计算报告图表数据"""
 
@@ -399,6 +410,12 @@ class UserAnalyticsReportCharts(BaseModel):
     generated_images: List[UserAnalyticsReportGeneratedImageItem] = Field(
         default_factory=list, description="日报当日生图列表"
     )
+    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = Field(
+        default_factory=list, description="日报当日聊天轮数 Top 角色（默认 Top10）"
+    )
+    daily_most_discussed_agent: Optional[UserAnalyticsReportDailyTopAgentItem] = Field(
+        None, description="日报当日聊天轮数最高角色"
+    )
 
 
 class UserAnalyticsReportItem(BaseModel):
@@ -410,6 +427,14 @@ class UserAnalyticsReportItem(BaseModel):
         description="日报：统计日期；周报：该周周一日期 (YYYY-MM-DD)"
     )
     stats: UserAnalyticsStatsResponse = Field(description="聚合统计数据")
+    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = Field(
+        default_factory=list,
+        description="日报当日聊天轮数 Top 角色（用于轻量列表请求）",
+    )
+    daily_most_discussed_agent: Optional[UserAnalyticsReportDailyTopAgentItem] = Field(
+        None,
+        description="日报当日聊天轮数最高角色（用于轻量列表请求）",
+    )
     charts: Optional[UserAnalyticsReportCharts] = Field(None, description="图表数据")
     created_at: Optional[str] = Field(None, description="创建时间")
 

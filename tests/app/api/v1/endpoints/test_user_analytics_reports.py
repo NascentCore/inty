@@ -51,6 +51,33 @@ def _build_stats() -> dict:
     }
 
 
+def _build_popular_agents_for_fallback() -> list[dict]:
+    return [
+        {
+            "agent_name": "Role Alpha",
+            "user_count": 3,
+            "total_rounds": 28,
+            "avg_rounds_per_user": 9.33,
+            "pct_sessions_ge_5": 50.0,
+            "pct_sessions_ge_10": 33.33,
+            "total_sessions": 8,
+            "active_sessions": 4,
+            "open_rate": 50.0,
+        },
+        {
+            "agent_name": "Role Beta",
+            "user_count": 2,
+            "total_rounds": 35,
+            "avg_rounds_per_user": 17.5,
+            "pct_sessions_ge_5": 60.0,
+            "pct_sessions_ge_10": 40.0,
+            "total_sessions": 5,
+            "active_sessions": 3,
+            "open_rate": 60.0,
+        },
+    ]
+
+
 @pytest.fixture
 def reports_app():
     """提供挂载 evaluation 路由的 FastAPI 应用，用于测试 reports 端点"""
@@ -155,3 +182,51 @@ def test_user_analytics_reports_can_skip_charts(
     assert resp.status_code == 200
     body = resp.json()
     assert body["reports"][0]["charts"] is None
+    assert body["reports"][0]["daily_top_agents_by_rounds"] == []
+    assert body["reports"][0]["daily_most_discussed_agent"] is None
+
+
+def test_user_analytics_reports_fallback_daily_top_agents_when_charts_skipped(
+    reports_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+):
+    """旧日报缺少 daily_top 字段时，应基于 popular_agents 兜底计算"""
+    from unittest.mock import AsyncMock, MagicMock
+
+    row = MagicMock()
+    row.id = "report-2"
+    row.report_type = "daily"
+    row.report_date = datetime(2026, 2, 6, tzinfo=timezone.utc).date()
+    row.stats = _build_stats()
+    row.charts = {"popular_agents": _build_popular_agents_for_fallback()}
+    row.created_at = None
+
+    async def mock_execute(stmt):
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [row]
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        return mock_result
+
+    mock_db = MagicMock()
+    mock_db.execute = AsyncMock(side_effect=mock_execute)
+
+    async def override_get_async_replica_db():
+        yield mock_db
+
+    reports_app.dependency_overrides[deps.get_async_replica_db] = (
+        override_get_async_replica_db
+    )
+
+    with TestClient(reports_app) as client:
+        resp = client.get(
+            "/api/v1/evaluation/user-analytics/reports",
+            params={"report_type": "daily", "include_charts": "false"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    report = body["reports"][0]
+    assert report["charts"] is None
+    assert report["daily_top_agents_by_rounds"][0]["agent_name"] == "Role Beta"
+    assert report["daily_top_agents_by_rounds"][0]["total_rounds"] == 35
+    assert report["daily_most_discussed_agent"]["agent_name"] == "Role Beta"
