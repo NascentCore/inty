@@ -26,12 +26,14 @@ class ModelModalities(BaseModel):
     模型输入输出的模态组合，用于描述模型支持的输入和输出模态。
     """
 
-    inputs: set[DataModality] = Field(description="""
-        模型输入的模态，比如文本、图像、音频、视频等。
-        不是互斥的，仅仅用于常见的分类说明。""")
-    outputs: set[DataModality] = Field(description="""
-        模型输出的模态，比如文本、图像、音频、视频等。
-        不是互斥的，仅仅用于常见的分类说明。""")
+    inputs: list[DataModality] = Field(description="""
+        模型输入的模态列表，比如文本、图像、音频、视频等。
+        列表中的模态可以互斥，也可以不互斥，比如文本和图像可以同时输入。""")
+    outputs: list[DataModality] = Field(description="""
+        模型输出的模态列表，比如文本、图像、音频、视频等。
+        列表中的模态可以互斥，也可以不互斥，比如文本和图像可以同时输出。""")
+
+    notes: str = Field(description="模型价格的一些备注信息", default="")
 
 
 class ModelBuilder(StrEnum):
@@ -40,7 +42,36 @@ class ModelBuilder(StrEnum):
     """
 
     GOOGLE = "google"
+    BYTE_DANCE = "bytedance"
 
+
+class PricingModel(StrEnum):
+    """
+    模型价格类型，比如按 token 计费、按图片计费、按视频计费等。
+    """
+
+    # 1M token 的价格，1M token 是个流行选项
+    BY_1M_TOKEN = "by_1m_token"
+
+    # 按使用次数计费，比如图片生成次数、视频生成次数等
+    BY_USE = "by_use"
+
+
+class PriceInfo(BaseModel):
+    """
+    模型价格，用于计算用量和成本。
+    """
+    price: float = Field(description="模型价格，都是美元计价。")
+    model: PricingModel = Field(description="模型价格类型，比如按 token 计费、按使用次数计费等。")
+    modality: DataModality = Field(description="本价格使用的模态，比如文本、图像、音频、视频等。有时候同一个模型，不同的模态价格不同。")
+
+
+class Pricing(BaseModel):
+    """
+    模型价格，用于计算用量和成本。
+    """
+    inputs: list[PriceInfo] = Field(description="模型输入价格信息列表，用于计算用量和成本。")
+    outputs: list[PriceInfo] = Field(description="模型输出价格信息列表，用于计算用量和成本。")
 
 class ModelAPIProvider(StrEnum):
     """
@@ -98,10 +129,7 @@ class GenAIModel(BaseModel):
         现阶段，不区分 Provider，只隐含在代码中的对应 API 上使用合适的名字。
         这个 ID 只用于后端代码使用""")
 
-    provider_pricing: str = Field(
-        description="""
-        模型 API 提供者的价格，用于在代码中唯一标识一个模型。拷贝自供应商的文档，方便查看和理解。"""
-    )
+    pricing: Pricing = Field(description="模型价格，用于计算用量和成本。")
 
     playground_url: str = Field(description="""
         模型 API 提供者的 playground 地址，用于在代码中唯一标识一个模型。
@@ -115,26 +143,39 @@ class GenAIModel(BaseModel):
 
 GEMINI_2_5_FLASH_LITE = GenAIModel(
     nickname="Gemini 2.5 Flash Lite",
-    modalities=ModelModalities(inputs={DataModality.TEXT}, outputs={DataModality.TEXT}),
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash-lite",
-    provider_pricing="""
-        https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5
-    """,
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(price=0.1, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT),
+            PriceInfo(price=0.3, model=PricingModel.BY_1M_TOKEN, modality=DataModality.AUDIO),
+        ],
+        outputs=[PriceInfo(price=0.4, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT)],
+    ),
+    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
 )
 
 
 GEMINI_2_5_FLASH = GenAIModel(
     nickname="Gemini 2.5 Flash",
-    modalities=ModelModalities(inputs={DataModality.TEXT}, outputs={DataModality.TEXT}),
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash",
-    provider_pricing="""
-        https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5
-    """,
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(price=0.30, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT),
+            PriceInfo(price=1.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.AUDIO),
+        ],
+        outputs=[
+            PriceInfo(price=2.50, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT),
+            PriceInfo(price=30.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE),
+        ],
+    ),
+    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
 )
 
@@ -142,12 +183,16 @@ GEMINI_2_5_FLASH = GenAIModel(
 NANO_BANANA = GenAIModel(
     nickname="Nano Banana",
     modalities=ModelModalities(
-        inputs={DataModality.TEXT, DataModality.IMAGE}, outputs={DataModality.IMAGE}
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-2.5-flash-image",
-    provider_pricing="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
+    pricing=Pricing(
+        inputs=[PriceInfo(price=0.30, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT)],
+        outputs=[PriceInfo(price=30.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE)],
+    ),
+    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
 )
 
@@ -155,28 +200,36 @@ NANO_BANANA = GenAIModel(
 NANO_BANANA_PRO = GenAIModel(
     nickname="Nano Banana Pro",
     modalities=ModelModalities(
-        inputs={DataModality.TEXT, DataModality.IMAGE}, outputs={DataModality.IMAGE}
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="gemini-3-pro-image-preview",
-    provider_pricing="""
-        https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-3
-    """,
+    pricing=Pricing(
+        inputs=[PriceInfo(price=2.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT)],
+        outputs=[
+            PriceInfo(price=12.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT),
+            PriceInfo(price=120.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE),
+        ],
+    ),
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
-    notes="""最多支持 14 张参考图片。""",
+    notes="最多支持 14 张参考图片。价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-3",
 )
 
 
 IMAGEN_4_FAST = GenAIModel(
     nickname="Imagen 4.0 Fast",
     modalities=ModelModalities(
-        inputs={DataModality.TEXT, DataModality.IMAGE}, outputs={DataModality.IMAGE}
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="imagen-4.0-fast-generate-001",
-    provider_pricing="https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[PriceInfo(price=0.02, model=PricingModel.BY_USE, modality=DataModality.IMAGE)],
+    ),
+    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=imagen-4.0-fast-generate-001&project=alien-paratext-461204-i9",
 )
 
@@ -184,12 +237,16 @@ IMAGEN_4_FAST = GenAIModel(
 IMAGEN_4 = GenAIModel(
     nickname="Imagen 4.0",
     modalities=ModelModalities(
-        inputs={DataModality.TEXT, DataModality.IMAGE}, outputs={DataModality.IMAGE}
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="imagen-4.0-generate-001",
-    provider_pricing="https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[PriceInfo(price=0.04, model=PricingModel.BY_USE, modality=DataModality.IMAGE)],
+    ),
+    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=imagen-4.0-generate-001&project=alien-paratext-461204-i9",
 )
 
@@ -197,23 +254,66 @@ IMAGEN_4 = GenAIModel(
 VEO_3_1_FAST = GenAIModel(
     nickname="Veo3.1 Fast",
     modalities=ModelModalities(
-        inputs={DataModality.TEXT, DataModality.IMAGE}, outputs={DataModality.VIDEO}
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.VIDEO]
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="veo-3.1-fast-generate-001",
-    provider_pricing="https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[PriceInfo(price=0.15, model=PricingModel.BY_USE, modality=DataModality.VIDEO)],
+    ),
+    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/media/video?project=alien-paratext-461204-i9",
 )
 
 VEO_3_1 = GenAIModel(
     nickname="Veo3.1",
     modalities=ModelModalities(
-        inputs={DataModality.TEXT, DataModality.IMAGE}, outputs={DataModality.VIDEO}
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.VIDEO]
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
     id_on_provider="veo-3.1-generate-001",
-    provider_pricing="https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[PriceInfo(price=0.40, model=PricingModel.BY_USE, modality=DataModality.VIDEO)],
+    ),
+    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/media/video?project=alien-paratext-461204-i9",
+)
+
+SEEDREAM_V4_5_EDIT = GenAIModel(
+    nickname="Seedream V4.5 Edit",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
+    ),
+    builder=ModelBuilder.BYTE_DANCE,
+    # TODO：Openrouter 没有 edit 版本似乎，需要调研
+    # Ref: https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api?platform=python
+    provider=ModelAPIProvider.FALAI,
+    id_on_provider="fal-ai/bytedance/seedream/v4.5/edit",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[PriceInfo(price=0.04, model=PricingModel.BY_USE, modality=DataModality.IMAGE)],
+    ),
+    notes="价格/定价见：https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit",
+    playground_url="https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit",
+)
+
+GPT_IMAGE_1_5 = GenAIModel(
+    nickname="GPT Image 1.5",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.TEXT, DataModality.IMAGE]
+    ),
+    builder=ModelBuilder.OPENAI,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="openai/gpt-image-1.5/edit",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[PriceInfo(price=0.01, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE)],
+        notes="测试中，4k 输出，80 张话费 $6.59，合 $0.082375/张图片"
+    ),
+    notes="价格列表：https://fal.ai/models/fal-ai/gpt-image-1.5/edit",
+    playground_url="https://platform.openai.com/playground/images",
 )

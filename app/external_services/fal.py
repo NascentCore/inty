@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import fal_client
+from loguru import logger
+from pydantic import BaseModel, Field
 
 FAL_API_KEY_ENV_VAR = "FAL_KEY"
 
@@ -62,6 +64,51 @@ class FalTextToVideoResult:
 
 
 IMAGE_SIZE_PORTRAIT_16_9 = "portrait_16_9"
+
+# gpt-image-1.5/edit input_fidelity: "low" | "high". Default "high" = preserve input composition more.
+# Ref: https://fal.ai/models/fal-ai/gpt-image-1.5/edit/api (Input schema → input_fidelity)
+INPUT_FIDELITY_HIGH = "high"
+INPUT_FIDELITY_LOW = "low"
+
+# gpt-image-1.5/edit image_size: only these literals are accepted; portrait_16_9 causes 422.
+# Ref: https://fal.ai/models/fal-ai/gpt-image-1.5/edit/api (Input schema → image_size)
+GPT_IMAGE_1_5_EDIT_IMAGE_SIZE_LITERAL = Literal["auto", "1024x1024", "1536x1024", "1024x1536"]
+
+
+class GPTImage1_5EditGenConfig(BaseModel):
+    """
+    Model-specific parameters for fal-ai/gpt-image-1.5/edit image-to-image.
+    Ref: https://fal.ai/models/fal-ai/gpt-image-1.5/edit/api
+    """
+
+    image_size: GPT_IMAGE_1_5_EDIT_IMAGE_SIZE_LITERAL = Field(
+        default="auto",
+        description="Output size. Only 'auto', '1024x1024', '1536x1024', '1024x1536' are valid; portrait_16_9 causes 422.",
+    )
+    input_fidelity: Literal["low", "high"] = Field(
+        default=INPUT_FIDELITY_HIGH,
+        description="Input fidelity: 'high' preserves input composition more, 'low' allows more change.",
+    )
+    num_images: int = Field(default=1, ge=1, description="Number of images to generate.")
+    output_format: str = Field(default="jpeg", description="Output format, e.g. 'jpeg'.")
+
+
+class SeedreamV4_5EditGenConfig(BaseModel):
+    """
+    Model-specific parameters for fal-ai/bytedance/seedream/v4.5/edit image-to-image.
+    Ref: https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api
+    """
+
+    num_images: int = Field(default=1, ge=1, description="Number of images to generate.")
+    image_size: Optional[str] = Field(
+        default=None,
+        description="Optional output size; Seedream may accept e.g. portrait_16_9.",
+    )
+    output_format: str = Field(default="jpeg", description="Output format, e.g. 'jpeg'.")
+
+
+DEFAULT_GPT_IMAGE_1_5_EDIT_CONFIG = GPTImage1_5EditGenConfig()
+DEFAULT_SEEDREAM_V4_5_EDIT_CONFIG = SeedreamV4_5EditGenConfig()
 
 
 class FalAIClient:
@@ -125,6 +172,9 @@ class FalAIClient:
         prompt: str,
         strength: float = 0.75,
         num_images: int = 1,
+        input_fidelity: Literal["low", "high"] = INPUT_FIDELITY_HIGH,
+        gpt_image_1_5_edit_config: GPTImage1_5EditGenConfig | None = None,
+        seedream_v4_5_edit_config: SeedreamV4_5EditGenConfig | None = None,
         extra_args: dict[str, Any] | None = None,
         with_logs: bool = False,
     ) -> FalTextToImageResult:
@@ -135,9 +185,12 @@ class FalAIClient:
             model: fal 模型名，如 "fal-ai/z-image/turbo/image-to-image"
             image_urls: 参考图 URL 列表
             prompt: 生成提示词
-            strength: 变换强度 (0-1)，值越大变化越大
-            num_images: 生成图片数量
-            extra_args: 额外的模型参数
+            strength: 变换强度 (0-1)，值越大变化越大（仅非 gpt-image/seedream 模型）
+            num_images: 生成图片数量（当未传对应 model config 时使用）
+            input_fidelity: 仅 gpt-image-1.5/edit 使用，当未传 gpt_image_1_5_edit_config 时生效。
+            gpt_image_1_5_edit_config: 仅 gpt-image-1.5/edit 使用；传入时用其 image_size/input_fidelity 等，避免 portrait_16_9 导致 422。
+            seedream_v4_5_edit_config: 仅 bytedance/seedream/v4.5/edit 使用。
+            extra_args: 额外的模型参数（在 config 之后合并，注意 gpt-image 勿传非法 image_size）
             with_logs: 是否返回日志
 
         Returns:
@@ -151,10 +204,28 @@ class FalAIClient:
         }
 
         # 根据模型类型选择正确的参数格式
-        # gpt-image-1.5/edit、bytedance/seedream/v4.5/edit 等使用 image_urls（数组格式）
-        # 其他模型使用 image_url（单数）
-        if "gpt-image" in model.lower() or "seedream" in model.lower():
+        # gpt-image-1.5/edit：image_urls + num_images + input_fidelity（无 strength）；image_size 仅允许 auto/1024x1024/1536x1024/1024x1536
+        # bytedance/seedream/v4.5/edit：image_urls + num_images（无 strength、无 input_fidelity）
+        # 其他模型：image_url（单数）+ strength + num_images
+        if "gpt-image" in model.lower():
             arguments["image_urls"] = image_urls
+            if gpt_image_1_5_edit_config is not None:
+                arguments["num_images"] = gpt_image_1_5_edit_config.num_images
+                arguments["input_fidelity"] = gpt_image_1_5_edit_config.input_fidelity
+                arguments["image_size"] = gpt_image_1_5_edit_config.image_size
+                arguments["output_format"] = gpt_image_1_5_edit_config.output_format
+            else:
+                arguments["num_images"] = num_images
+                arguments["input_fidelity"] = input_fidelity
+        elif "seedream" in model.lower():
+            arguments["image_urls"] = image_urls
+            if seedream_v4_5_edit_config is not None:
+                arguments["num_images"] = seedream_v4_5_edit_config.num_images
+                if seedream_v4_5_edit_config.image_size is not None:
+                    arguments["image_size"] = seedream_v4_5_edit_config.image_size
+                arguments["output_format"] = seedream_v4_5_edit_config.output_format
+            else:
+                arguments["num_images"] = num_images
         else:
             if len(image_urls) > 1:
                 raise ValueError("Only one image URL is supported for non-gpt-image/seedream models")
@@ -164,6 +235,10 @@ class FalAIClient:
 
         if extra_args:
             arguments.update(extra_args)
+
+        arguments["enable_safety_checker"] = False
+        
+        logger.info(f"Calling fal.ai with model: {model}, arguments: {arguments}")
 
         return _parse_fal_text_to_image_result(
             self.subscribe(model=model, arguments=arguments, with_logs=with_logs)

@@ -1,7 +1,7 @@
 """
-For each prompt file under tmp/scene_prompt_*.txt, read content and generate images via fal (image-to-image).
-Uses default char/user avatar files (uploaded to fal CDN). Use --model to choose fal model.
-On fal error (e.g. 422 content_policy_violation): print response, save full error JSON, then continue.
+For each prompt file under tmp/scene_prompt_*.txt, read content and generate images via OpenAI Images Edit (gpt-image-1.5).
+Uses default char/user avatar files (local paths). Use --model to choose model.
+On OpenAI API error: print response, save full error JSON, then continue.
 Run from repo root so tmp/ and tests/files/ paths are correct.
 """
 
@@ -14,21 +14,22 @@ import os
 from typing import Annotated, Any
 
 import cyclopts
-import fal_client
-from fal_client.client import FalClientHTTPError
-
 from dotenv import load_dotenv
+from openai import APIError, APIConnectionError, APITimeoutError
 
 load_dotenv()
 
-from experimental.eval_nana_banana.fal.lib import (
+from experimental.eval_nana_banana.openai.lib import (
     _model_to_output_subdir,
     generate,
     save_result_to_files,
 )
 
-DEFAULT_MODEL = "fal-ai/flux-1.1-pro"
+DEFAULT_MODEL = "gpt-image-1.5"
 PROMPT_PREVIEW_MAX_CHARS = 1000
+
+DEFAULT_CHAR_AVATAR_PATH = "tests/files/nurse_char.jpg"
+DEFAULT_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
 
 
 def _json_safe(val: Any) -> Any:
@@ -48,38 +49,35 @@ def _save_error_json(
     files_prefix: str,
     error_payload: dict,
 ) -> str:
-    """Write error payload under output_dir/<model_subdir>/{files_prefix}_fal_output_{suffix}_error.json. Returns path."""
+    """Write error payload under output_dir/openai/<model>/{files_prefix}_openai_output_{suffix}_error.json. Returns path."""
     model_dir = _model_to_output_subdir(output_dir, model)
     os.makedirs(model_dir, exist_ok=True)
     suffix = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    stem = f"{files_prefix}_fal_output_{suffix}_error"
+    stem = f"{files_prefix}_openai_output_{suffix}_error"
     path = os.path.join(model_dir, f"{stem}.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(_json_safe(error_payload), f, indent=2, ensure_ascii=False)
     return path
 
 
-# DEFAULT_CHAR_AVATAR_PATH = "tests/files/nurse_char_full_body.jpg"
-DEFAULT_CHAR_AVATAR_PATH = "tests/files/nurse_char.jpg"
-DEFAULT_USER_AVATAR_PATH = "tests/files/zunlong.jpg"
-
-
-def upload_file(path: str) -> str:
-    return fal_client.sync_client.upload_file(path)
-
-
 def main(
     model: Annotated[
         str,
-        cyclopts.Parameter(help="fal model, e.g. fal-ai/flux-1.1-pro or fal-ai/gpt-image-1.5/edit"),
+        cyclopts.Parameter(help="OpenAI image model, e.g. gpt-image-1.5"),
     ] = DEFAULT_MODEL,
     output_dir: Annotated[
         str,
         cyclopts.Parameter(help="Output directory for images and JSON"),
     ] = "tmp",
+    char_avatar_path: Annotated[
+        str,
+        cyclopts.Parameter(help="Path to character avatar image"),
+    ] = DEFAULT_CHAR_AVATAR_PATH,
+    user_avatar_path: Annotated[
+        str,
+        cyclopts.Parameter(help="Path to user avatar image"),
+    ] = DEFAULT_USER_AVATAR_PATH,
 ) -> None:
-    char_avatar_url = upload_file(DEFAULT_CHAR_AVATAR_PATH)
-    user_avatar_url = upload_file(DEFAULT_USER_AVATAR_PATH)
     prompt_files = sorted(glob.glob("tmp/scene_prompt_*.txt"))
     for prompt_file in prompt_files:
         files_prefix = os.path.splitext(os.path.basename(prompt_file))[0]
@@ -87,10 +85,23 @@ def main(
             prompt = f.read()
         start_time = datetime.datetime.now()
         try:
-            result = generate(prompt, model=model, char_avatar_url=char_avatar_url, user_avatar_url=user_avatar_url)
+            result = generate(
+                prompt,
+                model=model,
+                char_avatar_path=char_avatar_path,
+                user_avatar_path=user_avatar_path,
+            )
             duration = datetime.datetime.now() - start_time
-            save_result_to_files(result, files_prefix, duration, model=model, output_dir=output_dir)
-        except (FalClientHTTPError, ValueError) as e:
+            save_result_to_files(
+                result,
+                files_prefix,
+                duration,
+                model=model,
+                output_dir=output_dir,
+                prompt_preview=prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None,
+            )
+            print(f"Saved image and JSON for {files_prefix}")
+        except (APIError, APIConnectionError, APITimeoutError, ValueError) as e:
             duration = datetime.datetime.now() - start_time
             error_payload = {
                 "error": True,
@@ -102,8 +113,6 @@ def main(
                 "duration_seconds": duration.total_seconds(),
                 "prompt_preview": prompt[:PROMPT_PREVIEW_MAX_CHARS] if prompt else None,
             }
-            if hasattr(e, "body"):
-                error_payload["body"] = e.body
             if hasattr(e, "response") and e.response is not None:
                 try:
                     error_payload["response_json"] = (
@@ -111,10 +120,11 @@ def main(
                     )
                 except (ValueError, TypeError, AttributeError, OSError):
                     error_payload["response_raw"] = str(e.response)
+            if hasattr(e, "body"):
+                error_payload["body"] = e.body
             print(repr(e))
             out_path = _save_error_json(output_dir, model, files_prefix, error_payload)
             print(f"Saved error JSON to {out_path} for {files_prefix}, continuing.")
-            continue
 
 
 if __name__ == "__main__":
