@@ -1,6 +1,11 @@
 # Live API 单轮语音生成：系统指令 + 最近 N 条消息 + 回复文案 → PCM。
 # 代码参考: experimental/agentic_ai_companion/code_samples/erotic_actress_gemini_live_camera.py
-# 优势在于生成速度省去一次调用 text 生成、tts 的等待
+# 潜在优势：
+# - 生成速度省去一次调用 text 生成、tts 的等待，但是实际生成来看还是比生成文本然后 tts 要慢
+# - 可以更有表现力？目前还没有具体测试
+# 潜在问题：
+# - 是否会有更严格的审核？
+
 
 from __future__ import annotations
 
