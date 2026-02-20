@@ -46,6 +46,9 @@ from app.utils.google_genai_client import wrap_google_genai_client_with_langsmit
 # Initialize Google Gen AI clients with Vertex AI.
 # The clients use the same credentials as configured for GCS.
 _clients_by_output_modality: dict[str, Any] = {}
+# Backward compatibility for tests and legacy monkeypatches.
+# Mirrors the cached text-modality client.
+client: Any = None
 
 
 def _normalize_output_modality(output_modality: str) -> str:
@@ -57,10 +60,15 @@ def _normalize_output_modality(output_modality: str) -> str:
 
 def get_genai_client(*, output_modality: str = "text"):
     """Get or create Google Gen AI client with proper configuration"""
-    global _clients_by_output_modality
+    global _clients_by_output_modality, client
     normalized_output_modality = _normalize_output_modality(output_modality)
+    if normalized_output_modality == "text" and client is not None:
+        return client
+
     cached_client = _clients_by_output_modality.get(normalized_output_modality)
     if cached_client is not None:
+        if normalized_output_modality == "text":
+            client = cached_client
         return cached_client
 
     # Check if we're in test environment
@@ -70,6 +78,8 @@ def get_genai_client(*, output_modality: str = "text"):
         logger.info("Using FakeGeminiClient in test environment")
         fake_client = FakeGeminiClient()
         _clients_by_output_modality[normalized_output_modality] = fake_client
+        if normalized_output_modality == "text":
+            client = fake_client
         return fake_client
 
     location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
@@ -116,6 +126,8 @@ def get_genai_client(*, output_modality: str = "text"):
             output_modality=normalized_output_modality,
         )
         _clients_by_output_modality[normalized_output_modality] = wrapped_client
+        if normalized_output_modality == "text":
+            client = wrapped_client
         logger.debug(
             f"Initialized Google Gen AI client with project: {project_id}, location: {location}, output_modality: {normalized_output_modality}"
         )
@@ -131,6 +143,8 @@ def get_genai_client(*, output_modality: str = "text"):
             output_modality=normalized_output_modality,
         )
         _clients_by_output_modality[normalized_output_modality] = wrapped_fallback_client
+        if normalized_output_modality == "text":
+            client = wrapped_fallback_client
 
     return _clients_by_output_modality[normalized_output_modality]
 
