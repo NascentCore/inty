@@ -41,6 +41,7 @@ from app.utils.image import (
     crop_image_to_9_16,
     get_jpg_bytes_from_pil_image,
 )
+from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
@@ -86,14 +87,35 @@ def get_genai_client():
             if hasattr(genai, "_client_cache"):
                 genai._client_cache.clear()
 
-            client = genai.Client(vertexai=True, project=project_id, location=location)
+            tracing_metadata = {
+                "source": "app.utils.gemini",
+                "project_id": project_id,
+                "location": location,
+            }
+            base_client = genai.Client(
+                vertexai=True,
+                project=project_id,
+                location=location,
+            )
+            client = wrap_google_genai_client_with_langsmith(
+                base_client,
+                tags=["google-genai", "vertex-ai", "app-utils-gemini"],
+                metadata=tracing_metadata,
+                chat_name="Inty_GoogleGenAI",
+            )
             logger.debug(
                 f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
             )
         except Exception as e:
             logger.error(f"Error initializing Google Gen AI client: {e}")
             # Fallback to basic initialization with environment variable set
-            client = genai.Client(vertexai=True)
+            fallback_client = genai.Client(vertexai=True)
+            client = wrap_google_genai_client_with_langsmith(
+                fallback_client,
+                tags=["google-genai", "vertex-ai", "app-utils-gemini"],
+                metadata={"source": "app.utils.gemini", "location": location},
+                chat_name="Inty_GoogleGenAI",
+            )
 
     return client
 
