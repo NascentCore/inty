@@ -4,6 +4,7 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.design.ImageLoaderUtils
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -63,6 +64,7 @@ import com.ai.intellimate.utils.ShareUtils
 import kotlinx.coroutines.launch
 
 private val IMAGE_UPSCALE_FACTORS = listOf(1, 2, 4)
+private const val IMAGE_VIEWER_UPSCALE_EVENT = "image_viewer_upscale"
 
 /** 全屏图片查看器 */
 @Composable
@@ -98,6 +100,20 @@ internal fun FullScreenImageViewer(
                 quality = UiConfigs.CharacterProfile.CDN_IMAGE_QUALITY,
             ) ?: imageUrl
         }
+
+    fun trackUpscaleEvent(action: String, vararg extraParams: Pair<String, Any?>) {
+        FirebaseManager.logEvent(
+            IMAGE_VIEWER_UPSCALE_EVENT,
+            FirebaseManager.safeEventParams(
+                "action" to action,
+                "is_subscribed" to vipStatus.isSubscribed,
+                "has_temporary_access" to hasTemporaryUpscaleAccess,
+                "current_factor" to selectedUpscaleFactor,
+                "timestamp" to System.currentTimeMillis(),
+                *extraParams,
+            ),
+        )
+    }
 
     // 缩放、平移状态（不支持旋转）
     var scale by remember { mutableFloatStateOf(1f) }
@@ -280,9 +296,12 @@ internal fun FullScreenImageViewer(
                     Modifier.clip(RoundedCornerShape(8.dp))
                         .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
                         .noRippleClickable {
+                            trackUpscaleEvent("click_button")
                             if (canUseUpscaleFeature) {
+                                trackUpscaleEvent("open_options_dialog")
                                 showUpscaleOptionsDialog = true
                             } else {
+                                trackUpscaleEvent("open_unlock_dialog")
                                 showUpscaleCreditsDialog = true
                             }
                         }
@@ -411,7 +430,17 @@ internal fun FullScreenImageViewer(
                             scope.launch {
                                 val cost = UiConfigs.Credits.VipImageUpscaleCost
                                 val availableCredits = BoostManager.boostState.value.availablePoints
+                                trackUpscaleEvent(
+                                    "unlock_attempt",
+                                    "required_credits" to cost,
+                                    "available_credits" to availableCredits,
+                                )
                                 if (availableCredits < cost) {
+                                    trackUpscaleEvent(
+                                        "unlock_failed_not_enough_credits",
+                                        "required_credits" to cost,
+                                        "available_credits" to availableCredits,
+                                    )
                                     isDeductingUpscaleCredits = false
                                     ToastUtils.showShort(R.string.credits_not_enough)
                                     return@launch
@@ -427,10 +456,20 @@ internal fun FullScreenImageViewer(
                                 isDeductingUpscaleCredits = false
                                 if (deducted) {
                                     hasTemporaryUpscaleAccess = true
+                                    trackUpscaleEvent(
+                                        "unlock_success_credits",
+                                        "required_credits" to cost,
+                                        "available_credits" to availableCredits,
+                                    )
                                     showUpscaleCreditsDialog = false
                                     showUpscaleOptionsDialog = true
                                     ToastUtils.showShort(R.string.credits_deducted, cost)
                                 } else {
+                                    trackUpscaleEvent(
+                                        "unlock_failed_deduct_error",
+                                        "required_credits" to cost,
+                                        "available_credits" to availableCredits,
+                                    )
                                     ToastUtils.showShort(R.string.credits_not_enough)
                                 }
                             }
@@ -473,8 +512,14 @@ internal fun FullScreenImageViewer(
                             TextButton(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
+                                    val previousFactor = selectedUpscaleFactor
                                     selectedUpscaleFactor = factor
                                     showUpscaleOptionsDialog = false
+                                    trackUpscaleEvent(
+                                        "apply_factor",
+                                        "previous_factor" to previousFactor,
+                                        "target_factor" to factor,
+                                    )
                                     ToastUtils.showShort(R.string.image_upscale_applied, factor)
                                 },
                             ) {
