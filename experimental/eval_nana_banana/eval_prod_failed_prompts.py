@@ -25,4 +25,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-  cyclopts.run(main)
+    cyclopts.run(main)

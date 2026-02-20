@@ -448,8 +448,10 @@ class GeminiLiveConfig:
 
 class TTSConfig:
     """语音播报配置"""
+
     # Gemini tts 还不稳定，经常出现措辞失误：把括号里面内容讲出来、重复对话内容
     use_gemini_prompted_tts: bool = False
+
 
 @dataclass
 class Config:

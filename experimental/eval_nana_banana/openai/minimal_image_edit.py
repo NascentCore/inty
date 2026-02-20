@@ -1,5 +1,6 @@
 import base64
 from openai import OpenAI
+
 client = OpenAI()
 
 prompt = """
@@ -12,7 +13,7 @@ result = client.images.edit(
         open("tests/files/nurse_char.jpg", "rb"),
         open("tests/files/zunlong.jpg", "rb"),
     ],
-    prompt=prompt
+    prompt=prompt,
 )
 
 image_base64 = result.data[0].b64_json

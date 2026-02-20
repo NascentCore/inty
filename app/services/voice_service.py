@@ -348,9 +348,7 @@ class VoiceService:
                     )
                 else:
                     tts_result = await self.gemini_tts_api.synthesize(req)
-                logger.debug(
-                    f"Gemini TTS 路径: use_gemini_prompted_tts={use_prompted}"
-                )
+                logger.debug(f"Gemini TTS 路径: use_gemini_prompted_tts={use_prompted}")
                 if not tts_result:
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
                     logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")
