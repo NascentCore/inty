@@ -366,6 +366,18 @@ class UserGeneratedImagesResponse(BaseModel):
     total: int = Field(description="总数量")
 
 
+class UserAnalyticsReportGeneratedImageItem(BaseModel):
+    """日报中的生图列表项"""
+
+    id: int = Field(description="chat_history ID")
+    session_id: str = Field(description="会话 session_id")
+    image_url: str = Field(
+        description="图片 URL（gs:// 已转换为 https://storage.googleapis.com/）"
+    )
+    meta_data: Dict[str, Any] = Field(default_factory=dict, description="消息元数据")
+    created_at: Optional[str] = Field(None, description="创建时间")
+
+
 class UserAnalyticsReportCharts(BaseModel):
     """用户数据分析预计算报告图表数据"""
 
@@ -383,6 +395,9 @@ class UserAnalyticsReportCharts(BaseModel):
     )
     popular_agents: List[Dict[str, Any]] = Field(
         default_factory=list, description="热门角色排行"
+    )
+    generated_images: List[UserAnalyticsReportGeneratedImageItem] = Field(
+        default_factory=list, description="日报当日生图列表"
     )
 
 

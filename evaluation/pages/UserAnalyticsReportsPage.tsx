@@ -23,6 +23,7 @@ import {
   message,
   Spin,
   Empty,
+  Image,
 } from "antd";
 import {
   ReloadOutlined,
@@ -79,6 +80,7 @@ const USAGE_CHART_HEIGHT = 360;
 const USAGE_MARKER_SIZE = 6;
 const REPORTS_LIMIT = 30;
 const DAILY_LATEST_LIMIT = 1;
+const DAILY_GENERATED_IMAGES_PREVIEW_LIMIT = 60;
 
 function computeRoundsDistributionBySession(
   conversationRounds: UserAnalyticsReportCharts["conversation_rounds"],
@@ -157,9 +159,11 @@ function computeUsersHittingLimitTrend(
 function ReportContent({
   stats,
   charts,
+  reportType,
 }: {
   stats: UserAnalyticsStatsResponse;
   charts: UserAnalyticsReportCharts | null;
+  reportType: ReportType;
 }) {
   const roundsDistributionBySession = useMemo(
     () =>
@@ -182,10 +186,57 @@ function ReportContent({
   );
   const newUsers = charts?.new_users ?? [];
   const popularAgents = charts?.popular_agents ?? [];
+  const generatedImages = charts?.generated_images ?? [];
+  const previewGeneratedImages = generatedImages.slice(
+    0,
+    DAILY_GENERATED_IMAGES_PREVIEW_LIMIT,
+  );
 
   return (
     <>
       <StatsCards stats={stats} />
+      {reportType === "daily" && (
+        <Card
+          title={`当天生成图片（${generatedImages.length}）`}
+          style={{ marginTop: "24px" }}
+          styles={{ body: { maxHeight: 420, overflowY: "auto" } }}
+        >
+          {generatedImages.length > 0 ? (
+            <>
+              {generatedImages.length > DAILY_GENERATED_IMAGES_PREVIEW_LIMIT && (
+                <div style={{ marginBottom: 12, color: "#999", fontSize: 12 }}>
+                  仅展示最新 {DAILY_GENERATED_IMAGES_PREVIEW_LIMIT} 张
+                </div>
+              )}
+              <Row gutter={[12, 12]}>
+                {previewGeneratedImages.map((item) => (
+                  <Col key={item.id} xs={12} sm={8} md={6} lg={4} xl={3}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <Image
+                        src={item.image_url}
+                        alt={`generated-${item.id}`}
+                        style={{
+                          width: "100%",
+                          aspectRatio: "1 / 1",
+                          objectFit: "cover",
+                          borderRadius: 8,
+                        }}
+                      />
+                      <div style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}>
+                        {item.created_at
+                          ? item.created_at.replace("T", " ").slice(0, 19)
+                          : "时间未知"}
+                      </div>
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            </>
+          ) : (
+            <Empty description="当天无生图" />
+          )}
+        </Card>
+      )}
       <Row gutter={[16, 16]} style={{ marginTop: "24px" }}>
         <Col xs={24} lg={12}>
           <Card title="用户注册结构" style={{ height: "400px" }}>
@@ -826,7 +877,13 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       sortedReports.map((report) => ({
         key: report.id,
         label: `${report.report_date}（${REPORT_TYPE_LABELS[report.report_type]}）`,
-        children: <ReportContent stats={report.stats} charts={report.charts} />,
+        children: (
+          <ReportContent
+            stats={report.stats}
+            charts={report.charts}
+            reportType={report.report_type}
+          />
+        ),
       })),
     [sortedReports],
   );

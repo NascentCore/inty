@@ -167,6 +167,51 @@ class UserAnalyticsService:
         )
         return {row[0] for row in result.fetchall()}
 
+    async def get_generated_images_on_date(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+    ) -> List[Dict[str, Any]]:
+        """查询指定日期范围内的生图列表（用于日报展示）"""
+        # 关键步骤：按日报传入的 UTC 日期边界查询，避免“最近 1 天”导致跨日报口径不一致。
+        query = text("""
+            SELECT
+                id,
+                session_id::text as session_id,
+                REPLACE(
+                    meta_data->'generated_image'->>'image_url',
+                    'gs://',
+                    'https://storage.googleapis.com/'
+                ) as image_url,
+                meta_data,
+                created_at
+            FROM chat_history
+            WHERE meta_data->'generated_image' IS NOT NULL
+              AND meta_data->'generated_image'->>'image_url' IS NOT NULL
+              AND deleted_at IS NULL
+              AND created_at >= :activity_start_date
+              AND created_at < :activity_end_date
+            ORDER BY created_at DESC
+        """)
+        result = await self.db.execute(
+            query,
+            {
+                "activity_start_date": activity_start_date,
+                "activity_end_date": activity_end_date,
+            },
+        )
+        rows = result.fetchall()
+        return [
+            {
+                "id": row[0],
+                "session_id": row[1],
+                "image_url": row[2],
+                "meta_data": row[3] or {},
+                "created_at": row[4].isoformat() if row[4] else None,
+            }
+            for row in rows
+        ]
+
     async def _query_session_message_counts(
         self,
         session_ids: List[str],
