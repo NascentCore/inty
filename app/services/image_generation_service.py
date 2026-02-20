@@ -15,7 +15,7 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.agent import prompt_template, prompts as agent_prompts
+from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.predefined_configs import (
     GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
@@ -942,7 +942,7 @@ class ImageGenerationService:
 
             fal_result = client.image_to_image(
                 model=model,
-                image_urls=[reference_url],
+                image_url=reference_url,
                 prompt=prompt,
                 strength=0.75,
                 num_images=1,
