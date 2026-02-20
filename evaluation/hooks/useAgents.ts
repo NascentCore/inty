@@ -330,9 +330,17 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           .getIntyClient()
           .api.v1.ai.agents.update(agentId, updateData)) as unknown as Agent;
 
-        // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
+        // 仅更新本地内存态，避免保存动作被“全量分页刷新列表”阻塞
+        setAgents((prevAgents) => {
+          const mergedAgents = prevAgents.map((agent) => {
+            if (agent.id !== agentId) {
+              return agent;
+            }
+            return { ...agent, ...updatedAgent };
+          });
+          return filterAgentsByType(mergedAgents, type);
+        });
         clearCache();
-        await loadAgents(true); // 强制刷新
 
         message.success("智能体更新成功");
         return updatedAgent;
@@ -343,7 +351,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError, loadAgents],
+    [clearCache, handleError, type],
   );
 
   // 删除智能体
