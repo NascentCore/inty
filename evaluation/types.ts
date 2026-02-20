@@ -581,6 +581,14 @@ export interface ConversationsDetailResponse {
   sessions: ConversationsDetailSession[];
 }
 
+export interface UserAnalyticsReportGeneratedImageItem {
+  id: number;
+  session_id: string;
+  image_url: string;
+  meta_data: Record<string, unknown>;
+  created_at: string | null;
+}
+
 export interface UserAnalyticsReportCharts {
   new_users: Array<{ date: string; auth_type: string; count: number }>;
   conversation_rounds: Array<{
@@ -602,6 +610,7 @@ export interface UserAnalyticsReportCharts {
     limit_value: number;
   }>;
   popular_agents: PopularAgentsResponse[];
+  generated_images: UserAnalyticsReportGeneratedImageItem[];
 }
 
 export interface UserAnalyticsReportItem {

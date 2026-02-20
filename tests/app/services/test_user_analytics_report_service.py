@@ -1,7 +1,7 @@
 # CREATED_BY_AGENT
 """用户数据分析预计算报告服务测试"""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -73,6 +73,15 @@ async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stat
     ):
         mock_service_instance = AsyncMock()
         mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_active_session_ids_on_date = AsyncMock(
+            return_value=set()
+        )
+        mock_service_instance.get_new_users = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_popular_agents = AsyncMock(return_value=[])
+        mock_service_instance.get_generated_images_on_date = AsyncMock(return_value=[])
         MockService.return_value = mock_service_instance
 
         result = await compute_and_save_daily_report(mock_db, date(2026, 2, 1))
@@ -80,6 +89,10 @@ async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stat
     assert result is None
     mock_db.add.assert_not_called()
     mock_db.commit.assert_not_called()
+    mock_service_instance.get_generated_images_on_date.assert_awaited_once_with(
+        datetime(2026, 2, 1, tzinfo=timezone.utc),
+        datetime(2026, 2, 2, tzinfo=timezone.utc),
+    )
 
 
 @pytest.mark.asyncio
@@ -100,6 +113,26 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
     ):
         mock_service_instance = AsyncMock()
         mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_active_session_ids_on_date = AsyncMock(
+            return_value=set()
+        )
+        mock_service_instance.get_new_users = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_popular_agents = AsyncMock(return_value=[])
+        generated_images = [
+            {
+                "id": 1001,
+                "session_id": "session-1",
+                "image_url": "https://storage.googleapis.com/bucket/path.png",
+                "meta_data": {"generated_image": {"prompt": "sunset"}},
+                "created_at": "2026-02-01T03:00:00+00:00",
+            }
+        ]
+        mock_service_instance.get_generated_images_on_date = AsyncMock(
+            return_value=generated_images
+        )
         MockService.return_value = mock_service_instance
 
         result = await compute_and_save_daily_report(mock_db, date(2026, 2, 1))
@@ -107,6 +140,11 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
     assert result is not None
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()
+    assert result.charts["generated_images"] == generated_images
+    mock_service_instance.get_generated_images_on_date.assert_awaited_once_with(
+        datetime(2026, 2, 1, tzinfo=timezone.utc),
+        datetime(2026, 2, 2, tzinfo=timezone.utc),
+    )
 
 
 @pytest.mark.asyncio

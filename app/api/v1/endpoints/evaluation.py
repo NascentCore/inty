@@ -1821,6 +1821,7 @@ async def get_user_analytics_reports(
                     ),
                     users_hitting_limit=row.charts.get("users_hitting_limit", []),
                     popular_agents=row.charts.get("popular_agents", []),
+                    generated_images=row.charts.get("generated_images", []),
                 )
             reports.append(
                 schemas.user_analytics.UserAnalyticsReportItem(

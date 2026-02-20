@@ -44,6 +44,7 @@ def _build_daily_charts(
     user_rounds_distribution: list,
     users_hitting_limit: list,
     popular_agents: list,
+    generated_images: list,
 ) -> dict:
     return {
         "new_users": [
@@ -75,6 +76,7 @@ def _build_daily_charts(
             for d in users_hitting_limit
         ],
         "popular_agents": popular_agents,
+        "generated_images": generated_images,
     }
 
 
@@ -131,12 +133,14 @@ async def _read_daily_report_from_replica(
             limit=20,
             active_session_ids=active_session_ids,
         )
+        generated_images = await service.get_generated_images_on_date(act_start, act_end)
         charts = _build_daily_charts(
             new_users,
             conversation_rounds,
             user_rounds_distribution,
             users_hitting_limit,
             popular_agents,
+            generated_images,
         )
     return stats, charts
 
@@ -226,12 +230,14 @@ async def compute_and_save_daily_report(
             limit=20,
             active_session_ids=active_session_ids,
         )
+        generated_images = await service.get_generated_images_on_date(act_start, act_end)
         charts = _build_daily_charts(
             new_users,
             conversation_rounds,
             user_rounds_distribution,
             users_hitting_limit,
             popular_agents,
+            generated_images,
         )
 
     existing = await db.execute(
