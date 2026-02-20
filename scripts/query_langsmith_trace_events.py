@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import csv
+import inspect
 import json
 import os
 from datetime import date, datetime, time
@@ -77,6 +79,96 @@ def _extract_model_name(run: Any) -> str | None:
     return None
 
 
+def _escape_filter_string(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _build_user_id_filter(*, user_ids: set[str], metadata_key: str) -> str | None:
+    if not user_ids:
+        return None
+
+    escaped_key = _escape_filter_string(metadata_key)
+    clauses = [
+        'and(eq(metadata_key, "{key}"), eq(metadata_value, "{value}"))'.format(
+            key=escaped_key,
+            value=_escape_filter_string(user_id),
+        )
+        for user_id in sorted(user_ids)
+    ]
+    if len(clauses) == 1:
+        return clauses[0]
+    return f"or({', '.join(clauses)})"
+
+
+def _merge_filters(base_filter: str | None, extra_filter: str | None) -> str | None:
+    if base_filter and extra_filter:
+        return f"and({base_filter}, {extra_filter})"
+    return base_filter or extra_filter
+
+
+def _filter_supported_kwargs(
+    callable_obj: Any, kwargs: dict[str, Any]
+) -> tuple[dict[str, Any], list[str]]:
+    signature = inspect.signature(callable_obj)
+    parameters = signature.parameters
+    has_var_kwargs = any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    )
+    if has_var_kwargs:
+        return (kwargs, [])
+
+    supported_names = set(parameters.keys())
+    accepted: dict[str, Any] = {}
+    dropped: list[str] = []
+    for key, value in kwargs.items():
+        if key in supported_names:
+            accepted[key] = value
+        else:
+            dropped.append(key)
+    return (accepted, dropped)
+
+
+def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    csv_fields = [
+        "run_id",
+        "name",
+        "run_type",
+        "status",
+        "error",
+        "start_time",
+        "end_time",
+        "latency",
+        "model",
+        "metadata_user_value",
+        "event_count",
+        "event_summaries_json",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as output_file:
+        writer = csv.DictWriter(output_file, fieldnames=csv_fields)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(
+                {
+                    "run_id": row.get("run_id"),
+                    "name": row.get("name"),
+                    "run_type": row.get("run_type"),
+                    "status": row.get("status"),
+                    "error": row.get("error"),
+                    "start_time": row.get("start_time"),
+                    "end_time": row.get("end_time"),
+                    "latency": row.get("latency"),
+                    "model": row.get("model"),
+                    "metadata_user_value": row.get("metadata_user_value"),
+                    "event_count": row.get("event_count"),
+                    "event_summaries_json": json.dumps(
+                        row.get("event_summaries", []), ensure_ascii=False
+                    ),
+                }
+            )
+
+
 @app.default
 def main(
     project_name: Annotated[
@@ -121,6 +213,46 @@ def main(
             required=False,
         ),
     ] = None,
+    trace_filter: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--trace-filter",
+            help='作用于根 run 的过滤表达式（示例：and(eq(feedback_key, "user_score"), eq(feedback_score, 1)))',
+            required=False,
+        ),
+    ] = None,
+    tree_filter: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--tree-filter",
+            help="作用于同一 trace 中其它节点（child/sibling）的过滤表达式",
+            required=False,
+        ),
+    ] = None,
+    is_root: Annotated[
+        bool | None,
+        cyclopts.Parameter(
+            name="--is-root",
+            help="仅查询根 run（true）或非根 run（false）；不传则不过滤",
+            required=False,
+        ),
+    ] = None,
+    select: Annotated[
+        list[str] | None,
+        cyclopts.Parameter(
+            name="--select",
+            help="仅返回指定字段（可重复传入，参考 run data format 字段名）",
+            required=False,
+        ),
+    ] = None,
+    query: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--query",
+            help="自然语言查询（experimental，SDK 支持时生效）",
+            required=False,
+        ),
+    ] = None,
     include_events: Annotated[
         bool,
         cyclopts.Parameter(
@@ -136,20 +268,29 @@ def main(
             required=False,
         ),
     ] = None,
+    output_csv: Annotated[
+        str | None,
+        cyclopts.Parameter(
+            name="--output-csv",
+            help="可选：将结果写入 CSV 文件（适合导出分析）",
+            required=False,
+        ),
+    ] = None,
 ) -> None:
     """
     示例：
 
-    1) 按用户筛选最近 50 条 llm runs
+    1) 按用户筛选最近 50 条 llm runs（自动拼接 metadata_key/metadata_value 过滤）
        PYTHONPATH=. python scripts/query_langsmith_trace_events.py \\
          --project-name my-app-production \\
          --user-id user_123 \\
          --limit 50
 
-    2) 叠加 LangSmith 服务器端过滤表达式
+    2) 使用 trace query syntax 过滤表达式
        PYTHONPATH=. python scripts/query_langsmith_trace_events.py \\
          --project-name my-app-production \\
-         --filter 'eq(status, "error")' \\
+         --filter 'and(eq(metadata_key, "user_id"), eq(metadata_value, "user_123"))' \\
+         --is-root \\
          --include-events
     """
     try:
@@ -172,14 +313,24 @@ def main(
     target_user_ids = {
         candidate.strip() for candidate in (user_id or []) if candidate.strip()
     }
+    user_id_filter = _build_user_id_filter(
+        user_ids=target_user_ids,
+        metadata_key=metadata_key,
+    )
+    merged_filter_expr = _merge_filters(filter_expr, user_id_filter)
 
     logger.debug(
-        "LangSmith 查询参数: project_name={}, run_type={}, limit={}, offset={}, filter={}, metadata_key={}, target_user_ids={}",
+        "LangSmith 查询参数: project_name={}, run_type={}, limit={}, offset={}, filter={}, trace_filter={}, tree_filter={}, is_root={}, select={}, query={}, metadata_key={}, target_user_ids={}",
         project_name_final,
         run_type,
         limit,
         offset,
-        filter_expr,
+        merged_filter_expr,
+        trace_filter,
+        tree_filter,
+        is_root,
+        select,
+        query,
         metadata_key,
         sorted(target_user_ids),
     )
@@ -191,22 +342,39 @@ def main(
         "limit": limit,
         "offset": offset,
     }
-    if filter_expr:
-        list_run_kwargs["filter"] = filter_expr
+    if merged_filter_expr:
+        list_run_kwargs["filter"] = merged_filter_expr
+    if trace_filter:
+        list_run_kwargs["trace_filter"] = trace_filter
+    if tree_filter:
+        list_run_kwargs["tree_filter"] = tree_filter
+    if is_root is not None:
+        list_run_kwargs["is_root"] = is_root
+    if select:
+        list_run_kwargs["select"] = select
+    if query:
+        list_run_kwargs["query"] = query
+
+    supported_kwargs, dropped_kwargs = _filter_supported_kwargs(
+        client.list_runs,
+        list_run_kwargs,
+    )
+    if dropped_kwargs:
+        logger.warning(
+            "当前 langsmith SDK 不支持以下参数，已忽略: {}",
+            dropped_kwargs,
+        )
 
     # 关键步骤：
     # 1) list_runs 做批量粗筛；
-    # 2) 再按 metadata.user_id（可配置）做二次筛选；
+    # 2) 用户筛选优先走服务端 filter（metadata_key/metadata_value）；
     # 3) 需要 trace events 时，再对命中的 run 调 read_run 补全细节。
     matched: list[dict[str, Any]] = []
-    for run in client.list_runs(**list_run_kwargs):
+    for run in client.list_runs(**supported_kwargs):
         metadata = getattr(run, "metadata", None)
         metadata_dict = metadata if isinstance(metadata, dict) else {}
         user_value = _read_dotted_key(metadata_dict, metadata_key)
         user_value_str = str(user_value) if user_value is not None else None
-
-        if target_user_ids and user_value_str not in target_user_ids:
-            continue
 
         run_for_details = client.read_run(run.id) if include_events else run
         events = getattr(run_for_details, "events", None) if include_events else None
@@ -251,6 +419,11 @@ def main(
             encoding="utf-8",
         )
         print(f"Saved JSON results to: {output_path}")
+
+    if output_csv:
+        output_csv_path = Path(output_csv)
+        _write_csv(output_csv_path, matched)
+        print(f"Saved CSV results to: {output_csv_path}")
 
 
 if __name__ == "__main__":
