@@ -16,6 +16,7 @@ Review the code in context (current file, selection, or diff) and then propose a
    - Prefer small, clear edits.
    - Avoid changing behavior unless the user asks.
    - After edits: re-read the diff, run relevant tests, and fix any new broken tests.
+   - Detect duplicate code: when possible, refactor duplicate code into reusable helper functions.
 
 ## Checklist
 
