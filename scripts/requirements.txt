@@ -1,6 +1,7 @@
 Pillow
 cyclopts
 openai
+langsmith
 pydantic
 matplotlib
 pydub
