@@ -4,7 +4,9 @@
 import { describe, it, expect } from "vitest";
 import {
   buildDailyUsageSeries,
+  buildDailyImageUsageSeries,
   buildRollingDailyUsageSeries,
+  buildRollingDailyImageUsageSeries,
   buildDailyUsageTickText,
   sortReportsByDateDesc,
   WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
@@ -111,6 +113,55 @@ describe("buildDailyUsageSeries", () => {
   });
 });
 
+describe("buildDailyImageUsageSeries", () => {
+  it("按日期升序输出生图请求与成功曲线，并过滤周报", () => {
+    const reports = [
+      buildReport({
+        id: "r2",
+        report_date: "2026-02-02",
+        stats: buildStats({
+          total_image_generation_requests: 12,
+          total_image_generation_success: 10,
+        }),
+      }),
+      buildReport({
+        id: "r1",
+        report_date: "2026-02-01",
+        stats: buildStats({
+          total_image_generation_requests: 8,
+          total_image_generation_success: 7,
+        }),
+      }),
+      buildReport({
+        id: "w1",
+        report_type: "weekly",
+        report_date: "2026-W05",
+        stats: buildStats({
+          total_image_generation_requests: 999,
+          total_image_generation_success: 999,
+        }),
+      }),
+    ];
+
+    const series = buildDailyImageUsageSeries(reports);
+
+    expect(series?.dates).toEqual(["2026-02-01", "2026-02-02"]);
+    expect(series?.valuesByMetric.total_image_generation_requests).toEqual([
+      8, 12,
+    ]);
+    expect(series?.valuesByMetric.total_image_generation_success).toEqual([
+      7, 10,
+    ]);
+  });
+
+  it("没有日报数据时返回空值", () => {
+    const series = buildDailyImageUsageSeries([
+      buildReport({ report_type: "weekly", report_date: "2026-W05" }),
+    ]);
+    expect(series).toBeNull();
+  });
+});
+
 describe("buildRollingDailyUsageSeries", () => {
   it("按日期输出每日近7天滚动和", () => {
     const reports = Array.from({ length: 8 }, (_, index) => {
@@ -187,6 +238,88 @@ describe("buildRollingDailyUsageSeries", () => {
 
   it("没有日报数据时返回空值", () => {
     const series = buildRollingDailyUsageSeries([
+      buildReport({ report_type: "weekly", report_date: "2026-W05" }),
+    ]);
+    expect(series).toBeNull();
+  });
+});
+
+describe("buildRollingDailyImageUsageSeries", () => {
+  it("按日期输出每日近7天生图请求与成功滚动和", () => {
+    const reports = Array.from({ length: 8 }, (_, index) => {
+      const day = String(index + 1).padStart(2, "0");
+      const value = index + 1;
+      return buildReport({
+        id: `r${value}`,
+        report_date: `2026-02-${day}`,
+        stats: buildStats({
+          total_image_generation_requests: value * 3,
+          total_image_generation_success: value * 2,
+        }),
+      });
+    });
+
+    const series = buildRollingDailyImageUsageSeries(reports);
+
+    expect(series?.valuesByMetric.total_image_generation_requests).toEqual([
+      3, 9, 18, 30, 45, 63, 84, 105,
+    ]);
+    expect(series?.valuesByMetric.total_image_generation_success).toEqual([
+      2, 6, 12, 20, 30, 42, 56, 70,
+    ]);
+    expect(series?.dates[series.dates.length - 1]).toBe("2026-02-08");
+  });
+
+  it("支持自定义窗口并过滤周报", () => {
+    const reports = [
+      buildReport({
+        id: "d1",
+        report_date: "2026-02-01",
+        stats: buildStats({
+          total_image_generation_requests: 10,
+          total_image_generation_success: 8,
+        }),
+      }),
+      buildReport({
+        id: "d2",
+        report_date: "2026-02-02",
+        stats: buildStats({
+          total_image_generation_requests: 20,
+          total_image_generation_success: 15,
+        }),
+      }),
+      buildReport({
+        id: "d3",
+        report_date: "2026-02-03",
+        stats: buildStats({
+          total_image_generation_requests: 30,
+          total_image_generation_success: 24,
+        }),
+      }),
+      buildReport({
+        id: "w1",
+        report_type: "weekly",
+        report_date: "2026-W05",
+        stats: buildStats({
+          total_image_generation_requests: 999,
+          total_image_generation_success: 999,
+        }),
+      }),
+    ];
+
+    const series = buildRollingDailyImageUsageSeries(reports, 2);
+
+    expect(series?.dates).toEqual(["2026-02-01", "2026-02-02", "2026-02-03"]);
+    expect(series?.valuesByMetric.total_image_generation_requests).toEqual([
+      10, 30, 50,
+    ]);
+    expect(series?.valuesByMetric.total_image_generation_success).toEqual([
+      8, 23, 39,
+    ]);
+  });
+
+  it("没有日报数据时返回空值", () => {
+    const series = buildRollingDailyImageUsageSeries([
       buildReport({ report_type: "weekly", report_date: "2026-W05" }),
     ]);
     expect(series).toBeNull();

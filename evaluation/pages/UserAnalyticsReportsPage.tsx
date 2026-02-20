@@ -41,10 +41,13 @@ import type {
 } from "../types";
 import {
   DAILY_USAGE_CHART_METRICS,
+  DAILY_IMAGE_USAGE_CHART_METRICS,
   DAILY_USAGE_HAS_SECONDARY_AXIS,
   DAILY_USAGE_SECONDARY_AXIS_COLOR,
   DAILY_USAGE_SECONDARY_AXIS_TITLE,
+  buildDailyImageUsageSeries,
   buildDailyUsageSeries,
+  buildRollingDailyImageUsageSeries,
   buildRollingDailyUsageSeries,
   buildDailyUsageTickText,
   sortReportsByDateDesc,
@@ -758,8 +761,19 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     }
     return buildDailyUsageSeries(usageReports);
   }, [reportType, usageReports]);
+  const imageUsageSeries = useMemo(() => {
+    if (reportType === "weekly") {
+      return buildRollingDailyImageUsageSeries(
+        usageReports,
+        WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
+      );
+    }
+    return buildDailyImageUsageSeries(usageReports);
+  }, [reportType, usageReports]);
   const usageChartTitle =
     reportType === "weekly" ? "每周用量曲线" : "每日用量曲线";
+  const imageUsageChartTitle =
+    reportType === "weekly" ? "每周生图用量" : "每日生图用量";
   const usageEmptyDescription =
     reportType === "weekly"
       ? "暂无日报数据，无法计算近7天用量"
@@ -786,6 +800,26 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     }
     return buildDailyUsageTickText(usageSeries.dates);
   }, [usageSeries]);
+  const dailyImageUsagePlotData = useMemo(() => {
+    if (!imageUsageSeries) {
+      return [];
+    }
+    return DAILY_IMAGE_USAGE_CHART_METRICS.map((metric) => ({
+      x: imageUsageSeries.dates,
+      y: imageUsageSeries.valuesByMetric[metric.key],
+      name: metric.label,
+      type: "scatter",
+      mode: "lines+markers",
+      marker: { size: USAGE_MARKER_SIZE, color: metric.color },
+      line: { color: metric.color },
+    }));
+  }, [imageUsageSeries]);
+  const dailyImageUsageXAxisTickText = useMemo(() => {
+    if (!imageUsageSeries) {
+      return [];
+    }
+    return buildDailyUsageTickText(imageUsageSeries.dates);
+  }, [imageUsageSeries]);
 
   const items = useMemo(
     () =>
@@ -854,6 +888,32 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                       margin: { r: 80 },
                     }
                   : {}),
+                legend: { orientation: "h" },
+              }}
+              style={{ width: "100%", height: "100%" }}
+            />
+          ) : loadingUsage ? (
+            <div style={{ height: USAGE_CHART_HEIGHT }} />
+          ) : (
+            <Empty description={usageEmptyDescription} />
+          )}
+        </Spin>
+      </Card>
+      <Card title={imageUsageChartTitle} style={{ marginBottom: "24px" }}>
+        <Spin spinning={loadingUsage}>
+          {imageUsageSeries ? (
+            <Plot
+              data={dailyImageUsagePlotData}
+              layout={{
+                height: USAGE_CHART_HEIGHT,
+                hovermode: "x unified",
+                xaxis: {
+                  title: "日期",
+                  tickmode: "array",
+                  tickvals: imageUsageSeries.dates,
+                  ticktext: dailyImageUsageXAxisTickText,
+                },
+                yaxis: { title: "生图次数" },
                 legend: { orientation: "h" },
               }}
               style={{ width: "100%", height: "100%" }}

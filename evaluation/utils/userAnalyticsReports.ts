@@ -8,6 +8,15 @@ import type {
 
 type DailyUsageAxis = "y" | "y2";
 
+interface UsageMetricConfig<
+  MetricKey extends keyof UserAnalyticsStatsResponse = keyof UserAnalyticsStatsResponse,
+> {
+  key: MetricKey;
+  label: string;
+  color: string;
+  axis: DailyUsageAxis;
+}
+
 export const DAILY_USAGE_CHART_METRICS = [
   {
     key: "total_user_messages",
@@ -39,12 +48,22 @@ export const DAILY_USAGE_CHART_METRICS = [
     color: "#ff4d4f",
     axis: "y2",
   },
-] as const satisfies ReadonlyArray<{
-  key: keyof UserAnalyticsStatsResponse;
-  label: string;
-  color: string;
-  axis: DailyUsageAxis;
-}>;
+] as const satisfies ReadonlyArray<UsageMetricConfig>;
+
+export const DAILY_IMAGE_USAGE_CHART_METRICS = [
+  {
+    key: "total_image_generation_requests",
+    label: "生图请求数",
+    color: "#52c41a",
+    axis: "y",
+  },
+  {
+    key: "total_image_generation_success",
+    label: "生图成功数",
+    color: "#1677ff",
+    axis: "y",
+  },
+] as const satisfies ReadonlyArray<UsageMetricConfig>;
 
 export const DAILY_USAGE_METRICS = DAILY_USAGE_CHART_METRICS.filter(
   (metric) => metric.axis === "y",
@@ -94,10 +113,17 @@ const toValidUtcDate = (
 export type DailyUsageMetricKey =
   (typeof DAILY_USAGE_CHART_METRICS)[number]["key"];
 
-export interface DailyUsageSeries {
+export type DailyImageUsageMetricKey =
+  (typeof DAILY_IMAGE_USAGE_CHART_METRICS)[number]["key"];
+
+interface UsageSeries<MetricKey extends keyof UserAnalyticsStatsResponse> {
   dates: string[];
-  valuesByMetric: Record<DailyUsageMetricKey, number[]>;
+  valuesByMetric: Record<MetricKey, number[]>;
 }
+
+export interface DailyUsageSeries extends UsageSeries<DailyUsageMetricKey> {}
+export interface DailyImageUsageSeries
+  extends UsageSeries<DailyImageUsageMetricKey> {}
 
 export const WEEKLY_USAGE_ROLLING_WINDOW_DAYS = 7;
 
@@ -130,26 +156,29 @@ const buildRollingSums = (values: number[], windowDays: number): number[] => {
   return rollingSums;
 };
 
-const buildMetricValuesByMetricKey = (
+const buildMetricValuesByMetricKey = <
+  MetricKey extends keyof UserAnalyticsStatsResponse,
+>(
   dailyReports: UserAnalyticsReportItem[],
+  metrics: ReadonlyArray<UsageMetricConfig<MetricKey>>,
   mapValues: (dailyValues: number[]) => number[],
-): Record<DailyUsageMetricKey, number[]> =>
-  DAILY_USAGE_CHART_METRICS.reduce(
-    (acc, metric) => {
-      const dailyValues = dailyReports.map((report) =>
-        toStatsMetricValue(report, metric.key),
-      );
-      acc[metric.key] = mapValues(dailyValues);
-      return acc;
-    },
-    {} as Record<DailyUsageMetricKey, number[]>,
-  );
+): Record<MetricKey, number[]> => {
+  const valuesByMetric = {} as Record<MetricKey, number[]>;
+  metrics.forEach((metric) => {
+    const dailyValues = dailyReports.map((report) =>
+      toStatsMetricValue(report, metric.key),
+    );
+    valuesByMetric[metric.key] = mapValues(dailyValues);
+  });
+  return valuesByMetric;
+};
 
-export const buildDailyUsageSeries = (
+const buildUsageSeries = <MetricKey extends keyof UserAnalyticsStatsResponse>(
   reports: UserAnalyticsReportItem[],
-): DailyUsageSeries | null => {
+  metrics: ReadonlyArray<UsageMetricConfig<MetricKey>>,
+  mapValues: (dailyValues: number[]) => number[],
+): UsageSeries<MetricKey> | null => {
   const dailyReports = getSortedDailyReports(reports);
-
   if (dailyReports.length === 0) {
     return null;
   }
@@ -157,28 +186,53 @@ export const buildDailyUsageSeries = (
   const dates = dailyReports.map((report) => report.report_date);
   const valuesByMetric = buildMetricValuesByMetricKey(
     dailyReports,
+    metrics,
+    mapValues,
+  );
+  return { dates, valuesByMetric };
+};
+
+export const buildDailyUsageSeries = (
+  reports: UserAnalyticsReportItem[],
+): DailyUsageSeries | null => {
+  return buildUsageSeries(
+    reports,
+    DAILY_USAGE_CHART_METRICS,
     (dailyValues) => dailyValues,
   );
-
-  return { dates, valuesByMetric };
 };
 
 export const buildRollingDailyUsageSeries = (
   reports: UserAnalyticsReportItem[],
   windowDays: number = WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 ): DailyUsageSeries | null => {
-  const dailyReports = getSortedDailyReports(reports);
-  if (dailyReports.length === 0) {
-    return null;
-  }
-
   const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
-  const dates = dailyReports.map((report) => report.report_date);
-  const valuesByMetric = buildMetricValuesByMetricKey(dailyReports, (values) =>
-    buildRollingSums(values, normalizedWindowDays),
+  return buildUsageSeries(
+    reports,
+    DAILY_USAGE_CHART_METRICS,
+    (values) => buildRollingSums(values, normalizedWindowDays),
+  );
+};
+
+export const buildDailyImageUsageSeries = (
+  reports: UserAnalyticsReportItem[],
+): DailyImageUsageSeries | null =>
+  buildUsageSeries(
+    reports,
+    DAILY_IMAGE_USAGE_CHART_METRICS,
+    (dailyValues) => dailyValues,
   );
 
-  return { dates, valuesByMetric };
+export const buildRollingDailyImageUsageSeries = (
+  reports: UserAnalyticsReportItem[],
+  windowDays: number = WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
+): DailyImageUsageSeries | null => {
+  const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
+  return buildUsageSeries(
+    reports,
+    DAILY_IMAGE_USAGE_CHART_METRICS,
+    (values) => buildRollingSums(values, normalizedWindowDays),
+  );
 };
 
 const formatDateWithWeekday = (date: string): string => {
