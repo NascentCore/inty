@@ -56,3 +56,20 @@ def test_build_live_config_sets_speech_language_code_when_supported():
         assert live_config.speech_config.language_code == "en-US"
     else:
         assert not hasattr(live_config.speech_config, "language_code")
+
+
+def test_build_live_config_accepts_google_prefixed_voice_id():
+    """带 google/ 前缀的 voice_id 应解析为 raw 名字传给 Gemini Live。"""
+    service = _build_service_with_language_config()
+
+    live_config = service._build_live_config(
+        voice_id="google/Zephyr",
+        agent_gender="FEMALE",
+        system_instruction="test",
+    )
+
+    assert live_config.speech_config is not None
+    assert (
+        live_config.speech_config.voice_config.prebuilt_voice_config.voice_name
+        == "Zephyr"
+    )

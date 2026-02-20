@@ -44,6 +44,7 @@ class ModelBuilder(StrEnum):
     GOOGLE = "google"
     BYTE_DANCE = "bytedance"
     OPENAI = "openai"
+    ELEVENLABS = "11labs"
 
 
 class PricingModel(StrEnum):

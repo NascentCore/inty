@@ -366,12 +366,14 @@ class LiveChatService:
         agent_gender: Optional[str] = None,
         system_instruction: Optional[str] = None,
     ) -> types.LiveConnectConfig:
-        """构建 Gemini Live 连接配置"""
-        # 验证 voice_id 是否是 Gemini 支持的预设语音，否则根据性别选择默认语音
-        if voice_id and voice_id in self.GEMINI_PREBUILT_VOICES:
+        """构建 Gemini Live 连接配置。支持带 google/ 前缀与无前缀的 voice_id。"""
+        prefix, raw = voice_tts_api.parse_voice_id(voice_id or "")
+        if voice_id and prefix == voice_tts_api.VOICE_ID_PREFIX_GEMINI and raw in self.GEMINI_PREBUILT_VOICES:
+            voice_name = raw
+        elif voice_id and prefix == "" and voice_id in self.GEMINI_PREBUILT_VOICES:
             voice_name = voice_id
         else:
-            # 根据性别选择默认音色，回退到配置文件默认值
+            logger.error(f"Unknown voice_id: {voice_id}")
             voice_name = GENDER_TO_GEMINI_VOICE_MAPPING.get(
                 agent_gender, self._config.default_voice
             )
