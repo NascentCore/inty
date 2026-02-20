@@ -38,6 +38,26 @@ DEFAULT_GEMINI_TTS_TEMPERATURE = 1.3
 TTS_PROVIDER_GEMINI = "gemini"
 TTS_PROVIDER_ELEVENLABS = "elevenlabs"
 
+# Prompted TTS: instruction so Gemini acts as voice actor; parentheticals = stage directions.
+# Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
+# (Director's Notes: natural, expressive delivery; transcript rules preserved from speech_gen.)
+TTS_ROLEPLAY_INSTRUCTION = (
+    "You are a voice actor. "
+    "You are naturally and convincingly acting out a scene description.\n\n"
+    "Director's notes: Deliver the dialogue in a natural, expressive way; "
+    "match tone and pace to the scene.\n\n"
+    "In the scene description: "
+    "non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses (); "
+    "the rest are the actual dialogue that you must speak. "
+    "example: <begin-of-example>(whispering) I won the lottery!!!.<end-of-example>\n\n"
+    "You must:\n"
+    "1. In your speech: use the non-audible descriptions to inform the delivery, "
+    "strictly adhere to the non-audible descriptions.\n"
+    "2. Never speak the non-audible descriptions\n"
+    "3. Speak only the actual dialogue that is not inside parentheses ()\n\n"
+    "The following are the scene description:\n\n"
+)
+
 # How the per-voice "keywords" were generated (for reference):
 #
 # 1. Pulled official samples from the Chirp 3 HD doc page (all 30 voice .wav URLs).
@@ -515,6 +535,43 @@ def _looks_like_gemini_voice_name(voice_id: str) -> bool:
     return voice_id.isalpha() and 2 <= len(voice_id) <= 32
 
 
+def _collect_gemini_tts_stream(
+    client: Any,
+    model: str,
+    contents: List[Any],
+    config: Any,
+) -> Tuple[bytes, Optional[str]]:
+    """
+    同步迭代 Gemini TTS 流式接口，收集音频块并返回 (raw_bytes, mime_type)。
+    供 GeminiTTSAPI.synthesize 与 synthesize_with_roleplay_prompt 共用。
+    """
+    collected: list[bytes] = []
+    mt: Optional[str] = None
+    for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=config,
+    ):
+        if (
+            chunk.candidates is None
+            or not chunk.candidates
+            or chunk.candidates[0].content is None
+            or chunk.candidates[0].content.parts is None
+            or not chunk.candidates[0].content.parts
+        ):
+            continue
+
+        part0 = chunk.candidates[0].content.parts[0]
+        inline = getattr(part0, "inline_data", None)
+        if not inline or not getattr(inline, "data", None):
+            continue
+
+        if mt is None and getattr(inline, "mime_type", None):
+            mt = inline.mime_type
+        collected.append(inline.data)
+    return b"".join(collected), mt
+
+
 class GeminiTTSAPI:
     """
     Gemini TTS wrapper（基于 google-genai 官方 demo）。
@@ -610,38 +667,77 @@ class GeminiTTSAPI:
         )
 
         try:
-            audio_chunks: list[bytes] = []
-            mime_type: Optional[str] = None
-
             # google-genai 的流式接口是同步迭代，这里放到线程池避免阻塞 event loop
-            def _sync_collect() -> Tuple[bytes, Optional[str]]:
-                collected: list[bytes] = []
-                mt: Optional[str] = None
-                for chunk in client.models.generate_content_stream(
-                    model=self._model,
-                    contents=contents,
-                    config=config,
-                ):
-                    if (
-                        chunk.candidates is None
-                        or not chunk.candidates
-                        or chunk.candidates[0].content is None
-                        or chunk.candidates[0].content.parts is None
-                        or not chunk.candidates[0].content.parts
-                    ):
-                        continue
+            audio_bytes, mime_type = await asyncio.to_thread(
+                _collect_gemini_tts_stream, client, self._model, contents, config
+            )
 
-                    part0 = chunk.candidates[0].content.parts[0]
-                    inline = getattr(part0, "inline_data", None)
-                    if not inline or not getattr(inline, "data", None):
-                        continue
+            if not audio_bytes:
+                logger.error("Gemini TTS 返回空音频数据")
+                return None
 
-                    if mt is None and getattr(inline, "mime_type", None):
-                        mt = inline.mime_type
-                    collected.append(inline.data)
-                return b"".join(collected), mt
+            if mime_type and mime_type.startswith("audio/L"):
+                audio_bytes = _pcm_to_wav(audio_bytes, mime_type=mime_type)
+                mime_type = "audio/wav"
 
-            audio_bytes, mime_type = await asyncio.to_thread(_sync_collect)
+            return TTSResult(
+                audio_bytes=audio_bytes,
+                mime_type=mime_type or "application/octet-stream",
+            )
+
+        except Exception as e:
+            logger.error(f"Gemini TTS 调用失败: {str(e)}")
+            logger.exception("Gemini TTS 异常详细信息:")
+            return None
+
+    async def synthesize_with_roleplay_prompt(
+        self, request: TTSRequest
+    ) -> Optional[TTSResult]:
+        """
+        Same as synthesize() but sends TTS_ROLEPLAY_INSTRUCTION + request.text
+        so the model acts as a voice actor: parentheticals are stage directions
+        (do not speak them; use them to inform delivery). No text cleaning
+        should be applied to request.text by the caller.
+        """
+        if not (request.text or "").strip():
+            logger.warning("synthesize_with_roleplay_prompt: 文本为空，跳过")
+            return None
+
+        client = self._get_client()
+        if client is None:
+            logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            return None
+
+        voice_name = (
+            request.voice_id
+            if _looks_like_gemini_voice_name(request.voice_id)
+            else self._default_voice_name
+        )
+
+        prompted_text = TTS_ROLEPLAY_INSTRUCTION + request.text
+        contents = [
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=prompted_text)],
+            )
+        ]
+
+        config = types.GenerateContentConfig(
+            temperature=self._temperature,
+            response_modalities=["audio"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=voice_name
+                    )
+                )
+            ),
+        )
+
+        try:
+            audio_bytes, mime_type = await asyncio.to_thread(
+                _collect_gemini_tts_stream, client, self._model, contents, config
+            )
 
             if not audio_bytes:
                 logger.error("Gemini TTS 返回空音频数据")
