@@ -1,8 +1,27 @@
 # TTS (Text to Speech) Demos - 语音合成演示
 
+## Gemini TTS -> ElevenLabs Voice Changer Demo
+
+This demo generates a speech clip with Gemini TTS, saves it to local disk,
+then sends that clip to ElevenLabs Voice Changer (speech-to-speech) and saves
+the transformed voice locally.
+
+```bash
+cd experimental/voice
+cp .env.sample .env
+# Fill GEMINI_API_KEY and ELEVENLABS_API_KEY in .env
+uv sync
+uv run demo_gemini_tts_voice_changer.py
+```
+
+Output files are saved to:
+
+- `experimental/voice/outputs/gemini_tts_<timestamp>.wav`
+- `experimental/voice/outputs/elevenlabs_voice_changed_<timestamp>.mp3`
+
 ## Gemini
 
-`uv run --no-project gemini.py` You might need to install additional deps.
+`uv run demo_gemini_tts.py` You might need to install additional deps.
 This will write out a `.wav` file that can be played.
 
 官方示例代码
@@ -14,11 +33,11 @@ Using ElevenLabs API to turn text into speech.
 
 ```bash
 # Copy API Key from https://tricorder.feishu.cn/wiki/ToKJwUzKiicUf6kZOugcjRbZnih
-cp .env.example .env
+cp .env.sample .env
 brew install ffmpeg
 python -m venv .venv
 pip install -r requirements.txt
-python tts/elevenlabs.py
+python demo_elevenlabs_tts.py
 ```
 
 The delay is about 1 second. Not too bad.
