@@ -30,6 +30,9 @@ from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import NANO_BANANA
 
+# 生图失败时日志中提示词最大长度，避免泄露过多用户内容并控制日志体积
+_MAX_PROMPT_LOG_LEN = 800000
+
 
 def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
     """将 Gemini generate_content 的返回序列化为可安全写入日志的字典（不含图片二进制）。"""
@@ -39,7 +42,7 @@ def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
     try:
         _fill_serialized_gemini_response(out, response)
     except Exception as e:
-        logger.warning("生图失败日志序列化异常，使用简化信息: %s", e)
+        logger.warning("生图失败日志序列化异常，使用简化信息: {}", e)
         return {"error": "serialization_failed", "message": str(e)}
     return out
 
@@ -97,10 +100,21 @@ def _fill_serialized_gemini_response(out: Dict[str, Any], response: Any) -> None
 
 
 def _log_image_generation_failure(prompt: Optional[str], response: Any) -> None:
-    """生图失败时在日志中记录完整提示词与 Gemini 返回结果。loguru 使用 {} 占位符。"""
+    """生图失败时在日志中记录提示词（过长时截断）与 Gemini 返回结果。loguru 使用 {} 占位符。"""
+    if prompt is None:
+        prompt_for_log = "(无)"
+    elif len(prompt) <= _MAX_PROMPT_LOG_LEN:
+        prompt_for_log = prompt
+    else:
+        prompt_for_log = (
+            prompt[:_MAX_PROMPT_LOG_LEN]
+            + "… [truncated, total len="
+            + str(len(prompt))
+            + "]"
+        )
     logger.error(
         "生图失败 - 完整提示词: {}",
-        prompt if prompt is not None else "(无)",
+        prompt_for_log,
     )
     logger.error(
         "生图失败 - Gemini 返回: {}",
@@ -167,7 +181,7 @@ class ImageGenerationService:
             user_info=user_info,
         )
 
-        logger.debug(f"构建的生图提示词: {prompt}")
+        logger.debug("构建的生图提示词: {}", prompt)
         return prompt
 
     def _tokenize_text(self, text_input: str) -> set:
@@ -310,18 +324,23 @@ class ImageGenerationService:
                     )
                 except Exception as e:
                     logger.warning(
-                        f"解析资源元数据失败: {str(e)}, resource_url: {resource.url}"
+                        "解析资源元数据失败: {}, resource_url: {}",
+                        str(e),
+                        resource.url,
                     )
                     continue
 
             logger.debug(
-                f"查询到 Agent {agent_id} 的 {len(images)} 张已生成图片"
-                f"（exclude_user_id={exclude_user_id}, only_user_id={only_user_id}）"
+                "查询到 Agent {} 的 {} 张已生成图片（exclude_user_id={}, only_user_id={}）",
+                agent_id,
+                len(images),
+                exclude_user_id,
+                only_user_id,
             )
             return images
 
         except Exception as e:
-            logger.error(f"查询已生成图片失败: {str(e)}")
+            logger.error("查询已生成图片失败: {}", str(e))
             import traceback
 
             traceback.print_exc()
@@ -415,15 +434,16 @@ class ImageGenerationService:
                 )
                 if best_match:
                     logger.info(
-                        f"找到当前用户的匹配图片，相似度: {best_match.get('similarity', 0):.3f}"
+                        "找到当前用户的匹配图片，相似度: {:.3f}",
+                        best_match.get("similarity", 0),
                     )
                     return best_match
 
-            logger.debug(f"Agent {agent_id} 没有匹配的图片")
+            logger.debug("Agent {} 没有匹配的图片", agent_id)
             return None
 
         except Exception as e:
-            logger.error(f"查找最相似图片失败: {str(e)}")
+            logger.error("查找最相似图片失败: {}", str(e))
             import traceback
 
             traceback.print_exc()
@@ -561,7 +581,7 @@ class ImageGenerationService:
                         mime_type="image/jpeg",
                     )
                     parts.append(user_photo_part)
-                    logger.info(f"添加用户自拍照片作为参考图: {user_photo_url}")
+                    logger.info("添加用户自拍照片作为参考图: {}", user_photo_url)
 
             parts.append(types.Part.from_text(text=prompt))
 
@@ -582,10 +602,10 @@ class ImageGenerationService:
             # 检查 prompt_feedback（响应级别的反馈）
             if hasattr(response, "prompt_feedback") and response.prompt_feedback:
                 prompt_feedback = response.prompt_feedback
-                logger.warning(f"Prompt feedback: {prompt_feedback}")
+                logger.warning("Prompt feedback: {}", prompt_feedback)
                 if hasattr(prompt_feedback, "block_reason"):
                     block_reason = prompt_feedback.block_reason
-                    logger.warning(f"请求被阻止，原因: {block_reason}")
+                    logger.warning("请求被阻止，原因: {}", block_reason)
                     _log_image_generation_failure(prompt, response)
                     raise ValueError(
                         f"Image generation request blocked by safety filter: {block_reason}"
@@ -602,7 +622,7 @@ class ImageGenerationService:
             # 检查 finish_reason（完成原因）
             finish_reason = getattr(candidate, "finish_reason", None)
             if finish_reason:
-                logger.warning(f"候选结果完成原因: {finish_reason}")
+                logger.warning("候选结果完成原因: {}", finish_reason)
                 if finish_reason == "SAFETY":
                     # 检查安全评级以获取详细信息
                     safety_ratings = getattr(candidate, "safety_ratings", None) or []
@@ -622,7 +642,7 @@ class ImageGenerationService:
                     _log_image_generation_failure(prompt, response)
                     raise ValueError(error_msg)
                 elif finish_reason not in ("STOP", None):
-                    logger.warning(f"候选结果以非正常原因结束: {finish_reason}")
+                    logger.warning("候选结果以非正常原因结束: {}", finish_reason)
 
             # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
             candidate_safety_ratings = getattr(candidate, "safety_ratings", None) or []
@@ -641,7 +661,7 @@ class ImageGenerationService:
 
             # 检查 content 和 parts
             if not candidate.content or not candidate.content.parts:
-                logger.error(f"候选结果中没有内容，finish_reason={finish_reason}")
+                logger.error("候选结果中没有内容，finish_reason={}", finish_reason)
                 error_msg = "No content in candidates"
                 if finish_reason:
                     error_msg += f" (finish_reason: {finish_reason})"
@@ -663,11 +683,12 @@ class ImageGenerationService:
             import base64
 
             # 调试：检查 inline_data 的类型和内容
-            logger.debug(f"inline_data 类型: {type(image_part.inline_data)}")
-            logger.debug(f"inline_data.data 类型: {type(image_part.inline_data.data)}")
+            logger.debug("inline_data 类型: {}", type(image_part.inline_data))
+            logger.debug("inline_data.data 类型: {}", type(image_part.inline_data.data))
             if hasattr(image_part.inline_data, "mime_type"):
                 logger.debug(
-                    f"inline_data.mime_type: {image_part.inline_data.mime_type}"
+                    "inline_data.mime_type: {}",
+                    image_part.inline_data.mime_type,
                 )
 
             # 获取原始数据
@@ -683,17 +704,17 @@ class ImageGenerationService:
                 image_data = raw_data
                 logger.debug("数据已经是 bytes，直接使用")
             else:
-                logger.error(f"未知的数据类型: {type(raw_data)}")
+                logger.error("未知的数据类型: {}", type(raw_data))
                 raise ValueError(f"Unsupported image data type: {type(raw_data)}")
 
-            logger.info(f"成功提取图片数据，大小: {len(image_data)} bytes")
+            logger.info("成功提取图片数据，大小: {} bytes", len(image_data))
 
             # 调试：打印前几个字节来识别格式
             if len(image_data) == 0:
                 raise ValueError("Image data is empty")
 
             header = image_data[:20] if len(image_data) >= 20 else image_data
-            logger.debug(f"图片数据头部（hex）: {header.hex()}")
+            logger.debug("图片数据头部（hex）: {}", header.hex())
 
             # 检查常见图片格式的魔术数字
             if image_data[:2] == b"\xff\xd8":
@@ -705,26 +726,26 @@ class ImageGenerationService:
             elif image_data[:4] == b"RIFF" and image_data[8:12] == b"WEBP":
                 logger.debug("检测到 WEBP 格式")
             else:
-                logger.warning(f"未知的图片格式，尝试作为原始数据处理")
+                logger.warning("未知的图片格式，尝试作为原始数据处理")
                 # 尝试将数据写入临时文件进行调试
                 import tempfile
 
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as tmp:
                     tmp.write(image_data)
-                    logger.debug(f"原始数据已写入: {tmp.name}")
+                    logger.debug("原始数据已写入: {}", tmp.name)
 
             # 获取图片尺寸
             try:
                 pil_image = PIL.Image.open(io.BytesIO(image_data))
                 width, height = pil_image.size
                 image_format = pil_image.format or "JPEG"
-                logger.info(f"成功解析图片: {width}x{height}, 格式: {image_format}")
+                logger.info("成功解析图片: {}x{}, 格式: {}", width, height, image_format)
             except Exception as e:
-                logger.error(f"PIL 无法解析图片: {str(e)}")
+                logger.error("PIL 无法解析图片: {}", str(e))
                 # 尝试检查是否是文本响应
                 try:
                     text_content = image_data.decode("utf-8")[:200]
-                    logger.error(f"数据可能是文本: {text_content}")
+                    logger.error("数据可能是文本: {}", text_content)
                 except:
                     pass
                 raise ValueError(f"Unable to parse image data: {str(e)}")
@@ -744,7 +765,7 @@ class ImageGenerationService:
                 bucket_name=bucket_name,
                 path=gcs_path,
             )
-            logger.info(f"图片已上传到 GCS: {public_url}")
+            logger.info("图片已上传到 GCS: {}", public_url)
 
             # 转换为 gs:// URI 格式用于存储
             gcs_uri = f"gs://{bucket_name}/{gcs_path}"
@@ -823,9 +844,9 @@ class ImageGenerationService:
                     await db.execute(update_stmt)
                     await db.commit()
 
-                    logger.info(f"图片已保存到resources表: {gcs_uri}")
+                    logger.info("图片已保存到resources表: {}", gcs_uri)
                 except Exception as e:
-                    logger.warning(f"保存图片到resources表失败: {str(e)}")
+                    logger.warning("保存图片到resources表失败: {}", str(e))
                     import traceback
 
                     traceback.print_exc()
@@ -849,7 +870,7 @@ class ImageGenerationService:
             }
 
         except Exception as e:
-            logger.error(f"使用 Gemini 生成聊天图片失败: {str(e)}")
+            logger.error("使用 Gemini 生成聊天图片失败: {}", str(e))
             _log_image_generation_failure(prompt, response)
             import traceback
 
@@ -954,7 +975,7 @@ class ImageGenerationService:
             fal_image = fal_result.images[0]
             image_url = fal_image.url
 
-            logger.info(f"fal.ai 生成图片成功: {image_url}")
+            logger.info("fal.ai 生成图片成功: {}", image_url)
 
             # 下载图片
             async with httpx.AsyncClient(timeout=60.0) as http_client:
@@ -985,7 +1006,7 @@ class ImageGenerationService:
                 bucket_name=bucket_name,
                 path=gcs_path,
             )
-            logger.info(f"图片已上传到 GCS: {public_url}")
+            logger.info("图片已上传到 GCS: {}", public_url)
 
             # 转换为 gs:// URI 格式用于存储
             gcs_uri = f"gs://{bucket_name}/{gcs_path}"
@@ -1059,9 +1080,9 @@ class ImageGenerationService:
                     await db.execute(update_stmt)
                     await db.commit()
 
-                    logger.info(f"图片已保存到resources表: {gcs_uri}")
+                    logger.info("图片已保存到resources表: {}", gcs_uri)
                 except Exception as e:
-                    logger.warning(f"保存图片到resources表失败: {str(e)}")
+                    logger.warning("保存图片到resources表失败: {}", str(e))
                     import traceback
 
                     traceback.print_exc()
@@ -1082,7 +1103,7 @@ class ImageGenerationService:
             }
 
         except Exception as e:
-            logger.error(f"使用 fal.ai 生成聊天图片失败: {str(e)}")
+            logger.error("使用 fal.ai 生成聊天图片失败: {}", str(e))
             import traceback
 
             traceback.print_exc()
