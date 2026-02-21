@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app import models
 from app.core.config import global_config_loaded_from_config_yaml
+from app.external_services.fakes.gemini import FakeGeminiClient
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
@@ -163,9 +164,13 @@ class TestImageGenerationService:
         mock_response.candidates = [mock_candidate]
         mock_response.prompt_feedback = None
 
-        # Mock client - get_genai_client 返回一个配置好的客户端实例
+        # Mock client - WrappedClient 使用 client.aio.models.generate_content（异步）
         mock_client_instance = Mock()
-        mock_client_instance.models.generate_content.return_value = mock_response
+        mock_client_instance.aio = Mock()
+        mock_client_instance.aio.models = Mock()
+        mock_client_instance.aio.models.generate_content = AsyncMock(
+            return_value=mock_response
+        )
         mock_get_client.return_value = mock_client_instance
 
         # Mock GCS upload
@@ -263,6 +268,10 @@ class TestChatHistoryService:
             chat_history_service,
             "get_messages_paginated",
             lambda *args, **kwargs: {"messages": [], "total": 0},
+        )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.get_genai_client",
+            lambda: FakeGeminiClient(),
         )
 
         def fake_upload(file_data, content_type, bucket_name, path):
