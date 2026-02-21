@@ -4,7 +4,6 @@ import ai.sxwl.android.utils.Utils
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.tencent.mmkv.MMKV
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -13,8 +12,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-private const val TEST_DATASTORE_ALL_USER_NAME = "inty_setting_all_user"
-private const val TEST_DATASTORE_USER_PREFIX = "inty_setting_user_"
 private const val TEST_KEY_TOKEN = "token"
 private const val TEST_KEY_APP_DATA_PREFIX = "app_data_"
 
@@ -24,24 +21,20 @@ class IntySettingDataStoreMigrationTest {
     private lateinit var app: Application
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() {
         app = ApplicationProvider.getApplicationContext()
         Utils.init(app)
         MMKV.initialize(app)
-        dataStore(TEST_DATASTORE_ALL_USER_NAME).clear()
     }
 
     @After
-    fun tearDown() = runBlocking {
-        dataStore(TEST_DATASTORE_ALL_USER_NAME).clear()
-    }
+    fun tearDown() = Unit
 
     @Test
-    fun getCurToken_migratesLegacyValueToDataStoreAndKeepsDataStoreAsSource() = runBlocking {
+    fun getCurToken_migratesLegacyValueToDataStoreAndKeepsDataStoreAsSource() {
         val userId = "migration_user_${System.nanoTime()}"
         val userLegacyStore = legacyUserStore(userId)
         userLegacyStore.clearAll()
-        dataStore("$TEST_DATASTORE_USER_PREFIX$userId").clear()
 
         IntySetting.changeUser(userId)
         userLegacyStore.putString(TEST_KEY_TOKEN, "legacy_token")
@@ -53,11 +46,10 @@ class IntySettingDataStoreMigrationTest {
     }
 
     @Test
-    fun setToken_writesOnlyToDataStore() = runBlocking {
+    fun setToken_writesOnlyToDataStore() {
         val userId = "write_only_user_${System.nanoTime()}"
         val userLegacyStore = legacyUserStore(userId)
         userLegacyStore.clearAll()
-        dataStore("$TEST_DATASTORE_USER_PREFIX$userId").clear()
 
         IntySetting.changeUser(userId)
         IntySetting.setToken("data_store_token")
@@ -67,7 +59,7 @@ class IntySettingDataStoreMigrationTest {
     }
 
     @Test
-    fun clearAppData_shouldNotFallBackToLegacyMmkvAgain() = runBlocking {
+    fun clearAppData_shouldNotFallBackToLegacyMmkvAgain() {
         val userId = "clear_app_data_user_${System.nanoTime()}"
         IntySetting.changeUser(userId)
 
