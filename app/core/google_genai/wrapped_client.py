@@ -65,53 +65,6 @@ class LangSmithTraceRunType(StrEnum):
     PARSER = "parser"
 
 
-def _process_inputs_generate_image(
-    _self: object, model: str, contents: list[str]
-) -> dict:
-    """LangSmith process_inputs：只记录 model 与 contents，不记录 client。"""
-    return {"model": model, "contents": contents}
-
-
-def _process_outputs_generate_image(response: object) -> dict:
-    """LangSmith process_outputs：只记录响应摘要（候选数、part 类型与字节长），不写入图片二进制。"""
-    out: dict = {}
-    if response is None:
-        return {"status": "none", "candidates_count": 0}
-    if hasattr(response, "prompt_feedback") and response.prompt_feedback:
-        pf = response.prompt_feedback
-        out["prompt_feedback"] = {"block_reason": getattr(pf, "block_reason", None)}
-    raw_candidates = getattr(response, "candidates", None)
-    if raw_candidates is None:
-        candidates = []
-    else:
-        try:
-            candidates = list(raw_candidates)
-        except (TypeError, AttributeError):
-            candidates = []
-    out["candidates_count"] = len(candidates)
-    parts_summaries = []
-    for c in candidates:
-        content = getattr(c, "content", None)
-        parts = getattr(content, "parts", None) if content else None
-        if not parts:
-            parts_summaries.append([])
-            continue
-        entry = []
-        for p in parts:
-            if hasattr(p, "inline_data") and p.inline_data:
-                data = getattr(p.inline_data, "data", b"")
-                size = len(data) if isinstance(data, bytes) else 0
-                entry.append({"kind": "inline_data", "size_bytes": size})
-            elif hasattr(p, "text") and p.text is not None:
-                text = p.text
-                entry.append({"kind": "text", "length": len(text) if isinstance(text, str) else 0})
-            else:
-                entry.append({"kind": "other"})
-        parts_summaries.append(entry)
-    out["candidates_parts_summary"] = parts_summaries
-    return out
-
-
 class WrappedClient:
     def __init__(self, client: genai.Client):
         self.client = client
@@ -171,6 +124,7 @@ class WrappedClient:
                 return await self.client.aio.models.generate_images(
                     model=model,
                     prompt=contents[0],
+                    # TODO: 需要替换为现有代码中实际使用的 API 配置
                     config=types.GenerateImagesConfig(
                         number_of_images=1,
                         aspect_ratio=ASPECT_RATIO_9_16,

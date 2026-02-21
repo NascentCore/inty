@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import PIL.Image
+from app.core.google_genai.wrapped_client import WrappedClient
 from google.genai import types
 from loguru import logger
 from sqlalchemy import select, update
@@ -485,6 +486,7 @@ class ImageGenerationService:
         Returns:
             包含图片信息的字典
         """
+        logger.debug(f"使用 Gemini 模型及 Google GenAI SDK 生成图片，session_id={session_id}, model={model}")
         # 提前定义 2 个变量，在后续代码中赋值，并用于记录日志
         prompt: Optional[str] = None
         response: Any = None
@@ -564,50 +566,30 @@ class ImageGenerationService:
             )
 
             # 复用现有的 Gemini 客户端（自动从 service account 读取配置）
-            client = get_genai_client()
-
-            # 准备输入：参考图 + 文字提示
-            reference_image = types.Part.from_uri(
-                file_uri=reference_url,
-                mime_type="image/jpeg",
-            )
-
-            # 构建 parts 列表：Agent 参考图 + 用户自拍（若有）+ 提示词
-            parts = [reference_image]
+            client = WrappedClient(client=get_genai_client())
+            contents = []
+            contents.append(reference_url)
 
             # 如果用户有自拍照片，添加为额外参考图
             if user_photo_url:
                 # 确保用户照片是完整URL
-                if not user_photo_url.startswith("http"):
-                    if user_photo_url.startswith("gs://"):
-                        user_photo_url = user_photo_url.replace(
-                            "gs://", "https://storage.googleapis.com/"
-                        )
-                if user_photo_url.startswith("http"):
-                    user_photo_part = types.Part.from_uri(
-                        file_uri=user_photo_url,
-                        mime_type="image/jpeg",
+                if user_photo_url.startswith("gs://"):
+                    user_photo_url = user_photo_url.replace(
+                        "gs://", "https://storage.googleapis.com/"
                     )
-                    parts.append(user_photo_part)
+                if user_photo_url.startswith("http"):
+                    contents.append(user_photo_url)
                     logger.info("添加用户自拍照片作为参考图: {}", user_photo_url)
+                else:
+                    logger.error("用户自拍照片不是完整URL: {}", user_photo_url)
 
-            parts.append(types.Part.from_text(text=prompt))
-
-            contents = [
-                types.Content(
-                    role="user",
-                    parts=parts,
-                )
-            ]
+            contents.append(prompt)
 
             gemini_model = model or NANO_BANANA.id_on_provider
-            response = client.models.generate_content(
-                model=gemini_model,
-                contents=contents,
-                config=GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
-            )
+            response = await client.async_generate_image(model=gemini_model, contents=contents)
 
             # 检查 prompt_feedback（响应级别的反馈）
+            # TODO：以下代码继续考虑重构为工具函数，然后在 WrappedClient.async_generate_image 中调用。
             if hasattr(response, "prompt_feedback") and response.prompt_feedback:
                 prompt_feedback = response.prompt_feedback
                 logger.warning("Prompt feedback: {}", prompt_feedback)
@@ -724,7 +706,11 @@ class ImageGenerationService:
             header = image_data[:20] if len(image_data) >= 20 else image_data
             logger.debug("图片数据头部（hex）: {}", header.hex())
 
-            # 检查常见图片格式的魔术数字
+            # 检查常见图片格式的魔术数字（仅用于 logger.debug，不参与分支）。
+            # 实际格式由下面 PIL 解析得到，并用于 meta_data / ImageFormat / 上传。
+            # Gemini generate_content 图像生成默认返回 PNG；predefined_configs 中的
+            # output_mime_type 在 ImageConfig 里可能不被支持，故真实 API 通常只返回 PNG。
+            # TODO：本段对主流程非必需，可删；保留便于调试及应对日后 API 行为变化；测试 fake 可能返回 JPEG。
             if image_data[:2] == b"\xff\xd8":
                 logger.debug("检测到 JPEG 格式")
             elif image_data[:8] == b"\x89PNG\r\n\x1a\n":
