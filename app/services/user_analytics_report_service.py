@@ -20,6 +20,8 @@ from app.models.user_analytics_report import UserAnalyticsReport
 from app.services.user_analytics_service import UserAnalyticsService
 
 BACKFILL_DAILY_DAYS = 30
+POPULAR_AGENTS_QUERY_LIMIT = 2000
+DAILY_TOP_AGENTS_LIMIT = 10
 
 REPLICA_READ_MAX_ATTEMPTS = 3  # 含首次共 3 次，用于 conflict with recovery 重试
 REPLICA_READ_RETRY_SLEEP_SEC = 3
@@ -38,6 +40,44 @@ async def _ensure_statement_timeout(db: AsyncSession) -> None:
 ALL_USERS_REGISTER_START = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
 
+def _safe_to_int(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _build_daily_top_agents_by_rounds(
+    popular_agents: list[dict],
+    limit: int,
+) -> list[dict]:
+    # 关键步骤：按总聊天轮数排序，补齐 rank 便于前端做“同角色跨日期连线”展示。
+    sorted_agents = sorted(
+        popular_agents,
+        key=lambda item: (
+            _safe_to_int(item.get("total_rounds")),
+            _safe_to_int(item.get("user_count")),
+        ),
+        reverse=True,
+    )
+    top_agents: list[dict] = []
+    for rank, item in enumerate(sorted_agents[:limit], start=1):
+        agent_name = item.get("agent_name")
+        if not agent_name:
+            continue
+        top_agents.append(
+            {
+                "rank": rank,
+                "agent_name": agent_name,
+                "total_rounds": _safe_to_int(item.get("total_rounds")),
+                "user_count": _safe_to_int(item.get("user_count")),
+                "total_sessions": _safe_to_int(item.get("total_sessions")),
+                "active_sessions": _safe_to_int(item.get("active_sessions")),
+            }
+        )
+    return top_agents
+
+
 def _build_daily_charts(
     new_users: list,
     conversation_rounds: list,
@@ -45,6 +85,8 @@ def _build_daily_charts(
     users_hitting_limit: list,
     popular_agents: list,
     generated_images: list,
+    daily_top_agents_by_rounds: list,
+    daily_most_discussed_agent: dict | None,
 ) -> dict:
     return {
         "new_users": [
@@ -77,6 +119,8 @@ def _build_daily_charts(
         ],
         "popular_agents": popular_agents,
         "generated_images": generated_images,
+        "daily_top_agents_by_rounds": daily_top_agents_by_rounds,
+        "daily_most_discussed_agent": daily_most_discussed_agent,
     }
 
 
@@ -125,13 +169,20 @@ async def _read_daily_report_from_replica(
         users_hitting_limit = await service.get_users_hitting_chat_limit(
             act_start, act_end
         )
-        popular_agents = await service.get_popular_agents(
+        popular_agents_ranked = await service.get_popular_agents(
             reg_start,
             reg_end,
             act_start,
             act_end,
-            limit=20,
+            limit=POPULAR_AGENTS_QUERY_LIMIT,
             active_session_ids=active_session_ids,
+        )
+        popular_agents = popular_agents_ranked[:20]
+        daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(
+            popular_agents_ranked, DAILY_TOP_AGENTS_LIMIT
+        )
+        daily_most_discussed_agent = (
+            daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
         )
         generated_images = await service.get_generated_images_on_date(act_start, act_end)
         charts = _build_daily_charts(
@@ -141,6 +192,8 @@ async def _read_daily_report_from_replica(
             users_hitting_limit,
             popular_agents,
             generated_images,
+            daily_top_agents_by_rounds,
+            daily_most_discussed_agent,
         )
     return stats, charts
 
@@ -222,13 +275,20 @@ async def compute_and_save_daily_report(
         users_hitting_limit = await service.get_users_hitting_chat_limit(
             act_start, act_end
         )
-        popular_agents = await service.get_popular_agents(
+        popular_agents_ranked = await service.get_popular_agents(
             reg_start,
             reg_end,
             act_start,
             act_end,
-            limit=20,
+            limit=POPULAR_AGENTS_QUERY_LIMIT,
             active_session_ids=active_session_ids,
+        )
+        popular_agents = popular_agents_ranked[:20]
+        daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(
+            popular_agents_ranked, DAILY_TOP_AGENTS_LIMIT
+        )
+        daily_most_discussed_agent = (
+            daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
         )
         generated_images = await service.get_generated_images_on_date(act_start, act_end)
         charts = _build_daily_charts(
@@ -238,6 +298,8 @@ async def compute_and_save_daily_report(
             users_hitting_limit,
             popular_agents,
             generated_images,
+            daily_top_agents_by_rounds,
+            daily_most_discussed_agent,
         )
 
     existing = await db.execute(

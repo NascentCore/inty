@@ -589,6 +589,15 @@ export interface UserAnalyticsReportGeneratedImageItem {
   created_at: string | null;
 }
 
+export interface UserAnalyticsReportDailyTopAgentItem {
+  rank: number;
+  agent_name: string;
+  total_rounds: number;
+  user_count: number;
+  total_sessions: number;
+  active_sessions: number;
+}
+
 export interface UserAnalyticsReportCharts {
   new_users: Array<{ date: string; auth_type: string; count: number }>;
   conversation_rounds: Array<{
@@ -611,6 +620,8 @@ export interface UserAnalyticsReportCharts {
   }>;
   popular_agents: PopularAgentsResponse[];
   generated_images: UserAnalyticsReportGeneratedImageItem[];
+  daily_top_agents_by_rounds: UserAnalyticsReportDailyTopAgentItem[];
+  daily_most_discussed_agent: UserAnalyticsReportDailyTopAgentItem | null;
 }
 
 export interface UserAnalyticsReportItem {
@@ -618,6 +629,8 @@ export interface UserAnalyticsReportItem {
   report_type: "daily" | "weekly";
   report_date: string;
   stats: UserAnalyticsStatsResponse;
+  daily_top_agents_by_rounds: UserAnalyticsReportDailyTopAgentItem[];
+  daily_most_discussed_agent: UserAnalyticsReportDailyTopAgentItem | null;
   charts: UserAnalyticsReportCharts | null;
   created_at: string | null;
 }

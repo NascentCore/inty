@@ -55,6 +55,45 @@ def sample_stats():
     }
 
 
+@pytest.fixture
+def sample_popular_agents():
+    return [
+        {
+            "agent_name": "Agent A",
+            "user_count": 10,
+            "total_rounds": 80,
+            "avg_rounds_per_user": 8.0,
+            "pct_sessions_ge_5": 60.0,
+            "pct_sessions_ge_10": 30.0,
+            "total_sessions": 20,
+            "active_sessions": 12,
+            "open_rate": 60.0,
+        },
+        {
+            "agent_name": "Agent B",
+            "user_count": 7,
+            "total_rounds": 120,
+            "avg_rounds_per_user": 17.14,
+            "pct_sessions_ge_5": 75.0,
+            "pct_sessions_ge_10": 50.0,
+            "total_sessions": 15,
+            "active_sessions": 10,
+            "open_rate": 66.67,
+        },
+        {
+            "agent_name": "Agent C",
+            "user_count": 4,
+            "total_rounds": 60,
+            "avg_rounds_per_user": 15.0,
+            "pct_sessions_ge_5": 70.0,
+            "pct_sessions_ge_10": 40.0,
+            "total_sessions": 9,
+            "active_sessions": 7,
+            "open_rate": 77.78,
+        },
+    ]
+
+
 @pytest.mark.asyncio
 async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stats):
     """已存在的日报应跳过"""
@@ -96,7 +135,9 @@ async def test_compute_and_save_daily_report_skips_existing(mock_db, sample_stat
 
 
 @pytest.mark.asyncio
-async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
+async def test_compute_and_save_daily_report_creates_new(
+    mock_db, sample_stats, sample_popular_agents
+):
     """新日报应创建并保存"""
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
@@ -120,7 +161,9 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
         mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
         mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
         mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
-        mock_service_instance.get_popular_agents = AsyncMock(return_value=[])
+        mock_service_instance.get_popular_agents = AsyncMock(
+            return_value=sample_popular_agents
+        )
         generated_images = [
             {
                 "id": 1001,
@@ -141,6 +184,10 @@ async def test_compute_and_save_daily_report_creates_new(mock_db, sample_stats):
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()
     assert result.charts["generated_images"] == generated_images
+    assert result.charts["popular_agents"] == sample_popular_agents
+    assert result.charts["daily_top_agents_by_rounds"][0]["agent_name"] == "Agent B"
+    assert result.charts["daily_top_agents_by_rounds"][0]["total_rounds"] == 120
+    assert result.charts["daily_most_discussed_agent"]["agent_name"] == "Agent B"
     mock_service_instance.get_generated_images_on_date.assert_awaited_once_with(
         datetime(2026, 2, 1, tzinfo=timezone.utc),
         datetime(2026, 2, 2, tzinfo=timezone.utc),

@@ -21,7 +21,7 @@ CREATED_BY_AGENT
 | report_type | VARCHAR(16) | `daily` / `weekly` |
 | report_date | DATE | 日报：统计日期；周报：该周周一日期 |
 | stats | JSONB | `UserAnalyticsStatsResponse` 的完整 JSON |
-| charts | JSONB | 图表数据：new_users, conversation_rounds, user_rounds_distribution, users_hitting_limit, popular_agents, generated_images（日报当天生图列表） |
+| charts | JSONB | 图表数据：new_users, conversation_rounds, user_rounds_distribution, users_hitting_limit, popular_agents, generated_images（日报当天生图列表）, daily_top_agents_by_rounds（日报按聊天轮数 Top10 角色）, daily_most_discussed_agent（日报聊天轮数最高角色） |
 | created_at | TIMESTAMPTZ | 创建时间 |
 
 唯一约束：`(report_type, report_date)`
@@ -189,5 +189,6 @@ done
 - 路由 key：`user-analytics-reports`
 - 菜单位置：用户数据分析 与 用户每日消息 之间
 - 曲线面板：每日/每周用量曲线；每日/每周生图用量（生图请求数、生图成功数）
+- 新增角色热度面板：在「每日生图用量」下展示「每日最受欢迎角色（Top 10，按聊天轮数）」；同一角色跨日期用连线展示排名变化
 - 图表：用户注册结构、Top 20 热门角色、对话轮数分布（按 Session/用户）、达到聊天限制的用户趋势
-- 日报详情：展示当天生成图片缩略图（来源于 `chat_history.meta_data.generated_image`）
+- 日报详情：展示当日聊天轮数最高角色 + 当天生成图片缩略图（来源于 `chat_history.meta_data.generated_image`）

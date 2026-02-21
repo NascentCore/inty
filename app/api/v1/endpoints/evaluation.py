@@ -1798,6 +1798,84 @@ async def get_user_analytics_reports(
 
         from app.models.user_analytics_report import UserAnalyticsReport
 
+        def _safe_to_int(value: Any) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+
+        def _normalize_daily_top_agent(
+            item: Dict[str, Any],
+            rank: int,
+        ) -> Optional[Dict[str, Any]]:
+            agent_name = item.get("agent_name")
+            if not isinstance(agent_name, str) or not agent_name:
+                return None
+            normalized_rank = _safe_to_int(item.get("rank"))
+            return {
+                "rank": normalized_rank if normalized_rank > 0 else rank,
+                "agent_name": agent_name,
+                "total_rounds": _safe_to_int(item.get("total_rounds")),
+                "user_count": _safe_to_int(item.get("user_count")),
+                "total_sessions": _safe_to_int(item.get("total_sessions")),
+                "active_sessions": _safe_to_int(item.get("active_sessions")),
+            }
+
+        def _build_daily_top_agents_by_rounds(charts: Any) -> List[Dict[str, Any]]:
+            if not isinstance(charts, dict):
+                return []
+
+            raw_top_agents = charts.get("daily_top_agents_by_rounds")
+            if isinstance(raw_top_agents, list) and raw_top_agents:
+                normalized_from_daily: List[Dict[str, Any]] = []
+                for index, item in enumerate(raw_top_agents, start=1):
+                    if not isinstance(item, dict):
+                        continue
+                    normalized_item = _normalize_daily_top_agent(item, index)
+                    if normalized_item is None:
+                        continue
+                    normalized_from_daily.append(normalized_item)
+                normalized_from_daily.sort(key=lambda item: item["rank"])
+                return normalized_from_daily[:10]
+
+            raw_popular_agents = charts.get("popular_agents")
+            if not isinstance(raw_popular_agents, list):
+                return []
+            popular_agents = [
+                item
+                for item in raw_popular_agents
+                if isinstance(item, dict) and item.get("agent_name")
+            ]
+            sorted_by_rounds = sorted(
+                popular_agents,
+                key=lambda item: (
+                    _safe_to_int(item.get("total_rounds")),
+                    _safe_to_int(item.get("user_count")),
+                ),
+                reverse=True,
+            )
+            fallback_top_agents: List[Dict[str, Any]] = []
+            for rank, item in enumerate(sorted_by_rounds[:10], start=1):
+                normalized_item = _normalize_daily_top_agent(item, rank)
+                if normalized_item is None:
+                    continue
+                fallback_top_agents.append(normalized_item)
+            return fallback_top_agents
+
+        def _build_daily_most_discussed_agent(
+            charts: Any,
+            daily_top_agents_by_rounds: List[Dict[str, Any]],
+        ) -> Optional[Dict[str, Any]]:
+            if isinstance(charts, dict):
+                raw_most_discussed = charts.get("daily_most_discussed_agent")
+                if isinstance(raw_most_discussed, dict):
+                    normalized_item = _normalize_daily_top_agent(raw_most_discussed, 1)
+                    if normalized_item is not None:
+                        return normalized_item
+            if daily_top_agents_by_rounds:
+                return daily_top_agents_by_rounds[0]
+            return None
+
         stmt = (
             select(UserAnalyticsReport)
             .order_by(desc(UserAnalyticsReport.report_date))
@@ -1811,6 +1889,10 @@ async def get_user_analytics_reports(
 
         reports = []
         for row in rows:
+            daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(row.charts)
+            daily_most_discussed_agent = _build_daily_most_discussed_agent(
+                row.charts, daily_top_agents_by_rounds
+            )
             charts_data = None
             if include_charts and row.charts:
                 charts_data = schemas.user_analytics.UserAnalyticsReportCharts(
@@ -1822,6 +1904,8 @@ async def get_user_analytics_reports(
                     users_hitting_limit=row.charts.get("users_hitting_limit", []),
                     popular_agents=row.charts.get("popular_agents", []),
                     generated_images=row.charts.get("generated_images", []),
+                    daily_top_agents_by_rounds=daily_top_agents_by_rounds,
+                    daily_most_discussed_agent=daily_most_discussed_agent,
                 )
             reports.append(
                 schemas.user_analytics.UserAnalyticsReportItem(
@@ -1829,6 +1913,8 @@ async def get_user_analytics_reports(
                     report_type=row.report_type,
                     report_date=row.report_date.isoformat(),
                     stats=row.stats,
+                    daily_top_agents_by_rounds=daily_top_agents_by_rounds,
+                    daily_most_discussed_agent=daily_most_discussed_agent,
                     charts=charts_data,
                     created_at=(row.created_at.isoformat() if row.created_at else None),
                 )

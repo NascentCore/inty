@@ -42,7 +42,11 @@ class UserAnalyticsReport(Base):
     charts = Column(
         JSONB,
         nullable=True,
-        comment="图表数据：new_users, conversation_rounds, user_rounds_distribution, users_hitting_limit, popular_agents",
+        comment=(
+            "图表数据：new_users, conversation_rounds, user_rounds_distribution, "
+            "users_hitting_limit, popular_agents, generated_images, "
+            "daily_top_agents_by_rounds, daily_most_discussed_agent"
+        ),
     )
     created_at = Column(
         DateTime(timezone=True),
