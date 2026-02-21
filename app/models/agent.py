@@ -45,6 +45,8 @@ class Agent(Base):
     background_images = Column(JSON)  # 存储背景图列表
     background_animated = Column(String, nullable=True)  # 存储 webp 动图 URL
     voice_id = Column(String)
+    # 这里包含了 llm_config 和 chat_settings 的配置；llm_config 用于覆盖系统为
+    # 免费用户和付费用户设置的默认模型。
     settings = Column(JSON)
     intro = Column(String)
     opening = Column(String)
