@@ -1212,26 +1212,45 @@ private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agen
 /** 聊天消息受限的dialog */
 @Composable
 private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatViewModel) {
-    val showDialog by chatViewModel.showLimitDialog.collectAsState()
-    //    val context = LocalContext.current
-    if (showDialog) {
-        val data =
-            ChatDialogData(
-                R.drawable.img_unlimit_dialog_bg,
-                stringResource(R.string.str_unlimit_dialog_content),
-                stringResource(R.string.str_unlimit_btn_text),
-            )
+    val dialogData by chatViewModel.showLimitDialog.collectAsState()
+    dialogData?.let { limitDialog ->
+        val isSubscriptionGuide =
+            limitDialog.errorType ==
+                ChatViewModel.ChatLimitErrorType.FREE_USER_SUBSCRIPTION_REQUIRED
+        val content =
+            when (limitDialog.errorType) {
+                ChatViewModel.ChatLimitErrorType.FREE_USER_SUBSCRIPTION_REQUIRED ->
+                    stringResource(R.string.str_unlimit_dialog_content)
+                ChatViewModel.ChatLimitErrorType.SUBSCRIBED_USER_LIMIT_REACHED ->
+                    stringResource(R.string.chat_subscribed_limit_content)
+            }
+        val btnText =
+            when (limitDialog.errorType) {
+                ChatViewModel.ChatLimitErrorType.FREE_USER_SUBSCRIPTION_REQUIRED ->
+                    stringResource(R.string.str_unlimit_btn_text)
+                ChatViewModel.ChatLimitErrorType.SUBSCRIBED_USER_LIMIT_REACHED ->
+                    stringResource(R.string.chat_subscribed_limit_btn_text)
+            }
+        val data = ChatDialogData(R.drawable.img_unlimit_dialog_bg, content, btnText)
         UnlimitChatDialog(
             data,
             onCancel = { chatViewModel.dismissDialog() },
             onSure = {
-                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                if (
+                    isSubscriptionGuide &&
+                        IntySetting.isLogin() &&
+                        IntySetting.getCurToken().isNotEmpty()
+                ) {
                     navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
                 }
                 chatViewModel.dismissDialog()
             },
             onMoreInfo = {
-                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                if (
+                    isSubscriptionGuide &&
+                        IntySetting.isLogin() &&
+                        IntySetting.getCurToken().isNotEmpty()
+                ) {
                     navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
                 }
                 chatViewModel.dismissDialog()

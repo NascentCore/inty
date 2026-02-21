@@ -608,22 +608,11 @@ class ChatViewModel : BaseVM() {
                         }
 
                         runCatching {
-                                // 有免费次数限制，需要vip订阅
                                 if (
                                     result.data.code ==
                                         BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
                                 ) {
-                                    // Firebase Analytics - 记录免费次数限制
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.FREE_LIMIT_REACHED,
-                                        FirebaseManager.safeEventParams(
-                                            "agent_id" to agentId,
-                                            "agent_name" to (_agentInfo.value?.name ?: ""),
-                                            "user_type" to "free",
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    showLimitDialog.emit(true)
+                                    emitChatLimitDialog(agentId = agentId, agentName = _agentInfo.value?.name)
                                 }
                             }
                             .onFailure {
@@ -777,7 +766,14 @@ class ChatViewModel : BaseVM() {
         chatRepository.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
 
-    val showLimitDialog = MutableStateFlow(false)
+    enum class ChatLimitErrorType {
+        FREE_USER_SUBSCRIPTION_REQUIRED, // 免费用户需要订阅
+        SUBSCRIBED_USER_LIMIT_REACHED, // 已订阅用户达到每日限制
+    }
+
+    data class ChatLimitDialogData(val errorType: ChatLimitErrorType)
+
+    val showLimitDialog = MutableStateFlow<ChatLimitDialogData?>(null)
     val requestLogin = MutableStateFlow(false)
 
     // 图片生成错误弹窗相关
@@ -791,7 +787,28 @@ class ChatViewModel : BaseVM() {
     val showImageGenerationDialog = MutableStateFlow<ImageGenerationDialogData?>(null)
 
     // 关闭limit次数 拦截消息的弹窗
-    fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+    fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(null) }
+
+    private suspend fun emitChatLimitDialog(agentId: String, agentName: String?) {
+        val isVip = VipStatusHelper.isUserVip()
+        val eventName =
+            if (isVip) FirebaseManager.Events.SUBSCRIBED_CHAT_LIMIT_REACHED
+            else FirebaseManager.Events.FREE_LIMIT_REACHED
+        val errorType =
+            if (isVip) ChatLimitErrorType.SUBSCRIBED_USER_LIMIT_REACHED
+            else ChatLimitErrorType.FREE_USER_SUBSCRIPTION_REQUIRED
+
+        FirebaseManager.logEvent(
+            eventName,
+            FirebaseManager.safeEventParams(
+                "agent_id" to agentId,
+                "agent_name" to (agentName ?: ""),
+                "user_type" to if (isVip) "vip" else "free",
+                "timestamp" to System.currentTimeMillis(),
+            ),
+        )
+        showLimitDialog.emit(ChatLimitDialogData(errorType = errorType))
+    }
 
     /** 隐藏反馈对话框 */
     fun hideFeedbackRequestDialog() {
@@ -885,12 +902,11 @@ class ChatViewModel : BaseVM() {
                             )
 
                             runCatching {
-                                    // 有免费次数限制，需要vip订阅
                                     if (
                                         result.data.code ==
                                             BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
                                     ) {
-                                        showLimitDialog.emit(true)
+                                        emitChatLimitDialog(agentId = agent.id, agentName = agent.name)
                                     }
                                 }
                                 .onFailure {
