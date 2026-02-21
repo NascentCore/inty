@@ -24,6 +24,10 @@ import kotlinx.coroutines.launch
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM(), ExploreFetchCallback {
+    companion object {
+        private const val NEWLY_CREATED_SECTION_LIMIT = 10
+    }
+
     // 角色数据库仓库，用于搜索
     private val characterRepository = CharacterRepository()
 
@@ -63,6 +67,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         MutableStateFlow<List<AgentService.CharacterThemeItem>>(emptyList())
     val characterThemes: StateFlow<List<AgentService.CharacterThemeItem>> =
         _characterThemes.asStateFlow()
+
+    // 最近创建角色列表（用于 Explore 顶部 Newly iMates 分区）
+    private val _newlyCreatedAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
+    val newlyCreatedAgents: StateFlow<List<AgentInfo>> = _newlyCreatedAgents.asStateFlow()
 
     // 是否正在加载主题专区
     private val _isLoadingThemes = MutableStateFlow(false)
@@ -167,6 +175,8 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
         // 初始化时从缓存加载主题专区数据，确保快速显示
         loadCharacterThemesFromCache()
+        // 初始化时加载最近创建角色数据，用于 Newly iMates 分区
+        loadNewlyCreatedAgents(limit = NEWLY_CREATED_SECTION_LIMIT)
     }
 
     /** 获取推荐agents的Paging数据流 */
@@ -352,6 +362,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         _agentsFlow.value = null
         isInitialized = false
         _characterThemes.value = emptyList()
+        _newlyCreatedAgents.value = emptyList()
         _isCacheLoaded.value = false
     }
 
@@ -409,6 +420,37 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 }
             } finally {
                 _isLoadingThemes.value = false
+            }
+        }
+    }
+
+    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区） */
+    fun loadNewlyCreatedAgents(limit: Int = NEWLY_CREATED_SECTION_LIMIT) {
+        viewModelScope.launch {
+            try {
+                when (
+                    val result =
+                        AgentService.getRecommendAgents(
+                            page = 1,
+                            pageSize = limit,
+                            sort = "created_desc",
+                            sortSeed = "newly_imates",
+                        )
+                ) {
+                    is ai.sxwl.android.data.http.ApiResult.Success -> {
+                        val latestAgents = result.data.take(limit)
+                        LogUtils.d("ExploreViewModel - 获取最近创建角色成功: ${latestAgents.size} 条")
+                        _newlyCreatedAgents.value = latestAgents
+                    }
+
+                    is ai.sxwl.android.data.http.ApiResult.Error -> {
+                        LogUtils.w(
+                            "ExploreViewModel - 获取最近创建角色失败: code=${result.code}, message=${result.message}"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("ExploreViewModel - 加载最近创建角色异常: ${e.message}", e)
             }
         }
     }
@@ -526,6 +568,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
     /** 刷新主题专区列表（用于下拉刷新，只有成功获取数据后才更新 UI） */
     fun refreshCharacterThemes(skip: Int = 0, limit: Int = 100) {
+        loadNewlyCreatedAgents(limit = NEWLY_CREATED_SECTION_LIMIT)
         viewModelScope.launch {
             _isLoadingThemes.value = true
             try {

@@ -135,8 +135,21 @@ fun ExploreContent(
 
     // 获取主题专区数据
     val characterThemes by vm.characterThemes.collectAsState()
+    // 获取最近创建角色数据（用于 Newly iMates 分区）
+    val newlyCreatedAgents by vm.newlyCreatedAgents.collectAsState()
     // 获取缓存加载状态
     val isCacheLoaded by vm.isCacheLoaded.collectAsState()
+    val newlyImatesTitle = stringResource(R.string.explore_newly_imates_title)
+    val newlyImatesSubtitle = stringResource(R.string.explore_newly_imates_subtitle)
+    val exploreThemeSections =
+        remember(characterThemes, newlyCreatedAgents, newlyImatesTitle, newlyImatesSubtitle) {
+            buildExploreThemeSections(
+                characterThemes = characterThemes,
+                newlyCreatedAgents = newlyCreatedAgents,
+                newlyImatesTitle = newlyImatesTitle,
+                newlyImatesSubtitle = newlyImatesSubtitle,
+            )
+        }
 
     // 计算全屏宽度（在 Composable 顶层计算，避免在 item lambda 中调用 CompositionLocal）
     val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
@@ -170,9 +183,9 @@ fun ExploreContent(
         lazyPagingItems?.itemCount?.let { count -> vm.updateCurrentUiAgentsCount(count) }
     }
 
-    // 计算主题专区的 item 数量（每个有 agents 的 theme 是一个 item）
+    // 计算主题专区的 item 数量（每个有 agents 的 theme section 是一个 item）
     val themeItemCount =
-        remember(characterThemes) { characterThemes.count { it.agents.isNotEmpty() } }
+        remember(exploreThemeSections) { exploreThemeSections.count { it.agents.isNotEmpty() } }
 
     // 获取保存的滚动位置
     val savedGridIndex by vm.savedFirstVisibleGridIndex.collectAsState()
@@ -428,6 +441,7 @@ fun ExploreContent(
             }
             // 刷新时也重新加载主题专区（从网络加载，更新缓存）
             vm.loadCharacterThemes(skip = 0, limit = 100)
+            vm.loadNewlyCreatedAgents()
         }
     }
 
@@ -467,7 +481,7 @@ fun ExploreContent(
                     } else {
                         // 主题专区的item数据，如果有接口数据则显示，无则不显示
                         // 注意：主题专区需要全屏宽度，不受 contentPadding 影响
-                        characterThemes.forEach { theme ->
+                        exploreThemeSections.forEach { theme ->
                             if (theme.agents.isNotEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     // 使用全屏宽度布局，突破 LazyVerticalGrid 的 contentPadding 限制
@@ -477,7 +491,12 @@ fun ExploreContent(
                                             description = theme.description,
                                             agents = theme.agents,
                                             isChristmas = theme.isChristmas,
-                                            onAgentClick = { onClickAgent(it, "theme") },
+                                            onAgentClick = {
+                                                onClickAgent(
+                                                    it,
+                                                    getExploreThemeClickSource(theme.id),
+                                                )
+                                            },
                                             onTitleClick = {
                                                 // 跳转到主题详情页面
                                                 navController?.let { nav ->
