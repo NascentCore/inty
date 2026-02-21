@@ -47,20 +47,18 @@ class AsyncClient:
     def __init__(self, client: genai.aio.Client):
         self.client = client
 
-    def generate_image(self, model: str, reference_jpeg_urls: list[str], prompt: str):
+    def generate_image(self, model: str, contents: list[str]):
         """
         使用指定的模型生成图片。
-        这个符合消息生图的设计。
+        contents 是 jpeg/jpg 文件 http url、或文本提示词；这个设计符合目前消息生图的需求。
         """
         parts = []
-        for reference_jpeg_url in reference_jpeg_urls:
-            reference_image = types.Part.from_uri(
-                file_uri=reference_jpeg_url,
-                mime_type="image/jpeg",
-            )
-            parts.append(reference_image)
-
-        parts.append(types.Part.from_text(text=prompt))
+        for content in contents:
+            # 如果是 jpeg url，则转换为 Part.from_uri
+            if content.startswith("http") and (content.endswith(".jpeg") or content.endswith(".jpg")):
+                parts.append(types.Part.from_uri(file_uri=content, mime_type="image/jpeg"))
+            else:
+                parts.append(types.Part.from_text(text=content))
         return self.client.models.generate_content(
             model=model,
             contents=[
