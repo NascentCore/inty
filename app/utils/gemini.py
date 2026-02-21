@@ -80,7 +80,9 @@ def get_genai_client():
                     project_id = creds.get("project_id")
 
             if not project_id:
-                raise ValueError(f"Project ID not found in credentials file: {credentials_path}")
+                raise ValueError(
+                    f"Project ID not found in credentials file: {credentials_path}"
+                )
 
             # Clear any cached client to ensure fresh authentication
             if hasattr(genai, "_client_cache"):

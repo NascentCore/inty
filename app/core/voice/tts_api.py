@@ -53,8 +53,8 @@ TTS_ROLEPLAY_INSTRUCTION = (
     "match tone and pace to the scene.\n\n"
     "In the scene description: "
     "non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses (); "
-    "audible dialogue is enclosed in double quotes (\")."
-    "example: <begin-of-example>(whispering) \"I won the lottery!!!\"<end-of-example>\n\n"
+    'audible dialogue is enclosed in double quotes (").'
+    'example: <begin-of-example>(whispering) "I won the lottery!!!"<end-of-example>\n\n'
     "You must:\n"
     "1. In your speech: use the non-audible descriptions to inform the delivery, "
     "strictly adhere to the non-audible descriptions.\n"

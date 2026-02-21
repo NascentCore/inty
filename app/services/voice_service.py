@@ -723,7 +723,11 @@ class VoiceService:
             prefix == "" and is_gemini_voice(voice_id)
         ):
             gemini_voices = get_gemini_voices()
-            lookup_id = voice_id if prefix == VOICE_ID_PREFIX_GEMINI else f"{VOICE_ID_PREFIX_GEMINI}/{raw}"
+            lookup_id = (
+                voice_id
+                if prefix == VOICE_ID_PREFIX_GEMINI
+                else f"{VOICE_ID_PREFIX_GEMINI}/{raw}"
+            )
             for voice in gemini_voices:
                 if voice["voice_id"] == lookup_id:
                     logger.debug(f"从 Gemini 预置音色中找到 voice_id: {voice_id}")
@@ -748,7 +752,10 @@ class VoiceService:
             shared_voices = await self._search_shared_voices(search=raw, page_size=50)
             prefixed_id = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw}"
             for voice in shared_voices:
-                if voice.get("voice_id") == prefixed_id or voice.get("voice_id") == voice_id:
+                if (
+                    voice.get("voice_id") == prefixed_id
+                    or voice.get("voice_id") == voice_id
+                ):
                     logger.debug(f"从共享音色中找到 voice_id: {voice_id}")
                     return voice
             logger.debug(f"在共享音色中也未找到 voice_id: {voice_id}")

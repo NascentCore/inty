@@ -739,7 +739,9 @@ class ImageGenerationService:
                 pil_image = PIL.Image.open(io.BytesIO(image_data))
                 width, height = pil_image.size
                 image_format = pil_image.format or "JPEG"
-                logger.info("成功解析图片: {}x{}, 格式: {}", width, height, image_format)
+                logger.info(
+                    "成功解析图片: {}x{}, 格式: {}", width, height, image_format
+                )
             except Exception as e:
                 logger.error("PIL 无法解析图片: {}", str(e))
                 # 尝试检查是否是文本响应

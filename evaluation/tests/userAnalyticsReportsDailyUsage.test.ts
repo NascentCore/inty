@@ -438,24 +438,24 @@ describe("buildDailyTopAgentsTrendSeries", () => {
 
     expect(trend?.dates).toEqual(["2026-02-01", "2026-02-02"]);
     expect(trend?.dailyTopAgentsByDate["2026-02-01"]?.length).toBe(2);
-    expect(trend?.lines.find((line) => line.agent_name === "Role A")?.points).toEqual(
-      [
-        {
-          date: "2026-02-01",
-          rank: 1,
-          agent_name: "Role A",
-          total_rounds: 24,
-          user_count: 5,
-        },
-        {
-          date: "2026-02-02",
-          rank: 2,
-          agent_name: "Role A",
-          total_rounds: 18,
-          user_count: 3,
-        },
-      ],
-    );
+    expect(
+      trend?.lines.find((line) => line.agent_name === "Role A")?.points,
+    ).toEqual([
+      {
+        date: "2026-02-01",
+        rank: 1,
+        agent_name: "Role A",
+        total_rounds: 24,
+        user_count: 5,
+      },
+      {
+        date: "2026-02-02",
+        rank: 2,
+        agent_name: "Role A",
+        total_rounds: 18,
+        user_count: 3,
+      },
+    ]);
   });
 
   it("支持限制每日 Top 数量", () => {

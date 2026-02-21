@@ -17,11 +17,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -39,8 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -206,9 +206,7 @@ fun ExploreContent(
     }
     val showBackToTopButton by remember { derivedStateOf { !isAtExploreStart } }
     val showGoToBottomButton by remember {
-        derivedStateOf {
-            BuildConfig.DEBUG && (lazyPagingItems?.itemCount ?: 0) > 0
-        }
+        derivedStateOf { BuildConfig.DEBUG && (lazyPagingItems?.itemCount ?: 0) > 0 }
     }
 
     // 标记是否正在恢复滚动位置，用于防止在恢复期间保存错误的位置
@@ -607,8 +605,7 @@ fun ExploreContent(
                                 var previousCount = items.itemCount
                                 while (true) {
                                     val lastIndex =
-                                        themeItemCount +
-                                            (items.itemCount - 1).coerceAtLeast(0)
+                                        themeItemCount + (items.itemCount - 1).coerceAtLeast(0)
                                     if (lastIndex < themeItemCount) break
                                     gridState.animateScrollToItem(lastIndex)
                                     snapshotFlow { items.loadState.append }
@@ -617,13 +614,13 @@ fun ExploreContent(
                                     if (
                                         appendState is LoadState.NotLoading &&
                                             appendState.endOfPaginationReached
-                                    ) break
+                                    )
+                                        break
                                     if (items.itemCount == previousCount) break
                                     previousCount = items.itemCount
                                 }
                                 val finalLast =
-                                    themeItemCount +
-                                        (items.itemCount - 1).coerceAtLeast(0)
+                                    themeItemCount + (items.itemCount - 1).coerceAtLeast(0)
                                 if (finalLast >= themeItemCount) {
                                     gridState.animateScrollToItem(finalLast)
                                 }
@@ -649,15 +646,11 @@ private fun EmptyStateIndicator() {
 }
 
 /**
- * Explore 页 Go to bottom 悬浮按钮（仅 debug 构建显示）。
- * 与 Back to top 同风格：圆形、白边、半透明黑底，双下箭头图标；点击后持续请求下一页直到没有新角色并滚到底部。
+ * Explore 页 Go to bottom 悬浮按钮（仅 debug 构建显示）。 与 Back to top
+ * 同风格：圆形、白边、半透明黑底，双下箭头图标；点击后持续请求下一页直到没有新角色并滚到底部。
  */
 @Composable
-private fun GoToBottomButton(
-    modifier: Modifier = Modifier,
-    visible: Boolean,
-    onClick: () -> Unit,
-) {
+private fun GoToBottomButton(modifier: Modifier = Modifier, visible: Boolean, onClick: () -> Unit) {
     val config = UiConfigs.ChatPage.FloatingScrollButton
     AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
         Box(
@@ -683,7 +676,8 @@ private fun GoToBottomButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.keyboard_double_arrow_down_24px),
+                imageVector =
+                    ImageVector.vectorResource(R.drawable.keyboard_double_arrow_down_24px),
                 contentDescription = stringResource(R.string.explore_go_to_bottom_cd),
                 modifier = Modifier.size(config.IconSize),
                 tint = Color.White,

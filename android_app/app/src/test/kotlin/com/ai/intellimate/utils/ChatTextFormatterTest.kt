@@ -26,7 +26,8 @@ class ChatTextFormatterTest {
         // Text remains unchanged
         assertEquals(input, result.text)
 
-        // Find span for the bracket content (formatter styles the full segment including parentheses)
+        // Find span for the bracket content (formatter styles the full segment including
+        // parentheses)
         val italicSpan =
             result.spanStyles.find { span ->
                 result.text.substring(span.start, span.end) == "(world)"
@@ -76,8 +77,7 @@ class ChatTextFormatterTest {
             )
 
         assertEquals(input, result.text)
-        val hasItalicSpan =
-            result.spanStyles.any { it.item.fontStyle == FontStyle.Italic }
+        val hasItalicSpan = result.spanStyles.any { it.item.fontStyle == FontStyle.Italic }
         assertFalse("Bracket mode must not style * as action", hasItalicSpan)
     }
 
@@ -96,11 +96,9 @@ class ChatTextFormatterTest {
 
         // * 不显示
         assertEquals("a b", result.text)
-        val italicSpans =
-            result.spanStyles.filter { it.item.fontStyle == FontStyle.Italic }
+        val italicSpans = result.spanStyles.filter { it.item.fontStyle == FontStyle.Italic }
         assertTrue(italicSpans.size >= 2)
-        val segments =
-            italicSpans.map { result.text.substring(it.start, it.end) }
+        val segments = italicSpans.map { result.text.substring(it.start, it.end) }
         assertTrue(segments.contains("a"))
         assertTrue(segments.contains("b"))
     }
@@ -118,8 +116,7 @@ class ChatTextFormatterTest {
                 actionMarkerBrackets = false,
             )
         assertEquals(input, result.text)
-        val hasItalicSpan =
-            result.spanStyles.any { it.item.fontStyle == FontStyle.Italic }
+        val hasItalicSpan = result.spanStyles.any { it.item.fontStyle == FontStyle.Italic }
         assertFalse("** must not be treated as single-asterisk action pair", hasItalicSpan)
     }
 

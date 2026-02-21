@@ -116,8 +116,8 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
@@ -141,7 +141,8 @@ fun ChatItem(
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
 
-    val agentInfoForFormatting by (chatViewModel?.agentInfo ?: flowOf(null)).collectAsState(initial = null)
+    val agentInfoForFormatting by
+        (chatViewModel?.agentInfo ?: flowOf(null)).collectAsState(initial = null)
     if (item.type == "text" || item.type.isNullOrBlank()) {
         when (item.role) {
             "assistant" -> {
@@ -161,7 +162,8 @@ fun ChatItem(
                 ChatItemUser(
                     item,
                     messageFontSizeSp,
-                    useDoubleAsteriskActionMarker = agentInfoForFormatting?.useDoubleAsteriskActionMarker() ?: false,
+                    useDoubleAsteriskActionMarker =
+                        agentInfoForFormatting?.useDoubleAsteriskActionMarker() ?: false,
                 )
             }
 
