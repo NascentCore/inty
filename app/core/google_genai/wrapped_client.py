@@ -71,7 +71,8 @@ class WrappedClient:
 
     @traceable(
         name="generate_image",
-        run_type=LangSmithTraceRunType.LLM,
+        # LLM 是语言模型，生图模型就作为工具调用类型
+        run_type=LangSmithTraceRunType.TOOL,
         # process_inputs=_process_inputs_generate_image,
         # process_outputs=_process_outputs_generate_image,
     )
@@ -132,3 +133,6 @@ class WrappedClient:
                 )
             case _:
                 raise ValueError(f"Unsupported model: {model}")
+
+        # TODO: 需要替换返回值为真实图片并上传，然后在被封禁/屏蔽时 raise exception 从而让 tracing 捕获
+        # 这样在 trace 搜索时能直接找到有问题的调用，否则全部是成功的。
