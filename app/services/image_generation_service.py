@@ -571,10 +571,10 @@ class ImageGenerationService:
 
             # 如果用户有自拍照片，添加为额外参考图
             if user_photo_url:
-                # 确保用户照片是完整URL
-                if user_photo_url.startswith("gs://"):
+                # 确保用户照片是完整 URL（与 reference_url 一致，使用 GCS 常量）
+                if user_photo_url.startswith(GCS_GS_PREFIX):
                     user_photo_url = user_photo_url.replace(
-                        "gs://", "https://storage.googleapis.com/"
+                        GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
                     )
                 if user_photo_url.startswith("http"):
                     contents.append(user_photo_url)
