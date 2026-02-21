@@ -25,7 +25,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.predefined_configs import (
     GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
 )
-from app.external_services.gcs import upload_to_gcs
+from app.external_services.gcs import GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
 from app.services.image_transform_service import image_transform_service
@@ -550,14 +550,13 @@ class ImageGenerationService:
                 )
 
             # 确保参考图是完整URL
+            # 如果是GCS路径，转换为URL
+            if reference_url.startswith(GCS_GS_PREFIX):
+                reference_url = reference_url.replace(
+                    GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
+                )
             if not reference_url.startswith("http"):
-                # 如果是GCS路径，转换为URL
-                if reference_url.startswith("gs://"):
-                    reference_url = reference_url.replace(
-                        "gs://", "https://storage.googleapis.com/"
-                    )
-                else:
-                    raise ValueError(f"Invalid reference image path: {reference_url}")
+                raise ValueError(f"Invalid reference image path: {reference_url}, must start with 'http'")
 
             # 记录使用的参考图类型
             reference_type = "背景图" if agent_data.get("background") else "头像"

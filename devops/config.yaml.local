@@ -60,8 +60,11 @@ agent:
   api_key: "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"
   # inty-dev api key personal access token
   langchain_api_key: "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"
-  sub_user_chat_image_gemini_model: "z-ai/glm-4.5-air:free"
-  free_user_chat_image_gemini_model: "z-ai/glm-4.5-air:free"
+  # 本地测试时使用免费模型，还可以在 openrouter 上找其他的免费模型：
+  # https://openrouter.ai/models?fmt=cards&q=%3Afree
+  # 但是，目前没有免费的生图、生语音、生视频模型
+  sub_user_chat_model: "z-ai/glm-4.5-air:free"
+  free_user_chat_model: "z-ai/glm-4.5-air:free"
 
 google_play:
   package_name: "com.ai.intellimate"
