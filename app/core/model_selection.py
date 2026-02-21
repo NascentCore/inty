@@ -11,9 +11,9 @@ def select_chat_model(*, user: object, is_subscribed: bool) -> str:
     Select chat LLM model based on user's subscription/superuser status.
     """
     config = global_config_loaded_from_config_yaml.agent
-    if is_subscribed or is_superuser(user):
-        return config.sub_user_chat_model or config.model
-    return config.free_user_chat_model or config.model
+    if is_subscribed:
+        return config.sub_user_chat_model
+    return config.free_user_chat_model
 
 
 def select_text_to_image_model(*, user: object, is_subscribed: bool) -> str:
@@ -21,7 +21,7 @@ def select_text_to_image_model(*, user: object, is_subscribed: bool) -> str:
     Select text-to-image model based on user's subscription/superuser status.
     """
     config = global_config_loaded_from_config_yaml.agent
-    if is_subscribed or is_superuser(user):
+    if is_subscribed:
         return config.sub_user_text_to_image_model or config.vertex_image_model
     return config.free_user_text_to_image_model or config.vertex_image_model
 
@@ -34,6 +34,8 @@ def select_chat_image_model(*, user: object, is_subscribed: bool) -> str:
         "gemini" for Gemini 2.5 Flash Image, or fal model name like "fal-ai/z-image/turbo/image-to-image"
     """
     config = global_config_loaded_from_config_yaml.agent
-    if is_subscribed or is_superuser(user):
+    if is_subscribed:
+        # TODO：这里的 or "gemini" 是做什么的？
         return config.sub_user_chat_image_model or "gemini"
+    # TODO：这里的 or "gemini" 是做什么的？
     return config.free_user_chat_image_model or "gemini"

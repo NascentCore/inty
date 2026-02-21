@@ -58,7 +58,7 @@ firebase:
   service_account_path: "inty-firebase-key.json"
 
 agent:
-  model: "google/gemini-2.5-flash"
+  # OpenRouter API Key: inty-backend-prod
   api_key: "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"
   base_url: "https://openrouter.ai/api/v1"
   # try@sxwl.ai LangSmith IntelliMate-prod 项目
