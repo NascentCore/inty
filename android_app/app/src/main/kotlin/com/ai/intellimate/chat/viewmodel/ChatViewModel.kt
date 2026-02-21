@@ -67,6 +67,22 @@ private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
 class ChatViewModel : BaseVM() {
 
+    /** 聊天消息额度弹窗类型。 */
+    enum class ChatLimitDialogType {
+        FREE_USER_SUBSCRIPTION_REQUIRED, // 免费用户达到额度，需要订阅
+        SUBSCRIBER_LIMIT_REACHED, // 订阅用户达到当日聊天额度
+    }
+
+    companion object {
+        internal fun resolveChatLimitDialogType(isUserVip: Boolean): ChatLimitDialogType {
+            return if (isUserVip) {
+                ChatLimitDialogType.SUBSCRIBER_LIMIT_REACHED
+            } else {
+                ChatLimitDialogType.FREE_USER_SUBSCRIPTION_REQUIRED
+            }
+        }
+    }
+
     // 依赖注入 - 使用新的架构
     private val chatMessageRepository = ChatMessageRepository()
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
@@ -613,17 +629,7 @@ class ChatViewModel : BaseVM() {
                                     result.data.code ==
                                         BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
                                 ) {
-                                    // Firebase Analytics - 记录免费次数限制
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.FREE_LIMIT_REACHED,
-                                        FirebaseManager.safeEventParams(
-                                            "agent_id" to agentId,
-                                            "agent_name" to (_agentInfo.value?.name ?: ""),
-                                            "user_type" to "free",
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    showLimitDialog.emit(true)
+                                    emitChatLimitDialog(agentId)
                                 }
                             }
                             .onFailure {
@@ -777,7 +783,7 @@ class ChatViewModel : BaseVM() {
         chatRepository.updateMessageAudioUrl(agentId, messageId, audioUrl)
     }
 
-    val showLimitDialog = MutableStateFlow(false)
+    val showChatLimitDialog = MutableStateFlow<ChatLimitDialogType?>(null)
     val requestLogin = MutableStateFlow(false)
 
     // 图片生成错误弹窗相关
@@ -790,8 +796,8 @@ class ChatViewModel : BaseVM() {
 
     val showImageGenerationDialog = MutableStateFlow<ImageGenerationDialogData?>(null)
 
-    // 关闭limit次数 拦截消息的弹窗
-    fun dismissDialog() = viewModelScope.launch { showLimitDialog.emit(false) }
+    // 关闭聊天额度限制弹窗
+    fun dismissChatLimitDialog() = viewModelScope.launch { showChatLimitDialog.emit(null) }
 
     /** 隐藏反馈对话框 */
     fun hideFeedbackRequestDialog() {
@@ -807,6 +813,35 @@ class ChatViewModel : BaseVM() {
         viewModelScope.launch { showImageGenerationDialog.emit(null) }
 
     fun dismissLoginRequest() = viewModelScope.launch { requestLogin.emit(false) }
+
+    private suspend fun emitChatLimitDialog(agentId: String) {
+        val dialogType = resolveChatLimitDialogType(VipStatusHelper.isUserVip())
+        when (dialogType) {
+            ChatLimitDialogType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.FREE_LIMIT_REACHED,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agentId,
+                        "agent_name" to (_agentInfo.value?.name ?: ""),
+                        "user_type" to "free",
+                        "timestamp" to System.currentTimeMillis(),
+                    ),
+                )
+            }
+            ChatLimitDialogType.SUBSCRIBER_LIMIT_REACHED -> {
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.SUBSCRIBER_LIMIT_REACHED,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agentId,
+                        "agent_name" to (_agentInfo.value?.name ?: ""),
+                        "user_type" to "vip",
+                        "timestamp" to System.currentTimeMillis(),
+                    ),
+                )
+            }
+        }
+        showChatLimitDialog.emit(dialogType)
+    }
 
     fun sendKeepTalkingMessage() {
         // 防抖检查
@@ -890,7 +925,7 @@ class ChatViewModel : BaseVM() {
                                         result.data.code ==
                                             BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
                                     ) {
-                                        showLimitDialog.emit(true)
+                                        emitChatLimitDialog(agent.id)
                                     }
                                 }
                                 .onFailure {
