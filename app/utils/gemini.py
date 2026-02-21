@@ -51,64 +51,70 @@ client = None  # Will be initialized when needed
 def get_genai_client():
     """Get or create Google Gen AI client with proper configuration"""
     global client
-    if client is not None:
-        return client
+    if client is None:
+        # Check if we're in test environment
+        from app.core.config import Environment
 
-    # Check if we're in test environment
-    from app.core.config import Environment
+        if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+            logger.info("Using FakeGeminiClient in test environment")
+            client = FakeGeminiClient()
+            return client
 
-    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
-        logger.info("Using FakeGeminiClient in test environment")
-        client = FakeGeminiClient()
-        return client
+        try:
+            # Initialize with Vertex AI configuration
+            # This will use the same service account credentials as GCS
 
-    # 在 try 外初始化，避免 except 中访问未定义变量导致 NameError
-    project_id = None
-    location = None
+            # Set environment variable for proper authentication
+            credentials_path = (
+                global_config_loaded_from_config_yaml.app.gcp_service_account_key
+            )
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
-    # Initialize with Vertex AI configuration
-    # This will use the same service account credentials as GCS
+            # Try to get project ID from credentials file
+            project_id = None
+            location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
 
-    # Set environment variable for proper authentication
-    credentials_path = (
-        global_config_loaded_from_config_yaml.app.gcp_service_account_key
-    )
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+            if os.path.exists(credentials_path):
+                with open(credentials_path, "r") as f:
+                    creds = json.load(f)
+                    project_id = creds.get("project_id")
 
-    location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
+            if not project_id:
+                raise ValueError(f"Project ID not found in credentials file: {credentials_path}")
 
-    # Try to get project ID from credentials file
-    if os.path.exists(credentials_path):
-        with open(credentials_path, "r") as f:
-            creds = json.load(f)
-            project_id = creds.get("project_id")
+            # Clear any cached client to ensure fresh authentication
+            if hasattr(genai, "_client_cache"):
+                genai._client_cache.clear()
 
-    if not project_id:
-        raise ValueError(f"Project ID not found in credentials file: {credentials_path}")
-
-    # Clear any cached client to ensure fresh authentication
-    if hasattr(genai, "_client_cache"):
-        genai._client_cache.clear()
-
-    tracing_metadata = {
-        "source": "app.utils.gemini",
-        "project_id": project_id,
-        "location": location,
-    }
-    base_client = genai.Client(
-        vertexai=True,
-        project=project_id,
-        location=location,
-    )
-    client = wrap_google_genai_client_with_langsmith(
-        base_client,
-        tags=["google-genai", "vertex-ai", "inty-backend"],
-        metadata=tracing_metadata,
-        chat_name="Inty_GoogleGenAI",
-    )
-    logger.debug(
-        f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
-    )
+            tracing_metadata = {
+                "source": "app.utils.gemini",
+                "project_id": project_id,
+                "location": location,
+            }
+            base_client = genai.Client(
+                vertexai=True,
+                project=project_id,
+                location=location,
+            )
+            client = wrap_google_genai_client_with_langsmith(
+                base_client,
+                tags=["google-genai", "vertex-ai", "app-utils-gemini"],
+                metadata=tracing_metadata,
+                chat_name="Inty_GoogleGenAI",
+            )
+            logger.debug(
+                f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
+            )
+        except Exception as e:
+            logger.error(f"Error initializing Google Gen AI client: {e}")
+            # Fallback to basic initialization with environment variable set
+            fallback_client = genai.Client(vertexai=True)
+            client = wrap_google_genai_client_with_langsmith(
+                fallback_client,
+                tags=["google-genai", "vertex-ai", "app-utils-gemini"],
+                metadata={"source": "app.utils.gemini", "location": location},
+                chat_name="Inty_GoogleGenAI",
+            )
 
     return client
 
