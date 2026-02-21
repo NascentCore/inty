@@ -1,9 +1,9 @@
-"""
-Limitations of the official LangSmith tracing wrapper for the Google GenAI SDK.
+"""Limitations of the official LangSmith tracing wrapper for the Google GenAI SDK.
 
 Ref: https://docs.langchain.com/langsmith/trace-with-google-gemini#configure-tracing
 Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_langsmith
 """
+from __future__ import annotations
 
 # -----------------------------------------------------------------------------
 # Official wrapper: langsmith.wrappers.wrap_gemini
@@ -37,8 +37,8 @@ Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_lang
 #
 
 
-import types
 from google import genai
+from google.genai import types
 
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
 
