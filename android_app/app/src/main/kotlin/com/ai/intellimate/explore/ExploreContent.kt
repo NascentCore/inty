@@ -1,21 +1,30 @@
 package com.ai.intellimate.explore
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.design.noRippleClickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,13 +40,17 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,6 +59,7 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.ui.BackToTop
 import com.ai.intellimate.explore.special.HorizontalAgentCardList
@@ -59,6 +73,7 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 // 判断是否为动图URL（非视频）
@@ -177,6 +192,11 @@ fun ExploreContent(
         }
     }
     val showBackToTopButton by remember { derivedStateOf { !isAtExploreStart } }
+    val showGoToBottomButton by remember {
+        derivedStateOf {
+            BuildConfig.DEBUG && (lazyPagingItems?.itemCount ?: 0) > 0
+        }
+    }
 
     // 标记是否正在恢复滚动位置，用于防止在恢复期间保存错误的位置
     var isRestoringScrollPosition by remember { mutableStateOf(false) }
@@ -548,7 +568,8 @@ fun ExploreContent(
                 }
 
                 // 复用 Chat 的回到顶部按钮样式与交互：不在顶部时显示，点击平滑滚动回第一个 item。
-                BackToTop(
+                // Debug 下增加 Go to bottom：点击持续请求下一页直到没有新角色，再滚到底部。
+                Row(
                     modifier =
                         Modifier.align(Alignment.BottomCenter)
                             .padding(
@@ -556,9 +577,45 @@ fun ExploreContent(
                                     innerPadding.calculateBottomPadding() +
                                         UiConfigs.Spacing.MediumPlus
                             ),
-                    visible = showBackToTopButton,
-                    onClick = { scope.launch { gridState.animateScrollToItem(0) } },
-                )
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GoToBottomButton(
+                        visible = showGoToBottomButton,
+                        onClick = {
+                            val items = lazyPagingItems ?: return@GoToBottomButton
+                            scope.launch {
+                                var previousCount = items.itemCount
+                                while (true) {
+                                    val lastIndex =
+                                        themeItemCount +
+                                            (items.itemCount - 1).coerceAtLeast(0)
+                                    if (lastIndex < themeItemCount) break
+                                    gridState.animateScrollToItem(lastIndex)
+                                    snapshotFlow { items.loadState.append }
+                                        .first { it is LoadState.NotLoading }
+                                    val appendState = items.loadState.append
+                                    if (
+                                        appendState is LoadState.NotLoading &&
+                                            appendState.endOfPaginationReached
+                                    ) break
+                                    if (items.itemCount == previousCount) break
+                                    previousCount = items.itemCount
+                                }
+                                val finalLast =
+                                    themeItemCount +
+                                        (items.itemCount - 1).coerceAtLeast(0)
+                                if (finalLast >= themeItemCount) {
+                                    gridState.animateScrollToItem(finalLast)
+                                }
+                            }
+                        },
+                    )
+                    BackToTop(
+                        visible = showBackToTopButton,
+                        onClick = { scope.launch { gridState.animateScrollToItem(0) } },
+                    )
+                }
             }
         }
     }
@@ -569,5 +626,49 @@ fun ExploreContent(
 private fun EmptyStateIndicator() {
     Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
+    }
+}
+
+/**
+ * Explore 页 Go to bottom 悬浮按钮（仅 debug 构建显示）。
+ * 与 Back to top 同风格：圆形、白边、半透明黑底，双下箭头图标；点击后持续请求下一页直到没有新角色并滚到底部。
+ */
+@Composable
+private fun GoToBottomButton(
+    modifier: Modifier = Modifier,
+    visible: Boolean,
+    onClick: () -> Unit,
+) {
+    val config = UiConfigs.ChatPage.FloatingScrollButton
+    AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
+        Box(
+            modifier =
+                Modifier.size(config.ButtonSize)
+                    .clip(CircleShape)
+                    .border(
+                        config.BorderWidth,
+                        brush =
+                            Brush.horizontalGradient(
+                                colors =
+                                    listOf(
+                                        Color.White.copy(config.BorderGradientStartAlpha),
+                                        Color.White.copy(config.BorderGradientEndAlpha),
+                                    )
+                            ),
+                        shape = CircleShape,
+                    )
+                    .background(Color.Black.copy(alpha = config.BackgroundAlpha), CircleShape)
+                    .alpha(1f)
+                    .noRippleClickable(onClick = onClick)
+                    .padding(config.InnerPadding),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.keyboard_double_arrow_down_24px),
+                contentDescription = stringResource(R.string.explore_go_to_bottom_cd),
+                modifier = Modifier.size(config.IconSize),
+                tint = Color.White,
+            )
+        }
     }
 }
