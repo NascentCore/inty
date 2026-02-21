@@ -91,6 +91,8 @@ fun ChatInput(
     val inputSelection = chatViewModel.inputSelection.collectAsState()
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
+    val sceneActionTemplate =
+        if (agentInfo?.useDoubleAsteriskActionMarker() == true) "**" else "()"
 
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -393,7 +395,7 @@ fun ChatInput(
                 if (!isKeyboardVisible) {
                     focusInputAndShowKeyboard()
                 }
-                val templateLength = SCENE_ACTION_TEMPLATE.length
+                val templateLength = sceneActionTemplate.length
                 val currentText = inputData.value
                 if (currentText.length > CHAT_INPUT_MAX_LENGTH - templateLength) {
                     ToastUtils.showShort(R.string.str_message_is_too_long)
@@ -402,7 +404,7 @@ fun ChatInput(
                     val newText =
                         buildString(currentText.length + templateLength) {
                             append(currentText.take(safeSelection))
-                            append(SCENE_ACTION_TEMPLATE)
+                            append(sceneActionTemplate)
                             append(currentText.substring(safeSelection))
                         }
                     chatViewModel.inputData.value = newText
@@ -420,6 +422,7 @@ fun ChatInput(
                 if (showSceneActionButton) {
                     SceneActionQuickButton(
                         buttonHeight = config.ButtonSize,
+                        sceneActionTemplate = sceneActionTemplate,
                         onClick = onSceneActionClick,
                     )
                 }
@@ -484,6 +487,7 @@ private fun MultiUseAccessButton(
 private fun SceneActionQuickButton(
     modifier: Modifier = Modifier,
     buttonHeight: Dp,
+    sceneActionTemplate: String,
     onClick: () -> Unit,
 ) {
     Box(
@@ -497,7 +501,7 @@ private fun SceneActionQuickButton(
     ) {
         Text(
             modifier = Modifier.padding(horizontal = 10.dp),
-            text = SCENE_ACTION_TEMPLATE,
+            text = sceneActionTemplate,
             color = Color.White,
             fontSize = 14.sp,
         )
@@ -655,7 +659,6 @@ private fun VoiceHoldToTalkButton(
 }
 
 private val NameDelimiterRegex = "\\s+".toRegex()
-private const val SCENE_ACTION_TEMPLATE = "()"
 private const val CHAT_INPUT_MAX_LENGTH = 500
 private const val VOICE_INPUT_MAX_RESULTS = 1
 

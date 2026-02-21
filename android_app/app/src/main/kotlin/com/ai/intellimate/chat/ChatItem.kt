@@ -116,6 +116,7 @@ import com.ai.intellimate.ui.components.ShimmerPlaceholder
 import com.ai.intellimate.utils.ChatTextFormatter
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -140,6 +141,7 @@ fun ChatItem(
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
 
+    val agentInfoForFormatting by (chatViewModel?.agentInfo ?: flowOf(null)).collectAsState(initial = null)
     if (item.type == "text" || item.type.isNullOrBlank()) {
         when (item.role) {
             "assistant" -> {
@@ -156,7 +158,11 @@ fun ChatItem(
             }
 
             "user" -> {
-                ChatItemUser(item, messageFontSizeSp)
+                ChatItemUser(
+                    item,
+                    messageFontSizeSp,
+                    useDoubleAsteriskActionMarker = agentInfoForFormatting?.useDoubleAsteriskActionMarker() ?: false,
+                )
             }
 
             "system" -> {
@@ -727,12 +733,15 @@ private fun ChatItemAI(
                                     item.content != "loading_animation"
 
                             if (item.content.isNotEmpty()) {
+                                val useDoubleAsterisk =
+                                    agentInfo?.useDoubleAsteriskActionMarker() ?: false
                                 StyledMessageText(
                                     text = item.content,
                                     fontSize = messageFontSize,
                                     fontWeight = FontWeight.Normal,
                                     normalColor = Color.White,
                                     actionColor = Color.White.copy(0.55f),
+                                    useDoubleAsteriskActionMarker = useDoubleAsterisk,
                                     isFlow = isFlow,
                                     onDisplayComplete = {
                                         // 标记消息已完整显示，避免再次流式显示
@@ -995,9 +1004,13 @@ private fun ChatItemAI(
         }
 }
 
-/** 用户消息气泡布局，靠右对齐。 */
+/** 用户消息气泡布局，靠右对齐。与当前 agent 一致：*...* 作为动作标记时，用户消息内 *text* 也以斜体显示且不显示 *。 */
 @Composable
-private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
+private fun ChatItemUser(
+    item: MessageEntity,
+    messageFontSizeSp: Float,
+    useDoubleAsteriskActionMarker: Boolean = false,
+) {
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
@@ -1036,6 +1049,7 @@ private fun ChatItemUser(item: MessageEntity, messageFontSizeSp: Float) {
                         fontWeight = FontWeight.Normal,
                         normalColor = Color(0xff090909),
                         actionColor = Color(0xff090909).copy(0.6f),
+                        useDoubleAsteriskActionMarker = useDoubleAsteriskActionMarker,
                     )
                 }
             }
@@ -1178,6 +1192,11 @@ private fun String.debugEllipsize(maxLength: Int = DEBUG_METADATA_VALUE_MAX): St
     return take(maxLength - 3) + "..."
 }
 
+/**
+ * 聊天气泡内消息正文。动作描述（括号或 *...*）以斜体+actionColor 显示。
+ *
+ * @param useDoubleAsteriskActionMarker true 时用 *...* 识别动作，false 时用 ()/（）
+ */
 @Composable
 private fun StyledMessageText(
     text: String,
@@ -1185,6 +1204,7 @@ private fun StyledMessageText(
     fontWeight: FontWeight,
     normalColor: Color,
     actionColor: Color,
+    useDoubleAsteriskActionMarker: Boolean = false,
     isFlow: Boolean = false,
     onDisplayComplete: (() -> Unit)? = null,
 ) {
@@ -1229,6 +1249,7 @@ private fun StyledMessageText(
                 fontWeight = fontWeight,
                 normalColor = normalColor,
                 italicColor = actionColor,
+                actionMarkerBrackets = !useDoubleAsteriskActionMarker,
             )
     )
 }

@@ -10,17 +10,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 
-/** 聊天文本格式化工具类 将括号内容转换为斜体，支持嵌套括号 */
+/** 聊天文本格式化工具类：将动作描述（括号或 *...*）转为斜体；括号与 * 二选一，由 [actionMarkerBrackets] 控制。 */
 object ChatTextFormatter {
 
+    private const val SINGLE_ASTERISK_LEN = 1
+
     /**
-     * 格式化聊天消息文本
+     * 格式化聊天消息文本。空字符串返回空 AnnotatedString。
      *
      * @param text 原始文本
      * @param fontSize 字体大小
      * @param fontWeight 字体粗细
      * @param normalColor 正常文本颜色
-     * @param italicColor 斜体文本颜色
+     * @param italicColor 斜体文本颜色（动作描述）
+     * @param actionMarkerBrackets true 用 ()/（） 标记动作，false 用 *...* 标记
      * @return 格式化后的AnnotatedString
      */
     fun formatChatMessage(
@@ -29,100 +32,98 @@ object ChatTextFormatter {
         fontWeight: FontWeight,
         normalColor: Color,
         italicColor: Color,
-    ): AnnotatedString = buildAnnotatedString {
-        val bracketPairs = findBracketPairs(text)
-        var currentIndex = 0
-        var pairIndex = 0
-
-        while (currentIndex < text.length) {
-            if (pairIndex < bracketPairs.size && currentIndex == bracketPairs[pairIndex].first) {
-                // 开始括号 - 斜体样式
-                withStyle(
-                    SpanStyle(
-                        color = italicColor,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Default,
-                    )
-                ) {
-                    append(text[currentIndex])
-                }
-                currentIndex++
-
-                // 括号内容为斜体
-                val endIndex = bracketPairs[pairIndex].second
-                // 确保索引有效，避免越界
-                if (currentIndex < endIndex) {
-                    withStyle(
-                        SpanStyle(
-                            color = italicColor,
-                            fontSize = fontSize,
-                            fontWeight = fontWeight,
-                            fontStyle = FontStyle.Italic,
-                            fontFamily = FontFamily.Default,
-                        )
-                    ) {
-                        append(text.substring(currentIndex, endIndex))
+        actionMarkerBrackets: Boolean = true,
+    ): AnnotatedString {
+        val actionRanges =
+            if (actionMarkerBrackets) findBracketPairs(text)
+            else findSingleAsteriskPairs(text)
+        val italicStyle =
+            SpanStyle(
+                color = italicColor,
+                fontSize = fontSize,
+                fontWeight = fontWeight,
+                fontStyle = FontStyle.Italic,
+                fontFamily = FontFamily.Default,
+            )
+        val normalStyle =
+            SpanStyle(
+                color = normalColor,
+                fontSize = fontSize,
+                fontWeight = fontWeight,
+                fontFamily = FontFamily.Default,
+            )
+        return buildAnnotatedString {
+            var currentIndex = 0
+            var pairIndex = 0
+            while (currentIndex < text.length) {
+                if (pairIndex < actionRanges.size && currentIndex == actionRanges[pairIndex].first) {
+                    val endIndex = actionRanges[pairIndex].second
+                    withStyle(italicStyle) {
+                        if (actionMarkerBrackets) {
+                            if (endIndex < text.length) {
+                                append(text.substring(currentIndex, endIndex + 1))
+                            } else {
+                                append(text.substring(currentIndex))
+                            }
+                        } else {
+                            // *...* 模式：只追加中间内容，不显示 *
+                            val innerStart = currentIndex + SINGLE_ASTERISK_LEN
+                            val innerEndExclusive = endIndex
+                            if (innerStart < innerEndExclusive) {
+                                append(text.substring(innerStart, innerEndExclusive))
+                            }
+                        }
                     }
-                }
-
-                // 结束括号 - 斜体样式
-                // 确保索引有效，避免越界
-                if (endIndex < text.length) {
-                    withStyle(
-                        SpanStyle(
-                            color = italicColor,
-                            fontSize = fontSize,
-                            fontWeight = fontWeight,
-                            fontStyle = FontStyle.Italic,
-                            fontFamily = FontFamily.Default,
-                        )
-                    ) {
-                        append(text[endIndex])
-                    }
-                    currentIndex = endIndex + 1
+                    currentIndex = if (endIndex < text.length) endIndex + 1 else text.length
+                    pairIndex++
                 } else {
-                    // 如果索引无效，跳过当前括号对
-                    currentIndex = text.length
-                }
-                pairIndex++
-            } else {
-                // 普通文本 - 按字符串片段添加而不是逐字符，避免破坏emoji
-                val nextBracketIndex =
-                    if (pairIndex < bracketPairs.size) {
-                        bracketPairs[pairIndex].first
+                    val nextStart =
+                        if (pairIndex < actionRanges.size) actionRanges[pairIndex].first
+                        else text.length
+                    if (currentIndex < nextStart) {
+                        withStyle(normalStyle) {
+                            append(text.substring(currentIndex, nextStart))
+                        }
+                        currentIndex = nextStart
                     } else {
-                        text.length
-                    }
-
-                // 确保索引有效，避免越界
-                if (currentIndex < nextBracketIndex) {
-                    withStyle(
-                        SpanStyle(
-                            color = normalColor,
-                            fontSize = fontSize,
-                            fontWeight = fontWeight,
-                            fontFamily = FontFamily.Default,
-                        )
-                    ) {
-                        append(text.substring(currentIndex, nextBracketIndex))
-                    }
-                    currentIndex = nextBracketIndex
-                } else {
-                    // 如果索引无效，跳过当前括号对，避免死循环
-                    if (pairIndex < bracketPairs.size) {
-                        pairIndex++
-                    } else {
-                        // 没有更多括号对，直接跳到文本末尾
-                        currentIndex = text.length
+                        if (pairIndex < actionRanges.size) pairIndex++
+                        else currentIndex = text.length
                     }
                 }
             }
         }
     }
 
-    /** 查找匹配的括号对 */
+    /** 查找非重叠的 *...* 对（单个 * 包裹），返回 (start, end) 含首尾 * 的闭区间；** 不视为一对。 */
+    private fun findSingleAsteriskPairs(text: String): List<Pair<Int, Int>> {
+        val pairs = mutableListOf<Pair<Int, Int>>()
+        var i = 0
+        while (i < text.length) {
+            if (text[i] == '*' && (i + 1 >= text.length || text[i + 1] != '*')) {
+                var j = i + 1
+                while (j < text.length) {
+                    when {
+                        text[j] == '*' && (j + 1 >= text.length || text[j + 1] != '*') -> {
+                            pairs.add(Pair(i, j))
+                            i = j + 1
+                            break
+                        }
+                        text[j] == '*' && j + 1 < text.length && text[j + 1] == '*' -> j += 2
+                        else -> j++
+                    }
+                }
+                // 未找到配对闭合 * 时跳过该起始 *，避免重复匹配
+                if (j >= text.length) i++
+            } else if (text[i] == '*' && i + 1 < text.length && text[i + 1] == '*') {
+                i += 2
+            } else {
+                i++
+            }
+        }
+        return pairs
+    }
+
+    /** 查找匹配的括号对，返回 (start, end) 含括号的闭区间。 */
     private fun findBracketPairs(text: String): List<Pair<Int, Int>> {
         val bracketPairs = mutableListOf<Pair<Int, Int>>()
         val stack = mutableListOf<Pair<Char, Int>>()

@@ -606,6 +606,7 @@
     <string name="boost_character_energy_points_hint">This score ranks IntelliMates on the leaderboard.</string>
     <string name="explore_boost_shortcut">Top IntelliMates</string>
     <string name="explore_boost_shortcut_cd">Open credits leaderboard</string>
+    <string name="explore_go_to_bottom_cd">Go to bottom</string>
     <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
     <string name="chat_reset_cost_hint">Non-members cost %1$d credits. Members reset for free.</string>
     <string name="reset">Reset</string>

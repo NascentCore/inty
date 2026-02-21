@@ -8,11 +8,12 @@ Review the code in context (current file, selection, or diff) and then propose a
 
 1. **Review**
    - Understand what the code does and its constraints (AGENTS.md, tests, existing patterns).
-   - Check for bugs, edge cases, error handling, and security/sensitivity (e.g. no leaked secrets).
-   - Note duplication, unclear names, magic constants, and missing tests or docs.
+   - Critique architecture soundness.
+   - Check for bugs.
 
 2. **Enhance**
-   - Suggest and implement improvements: readability, structure, naming, tests, and docs.
+   - Propose architecture improvement to improve clarity
+   - Suggest and implement improvements: readability, structure, naming.
    - Prefer small, clear edits.
    - Avoid changing behavior unless the user asks.
    - After edits: re-read the diff, run relevant tests, and fix any new broken tests.
@@ -20,7 +21,8 @@ Review the code in context (current file, selection, or diff) and then propose a
 
 ## Checklist
 
-- [ ] Behavior and edge cases understood
-- [ ] No unintended side effects or API changes
+- [ ] User intention understood
+- [ ] Implementation architecture understood
+- [ ] Architecture revised if needed
 - [ ] Follows project style and AGENTS.md
 - [ ] Tests/docs updated if behavior or contract changed
