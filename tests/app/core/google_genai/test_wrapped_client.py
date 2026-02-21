@@ -1,23 +1,26 @@
 """Tests for app.core.google_genai.wrapped_client.AsyncClient."""
 
+import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 from google.genai import types
 
+from app.core.google_genai.create import create_genai_client
 from app.core.google_genai.predefined_configs import (
     GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
 )
 from app.core.google_genai.wrapped_client import (
-    AsyncClient,
+    WrappedClient,
     _process_inputs_generate_image,
     _process_outputs_generate_image,
 )
+from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
 
 
 def test_async_client_stores_client():
     client = Mock()
-    wrapper = AsyncClient(client=client)
+    wrapper = WrappedClient(client=client)
     assert wrapper.client is client
 
 
@@ -28,8 +31,8 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts()
     client = Mock()
     client.models = mock_models
 
-    wrapper = AsyncClient(client=client)
-    await wrapper.generate_image(model="imagen-3", contents=["a cat", "on the beach"])
+    wrapper = WrappedClient(client=client)
+    await wrapper.async_generate_image(model="imagen-3", contents=["a cat", "on the beach"])
 
     mock_models.generate_content.assert_called_once()
     call_kw = mock_models.generate_content.call_args.kwargs
@@ -52,9 +55,9 @@ async def test_generate_image_jpeg_url_becomes_part_from_uri():
     client = Mock()
     client.models = mock_models
 
-    wrapper = AsyncClient(client=client)
+    wrapper = WrappedClient(client=client)
     url = "https://example.com/photo.jpeg"
-    await wrapper.generate_image(model="imagen-3", contents=[url])
+    await wrapper.async_generate_image(model="imagen-3", contents=[url])
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -72,9 +75,9 @@ async def test_generate_image_jpg_url_becomes_part_from_uri():
     client = Mock()
     client.models = mock_models
 
-    wrapper = AsyncClient(client=client)
+    wrapper = WrappedClient(client=client)
     url = "https://cdn.example.org/image.jpg"
-    await wrapper.generate_image(model="imagen-3", contents=[url])
+    await wrapper.async_generate_image(model="imagen-3", contents=[url])
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -92,8 +95,8 @@ async def test_generate_image_plain_text_not_treated_as_uri():
     client = Mock()
     client.models = mock_models
 
-    wrapper = AsyncClient(client=client)
-    await wrapper.generate_image(model="imagen-3", contents=["http is a protocol"])
+    wrapper = WrappedClient(client=client)
+    await wrapper.async_generate_image(model="imagen-3", contents=["http is a protocol"])
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -108,8 +111,8 @@ async def test_generate_image_mixed_text_and_image_url():
     client = Mock()
     client.models = mock_models
 
-    wrapper = AsyncClient(client=client)
-    await wrapper.generate_image(
+    wrapper = WrappedClient(client=client)
+    await wrapper.async_generate_image(
         model="imagen-3",
         contents=["draw a dog", "https://example.com/ref.jpeg", "in the garden"],
     )
@@ -132,8 +135,8 @@ async def test_generate_image_returns_result_of_generate_content():
     client = Mock()
     client.models = mock_models
 
-    wrapper = AsyncClient(client=client)
-    result = await wrapper.generate_image(model="imagen-3", contents=["hello"])
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(model="imagen-3", contents=["hello"])
 
     assert result is expected_result
 
@@ -189,11 +192,15 @@ def test_generate_image_has_traceable_decorator_configured():
     """generate_image 为 async 且模块已配置 LangSmith tracing（traceable + process_inputs/process_outputs）。"""
     import inspect
 
-    assert inspect.iscoroutinefunction(AsyncClient.generate_image)
+    assert inspect.iscoroutinefunction(WrappedClient.async_generate_image)
     assert _process_inputs_generate_image(None, "m", ["c"]) == {"model": "m", "contents": ["c"]}
     assert _process_outputs_generate_image(None) == {"status": "none", "candidates_count": 0}
 
 @pytest.mark.noci
-def test_generate_image_trace_with_real_langsmith():
+@pytest.mark.asyncio
+async def test_generate_image_trace_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
-    pass
+    client = create_genai_client()
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(model=IMAGEN_4_FAST.id_on_provider, contents=["a cat on the beach"])
+    assert result is not None

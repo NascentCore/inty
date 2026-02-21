@@ -4,6 +4,7 @@ Ref: https://docs.langchain.com/langsmith/trace-with-google-gemini#configure-tra
 Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_langsmith
 """
 from __future__ import annotations
+from typing import Literal
 
 # -----------------------------------------------------------------------------
 # Official wrapper: langsmith.wrappers.wrap_gemini
@@ -43,7 +44,8 @@ from google import genai
 from google.genai import types
 from langsmith.run_helpers import traceable
 
-from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
+from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
+from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
 
 
 def _process_inputs_generate_image(
@@ -93,8 +95,8 @@ def _process_outputs_generate_image(response: object) -> dict:
     return out
 
 
-class AsyncClient:
-    def __init__(self, client: genai.aio.Client):
+class WrappedClient:
+    def __init__(self, client: genai.Client):
         self.client = client
 
     @traceable(
@@ -103,26 +105,57 @@ class AsyncClient:
         process_inputs=_process_inputs_generate_image,
         process_outputs=_process_outputs_generate_image,
     )
-    async def generate_image(self, model: str, contents: list[str]):
+    async def async_generate_image(
+        self, 
+        model: Literal[
+            NANO_BANANA.id_on_provider,
+            NANO_BANANA_PRO.id_on_provider,
+            IMAGEN_4_FAST.id_on_provider,
+            IMAGEN_4.id_on_provider,
+        ],
+        contents: list[str]) -> types.GeneratedContent:
         """
         使用指定的模型生成图片。
         contents 是 jpeg/jpg 文件 http url、或文本提示词；这个设计符合目前消息生图的需求。
         本方法已用 LangSmith @traceable 追踪输入与输出摘要。
+
+        Parameters:
+            model: 模型 ID，用于在代码中唯一标识一个模型。
+            contents: 提示词列表，用于生成图片。
+
+        Returns:
+            types.GeneratedContent 对象，包含生成的图片。
         """
-        parts = []
-        for content in contents:
-            # 如果是 jpeg url，则转换为 Part.from_uri
-            if content.startswith("http") and (content.endswith(".jpeg") or content.endswith(".jpg")):
-                parts.append(types.Part.from_uri(file_uri=content, mime_type="image/jpeg"))
-            else:
-                parts.append(types.Part.from_text(text=content))
-        return await self.client.models.generate_content(
-            model=model,
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=parts,
+        match model:
+            case NANO_BANANA.id_on_provider | NANO_BANANA_PRO.id_on_provider:
+                # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
+                parts = []
+                for content in contents:
+                    # 如果是 jpeg url，则转换为 Part.from_uri
+                    if content.startswith("http") and (content.endswith(".jpeg") or content.endswith(".jpg")):
+                        parts.append(types.Part.from_uri(file_uri=content, mime_type="image/jpeg"))
+                    else:
+                        parts.append(types.Part.from_text(text=content))
+                return await self.client.aio.models.generate_content(
+                    model=model,
+                    contents=[
+                        types.Content(
+                            role="user",
+                            parts=parts,
+                        )
+                    ],
+                    config=GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
                 )
-            ],
-            config=GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
-        )
+            case IMAGEN_4_FAST.id_on_provider | IMAGEN_4.id_on_provider:
+                if len(contents) != 1:
+                    raise ValueError("Imagen 4.0 Fast 和 Imagen 4.0 模型只支持一个提示词")
+                return await self.client.aio.models.generate_images(
+                    model=model,
+                    prompt=contents[0],
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio=ASPECT_RATIO_9_16,
+                    ),
+                )
+            case _:
+                raise ValueError(f"Unsupported model: {model}")
