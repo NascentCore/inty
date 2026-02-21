@@ -213,8 +213,9 @@ class EmbeddingConfig:
 class AgentConfig:
     api_key: str
     langchain_api_key: str
+    # DEPRECATED: Do not use. Use free_user_chat_model and sub_user_chat_model instead.
     model: str = GEMINI_2_5_FLASH
-    # Free users (non-superuser) use this model by default to reduce cost.
+    # Free users use this model by default to reduce cost.
     free_user_chat_model: str = GEMINI_2_5_FLASH_LITE
     # Subscribed users and superusers use this model by default.
     sub_user_chat_model: str = GEMINI_2_5_FLASH
@@ -232,7 +233,10 @@ class AgentConfig:
     presence_penalty: float = 0.5
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
+
+    # TODO: 这是做什么的？
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
+
     free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
     sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词

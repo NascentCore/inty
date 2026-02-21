@@ -7,8 +7,12 @@ from google.genai import types
 from app.core.agent.prompts import R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
 from app.core.google_genai.utils import get_text_part
 
+
+ASPECT_RATIO_9_16 = "9:16"
+
+
 IMAGE_CONFIG_9_16_1K = types.ImageConfig(
-    aspect_ratio="9:16",
+    aspect_ratio=ASPECT_RATIO_9_16,
     image_size="1K",
     # NOTE: 下面两个参数在 Gemini APIs 中不支持。
     # 保留用于支持 ImageGen 系列模型。
