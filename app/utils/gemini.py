@@ -305,18 +305,22 @@ def text_to_image(
     model: Optional[str] = None,
 ) -> List[ImagenGeneratedImage]:
     """
-    使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
-    支持includeRaiReason参数获取RAI过滤原因
+    使用 output_gcs_uri 将生成的背景图由 SDK 直接写入 GCS，返回实际生成的图片
+    GCS 路径列表。支持 include_rai_reason 获取 RAI 过滤原因。
+
+    GCS：generate_images 在 config 中传入 output_gcs_uri 后由 SDK 直接上传，
+    无需应用侧再调用 upload_to_gcs。可选：output_compression_quality (0-100)
+    可控制 JPEG 压缩质量，当前未传。
 
     Args:
         prompt (str): 生成图片的描述提示词
         negative_prompt (str): 生成图片的负面提示词
-        gcs_uri_base (str): GCS 存储基础URI
+        gcs_uri_base (str): GCS 存储基础 URI
         count (int): 生成图片数量，默认为1
         aspect_ratio (str): 图片尺寸比例，默认为"9:16"
 
     Returns:
-        list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
+        list: 生成图片的 GCS/HTTPS 信息列表，或包含 RAI 原因的字典
     """
     try:
         logger.debug(
@@ -327,7 +331,8 @@ def text_to_image(
             f"aspect_ratio: {aspect_ratio}"
         )
 
-        # 使用新的Google Gen AI SDK生成图片
+        # 使用新的 Google Gen AI SDK 生成图片；SDK 按 output_gcs_uri 直接写入 GCS。
+        # 可选 output_compression_quality (0-100) 未传，使用 SDK 默认。
         config = types.GenerateImagesConfig(
             negative_prompt=negative_prompt,
             number_of_images=count,

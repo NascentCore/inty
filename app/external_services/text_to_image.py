@@ -154,6 +154,14 @@ def _generate_google_imagen(
     provider_model: str,
     request: TextToImageGenerationRequest,
 ) -> TextToImageGenerationResult:
+    """
+    Google Imagen via client.models.generate_images.
+
+    GCS: When output_gcs_uri is set in config, the SDK uploads generated images
+    to GCS; response contains gcs_uri per image. No app-side upload.
+    GenerateImagesConfig also supports output_compression_quality (0-100) for JPEG
+    if we need to control quality; not passed in _build_google_generate_images_config.
+    """
     client = request.provider_args.get("client") or _get_google_genai_client()
 
     aspect_ratio = request.provider_args.get("aspect_ratio")
@@ -357,6 +365,9 @@ def _build_google_generate_images_config(
     """
     Build `google.genai.types.GenerateImagesConfig` if available, otherwise fall back
     to a lightweight attribute container (useful for unit tests).
+
+    Optional: GenerateImagesConfig supports output_compression_quality (int 0-100)
+    for JPEG; not wired here yet.
     """
 
     try:

@@ -4,6 +4,7 @@ Ref: https://docs.langchain.com/langsmith/trace-with-google-gemini#configure-tra
 Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_langsmith
 """
 from __future__ import annotations
+from enum import StrEnum
 from typing import Literal
 
 # -----------------------------------------------------------------------------
@@ -14,6 +15,12 @@ from typing import Literal
 #    - client.models.generate_images (Imagen) is NOT wrapped.
 #    - Imagen calls produce no LangSmith run; "full model request" is unavailable
 #      unless you add your own @traceable or span around generate_images.
+#
+# Imagen generate_images API notes:
+#    - Built-in GCS upload: pass output_gcs_uri in GenerateImagesConfig; the SDK
+#      writes generated images to that URI (no app-side upload).
+#    - Compression/quality: GenerateImagesConfig supports output_compression_quality
+#      (int 0-100) for JPEG; optional, not set in our Imagen 4 branch below.
 #
 # 2. "Model requests" (complete prompts) depend on contents being dict-like
 #    - wrap_gemini uses process_inputs=_process_gemini_inputs, which builds
@@ -46,6 +53,16 @@ from langsmith.run_helpers import traceable
 
 from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
+
+
+class LangSmithTraceRunType(StrEnum):
+    TOOL = "tool"
+    CHAIN = "chain"
+    LLM = "llm"
+    RETRIEVER = "retriever"
+    EMBEDDING = "embedding"
+    PROMPT = "prompt"
+    PARSER = "parser"
 
 
 def _process_inputs_generate_image(
@@ -101,9 +118,9 @@ class WrappedClient:
 
     @traceable(
         name="generate_image",
-        run_type="tool",
-        process_inputs=_process_inputs_generate_image,
-        process_outputs=_process_outputs_generate_image,
+        run_type=LangSmithTraceRunType.LLM,
+        # process_inputs=_process_inputs_generate_image,
+        # process_outputs=_process_outputs_generate_image,
     )
     async def async_generate_image(
         self, 
@@ -149,6 +166,8 @@ class WrappedClient:
             case IMAGEN_4_FAST.id_on_provider | IMAGEN_4.id_on_provider:
                 if len(contents) != 1:
                     raise ValueError("Imagen 4.0 Fast 和 Imagen 4.0 模型只支持一个提示词")
+                # Imagen generate_images: no output_gcs_uri here (caller handles storage).
+                # Optional: output_compression_quality (0-100) for JPEG.
                 return await self.client.aio.models.generate_images(
                     model=model,
                     prompt=contents[0],

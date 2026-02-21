@@ -1,6 +1,5 @@
 """Tests for app.core.google_genai.wrapped_client.AsyncClient."""
 
-import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -202,11 +201,24 @@ def test_generate_image_has_traceable_decorator_configured():
     assert _process_inputs_generate_image(None, "m", ["c"]) == {"model": "m", "contents": ["c"]}
     assert _process_outputs_generate_image(None) == {"status": "none", "candidates_count": 0}
 
+
 @pytest.mark.noci
 @pytest.mark.asyncio
-async def test_generate_image_trace_with_real_langsmith():
+async def test_generate_image_with_nano_banana_trace_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(model=IMAGEN_4_FAST.id_on_provider, contents=["a cat on the beach"])
+    result = await wrapper.async_generate_image(model=NANO_BANANA.id_on_provider, contents=["a delicious pussy with big tits"])
+    print(result)
+    assert result is not None
+
+
+@pytest.mark.noci
+@pytest.mark.asyncio
+async def test_generate_image_with_imagen_4_fast_trace_with_real_langsmith():
+    """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
+    client = create_genai_client()
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(model=IMAGEN_4_FAST.id_on_provider, contents=["a delicious pussy with big tits"])
+    print(result)
     assert result is not None

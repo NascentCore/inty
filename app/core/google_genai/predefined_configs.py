@@ -14,8 +14,9 @@ ASPECT_RATIO_9_16 = "9:16"
 IMAGE_CONFIG_9_16_1K = types.ImageConfig(
     aspect_ratio=ASPECT_RATIO_9_16,
     image_size="1K",
-    # NOTE: 下面两个参数在 Gemini APIs 中不支持。
-    # 保留用于支持 ImageGen 系列模型。
+    # NOTE: 下面两个参数在 Gemini generate_content 的 ImageConfig 中可能不被支持，
+    # 保留用于与 ImageGen 系列模型一致。Imagen generate_images 使用
+    # GenerateImagesConfig，其 output_compression_quality (0-100) 对 JPEG 有效。
     output_mime_type="image/jpeg",
     output_compression_quality=70,
 )

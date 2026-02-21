@@ -1,6 +1,10 @@
 """
 图片生成服务：基于聊天上下文和角色背景图生成图片
-使用 Gemini 2.5 Flash Image 模型实现角色外观一致性
+使用 Gemini 2.5 Flash Image 模型实现角色外观一致性。
+
+本模块使用 generate_content（非 Imagen generate_images）：图片以内联数据返回，
+由本服务调用 upload_to_gcs 上传；Imagen 的 generate_images 则通过
+output_gcs_uri 由 SDK 直接写 GCS。
 """
 
 import io
@@ -461,7 +465,11 @@ class ImageGenerationService:
         model: Optional[str] = None,
     ) -> Dict:
         """
-        使用 Gemini 模型生成聊天图片并更新到消息 meta_data
+        使用 Gemini 模型（generate_content）生成聊天图片并更新到消息 meta_data。
+
+        与 Imagen generate_images 不同：本路径使用 generate_content，返回内联图片
+        (candidate.content.parts[].inline_data)，无 output_gcs_uri；应用侧从响应中
+        取出图片字节后调用 upload_to_gcs 上传到 GCS。
 
         Args:
             db: 数据库会话
