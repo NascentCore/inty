@@ -1,45 +1,48 @@
-# MMKV 在 IntelliMate 中的使用
+# MMKV 在 IntelliMate 中的使用（迁移阶段）
 
 ## 概述
 
-IntelliMate 使用 [MMKV](https://github.com/Tencent/MMKV)（版本 2.2.4）作为轻量级键值存储，用于存储应用设置、用户偏好、会话状态等数据。所有 MMKV 操作通过 `IntySetting` 单例统一封装，提供类型安全的访问接口。
+从 `2026-02` 开始，`IntySetting` 已切换为 **DataStore 主读写**，MMKV 仅保留为历史数据迁移来源：
+
+- **所有业务读写**：通过 DataStore 完成
+- **MMKV 作用**：当 DataStore 对应键不存在时，读取 MMKV 旧值并复制到 DataStore
+- **迁移完成后**：后续读取优先且仅使用 DataStore 已迁移结果
+
+> 说明：本文档中「键命名规范、键列表」仍然有效；但存储实现已从 MMKV 主存储迁移为 DataStore 主存储。
 
 ## 初始化
 
-MMKV 在 `IntySetting` 对象的 `init` 块中自动初始化：
+MMKV 在 `IntelliMateApp.onCreate()` 初始化（用于迁移阶段读取 legacy 数据）：
 
 ```kotlin
-init {
-    MMKV.initialize(Utils.getApp())
-    allUserSetting = MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
-    
-    curUid = getCurUserID()
-    curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
+override fun onCreate() {
+    super.onCreate()
+    MMKV.initialize(this)
 }
 ```
 
-**初始化时机**：应用启动时，首次访问 `IntySetting` 时自动完成。
+**初始化时机**：应用启动时，在任何 `IntySetting` 访问前完成。
 
 ## 双实例架构
 
-### 1. `allUserSetting` - 应用级存储
-- **模式**：`SINGLE_PROCESS_MODE`（单进程模式）
+### 1. `allUserDataStore` - 应用级存储（主）
 - **用途**：存储应用级通用数据，所有用户共享
-- **实例 ID**：使用包名作为标识
 - **典型数据**：
   - 当前用户 ID (`cur_uid`)
   - Guest 模式显示标记 (`show_guest`)
   - 应用级通用数据 (`app_data_*`)
 
-### 2. `curUserSetting` - 用户级存储
-- **模式**：`MULTI_PROCESS_MODE`（多进程模式）
+### 2. `curUserDataStore` - 用户级存储（主）
 - **用途**：存储当前用户的数据，支持多用户切换
-- **实例 ID**：`"user_$curUid"`，根据用户 ID 动态创建
 - **典型数据**：
   - 用户认证信息（token）
   - 用户偏好设置
   - 会话状态
   - 用户资料
+
+### 3. `allUserLegacySetting` / `curUserLegacySetting` - MMKV（迁移只读）
+- **用途**：DataStore 缺失键时读取旧值并复制
+- **注意**：迁移逻辑不再向 MMKV 写入新业务数据
 
 ### 用户切换机制
 
