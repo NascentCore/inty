@@ -1,6 +1,10 @@
 """Auto-instrumentation test for Gemini + LangSmith: uses wrap_gemini, then queries LangSmith with retries for write delay.
 
 Requires LANGSMITH_PROJECT and GCP credentials (app.gcp_service_account_key) when run locally (noci).
+
+cp devops/config.yaml.local config.yaml
+# 拷贝 GCP 凭证到本地
+cp ~/Workspace/NascentCore/inty/.secrets/inty-backend-key.json .secrets
 """
 
 from __future__ import annotations
