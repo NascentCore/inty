@@ -35,8 +35,7 @@ object ChatTextFormatter {
         actionMarkerBrackets: Boolean = true,
     ): AnnotatedString {
         val actionRanges =
-            if (actionMarkerBrackets) findBracketPairs(text)
-            else findSingleAsteriskPairs(text)
+            if (actionMarkerBrackets) findBracketPairs(text) else findSingleAsteriskPairs(text)
         val italicStyle =
             SpanStyle(
                 color = italicColor,
@@ -56,7 +55,9 @@ object ChatTextFormatter {
             var currentIndex = 0
             var pairIndex = 0
             while (currentIndex < text.length) {
-                if (pairIndex < actionRanges.size && currentIndex == actionRanges[pairIndex].first) {
+                if (
+                    pairIndex < actionRanges.size && currentIndex == actionRanges[pairIndex].first
+                ) {
                     val endIndex = actionRanges[pairIndex].second
                     withStyle(italicStyle) {
                         if (actionMarkerBrackets) {
@@ -81,9 +82,7 @@ object ChatTextFormatter {
                         if (pairIndex < actionRanges.size) actionRanges[pairIndex].first
                         else text.length
                     if (currentIndex < nextStart) {
-                        withStyle(normalStyle) {
-                            append(text.substring(currentIndex, nextStart))
-                        }
+                        withStyle(normalStyle) { append(text.substring(currentIndex, nextStart)) }
                         currentIndex = nextStart
                     } else {
                         if (pairIndex < actionRanges.size) pairIndex++

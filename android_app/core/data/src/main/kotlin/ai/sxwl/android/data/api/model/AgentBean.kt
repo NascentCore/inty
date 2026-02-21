@@ -81,9 +81,8 @@ data class AgentInfo(
             } ?: false
 
     /**
-     * 当 agent 使用 minimax/minimax-m2-her 时，聊天中动作描述用 *...* 标记而非括号。
-     * “double asterisk” 为模型侧命名，实际为单星号对 *...*（** 不参与匹配）。
-     * 从 settings.llm_config.model 读取。
+     * 当 agent 使用 minimax/minimax-m2-her 时，聊天中动作描述用 *...* 标记而非括号。 “double asterisk” 为模型侧命名，实际为单星号对
+     * *...*（** 不参与匹配）。 从 settings.llm_config.model 读取。
      */
     fun useDoubleAsteriskActionMarker(): Boolean {
         val llmConfig = settings?.get("llm_config") as? Map<*, *> ?: return false

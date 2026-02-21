@@ -91,8 +91,7 @@ fun ChatInput(
     val inputSelection = chatViewModel.inputSelection.collectAsState()
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
-    val sceneActionTemplate =
-        if (agentInfo?.useDoubleAsteriskActionMarker() == true) "**" else "()"
+    val sceneActionTemplate = if (agentInfo?.useDoubleAsteriskActionMarker() == true) "**" else "()"
 
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current

@@ -368,7 +368,11 @@ class LiveChatService:
     ) -> types.LiveConnectConfig:
         """构建 Gemini Live 连接配置。支持带 google/ 前缀与无前缀的 voice_id。"""
         prefix, raw = voice_tts_api.parse_voice_id(voice_id or "")
-        if voice_id and prefix == voice_tts_api.VOICE_ID_PREFIX_GEMINI and raw in self.GEMINI_PREBUILT_VOICES:
+        if (
+            voice_id
+            and prefix == voice_tts_api.VOICE_ID_PREFIX_GEMINI
+            and raw in self.GEMINI_PREBUILT_VOICES
+        ):
             voice_name = raw
         elif voice_id and prefix == "" and voice_id in self.GEMINI_PREBUILT_VOICES:
             voice_name = voice_id

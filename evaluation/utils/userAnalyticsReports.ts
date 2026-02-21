@@ -280,8 +280,10 @@ export const buildDailyImageUsageSeries = (
   reports: UserAnalyticsReportItem[],
 ): DailyImageUsageSeries | null =>
   withImageGenerationSuccessRate(
-    buildUsageSeries(reports, DAILY_IMAGE_USAGE_CHART_METRICS, (dailyValues) =>
-      dailyValues,
+    buildUsageSeries(
+      reports,
+      DAILY_IMAGE_USAGE_CHART_METRICS,
+      (dailyValues) => dailyValues,
     ),
   );
 

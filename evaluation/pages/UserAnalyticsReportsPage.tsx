@@ -269,7 +269,8 @@ function ReportContent({
         >
           {generatedImages.length > 0 ? (
             <>
-              {generatedImages.length > DAILY_GENERATED_IMAGES_PREVIEW_LIMIT && (
+              {generatedImages.length >
+                DAILY_GENERATED_IMAGES_PREVIEW_LIMIT && (
                 <div style={{ marginBottom: 12, color: "#999", fontSize: 12 }}>
                   仅展示最新 {DAILY_GENERATED_IMAGES_PREVIEW_LIMIT} 张
                 </div>
@@ -277,7 +278,13 @@ function ReportContent({
               <Row gutter={[12, 12]}>
                 {previewGeneratedImages.map((item) => (
                   <Col key={item.id} xs={12} sm={8} md={6} lg={4} xl={3}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
                       <Image
                         src={item.image_url}
                         alt={`generated-${item.id}`}
@@ -288,7 +295,9 @@ function ReportContent({
                           borderRadius: 8,
                         }}
                       />
-                      <div style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}>
+                      <div
+                        style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                      >
                         {item.created_at
                           ? item.created_at.replace("T", " ").slice(0, 19)
                           : "时间未知"}
@@ -1090,7 +1099,9 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                       yaxis2: {
                         title: {
                           text: DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE,
-                          font: { color: DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR },
+                          font: {
+                            color: DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR,
+                          },
                         },
                         tickfont: {
                           color: DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR,
@@ -1200,7 +1211,13 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                                 gap: 6,
                               }}
                             >
-                              <span style={{ color: "#999", fontSize: 12, width: 24 }}>
+                              <span
+                                style={{
+                                  color: "#999",
+                                  fontSize: 12,
+                                  width: 24,
+                                }}
+                              >
                                 #{agent.rank}
                               </span>
                               <Avatar

@@ -39,8 +39,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -1246,11 +1246,18 @@ private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatVie
                     onDismissRequest = { chatViewModel.dismissChatLimitDialog() },
                     confirmButton = {
                         TextButton(onClick = { chatViewModel.dismissChatLimitDialog() }) {
-                            Text(text = stringResource(R.string.chat_subscriber_limit_reached_confirm))
+                            Text(
+                                text =
+                                    stringResource(R.string.chat_subscriber_limit_reached_confirm)
+                            )
                         }
                     },
-                    title = { Text(text = stringResource(R.string.chat_subscriber_limit_reached_title)) },
-                    text = { Text(text = stringResource(R.string.chat_subscriber_limit_reached_content)) },
+                    title = {
+                        Text(text = stringResource(R.string.chat_subscriber_limit_reached_title))
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.chat_subscriber_limit_reached_content))
+                    },
                 )
             }
         }

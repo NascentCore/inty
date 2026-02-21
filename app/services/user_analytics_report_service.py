@@ -184,7 +184,9 @@ async def _read_daily_report_from_replica(
         daily_most_discussed_agent = (
             daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
         )
-        generated_images = await service.get_generated_images_on_date(act_start, act_end)
+        generated_images = await service.get_generated_images_on_date(
+            act_start, act_end
+        )
         charts = _build_daily_charts(
             new_users,
             conversation_rounds,
@@ -290,7 +292,9 @@ async def compute_and_save_daily_report(
         daily_most_discussed_agent = (
             daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
         )
-        generated_images = await service.get_generated_images_on_date(act_start, act_end)
+        generated_images = await service.get_generated_images_on_date(
+            act_start, act_end
+        )
         charts = _build_daily_charts(
             new_users,
             conversation_rounds,
