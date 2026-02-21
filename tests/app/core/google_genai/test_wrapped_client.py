@@ -29,14 +29,15 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts()
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=Mock())
     client = Mock()
-    client.models = mock_models
+    client.aio = Mock()
+    client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(model="imagen-3", contents=["a cat", "on the beach"])
+    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=["a cat", "on the beach"])
 
     mock_models.generate_content.assert_called_once()
     call_kw = mock_models.generate_content.call_args.kwargs
-    assert call_kw["model"] == "imagen-3"
+    assert call_kw["model"] == "gemini-2.5-flash-image"
     assert call_kw["config"] is GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
     contents = call_kw["contents"]
     assert len(contents) == 1
@@ -53,11 +54,12 @@ async def test_generate_image_jpeg_url_becomes_part_from_uri():
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=Mock())
     client = Mock()
-    client.models = mock_models
+    client.aio = Mock()
+    client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
     url = "https://example.com/photo.jpeg"
-    await wrapper.async_generate_image(model="imagen-3", contents=[url])
+    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=[url])
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -73,11 +75,12 @@ async def test_generate_image_jpg_url_becomes_part_from_uri():
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=Mock())
     client = Mock()
-    client.models = mock_models
+    client.aio = Mock()
+    client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
     url = "https://cdn.example.org/image.jpg"
-    await wrapper.async_generate_image(model="imagen-3", contents=[url])
+    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=[url])
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -93,10 +96,11 @@ async def test_generate_image_plain_text_not_treated_as_uri():
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=Mock())
     client = Mock()
-    client.models = mock_models
+    client.aio = Mock()
+    client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(model="imagen-3", contents=["http is a protocol"])
+    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=["http is a protocol"])
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -109,11 +113,12 @@ async def test_generate_image_mixed_text_and_image_url():
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=Mock())
     client = Mock()
-    client.models = mock_models
+    client.aio = Mock()
+    client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
     await wrapper.async_generate_image(
-        model="imagen-3",
+        model="gemini-2.5-flash-image",
         contents=["draw a dog", "https://example.com/ref.jpeg", "in the garden"],
     )
 
@@ -133,10 +138,11 @@ async def test_generate_image_returns_result_of_generate_content():
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=expected_result)
     client = Mock()
-    client.models = mock_models
+    client.aio = Mock()
+    client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(model="imagen-3", contents=["hello"])
+    result = await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=["hello"])
 
     assert result is expected_result
 
@@ -144,11 +150,11 @@ def test_process_inputs_generate_image_records_model_and_contents_only():
     """Trace inputs 包含 model 与 contents，不包含 client。"""
     inp = _process_inputs_generate_image(
         _self=Mock(),
-        model="imagen-3",
+        model="gemini-2.5-flash-image",
         contents=["a prompt", "https://example.com/ref.jpeg"],
     )
     assert inp == {
-        "model": "imagen-3",
+        "model": "gemini-2.5-flash-image",
         "contents": ["a prompt", "https://example.com/ref.jpeg"],
     }
 
