@@ -580,3 +580,106 @@ async def test_get_user_followed_agents_returns_410():
             page_size=10,
         )
     assert exc_info.value.status_code == 410
+
+
+@pytest.mark.asyncio
+async def test_create_agent_enqueues_opening_voice_generation(db_session, monkeypatch):
+    """创建 Agent 时只投递后台任务，不在当前调用中等待语音生成。"""
+    user = models.User(
+        id=str(uuid.uuid4()),
+        readable_id=str(uuid.uuid4().int)[:8],
+        auth_type=models.AuthType.PHONE,
+        nickname="creator",
+        email=f"creator-{uuid.uuid4().hex[:8]}@example.com",
+        system_language="en",
+        is_superuser=False,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    enqueue_calls = []
+
+    def fake_enqueue(agent_id: str, expected_version: int) -> None:
+        enqueue_calls.append((agent_id, expected_version))
+
+    generate_mock = AsyncMock()
+    monkeypatch.setattr(
+        agent_service,
+        "_enqueue_agent_opening_voice_generation",
+        fake_enqueue,
+    )
+    monkeypatch.setattr(agent_service, "generate_agent_opening_voice", generate_mock)
+
+    agent_in = schemas.AgentCreate(
+        name="Create Async Voice Agent",
+        gender="FEMALE",
+        opening="Hello there.",
+    )
+    created_agent = await agent_service.create_agent(
+        db_session,
+        agent_in=agent_in,
+        user_id=user.id,
+    )
+
+    assert enqueue_calls == [(created_agent.id, created_agent.version)]
+    generate_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_update_agent_enqueues_opening_voice_generation(db_session, monkeypatch):
+    """更新 opening 时只投递后台任务，不在当前调用中等待语音生成。"""
+    user = models.User(
+        id=str(uuid.uuid4()),
+        readable_id=str(uuid.uuid4().int)[:8],
+        auth_type=models.AuthType.PHONE,
+        nickname="creator",
+        email=f"creator-{uuid.uuid4().hex[:8]}@example.com",
+        system_language="en",
+        is_superuser=False,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    agent = models.Agent(
+        id=str(uuid.uuid4()),
+        readable_id=str(uuid.uuid4().int)[:8],
+        name="Update Async Voice Agent",
+        gender=models.Gender.FEMALE,
+        opening="Old opening",
+        creator_id=user.id,
+    )
+    db_session.add(agent)
+    await db_session.commit()
+    await db_session.refresh(agent)
+
+    class DummyCacheService:
+        def invalidate_agent_config(self, agent_id: str) -> bool:
+            return bool(agent_id)
+
+    dummy_agent_manager = type("DummyAgentManager", (), {})()
+    dummy_agent_manager.reload_agent = AsyncMock(return_value=True)
+
+    enqueue_calls = []
+
+    def fake_enqueue(agent_id: str, expected_version: int) -> None:
+        enqueue_calls.append((agent_id, expected_version))
+
+    generate_mock = AsyncMock()
+    monkeypatch.setattr(agent_service, "cache_service", DummyCacheService())
+    monkeypatch.setattr(agent_service, "agent_manager", dummy_agent_manager)
+    monkeypatch.setattr(
+        agent_service,
+        "_enqueue_agent_opening_voice_generation",
+        fake_enqueue,
+    )
+    monkeypatch.setattr(agent_service, "generate_agent_opening_voice", generate_mock)
+
+    updated_agent = await agent_service.update_agent(
+        db_session,
+        db_agent=agent,
+        agent_in=AgentUpdate(opening="New opening"),
+    )
+
+    assert enqueue_calls == [(updated_agent.id, updated_agent.version)]
+    generate_mock.assert_not_awaited()

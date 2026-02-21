@@ -2,6 +2,7 @@
 将数据库中的 agent 记录转换为面向客户端端 agent 数据对象。
 """
 
+import asyncio
 import math
 import uuid
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from app.core.agent.prompt_template import (
     has_template_variable,
     render_prompt_jinja2_template,
 )
+from app.db.session import AsyncSessionLocal
 from app.external_services.gcs import (
     append_filename_suffix,
     download_from_gcs,
@@ -137,6 +139,67 @@ async def generate_agent_opening_voice(
     except Exception as e:
         logger.error(f"为Agent {agent.id} 生成开场白语音失败: {str(e)}")
         return None
+
+
+def _enqueue_agent_opening_voice_generation(
+    agent_id: str, expected_version: int
+) -> None:
+    """
+    调度开场白语音后台任务，避免阻塞创建/更新接口返回。
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        logger.warning(
+            "No running event loop; skip opening voice generation enqueue: agent_id={}, expected_version={}",
+            agent_id,
+            expected_version,
+        )
+        return
+
+    task = loop.create_task(
+        _generate_agent_opening_voice_in_background(
+            agent_id=agent_id, expected_version=expected_version
+        )
+    )
+    task.add_done_callback(_on_opening_voice_generation_task_done)
+
+
+def _on_opening_voice_generation_task_done(task: asyncio.Task[None]) -> None:
+    if task.cancelled():
+        return
+
+    error = task.exception()
+    if error is not None:
+        logger.error("agent opening voice background task failed: {}", error)
+
+
+async def _generate_agent_opening_voice_in_background(
+    agent_id: str, expected_version: int
+) -> None:
+    """
+    后台生成 opening audio，使用独立数据库会话并按版本号跳过过期任务。
+    """
+    async with AsyncSessionLocal() as background_db:
+        result = await background_db.execute(
+            select(models.Agent).where(
+                and_(
+                    models.Agent.id == agent_id,
+                    models.Agent.deleted_at.is_(None),
+                    models.Agent.version == expected_version,
+                )
+            )
+        )
+        db_agent = result.scalar_one_or_none()
+        if db_agent is None:
+            logger.debug(
+                "Skip outdated opening voice task: agent_id={}, expected_version={}",
+                agent_id,
+                expected_version,
+            )
+            return
+
+        await generate_agent_opening_voice(db_agent, background_db)
 
 
 @deprecated("app 不在显示 readable_id 字段，请使用 id 字段")
@@ -800,18 +863,16 @@ async def create_agent(
         await db.commit()
         await db.refresh(db_agent)
 
-        # 异步生成开场白语音（不阻塞Agent创建）
-        try:
-            # TODO：https://github.com/NascentCore/inty/issues/542
-            # 生成的开场语音中是包含变量名，这种场景下只能替换 agent 名字
-            # 比如 “你好，我是 {{ char }}，很高兴认识你”
-            # 如果出现了用户的名字，则无法静态生成。
-            # TODO：考虑在用户打开时再进行生成，这样用户看到的信息是不同的。
-            await generate_agent_opening_voice(db_agent, db)
-        except Exception as e:
-            logger.warning(
-                f"Agent {db_agent.id} 创建后语音生成失败，将在后续使用时生成: {str(e)}"
-            )
+        # 后台生成开场白语音（不阻塞 Agent 创建）
+        # TODO：https://github.com/NascentCore/inty/issues/542
+        # 生成的开场语音中是包含变量名，这种场景下只能替换 agent 名字
+        # 比如 “你好，我是 {{ char }}，很高兴认识你”
+        # 如果出现了用户的名字，则无法静态生成。
+        # TODO：考虑在用户打开时再进行生成，这样用户看到的信息是不同的。
+        _enqueue_agent_opening_voice_generation(
+            agent_id=db_agent.id,
+            expected_version=db_agent.version,
+        )
 
         result = await db.execute(
             select(models.Agent)
@@ -1049,16 +1110,16 @@ async def update_agent(
         await db.commit()
         await db.refresh(db_agent)
 
-        # 如果开场白文本或语音ID发生变化，重新生成语音
+        # 如果开场白文本或语音ID发生变化，后台重新生成语音
         if should_regenerate_voice:
-            try:
-                # TODO：https://github.com/NascentCore/inty/issues/542
-                # 生成的开场语音中是包含变量名，这种场景下只能替换 agent 名字
-                # 比如 “你好，我是 {{ char }}，很高兴认识你”
-                # 如果出现了用户的名字，则无法静态生成。
-                await generate_agent_opening_voice(db_agent, db)
-            except Exception as e:
-                logger.warning(f"Agent {db_agent.id} 更新后语音重新生成失败: {str(e)}")
+            # TODO：https://github.com/NascentCore/inty/issues/542
+            # 生成的开场语音中是包含变量名，这种场景下只能替换 agent 名字
+            # 比如 “你好，我是 {{ char }}，很高兴认识你”
+            # 如果出现了用户的名字，则无法静态生成。
+            _enqueue_agent_opening_voice_generation(
+                agent_id=db_agent.id,
+                expected_version=db_agent.version,
+            )
 
         # 重新查询以加载关系数据
         result = await db.execute(
