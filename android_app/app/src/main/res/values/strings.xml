@@ -121,6 +121,9 @@
     <string name="str_expired_vip_dialog_content">You have enjoyed IntelliMate Premium before. Come back and check out IntelliMate Premium\'s newest benefits and perks!</string>
     <string name="str_unlimit_dialog_content">Daily Free Chat Limit Reached! Go Premium for unlimited chats and exclusive features! Free chats refresh tomorrow — come back and keep chatting. ❤️</string>
     <string name="str_unlimit_btn_text">Unlimited Chat and More! 🔥</string>
+    <string name="chat_subscriber_limit_reached_title">Daily Premium Chat Limit Reached</string>
+    <string name="chat_subscriber_limit_reached_content">You\'ve used all available chats for today. Your daily Premium chat limit refreshes tomorrow.</string>
+    <string name="chat_subscriber_limit_reached_confirm">Got it</string>
     <!-- Image Generation Error Messages -->
     <string name="image_generation_free_limit_content">Daily Free Pic Limit Reached! Go Premium for more pics and exclusive features! Free pics refresh tomorrow - come back then.</string>
     <string name="image_generation_vip_limit_content">Oops! Daily Pic Limit Reached! You\'ve used all available pics for today. Don\'t worry—your limit refreshes tomorrow! Can\'t wait to see what you\'ll create next!</string>

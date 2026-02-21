@@ -91,6 +91,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
 - VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
+- If a subscribed user reaches the daily chat quota, IntelliMate shows a dedicated dialog (**“Daily Premium Chat Limit Reached”**) instead of the upgrade-to-premium prompt.
 - Fullscreen image viewer includes a VIP **Upscale** action (next to Share) with **1x / 2x / 4x** options. Non-subscribed users can still use it by spending **10 credits** once per open viewer session.
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/0326fd90-1bbe-4207-9e9f-1c71c4608847" />
@@ -120,6 +121,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 ### Chat & Media
 - **Voice playback issues**: Check system volume. If playback keeps failing, clear cache or restart the app; audio will re-cache automatically.
 - **Voice call screen stays blank**: Allow microphone permission when the app asks, or open Settings → Apps → IntelliMate → Permissions and enable Microphone.
+- **Daily premium chat limit reached**: If you are already subscribed and hit your daily quota, you should see a dedicated limit dialog. The quota refreshes automatically the next day.
 - **Image generation errors**: `IMAGE_GENERATION_LIMIT_REACHED` means you hit the quota. Try again later.
 
 ### Subscription

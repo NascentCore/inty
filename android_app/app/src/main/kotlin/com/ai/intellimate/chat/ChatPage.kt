@@ -40,11 +40,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -1212,31 +1214,46 @@ private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agen
 /** 聊天消息受限的dialog */
 @Composable
 private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatViewModel) {
-    val showDialog by chatViewModel.showLimitDialog.collectAsState()
-    //    val context = LocalContext.current
-    if (showDialog) {
-        val data =
-            ChatDialogData(
-                R.drawable.img_unlimit_dialog_bg,
-                stringResource(R.string.str_unlimit_dialog_content),
-                stringResource(R.string.str_unlimit_btn_text),
-            )
-        UnlimitChatDialog(
-            data,
-            onCancel = { chatViewModel.dismissDialog() },
-            onSure = {
-                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
-                }
-                chatViewModel.dismissDialog()
-            },
-            onMoreInfo = {
-                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
-                }
-                chatViewModel.dismissDialog()
-            },
-        )
+    val dialogType by chatViewModel.showChatLimitDialog.collectAsState()
+    dialogType?.let { type ->
+        when (type) {
+            ChatViewModel.ChatLimitDialogType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                val data =
+                    ChatDialogData(
+                        R.drawable.img_unlimit_dialog_bg,
+                        stringResource(R.string.str_unlimit_dialog_content),
+                        stringResource(R.string.str_unlimit_btn_text),
+                    )
+                UnlimitChatDialog(
+                    data,
+                    onCancel = { chatViewModel.dismissChatLimitDialog() },
+                    onSure = {
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
+                        }
+                        chatViewModel.dismissChatLimitDialog()
+                    },
+                    onMoreInfo = {
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
+                        }
+                        chatViewModel.dismissChatLimitDialog()
+                    },
+                )
+            }
+            ChatViewModel.ChatLimitDialogType.SUBSCRIBER_LIMIT_REACHED -> {
+                AlertDialog(
+                    onDismissRequest = { chatViewModel.dismissChatLimitDialog() },
+                    confirmButton = {
+                        TextButton(onClick = { chatViewModel.dismissChatLimitDialog() }) {
+                            Text(text = stringResource(R.string.chat_subscriber_limit_reached_confirm))
+                        }
+                    },
+                    title = { Text(text = stringResource(R.string.chat_subscriber_limit_reached_title)) },
+                    text = { Text(text = stringResource(R.string.chat_subscriber_limit_reached_content)) },
+                )
+            }
+        }
     }
 }
 
