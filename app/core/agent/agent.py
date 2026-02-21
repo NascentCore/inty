@@ -972,10 +972,14 @@ class Agent:
                 )
 
                 # API调用（带重试机制）
-                # 模型优先级：角色 model > 订阅层 model_override > 默认。chat_settings 的「选择模型」未接入。
+                # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
                 api_start = time.time()
                 agent_model = self.model_config.get("model")
                 model_name = agent_model or model_override
+                if model_name is None:
+                    raise ValueError(
+                        "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
+                    )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1260,10 +1264,14 @@ class Agent:
                 )
 
                 # API调用（使用统一的重试和 trace 逻辑）
-                # 模型优先级：角色 model > 订阅层 model_override > 默认。chat_settings 的「选择模型」未接入。
+                # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
                 api_start = time.time()
                 agent_model = self.model_config.get("model")
                 model_name = agent_model or model_override
+                if model_name is None:
+                    raise ValueError(
+                        "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
+                    )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
