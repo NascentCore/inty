@@ -145,7 +145,7 @@ class TestUploadImage:
             assert resource.resource_metadata["size"]["width"] > 0
             assert resource.resource_metadata["size"]["height"] > 0
             assert resource.resource_metadata["byte_size"] > 0
-            assert global_config_loaded_from_config_yaml.cloudflare.domain in resource.url
+            assert "cdn.example.com" in resource.url
 
         # 清理
         db.close()
@@ -454,7 +454,7 @@ class TestImageUploadCompression:
             )
 
         assert result.code == 200
-        assert global_config_loaded_from_config_yaml.cloudflare.domain in result.data.url
+        assert "cdn.example.com" in result.data.url
 
         # 清理
         db.close()
@@ -503,7 +503,7 @@ class TestImageUploadCompression:
             )
 
         assert result.code == 200
-        assert global_config_loaded_from_config_yaml.cloudflare.domain in result.data.url
+        assert "cdn.example.com" in result.data.url
 
         # 清理
         db.close()
@@ -555,7 +555,7 @@ class TestImageUploadDifferentFormats:
             )
 
         assert result.code == 200
-        assert global_config_loaded_from_config_yaml.cloudflare.domain in result.data.url
+        assert "cdn.example.com" in result.data.url
 
         # 清理
         db.close()
@@ -603,7 +603,7 @@ class TestImageUploadDifferentFormats:
             )
 
         assert result.code == 200
-        assert global_config_loaded_from_config_yaml.cloudflare.domain in result.data.url
+        assert "cdn.example.com" in result.data.url
 
         # 清理
         db.close()
@@ -658,7 +658,7 @@ class TestImageUploadCropping:
         assert result.code == 200
         assert result.data.avatar_url is not None
         assert result.data.avatar_size is not None
-        assert global_config_loaded_from_config_yaml.cloudflare.domain in result.data.avatar_url
+        assert "cdn.example.com" in result.data.avatar_url
 
         # 清理
         db.close()
@@ -885,7 +885,7 @@ class TestImageUploadResourceRecords:
             assert resource.resource_metadata["size"]["width"] > 0
             assert resource.resource_metadata["size"]["height"] > 0
             assert resource.resource_metadata["byte_size"] > 0
-            assert global_config_loaded_from_config_yaml.cloudflare.domain in resource.url
+            assert "cdn.example.com" in resource.url
 
         # 清理
         db.close()
@@ -956,7 +956,7 @@ class TestImageUploadResourceRecords:
 
         # 验证URL格式
         for resource in resources:
-            assert global_config_loaded_from_config_yaml.cloudflare.domain in resource.url
+            assert "cdn.example.com" in resource.url
 
         # 清理
         db.close()
