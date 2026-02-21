@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Auto-instrumentation test for Gemini + LangSmith: uses wrap_gemini, then queries LangSmith with retries for write delay.
 
 Requires LANGSMITH_PROJECT and GCP credentials (app.gcp_service_account_key) when run locally (noci).
@@ -7,18 +6,12 @@ cp devops/config.yaml.local config.yaml
 # 拷贝 GCP 凭证到本地
 cp ~/Workspace/NascentCore/inty/.secrets/inty-backend-key.json .secrets
 """
-=======
-"""Auto-instrumentation test for Gemini + LangSmith: uses wrap_gemini, then queries LangSmith with retries for write delay."""
->>>>>>> b46472d7 (减少递进层级)
 
 from __future__ import annotations
 
 import datetime
 import os
-<<<<<<< HEAD
 import time
-=======
->>>>>>> b46472d7 (减少递进层级)
 import uuid
 
 import langsmith
@@ -33,10 +26,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 # 轮询 LangSmith 时的尝试次数与每页 run 数量（用于写入延迟）
 _LANGSMITH_POLL_ATTEMPTS = 10
 _LANGSMITH_RUNS_PAGE_SIZE = 10
-<<<<<<< HEAD
 _LANGSMITH_POLL_SLEEP_SECONDS = 2
-=======
->>>>>>> b46472d7 (减少递进层级)
 
 
 def get_wrapped_genai_client():
@@ -68,7 +58,6 @@ def get_wrapped_genai_client():
     )
 
 
-<<<<<<< HEAD
 def _first_message_content(run: langsmith.schemas.Run) -> str | None:
     """Return the first message content from run.inputs if present, else None."""
     if not isinstance(run.inputs, dict) or "messages" not in run.inputs:
@@ -80,8 +69,6 @@ def _first_message_content(run: langsmith.schemas.Run) -> str | None:
     return first.get("content") if isinstance(first, dict) else None
 
 
-=======
->>>>>>> b46472d7 (减少递进层级)
 def find_run_contains_random_string(
     start_time: datetime.datetime, random_str: str
 ) -> langsmith.schemas.Run | None:
@@ -97,21 +84,10 @@ def find_run_contains_random_string(
         )
         runs_list = list(runs)
         for run in runs_list:
-<<<<<<< HEAD
             if _first_message_content(run) == random_str:
                 return run
         if attempt < _LANGSMITH_POLL_ATTEMPTS - 1:
             time.sleep(_LANGSMITH_POLL_SLEEP_SECONDS)
-=======
-            if not isinstance(run.inputs, dict):
-                continue
-            if "messages" not in run.inputs:
-                continue
-            if len(run.inputs["messages"]) == 0:
-                continue
-            if run.inputs["messages"][0]["content"] == random_str:
-                return run
->>>>>>> b46472d7 (减少递进层级)
     return None
 
 
