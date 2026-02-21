@@ -22,11 +22,7 @@ from langsmith import Client as LangSmithClient
 from langsmith import wrappers
 
 from app.core.config import global_config_loaded_from_config_yaml
-
-# 轮询 LangSmith 时的尝试次数与每页 run 数量（用于写入延迟）
-_LANGSMITH_POLL_ATTEMPTS = 10
-_LANGSMITH_RUNS_PAGE_SIZE = 10
-_LANGSMITH_POLL_SLEEP_SECONDS = 2
+from tests.langsmith import find_run_contains_random_string
 
 
 def get_wrapped_genai_client():
@@ -56,39 +52,6 @@ def get_wrapped_genai_client():
             },
         },
     )
-
-
-def _first_message_content(run: langsmith.schemas.Run) -> str | None:
-    """Return the first message content from run.inputs if present, else None."""
-    if not isinstance(run.inputs, dict) or "messages" not in run.inputs:
-        return None
-    messages = run.inputs["messages"]
-    if not messages:
-        return None
-    first = messages[0]
-    return first.get("content") if isinstance(first, dict) else None
-
-
-def find_run_contains_random_string(
-    start_time: datetime.datetime, random_str: str
-) -> langsmith.schemas.Run | None:
-    """Query LangSmith for a run whose first message content equals random_str; returns None if not found."""
-    ls_client = LangSmithClient()
-
-    for attempt in range(_LANGSMITH_POLL_ATTEMPTS):
-        print(f"Attempt {attempt} to find the run with the random string: {random_str}")
-        runs = ls_client.list_runs(
-            project_name=os.environ["LANGSMITH_PROJECT"],
-            start_time=start_time,
-            limit=_LANGSMITH_RUNS_PAGE_SIZE,
-        )
-        runs_list = list(runs)
-        for run in runs_list:
-            if _first_message_content(run) == random_str:
-                return run
-        if attempt < _LANGSMITH_POLL_ATTEMPTS - 1:
-            time.sleep(_LANGSMITH_POLL_SLEEP_SECONDS)
-    return None
 
 
 def _make_traced_gemini_call(wrapped_client, *, use_plain_text: bool):
