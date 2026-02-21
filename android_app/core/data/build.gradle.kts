@@ -56,7 +56,6 @@ dependencies {
 
     implementation(libs.androidx.dataStore.preferences)
     implementation(libs.androidx.dataStore)
-    implementation(libs.mmkv)
 
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)

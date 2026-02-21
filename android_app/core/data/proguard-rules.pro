@@ -101,9 +101,6 @@
 # 数据存储保护
 # ===========================================
 
-# MMKV 存储
--keep class com.tencent.mmkv.** { *; }
-
 # Room 数据库
 -keep class androidx.room.** { *; }
 -keep class * extends androidx.room.RoomDatabase { *; }

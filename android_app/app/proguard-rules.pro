@@ -176,9 +176,6 @@
 # 第三方库保护
 # ===========================================
 
-# MMKV 存储
--keep class com.tencent.mmkv.** { *; }
-
 # Coil 图片加载
 -keep class coil.** { *; }
 -keep class coil3.** { *; }

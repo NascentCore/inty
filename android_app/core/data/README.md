@@ -9,6 +9,6 @@
   - `chat/` 与 `usecase/`: 会话管理与核心用例（发送消息、加载历史、同步数据等）。
   - `chat/local/db`: Room schema（`IntyChatDatabase`、`ChatMessageEntity`、`ChatSyncStateEntity`）与离线缓存映射，所有 UI 读取均来自本地数据库。
   - `billing/`: 谷歌支付集成（价格/购买/状态/仓库/错误处理/本地存储）。
-  - `store/`: 应用设置持久化（如 `IntySetting`），详见 [MMKV_USAGE.md](./MMKV_USAGE.md)。
+  - `store/`: 应用设置持久化（如 `IntySetting`），基于 DataStore Preferences + JSON DataStore。
   - `di/`: 依赖注入模块（`ChatModule` 等）。
 - 关联: 通过 `library/network` 与后端通信；与 `core/common`、`app` 层配合形成完整业务流。

@@ -5,7 +5,7 @@ package com.ai.intellimate.boost
 
 import kotlinx.serialization.Serializable
 
-/** MMKV 中的原始快照，用于序列化存储。 */
+/** 本地存储中的原始快照，用于序列化存储。 */
 @Serializable
 data class BoostStateSnapshot(
     val availablePoints: Int = 0,
@@ -20,7 +20,7 @@ data class BoostStateSnapshot(
     val lastClaimedMonthReward: String = "",
 )
 
-/** 单个角色在 MMKV 中的快照。 */
+/** 单个角色在本地存储中的快照。 */
 @Serializable
 data class AgentBoostInfoSnapshot(
     val agentId: String = "",

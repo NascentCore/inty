@@ -2,12 +2,23 @@ package ai.sxwl.android.data.store
 
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.IntyNetworkManager
-import ai.sxwl.android.utils.AppUtils
 import android.os.Handler
 import android.os.Looper
-import com.tencent.mmkv.MMKV
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlin.random.Random
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
+private const val KEY_CUR_UID = "cur_uid"
+private const val ALL_USER_SETTINGS_STORE_NAME = "inty_all_user_setting"
+private const val USER_SETTINGS_STORE_PREFIX = "inty_user_"
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
 private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
@@ -26,14 +37,6 @@ private const val INTELLIMATE_TIP_MIN_INTERVAL_MILLIS = 8 * 60 * 60 * 1000L
 
 object IntySetting {
 
-    // App级通用标记的存储 使用的对象
-    // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
-    private val allUserSetting: MMKV =
-        MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
-
-    // 当前用户级别的数据存储
-    private var curUserSetting: MMKV
-
     // 当前UserId
     private var curUid: String = ""
 
@@ -41,30 +44,25 @@ object IntySetting {
     private val messageCountLock = Any()
 
     init {
-
-        curUid = getCurUserID()
-        curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
+        curUid = getStringValue(allUserStore(), KEY_CUR_UID) ?: ""
     }
 
     fun getCurUserID(): String {
-        return allUserSetting.decodeString("cur_uid") ?: ""
+        return curUid
     }
 
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
-        curUserSetting
-
         curUid = uid
-        curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
-        allUserSetting.putString("cur_uid", uid)
+        putStringValue(allUserStore(), KEY_CUR_UID, uid)
     }
 
     fun setToken(token: String) {
-        curUserSetting.putString("token", token)
+        putStringValue(curUserStore(), "token", token)
     }
 
     fun getCurToken(): String {
-        return curUserSetting.decodeString("token") ?: ""
+        return getStringValue(curUserStore(), "token") ?: ""
     }
 
     fun isLogin(): Boolean {
@@ -89,98 +87,98 @@ object IntySetting {
     }
 
     fun setKeyboardHeight(height: Float) {
-        allUserSetting.putFloat("keyboardHeight", height)
+        putFloatValue(allUserStore(), "keyboardHeight", height)
     }
 
     fun getKeyboardHeight(): Float {
-        return allUserSetting.getFloat("keyboardHeight", 0f)
+        return getFloatValue(allUserStore(), "keyboardHeight", 0f)
     }
 
     /** 记录是否显示keepTalking按钮（全局设置） */
     fun setShowKeepTalking(show: Boolean) {
-        curUserSetting.putBoolean("show_keep_talking", show)
+        putBooleanValue(curUserStore(), "show_keep_talking", show)
     }
 
     fun isShowKeepTalking(): Boolean {
-        return curUserSetting.decodeBool("show_keep_talking", false)
+        return getBooleanValue(curUserStore(), "show_keep_talking", false)
     }
 
     /** 检查用户是否手动设置过 Keep Talking（用于判断是否使用 Remote Config 默认值） */
     fun hasUserSetKeepTalking(): Boolean {
-        return curUserSetting.decodeBool("user_set_keep_talking", false)
+        return getBooleanValue(curUserStore(), "user_set_keep_talking", false)
     }
 
     /** 标记用户已手动设置过 Keep Talking */
     fun markUserSetKeepTalking() {
-        curUserSetting.putBoolean("user_set_keep_talking", true)
+        putBooleanValue(curUserStore(), "user_set_keep_talking", true)
     }
 
     /** 自动播放语音消息（全局设置，默认开启） */
     fun setAutoPlayAudio(play: Boolean) {
-        curUserSetting.putBoolean("auto_play_audio", play)
+        putBooleanValue(curUserStore(), "auto_play_audio", play)
     }
 
     fun isAutoPlayAudio(): Boolean {
         // 默认值为true（开启）
-        return curUserSetting.decodeBool("auto_play_audio", true)
+        return getBooleanValue(curUserStore(), "auto_play_audio", true)
     }
 
     /** 检查用户是否手动设置过 Auto Play Voice（用于判断是否使用 Remote Config 默认值） */
     fun hasUserSetAutoPlayVoice(): Boolean {
-        return curUserSetting.decodeBool("user_set_auto_play_voice", false)
+        return getBooleanValue(curUserStore(), "user_set_auto_play_voice", false)
     }
 
     /** 标记用户已手动设置过 Auto Play Voice */
     fun markUserSetAutoPlayVoice() {
-        curUserSetting.putBoolean("user_set_auto_play_voice", true)
+        putBooleanValue(curUserStore(), "user_set_auto_play_voice", true)
     }
 
     /** 自动播放背景动画（全局设置，默认开启） */
     fun setAutoPlayAnimation(enabled: Boolean) {
-        curUserSetting.putBoolean("auto_play_animation", enabled)
+        putBooleanValue(curUserStore(), "auto_play_animation", enabled)
     }
 
     /** 流式显示聊天消息 */
     fun setTextStreaming(enabled: Boolean) {
-        curUserSetting.putBoolean("text_streaming", enabled)
+        putBooleanValue(curUserStore(), "text_streaming", enabled)
     }
 
     fun isAutoPlayAnimation(): Boolean {
-        return curUserSetting.decodeBool("auto_play_animation", true)
+        return getBooleanValue(curUserStore(), "auto_play_animation", true)
     }
 
     /** 是否流式显示聊天消息 */
     fun isTextStreaming(): Boolean {
-        return curUserSetting.decodeBool("text_streaming", true)
+        return getBooleanValue(curUserStore(), "text_streaming", true)
     }
 
     /** Vibe Mode 开关状态（仅限订阅用户） */
     fun setVibeModeEnabled(enabled: Boolean) {
-        curUserSetting.putBoolean("vibe_mode_enabled", enabled)
+        putBooleanValue(curUserStore(), "vibe_mode_enabled", enabled)
     }
 
     fun isVibeModeEnabled(): Boolean {
-        return curUserSetting.decodeBool("vibe_mode_enabled", false)
+        return getBooleanValue(curUserStore(), "vibe_mode_enabled", false)
     }
 
     /** 禁用 IntelliMate tips 弹窗（用户偏好设置） */
     fun setTipsDisabled(disabled: Boolean) {
-        curUserSetting.putBoolean("tips_disabled", disabled)
+        putBooleanValue(curUserStore(), "tips_disabled", disabled)
     }
 
     fun isTipsDisabled(): Boolean {
-        return curUserSetting.decodeBool("tips_disabled", false)
+        return getBooleanValue(curUserStore(), "tips_disabled", false)
     }
 
     /** 获取 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
     fun getIntelliMateTipLastShowTimeMillis(): Long {
         // 默认值为很小的值，确保首次检查一定可以展示。
-        return curUserSetting.decodeLong(KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, -1L)
+        return getLongValue(curUserStore(), KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, -1L)
     }
 
     /** 设置 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
     fun setIntelliMateTipLastShowTimeMillis(timestampMillis: Long) {
-        curUserSetting.putLong(KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, timestampMillis)
+        putLongValue(curUserStore(), KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, timestampMillis)
     }
 
     /**
@@ -196,96 +194,96 @@ object IntySetting {
 
     /** 检查用户是否手动设置过 Auto Play Animation */
     fun hasUserSetAutoPlayAnimation(): Boolean {
-        return curUserSetting.decodeBool("user_set_auto_play_animation", false)
+        return getBooleanValue(curUserStore(), "user_set_auto_play_animation", false)
     }
 
     /** 标记用户已手动设置过 Auto Play Animation */
     fun markUserSetAutoPlayAnimation() {
-        curUserSetting.putBoolean("user_set_auto_play_animation", true)
+        putBooleanValue(curUserStore(), "user_set_auto_play_animation", true)
     }
 
     /** 标记用户已手动设置过 Text Streaming */
     fun markUserTextStreaming() {
-        curUserSetting.putBoolean("user_set_text_streaming", true)
+        putBooleanValue(curUserStore(), "user_set_text_streaming", true)
     }
 
     /** 显示场景动作输入按钮（全局设置，默认关闭） */
     fun setShowSceneActionButton(show: Boolean) {
-        curUserSetting.putBoolean("show_scene_action_button", show)
+        putBooleanValue(curUserStore(), "show_scene_action_button", show)
     }
 
     fun isShowSceneActionButton(): Boolean {
         // 默认值为false（关闭）
-        return curUserSetting.decodeBool("show_scene_action_button", false)
+        return getBooleanValue(curUserStore(), "show_scene_action_button", false)
     }
 
     /** 检查用户是否手动设置过 Show Scene Action Button（用于判断是否使用 Remote Config 默认值） */
     fun hasUserSetSceneActionButton(): Boolean {
-        return curUserSetting.decodeBool("user_set_scene_action_button", false)
+        return getBooleanValue(curUserStore(), "user_set_scene_action_button", false)
     }
 
     /** 标记用户已手动设置过 Show Scene Action Button */
     fun markUserSetSceneActionButton() {
-        curUserSetting.putBoolean("user_set_scene_action_button", true)
+        putBooleanValue(curUserStore(), "user_set_scene_action_button", true)
     }
 
     /** 消息列表是否全屏（全局设置，默认关闭） */
     fun setChatListFullScreen(fullScreen: Boolean) {
-        curUserSetting.putBoolean("chat_list_full_screen", fullScreen)
+        putBooleanValue(curUserStore(), "chat_list_full_screen", fullScreen)
     }
 
     fun isChatListFullScreen(): Boolean {
         // 默认值为 false（关闭全屏），避免消息列表遮挡角色脸部
-        return curUserSetting.decodeBool("chat_list_full_screen", false)
+        return getBooleanValue(curUserStore(), "chat_list_full_screen", false)
     }
 
     /** 聊天消息字体大小（单位 sp，默认 14f） */
     fun setChatFontSizeSp(size: Float) {
-        curUserSetting.putFloat(KEY_CHAT_FONT_SIZE_SP, size)
+        putFloatValue(curUserStore(), KEY_CHAT_FONT_SIZE_SP, size)
     }
 
     fun getChatFontSizeSp(): Float {
-        return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
+        return getFloatValue(curUserStore(), KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
     }
 
     /** 聊天模型选择（全局设置，默认 Gemini 3 Flash） */
     fun setChatModelId(modelId: String) {
-        curUserSetting.putString(KEY_CHAT_MODEL_ID, modelId)
+        putStringValue(curUserStore(), KEY_CHAT_MODEL_ID, modelId)
     }
 
     fun getChatModelId(): String {
-        return curUserSetting.decodeString(KEY_CHAT_MODEL_ID, DEFAULT_CHAT_MODEL_ID)
+        return getStringValue(curUserStore(), KEY_CHAT_MODEL_ID, DEFAULT_CHAT_MODEL_ID)
             ?: DEFAULT_CHAT_MODEL_ID
     }
 
     fun getLastResubReminderDialogShowTime(): Long {
-        return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
+        return getLongValue(curUserStore(), KEY_RESUB_REMINDER_LAST_TIME, 0L)
     }
 
     fun setLastResubReminderDialogShowTime(timestampSeconds: Long) {
-        curUserSetting.putLong(KEY_RESUB_REMINDER_LAST_TIME, timestampSeconds)
+        putLongValue(curUserStore(), KEY_RESUB_REMINDER_LAST_TIME, timestampSeconds)
     }
 
     fun getResubReminderDialogShowCount(): Int {
-        return curUserSetting.decodeInt(KEY_RESUB_REMINDER_SHOW_COUNT, 0)
+        return getIntValue(curUserStore(), KEY_RESUB_REMINDER_SHOW_COUNT, 0)
     }
 
     fun setResubReminderDialogShowCount(count: Int) {
-        curUserSetting.putInt(KEY_RESUB_REMINDER_SHOW_COUNT, count)
+        putIntValue(curUserStore(), KEY_RESUB_REMINDER_SHOW_COUNT, count)
     }
 
     fun getFeedbackDialogLastShowTime(): Long {
         // 默认值为很大的负值，保证第一次检查一定超出显示时长阈值。
-        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, -1L)
+        return getLongValue(curUserStore(), KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, -1L)
     }
 
     fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
-        curUserSetting.putLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
+        putLongValue(curUserStore(), KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
     }
 
     /** 获取总消息数（跨所有AI角色） */
     fun getTotalMessageCount(): Int {
-        return curUserSetting.decodeInt(KEY_TOTAL_MESSAGE_COUNT, 0)
+        return getIntValue(curUserStore(), KEY_TOTAL_MESSAGE_COUNT, 0)
     }
 
     /**
@@ -295,44 +293,49 @@ object IntySetting {
      */
     fun incrementTotalMessageCount(): Int {
         synchronized(messageCountLock) {
-            // TODO: DataStore 是否能提供同步？
-            val currentCount = getTotalMessageCount()
-            val newCount = currentCount + 1
-            curUserSetting.putInt(KEY_TOTAL_MESSAGE_COUNT, newCount)
+            var newCount = 0
+            runBlocking {
+                val totalMessageCountKey = intPreferencesKey(KEY_TOTAL_MESSAGE_COUNT)
+                curUserStore().edit { preferences ->
+                    val currentCount = preferences[totalMessageCountKey] ?: 0
+                    newCount = currentCount + 1
+                    preferences[totalMessageCountKey] = newCount
+                }
+            }
             return newCount
         }
     }
 
     /** 记录消息Tab是否需要显示推送红点 */
     fun setMessagesTabHasPush(hasPush: Boolean) {
-        curUserSetting.putBoolean(KEY_MESSAGES_TAB_HAS_PUSH, hasPush)
+        putBooleanValue(curUserStore(), KEY_MESSAGES_TAB_HAS_PUSH, hasPush)
     }
 
     fun hasMessagesTabPush(): Boolean {
-        return curUserSetting.decodeBool(KEY_MESSAGES_TAB_HAS_PUSH, false)
+        return getBooleanValue(curUserStore(), KEY_MESSAGES_TAB_HAS_PUSH, false)
     }
 
     /** 记录特定会话是否有推送未读 */
     fun setConversationHasPush(agentId: String, hasPush: Boolean) {
         val key = "$KEY_CONVERSATION_PUSH_PREFIX$agentId"
         if (hasPush) {
-            curUserSetting.putBoolean(key, true)
+            putBooleanValue(curUserStore(), key, true)
         } else {
-            curUserSetting.removeValueForKey(key)
+            removeKeyValue(curUserStore(), key)
         }
     }
 
     fun hasConversationPush(agentId: String): Boolean {
-        return curUserSetting.decodeBool("$KEY_CONVERSATION_PUSH_PREFIX$agentId", false)
+        return getBooleanValue(curUserStore(), "$KEY_CONVERSATION_PUSH_PREFIX$agentId", false)
     }
 
     // 标记是否已经有可用的App更新，用于红点标记
     fun hasAppUpdateTips(): Boolean {
-        return curUserSetting.getBoolean("has_app_update_tips", false)
+        return getBooleanValue(curUserStore(), "has_app_update_tips", false)
     }
 
     fun setAppUpdateTips(showed: Boolean) {
-        curUserSetting.putBoolean("has_app_update_tips", showed)
+        putBooleanValue(curUserStore(), "has_app_update_tips", showed)
     }
 
     private var isLoggingOut = false
@@ -350,7 +353,7 @@ object IntySetting {
 
     // 用于推荐接口后端sort随机排序的seed种子
     fun sortSeed(): Int {
-        return curUserSetting.getInt("current_sort_seed", 0)
+        return getIntValue(curUserStore(), "current_sort_seed", 0)
     }
 
     // 用于首页chat的页面请求数据的seed，每次app启动时生成固定值
@@ -364,85 +367,78 @@ object IntySetting {
     }
 
     fun updateSortSeed(seed: Int) {
-        curUserSetting.putInt("current_sort_seed", seed)
+        putIntValue(curUserStore(), "current_sort_seed", seed)
     }
 
     // region 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
     fun setUserProfileData(key: String, value: String) {
-        curUserSetting.putString("user_profile_$key", value)
+        putStringValue(curUserStore(), "user_profile_$key", value)
     }
 
     fun getUserProfileData(key: String): String? {
-        return curUserSetting.decodeString("user_profile_$key")
+        return getStringValue(curUserStore(), "user_profile_$key")
     }
 
     fun setUserProfileBoolean(key: String, value: Boolean) {
-        curUserSetting.putBoolean("user_profile_$key", value)
+        putBooleanValue(curUserStore(), "user_profile_$key", value)
     }
 
     fun getUserProfileBoolean(key: String, defaultValue: Boolean = false): Boolean {
-        return curUserSetting.decodeBool("user_profile_$key", defaultValue)
+        return getBooleanValue(curUserStore(), "user_profile_$key", defaultValue)
     }
 
     fun setUserProfileInt(key: String, value: Int) {
-        curUserSetting.putInt("user_profile_$key", value)
+        putIntValue(curUserStore(), "user_profile_$key", value)
     }
 
     fun getUserProfileInt(key: String, defaultValue: Int = 0): Int {
-        return curUserSetting.decodeInt("user_profile_$key", defaultValue)
+        return getIntValue(curUserStore(), "user_profile_$key", defaultValue)
     }
 
     fun hasUserProfileData(key: String): Boolean {
-        return curUserSetting.decodeString("user_profile_$key")?.isNotEmpty() == true
+        return getStringValue(curUserStore(), "user_profile_$key")?.isNotEmpty() == true
     }
 
     fun clearUserProfileData(key: String) {
-        curUserSetting.removeValueForKey("user_profile_$key")
+        removeKeyValue(curUserStore(), "user_profile_$key")
     }
 
     fun clearAllUserProfileData() {
-        // 清除所有以 user_profile_ 开头的键
-        val keys = curUserSetting.allKeys()
-        keys?.forEach { key ->
-            if (key.startsWith("user_profile_")) {
-                curUserSetting.removeValueForKey(key)
-            }
-        }
+        removeKeysByPrefix(curUserStore(), setOf("user_profile_"))
     }
 
     fun hasShowGuest(): Boolean {
-        return allUserSetting.decodeBool("show_guest", false)
+        return getBooleanValue(allUserStore(), "show_guest", false)
     }
 
     fun setShowGuested() {
-        allUserSetting.putBoolean("show_guest", true)
+        putBooleanValue(allUserStore(), "show_guest", true)
     }
 
     // region 应用级别的通用存储方法（不依赖用户）
     /** 设置应用级别的数据（所有用户共享） */
     fun setAppData(key: String, value: String) {
-        allUserSetting.putString("app_data_$key", value)
+        putStringValue(allUserStore(), "app_data_$key", value)
     }
 
     /** 获取应用级别的数据 */
     fun getAppData(key: String): String? {
-        return allUserSetting.decodeString("app_data_$key")
+        return getStringValue(allUserStore(), "app_data_$key")
     }
 
     /** 检查应用级别的数据是否存在 */
     fun hasAppData(key: String): Boolean {
-        return allUserSetting.decodeString("app_data_$key")?.isNotEmpty() == true
+        return getStringValue(allUserStore(), "app_data_$key")?.isNotEmpty() == true
     }
 
     /** 清除应用级别的数据 */
     fun clearAppData(key: String) {
-        allUserSetting.removeValueForKey("app_data_$key")
+        removeKeyValue(allUserStore(), "app_data_$key")
     }
 
     /** 获取所有应用级别的数据键（用于批量操作） */
     fun getAllAppDataKeys(): Set<String> {
-        val allKeys = allUserSetting.allKeys()
-        return allKeys?.filter { it.startsWith("app_data_") }?.toSet() ?: emptySet()
+        return getAllKeyNames(allUserStore()).filter { it.startsWith("app_data_") }.toSet()
     }
 
     // endregion
@@ -453,25 +449,18 @@ object IntySetting {
 
     /** 清除指定agent的聊天数据（清理可能存在的旧数据） */
     fun clearChatData(agentId: String) {
-        curUserSetting.removeValueForKey("chat_messages_$agentId")
-        curUserSetting.removeValueForKey("chat_offset_$agentId")
-        curUserSetting.removeValueForKey("chat_has_more_$agentId")
-        curUserSetting.removeValueForKey("chat_initial_loaded_$agentId")
+        removeKeyValue(curUserStore(), "chat_messages_$agentId")
+        removeKeyValue(curUserStore(), "chat_offset_$agentId")
+        removeKeyValue(curUserStore(), "chat_has_more_$agentId")
+        removeKeyValue(curUserStore(), "chat_initial_loaded_$agentId")
     }
 
     /** 清除所有聊天数据 */
     fun clearAllChatData() {
-        val keys = curUserSetting.allKeys()
-        keys?.forEach { key: String ->
-            if (
-                key.startsWith("chat_messages_") ||
-                    key.startsWith("chat_offset_") ||
-                    key.startsWith("chat_has_more_") ||
-                    key.startsWith("chat_initial_loaded_")
-            ) {
-                curUserSetting.removeValueForKey(key)
-            }
-        }
+        removeKeysByPrefix(
+            curUserStore(),
+            setOf("chat_messages_", "chat_offset_", "chat_has_more_", "chat_initial_loaded_"),
+        )
     }
 
     // endregion
@@ -483,27 +472,29 @@ object IntySetting {
         if (agentId.isBlank()) return
         val key = "$KEY_PREFIX_EXPLORE_FAVORITE$agentId"
         if (favorite) {
-            curUserSetting.putBoolean(key, true)
+            putBooleanValue(curUserStore(), key, true)
         } else {
-            curUserSetting.removeValueForKey(key)
+            removeKeyValue(curUserStore(), key)
         }
     }
 
     /** 获取 Explore 页面角色卡的收藏状态 */
     fun isExploreAgentFavorite(agentId: String): Boolean {
         if (agentId.isBlank()) return false
-        return curUserSetting.decodeBool("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", false)
+        return getBooleanValue(curUserStore(), "$KEY_PREFIX_EXPLORE_FAVORITE$agentId", false)
     }
 
     /** 获取所有已收藏的 Explore 角色ID */
     fun getExploreFavoriteAgentIds(): List<String> {
-        val keys = curUserSetting.allKeys() ?: return emptyList()
-        return keys
+        val preferences = readPreferences(curUserStore())
+        return preferences
+            .asMap()
             .asSequence()
-            .filter { it.startsWith(KEY_PREFIX_EXPLORE_FAVORITE) }
-            .mapNotNull { key ->
+            .map { it.key.name to it.value }
+            .filter { it.first.startsWith(KEY_PREFIX_EXPLORE_FAVORITE) }
+            .mapNotNull { (key, value) ->
                 val agentId = key.removePrefix(KEY_PREFIX_EXPLORE_FAVORITE)
-                if (curUserSetting.decodeBool(key, false)) agentId else null
+                if (value == true) agentId else null
             }
             .distinct()
             .sorted()
@@ -540,33 +531,33 @@ object IntySetting {
 
     /** 设置会话置顶状态 */
     fun setConversationPinned(agentId: String, pinned: Boolean) {
-        curUserSetting.putBoolean("conversation_pinned_$agentId", pinned)
+        putBooleanValue(curUserStore(), "conversation_pinned_$agentId", pinned)
     }
 
     /** 获取会话置顶状态 */
     fun isConversationPinned(agentId: String): Boolean {
-        return curUserSetting.decodeBool("conversation_pinned_$agentId", false)
+        return getBooleanValue(curUserStore(), "conversation_pinned_$agentId", false)
     }
 
     /** 设置会话隐藏状态 */
     fun setConversationHidden(agentId: String, hidden: Boolean) {
-        curUserSetting.putBoolean("conversation_hidden_$agentId", hidden)
+        putBooleanValue(curUserStore(), "conversation_hidden_$agentId", hidden)
         if (hidden) {
             // 记录隐藏时的时间戳，用于判断是否有新消息
-            curUserSetting.putLong("conversation_hidden_time_$agentId", System.currentTimeMillis())
+            putLongValue(curUserStore(), "conversation_hidden_time_$agentId", System.currentTimeMillis())
         } else {
-            curUserSetting.removeValueForKey("conversation_hidden_time_$agentId")
+            removeKeyValue(curUserStore(), "conversation_hidden_time_$agentId")
         }
     }
 
     /** 获取会话隐藏状态 */
     fun isConversationHidden(agentId: String): Boolean {
-        return curUserSetting.decodeBool("conversation_hidden_$agentId", false)
+        return getBooleanValue(curUserStore(), "conversation_hidden_$agentId", false)
     }
 
     /** 获取会话隐藏时间（用于判断是否应该恢复显示） */
     fun getConversationHiddenTime(agentId: String): Long {
-        return curUserSetting.decodeLong("conversation_hidden_time_$agentId", 0L)
+        return getLongValue(curUserStore(), "conversation_hidden_time_$agentId", 0L)
     }
 
     /** 检查会话是否有新消息（用于自动取消隐藏） */
@@ -586,4 +577,101 @@ object IntySetting {
 
     // endregion
 
+    private fun allUserStore(): DataStore<Preferences> = dataStore(ALL_USER_SETTINGS_STORE_NAME)
+
+    private fun curUserStore(): DataStore<Preferences> = dataStore("$USER_SETTINGS_STORE_PREFIX$curUid")
+
+    private fun getStringValue(
+        store: DataStore<Preferences>,
+        key: String,
+        defaultValue: String? = null,
+    ): String? {
+        val preferenceKey = stringPreferencesKey(key)
+        return runBlocking { store.data.first()[preferenceKey] ?: defaultValue }
+    }
+
+    private fun putStringValue(store: DataStore<Preferences>, key: String, value: String) {
+        val preferenceKey = stringPreferencesKey(key)
+        runBlocking { store.edit { preferences -> preferences[preferenceKey] = value } }
+    }
+
+    private fun getBooleanValue(
+        store: DataStore<Preferences>,
+        key: String,
+        defaultValue: Boolean,
+    ): Boolean {
+        val preferenceKey = booleanPreferencesKey(key)
+        return runBlocking { store.data.first()[preferenceKey] ?: defaultValue }
+    }
+
+    private fun putBooleanValue(store: DataStore<Preferences>, key: String, value: Boolean) {
+        val preferenceKey = booleanPreferencesKey(key)
+        runBlocking { store.edit { preferences -> preferences[preferenceKey] = value } }
+    }
+
+    private fun getIntValue(store: DataStore<Preferences>, key: String, defaultValue: Int): Int {
+        val preferenceKey = intPreferencesKey(key)
+        return runBlocking { store.data.first()[preferenceKey] ?: defaultValue }
+    }
+
+    private fun putIntValue(store: DataStore<Preferences>, key: String, value: Int) {
+        val preferenceKey = intPreferencesKey(key)
+        runBlocking { store.edit { preferences -> preferences[preferenceKey] = value } }
+    }
+
+    private fun getLongValue(store: DataStore<Preferences>, key: String, defaultValue: Long): Long {
+        val preferenceKey = longPreferencesKey(key)
+        return runBlocking { store.data.first()[preferenceKey] ?: defaultValue }
+    }
+
+    private fun putLongValue(store: DataStore<Preferences>, key: String, value: Long) {
+        val preferenceKey = longPreferencesKey(key)
+        runBlocking { store.edit { preferences -> preferences[preferenceKey] = value } }
+    }
+
+    private fun getFloatValue(
+        store: DataStore<Preferences>,
+        key: String,
+        defaultValue: Float,
+    ): Float {
+        val preferenceKey = floatPreferencesKey(key)
+        return runBlocking { store.data.first()[preferenceKey] ?: defaultValue }
+    }
+
+    private fun putFloatValue(store: DataStore<Preferences>, key: String, value: Float) {
+        val preferenceKey = floatPreferencesKey(key)
+        runBlocking { store.edit { preferences -> preferences[preferenceKey] = value } }
+    }
+
+    private fun removeKeyValue(store: DataStore<Preferences>, keyName: String) {
+        runBlocking {
+            store.edit { preferences ->
+                val key =
+                    preferences.asMap().keys.firstOrNull { existingKey ->
+                        existingKey.name == keyName
+                    } ?: return@edit
+                preferences.remove(key)
+            }
+        }
+    }
+
+    private fun removeKeysByPrefix(store: DataStore<Preferences>, keyPrefixes: Set<String>) {
+        runBlocking {
+            store.edit { preferences ->
+                val keysToRemove =
+                    preferences.asMap().keys.filter { key ->
+                        keyPrefixes.any { prefix -> key.name.startsWith(prefix) }
+                    }
+                keysToRemove.forEach { key -> preferences.remove(key) }
+            }
+        }
+    }
+
+    private fun readPreferences(store: DataStore<Preferences>): Preferences {
+        return runBlocking { store.data.first() }
+    }
+
+    private fun getAllKeyNames(store: DataStore<Preferences>): Set<String> {
+        return readPreferences(store).asMap().keys.map { it.name }.toSet()
+    }
 }

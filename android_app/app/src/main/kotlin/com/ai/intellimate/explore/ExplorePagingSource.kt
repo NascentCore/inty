@@ -50,7 +50,7 @@ interface ExploreFetchCallback {
 class ExplorePagingSource(
     private val useCache: Boolean = true,
     private val sortSeed: Int = IntySetting.sortSeed(),
-    private val cacheProvider: RecommendedAgentCacheProvider? = null, // 实际缓存仍然使用的MMKV
+    private val cacheProvider: RecommendedAgentCacheProvider? = null, // 实际缓存由 DataStore 驱动
     private val fetchCallback: ExploreFetchCallback? = null,
     private val characterRepository: CharacterRepository = CharacterRepository(),
 ) : PagingSource<Int, AgentInfo>() {

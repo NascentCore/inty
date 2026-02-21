@@ -81,9 +81,6 @@ robolectric = "4.15"
 chucker = "4.2.0"
 leakcanary = "2.14"
 
-# 腾讯系库
-mmkv = "2.2.4"
-
 # 其他第三方库
 ucrop = "2.2.10"
 luban = "1.1.8"
@@ -254,9 +251,6 @@ androidx-annotation = { group = "androidx.annotation", name = "annotation", vers
 chucker-library = { module = "com.github.chuckerteam.chucker:library", version.ref = "chucker" }
 chucker-no-op = { module = "com.github.chuckerteam.chucker:library-no-op", version.ref = "chucker" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
-
-# ===== 腾讯系库 =====
-mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
 
 # ===== 图片处理库 =====
 ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }

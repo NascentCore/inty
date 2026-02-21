@@ -90,7 +90,7 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
 
 - [Jetpack Compose](https://developer.android.com/jetpack/compose) 用于现代 UI 开发
 - 原生Intent导航系统
-- [MMKV](https://github.com/Tencent/MMKV) 用于高效存储
+- [Jetpack DataStore](https://developer.android.com/topic/libraries/architecture/datastore) 用于本地设置存储
 - [Coil](https://coil-kt.github.io/coil/) 用于图片加载
 - [Firebase](https://firebase.google.com/) 用于后端服务
 
@@ -107,7 +107,7 @@ PATH="/Users/yzhao/Library/Android/sdk/platform-tools:$PATH"
   - `library/utils`: 图片压缩/网络等工具集合。
   - `build-logic/convention`: Gradle 约定式插件（Compose/Navigation/Kotlin Android 等）。
  - 网络与环境: `core/data` 通过自定义网络层访问后端；构建类型决定 `baseUrl`；`local` 对应 `http://localhost:8000`，通过 `adb reverse` 映射。
- - 数据与存储: 使用 MMKV 本地存储（见仓库引用）。
+- 数据与存储: 使用 DataStore 本地存储（`IntySetting`、Boost 状态等）。
  - 计费: 集成 Google Play Billing（`BillingRepository` 及价格/购买/状态管理器）。
  - 音频/语音: TTS 与音频播放/缓存管理（`TtsManager`/`AudioPlaybackManager`/`VoicePlayer` 等）。
  - 推送通知: Firebase Cloud Messaging 集成。
