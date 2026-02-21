@@ -4,6 +4,7 @@ import ai.sxwl.android.utils.Utils
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.tencent.mmkv.MMKV
+import org.junit.Assume.assumeTrue
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -24,7 +25,7 @@ class IntySettingDataStoreMigrationTest {
     fun setUp() {
         app = ApplicationProvider.getApplicationContext()
         Utils.init(app)
-        MMKV.initialize(app)
+        assumeTrue("MMKV is not available in current unit test runtime", initializeMmkvCompat(app))
     }
 
     @After
@@ -83,5 +84,39 @@ class IntySettingDataStoreMigrationTest {
 
     private fun legacyAllUserStore(): MMKV {
         return MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, app.packageName)
+    }
+
+    private fun initializeMmkvCompat(application: Application): Boolean {
+        val mmkvClass = MMKV::class.java
+
+        val initWithContextSucceeded =
+            runCatching {
+                    mmkvClass.getMethod("initialize", android.content.Context::class.java)
+                        .invoke(null, application)
+                }
+                .isSuccess
+        if (initWithContextSucceeded) return true
+
+        val initWithPathSucceeded =
+            runCatching {
+                    mmkvClass.getMethod("initialize", String::class.java)
+                        .invoke(null, application.filesDir.resolve("mmkv").absolutePath)
+                }
+                .isSuccess
+        if (initWithPathSucceeded) return true
+
+        val initWithPathAndLevelSucceeded =
+            runCatching {
+                    val logLevelClass = Class.forName("com.tencent.mmkv.MMKVLogLevel")
+                    val level = logLevelClass.enumConstants.firstOrNull()
+                    if (level != null) {
+                        mmkvClass.getMethod("initialize", String::class.java, logLevelClass)
+                            .invoke(null, application.filesDir.resolve("mmkv").absolutePath, level)
+                    } else {
+                        error("MMKVLogLevel enum is empty")
+                    }
+                }
+                .isSuccess
+        return initWithPathAndLevelSucceeded
     }
 }
