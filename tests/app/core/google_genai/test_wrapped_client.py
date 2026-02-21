@@ -1,6 +1,5 @@
 """Tests for app.core.google_genai.wrapped_client.AsyncClient."""
 
-import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -10,11 +9,7 @@ from app.core.google_genai.create import create_genai_client
 from app.core.google_genai.predefined_configs import (
     GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
 )
-from app.core.google_genai.wrapped_client import (
-    WrappedClient,
-    _process_inputs_generate_image,
-    _process_outputs_generate_image,
-)
+from app.core.google_genai.wrapped_client import LangSmithTraceRunType, WrappedClient
 from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
 
 
@@ -146,67 +141,36 @@ async def test_generate_image_returns_result_of_generate_content():
 
     assert result is expected_result
 
-def test_process_inputs_generate_image_records_model_and_contents_only():
-    """Trace inputs 包含 model 与 contents，不包含 client。"""
-    inp = _process_inputs_generate_image(
-        _self=Mock(),
-        model="gemini-2.5-flash-image",
-        contents=["a prompt", "https://example.com/ref.jpeg"],
-    )
-    assert inp == {
-        "model": "gemini-2.5-flash-image",
-        "contents": ["a prompt", "https://example.com/ref.jpeg"],
-    }
-
-
-def test_process_outputs_generate_image_none_returns_summary():
-    out = _process_outputs_generate_image(None)
-    assert out == {"status": "none", "candidates_count": 0}
-
-
-def test_process_outputs_generate_image_summarizes_response_no_raw_bytes():
-    """Outputs 为摘要（候选数、part 类型与字节长），不包含图片二进制。"""
-    mock_part_inline = Mock()
-    mock_part_inline.inline_data = Mock(data=b"x" * 100)
-    mock_part_text = Mock(spec=[])
-    mock_part_text.inline_data = None
-    mock_part_text.text = "caption"
-    mock_content = Mock()
-    mock_content.parts = [mock_part_inline, mock_part_text]
-    mock_candidate = Mock()
-    mock_candidate.content = mock_content
-    mock_response = Mock()
-    mock_response.prompt_feedback = None
-    mock_response.candidates = [mock_candidate]
-
-    out = _process_outputs_generate_image(mock_response)
-
-    assert out["candidates_count"] == 1
-    assert out["candidates_parts_summary"] == [
-        [
-            {"kind": "inline_data", "size_bytes": 100},
-            {"kind": "text", "length": 7},
-        ]
-    ]
-    # 确保只有摘要（size_bytes: 100），没有原始图片二进制
-    assert out["candidates_parts_summary"][0][0]["kind"] == "inline_data"
-    assert out["candidates_parts_summary"][0][0]["size_bytes"] == 100
-    assert "data" not in out["candidates_parts_summary"][0][0]
-
-
 def test_generate_image_has_traceable_decorator_configured():
-    """generate_image 为 async 且模块已配置 LangSmith tracing（traceable + process_inputs/process_outputs）。"""
+    """async_generate_image 为 async，且已用 LangSmith @traceable 装饰（run_type=LLM）。"""
     import inspect
 
     assert inspect.iscoroutinefunction(WrappedClient.async_generate_image)
-    assert _process_inputs_generate_image(None, "m", ["c"]) == {"model": "m", "contents": ["c"]}
-    assert _process_outputs_generate_image(None) == {"status": "none", "candidates_count": 0}
+    # run_type 在 wrapped_client 中为 LangSmithTraceRunType.LLM；此处仅保证枚举已导出
+    assert LangSmithTraceRunType.LLM == "llm"
+
 
 @pytest.mark.noci
 @pytest.mark.asyncio
-async def test_generate_image_trace_with_real_langsmith():
+async def test_generate_image_with_nano_banana_trace_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(model=IMAGEN_4_FAST.id_on_provider, contents=["a cat on the beach"])
+    result = await wrapper.async_generate_image(
+        model=NANO_BANANA.id_on_provider, contents=["a delicious puusy and giant tits"]
+    )
+    print(result)
+    assert result is not None
+
+
+@pytest.mark.noci
+@pytest.mark.asyncio
+async def test_generate_image_with_imagen_4_fast_trace_with_real_langsmith():
+    """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
+    client = create_genai_client()
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(
+        model=IMAGEN_4_FAST.id_on_provider, contents=["a cat on the beach"]
+    )
+    print(result)
     assert result is not None

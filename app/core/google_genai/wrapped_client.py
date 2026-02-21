@@ -4,6 +4,7 @@ Ref: https://docs.langchain.com/langsmith/trace-with-google-gemini#configure-tra
 Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_langsmith
 """
 from __future__ import annotations
+from enum import StrEnum
 from typing import Literal
 
 # -----------------------------------------------------------------------------
@@ -14,6 +15,12 @@ from typing import Literal
 #    - client.models.generate_images (Imagen) is NOT wrapped.
 #    - Imagen calls produce no LangSmith run; "full model request" is unavailable
 #      unless you add your own @traceable or span around generate_images.
+#
+# Imagen generate_images API notes:
+#    - Built-in GCS upload: pass output_gcs_uri in GenerateImagesConfig; the SDK
+#      writes generated images to that URI (no app-side upload).
+#    - Compression/quality: GenerateImagesConfig supports output_compression_quality
+#      (int 0-100) for JPEG; optional, not set in our Imagen 4 branch below.
 #
 # 2. "Model requests" (complete prompts) depend on contents being dict-like
 #    - wrap_gemini uses process_inputs=_process_gemini_inputs, which builds
@@ -48,51 +55,14 @@ from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONT
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
 
 
-def _process_inputs_generate_image(
-    _self: object, model: str, contents: list[str]
-) -> dict:
-    """LangSmith process_inputs：只记录 model 与 contents，不记录 client。"""
-    return {"model": model, "contents": contents}
-
-
-def _process_outputs_generate_image(response: object) -> dict:
-    """LangSmith process_outputs：只记录响应摘要（候选数、part 类型与字节长），不写入图片二进制。"""
-    out: dict = {}
-    if response is None:
-        return {"status": "none", "candidates_count": 0}
-    if hasattr(response, "prompt_feedback") and response.prompt_feedback:
-        pf = response.prompt_feedback
-        out["prompt_feedback"] = {"block_reason": getattr(pf, "block_reason", None)}
-    raw_candidates = getattr(response, "candidates", None)
-    if raw_candidates is None:
-        candidates = []
-    else:
-        try:
-            candidates = list(raw_candidates)
-        except (TypeError, AttributeError):
-            candidates = []
-    out["candidates_count"] = len(candidates)
-    parts_summaries = []
-    for c in candidates:
-        content = getattr(c, "content", None)
-        parts = getattr(content, "parts", None) if content else None
-        if not parts:
-            parts_summaries.append([])
-            continue
-        entry = []
-        for p in parts:
-            if hasattr(p, "inline_data") and p.inline_data:
-                data = getattr(p.inline_data, "data", b"")
-                size = len(data) if isinstance(data, bytes) else 0
-                entry.append({"kind": "inline_data", "size_bytes": size})
-            elif hasattr(p, "text") and p.text is not None:
-                text = p.text
-                entry.append({"kind": "text", "length": len(text) if isinstance(text, str) else 0})
-            else:
-                entry.append({"kind": "other"})
-        parts_summaries.append(entry)
-    out["candidates_parts_summary"] = parts_summaries
-    return out
+class LangSmithTraceRunType(StrEnum):
+    TOOL = "tool"
+    CHAIN = "chain"
+    LLM = "llm"
+    RETRIEVER = "retriever"
+    EMBEDDING = "embedding"
+    PROMPT = "prompt"
+    PARSER = "parser"
 
 
 class WrappedClient:
@@ -101,9 +71,10 @@ class WrappedClient:
 
     @traceable(
         name="generate_image",
-        run_type="tool",
-        process_inputs=_process_inputs_generate_image,
-        process_outputs=_process_outputs_generate_image,
+        # LLM 是语言模型，生图模型就作为工具调用类型
+        run_type=LangSmithTraceRunType.TOOL,
+        # process_inputs=_process_inputs_generate_image,
+        # process_outputs=_process_outputs_generate_image,
     )
     async def async_generate_image(
         self, 
@@ -149,9 +120,12 @@ class WrappedClient:
             case IMAGEN_4_FAST.id_on_provider | IMAGEN_4.id_on_provider:
                 if len(contents) != 1:
                     raise ValueError("Imagen 4.0 Fast 和 Imagen 4.0 模型只支持一个提示词")
+                # Imagen generate_images: no output_gcs_uri here (caller handles storage).
+                # Optional: output_compression_quality (0-100) for JPEG.
                 return await self.client.aio.models.generate_images(
                     model=model,
                     prompt=contents[0],
+                    # TODO: 需要替换为现有代码中实际使用的 API 配置
                     config=types.GenerateImagesConfig(
                         number_of_images=1,
                         aspect_ratio=ASPECT_RATIO_9_16,
@@ -159,3 +133,6 @@ class WrappedClient:
                 )
             case _:
                 raise ValueError(f"Unsupported model: {model}")
+
+        # TODO: 需要替换返回值为真实图片并上传，然后在被封禁/屏蔽时 raise exception 从而让 tracing 捕获
+        # 这样在 trace 搜索时能直接找到有问题的调用，否则全部是成功的。

@@ -69,6 +69,21 @@ class _FakeGeminiModels:
         )
 
 
+class _FakeGeminiModelsAio:
+    """Async models facade：WrappedClient 使用 client.aio.models.generate_content / generate_images。"""
+
+    def __init__(self, client: "FakeGeminiClient") -> None:
+        self._client = client
+
+    async def generate_images(self, *, model: str, prompt: str, config):
+        return self._client._generate_images(model=model, prompt=prompt, config=config)
+
+    async def generate_content(self, *, model: str, contents, config):
+        return self._client._generate_content(
+            model=model, contents=contents, config=config
+        )
+
+
 class FakeGeminiClient:
     """
     A lightweight fake of the Gemini image generation client for tests.
@@ -89,6 +104,7 @@ class FakeGeminiClient:
 
     def __init__(self, *, fail_generate_content: bool = False) -> None:
         self.models = _FakeGeminiModels(self)
+        self.aio = type("FakeAio", (), {"models": _FakeGeminiModelsAio(self)})()
         self._generated_bytes: Dict[str, bytes] = {}
         self._call_index = 0
         self._fail_generate_content = fail_generate_content

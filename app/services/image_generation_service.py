@@ -1,6 +1,10 @@
 """
 图片生成服务：基于聊天上下文和角色背景图生成图片
-使用 Gemini 2.5 Flash Image 模型实现角色外观一致性
+使用 Gemini 2.5 Flash Image 模型实现角色外观一致性。
+
+本模块使用 generate_content（非 Imagen generate_images）：图片以内联数据返回，
+由本服务调用 upload_to_gcs 上传；Imagen 的 generate_images 则通过
+output_gcs_uri 由 SDK 直接写 GCS。
 """
 
 import io
@@ -10,6 +14,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import PIL.Image
+from app.core.google_genai.wrapped_client import WrappedClient
 from google.genai import types
 from loguru import logger
 from sqlalchemy import select, update
@@ -20,7 +25,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.predefined_configs import (
     GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
 )
-from app.external_services.gcs import upload_to_gcs
+from app.external_services.gcs import GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
 from app.services.image_transform_service import image_transform_service
@@ -461,7 +466,11 @@ class ImageGenerationService:
         model: Optional[str] = None,
     ) -> Dict:
         """
-        使用 Gemini 模型生成聊天图片并更新到消息 meta_data
+        使用 Gemini 模型（generate_content）生成聊天图片并更新到消息 meta_data。
+
+        与 Imagen generate_images 不同：本路径使用 generate_content，返回内联图片
+        (candidate.content.parts[].inline_data)，无 output_gcs_uri；应用侧从响应中
+        取出图片字节后调用 upload_to_gcs 上传到 GCS。
 
         Args:
             db: 数据库会话
@@ -477,6 +486,7 @@ class ImageGenerationService:
         Returns:
             包含图片信息的字典
         """
+        logger.debug(f"使用 Gemini 模型及 Google GenAI SDK 生成图片，session_id={session_id}, model={model}")
         # 提前定义 2 个变量，在后续代码中赋值，并用于记录日志
         prompt: Optional[str] = None
         response: Any = None
@@ -540,14 +550,13 @@ class ImageGenerationService:
                 )
 
             # 确保参考图是完整URL
+            # 如果是GCS路径，转换为URL
+            if reference_url.startswith(GCS_GS_PREFIX):
+                reference_url = reference_url.replace(
+                    GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
+                )
             if not reference_url.startswith("http"):
-                # 如果是GCS路径，转换为URL
-                if reference_url.startswith("gs://"):
-                    reference_url = reference_url.replace(
-                        "gs://", "https://storage.googleapis.com/"
-                    )
-                else:
-                    raise ValueError(f"Invalid reference image path: {reference_url}")
+                raise ValueError(f"Invalid reference image path: {reference_url}, must start with 'http'")
 
             # 记录使用的参考图类型
             reference_type = "背景图" if agent_data.get("background") else "头像"
@@ -556,50 +565,30 @@ class ImageGenerationService:
             )
 
             # 复用现有的 Gemini 客户端（自动从 service account 读取配置）
-            client = get_genai_client()
-
-            # 准备输入：参考图 + 文字提示
-            reference_image = types.Part.from_uri(
-                file_uri=reference_url,
-                mime_type="image/jpeg",
-            )
-
-            # 构建 parts 列表：Agent 参考图 + 用户自拍（若有）+ 提示词
-            parts = [reference_image]
+            client = WrappedClient(client=get_genai_client())
+            contents = []
+            contents.append(reference_url)
 
             # 如果用户有自拍照片，添加为额外参考图
             if user_photo_url:
-                # 确保用户照片是完整URL
-                if not user_photo_url.startswith("http"):
-                    if user_photo_url.startswith("gs://"):
-                        user_photo_url = user_photo_url.replace(
-                            "gs://", "https://storage.googleapis.com/"
-                        )
-                if user_photo_url.startswith("http"):
-                    user_photo_part = types.Part.from_uri(
-                        file_uri=user_photo_url,
-                        mime_type="image/jpeg",
+                # 确保用户照片是完整 URL（与 reference_url 一致，使用 GCS 常量）
+                if user_photo_url.startswith(GCS_GS_PREFIX):
+                    user_photo_url = user_photo_url.replace(
+                        GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
                     )
-                    parts.append(user_photo_part)
+                if user_photo_url.startswith("http"):
+                    contents.append(user_photo_url)
                     logger.info("添加用户自拍照片作为参考图: {}", user_photo_url)
+                else:
+                    logger.error("用户自拍照片不是完整URL: {}", user_photo_url)
 
-            parts.append(types.Part.from_text(text=prompt))
-
-            contents = [
-                types.Content(
-                    role="user",
-                    parts=parts,
-                )
-            ]
+            contents.append(prompt)
 
             gemini_model = model or NANO_BANANA.id_on_provider
-            response = client.models.generate_content(
-                model=gemini_model,
-                contents=contents,
-                config=GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
-            )
+            response = await client.async_generate_image(model=gemini_model, contents=contents)
 
             # 检查 prompt_feedback（响应级别的反馈）
+            # TODO：以下代码继续考虑重构为工具函数，然后在 WrappedClient.async_generate_image 中调用。
             if hasattr(response, "prompt_feedback") and response.prompt_feedback:
                 prompt_feedback = response.prompt_feedback
                 logger.warning("Prompt feedback: {}", prompt_feedback)
@@ -716,7 +705,11 @@ class ImageGenerationService:
             header = image_data[:20] if len(image_data) >= 20 else image_data
             logger.debug("图片数据头部（hex）: {}", header.hex())
 
-            # 检查常见图片格式的魔术数字
+            # 检查常见图片格式的魔术数字（仅用于 logger.debug，不参与分支）。
+            # 实际格式由下面 PIL 解析得到，并用于 meta_data / ImageFormat / 上传。
+            # Gemini generate_content 图像生成默认返回 PNG；predefined_configs 中的
+            # output_mime_type 在 ImageConfig 里可能不被支持，故真实 API 通常只返回 PNG。
+            # TODO：本段对主流程非必需，可删；保留便于调试及应对日后 API 行为变化；测试 fake 可能返回 JPEG。
             if image_data[:2] == b"\xff\xd8":
                 logger.debug("检测到 JPEG 格式")
             elif image_data[:8] == b"\x89PNG\r\n\x1a\n":
