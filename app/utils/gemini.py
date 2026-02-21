@@ -80,8 +80,7 @@ def get_genai_client():
                     project_id = creds.get("project_id")
 
             if not project_id:
-                # Fallback: try to get from environment or use default
-                project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "inty-backend")
+                raise ValueError(f"Project ID not found in credentials file: {credentials_path}")
 
             # Clear any cached client to ensure fresh authentication
             if hasattr(genai, "_client_cache"):
