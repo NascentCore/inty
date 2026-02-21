@@ -151,50 +151,47 @@ def get_agent_model_config(agent_data: dict) -> dict:
         模型配置字典
     """
     model_config = {}
-
     # 首先尝试从settings.llm_config获取
     if agent_data.get("settings"):
-        model_config = agent_data["settings"].get("llm_config", {})
+        model_config = agent_data["settings"].get("llm_config", {}) or {}
         # 向后兼容：也检查旧的model_config字段
+        # TODO: 清理数据库中的 model_config 字段；然后删除该分支
         if not model_config and "model_config" in agent_data["settings"]:
-            model_config = agent_data["settings"]["model_config"]
-
-    # 如果没有自定义配置，使用默认配置
-    # Deprecated: api_key 与 base_url 不再参与 chat；chat 使用全局 client（见 get_base_openai_client）
-    if not model_config:
-        model_config = {
-            "model": global_config_loaded_from_config_yaml.agent.model,
-            "api_key": global_config_loaded_from_config_yaml.agent.api_key,
-            "base_url": global_config_loaded_from_config_yaml.agent.base_url,
-            "temperature": getattr(
-                global_config_loaded_from_config_yaml.agent, "temperature", 0.5
-            ),
-            "max_tokens": getattr(
-                global_config_loaded_from_config_yaml.agent, "max_tokens", 1000
-            ),
-            "top_p": getattr(global_config_loaded_from_config_yaml.agent, "top_p", 1.0),
-            "frequency_penalty": getattr(
-                global_config_loaded_from_config_yaml.agent, "frequency_penalty", 0.0
-            ),
-            "presence_penalty": getattr(
-                global_config_loaded_from_config_yaml.agent, "presence_penalty", 0.0
-            ),
-        }
-    else:
-        # 如果有自定义配置，但某些字段为空，则使用默认配置补充
-        # Deprecated: api_key / base_url 仅做向后兼容存储，不参与 chat
-        if not model_config.get("base_url"):
-            model_config["base_url"] = (
-                global_config_loaded_from_config_yaml.agent.base_url
-            )
-        if not model_config.get("api_key"):
-            model_config["api_key"] = (
-                global_config_loaded_from_config_yaml.agent.api_key
-            )
-        if not model_config.get("model"):
-            model_config["model"] = global_config_loaded_from_config_yaml.agent.model
-
+            legacy = agent_data["settings"]["model_config"]
+            model_config = legacy if isinstance(legacy, dict) else {}
     return model_config
+
+
+def build_agent_from_data(agent_id: str, agent_data: dict) -> "Agent":
+    """
+    从 agent_data 构建 Agent 实例，供创建与重新加载共用。
+
+    Args:
+        agent_id: Agent ID
+        agent_data: Agent 数据（含 name、settings、main_prompt 等）
+
+    Returns:
+        构造好的 Agent 实例
+    """
+    model_config = get_agent_model_config(agent_data)
+    description = agent_data.get("description", "")
+    agent_name = agent_data.get("name", f"Agent_{agent_id[:8]}")
+    return Agent(
+        agent_id=agent_id,
+        name=agent_name,
+        model_config=model_config,
+        description=description,
+        main_prompt=agent_data.get("main_prompt", ""),
+        mode_prompt=agent_data.get("mode_prompt", ""),
+        personality=agent_data.get("personality", ""),
+        scenario=agent_data.get("scenario", ""),
+        message_example=agent_data.get("message_example", ""),
+        creator_notes=agent_data.get("creator_notes", ""),
+        tags=agent_data.get("tags", []),
+        character_version=agent_data.get("character_version", "1.0"),
+        extensions=agent_data.get("extensions", {}),
+        intro=agent_data.get("intro", ""),
+    )
 
 
 # 全局连接池
@@ -304,7 +301,7 @@ class Agent:
         self.extensions = extensions or {}
         self.intro = intro
 
-        # 更新agent数据以包含所有信息
+        # 更新agent数据以包含所有信息（与 self.tags / self.extensions 保持一致，不存 None）
         self._agent_data = {
             "id": agent_id,
             "name": name,
@@ -316,9 +313,9 @@ class Agent:
             "scenario": scenario,
             "message_example": message_example,
             "creator_notes": creator_notes,
-            "tags": tags,
+            "tags": self.tags,
             "character_version": character_version,
-            "extensions": extensions,
+            "extensions": self.extensions,
             "intro": intro,
         }
 
@@ -514,10 +511,10 @@ class Agent:
         if not user_profile:
             return None
 
+        import re
+
         try:
             # 尝试从用户profile中提取Name字段
-            import re
-
             name_match = re.search(r"Name:\s*([^\n]+)", user_profile)
             if name_match:
                 return name_match.group(1).strip()
@@ -528,9 +525,8 @@ class Agent:
             )
             if chinese_name_match:
                 return chinese_name_match.group(1).strip()
-
-        except Exception as e:
-            logger.error(f"提取用户名失败: {str(e)}")
+        except (AttributeError, TypeError) as e:
+            logger.error(f"提取用户名失败: {e!s}")
 
         return None
 
@@ -557,6 +553,13 @@ class Agent:
         """
         base_client = get_base_openai_client()
         return wrap_client_with_langsmith(base_client, chat_name, labels)
+
+    def _chat_extra_body(self, user_id: str) -> Dict[str, Any]:
+        """OpenAI/OpenRouter chat completion extra_body: thinking_budget (Gemini), user (tracking)."""
+        return {
+            "generation_config": {"thinking_budget": 0},
+            "user": user_id,
+        }
 
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
@@ -952,7 +955,6 @@ class Agent:
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
-                default_model = global_config_loaded_from_config_yaml.agent.model
                 default_temperature = (
                     global_config_loaded_from_config_yaml.agent.temperature
                 )
@@ -973,7 +975,7 @@ class Agent:
                 # 模型优先级：角色 model > 订阅层 model_override > 默认。chat_settings 的「选择模型」未接入。
                 api_start = time.time()
                 agent_model = self.model_config.get("model")
-                model_name = agent_model or model_override or default_model
+                model_name = agent_model or model_override
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -994,15 +996,7 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body={
-                            # This only works for Gemini models.
-                            "generation_config": {
-                                "thinking_budget": 0,
-                            },
-                            # This appears on Open Router Client User ID field.
-                            # can be used to track end user's usage.
-                            "user": user_id,
-                        },
+                        extra_body=self._chat_extra_body(user_id),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
@@ -1073,12 +1067,7 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body={
-                            "generation_config": {
-                                "thinking_budget": 0,
-                            },
-                            "user": user_id,
-                        },
+                        extra_body=self._chat_extra_body(user_id),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
@@ -1254,7 +1243,6 @@ class Agent:
                 logger.debug(f"开始Agent推理（推送消息） - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
-                default_model = global_config_loaded_from_config_yaml.agent.model
                 default_temperature = (
                     global_config_loaded_from_config_yaml.agent.temperature
                 )
@@ -1275,7 +1263,7 @@ class Agent:
                 # 模型优先级：角色 model > 订阅层 model_override > 默认。chat_settings 的「选择模型」未接入。
                 api_start = time.time()
                 agent_model = self.model_config.get("model")
-                model_name = agent_model or model_override or default_model
+                model_name = agent_model or model_override
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1295,15 +1283,7 @@ class Agent:
                     temperature=temperature,
                     max_tokens=max_tokens,
                     top_p=top_p,
-                    extra_body={
-                        # This only works for Gemini models.
-                        "generation_config": {
-                            "thinking_budget": 0,
-                        },
-                        # This appears on Open Router Client User ID field.
-                        # can be used to track end user's usage.
-                        "user": user_id,
-                    },
+                    extra_body=self._chat_extra_body(user_id),
                     user_id=user_id,
                     max_retries=3,
                     initial_delay=1.0,
@@ -1431,44 +1411,20 @@ class Agent:
 
     def get_final_prompt(self) -> str:
         """
-        获取最终渲染的提示词
+        获取最终渲染的提示词（用于调试/展示）。
 
-        Returns:
-            渲染后的完整提示词
+        当前通过 effective main/mode/personality 组合而成；未使用 prompt_runnable。
         """
-        # 构建示例输入来展示完整提示词
-        example_input = {
-            "messages": [HumanMessage(content="示例消息")],
-            "user_profile": "Name: 示例用户\nGender: Other\n[示例用户信息]",
-            "user_id": "example_user_id",
-        }
-
-        try:
-            # 通过Runnable生成示例提示词
-            formatted_prompt = self.prompt_runnable.invoke(example_input)
-            if hasattr(formatted_prompt, "messages"):
-                return "\n\n".join(
-                    [
-                        msg.content
-                        for msg in formatted_prompt.messages
-                        if hasattr(msg, "content")
-                    ]
-                )
-            else:
-                return str(formatted_prompt)
-        except Exception as e:
-            logger.error(f"生成提示词示例失败: {str(e)}")
-            # 回退到简单的组合提示词
-            fallback_parts = []
-            main_prompt = self._get_effective_main_prompt()
-            if main_prompt:
-                fallback_parts.append(main_prompt)
-            if self.personality:
-                fallback_parts.append(f"[角色性格]\n{self.personality}")
-            mode_prompt = self._get_effective_mode_prompt()
-            if mode_prompt:
-                fallback_parts.append(mode_prompt)
-            return "\n\n".join(fallback_parts) if fallback_parts else "AI助手"
+        parts = []
+        main_prompt = self._get_effective_main_prompt()
+        if main_prompt:
+            parts.append(main_prompt)
+        if self.personality:
+            parts.append(f"[角色性格]\n{self.personality}")
+        mode_prompt = self._get_effective_mode_prompt()
+        if mode_prompt:
+            parts.append(mode_prompt)
+        return "\n\n".join(parts) if parts else "AI助手"
 
     def cleanup(self):
         """清理资源"""
@@ -1624,36 +1580,13 @@ class AgentManager:
                         self._agent_locks.pop(oldest_agent_id, None)
 
                 # 创建新的Agent实例
-                model_config = get_agent_model_config(agent_data)
-                logger.debug(f"model_config: {model_config}")
-
-                description = agent_data.get("description", "")
-
-                agent_name = agent_data.get("name", f"Agent_{agent_id[:8]}")
+                agent = build_agent_from_data(agent_id, agent_data)
+                logger.debug(f"model_config: {agent.model_config}")
                 logger.info(
-                    f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_name}"
+                    f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent.name}"
                 )
 
                 try:
-                    agent = Agent(
-                        agent_id=agent_id,
-                        name=agent_name,
-                        model_config=model_config,
-                        description=description,
-                        # 主提示词和模式提示词参数
-                        main_prompt=agent_data.get("main_prompt", ""),
-                        mode_prompt=agent_data.get("mode_prompt", ""),
-                        # 角色卡相关参数
-                        personality=agent_data.get("personality", ""),
-                        scenario=agent_data.get("scenario", ""),
-                        message_example=agent_data.get("message_example", ""),
-                        creator_notes=agent_data.get("creator_notes", ""),
-                        tags=agent_data.get("tags", []),
-                        character_version=agent_data.get("character_version", "1.0"),
-                        extensions=agent_data.get("extensions", {}),
-                        intro=agent_data.get("intro", ""),
-                    )
-
                     # 验证创建的Agent实例的agent_id
                     if agent.agent_id != agent_id:
                         logger.error(
@@ -1798,31 +1731,7 @@ class AgentManager:
                     del self.agents[agent_id]
 
                 try:
-                    # 创建新的Agent实例
-                    model_config = get_agent_model_config(agent_data)
-
-                    description = agent_data.get("description", "")
-
-                    agent_name = agent_data.get("name", f"Agent_{agent_id[:8]}")
-                    agent = Agent(
-                        agent_id=agent_id,
-                        name=agent_name,
-                        model_config=model_config,
-                        description=description,
-                        # 主提示词和模式提示词参数
-                        main_prompt=agent_data.get("main_prompt", ""),
-                        mode_prompt=agent_data.get("mode_prompt", ""),
-                        # 角色卡相关参数
-                        personality=agent_data.get("personality", ""),
-                        scenario=agent_data.get("scenario", ""),
-                        message_example=agent_data.get("message_example", ""),
-                        creator_notes=agent_data.get("creator_notes", ""),
-                        tags=agent_data.get("tags", []),
-                        character_version=agent_data.get("character_version", "1.0"),
-                        extensions=agent_data.get("extensions", {}),
-                        intro=agent_data.get("intro", ""),
-                    )
-
+                    agent = build_agent_from_data(agent_id, agent_data)
                     self.agents[agent_id] = agent
                     logger.info(f"Agent重新加载成功: {agent_id}")
                     return True
