@@ -4,6 +4,8 @@ Ref: https://docs.langchain.com/langsmith/trace-with-google-gemini#configure-tra
 Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_langsmith
 """
 from __future__ import annotations
+
+import copy
 from enum import StrEnum
 from typing import Literal
 
@@ -52,7 +54,7 @@ from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_t
 from google.genai import types
 from langsmith.run_helpers import traceable
 
-from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
+from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
 
 
@@ -85,8 +87,8 @@ class WrappedClient:
             IMAGEN_4_FAST.id_on_provider,
             IMAGEN_4.id_on_provider,
         ],
-        system_instruction: list[str],
-        contents: list[str]) -> types.GeneratedContent:
+        contents: list[str],
+        system_instruction: list[str] | None = None) -> types.GeneratedContent:
         """
         使用指定的模型生成图片。
         contents 是 jpeg/jpg 文件 http url、或文本提示词；这个设计符合目前消息生图的需求。
@@ -101,14 +103,21 @@ class WrappedClient:
         输入参数列表内，这是 LangSmith 的要求。LangSmith 无法抓取 GenAI.generate_contents() 参数。
 
         Returns:
-            types.GeneratedContent 对象，包含生成的图片。
+            Gemini（NANO_BANANA*）路径返回 types.GeneratedContent（candidates[].content.parts）。
+            Imagen（IMAGEN_4*）路径返回 generate_images 的响应（结构不同，如 generated_images[]）。
+            使用 _extract_image_part_from_gemini_response 的调用方必须仅走 Gemini 路径。
         """
         match model:
             case NANO_BANANA.id_on_provider | NANO_BANANA_PRO.id_on_provider:
                 # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
-                config = GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
-                # 重制系统指令，避免影响其它调用。
-                config.system_instruction = get_text_parts(system_instruction)
+                # 默认参数不影响系统生成效果，不需要追踪。
+                # 仅在需要改写 system_instruction 时复制 config，避免污染全局预设。
+                if system_instruction is not None:
+                    config = copy.copy(GEN_CONTENT_CONFIG_IMAGE_9_16_1K)
+                    config.system_instruction = get_text_parts(system_instruction)
+                else:
+                    config = GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+
                 contents_parts = get_jpeg_url_and_text_mixed_parts(contents)
                 return await self.client.aio.models.generate_content(
                     model=model,
@@ -136,6 +145,3 @@ class WrappedClient:
                 )
             case _:
                 raise ValueError(f"Unsupported model: {model}")
-
-        # TODO: 需要替换返回值为真实图片并上传，然后在被封禁/屏蔽时 raise exception 从而让 tracing 捕获
-        # 这样在 trace 搜索时能直接找到有问题的调用，否则全部是成功的。
