@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import copy
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, Optional
 
 # -----------------------------------------------------------------------------
 # Official wrapper: langsmith.wrappers.wrap_gemini
@@ -50,6 +50,7 @@ from typing import Literal
 
 
 from google import genai
+from loguru import logger
 from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_text_part, get_text_parts
 from google.genai import types
 from langsmith.run_helpers import traceable
@@ -121,7 +122,7 @@ class WrappedClient:
                     config = GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 
                 contents_parts = get_jpeg_url_and_text_mixed_parts(contents)
-                return await self.client.aio.models.generate_content(
+                response = await self.client.aio.models.generate_content(
                     model=model,
                     contents=[
                         types.Content(
@@ -131,19 +132,81 @@ class WrappedClient:
                     ],
                     config=config,
                 )
-            case IMAGEN_4_FAST.id_on_provider | IMAGEN_4.id_on_provider:
-                if len(contents) != 1:
-                    raise ValueError("Imagen 4.0 Fast 和 Imagen 4.0 模型只支持一个提示词")
-                # Imagen generate_images: no output_gcs_uri here (caller handles storage).
-                # Optional: output_compression_quality (0-100) for JPEG.
-                return await self.client.aio.models.generate_images(
-                    model=model,
-                    prompt=contents[0],
-                    # TODO: 需要替换为现有代码中实际使用的 API 配置
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        aspect_ratio=ASPECT_RATIO_9_16,
-                    ),
-                )
+                return _extract_image_part_from_gemini_response(response)
             case _:
                 raise ValueError(f"Unsupported model: {model}")
+
+
+def _extract_image_part_from_gemini_response(
+    response: types.GeneratedContent,
+) -> types.Part:
+    """
+    校验 Gemini generate_content 响应并提取图片 part。
+    成功时返回含有 inline_data 的 part；失败时记录日志并抛出 ValueError。
+    """
+    # 检查 prompt_feedback（响应级别的反馈）
+    if hasattr(response, "prompt_feedback") and response.prompt_feedback:
+        prompt_feedback = response.prompt_feedback
+        logger.warning("Prompt feedback: {}", prompt_feedback)
+        if hasattr(prompt_feedback, "block_reason"):
+            block_reason = prompt_feedback.block_reason
+            logger.warning("请求被阻止，原因: {}", block_reason)
+            raise ValueError(
+                f"Image generation request blocked by safety filter: {block_reason}"
+            )
+
+    if not response.candidates:
+        logger.error("Gemini 未返回任何候选结果")
+        raise ValueError("Gemini returned no candidates")
+
+    candidate = response.candidates[0]
+
+    # 检查 finish_reason（完成原因）
+    finish_reason = getattr(candidate, "finish_reason", None)
+    if finish_reason:
+        logger.warning("候选结果完成原因: {}", finish_reason)
+        if finish_reason == "SAFETY":
+            safety_ratings = getattr(candidate, "safety_ratings", None) or []
+            safety_details = [
+                f"{r.category}={r.probability}(blocked={r.blocked})"
+                for r in safety_ratings
+            ]
+            error_msg = "Image generation blocked by safety filter"
+            if safety_details:
+                error_msg += f"; details: {', '.join(safety_details)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        elif finish_reason not in ("STOP", None):
+            logger.warning("候选结果以非正常原因结束: {}", finish_reason)
+
+    # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
+    candidate_safety_ratings = getattr(candidate, "safety_ratings", None) or []
+    blocked_ratings = [
+        f"{r.category}={r.probability}(blocked={r.blocked})"
+        for r in candidate_safety_ratings
+        if hasattr(r, "blocked") and r.blocked
+    ]
+    if blocked_ratings:
+        error_msg = f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    # 检查 content 和 parts
+    if not candidate.content or not candidate.content.parts:
+        logger.error("候选结果中没有内容，finish_reason={}", finish_reason)
+        error_msg = "No content in candidates"
+        if finish_reason:
+            error_msg += f" (finish_reason: {finish_reason})"
+        raise ValueError(error_msg)
+
+    # 查找图片部分
+    image_part = None
+    for part in candidate.content.parts:
+        if hasattr(part, "inline_data") and part.inline_data:
+            image_part = part
+            break
+
+    if not image_part:
+        raise ValueError("No image data found in response")
+
+    return image_part

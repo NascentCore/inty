@@ -673,9 +673,7 @@ class ImageGenerationService:
             contents.append(prompt)
 
             gemini_model = model or NANO_BANANA.id_on_provider
-            response = await client.async_generate_image(model=gemini_model, contents=contents)
-
-            image_part = _extract_image_part_from_gemini_response(prompt, response)
+            image_part = await client.async_generate_image(model=gemini_model, contents=contents)
 
             # 获取图片数据
             import base64
