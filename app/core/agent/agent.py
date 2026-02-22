@@ -1,6 +1,7 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock, RLock
@@ -68,6 +69,7 @@ USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
     "- Use it only as context for the user's situation and daily rhythm.",
     "- Do not claim to need sleep or be offline.",
 ]
+CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
 
 
 class UserTimeContext(TypedDict, total=False):
@@ -668,6 +670,72 @@ class Agent:
 
         return recent_messages
 
+    def _build_date_system_prompt(self, date_iso: str) -> str:
+        return "\n".join(
+            [
+                CONVERSATION_DATE_SYSTEM_PROMPT_TITLE,
+                f"- Date: {date_iso}",
+                "- The following messages happened on this date.",
+            ]
+        )
+
+    def _extract_message_date_iso(self, message: BaseMessage) -> Optional[str]:
+        additional_kwargs = getattr(message, "additional_kwargs", None) or {}
+        created_at_raw = additional_kwargs.get("created_at")
+        if not isinstance(created_at_raw, str) or not created_at_raw.strip():
+            return None
+
+        normalized_created_at = created_at_raw.strip().replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized_created_at).date().isoformat()
+        except ValueError:
+            logger.warning(f"无法解析消息 created_at: {created_at_raw}")
+            return None
+
+    def _build_messages_with_date_system_prompts(
+        self,
+        history_messages: List[BaseMessage],
+        current_messages: List[BaseMessage],
+        now_utc: Optional[datetime] = None,
+    ) -> List[BaseMessage]:
+        """
+        仅为“当天”注入一次日期 system message，位置是当天第一条消息之前。
+        """
+        if not history_messages and not current_messages:
+            return []
+
+        current_time_utc = now_utc if now_utc is not None else datetime.now(timezone.utc)
+        current_date_iso = current_time_utc.date().isoformat()
+
+        all_messages = history_messages + current_messages
+        if not all_messages:
+            return []
+
+        first_today_index: Optional[int] = None
+        history_count = len(history_messages)
+        for index, message in enumerate(all_messages):
+            if index < history_count:
+                message_date_iso = self._extract_message_date_iso(message)
+            else:
+                # 当前请求里的消息统一视为“今天”的消息
+                message_date_iso = current_date_iso
+            if message_date_iso == current_date_iso:
+                first_today_index = index
+                break
+
+        if first_today_index is None:
+            return all_messages
+
+        messages_with_date_prompts: List[BaseMessage] = []
+        for index, message in enumerate(all_messages):
+            if index == first_today_index:
+                messages_with_date_prompts.append(
+                    SystemMessage(content=self._build_date_system_prompt(current_date_iso))
+                )
+            messages_with_date_prompts.append(message)
+
+        return messages_with_date_prompts
+
     def _is_retryable_error(self, error: Exception) -> bool:
         """
         判断错误是否可重试
@@ -912,7 +980,10 @@ class Agent:
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                all_messages = recent_history + messages
+                all_messages = self._build_messages_with_date_system_prompts(
+                    history_messages=recent_history,
+                    current_messages=messages,
+                )
                 logger.debug(f"all_messages: {all_messages}")
 
                 # 保存原始用户消息到历史记录
@@ -1208,7 +1279,10 @@ class Agent:
                 )
 
                 # 注意：这里不保存用户消息到历史记录
-                all_messages = recent_history + messages
+                all_messages = self._build_messages_with_date_system_prompts(
+                    history_messages=recent_history,
+                    current_messages=messages,
+                )
                 logger.debug(f"all_messages: {all_messages}")
 
                 # 如果 user_profile 为 None，自动获取
