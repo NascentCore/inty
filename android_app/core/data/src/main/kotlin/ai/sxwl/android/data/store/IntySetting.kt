@@ -15,7 +15,16 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.tencent.mmkv.MMKV
 import kotlin.random.Random
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
@@ -71,10 +80,27 @@ object IntySetting {
     // 当前UserId
     private var curUid: String = ""
 
+    private val settingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val _currentUserIdState = MutableStateFlow("")
+    private val _currentTokenState = MutableStateFlow("")
+
+    val currentUserIdFlow: StateFlow<String>
+        get() = _currentUserIdState
+
+    val currentTokenFlow: StateFlow<String>
+        get() = _currentTokenState
+
+    val isLoginFlow: Flow<Boolean> =
+        combine(currentUserIdFlow, currentTokenFlow) { userId, token ->
+            userId.isNotEmpty() && token.isNotEmpty()
+        }.distinctUntilChanged()
+
     // 当前用户作用域初始化锁：用于延迟从 DataStore 同步 cur_uid，避免在 object init 阶段阻塞主线程
     private val currentUserScopeLock = Any()
 
     @Volatile private var hasHydratedCurrentUserScopeFromDataStore: Boolean = false
+    @Volatile private var isHydratingCurrentUserScopeFromDataStore: Boolean = false
 
     // 用于同步 incrementTotalMessageCount 操作的锁对象
     private val messageCountLock = Any()
@@ -90,6 +116,12 @@ object IntySetting {
         curUid = allUserLegacySetting.decodeString(KEY_CURRENT_USER_ID) ?: ""
         curUserDataStore = createUserDataStore(curUid)
         curUserLegacySetting = createLegacyUserStore(curUid)
+        _currentUserIdState.value = curUid
+        _currentTokenState.value = curUserLegacySetting.decodeString(KEY_TOKEN) ?: ""
+
+        // 启动后在 IO 线程补齐 DataStore 真值，避免主线程同步阻塞。
+        hydrateCurrentUserScopeAsync()
+        refreshCurrentTokenAsync(curUid)
     }
 
     private fun createUserDataStore(uid: String): DataStore<Preferences> {
@@ -603,50 +635,130 @@ object IntySetting {
         removePreference(allUserDataStore, keyName)
     }
 
+    private fun isMainThread(): Boolean {
+        return Looper.myLooper() == Looper.getMainLooper()
+    }
+
     private fun updateCurrentUserScope(userId: String) {
         curUid = userId
         curUserDataStore = createUserDataStore(curUid)
         curUserLegacySetting = createLegacyUserStore(curUid)
+        _currentUserIdState.value = curUid
     }
 
     private fun hydrateCurrentUserScopeIfNeeded() {
-        if (hasHydratedCurrentUserScopeFromDataStore) return
+        if (hasHydratedCurrentUserScopeFromDataStore) {
+            return
+        }
 
+        if (isMainThread()) {
+            hydrateCurrentUserScopeAsync()
+            return
+        }
+
+        hydrateCurrentUserScopeBlocking()
+    }
+
+    private fun hydrateCurrentUserScopeBlocking() {
+        if (hasHydratedCurrentUserScopeFromDataStore) {
+            return
+        }
+
+        val userId = getAppStringOrNull(KEY_CURRENT_USER_ID) ?: ""
+        var scopedUserId = userId
         synchronized(currentUserScopeLock) {
-            if (hasHydratedCurrentUserScopeFromDataStore) return
-            val userId = getAppStringOrNull(KEY_CURRENT_USER_ID) ?: ""
+            if (hasHydratedCurrentUserScopeFromDataStore) {
+                return
+            }
             if (userId != curUid) {
                 updateCurrentUserScope(userId)
+                _currentTokenState.value = ""
             }
+            scopedUserId = curUid
             hasHydratedCurrentUserScopeFromDataStore = true
+        }
+
+        refreshCurrentTokenAsync(scopedUserId)
+    }
+
+    private fun hydrateCurrentUserScopeAsync() {
+        if (hasHydratedCurrentUserScopeFromDataStore || isHydratingCurrentUserScopeFromDataStore) {
+            return
+        }
+
+        synchronized(currentUserScopeLock) {
+            if (hasHydratedCurrentUserScopeFromDataStore || isHydratingCurrentUserScopeFromDataStore) {
+                return
+            }
+            isHydratingCurrentUserScopeFromDataStore = true
+        }
+
+        settingScope.launch {
+            try {
+                hydrateCurrentUserScopeBlocking()
+            } finally {
+                synchronized(currentUserScopeLock) { isHydratingCurrentUserScopeFromDataStore = false }
+            }
+        }
+    }
+
+    private fun refreshCurrentTokenAsync(targetUserId: String) {
+        settingScope.launch {
+            val userDataStoreSnapshot: DataStore<Preferences>
+            val userLegacySnapshot: MMKV
+            synchronized(currentUserScopeLock) {
+                if (curUid != targetUserId) return@launch
+                userDataStoreSnapshot = curUserDataStore
+                userLegacySnapshot = curUserLegacySetting
+            }
+
+            val token =
+                getStringOrNullWithMigration(userDataStoreSnapshot, KEY_TOKEN) {
+                    userLegacySnapshot.decodeString(KEY_TOKEN)
+                } ?: ""
+
+            synchronized(currentUserScopeLock) {
+                if (curUid != targetUserId) return@synchronized
+                _currentTokenState.value = token
+            }
         }
     }
 
     fun getCurUserID(): String {
         hydrateCurrentUserScopeIfNeeded()
-        return curUid
+        return _currentUserIdState.value
     }
 
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
-        // 与 hydrateCurrentUserScopeIfNeeded 使用同一把锁，避免并发下用户作用域被旧值回滚。
+        val targetUserId: String
         synchronized(currentUserScopeLock) {
             updateCurrentUserScope(uid)
+            _currentTokenState.value = ""
             hasHydratedCurrentUserScopeFromDataStore = true
+            targetUserId = curUid
         }
-        putAppString(KEY_CURRENT_USER_ID, uid)
+        settingScope.launch { putStringPreference(allUserDataStore, KEY_CURRENT_USER_ID, targetUserId) }
+        refreshCurrentTokenAsync(targetUserId)
     }
 
     fun setToken(token: String) {
-        putUserString(KEY_TOKEN, token)
+        val userDataStoreSnapshot: DataStore<Preferences>
+        synchronized(currentUserScopeLock) {
+            _currentTokenState.value = token
+            userDataStoreSnapshot = curUserDataStore
+        }
+
+        settingScope.launch { putStringPreference(userDataStoreSnapshot, KEY_TOKEN, token) }
     }
 
     fun getCurToken(): String {
-        return getUserStringOrNull(KEY_TOKEN) ?: ""
+        hydrateCurrentUserScopeIfNeeded()
+        return _currentTokenState.value
     }
 
     fun isLogin(): Boolean {
-        return getCurUserID().isNotEmpty() && getCurToken().isNotEmpty()
+        return _currentUserIdState.value.isNotEmpty() && _currentTokenState.value.isNotEmpty()
     }
 
     /** 登录接口后，本地处理登录业务的数据逻辑 */

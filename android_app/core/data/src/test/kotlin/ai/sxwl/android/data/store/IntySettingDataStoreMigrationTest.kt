@@ -47,11 +47,11 @@ class IntySettingDataStoreMigrationTest {
     fun getCurToken_migratesLegacyValueToDataStoreAndKeepsDataStoreAsSource() {
         val userLegacyStore = legacyUserStore(TEST_USER_ID_MIGRATION)
         userLegacyStore.clearAll()
-
-        IntySetting.changeUser(TEST_USER_ID_MIGRATION)
         userLegacyStore.putString(TEST_KEY_TOKEN, "legacy_token")
 
-        assertEquals("legacy_token", IntySetting.getCurToken())
+        IntySetting.changeUser(TEST_USER_ID_MIGRATION)
+
+        assertEventuallyCurToken("legacy_token")
 
         userLegacyStore.putString(TEST_KEY_TOKEN, "legacy_token_changed")
         assertEquals("legacy_token", IntySetting.getCurToken())
@@ -143,5 +143,17 @@ class IntySettingDataStoreMigrationTest {
                 }
                 .isSuccess
         return initWithPathAndLevelSucceeded
+    }
+
+    private fun assertEventuallyCurToken(
+        expectedToken: String,
+        timeoutMs: Long = 1_500L,
+    ) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            if (IntySetting.getCurToken() == expectedToken) return
+            Thread.sleep(25L)
+        }
+        assertEquals(expectedToken, IntySetting.getCurToken())
     }
 }
