@@ -218,7 +218,9 @@ def test_resolve_festival_name_and_date_from_metadata():
 
 
 @pytest.mark.asyncio
-async def test_get_festival_memories_for_user_agent_reads_metadata():
+async def test_get_festival_memories_for_user_agent_reads_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+):
     mock_db = AsyncMock()
     mock_result = MagicMock()
     # row format: (id, metadata, content)
@@ -241,8 +243,8 @@ async def test_get_festival_memories_for_user_agent_reads_metadata():
     ]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    service.Memory = _FakeMemory
-    service.select = lambda *args, **kwargs: _DummyQuery()
+    monkeypatch.setattr(service, "Memory", _FakeMemory)
+    monkeypatch.setattr(service, "select", lambda *args, **kwargs: _DummyQuery())
 
     out = await service.get_festival_memories_for_user_agent(
         mock_db, "user-1", "agent-1"
@@ -260,7 +262,9 @@ async def test_get_festival_memories_for_user_agent_reads_metadata():
 
 
 @pytest.mark.asyncio
-async def test_get_undelivered_festival_memories_reads_metadata():
+async def test_get_undelivered_festival_memories_reads_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+):
     mock_db = AsyncMock()
     mock_result = MagicMock()
     # row format: (id, metadata)
@@ -273,8 +277,8 @@ async def test_get_undelivered_festival_memories_reads_metadata():
     ]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    service.Memory = _FakeMemory
-    service.select = lambda *args, **kwargs: _DummyQuery()
+    monkeypatch.setattr(service, "Memory", _FakeMemory)
+    monkeypatch.setattr(service, "select", lambda *args, **kwargs: _DummyQuery())
 
     out = await service.get_undelivered_festival_memories(mock_db, "u1", "a1")
     # Row with None metadata yields (None, None) and is skipped.
