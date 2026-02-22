@@ -4,6 +4,7 @@ import ai.sxwl.android.utils.Utils
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.tencent.mmkv.MMKV
+import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -13,8 +14,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+private const val TEST_DATASTORE_ALL_USER_NAME = "inty_setting_all_user"
+private const val TEST_DATASTORE_USER_PREFIX = "inty_setting_user_"
 private const val TEST_KEY_TOKEN = "token"
 private const val TEST_KEY_APP_DATA_PREFIX = "app_data_"
+private const val TEST_USER_ID_MIGRATION = "mmkv_migration_test_user"
+private const val TEST_USER_ID_WRITE_ONLY = "mmkv_write_only_test_user"
+private const val TEST_USER_ID_APP_DATA = "mmkv_app_data_test_user"
+private const val TEST_APP_DATA_KEY = "video_cache_test_key"
 
 @RunWith(RobolectricTestRunner::class)
 class IntySettingDataStoreMigrationTest {
@@ -26,18 +33,20 @@ class IntySettingDataStoreMigrationTest {
         app = ApplicationProvider.getApplicationContext()
         Utils.init(app)
         assumeTrue("MMKV is not available in current unit test runtime", initializeMmkvCompat(app))
+        cleanupTestData()
     }
 
     @After
-    fun tearDown() = Unit
+    fun tearDown() {
+        cleanupTestData()
+    }
 
     @Test
     fun getCurToken_migratesLegacyValueToDataStoreAndKeepsDataStoreAsSource() {
-        val userId = "migration_user_${System.nanoTime()}"
-        val userLegacyStore = legacyUserStore(userId)
+        val userLegacyStore = legacyUserStore(TEST_USER_ID_MIGRATION)
         userLegacyStore.clearAll()
 
-        IntySetting.changeUser(userId)
+        IntySetting.changeUser(TEST_USER_ID_MIGRATION)
         userLegacyStore.putString(TEST_KEY_TOKEN, "legacy_token")
 
         assertEquals("legacy_token", IntySetting.getCurToken())
@@ -48,11 +57,10 @@ class IntySettingDataStoreMigrationTest {
 
     @Test
     fun setToken_writesOnlyToDataStore() {
-        val userId = "write_only_user_${System.nanoTime()}"
-        val userLegacyStore = legacyUserStore(userId)
+        val userLegacyStore = legacyUserStore(TEST_USER_ID_WRITE_ONLY)
         userLegacyStore.clearAll()
 
-        IntySetting.changeUser(userId)
+        IntySetting.changeUser(TEST_USER_ID_WRITE_ONLY)
         IntySetting.setToken("data_store_token")
 
         assertEquals("data_store_token", IntySetting.getCurToken())
@@ -61,10 +69,9 @@ class IntySettingDataStoreMigrationTest {
 
     @Test
     fun clearAppData_shouldNotFallBackToLegacyMmkvAgain() {
-        val userId = "clear_app_data_user_${System.nanoTime()}"
-        IntySetting.changeUser(userId)
+        IntySetting.changeUser(TEST_USER_ID_APP_DATA)
 
-        val appDataKey = "video_cache_${System.nanoTime()}"
+        val appDataKey = TEST_APP_DATA_KEY
         val legacyFullKey = "$TEST_KEY_APP_DATA_PREFIX$appDataKey"
         val allUserLegacyStore = legacyAllUserStore()
         allUserLegacyStore.removeValueForKey(legacyFullKey)
@@ -84,6 +91,20 @@ class IntySettingDataStoreMigrationTest {
 
     private fun legacyAllUserStore(): MMKV {
         return MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, app.packageName)
+    }
+
+    private fun cleanupTestData() {
+        runBlocking {
+            dataStore(TEST_DATASTORE_ALL_USER_NAME).clear()
+            dataStore("$TEST_DATASTORE_USER_PREFIX$TEST_USER_ID_MIGRATION").clear()
+            dataStore("$TEST_DATASTORE_USER_PREFIX$TEST_USER_ID_WRITE_ONLY").clear()
+            dataStore("$TEST_DATASTORE_USER_PREFIX$TEST_USER_ID_APP_DATA").clear()
+        }
+
+        legacyUserStore(TEST_USER_ID_MIGRATION).clearAll()
+        legacyUserStore(TEST_USER_ID_WRITE_ONLY).clearAll()
+        legacyUserStore(TEST_USER_ID_APP_DATA).clearAll()
+        legacyAllUserStore().removeValueForKey("$TEST_KEY_APP_DATA_PREFIX$TEST_APP_DATA_KEY")
     }
 
     private fun initializeMmkvCompat(application: Application): Boolean {
