@@ -1,43 +1,43 @@
 <!-- CREATED_BY_AGENT -->
 ## 目标
 
-验证 Boost 功能相关的三类数值在 UI 中**不再混淆**，并且在「不可用态」下依然可点开解释与引导。
+验证 Hype 功能相关的三类数值在 UI 中**不再混淆**，并且在「不可用态」下依然可点开解释与引导。
 
 ## 前置条件
 
 - 具备可登录账号或游客模式可进入应用主流程
 - 网络可用（用于 Top 10 拉取后端 `energy_points` 排行）
 
-## 用例 1：聊天页不再展示“角色聊天 pts”
+## 用例 1：聊天页不再展示“iMate 聊天 pts”
 
-- **步骤**：进入任一角色聊天页（Chat）
+- **步骤**：进入任一 iMate 聊天页（Chat）
 - **期望**：
-  - 顶部栏不再显示 `⚡ xx pts`（避免与 Boost Points / Energy Points 混淆）
-  - 仍可点击顶部栏进入角色详情页
+  - 顶部栏不再显示 `⚡ xx pts`（避免与 Hype Credits / iMate Energy Points 混淆）
+  - 仍可点击顶部栏进入 iMate 详情页
 
-## 用例 2：Boost Points（账号可支配）在 <100 时可点开解释
+## 用例 2：Hype Credits（账号可支配）在 <100 时可点开解释
 
-- **步骤**：在「签到页 / 排行榜页 / 角色详情页」看到 `Boost Points` 卡片，且 points < 100
+- **步骤**：在「签到页 / 排行榜页 / iMate 详情页」看到 `Hype Credits` 卡片，且 points < 100
 - **期望**：
   - 卡片显示灰态，但**可点击**
   - 点击后弹出说明面板：
-    - 解释 Boost Points 的用途（先获得，再选择支持哪个角色）
+    - 解释 Hype Credits 的用途（先获得，再选择支持哪个 iMate）
     - 展示 `当前 / 100` 的进度
     - 提供进入 `Top 10` 的入口
 
-## 用例 3：角色详情页同时展示两类指标（账号 vs 角色）
+## 用例 3：iMate 详情页同时展示两类指标（账号 vs iMate）
 
-- **步骤**：从聊天页进入角色详情页（Agent Info）
+- **步骤**：从聊天页进入 iMate 详情页（Agent Info）
 - **期望**：
-  - 显示 `Boost Points`（账号可支配）
-  - 显示 `Character Energy Points: N`（角色榜单总分）与解释文案
+  - 显示 `Hype Credits`（账号可支配）
+  - 显示 `iMate Energy Points: N`（iMate 榜单总分）与解释文案
   - 提供 `View Top 10` 跳转入口
 
-## 用例 4：Boost 弹窗解释“Boost 的结果”
+## 用例 4：Hype 弹窗解释“Hype 的结果”
 
-- **步骤**：在角色详情页点 `Boost`（或从榜单点 Boost 进入聊天后弹出）
+- **步骤**：在 iMate 详情页点 `Hype`（或从榜单点 Hype 进入聊天后弹出）
 - **期望**：
-  - 弹窗内显示该角色 `Character Energy Points` 与解释（用于榜单排序）
+  - 弹窗内显示该 iMate `iMate Energy Points` 与解释（用于榜单排序）
   - 能跳转 `Top 10` 查看榜单
-  - Boost 成功后，返回聊天/详情页流程不中断
+  - Hype 成功后，返回聊天/详情页流程不中断
 

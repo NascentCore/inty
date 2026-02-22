@@ -67,6 +67,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | --- | --- | --- |
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
 | Find or follow iMates | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
+| Hype an iMate on the leaderboard | Explore → Top IntelliMates (rocket icon) → **Hype now** | Spend credits to hype an iMate directly. You can earn credits by chatting, generating images, listening to voices, or daily check-in. |
 | Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
 | Create or edit an iMate | Explore → “Create/+” or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
@@ -81,7 +82,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 ### 1. Explore
 - Double-tap the header to rewind to the top and refresh.
 - Avatars/backgrounds preload so cards stay visible even on slow networks.
-- The top banner section includes **Newly iMates** with subtitle **“Newly crafted based on your preference”**, showing up to 10 most recently created characters.
+- The top banner section includes **Newly iMates** with subtitle **“Newly crafted based on your preference”**, showing up to 10 most recently created iMates.
 - Switch between Recommended, Favorites, Created by Me.
 
   <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/526e12a9-f0ef-4735-9ec9-ec32da978639" />

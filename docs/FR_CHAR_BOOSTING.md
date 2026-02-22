@@ -1,5 +1,8 @@
 <!-- CREATED_BY_AGENT -->
-# Boost AI Characters 功能设计与实现计划
+# Hype iMates 功能设计与实现计划
+
+> 术语说明：面向用户的产品文案已统一为 **Hype**（原 Boost）与 **iMate**（原 Character）。
+> 本文中涉及代码标识、埋点键名、接口字段名仍沿用历史命名（如 `BoostManager`、`boost_*`、`agent`）。
 
 ## 目标与背景
 - 通过「角色打榜」玩法，将每日签到等轻任务与真实聊天行为绑定，提升留存与会话深度。
@@ -8,26 +11,26 @@
 
 ## 核心概念
 - **Token Energy**：用户每日通过签到、活动奖励等方式领取的额度，直接与聊天 token 消耗挂钩。
-- **Boost Points（账号可支配积分）**：用户通过聊天/图片/语音/签到获得的可支配积分，用于后续选择要支持（Boost）的角色。客户端常量控制兑换比例与获取规则。
-- **Energy Points（角色榜单积分）**：角色在榜单中的总分（后端字段 `energy_points` / `agents.points`），用于 Top10/排行榜排序。Boost 行为会把用户投入的 Boost Points 以增量形式累加到角色的 Energy Points 上。
-- **Boost**：一次支持/打榜行为，消耗一定数量的 Boost Points（默认 100，步长可配置），为当前 AI 角色累积 Energy Points。
-- **Top Characters（Leaderboard）**：按角色 Energy Points 排序的排行榜（例如 Top 10），用于展示“全站热度”。
+- **Hype Points（账号可支配积分）**：用户通过聊天/图片/语音/签到获得的可支配积分，用于后续选择要支持（Hype）的 iMate。客户端常量控制兑换比例与获取规则。
+- **Energy Points（iMate 榜单积分）**：iMate 在榜单中的总分（后端字段 `energy_points` / `agents.points`），用于 Top10/排行榜排序。Hype 行为会把用户投入的 Hype Points 以增量形式累加到 iMate 的 Energy Points 上。
+- **Hype**：一次支持/打榜行为，消耗一定数量的 Hype Points（默认 100，步长可配置），为当前 AI iMate 累积 Energy Points。
+- **Top iMates（Leaderboard）**：按 iMate Energy Points 排序的排行榜（例如 Top 10），用于展示“全站热度”。
 
 ## 用户旅程
 1. **签到/活动**：用户触发签到即获得 Token Energy，提示当前可用积分。
 2. **聊天转化**：聊天时根据 token 消耗实时折算并累积 Points。
-3. **Explore 子 Tab**：用户进入 Explore → Boost 子 Tab，浏览 Top 100 AI 角色，点击即可跳转聊天。
-4. **角色主页 Boost**：在角色主页显示积分面板，点击可打开 Boost 弹窗进行 boost 操作。
+3. **Explore 子 Tab**：用户进入 Explore → Hype 子 Tab，浏览 Top 100 iMates，点击即可跳转聊天。
+4. **iMate 主页 Hype**：在 iMate 主页显示积分面板，点击可打开 Hype 弹窗进行 hype 操作。
 
 ## UI/UX 要点
 - **签到反馈**：Toast + 积分条动画，突出「今日剩余 X Points」。
 - **Explore 子 Tab**：
-  - 排行列表：角色头像、名称、Boost 计数、涨幅趋势箭头。
-  - 按钮：`Boost`（直接打开对应聊天并聚焦 Boost 面板）与 `Chat`。
+  - 排行列表：iMate 头像、名称、Hype 计数、涨幅趋势箭头。
+  - 按钮：`Hype`（直接打开对应聊天并聚焦 Hype 面板）与 `Chat`。
   - 空状态：若无数据，展示「暂无打榜数据，去聊天赚积分」。
-- **角色主页**：
+- **iMate 主页**：
   - 显示 `BoostStatusChip`（积分面板），展示可用积分
-  - 点击后弹出半屏面板：角色简介、当前 Boost 总数、输入消耗 Points 的滑条或步进器（每步 100）。
+  - 点击后弹出半屏面板：iMate 简介、当前 Hype 总数、输入消耗 Points 的滑条或步进器（每步 100）。
   - 成功后在对话流插入系统消息提示。
 
 ## 当前实现状态（本地 MVP）
@@ -532,7 +535,7 @@ if (HeartAppUtils.isAppDebugMode(Utils.getApp())) {
 
 **系统消息插入**：
 - `appendBoostSystemMessage()` 方法：在 Boost 成功后，向聊天记录插入系统提示消息
-- 消息格式：`"You invested %1$d pts in %2$s. Total boosts: %3$d."`
+- 消息格式：`"You hyped %2$s with %1$d credits. Total hypes: %3$d."`
 
 #### 5. **AudioManager 集成** (`AudioManager.kt`)
 
@@ -1090,12 +1093,12 @@ LaunchedEffect(Unit) {
 - `android_app/app/src/main/kotlin/com/ai/intellimate/IntelliMateApp.kt` - Application 类，初始化 BoostManager
 
 ### 资源文件
-- `android_app/app/src/main/res/values/strings.xml` - Boost 相关文案（所有用户可见文本）
+- `android_app/app/src/main/res/values/strings.xml` - Hype 相关文案（所有用户可见文本）
 - `android_app/app/src/main/res/drawable/ic_boost_fire.xml` - Boost 火焰图标
 
 ### 文档
-- `android_app/AGENTS.md` - Boost 功能简要说明（在 "Boost AI Characters 本地 MVP" 章节）
-- `docs/FR_CHAR_BOOSTING.md` - 本文档，完整的功能设计与实现文档
+- `android_app/AGENTS.md` - Android 侧开发约定与实现规范
+- `docs/FR_CHAR_BOOSTING.md` - 本文档（文件名保留历史命名），完整的功能设计与实现文档
 
 ## 后续待办
 - 拟定后端接口：`GET /agents/boosted`, `POST /agents/{id}/boost`。
