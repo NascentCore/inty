@@ -1109,7 +1109,7 @@ internal fun ChatPage(
         // UI 效果：
         // - 显示角色信息（头像、名称）
         // - 显示可用积分（availablePoints）和积分投入滑块（100 pts 步长）
-        // - 提供 "Boost now" 按钮确认投入积分
+        // - 提供 "Hype now" 按钮确认投入积分
         // 交互流程：
         // - onBoostConfirmed: 用户确认投入积分 → 调用 BoostManager.boostAgent() → 成功后插入系统消息到聊天流 → 关闭弹窗
         // - onDismiss: 用户点击外部区域或取消按钮 → 直接关闭弹窗

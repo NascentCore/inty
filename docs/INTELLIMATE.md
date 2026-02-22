@@ -17,7 +17,7 @@ Terminology used in this guide:
 
 - **Install or update**: Prefer the [Google Play internal testing channel](https://play.google.com/store/apps/details?id=com.ai.intellimate&hl=en-US&ah=EmlT1IB-9hWsv_1I4B8Go9FEIFc). For the very latest QA builds, grab the APK from the [daily release page](https://github.com/NascentCore/inty-app/releases).
 - **Sign in**: You can explore as a guest, but linking your Google account keeps chats and VIP benefits synced across devices. (Phones in China must install Google services first.)
-- **Main flow**: Discover iMates on Explore → open a Chat → use extras like voice playback, image generation, or Keep Talking → adjust Profile or Settings as needed.
+- **Main flow**: Discover iMates on Explore → open a Chat → use extras like voice playback, image generation, Keep Talking, or Hype actions → adjust Profile or Settings as needed.
 - **Need help?**
   - In-app: Settings → Help & Feedback (placeholder entry; use tester channels for now).
   - Test/ops escalation: see “Contact & Escalation” near the end of this doc.
@@ -68,6 +68,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
 | Find or follow iMates | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
 | Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
+| Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
 | Create or edit an iMate | Explore → “Create/+” or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
@@ -102,6 +103,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 ### 3. iMates
 - iMate creation/editing supports uploads plus AI-generated art; failures surface clear error states (`AvatarManager`).
 - iMate detail pages show AI-generated media pulled from recent chats, with explicit labeling.
+- iMate detail pages include **Hype this iMate**, which lets you spend Credits to increase that iMate's Hype Score.
 
 ### 4. VIP / Subscription
 - Plans run through Google Play Billing; benefits refresh automatically after purchase.

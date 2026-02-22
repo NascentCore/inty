@@ -1,5 +1,5 @@
 <!-- CREATED_BY_AGENT -->
-# 角色能量值排名功能实现现状调研
+# iMate 能量值排名功能实现现状调研
 
 ## 一、功能需求概述
 
@@ -7,15 +7,15 @@
 
 1. **用户获得 energy points**
    - 从签到获得 energy points
-   - 从跟角色聊天获得 energy points
+   - 从跟 iMate 聊天获得 energy points
 
-2. **用户 Boost 角色**
+2. **用户 Hype iMate**
    - 用户可以选择一定数量自己从聊天、每日签到获得的 energy points
-   - 将选定的 energy points 加到用户自己选择的某个角色上
+   - 将选定的 energy points 加到用户自己选择的某个 iMate 上
 
 3. **Explore 页面 Top 10 排行榜**
    - Explore 页面有 "Top 10" 按钮
-   - 点击后进入页面，显示按照 energy points 排名的角色列表
+   - 点击后进入页面，显示按照 energy points 排名的 iMate 列表
 
 ## 二、后端实现现状
 
@@ -27,17 +27,17 @@ points = Column(
     Integer,
     default=0,
     server_default=sa.text("0"),
-    comment="角色积分，用于角色热度排名（boosting feature）",
+    comment="iMate 积分，用于 iMate 热度排名（hype an iMate feature）",
 )
 ```
 
 - 数据库字段：`points` (Integer)
 - 默认值：0
-- 用途：存储角色的 energy points，用于排行榜排序
+- 用途：存储 iMate 的 energy points，用于排行榜排序
 
 ### 2.2 API 接口
 
-#### 2.2.1 `/api/v1/ai/agents/recommend` - 推荐角色列表
+#### 2.2.1 `/api/v1/ai/agents/recommend` - 推荐 iMate 列表
 
 **位置**: `app/api/v1/endpoints/agents.py:117`
 
@@ -51,7 +51,7 @@ elif sort_by == AgentSortOption.ENERGY_POINTS:
 ```
 
 **状态**: ✅ **已实现**
-- 可以返回按 energy points 降序排列的角色列表
+- 可以返回按 energy points 降序排列的 iMate 列表
 - 支持分页（`page`, `page_size`）
 
 #### 2.2.2 `/api/v1/ai/agents/{agent_id}` - 更新角色
@@ -196,21 +196,21 @@ fun recordAssistantMessage(agentInfo: AgentInfo?) {
 - 用户可以通过签到、聊天获得 points
 - 数据存储在本地 MMKV，**未同步到后端**
 
-#### 3.2.3 Boost 角色
+#### 3.2.3 Hype iMate
 
 **Boost 操作** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostRepository.kt:99-130`):
 ```kotlin
 suspend fun boostAgent(agentInfo: AgentInfo, points: Int): AgentBoostInfo {
     // 验证 points 有效性
     // 扣除用户可用积分
-    // 更新角色的 boost 信息（本地）
+    // 更新 iMate 的 boost 信息（本地）
     // 保存到 MMKV
 }
 ```
 
 **状态**: ⚠️ **部分实现（仅本地）**
-- 用户可以 boost 角色，消耗本地 points
-- **未调用后端 API 更新角色的 energy points**
+- 用户可以 hype iMate，消耗本地 points
+- **未调用后端 API 更新 iMate 的 energy points**
 - Boost 数据仅存储在本地，不与其他用户共享
 
 #### 3.2.4 排行榜
@@ -236,11 +236,11 @@ private fun buildLeaderboard(snapshot: BoostStateSnapshot): List<BoostLeaderboar
 
 **排行榜页面** (`android_app/app/src/main/kotlin/com/ai/intellimate/boost/BoostLeaderboardActivity.kt`):
 - 显示本地排行榜（基于本地 boost 数据）
-- 支持点击角色跳转到聊天页面
+- 支持点击 iMate 跳转到聊天页面
 
 **状态**: ⚠️ **部分实现（仅本地）**
 - 排行榜数据来自本地 MMKV，**不是从后端获取的真实排行榜**
-- 只显示用户自己 boost 过的角色
+- 只显示用户自己 boost 过的 iMate
 
 ### 3.3 Explore 页面 Top 10 按钮
 
@@ -270,7 +270,7 @@ actions = {
 | Energy Points 显示 | ✅ | 聊天页面顶部栏显示 |
 | 签到获得 Points | ✅ | 本地实现，未同步后端 |
 | 聊天获得 Points | ✅ | 本地实现，未同步后端 |
-| Boost 角色 | ⚠️ | 本地实现，未调用后端 API |
+| Hype iMate | ⚠️ | 本地实现，未调用后端 API |
 | 本地排行榜 | ⚠️ | 仅显示本地数据 |
 | Top 10 按钮 | ⚠️ | 仅 debug 模式，显示本地排行榜 |
 
@@ -286,11 +286,11 @@ actions = {
 - 需要后端 API 记录用户的 energy points 余额
 - 需要后端 API 记录用户从签到、聊天获得的 points 历史
 
-### 4.2 用户 Boost 角色
+### 4.2 用户 Hype iMate
 
 **现状**:
 - ✅ 前端已实现 boost 操作的 UI 和本地逻辑
-- ❌ **未调用后端 API**：boost 操作未更新角色的 `points` 字段
+- ❌ **未调用后端 API**：boost 操作未更新 iMate 的 `points` 字段
 
 **差距**:
 - 需要在 `BoostManager.boostAgent()` 中调用后端 API
@@ -325,7 +325,7 @@ val result = AgentService.updateAgent(
 **实现方案**:
 1. 创建新的 `EnergyPointsLeaderboardActivity` 或修改现有的 `BoostLeaderboardActivity`
 2. 调用 `AgentService.getRecommendAgents(sort="energy_points", pageSize=10)`
-3. 显示从后端获取的角色列表，按 energy points 降序排列
+3. 显示从后端获取的 iMate 列表，按 energy points 降序排列
 
 ## 五、实现完整功能的计划
 
@@ -337,9 +337,9 @@ val result = AgentService.updateAgent(
 - [ ] 是否需要记录用户 boost 操作的历史记录？
 
 **当前后端已支持**:
-- ✅ 更新角色 energy points（增量）
-- ✅ 按 energy points 排序获取角色列表
-- ✅ 返回角色的 energy points
+- ✅ 更新 iMate energy points（增量）
+- ✅ 按 energy points 排序获取 iMate 列表
+- ✅ 返回 iMate 的 energy points
 
 ### 5.2 前端（需要实现）
 
@@ -347,7 +347,7 @@ val result = AgentService.updateAgent(
 
 **任务**:
 1. 修改 `BoostManager.boostAgent()` 方法
-2. 在本地 boost 成功后，调用后端 API 更新角色的 energy points
+2. 在本地 boost 成功后，调用后端 API 更新 iMate 的 energy points
 3. 处理网络错误、重试逻辑
 
 **代码位置**:
@@ -360,7 +360,7 @@ suspend fun boostAgent(agentInfo: AgentInfo, requestedPoints: Int): BoostResult 
     // 1. 本地 boost 操作（现有逻辑）
     val info = repo.boostAgent(agentInfo, normalized)
     
-    // 2. 调用后端 API 更新角色的 energy points
+    // 2. 调用后端 API 更新 iMate 的 energy points
     try {
         val updateResult = AgentService.updateAgent(
             agentId = agentInfo.id,
@@ -402,7 +402,7 @@ suspend fun boostAgent(agentInfo: AgentInfo, requestedPoints: Int): BoostResult 
 1. 修改 `ExplorePage.kt`，移除 `isDebugMode` 条件
 2. 创建新的 `EnergyPointsLeaderboardActivity` 或修改 `BoostLeaderboardActivity`
 3. 在 Activity 中调用 `AgentService.getRecommendAgents(sort="energy_points", pageSize=10)`
-4. 显示从后端获取的角色列表
+4. 显示从后端获取的 iMate 列表
 
 **AgentService 需要支持**:
 ```kotlin
@@ -447,9 +447,9 @@ suspend fun getRecommendAgents(
 
 ## 七、下一步行动建议
 
-### 优先级 1：Boost 操作同步到后端
+### 优先级 1：Hype 操作同步到后端
 - 修改 `BoostManager.boostAgent()` 调用后端 API
-- 确保 boost 操作能正确更新角色的 energy points
+- 确保 boost 操作能正确更新 iMate 的 energy points
 
 ### 优先级 2：Top 10 排行榜
 - 修改 `AgentService.getRecommendAgents()` 支持 `sort="energy_points"`
