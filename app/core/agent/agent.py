@@ -699,7 +699,7 @@ class Agent:
         now_utc: Optional[datetime] = None,
     ) -> List[BaseMessage]:
         """
-        按自然日为对话分段，并在每天第一条消息前注入日期 system message。
+        仅为“当天”注入一次日期 system message，位置是当天第一条消息之前。
         """
         if not history_messages and not current_messages:
             return []
@@ -707,29 +707,31 @@ class Agent:
         current_time_utc = now_utc if now_utc is not None else datetime.now(timezone.utc)
         current_date_iso = current_time_utc.date().isoformat()
 
+        all_messages = history_messages + current_messages
+        if not all_messages:
+            return []
+
+        first_today_index: Optional[int] = None
+        history_count = len(history_messages)
+        for index, message in enumerate(all_messages):
+            if index < history_count:
+                message_date_iso = self._extract_message_date_iso(message)
+            else:
+                # 当前请求里的消息统一视为“今天”的消息
+                message_date_iso = current_date_iso
+            if message_date_iso == current_date_iso:
+                first_today_index = index
+                break
+
+        if first_today_index is None:
+            return all_messages
+
         messages_with_date_prompts: List[BaseMessage] = []
-        last_date_iso: Optional[str] = None
-
-        # 关键步骤：
-        # 1) 从历史消息 additional_kwargs.created_at 提取日期；
-        # 2) 日期变化时插入 system message；
-        # 3) 当前请求消息统一使用 now_utc 所在日期，确保“新的一天首聊”带日期提示。
-        for message in history_messages:
-            message_date_iso = self._extract_message_date_iso(message)
-            effective_date_iso = message_date_iso or last_date_iso or current_date_iso
-            if effective_date_iso != last_date_iso:
-                messages_with_date_prompts.append(
-                    SystemMessage(content=self._build_date_system_prompt(effective_date_iso))
-                )
-                last_date_iso = effective_date_iso
-            messages_with_date_prompts.append(message)
-
-        for message in current_messages:
-            if current_date_iso != last_date_iso:
+        for index, message in enumerate(all_messages):
+            if index == first_today_index:
                 messages_with_date_prompts.append(
                     SystemMessage(content=self._build_date_system_prompt(current_date_iso))
                 )
-                last_date_iso = current_date_iso
             messages_with_date_prompts.append(message)
 
         return messages_with_date_prompts
