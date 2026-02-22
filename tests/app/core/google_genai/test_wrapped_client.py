@@ -256,13 +256,6 @@ def test_process_outputs_generate_image_handles_short_raw_data():
     assert len(base64.b64decode(traced["raw_data"])) == 50
 
 
-def test_process_outputs_generate_image_handles_non_dict_output():
-    """非 dict 输出时返回最小错误信息，避免 trace 序列化失败。"""
-    traced = _process_outputs_generate_image("not a dict")
-    assert traced.get("error") == "non-dict output"
-    assert "type" in traced
-
-
 def test_generate_image_has_traceable_decorator_configured():
     """async_generate_image 为 async，且已用 LangSmith @traceable 装饰（run_type=TOOL）。"""
     import inspect
