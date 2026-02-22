@@ -11,12 +11,12 @@
       "text": "Try adjusting “Chat Style” in chat settings to change the tone or writing style."
     },
     {
-      "id": "favorite_characters",
+      "id": "favorite_imates",
       "text": "Tap the heart icon on an iMate to save them to Favorites for quick access."
     },
     {
-      "id": "boost_points",
-      "text": "Earn Credits by chatting, generating images, listening to voices, or checking in daily."
+      "id": "hype_imates",
+      "text": "Earn Credits by chatting, generating images, listening to voices, or checking in daily, then use them to hype an iMate."
     },
     {
       "id": "voice_call_button",

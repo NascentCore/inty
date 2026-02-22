@@ -127,7 +127,7 @@ Android 端（Kotlin/Compose）已具备的核心能力包括：
 
 ### 11. 用户指南 / 轻量提示
 
-文档未单独列，但与体验相关： [intellimate_tips.json](../android_app/app/src/main/assets/intellimate_tips.json) + IntelliMateTips 相关逻辑，用于展示使用技巧（如括号描述动作、Chat Style、Boost、语音通话、反馈等），可视为轻量「引导/提示」的部分实现。
+文档未单独列，但与体验相关： [intellimate_tips.json](../android_app/app/src/main/assets/intellimate_tips.json) + IntelliMateTips 相关逻辑，用于展示使用技巧（如括号描述动作、Chat Style、Hype an iMate、语音通话、反馈等），可视为轻量「引导/提示」的部分实现。
 
 ---
 
