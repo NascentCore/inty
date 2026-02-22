@@ -102,6 +102,8 @@ class WrappedClient:
         为了 traceable 可以争取抓取主要信息，必须把对结果有影响的参数暴露在这个函数的
         输入参数列表内，这是 LangSmith 的要求。LangSmith 无法抓取 GenAI.generate_contents() 参数。
 
+        参数要简单，不能太复杂，否则 LangSmith 无法抓取主要信息。
+
         Returns:
             Gemini（NANO_BANANA*）路径返回 types.GeneratedContent（candidates[].content.parts）。
             Imagen（IMAGEN_4*）路径返回 generate_images 的响应（结构不同，如 generated_images[]）。
