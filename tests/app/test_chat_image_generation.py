@@ -531,7 +531,3 @@ class TestChatHistoryService:
         await session.delete(agent)
         await session.delete(user)
         await session.commit()
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
