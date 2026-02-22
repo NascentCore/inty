@@ -11,6 +11,8 @@ from PIL import Image
 
 from app.core.google_genai.create import create_genai_client
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.external_services.fakes.gcs import FakeGCSClient
+from app.external_services.gcs import get_bucket_and_path_from_gcs_url
 from app.core.google_genai.wrapped_client import (
     GeneratedImageProcessResult,
     LangSmithTraceRunType,
@@ -45,6 +47,44 @@ def _make_gemini_image_response():
     response.candidates = [candidate]
     response.prompt_feedback = None
     return response
+
+
+def _make_gemini_image_response_png():
+    """与 _make_gemini_image_response 相同结构，但 inline_data 为 PNG 字节。"""
+    img = Image.new("RGB", (2, 2), color="blue")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
+    inline_data = Mock()
+    inline_data.data = png_bytes
+    inline_data.mime_type = "image/png"
+    part = Mock()
+    part.inline_data = inline_data
+    content = Mock()
+    content.parts = [part]
+    candidate = Mock()
+    candidate.content = content
+    candidate.finish_reason = "STOP"
+    candidate.safety_ratings = []
+    response = Mock()
+    response.candidates = [candidate]
+    response.prompt_feedback = None
+    return response
+
+
+@pytest.fixture
+def fake_gcs_for_wrapped_client(monkeypatch, tmp_path):
+    """注入 FakeGCSClient 到 app.external_services.gcs，并 stub wrapped_client 使用的 gcs.bucket 配置。"""
+    import app.external_services.gcs as gcs_module
+
+    fake = FakeGCSClient(base_dir=str(tmp_path))
+    monkeypatch.setattr(gcs_module, "gcs_client", fake, raising=True)
+    monkeypatch.setattr(
+        "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+        Mock(gcs=Mock(bucket="test-bucket")),
+        raising=True,
+    )
+    yield fake
 
 
 def test_async_client_stores_client():
@@ -217,6 +257,65 @@ async def test_generate_image_returns_generated_image_process_result(mock_upload
     assert isinstance(result["raw_data"], bytes)
     assert result["gcs_uri"].startswith("gs://test-bucket/")
     mock_upload.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_generate_image_uploads_to_fake_gcs_and_content_matches(
+    fake_gcs_for_wrapped_client: FakeGCSClient,
+):
+    """使用 Fake GCS 走实际上传路径，断言 gcs_uri 与 fake 中写入内容一致。"""
+    mock_models = Mock()
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = mock_models
+
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["a cat"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
+
+    assert result["gcs_uri"].startswith("gs://test-bucket/")
+    assert result["gcs_uri"].endswith(".jpg")
+    assert result["gcs_uri"].find(_GCS_URI_BASE) >= 0
+
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result["gcs_uri"])
+    blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
+    assert blob.exists()
+    assert blob.download_as_bytes() == result["raw_data"]
+
+
+@pytest.mark.asyncio
+async def test_generate_image_uploads_png_to_fake_gcs_with_correct_extension(
+    fake_gcs_for_wrapped_client: FakeGCSClient,
+):
+    """PNG 响应时上传到 Fake GCS，路径扩展名为 .png，fake 中内容与 raw_data 一致。"""
+    mock_models = Mock()
+    mock_models.generate_content = AsyncMock(
+        return_value=_make_gemini_image_response_png()
+    )
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = mock_models
+
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["blue square"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
+
+    assert result["format"] == "png"
+    assert result["gcs_uri"].startswith("gs://test-bucket/")
+    assert result["gcs_uri"].endswith(".png")
+    assert result["gcs_uri"].find(_GCS_URI_BASE) >= 0
+
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result["gcs_uri"])
+    blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
+    assert blob.exists()
+    assert blob.download_as_bytes() == result["raw_data"]
 
 
 def test_process_outputs_generate_image_truncates_raw_data_to_100_bytes():
