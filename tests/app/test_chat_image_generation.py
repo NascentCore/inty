@@ -6,6 +6,7 @@ import uuid
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -351,6 +352,146 @@ class TestChatHistoryService:
         bucket = global_config_loaded_from_config_yaml.gcs.bucket
         assert agent.background_images[1].startswith(f"gs://{bucket}/chat_images/")
 
+        await session.delete(agent)
+        await session.delete(user)
+        await session.commit()
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_with_gemini_writes_db_records_as_expected(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        db_session: AsyncSession,
+    ):
+        """generate_chat_image_with_gemini 写入的 DB 记录符合预期：消息 meta_data、Agent background_images、Resource 表。"""
+        monkeypatch.setattr(
+            chat_history_service,
+            "get_messages_paginated",
+            lambda *args, **kwargs: {"messages": [], "total": 0},
+        )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.get_genai_client",
+            lambda: FakeGeminiClient(),
+        )
+
+        def fake_upload(file_data, content_type, bucket_name, path):
+            return "https://storage.googleapis.com/{}/{}".format(bucket_name, path)
+
+        monkeypatch.setattr(
+            "app.core.google_genai.wrapped_client.upload_to_gcs",
+            fake_upload,
+        )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.image_transform_service.transform_desktop",
+            lambda url: "https://cdn.example.com/{}".format(url.split("/", 3)[-1]),
+        )
+
+        session = db_session
+        user_id = "user-{}".format(uuid.uuid4().hex[:8])
+        agent_id = "agent-{}".format(uuid.uuid4().hex[:8])
+        session_uuid = uuid.uuid4()
+        session_id_str = str(session_uuid)
+
+        user = models.User(
+            id=user_id,
+            readable_id=uuid.uuid4().hex[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Chat Tester",
+            email="test@example.com",
+            system_language="en",
+        )
+        session.add(user)
+        await session.commit()
+
+        agent = models.Agent(
+            id=agent_id,
+            readable_id=uuid.uuid4().hex[:8],
+            name="Chat Image Agent",
+            gender=Gender.FEMALE,
+            avatar="https://storage.googleapis.com/test-bucket/avatar.jpg",
+            background="https://storage.googleapis.com/test-bucket/background.jpg",
+            personality="gentle",
+            scenario="coffee shop",
+            intro="intro text",
+            opening="hello",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+            background_images=["gs://test-bucket/original.jpg"],
+        )
+        session.add(agent)
+        await session.commit()
+        await session.refresh(agent)
+
+        # 真实消息行，以便 update_message_metadata 能更新
+        chat_msg = models.ChatHistory(
+            session_id=session_uuid,
+            message={"type": "user", "data": {"content": "draw an image"}},
+            meta_data=None,
+        )
+        session.add(chat_msg)
+        await session.commit()
+        await session.refresh(chat_msg)
+        message_id = chat_msg.id
+
+        agent_data = {
+            "id": agent_id,
+            "personality": agent.personality,
+            "scenario": agent.scenario,
+            "intro": agent.intro,
+            "background": agent.background,
+        }
+
+        result = await image_generation_service.generate_chat_image_with_gemini(
+            db=session,
+            session_id=session_id_str,
+            message_id=message_id,
+            agent_data=agent_data,
+            message_content="please draw an image",
+            user_id=user_id,
+            history_count=5,
+        )
+
+        assert result["message_id"] == message_id
+        assert result["image_url"].startswith("https://cdn.example.com/")
+
+        # 1) 消息 meta_data 中应有 generated_image
+        stmt = select(models.ChatHistory).where(
+            models.ChatHistory.session_id == session_uuid,
+            models.ChatHistory.id == message_id,
+        )
+        row = (await session.execute(stmt)).scalar_one_or_none()
+        assert row is not None
+        assert row.meta_data is not None
+        gen = row.meta_data.get("generated_image")
+        assert gen is not None
+        assert "image_url" in gen
+        assert gen["image_url"].startswith("gs://")
+        assert gen.get("width") is not None
+        assert gen.get("height") is not None
+        assert gen.get("format") is not None
+        assert gen.get("prompt") is not None
+        assert gen.get("generated_at") is not None
+
+        gcs_uri = gen["image_url"]
+
+        # 2) Agent background_images 应包含新图
+        await session.refresh(agent)
+        assert len(agent.background_images) == 2
+        assert agent.background_images[0] == "gs://test-bucket/original.jpg"
+        assert gcs_uri in agent.background_images or agent.background_images[1] == gcs_uri
+
+        # 3) Resource 表应有对应记录（user_id 传入时）
+        res_stmt = select(models.Resource).where(models.Resource.url == gcs_uri)
+        resource = (await session.execute(res_stmt)).scalar_one_or_none()
+        assert resource is not None
+        assert resource.agent_id == agent_id
+        assert resource.user_id == user_id
+        meta = resource.resource_metadata or {}
+        assert meta.get("generation_prompt") is not None
+        assert meta.get("gcs_url") == gcs_uri
+
+        await session.delete(resource)
+        await session.delete(chat_msg)
         await session.delete(agent)
         await session.delete(user)
         await session.commit()

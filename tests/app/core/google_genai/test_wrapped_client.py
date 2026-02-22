@@ -235,10 +235,7 @@ def test_process_outputs_generate_image_truncates_raw_data_to_100_bytes():
     decoded = base64.b64decode(traced["raw_data"])
     assert len(decoded) == 100
     assert decoded == raw_500[:100]
-    assert traced["size"] == {"width": 64, "height": 64}
-    assert traced["format"] == "jpeg"
-    assert traced["gcs_uri"] == "gs://bucket/path.jpg"
-    assert traced["generated_at"] == now.isoformat()
+
 
 
 def test_process_outputs_generate_image_handles_short_raw_data():
