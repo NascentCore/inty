@@ -5,9 +5,14 @@ Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_lang
 """
 from __future__ import annotations
 
+import base64
 import copy
+import datetime
 from enum import StrEnum
-from typing import Literal, Optional
+import io
+import tempfile
+from typing import Any, Literal, Optional, TypedDict
+import uuid
 
 # -----------------------------------------------------------------------------
 # Official wrapper: langsmith.wrappers.wrap_gemini
@@ -49,13 +54,17 @@ from typing import Literal, Optional
 #
 
 
+import PIL
 from google import genai
 from loguru import logger
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_text_part, get_text_parts
 from google.genai import types
 from langsmith.run_helpers import traceable
 
 from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.external_services.gcs import upload_to_gcs
+from app.utils.image import ImageSize
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
 
 
@@ -97,7 +106,8 @@ class WrappedClient:
             IMAGEN_4.id_on_provider,
         ],
         contents: list[str],
-        system_instruction: list[str] | None = None) -> types.GeneratedContent:
+        gcs_uri_base: str,
+        system_instruction: list[str] | None = None) -> GeneratedImageProcessResult:
         """
         使用指定的模型生成图片。
         contents 是 jpeg/jpg 文件 http url、或文本提示词；这个设计符合目前消息生图的需求。
@@ -140,7 +150,8 @@ class WrappedClient:
                     ],
                     config=config,
                 )
-                return _extract_image_part_from_gemini_response(response)
+                image_part = _extract_image_part_from_gemini_response(response)
+                return _process_image_part_to_generated_image(image_part, gcs_uri_base)
             case _:
                 raise ValueError(f"Unsupported model: {model}")
 
@@ -218,3 +229,115 @@ def _extract_image_part_from_gemini_response(
         raise ValueError("No image data found in response")
 
     return image_part
+
+
+class GeneratedImageProcessResult(TypedDict):
+    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI."""
+
+    size: ImageSize
+    format: str
+    raw_data: bytes
+    gcs_uri: str
+    generated_at: datetime
+
+
+def _process_image_part_to_generated_image(
+    image_part: Any,
+    gcs_uri_base: str,
+) -> GeneratedImageProcessResult:
+    """
+    从 Gemini 返回的 image_part（inline_data）解析图片、上传 GCS，返回 generated_image 元数据及 image_data、gcs_uri。
+    """
+    logger.debug("inline_data 类型: {}", type(image_part.inline_data))
+    logger.debug("inline_data.data 类型: {}", type(image_part.inline_data.data))
+    if hasattr(image_part.inline_data, "mime_type"):
+        logger.debug(
+            "inline_data.mime_type: {}",
+            image_part.inline_data.mime_type,
+        )
+
+    raw_data = image_part.inline_data.data
+    if isinstance(raw_data, str):
+        image_data = base64.b64decode(raw_data)
+        logger.debug("数据是 base64 字符串，已解码")
+    elif isinstance(raw_data, bytes):
+        image_data = raw_data
+        logger.debug("数据已经是 bytes，直接使用")
+    else:
+        logger.error("未知的数据类型: {}", type(raw_data))
+        raise ValueError(
+            "Unsupported image data type: {}".format(type(raw_data))
+        )
+
+    logger.info("成功提取图片数据，大小: {} bytes", len(image_data))
+    if len(image_data) == 0:
+        raise ValueError("Image data is empty")
+
+    header = image_data[:20] if len(image_data) >= 20 else image_data
+    logger.debug("图片数据头部（hex）: {}", header.hex())
+
+    if image_data[:2] == b"\xff\xd8":
+        logger.debug("检测到 JPEG 格式")
+    elif image_data[:8] == b"\x89PNG\r\n\x1a\n":
+        logger.debug("检测到 PNG 格式")
+    elif image_data[:6] in (b"GIF87a", b"GIF89a"):
+        logger.debug("检测到 GIF 格式")
+    elif image_data[:4] == b"RIFF" and image_data[8:12] == b"WEBP":
+        logger.debug("检测到 WEBP 格式")
+    else:
+        logger.warning("未知的图片格式，尝试作为原始数据处理")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as tmp:
+            tmp.write(image_data)
+            logger.debug("原始数据已写入: {}", tmp.name)
+
+    try:
+        pil_image = PIL.Image.open(io.BytesIO(image_data))
+        width, height = pil_image.size
+        image_format = pil_image.format or "JPEG"
+        logger.info(
+            "成功解析图片: {}x{}, 格式: {}", width, height, image_format
+        )
+    except Exception as e:
+        logger.error("PIL 无法解析图片: {}", str(e))
+        try:
+            text_content = image_data.decode("utf-8")[:200]
+            logger.error("数据可能是文本: {}", text_content)
+        except (UnicodeDecodeError, ValueError, AttributeError):
+            # 仅避免 decode 失败掩盖主异常，不改变主流程
+            pass
+        raise ValueError("Unable to parse image data: {}".format(str(e))) from e
+
+    # 按实际格式设置 content_type 与扩展名，避免将 PNG 等误标为 JPEG
+    _FORMAT_TO_MIME = {
+        "JPEG": "image/jpeg",
+        "PNG": "image/png",
+        "GIF": "image/gif",
+        "WEBP": "image/webp",
+    }
+    _FORMAT_TO_EXT = {"JPEG": "jpg", "PNG": "png", "GIF": "gif", "WEBP": "webp"}
+    fmt_upper = (image_format or "JPEG").upper()
+    content_type = _FORMAT_TO_MIME.get(fmt_upper, "image/jpeg")
+    ext = _FORMAT_TO_EXT.get(fmt_upper, "jpg")
+
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+    gcs_path = "{}/{}_{}.{}".format(
+        gcs_uri_base, timestamp, uuid.uuid4().hex[:8], ext
+    )
+    bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+    upload_to_gcs(
+        file_data=image_data,
+        content_type=content_type,
+        bucket_name=bucket_name,
+        path=gcs_path,
+    )
+    gcs_uri = "gs://{}/{}".format(bucket_name, gcs_path)
+    logger.info("图片已上传到 GCS: {}", gcs_uri)
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    return {
+        "size": ImageSize(width=width, height=height),
+        "format": image_format.lower(),
+        "raw_data": image_data,
+        "gcs_uri": gcs_uri,
+        "generated_at": now_utc,
+    }

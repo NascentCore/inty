@@ -14,7 +14,7 @@ import re
 import tempfile
 import traceback
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TypedDict
 
 import PIL.Image
@@ -50,6 +50,7 @@ class GeneratedImageProcessResult(TypedDict):
     format: str
     raw_data: bytes
     gcs_uri: str
+    generated_at: datetime
 
 
 def _process_image_part_to_generated_image(
@@ -144,18 +145,13 @@ def _process_image_part_to_generated_image(
     gcs_uri = "gs://{}/{}".format(bucket_name, gcs_path)
     logger.info("图片已上传到 GCS: {}", gcs_uri)
 
-    generated_image: Dict[str, Any] = {
-        "image_url": gcs_uri,
-        "width": width,
-        "height": height,
-        "format": image_format.lower(),
-        "generated_at": datetime.utcnow().isoformat(),
-    }
+    now_utc = datetime.now(timezone.utc)
     return {
         "size": ImageSize(width=width, height=height),
         "format": image_format.lower(),
         "raw_data": image_data,
         "gcs_uri": gcs_uri,
+        "generated_at": now_utc,
     }
 
 
@@ -812,16 +808,25 @@ class ImageGenerationService:
             result = _process_image_part_to_generated_image(
                 image_part, gcs_uri_base=gcs_uri_base
             )
-            metadata_update = {"generated_image": result["generated_image"]}
-            if prompt is not None:
-                metadata_update["generated_image"]["prompt"] = prompt
-            image_data = result["raw_data"]
-            gcs_uri = result["gcs_uri"]
-            width = result["generated_image"]["width"]
-            height = result["generated_image"]["height"]
-            image_format = result["generated_image"]["format"]
+            image_data = result.raw_data
+            gcs_uri = result.gcs_uri
+            width = result.size.width
+            height = result.size.height
+            image_format = result.format
+            generated_at = result.generated_at.isoformat()
+
             cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
+            metadata_update = {
+                "generated_image": {
+                    "image_url": gcs_uri,
+                    "width": width,
+                    "height": height,
+                    "format": image_format,
+                    "prompt": prompt,
+                    "generated_at": generated_at,
+                }
+            }
             success = await chat_history_service.update_message_metadata(
                 db=db,
                 session_id=session_id,
@@ -1066,7 +1071,7 @@ class ImageGenerationService:
                     "format": image_format.lower(),
                     "prompt": prompt,
                     "model": model,
-                    "generated_at": datetime.utcnow().isoformat(),
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
                 }
             }
 
