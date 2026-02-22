@@ -629,8 +629,11 @@ object IntySetting {
 
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
-        updateCurrentUserScope(uid)
-        hasHydratedCurrentUserScopeFromDataStore = true
+        // 与 hydrateCurrentUserScopeIfNeeded 使用同一把锁，避免并发下用户作用域被旧值回滚。
+        synchronized(currentUserScopeLock) {
+            updateCurrentUserScope(uid)
+            hasHydratedCurrentUserScopeFromDataStore = true
+        }
         putAppString(KEY_CURRENT_USER_ID, uid)
     }
 
