@@ -48,6 +48,7 @@ from typing import Literal
 
 
 from google import genai
+from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_text_part, get_text_parts
 from google.genai import types
 from langsmith.run_helpers import traceable
 
@@ -84,6 +85,7 @@ class WrappedClient:
             IMAGEN_4_FAST.id_on_provider,
             IMAGEN_4.id_on_provider,
         ],
+        system_instruction: list[str],
         contents: list[str]) -> types.GeneratedContent:
         """
         使用指定的模型生成图片。
@@ -92,7 +94,11 @@ class WrappedClient:
 
         Parameters:
             model: 模型 ID，用于在代码中唯一标识一个模型。
+            system_instruction: 系统指令列表。
             contents: 提示词列表，用于生成图片。
+
+        为了 traceable 可以争取抓取主要信息，必须把对结果有影响的参数暴露在这个函数的
+        输入参数列表内，这是 LangSmith 的要求。LangSmith 无法抓取 GenAI.generate_contents() 参数。
 
         Returns:
             types.GeneratedContent 对象，包含生成的图片。
@@ -100,22 +106,19 @@ class WrappedClient:
         match model:
             case NANO_BANANA.id_on_provider | NANO_BANANA_PRO.id_on_provider:
                 # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
-                parts = []
-                for content in contents:
-                    # 如果是 jpeg url，则转换为 Part.from_uri
-                    if content.startswith("http") and (content.endswith(".jpeg") or content.endswith(".jpg")):
-                        parts.append(types.Part.from_uri(file_uri=content, mime_type="image/jpeg"))
-                    else:
-                        parts.append(types.Part.from_text(text=content))
+                config = GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
+                # 重制系统指令，避免影响其它调用。
+                config.system_instruction = get_text_parts(system_instruction)
+                contents_parts = get_jpeg_url_and_text_mixed_parts(contents)
                 return await self.client.aio.models.generate_content(
                     model=model,
                     contents=[
                         types.Content(
                             role="user",
-                            parts=parts,
+                            parts=contents_parts,
                         )
                     ],
-                    config=GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
+                    config=config,
                 )
             case IMAGEN_4_FAST.id_on_provider | IMAGEN_4.id_on_provider:
                 if len(contents) != 1:
