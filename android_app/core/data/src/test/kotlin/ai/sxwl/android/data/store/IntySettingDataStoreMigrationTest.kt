@@ -27,12 +27,14 @@ private const val TEST_APP_DATA_KEY = "video_cache_test_key"
 class IntySettingDataStoreMigrationTest {
 
     private lateinit var app: Application
+    private var mmkvAvailableInRuntime: Boolean = false
 
     @Before
     fun setUp() {
         app = ApplicationProvider.getApplicationContext()
         Utils.init(app)
-        assumeTrue("MMKV is not available in current unit test runtime", initializeMmkvCompat(app))
+        mmkvAvailableInRuntime = initializeMmkvCompat(app)
+        assumeTrue("MMKV is not available in current unit test runtime", mmkvAvailableInRuntime)
         cleanupTestData()
     }
 
@@ -101,6 +103,8 @@ class IntySettingDataStoreMigrationTest {
             dataStore("$TEST_DATASTORE_USER_PREFIX$TEST_USER_ID_APP_DATA").clear()
         }
 
+        if (!mmkvAvailableInRuntime) return
+
         legacyUserStore(TEST_USER_ID_MIGRATION).clearAll()
         legacyUserStore(TEST_USER_ID_WRITE_ONLY).clearAll()
         legacyUserStore(TEST_USER_ID_APP_DATA).clearAll()
@@ -129,7 +133,7 @@ class IntySettingDataStoreMigrationTest {
         val initWithPathAndLevelSucceeded =
             runCatching {
                     val logLevelClass = Class.forName("com.tencent.mmkv.MMKVLogLevel")
-                    val level = logLevelClass.enumConstants.firstOrNull()
+                    val level = logLevelClass.enumConstants?.firstOrNull()
                     if (level != null) {
                         mmkvClass.getMethod("initialize", String::class.java, logLevelClass)
                             .invoke(null, application.filesDir.resolve("mmkv").absolutePath, level)
