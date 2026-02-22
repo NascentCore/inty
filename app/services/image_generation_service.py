@@ -47,10 +47,9 @@ class GeneratedImageProcessResult(TypedDict):
     """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI."""
 
     size: ImageSize
-    format: ImageFormat
+    format: str
     raw_data: bytes
     gcs_uri: str
-    generated_at: datetime.time
 
 
 def _process_image_part_to_generated_image(
@@ -153,7 +152,6 @@ def _process_image_part_to_generated_image(
         "generated_at": datetime.utcnow().isoformat(),
     }
     return {
-        "generated_image": generated_image,
         "size": ImageSize(width=width, height=height),
         "format": image_format.lower(),
         "raw_data": image_data,
@@ -817,7 +815,7 @@ class ImageGenerationService:
             metadata_update = {"generated_image": result["generated_image"]}
             if prompt is not None:
                 metadata_update["generated_image"]["prompt"] = prompt
-            image_data = result["image_data"]
+            image_data = result["raw_data"]
             gcs_uri = result["gcs_uri"]
             width = result["generated_image"]["width"]
             height = result["generated_image"]["height"]
