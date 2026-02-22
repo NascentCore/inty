@@ -71,6 +71,11 @@ object IntySetting {
     // 当前UserId
     private var curUid: String = ""
 
+    // 当前用户作用域初始化锁：用于延迟从 DataStore 同步 cur_uid，避免在 object init 阶段阻塞主线程
+    private val currentUserScopeLock = Any()
+
+    @Volatile private var hasHydratedCurrentUserScopeFromDataStore: Boolean = false
+
     // 用于同步 incrementTotalMessageCount 操作的锁对象
     private val messageCountLock = Any()
 
@@ -80,8 +85,9 @@ object IntySetting {
     private var _randomSortSeed: Int? = null
 
     init {
-
-        curUid = getCurUserID()
+        // 初始化阶段不执行 DataStore runBlocking，先用 legacy cur_uid 建立临时用户作用域。
+        // 后续首次读取/写入用户维度数据时，再按 DataStore 真值一次性同步。
+        curUid = allUserLegacySetting.decodeString(KEY_CURRENT_USER_ID) ?: ""
         curUserDataStore = createUserDataStore(curUid)
         curUserLegacySetting = createLegacyUserStore(curUid)
     }
@@ -475,6 +481,7 @@ object IntySetting {
     }
 
     private fun getUserStringOrNull(keyName: String): String? {
+        hydrateCurrentUserScopeIfNeeded()
         return getStringOrNullWithMigration(curUserDataStore, keyName) {
             curUserLegacySetting.decodeString(keyName)
         }
@@ -491,6 +498,7 @@ object IntySetting {
         keyName: String,
         defaultValue: Boolean,
     ): Boolean {
+        hydrateCurrentUserScopeIfNeeded()
         return getBooleanWithMigration(curUserDataStore, curUserLegacySetting, keyName, defaultValue)
     }
 
@@ -498,6 +506,7 @@ object IntySetting {
         keyName: String,
         defaultValue: Int,
     ): Int {
+        hydrateCurrentUserScopeIfNeeded()
         return getIntWithMigration(curUserDataStore, curUserLegacySetting, keyName, defaultValue)
     }
 
@@ -505,6 +514,7 @@ object IntySetting {
         keyName: String,
         defaultValue: Long,
     ): Long {
+        hydrateCurrentUserScopeIfNeeded()
         return getLongWithMigration(curUserDataStore, curUserLegacySetting, keyName, defaultValue)
     }
 
@@ -519,6 +529,7 @@ object IntySetting {
         keyName: String,
         defaultValue: Float,
     ): Float {
+        hydrateCurrentUserScopeIfNeeded()
         return getFloatWithMigration(curUserDataStore, curUserLegacySetting, keyName, defaultValue)
     }
 
@@ -533,6 +544,7 @@ object IntySetting {
         keyName: String,
         value: String,
     ) {
+        hydrateCurrentUserScopeIfNeeded()
         putStringPreference(curUserDataStore, keyName, value)
     }
 
@@ -547,6 +559,7 @@ object IntySetting {
         keyName: String,
         value: Boolean,
     ) {
+        hydrateCurrentUserScopeIfNeeded()
         putBooleanPreference(curUserDataStore, keyName, value)
     }
 
@@ -554,6 +567,7 @@ object IntySetting {
         keyName: String,
         value: Int,
     ) {
+        hydrateCurrentUserScopeIfNeeded()
         putIntPreference(curUserDataStore, keyName, value)
     }
 
@@ -561,6 +575,7 @@ object IntySetting {
         keyName: String,
         value: Long,
     ) {
+        hydrateCurrentUserScopeIfNeeded()
         putLongPreference(curUserDataStore, keyName, value)
     }
 
@@ -575,10 +590,12 @@ object IntySetting {
         keyName: String,
         value: Float,
     ) {
+        hydrateCurrentUserScopeIfNeeded()
         putFloatPreference(curUserDataStore, keyName, value)
     }
 
     private fun removeUserKey(keyName: String) {
+        hydrateCurrentUserScopeIfNeeded()
         removePreference(curUserDataStore, keyName)
     }
 
@@ -586,15 +603,34 @@ object IntySetting {
         removePreference(allUserDataStore, keyName)
     }
 
+    private fun updateCurrentUserScope(userId: String) {
+        curUid = userId
+        curUserDataStore = createUserDataStore(curUid)
+        curUserLegacySetting = createLegacyUserStore(curUid)
+    }
+
+    private fun hydrateCurrentUserScopeIfNeeded() {
+        if (hasHydratedCurrentUserScopeFromDataStore) return
+
+        synchronized(currentUserScopeLock) {
+            if (hasHydratedCurrentUserScopeFromDataStore) return
+            val userId = getAppStringOrNull(KEY_CURRENT_USER_ID) ?: ""
+            if (userId != curUid) {
+                updateCurrentUserScope(userId)
+            }
+            hasHydratedCurrentUserScopeFromDataStore = true
+        }
+    }
+
     fun getCurUserID(): String {
-        return getAppStringOrNull(KEY_CURRENT_USER_ID) ?: ""
+        hydrateCurrentUserScopeIfNeeded()
+        return curUid
     }
 
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
-        curUid = uid
-        curUserDataStore = createUserDataStore(curUid)
-        curUserLegacySetting = createLegacyUserStore(curUid)
+        updateCurrentUserScope(uid)
+        hasHydratedCurrentUserScopeFromDataStore = true
         putAppString(KEY_CURRENT_USER_ID, uid)
     }
 
