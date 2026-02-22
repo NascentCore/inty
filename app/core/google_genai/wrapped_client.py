@@ -63,9 +63,12 @@ from google.genai import types
 from langsmith.run_helpers import traceable
 
 from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K
-from app.external_services.gcs import upload_to_gcs
+from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.utils.image import ImageSize
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
+
+# LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
+_LANGSMITH_RAW_DATA_TRACE_BYTES = 100
 
 
 class GeminiImageExtractionError(ValueError):
@@ -86,6 +89,20 @@ class LangSmithTraceRunType(StrEnum):
     PARSER = "parser"
 
 
+def _process_outputs_generate_image(output: dict[str, Any]) -> dict[str, Any]:
+    """
+    process_outputs：供 LangSmith @traceable 使用，仅将 raw_data 的前 N 字节写入 trace，
+    避免大块二进制数据；实际返回值不受影响。
+    """
+    raw_data = output.get("raw_data", b"")
+    total = len(raw_data)
+    truncated = raw_data[:_LANGSMITH_RAW_DATA_TRACE_BYTES]
+    output_copy = copy.copy(output)
+    output_copy["raw_data"] = base64.b64encode(truncated).decode("ascii")
+    output_copy["raw_data_total_bytes"] = total
+    return output_copy
+
+
 class WrappedClient:
     def __init__(self, client: genai.Client):
         self.client = client
@@ -95,7 +112,7 @@ class WrappedClient:
         # LLM 是语言模型，生图模型就作为工具调用类型
         run_type=LangSmithTraceRunType.TOOL,
         # process_inputs=_process_inputs_generate_image,
-        # process_outputs=_process_outputs_generate_image,
+        process_outputs=_process_outputs_generate_image,
     )
     async def async_generate_image(
         self, 
@@ -124,9 +141,8 @@ class WrappedClient:
         参数要简单，不能太复杂，否则 LangSmith 无法抓取主要信息。
 
         Returns:
-            Gemini（NANO_BANANA*）路径返回 types.GeneratedContent（candidates[].content.parts）。
-            Imagen（IMAGEN_4*）路径返回 generate_images 的响应（结构不同，如 generated_images[]）。
-            使用 _extract_image_part_from_gemini_response 的调用方必须仅走 Gemini 路径。
+            GeneratedImageProcessResult（含 size, format, raw_data, gcs_uri, generated_at）。
+            当前仅支持 Gemini（NANO_BANANA*）路径；Imagen 模型会抛出 ValueError。
         """
         match model:
             case NANO_BANANA.id_on_provider | NANO_BANANA_PRO.id_on_provider:
@@ -150,6 +166,7 @@ class WrappedClient:
                     ],
                     config=config,
                 )
+                logger.debug("Gemini generate_content response: {}", response)
                 image_part = _extract_image_part_from_gemini_response(response)
                 return _process_image_part_to_generated_image(image_part, gcs_uri_base)
             case _:
@@ -238,7 +255,8 @@ class GeneratedImageProcessResult(TypedDict):
     format: str
     raw_data: bytes
     gcs_uri: str
-    generated_at: datetime
+    gcs_http_url: str
+    generated_at: datetime.datetime
 
 
 def _process_image_part_to_generated_image(
@@ -331,6 +349,7 @@ def _process_image_part_to_generated_image(
         path=gcs_path,
     )
     gcs_uri = "gs://{}/{}".format(bucket_name, gcs_path)
+    gcs_http_url = f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket_name}/{gcs_path}"
     logger.info("图片已上传到 GCS: {}", gcs_uri)
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -339,5 +358,6 @@ def _process_image_part_to_generated_image(
         "format": image_format.lower(),
         "raw_data": image_data,
         "gcs_uri": gcs_uri,
+        "gcs_http_url": gcs_http_url,
         "generated_at": now_utc,
     }

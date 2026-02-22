@@ -98,7 +98,7 @@ class TestImageGenerationService:
     @patch("app.services.image_generation_service.agent_service.append_agent_background_image")
     @patch("app.services.image_generation_service.image_transform_service")
     @patch("app.services.image_generation_service.get_genai_client")
-    @patch("app.services.image_generation_service.upload_to_gcs")
+    @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
     @patch("app.services.chat_history_service.get_messages_paginated")
     @patch("app.services.chat_history_service.update_message_metadata")
     @patch("app.services.image_generation_service.PIL.Image")
@@ -173,8 +173,8 @@ class TestImageGenerationService:
         )
         mock_get_client.return_value = mock_client_instance
 
-        # Mock GCS upload
-        mock_upload_gcs.return_value = "https://storage.googleapis.com/bucket/chat_images/test_image.jpg"
+        # GCS upload 在 WrappedClient._process_image_part_to_generated_image 内调用，由上面的 patch 注入
+        mock_upload_gcs.return_value = None
 
         # Mock PIL Image
         mock_image_instance = Mock()
