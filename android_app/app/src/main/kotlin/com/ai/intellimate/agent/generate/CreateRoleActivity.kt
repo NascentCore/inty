@@ -959,7 +959,7 @@ fun CreateRolePage(
                 label = "Opening (set tone and context) *",
                 value = opening,
                 onValueChange = { opening = it },
-                placeholder = "Please fill in the character's opening remarks...",
+                placeholder = "Please fill in your iMate's opening remarks...",
                 minLines = 2,
                 maxLength = 200,
             )
@@ -971,7 +971,7 @@ fun CreateRolePage(
                 label = "Intro for other users (no impact on chat) *",
                 value = intro,
                 onValueChange = { intro = it },
-                placeholder = "Please fill in the character introduction...",
+                placeholder = "Please fill in the iMate introduction...",
                 minLines = 2,
                 maxLength = 500,
             )

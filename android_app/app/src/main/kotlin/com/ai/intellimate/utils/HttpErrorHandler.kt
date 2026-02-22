@@ -21,7 +21,7 @@ object HttpErrorHandler {
                 when {
                     operation.contains("user", ignoreCase = true) -> "User information not found"
                     operation.contains("character", ignoreCase = true) ||
-                        operation.contains("agent", ignoreCase = true) -> "Character not found"
+                        operation.contains("agent", ignoreCase = true) -> "iMate not found"
                     else -> "Resource not found"
                 }
             429 -> "Too many requests, please try again later"
