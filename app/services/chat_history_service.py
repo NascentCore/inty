@@ -1291,7 +1291,7 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
         conn = get_chat_history_connection()
 
         query = """
-            SELECT message
+            SELECT message, created_at
             FROM chat_history 
             WHERE session_id = %s AND deleted_at IS NULL
             ORDER BY created_at ASC
@@ -1305,6 +1305,7 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
             for row in rows:
                 try:
                     message_raw = row[0]
+                    created_at = row[1]
                     if isinstance(message_raw, str):
                         message_data = json.loads(message_raw)
                     elif isinstance(message_raw, dict):
@@ -1320,10 +1321,17 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
                     elif "content" in message_data:
                         content = message_data["content"]
 
+                    # 关键步骤：把 created_at 放入 additional_kwargs，供上层按自然日插入日期 system message。
+                    message_kwargs = (
+                        {"additional_kwargs": {"created_at": created_at.isoformat()}}
+                        if created_at
+                        else {}
+                    )
+
                     if message_type in ["human", "HumanMessage"]:
-                        messages.append(HumanMessage(content=content))
+                        messages.append(HumanMessage(content=content, **message_kwargs))
                     else:
-                        messages.append(AIMessage(content=content))
+                        messages.append(AIMessage(content=content, **message_kwargs))
 
                 except Exception as e:
                     logger.warning(f"解析历史消息失败: {str(e)}")
