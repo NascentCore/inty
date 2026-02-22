@@ -92,11 +92,9 @@ class Agent(Base):
     )  # 主提示词 - 作为第一个system message，可以是预设 ID 或自定义文本
     mode_prompt = Column(
         Text, nullable=True
-    )  # 模式提示词 - 放在角色卡提示词后面，可以是预设 ID 或自定义文本
+    )  # 模式提示词 - 放在角色设定提示词后面，可以是预设 ID 或自定义文本
 
-    # 角色卡相关字段；都已经废弃
-    character_card_spec = Column(String, nullable=True)  # 角色卡规范版本
-    character_card_data = Column(JSON, nullable=True)  # 原始角色卡数据
+    # 角色设定相关字段
     personality = Column(Text, nullable=True)  # 性格特征
     scenario = Column(Text, nullable=True)  # 场景设定
     message_example = Column(Text, nullable=True)  # 对话示例

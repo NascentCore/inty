@@ -791,9 +791,6 @@ async def create_agent(
             logger.debug(f"将prompt转换为personality以保持向后兼容")
             agent_in.personality = agent_in.prompt
 
-        # 角色卡字段优先级验证和建议
-        _validate_character_card_fields(agent_in)
-
         # 生成唯一ID
         agent_id = str(uuid.uuid4())
 
@@ -939,25 +936,6 @@ async def _crop_avatar_from_background(
     avatar_url = upload_to_gcs(avatar_data, ImageFormat.JPEG, bucket, avatar_gcs_path)
     return CropAvatarFromGCSUrlResult(
         avatar_url, crop_avatar_result.size, ImageFormat.JPEG, avatar_byte_size
-    )
-
-
-def _validate_character_card_fields(agent_in: schemas.AgentCreate):
-    """
-    验证并建议使用角色卡字段
-
-    Args:
-        agent_in: Agent创建数据
-    """
-    # 检查是否提供了角色卡字段或prompt字段
-    has_character_card = bool(
-        (agent_in.personality and agent_in.personality.strip())
-        or (agent_in.scenario and agent_in.scenario.strip())
-    )
-    has_prompt = bool(agent_in.prompt and agent_in.prompt.strip())
-
-    logger.debug(
-        f"创建Agent字段使用情况 - character_card: {has_character_card}, prompt: {has_prompt}"
     )
 
 
