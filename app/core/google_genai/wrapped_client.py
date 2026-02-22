@@ -59,6 +59,14 @@ from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONT
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
 
 
+class GeminiImageExtractionError(ValueError):
+    """Raised when image part cannot be extracted from Gemini response; carries response for logging."""
+
+    def __init__(self, message: str, response: object) -> None:
+        super().__init__(message)
+        self.response = response
+
+
 class LangSmithTraceRunType(StrEnum):
     TOOL = "tool"
     CHAIN = "chain"
@@ -157,7 +165,7 @@ def _extract_image_part_from_gemini_response(
 
     if not response.candidates:
         logger.error("Gemini 未返回任何候选结果")
-        raise ValueError("Gemini returned no candidates")
+        raise GeminiImageExtractionError("Gemini returned no candidates", response=response)
 
     candidate = response.candidates[0]
 
