@@ -1,3 +1,15 @@
+"""
+app.services.memory_service 的测试（节日元数据及相关辅助逻辑）。
+
+测试隔离说明：本文件中有测试会 patch memory_service.select 和 memory_service.Memory
+（例如替换为 _DummyQuery、_FakeMemory）。这些 patch 必须通过 monkeypatch 施加，以便
+每个测试结束后自动恢复。若直接赋值（如 service.select = ...），patch 会泄漏到后续测试，
+其他使用真实 memory_service 的测试（例如 test_chat_image_generation.py 中
+TestChatHistoryService::test_generate_chat_image_with_gemini_writes_db_records_as_expected，
+会调用 get_user_memory_for_prompt_async）可能因运行顺序而报错：AttributeError
+（'_DummyQuery' object has no attribute 'order_by' 或 'Memory' has no attribute 'content'）。
+凡对 memory_service 做 patch 时，一律使用 monkeypatch。
+"""
 import importlib
 import sys
 import types
