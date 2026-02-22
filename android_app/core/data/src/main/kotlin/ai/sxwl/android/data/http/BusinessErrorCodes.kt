@@ -27,7 +27,7 @@ object BusinessErrorCodes {
     /** 角色创建限制达到错误 */
     const val AGENT_CREATION_LIMIT_REACHED_CODE = 10001003
     const val AGENT_CREATION_LIMIT_REACHED_ERROR_CODE = "AGENT_CREATION_LIMIT_REACHED"
-    const val AGENT_CREATION_LIMIT_REACHED_MESSAGE = "Character creation limit reached"
+    const val AGENT_CREATION_LIMIT_REACHED_MESSAGE = "iMate creation limit reached"
 
     /** 语音生成次数超限制 */
     const val VOICE_GENERATION_LIMIT_REACHED_CODE = 10001004
@@ -47,7 +47,7 @@ object BusinessErrorCodes {
     /** 实时通话 Agent 数量达到上限 */
     const val LIVE_CHAT_AGENT_LIMIT_REACHED_CODE = 10001007
     const val LIVE_CHAT_AGENT_LIMIT_REACHED_ERROR_CODE = "LIVE_CHAT_AGENT_LIMIT_REACHED"
-    const val LIVE_CHAT_AGENT_LIMIT_REACHED_MESSAGE = "Live chat agent limit reached"
+    const val LIVE_CHAT_AGENT_LIMIT_REACHED_MESSAGE = "Live chat iMate limit reached"
 
     /** 实时通话时长达到上限 */
     const val LIVE_CHAT_DURATION_LIMIT_REACHED_CODE = 10001008

@@ -160,7 +160,7 @@ fun LoadErrorState(
 private fun EmptyDataStatePreview() {
     EmptyDataState(
         title = "No conversations yet",
-        subtitle = "Start chatting with your favorite characters!",
+        subtitle = "Start chatting with your favorite iMates!",
     )
 }
 
@@ -168,7 +168,7 @@ private fun EmptyDataStatePreview() {
 @Composable
 private fun NetworkErrorStatePreview() {
     NetworkErrorState(
-        title = "Failed to load characters",
+        title = "Failed to load iMates",
         subtitle = "Check your connection and try again",
         onRetry = {},
     )
