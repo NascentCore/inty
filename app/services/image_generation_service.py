@@ -43,118 +43,6 @@ from app.utils.models_catalog import NANO_BANANA
 _MAX_PROMPT_LOG_LEN = 800000
 
 
-class GeneratedImageProcessResult(TypedDict):
-    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI."""
-
-    size: ImageSize
-    format: str
-    raw_data: bytes
-    gcs_uri: str
-    generated_at: datetime
-
-
-def _process_image_part_to_generated_image(
-    image_part: Any,
-    gcs_uri_base: str,
-) -> GeneratedImageProcessResult:
-    """
-    从 Gemini 返回的 image_part（inline_data）解析图片、上传 GCS，返回 generated_image 元数据及 image_data、gcs_uri。
-    """
-    logger.debug("inline_data 类型: {}", type(image_part.inline_data))
-    logger.debug("inline_data.data 类型: {}", type(image_part.inline_data.data))
-    if hasattr(image_part.inline_data, "mime_type"):
-        logger.debug(
-            "inline_data.mime_type: {}",
-            image_part.inline_data.mime_type,
-        )
-
-    raw_data = image_part.inline_data.data
-    if isinstance(raw_data, str):
-        image_data = base64.b64decode(raw_data)
-        logger.debug("数据是 base64 字符串，已解码")
-    elif isinstance(raw_data, bytes):
-        image_data = raw_data
-        logger.debug("数据已经是 bytes，直接使用")
-    else:
-        logger.error("未知的数据类型: {}", type(raw_data))
-        raise ValueError(
-            "Unsupported image data type: {}".format(type(raw_data))
-        )
-
-    logger.info("成功提取图片数据，大小: {} bytes", len(image_data))
-    if len(image_data) == 0:
-        raise ValueError("Image data is empty")
-
-    header = image_data[:20] if len(image_data) >= 20 else image_data
-    logger.debug("图片数据头部（hex）: {}", header.hex())
-
-    if image_data[:2] == b"\xff\xd8":
-        logger.debug("检测到 JPEG 格式")
-    elif image_data[:8] == b"\x89PNG\r\n\x1a\n":
-        logger.debug("检测到 PNG 格式")
-    elif image_data[:6] in (b"GIF87a", b"GIF89a"):
-        logger.debug("检测到 GIF 格式")
-    elif image_data[:4] == b"RIFF" and image_data[8:12] == b"WEBP":
-        logger.debug("检测到 WEBP 格式")
-    else:
-        logger.warning("未知的图片格式，尝试作为原始数据处理")
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as tmp:
-            tmp.write(image_data)
-            logger.debug("原始数据已写入: {}", tmp.name)
-
-    try:
-        pil_image = PIL.Image.open(io.BytesIO(image_data))
-        width, height = pil_image.size
-        image_format = pil_image.format or "JPEG"
-        logger.info(
-            "成功解析图片: {}x{}, 格式: {}", width, height, image_format
-        )
-    except Exception as e:
-        logger.error("PIL 无法解析图片: {}", str(e))
-        try:
-            text_content = image_data.decode("utf-8")[:200]
-            logger.error("数据可能是文本: {}", text_content)
-        except (UnicodeDecodeError, ValueError, AttributeError):
-            # 仅避免 decode 失败掩盖主异常，不改变主流程
-            pass
-        raise ValueError("Unable to parse image data: {}".format(str(e))) from e
-
-    # 按实际格式设置 content_type 与扩展名，避免将 PNG 等误标为 JPEG
-    _FORMAT_TO_MIME = {
-        "JPEG": "image/jpeg",
-        "PNG": "image/png",
-        "GIF": "image/gif",
-        "WEBP": "image/webp",
-    }
-    _FORMAT_TO_EXT = {"JPEG": "jpg", "PNG": "png", "GIF": "gif", "WEBP": "webp"}
-    fmt_upper = (image_format or "JPEG").upper()
-    content_type = _FORMAT_TO_MIME.get(fmt_upper, "image/jpeg")
-    ext = _FORMAT_TO_EXT.get(fmt_upper, "jpg")
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    gcs_path = "{}/{}_{}.{}".format(
-        gcs_uri_base, timestamp, uuid.uuid4().hex[:8], ext
-    )
-    bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-    upload_to_gcs(
-        file_data=image_data,
-        content_type=content_type,
-        bucket_name=bucket_name,
-        path=gcs_path,
-    )
-    gcs_uri = "gs://{}/{}".format(bucket_name, gcs_path)
-    logger.info("图片已上传到 GCS: {}", gcs_uri)
-
-    now_utc = datetime.now(timezone.utc)
-    return {
-        "size": ImageSize(width=width, height=height),
-        "format": image_format.lower(),
-        "raw_data": image_data,
-        "gcs_uri": gcs_uri,
-        "generated_at": now_utc,
-    }
-
-
 def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
     """将 Gemini generate_content 的返回序列化为可安全写入日志的字典（不含图片二进制）。"""
     out: Dict[str, Any] = {}
@@ -793,20 +681,12 @@ class ImageGenerationService:
             contents.append(prompt)
 
             gemini_model = model or NANO_BANANA.id_on_provider
-            try:
-                image_part = await client.async_generate_image(
-                    model=gemini_model, contents=contents
-                )
-            except GeminiImageExtractionError as e:
-                _log_image_generation_failure(prompt, e.response)
-                raise
-
             agent_id = agent_data.get("id")
             if not agent_id:
                 raise ValueError("Agent data missing ID; cannot generate image path")
             gcs_uri_base = f"chat_images/{agent_id}"
-            result = _process_image_part_to_generated_image(
-                image_part, gcs_uri_base=gcs_uri_base
+            result = await client.async_generate_image(
+                model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base
             )
             image_data = result.raw_data
             gcs_uri = result.gcs_uri
