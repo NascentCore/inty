@@ -140,11 +140,10 @@ class AgentBase(BaseModel):
     )
     mode_prompt: Optional[str] = Field(
         None,
-        description="模式提示词 - 放在角色卡提示词后面，覆盖全局默认模式提示词。可以是预设 ID 或自定义文本",
+        description="模式提示词 - 放在角色设定提示词后面，覆盖全局默认模式提示词。可以是预设 ID 或自定义文本",
     )
 
-    # 角色卡相关字段 (推荐使用)
-    character_card_spec: Optional[str] = None
+    # 角色设定相关字段 (推荐使用)
     personality: Optional[str] = Field(None, description="角色性格特点 (推荐)")
     scenario: Optional[str] = Field(None, description="背景设定 (推荐)")
     message_example: Optional[str] = Field(None, description="对话示例")
@@ -196,12 +195,12 @@ class AgentCreate(AgentBase):
 
     推荐使用方式：
     1. 使用personality + scenario字段构建角色
-    2. 添加first_message作为开场白
+    2. 添加opening作为开场白
     3. 可选添加message_example展示对话风格
 
     兼容性说明：
      - 仍支持使用prompt字段 (legacy模式)
-     - 优先级：角色卡字段 > prompt字段
+     - 优先级：personality/scenario > prompt字段
     """
 
     request_id: Optional[str] = None
@@ -223,7 +222,7 @@ class AgentUpdate(AgentBase):
     main_prompt: Optional[str] = None
     mode_prompt: Optional[str] = None
 
-    # 角色卡相关字段
+    # 角色设定相关字段
     personality: Optional[str] = None
     scenario: Optional[str] = None
     message_example: Optional[str] = None

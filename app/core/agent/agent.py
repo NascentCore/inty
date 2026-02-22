@@ -48,7 +48,7 @@ from app.utils.openai_client import (
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
 
-# 圣诞节季节性提示词：放在角色人设（personality/scenario/message_example）最后
+# 圣诞节季节性提示词：放在角色设定（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
 During this period, {{char}} naturally notices small Christmas details around them 
 (e.g., colder weather, office decorations, holiday coffee cups, gift ideas, city lights, end-of-year emotions).
@@ -264,7 +264,7 @@ class Agent:
         main_prompt: str = "",
         mode_prompt: str = "",
         output_format_prompt: str = "",
-        # 角色卡相关参数
+        # 角色设定相关参数
         personality: str = "",
         scenario: str = "",
         message_example: str = "",
@@ -291,7 +291,7 @@ class Agent:
         self.mode_prompt = mode_prompt
         self.output_format_prompt = output_format_prompt
 
-        # 角色卡相关属性
+        # 角色设定相关属性
         self.personality = personality
         self.scenario = scenario
         self.message_example = message_example
@@ -468,7 +468,7 @@ class Agent:
 
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
-        构建角色卡上下文信息，每个字段作为独立的system message，支持模板渲染
+        构建角色设定上下文信息，每个字段作为独立的 system message，支持模板渲染
         """
         context_messages = []
 
@@ -1634,7 +1634,7 @@ class AgentManager:
                     # 主提示词和模式提示词字段
                     "main_prompt": getattr(agent_db, "main_prompt", ""),
                     "mode_prompt": getattr(agent_db, "mode_prompt", ""),
-                    # 角色卡相关字段
+                    # 角色设定相关字段
                     "personality": getattr(agent_db, "personality", ""),
                     "scenario": getattr(agent_db, "scenario", ""),
                     "message_example": getattr(agent_db, "message_example", ""),
