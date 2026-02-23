@@ -594,12 +594,12 @@ class ImageGenerationService:
                 model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base,
                 system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
             )
-            image_data = result["raw_data"]
-            gcs_uri = result["gcs_uri"]
-            width = result["size"].width
-            height = result["size"].height
-            image_format = result["format"]
-            generated_at = result["generated_at"].isoformat()
+            image_data = result.raw_data
+            gcs_uri = result.gcs_uri
+            width = result.size.width
+            height = result.size.height
+            image_format = result.format.value
+            generated_at = result.generated_at.isoformat()
 
             cdn_url = image_transform_service.transform_desktop(gcs_uri)
 

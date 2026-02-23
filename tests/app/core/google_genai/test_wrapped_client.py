@@ -17,9 +17,9 @@ from app.core.google_genai.wrapped_client import (
     GeneratedImageProcessResult,
     LangSmithTraceRunType,
     WrappedClient,
-    _process_outputs_generate_image,
+    _langsmith_process_outputs_generate_image,
 )
-from app.utils.image import ImageSize
+from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
 
 # 所有调用 async_generate_image 的测试均需传入 gcs_uri_base（Gemini 路径会解析图片并上传 GCS）。
@@ -249,13 +249,11 @@ async def test_generate_image_returns_generated_image_process_result(mock_upload
         gcs_uri_base=_GCS_URI_BASE,
     )
 
-    assert isinstance(result, dict)
-    for key in GeneratedImageProcessResult.__annotations__:
-        assert key in result, f"missing key: {key}"
-    assert result["size"].width == 1 and result["size"].height == 1
-    assert result["format"] == "jpeg"
-    assert isinstance(result["raw_data"], bytes)
-    assert result["gcs_uri"].startswith("gs://test-bucket/")
+    assert isinstance(result, GeneratedImageProcessResult)
+    assert result.size.width == 1 and result.size.height == 1
+    assert result.format == ImageFormat.JPEG
+    assert isinstance(result.raw_data, bytes)
+    assert result.gcs_uri.startswith("gs://test-bucket/")
     mock_upload.assert_called_once()
 
 
@@ -277,14 +275,14 @@ async def test_generate_image_uploads_to_fake_gcs_and_content_matches(
         gcs_uri_base=_GCS_URI_BASE,
     )
 
-    assert result["gcs_uri"].startswith("gs://test-bucket/")
-    assert result["gcs_uri"].endswith(".jpg")
-    assert result["gcs_uri"].find(_GCS_URI_BASE) >= 0
+    assert result.gcs_uri.startswith("gs://test-bucket/")
+    assert result.gcs_uri.endswith(".jpg")
+    assert result.gcs_uri.find(_GCS_URI_BASE) >= 0
 
-    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result["gcs_uri"])
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
     blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
     assert blob.exists()
-    assert blob.download_as_bytes() == result["raw_data"]
+    assert blob.download_as_bytes() == result.raw_data
 
 
 @pytest.mark.asyncio
@@ -307,31 +305,33 @@ async def test_generate_image_uploads_png_to_fake_gcs_with_correct_extension(
         gcs_uri_base=_GCS_URI_BASE,
     )
 
-    assert result["format"] == "png"
-    assert result["gcs_uri"].startswith("gs://test-bucket/")
-    assert result["gcs_uri"].endswith(".png")
-    assert result["gcs_uri"].find(_GCS_URI_BASE) >= 0
+    assert result.format == ImageFormat.PNG
+    assert result.gcs_uri.startswith("gs://test-bucket/")
+    assert result.gcs_uri.endswith(".png")
+    assert result.gcs_uri.find(_GCS_URI_BASE) >= 0
 
-    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result["gcs_uri"])
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
     blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
     assert blob.exists()
-    assert blob.download_as_bytes() == result["raw_data"]
+    assert blob.download_as_bytes() == result.raw_data
 
 
 def test_process_outputs_generate_image_truncates_raw_data_to_100_bytes():
     """LangSmith 输出处理器只把 raw_data 前 100 字节写入 trace，并记录总字节数。"""
     raw_500 = b"x" * 500
     now = datetime.now(timezone.utc)
-    output: GeneratedImageProcessResult = {
-        "size": ImageSize(width=64, height=64),
-        "format": "jpeg",
-        "raw_data": raw_500,
-        "gcs_uri": "gs://bucket/path.jpg",
-        "generated_at": now,
-    }
-    traced = _process_outputs_generate_image(output)
-    assert traced["raw_data_total_bytes"] == 500
-    decoded = base64.b64decode(traced["raw_data"])
+    output = GeneratedImageProcessResult(
+        size=ImageSize(width=64, height=64),
+        format=ImageFormat.JPEG,
+        raw_data=raw_500,
+        gcs_uri="gs://bucket/path.jpg",
+        gcs_http_url="https://storage.googleapis.com/bucket/path.jpg",
+        generated_at=now,
+    )
+    traced = _langsmith_process_outputs_generate_image(output)
+    assert traced is not None
+    assert traced.raw_data_total_bytes == 500
+    decoded = base64.b64decode(traced.raw_data)
     assert len(decoded) == 100
     assert decoded == raw_500[:100]
 
@@ -340,16 +340,18 @@ def test_process_outputs_generate_image_truncates_raw_data_to_100_bytes():
 def test_process_outputs_generate_image_handles_short_raw_data():
     """raw_data 不足 100 字节时，trace 中为全部字节。"""
     raw_50 = b"y" * 50
-    output = {
-        "size": ImageSize(width=1, height=1),
-        "format": "png",
-        "raw_data": raw_50,
-        "gcs_uri": "gs://b/p.png",
-        "generated_at": datetime.now(timezone.utc),
-    }
-    traced = _process_outputs_generate_image(output)
-    assert traced["raw_data_total_bytes"] == 50
-    assert len(base64.b64decode(traced["raw_data"])) == 50
+    output = GeneratedImageProcessResult(
+        size=ImageSize(width=1, height=1),
+        format=ImageFormat.PNG,
+        raw_data=raw_50,
+        gcs_uri="gs://b/p.png",
+        gcs_http_url="https://storage.googleapis.com/b/p.png",
+        generated_at=datetime.now(timezone.utc),
+    )
+    traced = _langsmith_process_outputs_generate_image(output)
+    assert traced is not None
+    assert traced.raw_data_total_bytes == 50
+    assert len(base64.b64decode(traced.raw_data)) == 50
 
 
 def test_generate_image_has_traceable_decorator_configured():

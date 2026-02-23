@@ -83,11 +83,13 @@ class LangSmithTraceRunType(StrEnum):
 
 
 class GeneratedImageProcessResult(BaseModel):
-    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI."""
+    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI.
+    raw_data 正常为 bytes；LangSmith trace 副本中为 base64 字符串以缩小 trace 体积。
+    """
 
     size: ImageSize
     format: ImageFormat
-    raw_data: bytes | None = None
+    raw_data: bytes | str | None = None
     raw_data_total_bytes: int = 0
     gcs_uri: str
     gcs_http_url: str
@@ -95,7 +97,7 @@ class GeneratedImageProcessResult(BaseModel):
     raw_response_from_google: gemini_types.GenerateContentResponse | None = None
 
 
-def _process_outputs_generate_image(result: GeneratedImageProcessResult | None) -> GeneratedImageProcessResult | None:
+def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResult | None) -> GeneratedImageProcessResult | None:
     """
     process_outputs：供 LangSmith @traceable 使用，仅将 raw_data 的前 N 字节写入 trace，
     避免大块二进制数据；实际返回值不受影响。
@@ -103,13 +105,15 @@ def _process_outputs_generate_image(result: GeneratedImageProcessResult | None) 
     if result is None:
         # 当有异常时，返回值为 None，需要处理，否则 LangSmith 记录会显示超时。
         return None
-    raw_data = result.raw_data
+    raw_data = result.raw_data if isinstance(result.raw_data, bytes) else b""
     total = len(raw_data)
     truncated = raw_data[:_LANGSMITH_RAW_DATA_TRACE_BYTES]
-    result_copy = copy.copy(result)
-    result_copy.raw_data_total_bytes = total
-    result_copy.raw_data = base64.b64encode(truncated).decode("ascii")
-    return result_copy
+    return result.model_copy(
+        update={
+            "raw_data_total_bytes": total,
+            "raw_data": base64.b64encode(truncated).decode("ascii"),
+        }
+    )
 
 
 class WrappedClient:
@@ -121,7 +125,7 @@ class WrappedClient:
         # LLM 是语言模型，生图模型就作为工具调用类型
         run_type=LangSmithTraceRunType.TOOL,
         # process_inputs=_process_inputs_generate_image,
-        process_outputs=_process_outputs_generate_image,
+        process_outputs=_langsmith_process_outputs_generate_image,
     )
     async def async_generate_image(
         self, 
@@ -193,12 +197,12 @@ class WrappedClient:
 
 def _attach_response_to_langsmith_run(response: gemini_types.GeneratedContent) -> None:
     """
-    若当前在 LangSmith trace 内，将 Gemini 响应摘要写入当前 run 的 metadata，
-    以便异常时 LangSmith 也能看到响应概要。
+    若当前在 LangSmith trace 内，将本次 Gemini 响应写入当前 run 的 metadata。
+    成功与异常路径都会调用，便于在 LangSmith 中查看当次调用的响应；异常时因无返回值，
+    此处为查看响应摘要的唯一途径。
     """
     run = get_current_run_tree()
     if run is not None:
-        # 需要在 LangSmith Trace 记录的 Metadata 中查看错误响应摘要。
         run.metadata["raw_response_from_google"] = response
 
 
