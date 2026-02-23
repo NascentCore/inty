@@ -4,6 +4,7 @@ import tempfile
 import uuid
 from pathlib import Path
 from enum import StrEnum
+from typing import NamedTuple
 
 from loguru import logger
 from PIL import Image
@@ -33,7 +34,7 @@ class AspectRatio(StrEnum):
     PORTRAIT = "9:16"
 
 
-# Data URI MIME type to file extension for save_image_data_to_file.
+# Data URI MIME type to file extension.
 _DATA_URI_MIME_TO_EXT: dict[str, str] = {
     "image/jpeg": "jpeg",
     "image/jpg": "jpeg",
@@ -43,12 +44,28 @@ _DATA_URI_MIME_TO_EXT: dict[str, str] = {
     "image/avif": "avif",
 }
 
+# File extension to ImageFormat for parse_image_data_uri.
+_EXT_TO_IMAGE_FORMAT: dict[str, ImageFormat] = {
+    "jpeg": ImageFormat.JPEG,
+    "png": ImageFormat.PNG,
+    "webp": ImageFormat.WEBP,
+    "gif": ImageFormat.GIF,
+    "avif": ImageFormat.AVIF,
+}
 
-def save_image_data_to_file(data: str) -> str:
+
+class ParsedDataUri(NamedTuple):
+    """Result of parsing an image data URI: raw bytes and format."""
+
+    data: bytes
+    image_format: ImageFormat
+
+
+def parse_image_data_uri(data: str) -> ParsedDataUri:
     """
-    Parse a data URI (e.g. data:image/jpeg;base64,...) and save the decoded
-    image bytes to a file with the corresponding extension. Only base64
-    encoding is supported. Returns the path of the saved file.
+    Parse a data URI (e.g. data:image/jpeg;base64,...) and return the decoded
+    image bytes and the corresponding ImageFormat. Only base64 encoding is
+    supported.
     """
     if not data.startswith("data:"):
         raise ValueError("Not a data URI")
@@ -66,10 +83,22 @@ def save_image_data_to_file(data: str) -> str:
     if ext is None:
         raise ValueError(f"Unsupported image MIME type for data URI: {mime}")
     image_bytes = base64.b64decode(payload.strip())
+    image_format = _EXT_TO_IMAGE_FORMAT[ext]
+    return ParsedDataUri(data=image_bytes, image_format=image_format)
+
+
+def save_image_data_to_file(data: str) -> str:
+    """
+    Parse a data URI (e.g. data:image/jpeg;base64,...) and save the decoded
+    image bytes to a file with the corresponding extension. Only base64
+    encoding is supported. Returns the path of the saved file.
+    """
+    parsed = parse_image_data_uri(data)
+    ext = parsed.image_format.value
     name = f"{uuid.uuid4().hex}.{ext}"
     path = Path(tempfile.gettempdir()) / name
-    path.write_bytes(image_bytes)
-    logger.debug(f"Saved data URI image to {path} ({len(image_bytes)} bytes)")
+    path.write_bytes(parsed.data)
+    logger.debug(f"Saved data URI image to {path} ({len(parsed.data)} bytes)")
     return str(path)
 
 
