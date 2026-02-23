@@ -80,7 +80,7 @@ class FalSeedreamV4_5EditArgs(BaseModel):
     # seed
     # sync_mode
     enable_safety_checker: bool = False
-    enhance_prompt_mode: EnhancePromptModeEnum = EnhancePromptModeEnum.FAST
+    enhance_prompt_mode: EnhancePromptModeEnum = EnhancePromptModeEnum.STANDARD
     image_urls: list[str] = Field(...,
         description="""The URLs of the images to edit. Must be a list of two URLs.
         Example: ["https://example.com/image1.png", "https://example.com/image2.png"]
