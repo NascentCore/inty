@@ -1,4 +1,8 @@
+import base64
 import io
+import tempfile
+import uuid
+from pathlib import Path
 from enum import StrEnum
 
 from loguru import logger
@@ -27,6 +31,46 @@ class ImageFormat(StrEnum):
 
 class AspectRatio(StrEnum):
     PORTRAIT = "9:16"
+
+
+# Data URI MIME type to file extension for save_image_data_to_file.
+_DATA_URI_MIME_TO_EXT: dict[str, str] = {
+    "image/jpeg": "jpeg",
+    "image/jpg": "jpeg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/avif": "avif",
+}
+
+
+def save_image_data_to_file(data: str) -> str:
+    """
+    Parse a data URI (e.g. data:image/jpeg;base64,...) and save the decoded
+    image bytes to a file with the corresponding extension. Only base64
+    encoding is supported. Returns the path of the saved file.
+    """
+    if not data.startswith("data:"):
+        raise ValueError("Not a data URI")
+    header, _, payload = data.partition(",")
+    parts = header.split(";")
+    mime = parts[0].removeprefix("data:").strip().lower()
+    encoding = parts[1].strip().lower() if len(parts) > 1 else ""
+    if encoding != "base64":
+        raise ValueError(
+            f"Data URI encoding must be base64, got: {encoding!r}"
+            if encoding
+            else "Data URI must specify base64 encoding"
+        )
+    ext = _DATA_URI_MIME_TO_EXT.get(mime)
+    if ext is None:
+        raise ValueError(f"Unsupported image MIME type for data URI: {mime}")
+    image_bytes = base64.b64decode(payload.strip())
+    name = f"{uuid.uuid4().hex}.{ext}"
+    path = Path(tempfile.gettempdir()) / name
+    path.write_bytes(image_bytes)
+    logger.debug(f"Saved data URI image to {path} ({len(image_bytes)} bytes)")
+    return str(path)
 
 
 def compress_png_to_jpeg(image_data: bytes, quality: int = 80) -> bytes:

@@ -35,11 +35,10 @@ async def test_seedream_v4_5_edit_trace_with_real_fal():
         prompt=random_prompt,
         image_urls=_SEEDREAM_EXAMPLE_IMAGE_URLS,
     )
-    handler = await seedream_v4_5_edit(args)
-    assert handler is not None
-    result = await handler.get()
-    assert "images" in result
-    assert len(result["images"]) >= 1
+    result = await seedream_v4_5_edit(args)
+    assert result is not None
+    assert result.images is not None
+    assert len(result.images) >= 1
     for attempt in range(3):
         logger.info(f"Checking LangSmith trace for this run (attempt {attempt + 1}): {random_suffix}")
         run = find_run_inputs_contain_string(start_time, random_suffix)

@@ -44,7 +44,7 @@ import fal_client
 from langsmith import traceable
 from pydantic import BaseModel, Field
 
-from app.utils.image import IMAGE_SIZE_720_1280, ImageSize
+from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
 from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO
 
@@ -78,7 +78,7 @@ class FalSeedreamV4_5EditArgs(BaseModel):
     num_images: int = 1
     # max_images
     # seed
-    # sync_mode
+    sync_mode: bool = True
     enable_safety_checker: bool = False
     enhance_prompt_mode: EnhancePromptModeEnum = EnhancePromptModeEnum.STANDARD
     image_urls: list[str] = Field(...,
@@ -96,8 +96,8 @@ class Image(BaseModel):
     content_type: str
     file_name: str
     file_size: int
-    width: int
-    height: int
+    width: int | None = None
+    height: int | None = None
 
 class FalSeedreamV4_5EditResult(BaseModel):
     """
@@ -115,8 +115,35 @@ async def seedream_v4_5_edit(args: FalSeedreamV4_5EditArgs) -> FalSeedreamV4_5Ed
     return FalSeedreamV4_5EditResult(**result)
 
 
+class AccelerationEnum(StrEnum):
+    NONE = "none"
+    REGULAR = "regular"
+    HIGH = "high"
+
+
 class ImgGenArgs(BaseModel):
+    """
+    https://fal.ai/models/fal-ai/z-image/turbo/api#schema-input
+    """
     prompt: str
+    image_size: ImageSize | ImageSizeEnum = IMAGE_SIZE_720_1280
+    num_inference_steps: int = 8
+    seed: int | None = None
+    sync_mode: bool = Field(default=True, description="""
+        If True, the media will be returned as a data URI
+        and the output data won't be available in the request history.
+        Example:
+        {
+            "url": "data:image/jpeg;base64,..."
+        }
+        If False, the function will return a url to the fal CDN.
+        考虑统一，我们用 sync_mode=True 来处理，并自己上传文件到 GCS。
+    """)
+    num_images: int = 1
+    enable_safety_checker: bool = False
+    output_format: ImageFormat = ImageFormat.JPEG
+    acceleration: AccelerationEnum = AccelerationEnum.NONE
+    enable_prompt_expansion: bool = False
 
 
 class ImageFile(BaseModel):
@@ -126,7 +153,7 @@ class ImageFile(BaseModel):
     """
     url: str
     content_type: str
-    file_name: str
+    file_name: str | None = None
     file_size: int | None = None
     file_data: str | None = None  # optional; text-to-image response does not include it
     width: int
