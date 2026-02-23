@@ -2,7 +2,8 @@
 
 ## Overview
 
-Review the code in context (current file, selection, or diff) and then propose and apply targeted enhancements. Focus on correctness, maintainability, and alignment with project conventions.
+Review the code in context (current file, selection, or diff) and then propose and apply targeted enhancements.
+Focus on correctness, maintainability, simplicity, and alignment with project conventions.
 
 ## Steps
 
@@ -21,8 +22,10 @@ Review the code in context (current file, selection, or diff) and then propose a
 
 ## Checklist
 
+- [ ] android_app/docs/CHANGE_LOGS.md updated for user-visible changes in android_app/
+- [ ] docs/INTELLIMATE.md updated for user-visibule changes in android_app/
 - [ ] User intention understood
 - [ ] Implementation architecture understood
 - [ ] Architecture revised if needed
 - [ ] Follows project style and AGENTS.md
-- [ ] Tests/docs updated if behavior or contract changed
+- [ ] Tests updated if behavior or contract changed
