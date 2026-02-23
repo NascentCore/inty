@@ -64,6 +64,7 @@ import {
   sortReportsByDateDesc,
   WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 } from "../utils/userAnalyticsReports";
+import { USER_ANALYTICS_GENERATED_IMAGE_PREVIEW_STYLE } from "../utils/userAnalyticsReportImagePreview";
 
 type ReportType = "daily" | "weekly";
 
@@ -292,12 +293,7 @@ function ReportContent({
                       <Image
                         src={item.image_url}
                         alt={`generated-${item.id}`}
-                        style={{
-                          width: "100%",
-                          aspectRatio: "1 / 1",
-                          objectFit: "cover",
-                          borderRadius: 8,
-                        }}
+                        style={USER_ANALYTICS_GENERATED_IMAGE_PREVIEW_STYLE}
                       />
                       <div
                         style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
