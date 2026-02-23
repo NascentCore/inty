@@ -109,11 +109,10 @@ class FalSeedreamV4_5EditResult(BaseModel):
 @traceable
 async def seedream_v4_5_edit(args: FalSeedreamV4_5EditArgs) -> FalSeedreamV4_5EditResult:
     handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
-    raw_result = await handler.get()
-    raw_result["handler"] = handler
-    attach_provider_response_to_langsmith_run(raw_result)
-    result = FalSeedreamV4_5EditResult(**raw_result)
-    return result
+    attach_provider_response_to_langsmith_run(handler, key="handler")
+    result = await handler.get()
+    attach_provider_response_to_langsmith_run(result)
+    return FalSeedreamV4_5EditResult(**result)
 
 
 class ImgGenArgs(BaseModel):
