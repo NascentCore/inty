@@ -60,7 +60,7 @@ from loguru import logger
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_text_part, get_text_parts
 from google.genai import types
-from langsmith.run_helpers import traceable
+from langsmith.run_helpers import get_current_run_tree, traceable
 
 from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
@@ -89,11 +89,14 @@ class LangSmithTraceRunType(StrEnum):
     PARSER = "parser"
 
 
-def _process_outputs_generate_image(output: dict[str, Any]) -> dict[str, Any]:
+def _process_outputs_generate_image(output: dict[str, Any] | None) -> dict[str, Any] | None:
     """
     process_outputs：供 LangSmith @traceable 使用，仅将 raw_data 的前 N 字节写入 trace，
     避免大块二进制数据；实际返回值不受影响。
     """
+    if output is None:
+        # 当有异常时，返回值为 None，需要处理，否则 LangSmith 记录会显示超时。
+        return None
     raw_data = output.get("raw_data", b"")
     total = len(raw_data)
     truncated = raw_data[:_LANGSMITH_RAW_DATA_TRACE_BYTES]
@@ -173,6 +176,59 @@ class WrappedClient:
                 raise ValueError(f"Unsupported model: {model}")
 
 
+def _gemini_response_to_trace_metadata(response: types.GeneratedContent) -> dict[str, Any]:
+    """
+    将 Gemini 响应转为可写入 LangSmith metadata 的摘要（无大块二进制），
+    便于在异常时也能在 trace 中看到响应概要。
+    """
+    out: dict[str, Any] = {}
+    if hasattr(response, "prompt_feedback") and response.prompt_feedback:
+        pf = response.prompt_feedback
+        out["prompt_feedback"] = {"block_reason": getattr(pf, "block_reason", None)}
+    candidates = getattr(response, "candidates", None) or []
+    out["candidates"] = []
+    for c in candidates:
+        entry: dict[str, Any] = {"finish_reason": getattr(c, "finish_reason", None)}
+        safety_ratings = getattr(c, "safety_ratings", None) or []
+        if safety_ratings:
+            entry["safety_ratings"] = [
+                {
+                    "category": getattr(r, "category", None),
+                    "probability": getattr(r, "probability", None),
+                    "blocked": getattr(r, "blocked", None),
+                }
+                for r in safety_ratings
+            ]
+        content = getattr(c, "content", None)
+        parts = getattr(content, "parts", None) if content else None
+        if parts is not None:
+            entry["content_parts"] = []
+            for p in parts:
+                if hasattr(p, "inline_data") and p.inline_data:
+                    entry["content_parts"].append(
+                        {"kind": "inline_data", "size_bytes": len(getattr(p.inline_data, "data", b""))}
+                    )
+                elif hasattr(p, "text") and p.text:
+                    entry["content_parts"].append({"kind": "text", "length": len(p.text)})
+                else:
+                    entry["content_parts"].append({"kind": "other"})
+        else:
+            entry["content_parts"] = None
+        out["candidates"].append(entry)
+    return out
+
+
+def _attach_response_to_langsmith_run(response: types.GeneratedContent) -> None:
+    """
+    若当前在 LangSmith trace 内，将 Gemini 响应摘要写入当前 run 的 metadata，
+    以便异常时 LangSmith 也能看到响应概要。
+    """
+    run = get_current_run_tree()
+    if run is not None:
+        # 需要在 LangSmith Trace 记录的 Metadata 中查看错误响应摘要。
+        run.metadata["error_response_summary"] = _gemini_response_to_trace_metadata(response)
+
+
 def _extract_image_part_from_gemini_response(
     response: types.GeneratedContent,
 ) -> types.Part:
@@ -187,13 +243,15 @@ def _extract_image_part_from_gemini_response(
         if hasattr(prompt_feedback, "block_reason"):
             block_reason = prompt_feedback.block_reason
             logger.warning("请求被阻止，原因: {}", block_reason)
+            _attach_response_to_langsmith_run(response)
             raise ValueError(
                 f"Image generation request blocked by safety filter: {block_reason}"
             )
 
     if not response.candidates:
         logger.error("Gemini 未返回任何候选结果")
-        raise GeminiImageExtractionError("Gemini returned no candidates", response=response)
+        _attach_response_to_langsmith_run(response)
+        raise ValueError("Gemini returned no candidates")
 
     candidate = response.candidates[0]
 
@@ -211,6 +269,7 @@ def _extract_image_part_from_gemini_response(
             if safety_details:
                 error_msg += f"; details: {', '.join(safety_details)}"
             logger.error(error_msg)
+            _attach_response_to_langsmith_run(response)
             raise ValueError(error_msg)
         elif finish_reason not in ("STOP", None):
             logger.warning("候选结果以非正常原因结束: {}", finish_reason)
@@ -225,6 +284,7 @@ def _extract_image_part_from_gemini_response(
     if blocked_ratings:
         error_msg = f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
         logger.error(error_msg)
+        _attach_response_to_langsmith_run(response)
         raise ValueError(error_msg)
 
     # 检查 content 和 parts
@@ -233,6 +293,7 @@ def _extract_image_part_from_gemini_response(
         error_msg = "No content in candidates"
         if finish_reason:
             error_msg += f" (finish_reason: {finish_reason})"
+        _attach_response_to_langsmith_run(response)
         raise ValueError(error_msg)
 
     # 查找图片部分
@@ -243,6 +304,7 @@ def _extract_image_part_from_gemini_response(
             break
 
     if not image_part:
+        _attach_response_to_langsmith_run(response)
         raise ValueError("No image data found in response")
 
     return image_part
