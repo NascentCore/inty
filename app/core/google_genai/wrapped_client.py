@@ -57,26 +57,19 @@ import uuid
 import PIL
 from google import genai
 from loguru import logger
+from pydantic import BaseModel
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_text_part, get_text_parts
-from google.genai import types
-from langsmith.run_helpers import traceable
+from google.genai import types as gemini_types
+from langsmith.run_helpers import get_current_run_tree, traceable
 
-from app.core.google_genai.predefined_configs import ASPECT_RATIO_9_16, GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
-from app.utils.image import ImageSize
+from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
 
 # LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
 _LANGSMITH_RAW_DATA_TRACE_BYTES = 100
-
-
-class GeminiImageExtractionError(ValueError):
-    """Raised when image part cannot be extracted from Gemini response; carries response for logging."""
-
-    def __init__(self, message: str, response: object) -> None:
-        super().__init__(message)
-        self.response = response
 
 
 class LangSmithTraceRunType(StrEnum):
@@ -89,18 +82,38 @@ class LangSmithTraceRunType(StrEnum):
     PARSER = "parser"
 
 
-def _process_outputs_generate_image(output: dict[str, Any]) -> dict[str, Any]:
+class GeneratedImageProcessResult(BaseModel):
+    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI.
+    raw_data 正常为 bytes；LangSmith trace 副本中为 base64 字符串以缩小 trace 体积。
+    """
+
+    size: ImageSize
+    format: ImageFormat
+    raw_data: bytes | str | None = None
+    raw_data_total_bytes: int = 0
+    gcs_uri: str
+    gcs_http_url: str
+    generated_at: datetime.datetime
+    raw_response_from_google: gemini_types.GenerateContentResponse | None = None
+
+
+def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResult | None) -> GeneratedImageProcessResult | None:
     """
     process_outputs：供 LangSmith @traceable 使用，仅将 raw_data 的前 N 字节写入 trace，
     避免大块二进制数据；实际返回值不受影响。
     """
-    raw_data = output.get("raw_data", b"")
+    if result is None:
+        # 当有异常时，返回值为 None，需要处理，否则 LangSmith 记录会显示超时。
+        return None
+    raw_data = result.raw_data if isinstance(result.raw_data, bytes) else b""
     total = len(raw_data)
     truncated = raw_data[:_LANGSMITH_RAW_DATA_TRACE_BYTES]
-    output_copy = copy.copy(output)
-    output_copy["raw_data"] = base64.b64encode(truncated).decode("ascii")
-    output_copy["raw_data_total_bytes"] = total
-    return output_copy
+    return result.model_copy(
+        update={
+            "raw_data_total_bytes": total,
+            "raw_data": base64.b64encode(truncated).decode("ascii"),
+        }
+    )
 
 
 class WrappedClient:
@@ -112,7 +125,7 @@ class WrappedClient:
         # LLM 是语言模型，生图模型就作为工具调用类型
         run_type=LangSmithTraceRunType.TOOL,
         # process_inputs=_process_inputs_generate_image,
-        process_outputs=_process_outputs_generate_image,
+        process_outputs=_langsmith_process_outputs_generate_image,
     )
     async def async_generate_image(
         self, 
@@ -159,7 +172,7 @@ class WrappedClient:
                 response = await self.client.aio.models.generate_content(
                     model=model,
                     contents=[
-                        types.Content(
+                        gemini_types.Content(
                             role="user",
                             parts=contents_parts,
                         )
@@ -167,15 +180,35 @@ class WrappedClient:
                     config=config,
                 )
                 logger.debug("Gemini generate_content response: {}", response)
+                # 这里会把图片数据也写入 LangSmith Trace 的 metadata 中，
+                # 暂时不处理，如有需要，再想办法把图片数据从 langsmith trace 数据中删掉。
+                # 这个跟返回值的 raw_response_from_google 是重复的。
+                # 这个是必要的，因为发生异常时，返回值为 None，无法记录响应摘要。
+                # 如果有需要，可以考虑把返回值内的 raw_response_from_google 删除。
+                # 返回值中的 raw_response_from_google 是为了方便访问。
+                _attach_response_to_langsmith_run(response)
                 image_part = _extract_image_part_from_gemini_response(response)
-                return _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                result.raw_response_from_google = response
+                return result
             case _:
                 raise ValueError(f"Unsupported model: {model}")
 
 
+def _attach_response_to_langsmith_run(response: gemini_types.GeneratedContent) -> None:
+    """
+    若当前在 LangSmith trace 内，将本次 Gemini 响应写入当前 run 的 metadata。
+    成功与异常路径都会调用，便于在 LangSmith 中查看当次调用的响应；异常时因无返回值，
+    此处为查看响应摘要的唯一途径。
+    """
+    run = get_current_run_tree()
+    if run is not None:
+        run.metadata["raw_response_from_google"] = response
+
+
 def _extract_image_part_from_gemini_response(
-    response: types.GeneratedContent,
-) -> types.Part:
+    response: gemini_types.GeneratedContent,
+) -> gemini_types.Part:
     """
     校验 Gemini generate_content 响应并提取图片 part。
     成功时返回含有 inline_data 的 part；失败时记录日志并抛出 ValueError。
@@ -193,7 +226,7 @@ def _extract_image_part_from_gemini_response(
 
     if not response.candidates:
         logger.error("Gemini 未返回任何候选结果")
-        raise GeminiImageExtractionError("Gemini returned no candidates", response=response)
+        raise ValueError("Gemini returned no candidates")
 
     candidate = response.candidates[0]
 
@@ -248,19 +281,8 @@ def _extract_image_part_from_gemini_response(
     return image_part
 
 
-class GeneratedImageProcessResult(TypedDict):
-    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI."""
-
-    size: ImageSize
-    format: str
-    raw_data: bytes
-    gcs_uri: str
-    gcs_http_url: str
-    generated_at: datetime.datetime
-
-
 def _process_image_part_to_generated_image(
-    image_part: Any,
+    image_part: gemini_types.Part,
     gcs_uri_base: str,
 ) -> GeneratedImageProcessResult:
     """
@@ -311,7 +333,7 @@ def _process_image_part_to_generated_image(
     try:
         pil_image = PIL.Image.open(io.BytesIO(image_data))
         width, height = pil_image.size
-        image_format = pil_image.format or "JPEG"
+        image_format = pil_image.format
         logger.info(
             "成功解析图片: {}x{}, 格式: {}", width, height, image_format
         )
@@ -353,11 +375,11 @@ def _process_image_part_to_generated_image(
     logger.info("图片已上传到 GCS: {}", gcs_uri)
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)
-    return {
-        "size": ImageSize(width=width, height=height),
-        "format": image_format.lower(),
-        "raw_data": image_data,
-        "gcs_uri": gcs_uri,
-        "gcs_http_url": gcs_http_url,
-        "generated_at": now_utc,
-    }
+    return GeneratedImageProcessResult(
+        size=ImageSize(width=width, height=height),
+        format=ImageFormat(image_format.lower()),
+        raw_data=image_data,
+        gcs_uri=gcs_uri,
+        gcs_http_url=gcs_http_url,
+        generated_at=now_utc,
+    )

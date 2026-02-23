@@ -18,10 +18,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import PIL.Image
-from app.core.google_genai.wrapped_client import (
-    GeminiImageExtractionError,
-    WrappedClient,
-)
+from app.core.google_genai.wrapped_client import WrappedClient
 from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -597,12 +594,12 @@ class ImageGenerationService:
                 model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base,
                 system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
             )
-            image_data = result["raw_data"]
-            gcs_uri = result["gcs_uri"]
-            width = result["size"].width
-            height = result["size"].height
-            image_format = result["format"]
-            generated_at = result["generated_at"].isoformat()
+            image_data = result.raw_data
+            gcs_uri = result.gcs_uri
+            width = result.size.width
+            height = result.size.height
+            image_format = result.format.value
+            generated_at = result.generated_at.isoformat()
 
             cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
@@ -702,9 +699,6 @@ class ImageGenerationService:
 
         except Exception as e:
             logger.error("使用 Gemini 生成聊天图片失败: {}", str(e))
-            if isinstance(e, GeminiImageExtractionError):
-                response = e.response
-            _log_image_generation_failure(prompt, response)
             traceback.print_exc()
             raise
 
