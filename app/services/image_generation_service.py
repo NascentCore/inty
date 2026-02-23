@@ -594,7 +594,8 @@ class ImageGenerationService:
                 raise ValueError("Agent data missing ID; cannot generate image path")
             gcs_uri_base = f"chat_images/{agent_id}"
             result = await client.async_generate_image(
-                model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base
+                model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base,
+                system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
             )
             image_data = result["raw_data"]
             gcs_uri = result["gcs_uri"]
