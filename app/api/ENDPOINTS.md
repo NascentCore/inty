@@ -10,6 +10,8 @@
 | `/evaluation` | GET | `backend/inty/main.py` |
 | `/evaluation/{path:path}` | GET | `backend/inty/main.py` |
 
+> 注：当设置 `INTY_API_ONLY=true`（例如使用 `backend/inty/start.sh --api-only`）时，不会注册 `/evaluation` 与 `/evaluation/{path:path}` 这两个 web UI 端点。
+
 ## API v1 端点 (`/api/v1`)
 
 ### 认证 (Auth)
