@@ -66,6 +66,7 @@ from langsmith.run_helpers import get_current_run_tree, traceable
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.utils.image import ImageFormat, ImageSize
+from app.utils.langsmith import attach_provider_response_to_langsmith_run
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
 
 # LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
@@ -186,24 +187,13 @@ class WrappedClient:
                 # 这个是必要的，因为发生异常时，返回值为 None，无法记录响应摘要。
                 # 如果有需要，可以考虑把返回值内的 raw_response_from_google 删除。
                 # 返回值中的 raw_response_from_google 是为了方便访问。
-                _attach_response_to_langsmith_run(response)
+                attach_provider_response_to_langsmith_run(response)
                 image_part = _extract_image_part_from_gemini_response(response)
                 result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
                 result.raw_response_from_google = response
                 return result
             case _:
                 raise ValueError(f"Unsupported model: {model}")
-
-
-def _attach_response_to_langsmith_run(response: gemini_types.GeneratedContent) -> None:
-    """
-    若当前在 LangSmith trace 内，将本次 Gemini 响应写入当前 run 的 metadata。
-    成功与异常路径都会调用，便于在 LangSmith 中查看当次调用的响应；异常时因无返回值，
-    此处为查看响应摘要的唯一途径。
-    """
-    run = get_current_run_tree()
-    if run is not None:
-        run.metadata["raw_response_from_google"] = response
 
 
 def _extract_image_part_from_gemini_response(

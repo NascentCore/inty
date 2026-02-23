@@ -45,6 +45,7 @@ class ModelBuilder(StrEnum):
     BYTE_DANCE = "bytedance"
     OPENAI = "openai"
     ELEVENLABS = "11labs"
+    ALIBABA_TONGYI = "alibaba_tongyi"
 
 
 class PricingModel(StrEnum):
@@ -84,6 +85,9 @@ class Pricing(BaseModel):
     outputs: list[PriceInfo] = Field(
         description="模型输出价格信息列表，用于计算用量和成本。"
     )
+    official_url: str = Field(default="", description="""
+        模型 API 提供者的官方定价页面 URL，比如 fal.ai 的定价页面。
+        """)
     notes: str = Field(description="模型价格的一些备注信息", default="")
 
 
@@ -113,6 +117,7 @@ class GenAIModel(BaseModel):
 
     nickname: str = Field(description="""
         用于给非后端团队提供的名称，方便沟通和理解。
+        计划在 app/utils/config.py 中使用这些名字来指代模型。
 
         这个名字可以包含空格，比如 "Nano Banana"。
 
@@ -145,10 +150,10 @@ class GenAIModel(BaseModel):
 
     pricing: Pricing = Field(description="模型价格，用于计算用量和成本。")
 
-    playground_url: str = Field(description="""
-        模型 API 提供者的 playground 地址，用于在代码中唯一标识一个模型。
-        这个地址需要与第三方平台上的模型名称一致。比如 Google 的模型名称是 gemini-2.5-flash，
-        那么在该平台上名字是 google/gemini-2.5-flash。""")
+    
+    official_url: str = Field(default="", description="""
+        模型 API 提供者的官方 URL，多为 Hugging Face 或 GitHub 地址。
+        """)
 
     notes: str = Field(
         description="""
@@ -177,8 +182,8 @@ GEMINI_2_5_FLASH_LITE = GenAIModel(
                 price=0.4, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
             )
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     ),
-    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
 )
 
@@ -206,8 +211,8 @@ GEMINI_2_5_FLASH = GenAIModel(
                 price=30.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE
             ),
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     ),
-    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
 )
 
@@ -231,8 +236,8 @@ NANO_BANANA = GenAIModel(
                 price=30.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE
             )
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     ),
-    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
 )
 
@@ -259,9 +264,10 @@ NANO_BANANA_PRO = GenAIModel(
                 price=120.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE
             ),
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-3",
     ),
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
-    notes="最多支持 14 张参考图片。价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-3",
+    notes="最多支持 14 张参考图片。",
 )
 
 
@@ -280,8 +286,8 @@ IMAGEN_4_FAST = GenAIModel(
                 price=0.02, model=PricingModel.BY_USE, modality=DataModality.IMAGE
             )
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
     ),
-    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=imagen-4.0-fast-generate-001&project=alien-paratext-461204-i9",
 )
 
@@ -301,8 +307,8 @@ IMAGEN_4 = GenAIModel(
                 price=0.04, model=PricingModel.BY_USE, modality=DataModality.IMAGE
             )
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
     ),
-    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#imagen-models",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=imagen-4.0-generate-001&project=alien-paratext-461204-i9",
 )
 
@@ -322,8 +328,8 @@ VEO_3_1_FAST = GenAIModel(
                 price=0.15, model=PricingModel.BY_USE, modality=DataModality.VIDEO
             )
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
     ),
-    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/media/video?project=alien-paratext-461204-i9",
 )
 
@@ -342,8 +348,8 @@ VEO_3_1 = GenAIModel(
                 price=0.40, model=PricingModel.BY_USE, modality=DataModality.VIDEO
             )
         ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
     ),
-    notes="价格列表：https://cloud.google.com/vertex-ai/generative-ai/pricing#veo",
     playground_url="https://console.cloud.google.com/vertex-ai/studio/media/video?project=alien-paratext-461204-i9",
 )
 
@@ -364,8 +370,8 @@ SEEDREAM_V4_5_EDIT = GenAIModel(
                 price=0.04, model=PricingModel.BY_USE, modality=DataModality.IMAGE
             )
         ],
+        notes="没有专门针对模型的价格列表，通过 playground 测试后观察实际 cost",
     ),
-    notes="价格/定价见：https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit",
     playground_url="https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit",
 )
 
@@ -391,4 +397,25 @@ GPT_IMAGE_1_5 = GenAIModel(
     ),
     notes="价格列表：https://fal.ai/models/fal-ai/gpt-image-1.5/edit",
     playground_url="https://platform.openai.com/playground/images",
+)
+
+Z_IMAGE_TURBO = GenAIModel(
+    nickname="Z Image Turbo",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT], outputs=[DataModality.IMAGE]
+    ),
+    builder=ModelBuilder.ALIBABA_TONGYI,
+    provider=ModelAPIProvider.FALAI,
+    id_on_provider="fal-ai/z-image/turbo",
+    official_url="https://github.com/Tongyi-MAI/Z-Image",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[
+            PriceInfo(
+                price=0.005, model=PricingModel.BY_USE, modality=DataModality.IMAGE
+            )
+        ],
+        notes="没有专门给模型的定价页面，playground 测试后观察实际 cost",
+    ),
+    playground_url="https://fal.ai/models/fal-ai/z-image/turbo",
 )

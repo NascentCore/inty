@@ -59,8 +59,8 @@ async def test_z_image_turbo_trace_with_real_fal():
     args = ImgGenArgs(prompt=random_prompt)
     result = await z_image_turbo(args)
     assert result is not None
-    assert "images" in result
-    assert len(result["images"]) >= 1
+    assert result.images is not None
+    assert len(result.images) >= 1
 
     for attempt in range(3):
         logger.info(f"Checking LangSmith trace for this run (attempt {attempt + 1}): {random_suffix}")
