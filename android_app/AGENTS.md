@@ -3,7 +3,9 @@
 - 新功能要添加 firebase 埋点来收集用户使用数据。
 - 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
   [MMKV](https://github.com/Tencent/MMKV) 已计划废弃
+- 试用 [Room Database](https://developer.android.com/training/data-storage/room?hl=zh-cn) 在本地完成持久化数据存储
 - 从后端拿到的数据结构中忽略不理解的数据类型，而不是报错，比如聊天消息类型出现了 AI User 以外的类型，直接忽略，这样在后端发布新功能时更加具有容错性。
+- 为用户可见的 UI 元素取中英文对照名字，方便开发人员指代功能
 
 ## Design
 
