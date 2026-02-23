@@ -13,6 +13,9 @@ class ImageSize(BaseModel):
     height: int
 
 
+IMAGE_SIZE_720_1280 = ImageSize(width=720, height=1280)
+
+
 class ImageFormat(StrEnum):
     JPG = "jpg"
     JPEG = "jpeg"

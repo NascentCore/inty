@@ -39,23 +39,81 @@ output format:
 }
 """
 
+from enum import StrEnum
 import fal_client
 from langsmith import traceable
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from app.utils.image import IMAGE_SIZE_720_1280, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
 from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO
 
 
+class ImageSizeEnum(StrEnum):
+    """
+    https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-input-image_size
+    仅供参考，默认值为 
+    """
+    SQUARE_HD = "square_hd"
+    SQUARE = "square"
+    PORTRAIT_4_3 = "portrait_4_3"
+    PORTRAIT_16_9 = "portrait_16_9"
+    LANDSCAPE_4_3 = "landscape_4_3"
+    LANDSCAPE_16_9 = "landscape_16_9"
+    AUTO_2K = "auto_2K"
+    AUTO_4K = "auto_4K"
+
+
+class EnhancePromptModeEnum(StrEnum):
+    STANDARD = "standard"
+    FAST = "fast"
+
+
 class FalSeedreamV4_5EditArgs(BaseModel):
+    """
+    https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-input
+    """
     prompt: str
-    image_urls: list[str]
+    image_size: ImageSize | ImageSizeEnum = IMAGE_SIZE_720_1280
+    num_images: int = 1
+    # max_images
+    # seed
+    # sync_mode
+    enable_safety_checker: bool = False
+    enhance_prompt_mode: EnhancePromptModeEnum = EnhancePromptModeEnum.FAST
+    image_urls: list[str] = Field(...,
+        description="""The URLs of the images to edit. Must be a list of two URLs.
+        Example: ["https://example.com/image1.png", "https://example.com/image2.png"]
+        """
+    )
+
+
+class Image(BaseModel):
+    """
+    https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#type-Image
+    """
+    url: str
+    content_type: str
+    file_name: str
+    file_size: int
+    width: int
+    height: int
+
+class FalSeedreamV4_5EditResult(BaseModel):
+    """
+    https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-output
+    """
+    images: list[Image] | None = None
 
 
 @traceable
-async def seedream_v4_5_edit(args: FalSeedreamV4_5EditArgs):
+async def seedream_v4_5_edit(args: FalSeedreamV4_5EditArgs) -> FalSeedreamV4_5EditResult:
     handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
-    return handler
+    raw_result = await handler.get()
+    raw_result["handler"] = handler
+    attach_provider_response_to_langsmith_run(raw_result)
+    result = FalSeedreamV4_5EditResult(**raw_result)
+    return result
 
 
 class ImgGenArgs(BaseModel):
