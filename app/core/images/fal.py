@@ -56,3 +56,13 @@ class FalSeedreamV4_5EditArgs(BaseModel):
 async def seedream_v4_5_edit(args: FalSeedreamV4_5EditArgs):
     handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
     return handler
+
+
+class ImgGenArgs(BaseModel):
+    prompt: str
+
+
+@traceable
+async def z_image_turbo(args: ImgGenArgs):
+    handler = await fal_client.submit_async("fal-ai/z-image/turbo", arguments=args.model_dump())
+    return await handler.get()

@@ -10,7 +10,7 @@ load_dotenv()
 from loguru import logger
 import pytest
 
-from app.core.images.fal import FalSeedreamV4_5EditArgs, seedream_v4_5_edit
+from app.core.images.fal import FalSeedreamV4_5EditArgs, ImgGenArgs, seedream_v4_5_edit, z_image_turbo
 from tests.langsmith import find_run_inputs_contain_string
 
 # Example prompt and image_urls from app/core/images/fal.py docstring (public fal example).
@@ -40,6 +40,28 @@ async def test_seedream_v4_5_edit_trace_with_real_fal():
     result = await handler.get()
     assert "images" in result
     assert len(result["images"]) >= 1
+    for attempt in range(3):
+        logger.info(f"Checking LangSmith trace for this run (attempt {attempt + 1}): {random_suffix}")
+        run = find_run_inputs_contain_string(start_time, random_suffix)
+        if run is not None:
+            break
+        time.sleep(2)
+    assert run is not None, f"LangSmith trace for this run should contain the random string: {random_suffix}"
+
+
+@pytest.mark.noci
+@pytest.mark.asyncio
+async def test_z_image_turbo_trace_with_real_fal():
+    """使用实际的 FAL_KEY 测试 z_image_turbo 的 tracing；通过 LangSmith list_runs 查询确认 trace 含本次随机字符串。"""
+    random_suffix = str(uuid.uuid4())
+    random_prompt = f"A beautiful landscape painting with a river and mountains {random_suffix}"
+    start_time = datetime.datetime.now(datetime.timezone.utc)
+    args = ImgGenArgs(prompt=random_prompt)
+    result = await z_image_turbo(args)
+    assert result is not None
+    assert "images" in result
+    assert len(result["images"]) >= 1
+
     for attempt in range(3):
         logger.info(f"Checking LangSmith trace for this run (attempt {attempt + 1}): {random_suffix}")
         run = find_run_inputs_contain_string(start_time, random_suffix)
