@@ -35,6 +35,7 @@ import {
   SoundOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
+import type { Data } from "plotly.js";
 import { userAnalyticsApi } from "../services/api";
 import type {
   UserAnalyticsReportItem,
@@ -918,7 +919,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     if (!usageSeries) {
       return [];
     }
-    const traces = DAILY_USAGE_CHART_METRICS.map((metric) => ({
+    const traces: Data[] = DAILY_USAGE_CHART_METRICS.map((metric) => ({
       x: usageSeries.dates,
       y: usageSeries.valuesByMetric[metric.key],
       name: metric.label,
