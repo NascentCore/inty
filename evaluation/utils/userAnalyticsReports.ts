@@ -86,6 +86,8 @@ export const DAILY_USAGE_SECONDARY_AXIS_TITLE =
 export const DAILY_USAGE_SECONDARY_AXIS_COLOR =
   DAILY_USAGE_CHART_METRICS.find((metric) => metric.axis === "y2")?.color ??
   "#ff4d4f";
+export const DAILY_USAGE_VOICE_MESSAGE_RATIO_LABEL = "语音播报次数 / 消息数";
+export const DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR = "#13c2c2";
 export const DAILY_IMAGE_USAGE_HAS_SECONDARY_AXIS =
   DAILY_IMAGE_USAGE_CHART_METRICS.some((metric) => metric.axis === "y2");
 export const DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE =
@@ -273,6 +275,32 @@ export const buildRollingDailyUsageSeries = (
   const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
   return buildUsageSeries(reports, DAILY_USAGE_CHART_METRICS, (values) =>
     buildRollingSums(values, normalizedWindowDays),
+  );
+};
+
+const toVoiceRequestsPerMessageRatio = (
+  totalVoiceRequests: number,
+  totalUserMessages: number,
+): number => {
+  if (totalUserMessages <= 0) {
+    return 0;
+  }
+  return totalVoiceRequests / totalUserMessages;
+};
+
+export const buildVoiceRequestsPerMessageRatioValues = (
+  usageSeries: DailyUsageSeries | null,
+): number[] => {
+  if (!usageSeries) {
+    return [];
+  }
+  const totalVoiceRequestsValues = usageSeries.valuesByMetric.total_voice_requests;
+  const totalUserMessagesValues = usageSeries.valuesByMetric.total_user_messages;
+  return totalVoiceRequestsValues.map((voiceRequests, index) =>
+    toVoiceRequestsPerMessageRatio(
+      voiceRequests,
+      totalUserMessagesValues[index] ?? 0,
+    ),
   );
 };
 
