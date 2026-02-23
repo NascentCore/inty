@@ -21,6 +21,7 @@
 
 ## 一般指示
 
+- When referring to concepts in Kotlin code, use the language conventions, and remind the user about that, so the user can understand what it refers to
 - 颜色从MaterialTheme.colorScheme中根据具体作用取值，不应该直接使用具体颜色数值
 - 界面元素尺寸、大小写入 `android_app/app/src/main/res/values/dimens.xml`，不要直接使用数字值、如 `10.sp` `10.dp` 之类的
 - 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
