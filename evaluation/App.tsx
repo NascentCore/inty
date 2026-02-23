@@ -188,12 +188,6 @@ const AppContent: React.FC = () => {
       description: "与智能体进行一对一聊天",
     },
     {
-      key: "agents",
-      icon: <RobotOutlined />,
-      label: "智能体管理",
-      description: "创建、编辑和管理智能体",
-    },
-    {
       key: "voice-chat",
       icon: <PhoneOutlined />,
       label: "语音通话",
