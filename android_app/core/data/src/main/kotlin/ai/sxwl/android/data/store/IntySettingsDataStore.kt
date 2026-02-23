@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -16,6 +17,8 @@ import kotlinx.coroutines.runBlocking
  *
  * 提供同步 get 与异步 set，内部通过内存缓存 + runBlocking 首值加载满足 [IntySetting] 门面的同步读需求；
  * 用户切换时调用 [onUserChanged] 失效缓存。
+ * 为避免 set 后异步写未完成时 onUserChanged/ensureCache 从 DataStore 读到旧值，对每个 uid 记录未完成的写 Job 列表，
+ * 在 [onUserChanged] 与 [ensureCache] 重载前等待该 uid 全部写完成。
  */
 object IntySettingsDataStore {
 
@@ -41,6 +44,8 @@ object IntySettingsDataStore {
     private val lock = Any()
     private var cachedUid: String? = null
     private var cache = Cache()
+    /** 每个 uid 未完成的 DataStore 写 Job 列表；onUserChanged/ensureCache 重载前会 join 该 uid 全部 Job 以免读到未落盘的值。 */
+    private val pendingWrites = mutableMapOf<String, MutableList<Job>>()
 
     private data class Cache(
         var chatFontSizeSp: Float = DEFAULT_CHAT_FONT_SIZE_SP,
@@ -57,9 +62,13 @@ object IntySettingsDataStore {
         return dataStore("$PREFIX_USER_STORE$uid")
     }
 
-    /** 失效缓存，使用于用户切换后，下次 get 会按新 uid 重新加载。 */
+    /** 失效缓存，使用于用户切换后，下次 get 会按新 uid 重新加载。先等待当前缓存 uid 的未完成写再失效，避免丢写。 */
     fun onUserChanged() {
         synchronized(lock) {
+            cachedUid?.let { uid ->
+                pendingWrites[uid]?.forEach { runBlocking { it.join() } }
+                pendingWrites.remove(uid)
+            }
             cachedUid = null
         }
     }
@@ -67,6 +76,8 @@ object IntySettingsDataStore {
     private fun ensureCache(uid: String) {
         synchronized(lock) {
             if (cachedUid == uid) return
+            pendingWrites[uid]?.forEach { runBlocking { it.join() } }
+            pendingWrites.remove(uid)
             runBlocking {
                 val prefs = store(uid).data.first()
                 cache = Cache(
@@ -92,7 +103,8 @@ object IntySettingsDataStore {
     fun setChatFontSizeSp(uid: String, value: Float) {
         ensureCache(uid)
         synchronized(lock) { cache.chatFontSizeSp = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putFloat(KEY_CHAT_FONT_SIZE_SP, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putFloat(KEY_CHAT_FONT_SIZE_SP, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 
     fun getChatModelId(uid: String): String {
@@ -103,7 +115,8 @@ object IntySettingsDataStore {
     fun setChatModelId(uid: String, value: String) {
         ensureCache(uid)
         synchronized(lock) { cache.chatModelId = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putString(KEY_CHAT_MODEL_ID, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putString(KEY_CHAT_MODEL_ID, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 
     fun getChatListFullScreen(uid: String): Boolean {
@@ -114,7 +127,8 @@ object IntySettingsDataStore {
     fun setChatListFullScreen(uid: String, value: Boolean) {
         ensureCache(uid)
         synchronized(lock) { cache.chatListFullScreen = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_CHAT_LIST_FULL_SCREEN, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_CHAT_LIST_FULL_SCREEN, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 
     fun getAutoPlayAnimation(uid: String): Boolean {
@@ -125,7 +139,8 @@ object IntySettingsDataStore {
     fun setAutoPlayAnimation(uid: String, value: Boolean) {
         ensureCache(uid)
         synchronized(lock) { cache.autoPlayAnimation = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_AUTO_PLAY_ANIMATION, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_AUTO_PLAY_ANIMATION, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 
     fun getTextStreaming(uid: String): Boolean {
@@ -136,7 +151,8 @@ object IntySettingsDataStore {
     fun setTextStreaming(uid: String, value: Boolean) {
         ensureCache(uid)
         synchronized(lock) { cache.textStreaming = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_TEXT_STREAMING, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_TEXT_STREAMING, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 
     fun getShowSceneActionButton(uid: String): Boolean {
@@ -147,7 +163,8 @@ object IntySettingsDataStore {
     fun setShowSceneActionButton(uid: String, value: Boolean) {
         ensureCache(uid)
         synchronized(lock) { cache.showSceneActionButton = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_SHOW_SCENE_ACTION_BUTTON, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_SHOW_SCENE_ACTION_BUTTON, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 
     fun getShowKeepTalking(uid: String): Boolean {
@@ -158,7 +175,8 @@ object IntySettingsDataStore {
     fun setShowKeepTalking(uid: String, value: Boolean) {
         ensureCache(uid)
         synchronized(lock) { cache.showKeepTalking = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_SHOW_KEEP_TALKING, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_SHOW_KEEP_TALKING, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 
     fun getAutoPlayAudio(uid: String): Boolean {
@@ -169,6 +187,7 @@ object IntySettingsDataStore {
     fun setAutoPlayAudio(uid: String, value: Boolean) {
         ensureCache(uid)
         synchronized(lock) { cache.autoPlayAudio = value }
-        GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_AUTO_PLAY_AUDIO, value) }
+        val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_AUTO_PLAY_AUDIO, value) }
+        synchronized(lock) { pendingWrites.getOrPut(uid) { mutableListOf() }.add(job) }
     }
 }
