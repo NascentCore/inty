@@ -124,14 +124,14 @@
 
 | 迭代 | Entry | 风险 | 备注 |
 |---|---|---|---|
-| 01 | `chat_font_size_sp` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
-| 02 | `chat_model_id` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
-| 03 | `chat_list_full_screen` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
-| 04 | `auto_play_animation` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
-| 05 | `text_streaming` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
-| 06 | `show_scene_action_button` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
-| 07 | `show_keep_talking` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
-| 08 | `auto_play_audio` | 低 | 已迁 DataStore（不迁移旧 MMKV 记录） |
+| 01 | `chat_font_size_sp` | 低 | 单值、默认值明确 |
+| 02 | `chat_model_id` | 低 | 单值 String |
+| 03 | `chat_list_full_screen` | 低 | 单值 Boolean |
+| 04 | `auto_play_animation` | 低 | 单值 Boolean |
+| 05 | `text_streaming` | 低 | 单值 Boolean |
+| 06 | `show_scene_action_button` | 低 | 单值 Boolean |
+| 07 | `show_keep_talking` | 低 | 与 Remote Config 有关联，先迁值本身 |
+| 08 | `auto_play_audio` | 低 | 与订阅态组合显示，验证 UI 同步 |
 | 09 | `user_set_keep_talking` | 中 | 与远端默认值策略联动 |
 | 10 | `user_set_auto_play_voice` | 中 | 同上 |
 | 11 | `user_set_auto_play_animation` | 中 | 同上 |
