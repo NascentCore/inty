@@ -111,6 +111,8 @@ def _load_memory_service_module():
         mp.setitem(sys.modules, "app.services.chat_history_service", fake_chat_history_module)
         mp.setitem(sys.modules, "app.services.chat_service", fake_chat_service_module)
         module = importlib.import_module("app.services.memory_service")
+    # 从 sys.modules 移除，避免本文件用假依赖加载的 module 被其他测试复用（否则会报 Memory 无 content 等）。
+    sys.modules.pop("app.services.memory_service", None)
     return module
 
 
