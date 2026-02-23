@@ -10,12 +10,8 @@ import kotlin.random.Random
 
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
 private const val KEY_RESUB_REMINDER_SHOW_COUNT = "resub_reminder_show_count"
-private const val KEY_CHAT_FONT_SIZE_SP = "chat_font_size_sp"
-private const val KEY_CHAT_MODEL_ID = "chat_model_id"
 private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
-private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
-private const val DEFAULT_CHAT_MODEL_ID = "gemini_3_flash"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
 private const val KEY_TOTAL_MESSAGE_COUNT = "total_message_count"
@@ -52,11 +48,10 @@ object IntySetting {
 
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
     fun changeUser(uid: String) {
-        curUserSetting
-
         curUid = uid
         curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
         allUserSetting.putString("cur_uid", uid)
+        IntySettingsDataStore.onUserChanged()
     }
 
     fun setToken(token: String) {
@@ -98,11 +93,11 @@ object IntySetting {
 
     /** 记录是否显示keepTalking按钮（全局设置） */
     fun setShowKeepTalking(show: Boolean) {
-        curUserSetting.putBoolean("show_keep_talking", show)
+        IntySettingsDataStore.setShowKeepTalking(getCurUserID(), show)
     }
 
     fun isShowKeepTalking(): Boolean {
-        return curUserSetting.decodeBool("show_keep_talking", false)
+        return IntySettingsDataStore.getShowKeepTalking(getCurUserID())
     }
 
     /** 检查用户是否手动设置过 Keep Talking（用于判断是否使用 Remote Config 默认值） */
@@ -117,12 +112,11 @@ object IntySetting {
 
     /** 自动播放语音消息（全局设置，默认开启） */
     fun setAutoPlayAudio(play: Boolean) {
-        curUserSetting.putBoolean("auto_play_audio", play)
+        IntySettingsDataStore.setAutoPlayAudio(getCurUserID(), play)
     }
 
     fun isAutoPlayAudio(): Boolean {
-        // 默认值为true（开启）
-        return curUserSetting.decodeBool("auto_play_audio", true)
+        return IntySettingsDataStore.getAutoPlayAudio(getCurUserID())
     }
 
     /** 检查用户是否手动设置过 Auto Play Voice（用于判断是否使用 Remote Config 默认值） */
@@ -137,21 +131,21 @@ object IntySetting {
 
     /** 自动播放背景动画（全局设置，默认开启） */
     fun setAutoPlayAnimation(enabled: Boolean) {
-        curUserSetting.putBoolean("auto_play_animation", enabled)
+        IntySettingsDataStore.setAutoPlayAnimation(getCurUserID(), enabled)
     }
 
     /** 流式显示聊天消息 */
     fun setTextStreaming(enabled: Boolean) {
-        curUserSetting.putBoolean("text_streaming", enabled)
+        IntySettingsDataStore.setTextStreaming(getCurUserID(), enabled)
     }
 
     fun isAutoPlayAnimation(): Boolean {
-        return curUserSetting.decodeBool("auto_play_animation", true)
+        return IntySettingsDataStore.getAutoPlayAnimation(getCurUserID())
     }
 
     /** 是否流式显示聊天消息 */
     fun isTextStreaming(): Boolean {
-        return curUserSetting.decodeBool("text_streaming", true)
+        return IntySettingsDataStore.getTextStreaming(getCurUserID())
     }
 
     /** Vibe Mode 开关状态（仅限订阅用户） */
@@ -211,12 +205,11 @@ object IntySetting {
 
     /** 显示场景动作输入按钮（全局设置，默认关闭） */
     fun setShowSceneActionButton(show: Boolean) {
-        curUserSetting.putBoolean("show_scene_action_button", show)
+        IntySettingsDataStore.setShowSceneActionButton(getCurUserID(), show)
     }
 
     fun isShowSceneActionButton(): Boolean {
-        // 默认值为false（关闭）
-        return curUserSetting.decodeBool("show_scene_action_button", false)
+        return IntySettingsDataStore.getShowSceneActionButton(getCurUserID())
     }
 
     /** 检查用户是否手动设置过 Show Scene Action Button（用于判断是否使用 Remote Config 默认值） */
@@ -231,31 +224,29 @@ object IntySetting {
 
     /** 消息列表是否全屏（全局设置，默认关闭） */
     fun setChatListFullScreen(fullScreen: Boolean) {
-        curUserSetting.putBoolean("chat_list_full_screen", fullScreen)
+        IntySettingsDataStore.setChatListFullScreen(getCurUserID(), fullScreen)
     }
 
     fun isChatListFullScreen(): Boolean {
-        // 默认值为 false（关闭全屏），避免消息列表遮挡角色脸部
-        return curUserSetting.decodeBool("chat_list_full_screen", false)
+        return IntySettingsDataStore.getChatListFullScreen(getCurUserID())
     }
 
     /** 聊天消息字体大小（单位 sp，默认 14f） */
     fun setChatFontSizeSp(size: Float) {
-        curUserSetting.putFloat(KEY_CHAT_FONT_SIZE_SP, size)
+        IntySettingsDataStore.setChatFontSizeSp(getCurUserID(), size)
     }
 
     fun getChatFontSizeSp(): Float {
-        return curUserSetting.decodeFloat(KEY_CHAT_FONT_SIZE_SP, DEFAULT_CHAT_FONT_SIZE_SP)
+        return IntySettingsDataStore.getChatFontSizeSp(getCurUserID())
     }
 
     /** 聊天模型选择（全局设置，默认 Gemini 3 Flash） */
     fun setChatModelId(modelId: String) {
-        curUserSetting.putString(KEY_CHAT_MODEL_ID, modelId)
+        IntySettingsDataStore.setChatModelId(getCurUserID(), modelId)
     }
 
     fun getChatModelId(): String {
-        return curUserSetting.decodeString(KEY_CHAT_MODEL_ID, DEFAULT_CHAT_MODEL_ID)
-            ?: DEFAULT_CHAT_MODEL_ID
+        return IntySettingsDataStore.getChatModelId(getCurUserID())
     }
 
     fun getLastResubReminderDialogShowTime(): Long {
