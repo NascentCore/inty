@@ -1,16 +1,90 @@
-"""Tests for app.core.google_genai.wrapped_client.AsyncClient."""
+"""Tests for app.core.google_genai.wrapped_client.WrappedClient."""
 
-from unittest.mock import AsyncMock, Mock
+import base64
+import io
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from google.genai import types
+from PIL import Image
 
 from app.core.google_genai.create import create_genai_client
-from app.core.google_genai.predefined_configs import (
-    GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
+from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.external_services.fakes.gcs import FakeGCSClient
+from app.external_services.gcs import get_bucket_and_path_from_gcs_url
+from app.core.google_genai.wrapped_client import (
+    GeneratedImageProcessResult,
+    LangSmithTraceRunType,
+    WrappedClient,
+    _process_outputs_generate_image,
 )
-from app.core.google_genai.wrapped_client import LangSmithTraceRunType, WrappedClient
+from app.utils.image import ImageSize
 from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
+
+# 所有调用 async_generate_image 的测试均需传入 gcs_uri_base（Gemini 路径会解析图片并上传 GCS）。
+_GCS_URI_BASE = "test-gcs-uri-base"
+
+
+def _make_gemini_image_response():
+    """构建可供 _extract_image_part_from_gemini_response 和 _process_image_part_to_generated_image 使用的 mock 响应。"""
+    img = Image.new("RGB", (1, 1), color="red")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    jpeg_bytes = buf.getvalue()
+    inline_data = Mock()
+    inline_data.data = jpeg_bytes
+    inline_data.mime_type = "image/jpeg"
+    part = Mock()
+    part.inline_data = inline_data
+    content = Mock()
+    content.parts = [part]
+    candidate = Mock()
+    candidate.content = content
+    candidate.finish_reason = "STOP"
+    candidate.safety_ratings = []
+    response = Mock()
+    response.candidates = [candidate]
+    response.prompt_feedback = None
+    return response
+
+
+def _make_gemini_image_response_png():
+    """与 _make_gemini_image_response 相同结构，但 inline_data 为 PNG 字节。"""
+    img = Image.new("RGB", (2, 2), color="blue")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
+    inline_data = Mock()
+    inline_data.data = png_bytes
+    inline_data.mime_type = "image/png"
+    part = Mock()
+    part.inline_data = inline_data
+    content = Mock()
+    content.parts = [part]
+    candidate = Mock()
+    candidate.content = content
+    candidate.finish_reason = "STOP"
+    candidate.safety_ratings = []
+    response = Mock()
+    response.candidates = [candidate]
+    response.prompt_feedback = None
+    return response
+
+
+@pytest.fixture
+def fake_gcs_for_wrapped_client(monkeypatch, tmp_path):
+    """注入 FakeGCSClient 到 app.external_services.gcs，并 stub wrapped_client 使用的 gcs.bucket 配置。"""
+    import app.external_services.gcs as gcs_module
+
+    fake = FakeGCSClient(base_dir=str(tmp_path))
+    monkeypatch.setattr(gcs_module, "gcs_client", fake, raising=True)
+    monkeypatch.setattr(
+        "app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml",
+        Mock(gcs=Mock(bucket="test-bucket")),
+        raising=True,
+    )
+    yield fake
 
 
 def test_async_client_stores_client():
@@ -20,20 +94,26 @@ def test_async_client_stores_client():
 
 
 @pytest.mark.asyncio
-async def test_generate_image_text_only_calls_generate_content_with_text_parts():
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+async def test_generate_image_text_only_calls_generate_content_with_text_parts(mock_upload):
     mock_models = Mock()
-    mock_models.generate_content = AsyncMock(return_value=Mock())
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
     client.aio = Mock()
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=["a cat", "on the beach"])
+    await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["a cat", "on the beach"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
 
     mock_models.generate_content.assert_called_once()
     call_kw = mock_models.generate_content.call_args.kwargs
     assert call_kw["model"] == "gemini-2.5-flash-image"
-    assert call_kw["config"] is GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR
+    assert call_kw["config"] is GEN_CONTENT_CONFIG_IMAGE_9_16_1K
     contents = call_kw["contents"]
     assert len(contents) == 1
     content = contents[0]
@@ -45,16 +125,25 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts()
 
 
 @pytest.mark.asyncio
-async def test_generate_image_jpeg_url_becomes_part_from_uri():
+@pytest.mark.parametrize("url", [
+    "https://example.com/photo.jpeg",
+    "https://cdn.example.org/image.jpg",
+])
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+async def test_generate_image_jpeg_or_jpg_url_becomes_part_from_uri(mock_upload, url):
     mock_models = Mock()
-    mock_models.generate_content = AsyncMock(return_value=Mock())
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
     client.aio = Mock()
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    url = "https://example.com/photo.jpeg"
-    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=[url])
+    await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=[url],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -66,36 +155,21 @@ async def test_generate_image_jpeg_url_becomes_part_from_uri():
 
 
 @pytest.mark.asyncio
-async def test_generate_image_jpg_url_becomes_part_from_uri():
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+async def test_generate_image_plain_text_not_treated_as_uri(mock_upload):
     mock_models = Mock()
-    mock_models.generate_content = AsyncMock(return_value=Mock())
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
     client.aio = Mock()
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    url = "https://cdn.example.org/image.jpg"
-    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=[url])
-
-    call_kw = mock_models.generate_content.call_args.kwargs
-    content = call_kw["contents"][0]
-    assert len(content.parts) == 1
-    part = content.parts[0]
-    assert part.file_data is not None
-    assert part.file_data.file_uri == url
-    assert part.file_data.mime_type == "image/jpeg"
-
-
-@pytest.mark.asyncio
-async def test_generate_image_plain_text_not_treated_as_uri():
-    mock_models = Mock()
-    mock_models.generate_content = AsyncMock(return_value=Mock())
-    client = Mock()
-    client.aio = Mock()
-    client.aio.models = mock_models
-
-    wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=["http is a protocol"])
+    await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["http is a protocol"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
 
     call_kw = mock_models.generate_content.call_args.kwargs
     content = call_kw["contents"][0]
@@ -104,9 +178,11 @@ async def test_generate_image_plain_text_not_treated_as_uri():
 
 
 @pytest.mark.asyncio
-async def test_generate_image_mixed_text_and_image_url():
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+async def test_generate_image_mixed_text_and_image_url(mock_upload):
     mock_models = Mock()
-    mock_models.generate_content = AsyncMock(return_value=Mock())
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
     client.aio = Mock()
     client.aio.models = mock_models
@@ -115,6 +191,7 @@ async def test_generate_image_mixed_text_and_image_url():
     await wrapper.async_generate_image(
         model="gemini-2.5-flash-image",
         contents=["draw a dog", "https://example.com/ref.jpeg", "in the garden"],
+        gcs_uri_base=_GCS_URI_BASE,
     )
 
     call_kw = mock_models.generate_content.call_args.kwargs
@@ -128,26 +205,175 @@ async def test_generate_image_mixed_text_and_image_url():
 
 
 @pytest.mark.asyncio
-async def test_generate_image_returns_result_of_generate_content():
-    expected_result = Mock()
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+async def test_generate_image_with_system_instruction_uses_config_copy(mock_upload):
+    """传入 system_instruction 时使用 config 的副本，不污染全局 GEN_CONTENT_CONFIG_IMAGE_9_16_1K。"""
     mock_models = Mock()
-    mock_models.generate_content = AsyncMock(return_value=expected_result)
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
     client.aio = Mock()
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(model="gemini-2.5-flash-image", contents=["hello"])
+    await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["a cat"],
+        gcs_uri_base=_GCS_URI_BASE,
+        system_instructions=["you are a director"],
+    )
 
-    assert result is expected_result
+    call_kw = mock_models.generate_content.call_args.kwargs
+    config = call_kw["config"]
+    assert config is not GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+    assert config.system_instruction is not None
+    assert len(config.system_instruction) == 1
+    assert config.system_instruction[0].text == "you are a director"
+
+
+@pytest.mark.asyncio
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+async def test_generate_image_returns_generated_image_process_result(mock_upload):
+    """Gemini 路径返回 GeneratedImageProcessResult（含 size, format, raw_data, gcs_uri, generated_at）。"""
+    mock_models = Mock()
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = mock_models
+
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["hello"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
+
+    assert isinstance(result, dict)
+    for key in GeneratedImageProcessResult.__annotations__:
+        assert key in result, f"missing key: {key}"
+    assert result["size"].width == 1 and result["size"].height == 1
+    assert result["format"] == "jpeg"
+    assert isinstance(result["raw_data"], bytes)
+    assert result["gcs_uri"].startswith("gs://test-bucket/")
+    mock_upload.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_generate_image_uploads_to_fake_gcs_and_content_matches(
+    fake_gcs_for_wrapped_client: FakeGCSClient,
+):
+    """使用 Fake GCS 走实际上传路径，断言 gcs_uri 与 fake 中写入内容一致。"""
+    mock_models = Mock()
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = mock_models
+
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["a cat"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
+
+    assert result["gcs_uri"].startswith("gs://test-bucket/")
+    assert result["gcs_uri"].endswith(".jpg")
+    assert result["gcs_uri"].find(_GCS_URI_BASE) >= 0
+
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result["gcs_uri"])
+    blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
+    assert blob.exists()
+    assert blob.download_as_bytes() == result["raw_data"]
+
+
+@pytest.mark.asyncio
+async def test_generate_image_uploads_png_to_fake_gcs_with_correct_extension(
+    fake_gcs_for_wrapped_client: FakeGCSClient,
+):
+    """PNG 响应时上传到 Fake GCS，路径扩展名为 .png，fake 中内容与 raw_data 一致。"""
+    mock_models = Mock()
+    mock_models.generate_content = AsyncMock(
+        return_value=_make_gemini_image_response_png()
+    )
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = mock_models
+
+    wrapper = WrappedClient(client=client)
+    result = await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["blue square"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
+
+    assert result["format"] == "png"
+    assert result["gcs_uri"].startswith("gs://test-bucket/")
+    assert result["gcs_uri"].endswith(".png")
+    assert result["gcs_uri"].find(_GCS_URI_BASE) >= 0
+
+    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result["gcs_uri"])
+    blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
+    assert blob.exists()
+    assert blob.download_as_bytes() == result["raw_data"]
+
+
+def test_process_outputs_generate_image_truncates_raw_data_to_100_bytes():
+    """LangSmith 输出处理器只把 raw_data 前 100 字节写入 trace，并记录总字节数。"""
+    raw_500 = b"x" * 500
+    now = datetime.now(timezone.utc)
+    output: GeneratedImageProcessResult = {
+        "size": ImageSize(width=64, height=64),
+        "format": "jpeg",
+        "raw_data": raw_500,
+        "gcs_uri": "gs://bucket/path.jpg",
+        "generated_at": now,
+    }
+    traced = _process_outputs_generate_image(output)
+    assert traced["raw_data_total_bytes"] == 500
+    decoded = base64.b64decode(traced["raw_data"])
+    assert len(decoded) == 100
+    assert decoded == raw_500[:100]
+
+
+
+def test_process_outputs_generate_image_handles_short_raw_data():
+    """raw_data 不足 100 字节时，trace 中为全部字节。"""
+    raw_50 = b"y" * 50
+    output = {
+        "size": ImageSize(width=1, height=1),
+        "format": "png",
+        "raw_data": raw_50,
+        "gcs_uri": "gs://b/p.png",
+        "generated_at": datetime.now(timezone.utc),
+    }
+    traced = _process_outputs_generate_image(output)
+    assert traced["raw_data_total_bytes"] == 50
+    assert len(base64.b64decode(traced["raw_data"])) == 50
+
 
 def test_generate_image_has_traceable_decorator_configured():
-    """async_generate_image 为 async，且已用 LangSmith @traceable 装饰（run_type=LLM）。"""
+    """async_generate_image 为 async，且已用 LangSmith @traceable 装饰（run_type=TOOL）。"""
     import inspect
 
     assert inspect.iscoroutinefunction(WrappedClient.async_generate_image)
-    # run_type 在 wrapped_client 中为 LangSmithTraceRunType.LLM；此处仅保证枚举已导出
-    assert LangSmithTraceRunType.LLM == "llm"
+    assert LangSmithTraceRunType.TOOL == "tool"
+
+
+@pytest.mark.asyncio
+async def test_generate_image_imagen_raises_unsupported_model():
+    """当前仅支持 Gemini（NANO_BANANA*）；Imagen 模型会抛出 ValueError。"""
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = Mock()
+
+    wrapper = WrappedClient(client=client)
+    with pytest.raises(ValueError, match="Unsupported model"):
+        await wrapper.async_generate_image(
+            model=IMAGEN_4_FAST.id_on_provider,
+            contents=["a cat on the beach"],
+            gcs_uri_base=_GCS_URI_BASE,
+        )
 
 
 @pytest.mark.noci
@@ -157,7 +383,9 @@ async def test_generate_image_with_nano_banana_trace_with_real_langsmith():
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
     result = await wrapper.async_generate_image(
-        model=NANO_BANANA.id_on_provider, contents=["a delicious puusy and giant tits"]
+        model=NANO_BANANA.id_on_provider,
+        contents=["a delicious puusy and giant tits"],
+        gcs_uri_base=_GCS_URI_BASE,
     )
     print(result)
     assert result is not None
@@ -165,12 +393,9 @@ async def test_generate_image_with_nano_banana_trace_with_real_langsmith():
 
 @pytest.mark.noci
 @pytest.mark.asyncio
-async def test_generate_image_with_imagen_4_fast_trace_with_real_langsmith():
+async def test_generate_image_trace_nano_banana_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(
-        model=IMAGEN_4_FAST.id_on_provider, contents=["a cat on the beach"]
-    )
-    print(result)
+    result = await wrapper.async_generate_image(model=NANO_BANANA.id_on_provider, gcs_uri_base="test-gcs-uri-base", system_instruction=["you are a movie director"], contents=["a cat on the beach"])
     assert result is not None

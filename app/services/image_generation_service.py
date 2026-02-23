@@ -7,24 +7,27 @@
 output_gcs_uri 由 SDK 直接写 GCS。
 """
 
+import base64
 import io
+import os
 import re
+import tempfile
+import traceback
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import PIL.Image
-from app.core.google_genai.wrapped_client import WrappedClient
-from google.genai import types
+from app.core.google_genai.wrapped_client import (
+    GeminiImageExtractionError,
+    WrappedClient,
+)
 from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.google_genai.predefined_configs import (
-    GEN_CONTENT_CONFIG_IMAGE_9_16_1K_R_RATED_ROMANCE_DIRECTOR,
-)
 from app.external_services.gcs import GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
@@ -346,8 +349,6 @@ class ImageGenerationService:
 
         except Exception as e:
             logger.error("查询已生成图片失败: {}", str(e))
-            import traceback
-
             traceback.print_exc()
             return []
 
@@ -449,8 +450,6 @@ class ImageGenerationService:
 
         except Exception as e:
             logger.error("查找最相似图片失败: {}", str(e))
-            import traceback
-
             traceback.print_exc()
             return None
 
@@ -486,15 +485,17 @@ class ImageGenerationService:
         Returns:
             包含图片信息的字典
         """
-        logger.debug(f"使用 Gemini 模型及 Google GenAI SDK 生成图片，session_id={session_id}, model={model}")
+        logger.debug(
+            "使用 Gemini 模型及 Google GenAI SDK 生成图片，session_id={}, model={}",
+            session_id,
+            model,
+        )
         # 提前定义 2 个变量，在后续代码中赋值，并用于记录日志
         prompt: Optional[str] = None
         response: Any = None
         try:
             # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
             # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
-            import os
-
             test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
             if test_fail_mode == "safety_filter":
                 logger.warning("测试模式：模拟安全过滤器阻止")
@@ -561,7 +562,10 @@ class ImageGenerationService:
             # 记录使用的参考图类型
             reference_type = "背景图" if agent_data.get("background") else "头像"
             logger.info(
-                f"开始生成图片，session_id={session_id}, 使用{reference_type}: {reference_url}"
+                "开始生成图片，session_id={}, 使用{}: {}",
+                session_id,
+                reference_type,
+                reference_url,
             )
 
             # 复用现有的 Gemini 客户端（自动从 service account 读取配置）
@@ -585,201 +589,32 @@ class ImageGenerationService:
             contents.append(prompt)
 
             gemini_model = model or NANO_BANANA.id_on_provider
-            response = await client.async_generate_image(model=gemini_model, contents=contents)
-
-            # 检查 prompt_feedback（响应级别的反馈）
-            # TODO：以下代码继续考虑重构为工具函数，然后在 WrappedClient.async_generate_image 中调用。
-            if hasattr(response, "prompt_feedback") and response.prompt_feedback:
-                prompt_feedback = response.prompt_feedback
-                logger.warning("Prompt feedback: {}", prompt_feedback)
-                if hasattr(prompt_feedback, "block_reason"):
-                    block_reason = prompt_feedback.block_reason
-                    logger.warning("请求被阻止，原因: {}", block_reason)
-                    _log_image_generation_failure(prompt, response)
-                    raise ValueError(
-                        f"Image generation request blocked by safety filter: {block_reason}"
-                    )
-
-            # 提取图片数据
-            if not response.candidates or len(response.candidates) == 0:
-                logger.error("Gemini 未返回任何候选结果")
-                _log_image_generation_failure(prompt, response)
-                raise ValueError("Gemini returned no candidates")
-
-            candidate = response.candidates[0]
-
-            # 检查 finish_reason（完成原因）
-            finish_reason = getattr(candidate, "finish_reason", None)
-            if finish_reason:
-                logger.warning("候选结果完成原因: {}", finish_reason)
-                if finish_reason == "SAFETY":
-                    # 检查安全评级以获取详细信息
-                    safety_ratings = getattr(candidate, "safety_ratings", None) or []
-                    safety_details = []
-                    if safety_ratings:
-                        for rating in safety_ratings:
-                            category = getattr(rating, "category", "UNKNOWN")
-                            probability = getattr(rating, "probability", "UNKNOWN")
-                            severity = getattr(rating, "blocked", False)
-                            safety_details.append(
-                                f"{category}={probability}(blocked={severity})"
-                            )
-                    error_msg = "Image generation blocked by safety filter"
-                    if safety_details:
-                        error_msg += f"; details: {', '.join(safety_details)}"
-                    logger.error(error_msg)
-                    _log_image_generation_failure(prompt, response)
-                    raise ValueError(error_msg)
-                elif finish_reason not in ("STOP", None):
-                    logger.warning("候选结果以非正常原因结束: {}", finish_reason)
-
-            # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
-            candidate_safety_ratings = getattr(candidate, "safety_ratings", None) or []
-            if candidate_safety_ratings:
-                blocked_ratings = []
-                for rating in candidate_safety_ratings:
-                    if hasattr(rating, "blocked") and rating.blocked:
-                        category = getattr(rating, "category", "UNKNOWN")
-                        probability = getattr(rating, "probability", "UNKNOWN")
-                        blocked_ratings.append(f"{category}={probability}")
-                if blocked_ratings:
-                    error_msg = f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
-                    logger.error(error_msg)
-                    _log_image_generation_failure(prompt, response)
-                    raise ValueError(error_msg)
-
-            # 检查 content 和 parts
-            if not candidate.content or not candidate.content.parts:
-                logger.error("候选结果中没有内容，finish_reason={}", finish_reason)
-                error_msg = "No content in candidates"
-                if finish_reason:
-                    error_msg += f" (finish_reason: {finish_reason})"
-                _log_image_generation_failure(prompt, response)
-                raise ValueError(error_msg)
-
-            # 查找图片部分
-            image_part = None
-            for part in candidate.content.parts:
-                if hasattr(part, "inline_data") and part.inline_data:
-                    image_part = part
-                    break
-
-            if not image_part:
-                _log_image_generation_failure(prompt, response)
-                raise ValueError("No image data found in response")
-
-            # 获取图片数据
-            import base64
-
-            # 调试：检查 inline_data 的类型和内容
-            logger.debug("inline_data 类型: {}", type(image_part.inline_data))
-            logger.debug("inline_data.data 类型: {}", type(image_part.inline_data.data))
-            if hasattr(image_part.inline_data, "mime_type"):
-                logger.debug(
-                    "inline_data.mime_type: {}",
-                    image_part.inline_data.mime_type,
-                )
-
-            # 获取原始数据
-            raw_data = image_part.inline_data.data
-
-            # 判断是否需要 base64 解码
-            if isinstance(raw_data, str):
-                # 如果是字符串，需要 base64 解码
-                image_data = base64.b64decode(raw_data)
-                logger.debug("数据是 base64 字符串，已解码")
-            elif isinstance(raw_data, bytes):
-                # 如果已经是 bytes，直接使用
-                image_data = raw_data
-                logger.debug("数据已经是 bytes，直接使用")
-            else:
-                logger.error("未知的数据类型: {}", type(raw_data))
-                raise ValueError(f"Unsupported image data type: {type(raw_data)}")
-
-            logger.info("成功提取图片数据，大小: {} bytes", len(image_data))
-
-            # 调试：打印前几个字节来识别格式
-            if len(image_data) == 0:
-                raise ValueError("Image data is empty")
-
-            header = image_data[:20] if len(image_data) >= 20 else image_data
-            logger.debug("图片数据头部（hex）: {}", header.hex())
-
-            # 检查常见图片格式的魔术数字（仅用于 logger.debug，不参与分支）。
-            # 实际格式由下面 PIL 解析得到，并用于 meta_data / ImageFormat / 上传。
-            # Gemini generate_content 图像生成默认返回 PNG；predefined_configs 中的
-            # output_mime_type 在 ImageConfig 里可能不被支持，故真实 API 通常只返回 PNG。
-            # TODO：本段对主流程非必需，可删；保留便于调试及应对日后 API 行为变化；测试 fake 可能返回 JPEG。
-            if image_data[:2] == b"\xff\xd8":
-                logger.debug("检测到 JPEG 格式")
-            elif image_data[:8] == b"\x89PNG\r\n\x1a\n":
-                logger.debug("检测到 PNG 格式")
-            elif image_data[:6] in (b"GIF87a", b"GIF89a"):
-                logger.debug("检测到 GIF 格式")
-            elif image_data[:4] == b"RIFF" and image_data[8:12] == b"WEBP":
-                logger.debug("检测到 WEBP 格式")
-            else:
-                logger.warning("未知的图片格式，尝试作为原始数据处理")
-                # 尝试将数据写入临时文件进行调试
-                import tempfile
-
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as tmp:
-                    tmp.write(image_data)
-                    logger.debug("原始数据已写入: {}", tmp.name)
-
-            # 获取图片尺寸
-            try:
-                pil_image = PIL.Image.open(io.BytesIO(image_data))
-                width, height = pil_image.size
-                image_format = pil_image.format or "JPEG"
-                logger.info(
-                    "成功解析图片: {}x{}, 格式: {}", width, height, image_format
-                )
-            except Exception as e:
-                logger.error("PIL 无法解析图片: {}", str(e))
-                # 尝试检查是否是文本响应
-                try:
-                    text_content = image_data.decode("utf-8")[:200]
-                    logger.error("数据可能是文本: {}", text_content)
-                except:
-                    pass
-                raise ValueError(f"Unable to parse image data: {str(e)}")
-
-            # 生成GCS路径（以角色组织）
             agent_id = agent_data.get("id")
             if not agent_id:
                 raise ValueError("Agent data missing ID; cannot generate image path")
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            gcs_path = f"chat_images/{agent_id}/{timestamp}_{uuid.uuid4().hex[:8]}.jpg"
-
-            # 上传到GCS
-            bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-            public_url = upload_to_gcs(
-                file_data=image_data,
-                content_type="image/jpeg",
-                bucket_name=bucket_name,
-                path=gcs_path,
+            gcs_uri_base = f"chat_images/{agent_id}"
+            result = await client.async_generate_image(
+                model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base
             )
-            logger.info("图片已上传到 GCS: {}", public_url)
+            image_data = result["raw_data"]
+            gcs_uri = result["gcs_uri"]
+            width = result["size"].width
+            height = result["size"].height
+            image_format = result["format"]
+            generated_at = result["generated_at"].isoformat()
 
-            # 转换为 gs:// URI 格式用于存储
-            gcs_uri = f"gs://{bucket_name}/{gcs_path}"
-
-            # 转换为CDN URL
             cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
-            # 更新消息的 meta_data，将图片信息存储在其中
             metadata_update = {
                 "generated_image": {
-                    "image_url": gcs_uri,  # 存储 GCS URI
+                    "image_url": gcs_uri,
                     "width": width,
                     "height": height,
-                    "format": image_format.lower(),
+                    "format": image_format,
                     "prompt": prompt,
-                    "generated_at": datetime.utcnow().isoformat(),
+                    "generated_at": generated_at,
                 }
             }
-
             success = await chat_history_service.update_message_metadata(
                 db=db,
                 session_id=session_id,
@@ -842,15 +677,15 @@ class ImageGenerationService:
                     logger.info("图片已保存到resources表: {}", gcs_uri)
                 except Exception as e:
                     logger.warning("保存图片到resources表失败: {}", str(e))
-                    import traceback
-
                     traceback.print_exc()
                     # 不影响主流程，继续执行
             else:
                 logger.warning("未传入user_id，无法保存到resources表")
 
             logger.info(
-                f"图片生成成功并更新到消息 meta_data，message_id={message_id}, cdn_url={cdn_url}"
+                "图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
+                message_id,
+                cdn_url,
             )
 
             return {
@@ -866,9 +701,9 @@ class ImageGenerationService:
 
         except Exception as e:
             logger.error("使用 Gemini 生成聊天图片失败: {}", str(e))
+            if isinstance(e, GeminiImageExtractionError):
+                response = e.response
             _log_image_generation_failure(prompt, response)
-            import traceback
-
             traceback.print_exc()
             raise
 
@@ -949,7 +784,11 @@ class ImageGenerationService:
 
             reference_type = "背景图" if agent_data.get("background") else "头像"
             logger.info(
-                f"开始使用 fal.ai 生成图片，session_id={session_id}, model={model}, 使用{reference_type}: {reference_url}"
+                "开始使用 fal.ai 生成图片，session_id={}, model={}, 使用{}: {}",
+                session_id,
+                model,
+                reference_type,
+                reference_url,
             )
 
             # 调用 fal.ai image-to-image
@@ -983,7 +822,11 @@ class ImageGenerationService:
             width, height = pil_image.size
             image_format = pil_image.format or "JPEG"
             logger.info(
-                f"成功下载图片: {width}x{height}, 格式: {image_format}, 大小: {len(image_data)} bytes"
+                "成功下载图片: {}x{}, 格式: {}, 大小: {} bytes",
+                width,
+                height,
+                image_format,
+                len(image_data),
             )
 
             # 生成GCS路径
@@ -1018,7 +861,7 @@ class ImageGenerationService:
                     "format": image_format.lower(),
                     "prompt": prompt,
                     "model": model,
-                    "generated_at": datetime.utcnow().isoformat(),
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
                 }
             }
 
@@ -1078,12 +921,12 @@ class ImageGenerationService:
                     logger.info("图片已保存到resources表: {}", gcs_uri)
                 except Exception as e:
                     logger.warning("保存图片到resources表失败: {}", str(e))
-                    import traceback
-
                     traceback.print_exc()
 
             logger.info(
-                f"fal.ai 图片生成成功并更新到消息 meta_data，message_id={message_id}, cdn_url={cdn_url}"
+                "fal.ai 图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
+                message_id,
+                cdn_url,
             )
 
             return {
@@ -1099,8 +942,6 @@ class ImageGenerationService:
 
         except Exception as e:
             logger.error("使用 fal.ai 生成聊天图片失败: {}", str(e))
-            import traceback
-
             traceback.print_exc()
             raise
 

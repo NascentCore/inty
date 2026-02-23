@@ -46,7 +46,7 @@ ROLEPLAY_MAIN_PROMPT = _get_prompt_text("ROLEPLAY_MAIN_PROMPT")
 ###############################################################################
 # Mode prompt is for further steering the assumed {{char}}'s conversational
 # style and tone.
-# You can think of it subcatogory of the experience defined by the main prompt.
+# You can think of it subcategory of the experience defined by the main prompt.
 # In our case, main prompt is roleplay, then mode is flirting, they together
 # define the experience of romantic roleplay.
 ###############################################################################
@@ -164,9 +164,9 @@ class StructuredPrompt(BaseModel):
 
     <JSON-formated prompt> -> <LLM API request> -> <internal processing> -> <LLM> -> <suffix> -> <LLM API response>
 
-    Step back a bit, the above process is usally modeled as chat.
-    And the LLM can assume the role of one or multiple characters and/or narattor.
-    All dependes on how to manifulate the prompt.
+    Step back a bit, the above process is usually modeled as chat.
+    And the LLM can assume the role of one or multiple characters and/or narrator.
+    All depends on how to manipulate the prompt.
 
     With the above conceptual framework, we can then define various prompts for specific purposes.
     """

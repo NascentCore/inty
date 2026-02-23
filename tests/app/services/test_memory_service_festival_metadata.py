@@ -1,3 +1,15 @@
+"""
+app.services.memory_service 的测试（节日元数据及相关辅助逻辑）。
+
+测试隔离说明：本文件中有测试会 patch memory_service.select 和 memory_service.Memory
+（例如替换为 _DummyQuery、_FakeMemory）。这些 patch 必须通过 monkeypatch 施加，以便
+每个测试结束后自动恢复。若直接赋值（如 service.select = ...），patch 会泄漏到后续测试，
+其他使用真实 memory_service 的测试（例如 test_chat_image_generation.py 中
+TestChatHistoryService::test_generate_chat_image_with_gemini_writes_db_records_as_expected，
+会调用 get_user_memory_for_prompt_async）可能因运行顺序而报错：AttributeError
+（'_DummyQuery' object has no attribute 'order_by' 或 'Memory' has no attribute 'content'）。
+凡对 memory_service 做 patch 时，一律使用 monkeypatch。
+"""
 import importlib
 import sys
 import types
@@ -99,6 +111,8 @@ def _load_memory_service_module():
         mp.setitem(sys.modules, "app.services.chat_history_service", fake_chat_history_module)
         mp.setitem(sys.modules, "app.services.chat_service", fake_chat_service_module)
         module = importlib.import_module("app.services.memory_service")
+    # 从 sys.modules 移除，避免本文件用假依赖加载的 module 被其他测试复用（否则会报 Memory 无 content 等）。
+    sys.modules.pop("app.services.memory_service", None)
     return module
 
 
@@ -206,7 +220,9 @@ def test_resolve_festival_name_and_date_from_metadata():
 
 
 @pytest.mark.asyncio
-async def test_get_festival_memories_for_user_agent_reads_metadata():
+async def test_get_festival_memories_for_user_agent_reads_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+):
     mock_db = AsyncMock()
     mock_result = MagicMock()
     # row format: (id, metadata, content)
@@ -229,8 +245,8 @@ async def test_get_festival_memories_for_user_agent_reads_metadata():
     ]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    service.Memory = _FakeMemory
-    service.select = lambda *args, **kwargs: _DummyQuery()
+    monkeypatch.setattr(service, "Memory", _FakeMemory)
+    monkeypatch.setattr(service, "select", lambda *args, **kwargs: _DummyQuery())
 
     out = await service.get_festival_memories_for_user_agent(
         mock_db, "user-1", "agent-1"
@@ -248,7 +264,9 @@ async def test_get_festival_memories_for_user_agent_reads_metadata():
 
 
 @pytest.mark.asyncio
-async def test_get_undelivered_festival_memories_reads_metadata():
+async def test_get_undelivered_festival_memories_reads_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+):
     mock_db = AsyncMock()
     mock_result = MagicMock()
     # row format: (id, metadata)
@@ -261,8 +279,8 @@ async def test_get_undelivered_festival_memories_reads_metadata():
     ]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    service.Memory = _FakeMemory
-    service.select = lambda *args, **kwargs: _DummyQuery()
+    monkeypatch.setattr(service, "Memory", _FakeMemory)
+    monkeypatch.setattr(service, "select", lambda *args, **kwargs: _DummyQuery())
 
     out = await service.get_undelivered_festival_memories(mock_db, "u1", "a1")
     # Row with None metadata yields (None, None) and is skipped.
