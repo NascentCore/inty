@@ -48,12 +48,15 @@ import {
   DAILY_IMAGE_USAGE_HAS_SECONDARY_AXIS,
   DAILY_USAGE_SECONDARY_AXIS_COLOR,
   DAILY_USAGE_SECONDARY_AXIS_TITLE,
+  DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR,
+  DAILY_USAGE_VOICE_MESSAGE_RATIO_LABEL,
   DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR,
   DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE,
   DAILY_TOP_AGENTS_LIMIT,
   buildDailyTopAgentsTrendSeries,
   buildDailyImageUsageSeries,
   buildDailyUsageSeries,
+  buildVoiceRequestsPerMessageRatioValues,
   buildRollingDailyImageUsageSeries,
   buildRollingDailyUsageSeries,
   buildDailyUsageTickText,
@@ -887,6 +890,12 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     }
     return buildDailyUsageSeries(usageReports);
   }, [reportType, usageReports]);
+  const voiceRequestsPerMessageRatioValues = useMemo(
+    () => buildVoiceRequestsPerMessageRatioValues(usageSeries),
+    [usageSeries],
+  );
+  const hasVoiceRequestsPerMessageRatio =
+    voiceRequestsPerMessageRatioValues.length > 0;
   const imageUsageSeries = useMemo(() => {
     if (reportType === "weekly") {
       return buildRollingDailyImageUsageSeries(
@@ -909,7 +918,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
     if (!usageSeries) {
       return [];
     }
-    return DAILY_USAGE_CHART_METRICS.map((metric) => ({
+    const traces = DAILY_USAGE_CHART_METRICS.map((metric) => ({
       x: usageSeries.dates,
       y: usageSeries.valuesByMetric[metric.key],
       name: metric.label,
@@ -919,7 +928,23 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       line: { color: metric.color },
       ...(metric.axis === "y2" ? { yaxis: "y2" } : {}),
     }));
-  }, [usageSeries]);
+    traces.push({
+      x: usageSeries.dates,
+      y: voiceRequestsPerMessageRatioValues,
+      name: DAILY_USAGE_VOICE_MESSAGE_RATIO_LABEL,
+      type: "scatter",
+      mode: "lines+markers",
+      marker: {
+        size: USAGE_MARKER_SIZE,
+        color: DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR,
+      },
+      line: { color: DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR },
+      yaxis: "y3",
+      hovertemplate:
+        "日期: %{x}<br>语音播报次数 / 消息数: %{y:.2%}<extra></extra>",
+    });
+    return traces;
+  }, [usageSeries, voiceRequestsPerMessageRatioValues]);
   const dailyUsageXAxisTickText = useMemo(() => {
     if (!usageSeries) {
       return [];
@@ -1064,8 +1089,36 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                         rangemode: "tozero",
                         showgrid: false,
                         zeroline: false,
+                        ...(hasVoiceRequestsPerMessageRatio
+                          ? { anchor: "free", position: 0.93 }
+                          : {}),
                       },
-                      margin: { r: 80 },
+                      margin: {
+                        r: hasVoiceRequestsPerMessageRatio ? 130 : 80,
+                      },
+                    }
+                  : {}),
+                ...(hasVoiceRequestsPerMessageRatio
+                  ? {
+                      yaxis3: {
+                        title: {
+                          text: DAILY_USAGE_VOICE_MESSAGE_RATIO_LABEL,
+                          font: {
+                            color: DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR,
+                          },
+                        },
+                        tickfont: {
+                          color: DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR,
+                        },
+                        tickformat: ".0%",
+                        side: "right",
+                        overlaying: "y",
+                        anchor: "free",
+                        position: 1,
+                        rangemode: "tozero",
+                        showgrid: false,
+                        zeroline: false,
+                      },
                     }
                   : {}),
                 legend: { orientation: "h" },

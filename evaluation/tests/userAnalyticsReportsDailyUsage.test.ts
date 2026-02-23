@@ -8,6 +8,7 @@ import {
   buildDailyTopAgentsTrendSeries,
   buildRollingDailyUsageSeries,
   buildRollingDailyImageUsageSeries,
+  buildVoiceRequestsPerMessageRatioValues,
   buildDailyUsageTickText,
   sortReportsByDateDesc,
   DAILY_TOP_AGENTS_LIMIT,
@@ -250,6 +251,40 @@ describe("buildRollingDailyUsageSeries", () => {
       buildReport({ report_type: "weekly", report_date: "2026-W05" }),
     ]);
     expect(series).toBeNull();
+  });
+});
+
+describe("buildVoiceRequestsPerMessageRatioValues", () => {
+  it("按日期输出语音播报次数 / 消息数比值，分母为 0 时返回 0", () => {
+    const reports = [
+      buildReport({
+        id: "r2",
+        report_date: "2026-02-02",
+        stats: buildStats({
+          total_user_messages: 20,
+          total_voice_requests: 10,
+        }),
+      }),
+      buildReport({
+        id: "r1",
+        report_date: "2026-02-01",
+        stats: buildStats({
+          total_user_messages: 0,
+          total_voice_requests: 5,
+        }),
+      }),
+    ];
+
+    const usageSeries = buildDailyUsageSeries(reports);
+    const ratioValues = buildVoiceRequestsPerMessageRatioValues(usageSeries);
+
+    expect(ratioValues).toHaveLength(2);
+    expect(ratioValues[0]).toBe(0);
+    expect(ratioValues[1] ?? 0).toBeCloseTo(0.5, 6);
+  });
+
+  it("无用量序列时返回空数组", () => {
+    expect(buildVoiceRequestsPerMessageRatioValues(null)).toEqual([]);
   });
 });
 
