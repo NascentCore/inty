@@ -89,10 +89,19 @@ def test_resolve_provider_and_model_openai_keeps_org_prefix() -> None:
     assert provider_model == "openai/gpt-image-1"
 
 
-@pytest.mark.parametrize("model", ["", "google/", "openai/", "unknown/x"])
+@pytest.mark.parametrize(
+    "model",
+    ["", "google/", "openai/", "unknown/x", "fal-ai/z-image/turbo", "fal/foo"],
+)
 def test_resolve_provider_and_model_invalid_raises(model: str) -> None:
     with pytest.raises(ValueError):
         _resolve_provider_and_model(model)
+
+
+def test_resolve_provider_and_model_bare_model_raises() -> None:
+    """Bare model id without google/ or openai/ prefix raises (FAL no longer supported)."""
+    with pytest.raises(ValueError, match="Model id must use google/ or openai/"):
+        _resolve_provider_and_model("some-bare-model")
 
 
 def test_text_to_image_openai_returns_png_bytes() -> None:

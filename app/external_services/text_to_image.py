@@ -4,7 +4,6 @@ Unified text-to-image API wrapper for multiple providers.
 Supported providers:
 - Google Vertex AI Imagen via `google.genai` (model name uses `google/` prefix)
 - OpenAI image generation via OpenAI client (model name uses `openai/` prefix)
-- fal.ai model APIs via `fal_client`
 
 This module is intentionally NOT integrated into Inty backend flows yet.
 
@@ -28,8 +27,6 @@ import PIL.Image
 GOOGLE_MODEL_PREFIX = "google/"
 OPENAI_MODEL_PREFIX = "openai/"
 DEFAULT_GOOGLE_MIME_TYPE = "image/jpeg"
-DEFAULT_FAL_IMAGE_SIZE = "landscape_4_3"
-DEFAULT_FAL_OUTPUT_FORMAT = "png"
 DEFAULT_GCS_BASE_DIR = "tmp/image_generation_wrapper"
 FORMAT_JPEG = "jpeg"
 FORMAT_PNG = "png"
@@ -81,7 +78,6 @@ class TextToImageGenerationRequest:
     Provider routing is based on `model`:
     - `google/<imagen-model-name>` routes to Google Imagen.
     - `openai/<image-model-name>` routes to OpenAI image generation.
-    - Otherwise routes to fal.ai.
 
     Use `provider_args` for provider-specific parameters.
     """
@@ -133,19 +129,23 @@ def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
         )
         return TextToImageProvider.GOOGLE, model
 
-    # If model has org prefix, check routing.
+    # If model has org prefix, only google and openai are supported.
     if "/" in model:
         org = model.split("/", 1)[0].strip().lower()
-        # fal-ai or fal routes to FALAI provider (backward compatibility).
         if org in ("fal-ai", "fal"):
-            return TextToImageProvider.FALAI, model
-        # For unknown orgs (not google/openai/fal-ai/fal), raise error to match test expectations.
+            raise ValueError(
+                f"Unsupported image model org prefix: {org!r} (model={model!r}). "
+                "FAL (fal.ai) is not supported; use google/ or openai/ prefix."
+            )
         raise ValueError(
             f"Unsupported image model org prefix: {org!r} (model={model!r})"
         )
 
-    # Otherwise, default to FALAI for models without org prefix.
-    return TextToImageProvider.FALAI, model
+    # No org prefix and not imagen-*: require explicit google/ or openai/ prefix.
+    raise ValueError(
+        f"Unsupported image model: {model!r}. "
+        "Model id must use google/ or openai/ prefix (e.g. google/imagen-4.0-fast-generate-001)."
+    )
 
 
 def _generate_google_imagen(
