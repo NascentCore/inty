@@ -164,6 +164,24 @@ const AppContent: React.FC = () => {
   // 导航菜单配置
   const navigationItems: NavigationItem[] = [
     {
+      key: "user-analytics-reports",
+      icon: <FileTextOutlined />,
+      label: "用户日报周报",
+      description: "全部用户预计算日报与周报",
+    },
+    {
+      key: "report-feedback",
+      icon: <ExclamationCircleOutlined />,
+      label: "举报与反馈",
+      description: "查看用户举报和反馈列表",
+    },
+    {
+      key: "agents",
+      icon: <RobotOutlined />,
+      label: "智能体管理",
+      description: "创建、编辑和管理智能体",
+    },
+    {
       key: "chat",
       icon: <MessageOutlined />,
       label: "单角色聊天",
@@ -174,12 +192,6 @@ const AppContent: React.FC = () => {
       icon: <PhoneOutlined />,
       label: "语音通话",
       description: "与智能体进行实时语音对话",
-    },
-    {
-      key: "agents",
-      icon: <RobotOutlined />,
-      label: "智能体管理",
-      description: "创建、编辑和管理智能体",
     },
     {
       key: "character-themes",
@@ -200,28 +212,10 @@ const AppContent: React.FC = () => {
       description: "查看历史评测会话和结果",
     },
     {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "消息生图系统设置",
-      description: "配置图片生成等系统参数",
-    },
-    {
       key: "user-analytics",
       icon: <UserOutlined />,
       label: "用户数据分析",
       description: "查看用户注册和聊天行为数据",
-    },
-    {
-      key: "user-analytics-reports",
-      icon: <FileTextOutlined />,
-      label: "用户日报周报",
-      description: "全部用户预计算日报与周报",
-    },
-    {
-      key: "performance-analytics",
-      icon: <DashboardOutlined />,
-      label: "性能监控",
-      description: "查看 LLM、生图和 Live Chat 延迟趋势",
     },
     {
       key: "user-daily-messages",
@@ -236,16 +230,22 @@ const AppContent: React.FC = () => {
       description: "查看角色聊天生成的所有图片",
     },
     {
-      key: "report-feedback",
-      icon: <ExclamationCircleOutlined />,
-      label: "举报与反馈",
-      description: "查看用户举报和反馈列表",
-    },
-    {
       key: "festival-memory",
       icon: <CalendarOutlined />,
       label: "节日记忆提取",
       description: "配置节日与提示词，抽取用户与角色的节日回忆",
+    },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "消息生图系统设置",
+      description: "配置图片生成等系统参数",
+    },
+    {
+      key: "performance-analytics",
+      icon: <DashboardOutlined />,
+      label: "性能监控",
+      description: "查看 LLM、生图和 Live Chat 延迟趋势",
     },
   ];
 
