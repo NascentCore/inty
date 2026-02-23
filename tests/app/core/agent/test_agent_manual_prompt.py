@@ -151,6 +151,37 @@ def test_intellimate_official_injects_change_logs_prompt(tmp_path, monkeypatch):
     assert "Lines starting with" not in change_logs_message
 
 
+def test_build_system_messages_for_intellimate_official_assistant_happy_case(
+    tmp_path, monkeypatch
+):
+    """Happy case: new API returns User Manual, Change Logs, and character context."""
+    manual_path = tmp_path / "INTELLIMATE.md"
+    manual_path.write_text(MINIMAL_MANUAL_CONTENT, encoding="utf-8")
+    change_logs_path = tmp_path / "CHANGE_LOGS.md"
+    change_logs_path.write_text(CHANGE_LOGS_PROMPT_CONTENT, encoding="utf-8")
+    _patch_manual_and_change_logs(monkeypatch, manual_path, change_logs_path)
+
+    agent = _build_agent(
+        agent_id=INTELLIMATE_AGENT_ID,
+        name=INTELLIMATE_AGENT_NAME,
+        personality="Warm personality.",
+    )
+    contents = _get_contents(
+        agent.build_system_messages_for_intellimate_official_assistant("", None)
+    )
+
+    manual_message = _find_message_by_prefix(contents, "##IntelliMate User Manual\n")
+    assert manual_message.startswith("##IntelliMate User Manual\n")
+
+    change_logs_message = _find_message_by_prefix(
+        contents, "##IntelliMate Change Logs\n"
+    )
+    assert change_logs_message.startswith("##IntelliMate Change Logs\n")
+    assert "CHANGE_LOG_LINE_1" in change_logs_message
+
+    assert any("Warm personality." in c for c in contents)
+
+
 def test_non_intellimate_official_does_not_inject_manual_prompt(monkeypatch):
     monkeypatch.setattr(
         agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_CONTENT"

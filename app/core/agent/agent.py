@@ -468,6 +468,63 @@ class Agent:
 
         return system_messages
 
+    def build_system_messages_for_intellimate_official_assistant(
+        self,
+        user_profile: str,
+        chat_settings: models.chat_settings.ChatSettings,
+        user_time_context: Optional[UserTimeContext] = None,
+    ) -> List[SystemMessage]:
+        """构建官方 IntelliMate 助手的系统消息列表；与 build_system_messages 在官方角色时的组装顺序一致，不含 main/mode prompt。"""
+        user_name = self._extract_user_name_from_profile(user_profile)
+        system_messages: List[SystemMessage] = []
+
+        character_messages = self._build_character_context(user_name=user_name)
+        system_messages.extend(character_messages)
+
+        if chat_settings and chat_settings.style_prompt:
+            system_messages.append(SystemMessage(content=chat_settings.style_prompt))
+
+        if user_profile:
+            system_messages.append(SystemMessage(content=user_profile))
+
+        if (
+            user_time_context
+            and global_config_loaded_from_config_yaml.app.features.experimental_enable_chat_with_user_time_context
+        ):
+            user_time_context_prompt = _build_user_time_context_prompt(
+                user_time_context
+            )
+            if user_time_context_prompt:
+                system_messages.append(SystemMessage(content=user_time_context_prompt))
+
+        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_prompt))
+
+        system_messages.append(
+            SystemMessage(
+                content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
+                + self.intro
+            )
+        )
+
+        user_manual = _load_intellimate_user_manual()
+        system_messages.append(
+            SystemMessage(
+                content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + user_manual
+            )
+        )
+        change_logs = _load_intellimate_change_logs()
+        system_messages.append(
+            SystemMessage(
+                content=INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + change_logs
+            )
+        )
+
+        return system_messages
+
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
         构建角色设定上下文信息，每个字段作为独立的 system message，支持模板渲染
