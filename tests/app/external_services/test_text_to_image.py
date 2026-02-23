@@ -75,53 +75,6 @@ def test_text_to_image_google_prefix_dispatch() -> None:
     )
 
 
-def test_text_to_image_falai_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_subscribe(model: str, arguments: dict, with_logs: bool = False):  # noqa: ARG001
-        assert model == "fal-ai/z-image/turbo"
-        assert arguments["prompt"] == "A cute cat sitting on a sofa"
-        assert arguments["num_images"] == 2
-        return {
-            "images": [
-                {
-                    "url": "https://fal.example/1.png",
-                    "width": 1024,
-                    "height": 768,
-                    "content_type": "image/png",
-                },
-                {
-                    "url": "https://fal.example/2.png",
-                    "width": 1024,
-                    "height": 768,
-                    "content_type": "image/png",
-                },
-            ],
-            "seed": 42,
-            "prompt": arguments["prompt"],
-            "has_nsfw_concepts": [False, False],
-        }
-
-    monkeypatch.setattr("app.external_services.fal_ai.fal_client.subscribe", fake_subscribe)
-
-    result = generate_text_to_image(
-        TextToImageGenerationRequest(
-            model="fal-ai/z-image/turbo",
-            prompt="A cute cat sitting on a sofa",
-            num_images=2,
-            seed=42,
-            provider_args={"image_size": "landscape_4_3", "output_format": "png"},
-        )
-    )
-
-    assert result.provider == TextToImageProvider.FALAI
-    assert result.model == "fal-ai/z-image/turbo"
-    assert len(result.images) == 2
-    assert all(img.provider == TextToImageProvider.FALAI for img in result.images)
-    assert [img.url for img in result.images] == [
-        "https://fal.example/1.png",
-        "https://fal.example/2.png",
-    ]
-
-
 def test_resolve_provider_and_model_google_strips_org_prefix() -> None:
     provider, provider_model = _resolve_provider_and_model(
         "google/imagen-4.0-fast-generate-001"
@@ -136,10 +89,19 @@ def test_resolve_provider_and_model_openai_keeps_org_prefix() -> None:
     assert provider_model == "openai/gpt-image-1"
 
 
-@pytest.mark.parametrize("model", ["", "google/", "openai/", "unknown/x"])
+@pytest.mark.parametrize(
+    "model",
+    ["", "google/", "openai/", "unknown/x", "fal-ai/z-image/turbo", "fal/foo"],
+)
 def test_resolve_provider_and_model_invalid_raises(model: str) -> None:
     with pytest.raises(ValueError):
         _resolve_provider_and_model(model)
+
+
+def test_resolve_provider_and_model_bare_model_raises() -> None:
+    """Bare model id without google/ or openai/ prefix raises (FAL no longer supported)."""
+    with pytest.raises(ValueError, match="Model id must use google/ or openai/"):
+        _resolve_provider_and_model("some-bare-model")
 
 
 def test_text_to_image_openai_returns_png_bytes() -> None:
