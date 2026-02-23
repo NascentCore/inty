@@ -23,7 +23,7 @@ Focus on correctness, maintainability, simplicity, and alignment with project co
 ## Checklist
 
 - [ ] android_app/docs/CHANGE_LOGS.md updated for user-visible changes in android_app/
-- [ ] docs/INTELLIMATE.md updated for user-visibule changes in android_app/
+- [ ] docs/INTELLIMATE.md updated for user-visible changes in android_app/
 - [ ] User intention understood
 - [ ] Implementation architecture understood
 - [ ] Architecture revised if needed
