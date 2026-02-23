@@ -7,3 +7,7 @@
   - [x] 更新 nginx 配置来支持新域名
   - [x] 创建独立部署脚本和代码改动：https://github.com/NascentCore/inty/pull/2373
   - [ ] 创建独立部署 github 工作流
+- [ ] Optimize official assistant's prompts
+  - [x] Added a separate build system messages API for official assistant
+  - [ ] Integrate the new system messages building API in the agent workflow
+  - [ ] Revise the prompt to make the official assistant more helpful in answering user's question on app features
