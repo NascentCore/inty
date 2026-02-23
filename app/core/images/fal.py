@@ -39,10 +39,8 @@ output format:
 }
 """
 
-import asyncio
 import fal_client
 from langsmith import traceable
-from langsmith.run_helpers import get_current_run_tree
 from pydantic import BaseModel
 
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
@@ -93,7 +91,7 @@ class ZImageTurboResult(BaseModel):
 async def z_image_turbo(args: ImgGenArgs) -> ZImageTurboResult:
     handler = await fal_client.submit_async(Z_IMAGE_TURBO.id_on_provider, arguments=args.model_dump())
     raw_result = await handler.get()
+    raw_result["handler"] = handler
     attach_provider_response_to_langsmith_run(raw_result)
     result = ZImageTurboResult(**raw_result)
-    print(result)
     return result
