@@ -24,7 +24,6 @@ from typing import Any, Optional
 
 import PIL.Image
 
-from app.external_services.fal_ai import FalAIClient
 
 GOOGLE_MODEL_PREFIX = "google/"
 OPENAI_MODEL_PREFIX = "openai/"
@@ -103,7 +102,7 @@ def generate_text_to_image(
         return _generate_google_imagen(provider_model=provider_model, request=request)
     if provider == TextToImageProvider.OPENAI:
         return _generate_openai_image(provider_model=provider_model, request=request)
-    return _generate_fal_text_to_image(provider_model=provider_model, request=request)
+    raise ValueError(f"Unsupported provider: {provider}")
 
 
 def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
@@ -283,56 +282,6 @@ def _generate_openai_image(
         model=provider_model,
         images=images,
         raw=response,
-    )
-
-
-def _generate_fal_text_to_image(
-    *,
-    provider_model: str,
-    request: TextToImageGenerationRequest,
-) -> TextToImageGenerationResult:
-    api_key = request.provider_args.get("api_key")
-    client = FalAIClient(api_key=api_key if isinstance(api_key, str) else None)
-
-    arguments: dict[str, Any] = dict(request.provider_args.get("arguments") or {})
-    arguments.setdefault("prompt", request.prompt)
-    arguments.setdefault("num_images", int(request.num_images))
-    arguments.setdefault(
-        "image_size", request.provider_args.get("image_size") or DEFAULT_FAL_IMAGE_SIZE
-    )
-    arguments.setdefault(
-        "output_format",
-        request.provider_args.get("output_format") or DEFAULT_FAL_OUTPUT_FORMAT,
-    )
-
-    if request.negative_prompt:
-        arguments.setdefault("negative_prompt", request.negative_prompt)
-    if request.seed is not None:
-        arguments.setdefault("seed", int(request.seed))
-
-    result = client.text_to_image(
-        model=provider_model, arguments=arguments, with_logs=False
-    )
-
-    images: list[TextToImageGeneratedImage] = []
-    for img in result.images:
-        images.append(
-            TextToImageGeneratedImage(
-                provider=TextToImageProvider.FALAI,
-                model=provider_model,
-                prompt=request.prompt,
-                url=img.url,
-                width=img.width if isinstance(img.width, int) else None,
-                height=img.height if isinstance(img.height, int) else None,
-                mime_type=img.content_type,
-            )
-        )
-
-    return TextToImageGenerationResult(
-        provider=TextToImageProvider.FALAI,
-        model=provider_model,
-        images=images,
-        raw=result.raw,
     )
 
 
