@@ -126,9 +126,24 @@ class FalSeedreamV4_5EditResult(BaseModel):
 async def seedream_v4_5_edit(args: FalSeedreamV4_5EditArgs) -> FalSeedreamV4_5EditResult:
     handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
     attach_provider_response_to_langsmith_run(handler, key="handler")
-    result = await handler.get()
-    attach_provider_response_to_langsmith_run(result)
-    return FalSeedreamV4_5EditResult(**result)
+    raw_result = await handler.get()
+    attach_provider_response_to_langsmith_run(raw_result)
+    result = FalSeedreamV4_5EditResult(**raw_result)
+    if not result.images:
+        raise ValueError("No images returned from SeedreamV4_5Edit")
+
+    new_images: list[Image] = []
+    for img in result.images:
+        if not img.url.startswith("data:"):
+            raise ValueError(f"Image URL is not a data URI: {img.url}")
+        gcs_url = _upload_data_uri_to_gcs_and_return_url(img.url)
+        logger.debug(f"Uploaded SeedreamV4_5Edit data URI to GCS: {gcs_url}")
+        new_images.append(img.model_copy(update={
+            "url": gcs_url,
+            "file_data": None,
+        }))
+    logger.debug(f"SeedreamV4_5EditResult after processing and uploading to GCS: {result}")
+    return result.model_copy(update={"images": new_images})
 
 
 class AccelerationEnum(StrEnum):
@@ -219,12 +234,10 @@ async def z_image_turbo(args: ImgGenArgs) -> ZImageTurboResult:
         if not img.url.startswith("data:"):
             raise ValueError(f"Image URL is not a data URI: {img.url}")
         gcs_url = _upload_data_uri_to_gcs_and_return_url(img.url)
-        logger.debug(f"Uploaded data URI to GCS: {gcs_url}")
-        new_image = img.model_copy(update={
+        logger.debug(f"Uploaded ZImageTurbo data URI to GCS: {gcs_url}")
+        new_images.append(img.model_copy(update={
             "url": gcs_url,
             "file_data": None,
-        })
-        new_images.append(new_image)
-    result = result.model_copy(update={"images": new_images})
-    logger.debug(f"ZImageTurboResult: {result}")
-    return result
+        }))
+    logger.debug(f"ZImageTurboResult after processing and uploading to GCS: {result}")
+    return result.model_copy(update={"images": new_images})
