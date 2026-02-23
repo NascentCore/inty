@@ -220,7 +220,7 @@ async def test_generate_image_with_system_instruction_uses_config_copy(mock_uplo
         model="gemini-2.5-flash-image",
         contents=["a cat"],
         gcs_uri_base=_GCS_URI_BASE,
-        system_instruction=["you are a director"],
+        system_instructions=["you are a director"],
     )
 
     call_kw = mock_models.generate_content.call_args.kwargs
