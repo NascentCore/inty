@@ -39,6 +39,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -224,7 +225,7 @@ fun ChatInput(
     val minHeight = config.MinHeight
     val maxHeight = config.MaxHeight
     // 文字模式下测量到的输入区高度（px），用于切到语音模式时保持高度一致，避免输入框突然变矮
-    var lastTextModeHeightPx by remember { mutableStateOf(0) }
+    var lastTextModeHeightPx by remember { mutableIntStateOf(0) }
 
     Column(
         modifier =
@@ -658,7 +659,8 @@ private fun VoiceHoldToTalkButton(
 }
 
 private val NameDelimiterRegex = "\\s+".toRegex()
-private const val CHAT_INPUT_MAX_LENGTH = 500
+// 长一些的输入方便用户问官方机器人
+private const val CHAT_INPUT_MAX_LENGTH = 5000
 private const val VOICE_INPUT_MAX_RESULTS = 1
 
 private fun AgentInfo?.firstNameOrNull(): String? {
