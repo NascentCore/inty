@@ -124,7 +124,7 @@ class WrappedClient:
         ],
         contents: list[str],
         gcs_uri_base: str,
-        system_instruction: list[str] | None = None) -> GeneratedImageProcessResult:
+        system_instructions: list[str] | None = None) -> GeneratedImageProcessResult:
         """
         使用指定的模型生成图片。
         contents 是 jpeg/jpg 文件 http url、或文本提示词；这个设计符合目前消息生图的需求。
@@ -149,9 +149,9 @@ class WrappedClient:
                 # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
                 # 默认参数不影响系统生成效果，不需要追踪。
                 # 仅在需要改写 system_instruction 时复制 config，避免污染全局预设。
-                if system_instruction is not None:
+                if system_instructions is not None:
                     config = copy.copy(GEN_CONTENT_CONFIG_IMAGE_9_16_1K)
-                    config.system_instruction = get_text_parts(system_instruction)
+                    config.system_instruction = get_text_parts(system_instructions)
                 else:
                     config = GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 
