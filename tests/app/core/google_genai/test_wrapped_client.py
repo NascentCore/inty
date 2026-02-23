@@ -378,7 +378,7 @@ async def test_generate_image_imagen_raises_unsupported_model():
 
 @pytest.mark.noci
 @pytest.mark.asyncio
-async def test_generate_image_with_nano_banana_trace_with_real_langsmith():
+async def test_generate_image_failure_with_nano_banana_trace_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
@@ -397,5 +397,5 @@ async def test_generate_image_trace_nano_banana_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(model=NANO_BANANA.id_on_provider, gcs_uri_base="test-gcs-uri-base", system_instruction=["you are a movie director"], contents=["a cat on the beach"])
+    result = await wrapper.async_generate_image(model=NANO_BANANA.id_on_provider, gcs_uri_base="test-gcs-uri-base", system_instructions=["you are a movie director"], contents=["a cat on the beach"])
     assert result is not None

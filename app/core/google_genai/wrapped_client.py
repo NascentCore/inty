@@ -171,7 +171,10 @@ class WrappedClient:
                 )
                 logger.debug("Gemini generate_content response: {}", response)
                 image_part = _extract_image_part_from_gemini_response(response)
-                return _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                result["usage_metadata_from_google"] = response.usage_metadata
+                _attach_response_to_langsmith_run(response)
+                return result
             case _:
                 raise ValueError(f"Unsupported model: {model}")
 
@@ -319,6 +322,7 @@ class GeneratedImageProcessResult(TypedDict):
     gcs_uri: str
     gcs_http_url: str
     generated_at: datetime.datetime
+    usage_metadata_from_google: types.GenerateContentResponseUsageMetadata
 
 
 def _process_image_part_to_generated_image(
