@@ -1,9 +1,10 @@
+import os
+
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.staticfiles import StaticFiles
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import BaseModel, ValidationError
@@ -19,6 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import global_config_loaded_from_config_yaml
 
 from app.api.deps import get_async_db
+from app.api.evaluation_web import (
+    configure_evaluation_web_routes,
+    is_api_only_mode_enabled,
+)
 from app.api.v1.router import api_router
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
@@ -132,35 +137,14 @@ app.add_exception_handler(ValidationError, validation_error_handler)
 app.include_router(api_router)
 
 # 配置静态文件服务 - 用于评测系统前端
-import os
-
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 static_dir = os.path.join(_ROOT, "app", "static")
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-# 添加前端应用路由
-from fastapi.responses import FileResponse
-
-
-@app.get(
-    "/evaluation",
-    # 此为内部运营使用 API，不对外展示
-    include_in_schema=False,
+api_only_mode_enabled = is_api_only_mode_enabled()
+configure_evaluation_web_routes(
+    app=app,
+    static_root_dir=static_dir,
+    api_only_mode_enabled=api_only_mode_enabled,
 )
-async def evaluation_frontend():
-    evaluation_index = os.path.join(static_dir, "evaluation", "index.html")
-    return FileResponse(evaluation_index)
-
-
-@app.get(
-    "/evaluation/{path:path}",
-    # 此为内部运营使用 API，不对外展示
-    include_in_schema=False,
-)
-async def evaluation_static_files(path: str):
-    file_path = os.path.join(static_dir, "evaluation", path)
-    return FileResponse(file_path)
 
 
 # 初始化 Firebase
