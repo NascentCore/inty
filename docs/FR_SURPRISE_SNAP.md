@@ -2,7 +2,7 @@
 
 ## 概述
 
-Surprise Snap 指在用户与角色对话达到**可配置轮数**（用户消息数）时，系统自动插入一条「专属角色照」消息（`surprise_snap` 类型）。该消息来自角色运营配置的 `exclusive_photos` 图库，按顺序发放；订阅用户自动视为已解锁，免费用户需使用 credit 解锁（扣费在 App 端，后端仅记录解锁状态）。
+Surprise Snap 指在用户与角色对话达到**可配置轮数**（用户消息数）时，系统自动插入一条「专属角色照」消息（`surprise_snap` 类型）。该消息来自角色运营配置的 `exclusive_photos` 图库，按顺序发放。**是否展示为已解锁**：后端**仅根据 surprise_snap_unlock 表**（即 unlocked 消息 ID 集合）返回 `is_locked`，不依据订阅状态；订阅用户与超级管理员是否按已解锁展示由 **App 端**根据用户订阅状态（及超级管理员身份）判断并展示。免费用户需使用 credit 解锁（扣费在 App 端，后端仅记录解锁状态）。
 
 ## 数据与配置
 
@@ -46,12 +46,12 @@ surprise_snap:
 ### 消息展示与解锁
 
 - **GET /api/v1/chats/agents/{agent_id}/messages**：拉取消息列表时，对 `type === "surprise_snap"` 的消息补充 `media_url`（CDN）、`caption`、`price`、`is_locked`
-  - **is_locked**：订阅用户为 `false`；免费用户若该 message_id 在 `surprise_snap_unlock` 中则为 `false`，否则为 `true`
+  - **is_locked**：后端**仅根据 surprise_snap_unlock 表**（该 message_id 是否在已解锁集合中）计算，不依据订阅状态；**订阅用户与超级管理员的是否展示为已解锁由 App 端根据订阅状态/管理员身份判断**
 - **POST /api/v1/chats/surprise-snap/unlock**：Body `{ "message_id": number }`，校验消息为 surprise_snap 且属于当前用户会话后写入 `surprise_snap_unlock`；扣 credit 由 App 完成，后端只记解锁状态。重复调用同一 message_id 视为成功（幂等）
 
 ### 聊天接口中的 choice 返回
 
-- 当**本次**请求触发了 Surprise Snap 时，响应 `data.choices` 中会多一条 choice，`message.type === "surprise_snap"`，且含 `id`、`media_url`、`caption`、`price`、`is_locked`，与消息列表中的结构一致，便于客户端当轮展示
+- 当**本次**请求触发了 Surprise Snap 时，响应 `data.choices` 中会多一条 choice，`message.type === "surprise_snap"`，且含 `id`、`media_url`、`caption`、`price`、`is_locked`，与消息列表中的结构一致。`is_locked` 由后端**仅按 surprise_snap_unlock 表**计算；**订阅用户与超级管理员是否按已解锁展示由 App 端根据订阅状态/管理员身份处理**
 
 ## 接口汇总
 
