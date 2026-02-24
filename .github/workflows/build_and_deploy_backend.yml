@@ -138,7 +138,7 @@ jobs:
               --log-opt labels=application,environment \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
-              ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+              ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }} backend/inty/start.sh --dev
             echo "Waiting for application startup..."
             while ! sudo docker logs inty-backend-${{ steps.prep.outputs.environment }} 2>&1 | grep -q "Application startup complete"
             do
