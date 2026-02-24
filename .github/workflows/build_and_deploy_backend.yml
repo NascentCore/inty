@@ -5,12 +5,14 @@ on:
     branches:
       - main
     paths:
-      # 仅当以下路径有变更时触发；PR 仅含 markdown 等未列路径时不会触发
       # 后端代码
       - "app/**/*.py"
       - "alembic/**/*.py"
+      - "backend/inty/*.py"
+      - "backend/inty/start.sh"
       # 开发环境配置文件
       - "devops/config.yaml.dev"
+      # TODO：默认部署并不会测试这个配置文件，因为默认是部署到 dev 环境，使用的是上面的文件，应该增加一个 pre-prod 环境？
       - "devops/config.yaml.prod"
       # 评测系统
       - "evaluation/**/*.tsx"
