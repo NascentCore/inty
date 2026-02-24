@@ -7,8 +7,8 @@ BigQuery Federated Queries (for on-demand querying)
 
 DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数据库；
 
-- [ ] 是否能在只读副本上直接增加数据同步到 big query？
-      <img width="600" height="608" alt="image" src="https://github.com/user-attachments/assets/cdb6bce5-beb9-4d56-ad08-c3e53eae8c48" />
+- [ ] 是否能在只读副本上直接增加数据同步到 big query？ <img width="600" height="608" alt="image" src="https://github.com/user-attachments/assets/cdb6bce5-beb9-4d56-ad08-c3e53eae8c48" /> <img width="600" height="750" alt="image" src="https://github.com/user-attachments/assets/6e50aaa5-d5ef-449c-8bd0-b545cebcd667" />
+
 
 ## Dev/Prod 环境概览（Inty）
 
