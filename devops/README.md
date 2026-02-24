@@ -5,7 +5,6 @@
 - 共享同一台 gcp VM
 - 差别在配置文件：[dev](config.yaml.dev) [prod](config.yaml.prod)
 - 操作这两个环境必须先写 python 脚本，严禁直接操作数据库、或者直接调用管理员权限的 API Endpoint，步骤如下（以 dev 为例）：
-
   ```bash
   ssh <gcp-vm>
   docker exec -it inty-backend-dev bash
