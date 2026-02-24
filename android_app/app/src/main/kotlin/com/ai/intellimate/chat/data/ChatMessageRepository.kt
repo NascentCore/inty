@@ -248,11 +248,22 @@ class ChatMessageRepository(
 
     fun userMessageCountFlow(agentId: String) = localDataSource.userMessageCountFlow(agentId)
 
-    suspend fun purchaseForMoment(agentId: String, messageId: String, price: Int): Boolean {
-        return BoostManager.consume(price, PointSource.ForMoment).also { success ->
-            if (success) {
-                localDataSource.setForMomentPurchased(agentId, messageId)
+    suspend fun purchaseForMoment(agentId: String, messageId: String, price: Int) {
+        if (BoostManager.boostState.value.availablePoints >= price) {
+            when (val result = remoteDataSource.unlockSurpriseSnap(messageId.toLong())) {
+                is HttpResult.Success -> {
+                    if (BoostManager.consume(price, PointSource.ForMoment)) {
+                        localDataSource.setForMomentPurchased(agentId, messageId)
+                    } else {
+                        throw Exception("Not enough credits.")
+                    }
+                }
+                is HttpResult.Failure -> {
+                    throw Exception(result.message)
+                }
             }
+        } else {
+            throw Exception("Not enough credits.")
         }
     }
 }

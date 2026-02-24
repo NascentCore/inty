@@ -4,6 +4,7 @@ package ai.sxwl.android.data.chat.local.db
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.local.db.MessageEntity.MetaData
+import ai.sxwl.android.data.chat.local.db.MessageEntity.MomentExtra
 import ai.sxwl.android.data.chat.local.db.MessageEntity.UserVote
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -93,6 +94,7 @@ data class MessageUpdate(
     val isSending: Boolean = false,
     val type: String? = null,
     val festivalMemoryId: Long? = null,
+    @Embedded("moment_") val momentExtra: MomentExtra? = null
 )
 
 fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
@@ -121,6 +123,13 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
             } ?: MetaData(agentId),
         type = type,
         festivalMemoryId = festivalMemoryId,
+        momentExtra = if (type == "surprise_snap") {
+            MessageEntity.MomentExtra(
+                image = mediaUrl,
+                price = price,
+                isPurchased = !unPurchased
+            )
+        } else null
     )
 }
 
@@ -151,6 +160,13 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
         isSending = false,
         type = type,
         festivalMemoryId = festivalMemoryId,
+        momentExtra = if (type == "surprise_snap") {
+            MessageEntity.MomentExtra(
+                image = mediaUrl,
+                price = price,
+                isPurchased = !unPurchased
+            )
+        } else null
     )
 }
 
