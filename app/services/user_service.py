@@ -5,7 +5,7 @@ from typing import Optional
 
 from loguru import logger
 from sqlalchemy import and_, func, text, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
@@ -219,6 +219,24 @@ def generate_avatar_path(user_id: str, filename: str) -> str:
 
 
 GENDER_DISPLAY_MAP = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
+
+
+async def get_user_display_name_for_prompt(db: AsyncSession, user_id: str) -> str:
+    """
+    获取用于提示词渲染的用户显示名（如 personality/scenario 中的 {{ user }}）。
+    用于图片生成等需要与 char 一起渲染 Jinja2 模板的场景。
+    """
+    if not user_id:
+        return "the user"
+    try:
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+        if user and user.nickname and user.nickname.strip():
+            return user.nickname.strip()
+    except SQLAlchemyError as e:
+        logger.debug("get_user_display_name_for_prompt: user_id={}, error={}", user_id, e)
+    return "the user"
 
 
 async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:

@@ -180,6 +180,69 @@ class TestBuildImagePrompt:
         assert "P" in result
         assert "m" in result
 
+    def test_personality_and_scenario_rendered_when_char_name_user_name_provided(self):
+        """传入 char_name、user_name 时，personality 与 scenario 中的 {{ char }}、{{ user }} 被渲染。"""
+        agent_data = {
+            "scenario": "{{ char }} meets {{ user }} at a cafe.",
+            "personality": "{{ char }} is fond of {{ user }}.",
+        }
+        chat_history = []
+        user_message = "draw"
+        user_info = ""
+
+        result = image_generation_service.build_image_prompt(
+            agent_data=agent_data,
+            chat_history=chat_history,
+            user_message=user_message,
+            user_info=user_info,
+            char_name="Lily",
+            user_name="Alex",
+        )
+
+        assert "Lily meets Alex at a cafe." in result
+        assert "Lily is fond of Alex." in result
+        assert "{{ char }}" not in result
+        assert "{{ user }}" not in result
+
+    def test_personality_scenario_not_rendered_when_char_or_user_name_missing(self):
+        """未传 char_name 或 user_name 时，personality/scenario 不进行 jinja2 渲染，保持原样。"""
+        agent_data = {
+            "scenario": "{{ char }} and {{ user }}",
+            "personality": "{{ char }} likes {{ user }}",
+        }
+        chat_history = []
+        user_message = "m"
+        user_info = ""
+
+        result = image_generation_service.build_image_prompt(
+            agent_data=agent_data,
+            chat_history=chat_history,
+            user_message=user_message,
+            user_info=user_info,
+        )
+
+        assert "{{ char }}" in result
+        assert "{{ user }}" in result
+
+    def test_intro_fallback_rendered_when_scenario_empty_and_names_provided(self):
+        """scenario 为空时使用 intro；传入 char_name/user_name 时 intro 中的 {{ char }}/{{ user }} 被渲染。"""
+        agent_data = {
+            "scenario": "",
+            "intro": "{{ char }} greets {{ user }}.",
+            "personality": "Friendly.",
+        }
+        result = image_generation_service.build_image_prompt(
+            agent_data=agent_data,
+            chat_history=[],
+            user_message="hi",
+            user_info="",
+            char_name="Lily",
+            user_name="Alex",
+        )
+        assert "Lily greets Alex." in result
+        assert "{{ char }}" not in result
+        assert "{{ user }}" not in result
+
 
 class TestSerializeGeminiResponseForLog:
     """_serialize_gemini_response_for_log 防御性序列化"""

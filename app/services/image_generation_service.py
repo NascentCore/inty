@@ -24,13 +24,17 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
+from app.core.agent.prompt_template import render_prompt_jinja2_template
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.gcs import GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.models.resource import ResourceType
 from app.services import agent_service, chat_history_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
-from app.services.user_service import build_user_info_prompt_block
+from app.services.user_service import (
+    build_user_info_prompt_block,
+    get_user_display_name_for_prompt,
+)
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import NANO_BANANA
@@ -136,6 +140,8 @@ class ImageGenerationService:
         chat_history: List[dict],
         user_message: str,
         user_info: str = "",
+        char_name: Optional[str] = None,
+        user_name: Optional[str] = None,
     ) -> str:
         """
         构建生图提示词
@@ -145,21 +151,24 @@ class ImageGenerationService:
             chat_history: 聊天历史记录
             user_message: 用户当前请求的消息内容
             user_info: 用户信息块（##User Information...），可为空
+            char_name: 角色名，用于渲染 personality/scenario 中的 {{ char }}
+            user_name: 用户显示名，用于渲染 personality/scenario 中的 {{ user }}
 
         Returns:
             完整的生图提示词
         """
-        # 提取角色背景信息
-        agent_background = agent_data.get("scenario", "")
+        # 提取角色背景（scenario 优先，无则用 intro）与性格
+        agent_background = agent_data.get("scenario", "") or agent_data.get("intro", "")
         agent_personality = agent_data.get("personality", "")
 
-        # TODO: 需要使用 jinja2 template 渲染 agent_background 和 agent_personality
-        # 来填充 {{ char }} 和 {{ user }} 变量。
-        # 目前不太好弄，因为传入的对象类型是 dict，而不是 Agent 对象，不好分辨。
-
-        # 如果没有scenario，尝试使用intro
-        if not agent_background:
-            agent_background = agent_data.get("intro", "")
+        # 若调用方传入 char_name 与 user_name，则用 jinja2 渲染 personality/background 中的 {{ char }} / {{ user }}
+        if char_name is not None and user_name is not None:
+            agent_personality = render_prompt_jinja2_template(
+                agent_personality, char=char_name, user=user_name
+            )
+            agent_background = render_prompt_jinja2_template(
+                agent_background, char=char_name, user=user_name
+            )
 
         # 格式化聊天历史
         history_text = ""
@@ -188,6 +197,24 @@ class ImageGenerationService:
 
         logger.debug("构建的生图提示词: {}", prompt)
         return prompt
+
+    async def get_char_user_names_for_image_prompt(
+        self,
+        db: AsyncSession,
+        user_id: Optional[str],
+        agent_data: dict,
+    ) -> tuple[Optional[str], str]:
+        """
+        解析用于生图提示词 Jinja2 渲染的 char/user 显示名。
+        供 build_image_prompt 调用方统一使用，避免重复解析逻辑。
+        """
+        char_name = agent_data.get("name")
+        user_name = (
+            await get_user_display_name_for_prompt(db, user_id)
+            if user_id
+            else "the user"
+        )
+        return (char_name, user_name)
 
     def _tokenize_text(self, text_input: str) -> set:
         """
@@ -532,12 +559,18 @@ class ImageGenerationService:
                 )
                 user_photo_url = user_result.scalar_one_or_none()
 
+            char_name, user_name = await self.get_char_user_names_for_image_prompt(
+                db, user_id, agent_data
+            )
+
             # 构建提示词
             prompt = self.build_image_prompt(
                 agent_data=agent_data,
                 chat_history=chat_history,
                 user_message=message_content,
                 user_info=user_info,
+                char_name=char_name,
+                user_name=user_name,
             )
 
             # 获取Agent参考图（优先使用背景图，如果不存在则使用头像）
@@ -753,12 +786,18 @@ class ImageGenerationService:
             if user_id:
                 user_info = await build_user_info_prompt_block(db, user_id)
 
+            char_name, user_name = await self.get_char_user_names_for_image_prompt(
+                db, user_id, agent_data
+            )
+
             # 构建提示词
             prompt = self.build_image_prompt(
                 agent_data=agent_data,
                 chat_history=chat_history,
                 user_message=message_content,
                 user_info=user_info,
+                char_name=char_name,
+                user_name=user_name,
             )
 
             # 获取Agent参考图（优先使用背景图，如果不存在则使用头像）

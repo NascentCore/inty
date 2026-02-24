@@ -1543,11 +1543,18 @@ async def generate_chat_image(
             user_info = (
                 await build_user_info_prompt_block(db, user_id) if user_id else ""
             )
+            char_name, user_name = (
+                await image_generation_service.get_char_user_names_for_image_prompt(
+                    db, user_id, agent_data
+                )
+            )
             current_prompt = image_generation_service.build_image_prompt(
                 agent_data=agent_data,
                 chat_history=chat_history,
                 user_message=message_content,
                 user_info=user_info,
+                char_name=char_name,
+                user_name=user_name,
             )
         except Exception as e:
             logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
