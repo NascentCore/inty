@@ -1,3 +1,4 @@
+# 需要的时候手动运行来更新 prod 数据库 schema，不影响 dev 环境
 name: Alembic Upgrade Production DB Schema
 
 on:
