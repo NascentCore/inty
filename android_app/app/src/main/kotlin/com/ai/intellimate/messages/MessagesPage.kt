@@ -303,7 +303,7 @@ private fun MessagesSubscriptionBanner(
                         .clip(
                             RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CtaCornerRadius)
                         )
-                        .background(brush = MaterialTheme.brushes.gradientBrush4)
+                        .background(brush = MaterialTheme.brushes.horizontal.gradientBrush4)
                         .padding(
                             horizontal = UiConfigs.MessagesPage.PremiumBanner.CtaHorizontalPadding,
                             vertical = UiConfigs.MessagesPage.PremiumBanner.CtaVerticalPadding,

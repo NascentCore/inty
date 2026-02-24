@@ -9,15 +9,10 @@ import androidx.compose.ui.unit.sp
 // Set of Material typography styles to start with
 val HeartTypography =
     Typography(
-        titleLarge =
-            TextStyle(
-                fontFamily = FontFamily.Default,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-            ),
+        titleLarge = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp,), //标题 Title1
         titleMedium = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
         titleSmall = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold),
-        bodyLarge = TextStyle(fontSize = 14.sp),
+        bodyLarge = TextStyle(fontSize = 14.sp), //正文 Body
         labelLarge = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
         labelSmall = TextStyle(fontSize = 10.sp),
         /* Other default text styles to override

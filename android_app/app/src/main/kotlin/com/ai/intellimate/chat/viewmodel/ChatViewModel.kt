@@ -209,6 +209,8 @@ class ChatViewModel : BaseVM() {
     private var characterEnergyJob: Job? = null
     private var boundAgentId: String? = null
     private var lastSyncedEnergyPoints = 0
+    private val _showRankDialog = Channel<Boolean>()
+    val showRankDialog = _showRankDialog.receiveAsFlow()
 
     // 显示订阅
     private val _vipRequest = Channel<String>()
@@ -623,6 +625,9 @@ class ChatViewModel : BaseVM() {
                         result.data.data?.choices?.getOrNull(0)?.let {
                             if (it.message.agentId() == _agentId.value) {
                                 enableFlowShowIfAllowed()
+                                if (chatMessageRepository.shouldShowRank()) {
+                                    _showRankDialog.send(true)
+                                }
                             }
                         }
 
@@ -1472,6 +1477,11 @@ class ChatViewModel : BaseVM() {
         _isQueryMsgsCompleted.value = false
     }
 
+    /** 清除 last_rank_date 缓存，仅用于 Debug 设置页调试。 */
+    suspend fun clearLastRankDateCache() {
+        chatMessageRepository.clearLastRankDateCache()
+    }
+
     suspend fun appendBoostSystemMessage(agent: AgentInfo, points: Int, totalBoosts: Int) {
         chatMessageRepository.appendBoostSystemMessage(
             agent.id,
@@ -1521,5 +1531,9 @@ class ChatViewModel : BaseVM() {
         _isQueryMsgsCompleted.value = true
 
         LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
+    }
+
+    fun testRank() {
+        _showRankDialog.trySend(true)
     }
 }

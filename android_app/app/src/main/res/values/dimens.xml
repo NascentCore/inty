@@ -36,4 +36,13 @@
     <dimen name="heartbeat_top_bar_nav_icon_area_width">48dp</dimen>
     <!-- More 面板中 Love Journal 项图标尺寸（较默认更大以达到合适视觉效果） -->
     <dimen name="heartbeat_more_panel_icon_size">42dp</dimen>
+    <!-- RankDialog 评分弹窗 -->
+    <dimen name="rank_dialog_star_size">43.5dp</dimen>
+    <dimen name="rank_dialog_star_spacing">8dp</dimen>
+    <dimen name="rank_dialog_character_image_height">160dp</dimen>
+    <dimen name="rank_dialog_title_subtitle_spacing">8dp</dimen>
+    <dimen name="rank_dialog_subtitle_stars_spacing">16dp</dimen>
+    <dimen name="rank_dialog_stars_image_spacing">16dp</dimen>
+    <dimen name="rank_dialog_image_buttons_spacing">24dp</dimen>
+    <dimen name="rank_dialog_button_spacing">12dp</dimen>
 </resources>

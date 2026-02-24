@@ -136,6 +136,12 @@ object FirebaseManager {
                     Events.AVATAR_GENERATION_SUCCESS to 1.0, // 头像生成成功
                     Events.AVATAR_GENERATION_FAILURE to 1.0, // 头像生成失败
 
+                    // 🔴 评分弹窗事件 - 100%采样
+                    Events.RANK_DIALOG_SHOW to 1.0,
+                    Events.RANK_DIALOG_SUBMIT_CLICK to 1.0,
+                    Events.RANK_DIALOG_CANCEL_CLICK to 1.0,
+                    Events.RANK_DIALOG_REVIEW_COMPLETED to 1.0,
+
                     // 🟡 性能相关事件 - 保持现有采样配置
                     Events.SLOW_REQUEST to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
 
@@ -601,6 +607,13 @@ object FirebaseManager {
         const val PAGE_VISIBLE = "page_visible" // 页面变为可见（已禁用）
         const val PAGE_HIDDEN = "page_hidden" // 页面变为不可见（已禁用）
         const val PAGE_LIFECYCLE = "page_lifecycle" // 页面生命周期事件（已禁用）
+
+        // 评分弹窗（RankDialog）相关事件
+        const val RANK_DIALOG_SHOW = "rank_dialog_show" // 评分弹窗显示
+        const val RANK_DIALOG_SUBMIT_CLICK = "rank_dialog_submit_click" // 评分弹窗提交（含 rating 1～5）
+        const val RANK_DIALOG_CANCEL_CLICK = "rank_dialog_cancel_click" // 评分弹窗取消
+        const val RANK_DIALOG_REVIEW_COMPLETED =
+            "rank_dialog_review_completed" // 评分完成（用户选 4～5 星并完成应用内评价流程）
     }
 
     /** 预定义的用户属性常量 */

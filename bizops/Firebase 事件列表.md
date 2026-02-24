@@ -117,6 +117,16 @@
 - **曝光**：事件 `for_moment_message_exposure`。触发位置：ChatItem.kt 中 `item.type == "surprise_snap"` 时，LaunchedEffect 调用 ChatViewModel.reportForMomentExposureIfNeeded。以 ChatPage 为周期，每条消息在周期内首次展示时上报一次；离开页面时 ViewModel.clearForMomentExposureCycle() 清空周期。参数：`agent_id`、`message_key`。  
 - **点击**：使用事件 `chat_page_click`，通过参数 `click_type` 区分：`for_moment_go_premium`（Go Premium 按钮）、`for_moment_unlock_credits`（Unlock with Credits 按钮）、`for_moment_view_image`（点击已解锁图片进入全屏）、`for_moment_purchase_dialog_cancel`（积分支付确认弹窗取消）、`for_moment_purchase_dialog_confirm`（积分支付确认弹窗确认解锁，含参数 `price`）。触发位置：ChatItem.kt 内 ChatItemForMoment、PurchaseForMomentDialog。
 
+**评分弹窗（RankDialog）**  
+在用户与 iMate 聊天一段时间后展示的 1～5 星评分弹窗，用于收集聊天体验反馈；由 MainActivity 在收到 `chatViewModel.showRankDialog` 且 In-App Review 流程就绪后展示。
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `rank_dialog_show` | RankDialog.kt | 无 | 评分弹窗显示（弹窗首次展示时由 LaunchedEffect 上报一次） | 🔴 100% |
+| `rank_dialog_submit_click` | RankDialog.kt | `rating`（1～5） | 用户点击 Submit 提交评分 | 🔴 100% |
+| `rank_dialog_cancel_click` | RankDialog.kt | 无 | 用户点击 Cancel 关闭弹窗 | 🔴 100% |
+| `rank_dialog_review_completed` | MainActivity.kt | `user_id` | 评分完成（用户选 4～5 星并完成应用内评价流程后上报） | 🔴 100% |
+
 ### 1.9 订阅与计费事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
@@ -318,6 +328,7 @@
 - `error_code`、`error_message`：错误信息（失败时），统一使用 `error_` 前缀，错误类型和异常类型信息在 `error_message` 中
 - `enabled`：开关状态（chat_sidebar_click 事件中开关操作时）
 - `click_type`：点击类型，用于 chat_page_click/chat_sidebar_click/chat_more_click/conversations_page_click；chat_page_click 含 `message_like`、`message_dislike` 等（详见 1.8）；**For Moment** 含 `for_moment_go_premium`、`for_moment_unlock_credits`、`for_moment_view_image`、`for_moment_purchase_dialog_cancel`、`for_moment_purchase_dialog_confirm`
+- `rating`：用户选中的星级 1～5（`rank_dialog_submit_click` 事件）
 - `message_key`：For Moment 消息唯一标识（for_moment_message_exposure 事件），优先 message.id，否则 agentId-indexId
 - `unlock_method`、`owed_credits`：VIP 角色解锁方式（subscription/close_dialog/credits）与 credits 解锁时当前积分（vip_agent_unlock 事件）
 - `config_key`、`config_value`、`source`：Remote Config 应用记录（remote_config_applied 事件），用于验证配置下发

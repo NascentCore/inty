@@ -66,6 +66,7 @@ firebasePerf = "2.0.2"
 googleIdentity = "1.1.1"
 credentialManager = "1.6.0-beta03"
 billingKtx = "8.0.0"
+play-review = "2.0.2"
 
 # 测试相关库
 espressoCore = "3.7.0"
@@ -235,6 +236,8 @@ firebase-messaging-directboot = { module = "com.google.firebase:firebase-messagi
 firebase-perf = { module = "com.google.firebase:firebase-perf" }
 firebase-remote-config = { module = "com.google.firebase:firebase-config" }
 
+google-play-review = { module = "com.google.android.play:review", version.ref = "play-review"}
+google-play-review-ktx = { module = "com.google.android.play:review-ktx", version.ref = "play-review"}
 billing-client = { module = "com.android.billingclient:billing-ktx", version.ref = "billingKtx" }
 google-identity = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleIdentity" }
 credential-manager = { group = "androidx.credentials", name = "credentials", version.ref = "credentialManager" }

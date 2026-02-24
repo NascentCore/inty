@@ -106,6 +106,7 @@ dependencies {
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.dataStore.preferences)
 
     // ===== 项目模块 =====
     implementation(projects.core.common)
@@ -147,4 +148,7 @@ dependencies {
     implementation(libs.koin.androidx.navigation)
     testImplementation(libs.koin.test.junit)
     testImplementation(libs.koin.test.android)
+
+    implementation(libs.google.play.review)
+    implementation(libs.google.play.review.ktx)
 }

@@ -67,7 +67,7 @@ object DataStoreManager {
      * @return DataStore 实例，可用于存储和读取 Preferences 数据
      */
     fun getOrCreateDataStore(context: Context, name: String?): DataStore<Preferences> {
-        return dataStoreRegistry.getOrPut(name) {
+        return dataStoreRegistry.getOrPut(name ?: GLOBAL_DATASTORE_KEY) {
             PreferenceDataStoreFactory.create(
                 corruptionHandler = null,
                 migrations = listOf(),

@@ -11,7 +11,11 @@ import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toUpdate
 import ai.sxwl.android.data.http.BusinessErrorCodes
+import ai.sxwl.android.data.store.dataStore
 import ai.sxwl.android.utils.LogUtils
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -23,7 +27,11 @@ import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 聊天消息的 Paging Repository 使用 RemoteMediator 实现数据库查询和网络同步
@@ -45,6 +53,9 @@ class ChatMessageRepository(
     private val localDataSource: ChatLocalDataSource = ChatLocalDataSource(database),
     private val roomDataSource: RoomDataSource = RoomDataSource(database),
 ) {
+    companion object {
+        private val KEY_LAST_RANK_DATE = longPreferencesKey("last_rank_date")
+    }
 
     /** 获取聊天消息的 PagingData Flow 返回的 Flow 会从数据库读取数据，并在需要时通过 RemoteMediator 从网络同步 */
     @OptIn(ExperimentalPagingApi::class)
@@ -267,5 +278,23 @@ class ChatMessageRepository(
         } else {
             throw Exception("Not enough credits.")
         }
+    }
+
+    suspend fun shouldShowRank(): Boolean {
+        val lastRankDate = dataStore().data.map { it[KEY_LAST_RANK_DATE] }.first() ?: 0
+        val currentDate = System.currentTimeMillis()
+
+        return (localDataSource.getYesterdaySendCount() > 20 && currentDate.milliseconds - lastRankDate.milliseconds > 7.days).also {
+                    if (it) {
+                        dataStore().edit { preferences ->
+                            preferences[KEY_LAST_RANK_DATE] = currentDate
+                        }
+                    }
+        }
+    }
+
+    /** 清除 last_rank_date 缓存，仅用于 Debug 设置页调试。 */
+    suspend fun clearLastRankDateCache() {
+        dataStore().edit { it.remove(KEY_LAST_RANK_DATE) }
     }
 }

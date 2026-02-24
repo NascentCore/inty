@@ -528,11 +528,11 @@ private fun ChatItemForMoment(
                             .height(32.dp)
                             .clip(buttonShape)
                             .drawBehind {
-                                drawRect(brush = MaterialTheme.brushes.gradientBrush2, alpha = 0.2f)
+                                drawRect(brush = MaterialTheme.brushes.horizontal.gradientBrush2, alpha = 0.2f)
                             }
                             .border(
                                 width = 1.dp,
-                                brush = MaterialTheme.brushes.gradientBrush2,
+                                brush = MaterialTheme.brushes.horizontal.gradientBrush2,
                                 shape = buttonShape,
                             )
                             .noRippleClickable(onClick = unlockByVip),

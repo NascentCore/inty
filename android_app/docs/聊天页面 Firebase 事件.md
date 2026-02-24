@@ -109,3 +109,26 @@
 
 - 曝光：事件筛选 `event_name = for_moment_message_exposure`，可按 `agent_id`、`message_key` 筛选。
 - 点击类：事件筛选 `event_name = chat_page_click`，参数筛选 `click_type` 为上述各值（如 `for_moment_go_premium`、`for_moment_unlock_credits`、`for_moment_view_image`、`for_moment_purchase_dialog_cancel`、`for_moment_purchase_dialog_confirm`）。
+
+---
+
+## 评分弹窗（RankDialog）
+
+评分弹窗在用户与 iMate 聊天一段时间后由 `ChatViewModel` 触发（`showRankDialog`），MainActivity 在 In-App Review 流程就绪后展示 RankDialog，用于收集 1～5 星评分。
+
+- **触发位置**：`android_app/app/src/main/kotlin/com/ai/intellimate/ui/components/RankDialog.kt`（弹窗展示与按钮点击）、`MainActivity.kt`（展示条件）。
+- **事件与参数**：
+
+| 事件名 | 代码常量 | 触发时机 | 参数 |
+|--------|----------|----------|------|
+| `rank_dialog_show` | `FirebaseManager.Events.RANK_DIALOG_SHOW` | 弹窗首次展示 | 无 |
+| `rank_dialog_submit_click` | `FirebaseManager.Events.RANK_DIALOG_SUBMIT_CLICK` | 用户点击 Submit | `rating`（1～5） |
+| `rank_dialog_cancel_click` | `FirebaseManager.Events.RANK_DIALOG_CANCEL_CLICK` | 用户点击 Cancel | 无 |
+| `rank_dialog_review_completed` | `FirebaseManager.Events.RANK_DIALOG_REVIEW_COMPLETED` | 用户选 4～5 星并完成应用内评价流程 | `user_id` |
+
+### Firebase 侧查看方式（RankDialog）
+
+- 弹窗曝光：事件筛选 `event_name = rank_dialog_show`。
+- 提交：事件筛选 `event_name = rank_dialog_submit_click`，可按参数 `rating` 筛选星级分布。
+- 取消：事件筛选 `event_name = rank_dialog_cancel_click`。
+- 评分完成：事件筛选 `event_name = rank_dialog_review_completed`，可按参数 `user_id` 筛选。

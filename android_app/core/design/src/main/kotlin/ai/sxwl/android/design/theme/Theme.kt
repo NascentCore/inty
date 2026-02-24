@@ -1,6 +1,7 @@
 package ai.sxwl.android.design.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -48,16 +49,48 @@ private val lightScheme =
         surfaceContainerHighest = surfaceContainerHighestLight,
     )
 
-data class Brushes(val gradientBrush2: Brush, val gradientBrush4: Brush)
+data class IntyBrush(
+    val gradientBrush1: Brush,
+    val gradientBrush2: Brush,
+    val gradientBrush3: Brush,
+    val gradientBrush4: Brush
+)
+
+data class Brushes(
+    val horizontal: IntyBrush,
+    val vertical: IntyBrush
+)
 
 private val LightBrushes =
     Brushes(
-        gradientBrush2 =
-            Brush.horizontalGradient(
-                listOf(Color(0xFFC3F0FD), Color(0xFF9E97FF), Color(0xFFC567F5))
+        horizontal = IntyBrush(
+            gradientBrush1 = Brush.horizontalGradient(
+                listOf(primaryLight, secondaryLight)
             ),
-        gradientBrush4 = Brush.horizontalGradient(listOf(Color(0xFFFFEECC), Color(0xFFAD9515))),
+            gradientBrush2 =
+                Brush.horizontalGradient(
+                    listOf(Color(0xFFC3F0FD), Color(0xFF9E97FF), Color(0xFFC567F5))
+                ),
+            gradientBrush3 = Brush.horizontalGradient(
+                listOf(Color(0x806E5289), Color(0xFF1C1523))
+            ),
+            gradientBrush4 = Brush.horizontalGradient(listOf(Color(0xFFFFEECC), Color(0xFFAD9515))),
+        ),
+        vertical = IntyBrush(
+            gradientBrush1 = Brush.verticalGradient(
+                listOf(primaryLight, secondaryLight)
+            ),
+            gradientBrush2 =
+                Brush.verticalGradient(
+                    listOf(Color(0xFFC3F0FD), Color(0xFF9E97FF), Color(0xFFC567F5))
+                ),
+            gradientBrush3 = Brush.verticalGradient(
+                listOf(Color(0x806E5289), Color(0xFF1C1523))
+            ),
+            gradientBrush4 = Brush.verticalGradient(listOf(Color(0xFFFFEECC), Color(0xFFAD9515))),
+        )
     )
+
 
 val MaterialTheme.brushes: Brushes
     get() = LightBrushes
