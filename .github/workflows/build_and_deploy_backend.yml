@@ -13,7 +13,7 @@ on:
       # 开发环境配置文件
       - "devops/config.yaml.dev"
       # TODO：默认部署并不会测试这个配置文件，因为默认是部署到 dev 环境，使用的是上面的文件，应该增加一个 pre-prod 环境？
-      - "devops/config.yaml.prod"
+      # - "devops/config.yaml.prod"
       # 评测系统
       - "evaluation/**/*.tsx"
       - "evaluation/tsconfig.json"
