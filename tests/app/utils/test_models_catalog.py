@@ -3,6 +3,8 @@
 import pytest
 
 from app.utils.models_catalog import (
+    CHAT_IMAGE_FAL_IDS,
+    CHAT_IMAGE_FAL_MODELS,
     NANO_BANANA,
     NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
@@ -39,3 +41,12 @@ def test_resolve_chat_image_model_disallowed_catalog_model_raises():
     with pytest.raises(ValueError) as exc_info:
         resolve_chat_image_model("Imagen 4.0 Fast")
     assert "not allowed" in str(exc_info.value)
+
+
+def test_chat_image_fal_ids_matches_fal_models():
+    """CHAT_IMAGE_FAL_IDS 与 CHAT_IMAGE_FAL_MODELS 的 id_on_provider 一致。"""
+    assert CHAT_IMAGE_FAL_IDS == tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
+    assert set(CHAT_IMAGE_FAL_IDS) == {
+        SEEDREAM_V4_5_EDIT.id_on_provider,
+        Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider,
+    }

@@ -38,6 +38,7 @@ from app.services.user_service import (
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import (
+    CHAT_IMAGE_FAL_IDS,
     NANO_BANANA,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
@@ -761,13 +762,10 @@ class ImageGenerationService:
             z_image_turbo_image_to_image,
         )
 
-        if model not in (
-            SEEDREAM_V4_5_EDIT.id_on_provider,
-            Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider,
-        ):
+        if model not in CHAT_IMAGE_FAL_IDS:
             raise ValueError(
                 f"Chat image fal model {model!r} not allowed; "
-                f"allowed: {SEEDREAM_V4_5_EDIT.id_on_provider}, {Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider}"
+                f"allowed: {', '.join(CHAT_IMAGE_FAL_IDS)}"
             )
 
         if history_count is None:
