@@ -1421,7 +1421,8 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
     获取会话的历史消息，返回 LangChain BaseMessage 格式（排除已软删除的）
 
     用于 Agent 对话时获取上下文历史，替代 PostgresChatMessageHistory.messages
-    以支持软删除过滤。
+    以支持软删除过滤。会排除 festival_memory_prompt、surprise_snap 等非对话类消息，
+    避免其进入 Agent 上下文导致重复或干扰。
 
     Args:
         session_id: 会话ID
@@ -1432,16 +1433,27 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
     try:
         conn = get_chat_history_connection()
 
+        # 排除 festival_memory_prompt、surprise_snap 等非对话类消息，避免进入 Agent 上下文
         query = """
             SELECT message, created_at
-            FROM chat_history 
+            FROM chat_history
             WHERE session_id = %s AND deleted_at IS NULL
+              AND (meta_data IS NULL
+                   OR meta_data->>'messageType' IS NULL
+                   OR (meta_data->>'messageType' != %s AND meta_data->>'messageType' != %s))
             ORDER BY created_at ASC
         """
 
         messages: List[BaseMessage] = []
         with conn.cursor() as cur:
-            cur.execute(query, (session_id,))
+            cur.execute(
+                query,
+                (
+                    session_id,
+                    META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+                    META_MESSAGE_TYPE_SURPRISE_SNAP,
+                ),
+            )
             rows = cur.fetchall()
 
             for row in rows:
