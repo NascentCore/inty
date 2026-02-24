@@ -146,6 +146,8 @@ jobs:
               echo "Application startup complete detected!"
             else
               echo "Timeout waiting for application startup"
+              echo "Container status (docker ps -a):"
+              sudo docker ps -a --filter "name=inty-backend-${{ steps.prep.outputs.environment }}" || true
               echo "Latest container logs:"
               sudo docker logs inty-backend-${{ steps.prep.outputs.environment }} 2>&1 || true
               exit 1
