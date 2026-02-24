@@ -43,7 +43,7 @@ on:
 
 concurrency:
   group: inty-deploy-backend-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   INTY_SERVER_IMAGE: ghcr.io/nascentcore/inty-backend/inty-server
