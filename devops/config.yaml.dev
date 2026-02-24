@@ -111,3 +111,7 @@ gemini_live:
 
 fal:
   api_key: c5403f4b-1171-4b13-80ef-684802b2c3c9:26b324871f439642e5a375481e01cd25
+
+tts:
+  use_gemini_prompted_tts: true
+
