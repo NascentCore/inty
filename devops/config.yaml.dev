@@ -58,6 +58,7 @@ firebase:
   service_account_path: "inty-firebase-key.json"
 
 agent:
+  # 测试用 API key，每周上限 $10，inty-dev API key，intellimate-dev project
   api_key: "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"
   # intellimate-dev project, inty-dev api key, personal access token
   langchain_api_key: "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"
