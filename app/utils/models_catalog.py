@@ -419,3 +419,24 @@ Z_IMAGE_TURBO = GenAIModel(
     ),
     playground_url="https://fal.ai/models/fal-ai/z-image/turbo",
 )
+
+Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
+    nickname="Z Image Turbo Image to Image",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
+    ),
+    builder=ModelBuilder.ALIBABA_TONGYI,
+    provider=ModelAPIProvider.FALAI,
+    id_on_provider="fal-ai/z-image/turbo/image-to-image",
+    official_url="https://github.com/Tongyi-MAI/Z-Image",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[
+            PriceInfo(
+                price=0.01, model=PricingModel.BY_USE, modality=DataModality.IMAGE
+            )
+        ],
+        notes="没有专门给模型的定价页面，playground 测试后观察实际 cost",
+    ),
+    playground_url="https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/playground",
+)
