@@ -1480,41 +1480,23 @@ async def generate_chat_image(
             detail="Only the latest AI reply can be used to generate an image",
         )
 
-    # 确定使用的模型：订阅用户和超级用户强制使用 gemini，免费用户使用配置或请求指定的模型
+    # 模型选择仅按订阅状态，使用 config 中的 nickname 解析为 GenAIModel（无请求覆盖）
     from app.core.model_selection import select_chat_image_model
-    from app.core.user_privilege.superuser_check import is_superuser
+    from app.utils.models_catalog import ModelAPIProvider
 
     subscription_status = await subscription_service.get_user_subscription_status(
         db, user.id
     )
     is_subscribed = subscription_status.is_subscribed
-    is_admin = is_superuser(user)
 
-    # 确定最终使用的模型
-    if is_subscribed or is_admin:
-        # 订阅用户和超级用户强制使用 gemini
-        selected_model = "gemini"
-    elif model:
-        # 免费用户使用请求指定的模型
-        selected_model = model
-    else:
-        # 免费用户使用配置默认模型
-        selected_model = select_chat_image_model(user=user, is_subscribed=False)
+    try:
+        resolved_model = select_chat_image_model(user=user, is_subscribed=is_subscribed)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    use_gemini = selected_model == "gemini"
-    if use_gemini:
-        agent_config = global_config_loaded_from_config_yaml.agent
-        # 订阅用户和超级用户使用 sub_user_chat_image_gemini_model（如 gemini-3-pro-image-preview）
-        gemini_model = (
-            agent_config.sub_user_chat_image_gemini_model
-            if (is_subscribed or is_admin)
-            else agent_config.free_user_chat_image_gemini_model
-        )
-    else:
-        gemini_model = None
+    use_gemini = resolved_model.provider == ModelAPIProvider.GOOGLE_VERTEX_AI
     logger.info(
-        f"消息生图模型选择 - 订阅用户: {is_subscribed}, 超级用户: {is_admin}, "
-        f"请求模型: {model}, 最终模型: {selected_model}"
+        f"消息生图模型选择 - 订阅: {is_subscribed}, 模型: {resolved_model.nickname} ({resolved_model.id_on_provider})"
     )
 
     # 调用图片生成服务
@@ -1562,13 +1544,13 @@ async def generate_chat_image(
     import time
 
     generation_start_time = time.time()
-    actual_model = gemini_model if use_gemini else selected_model
+    actual_model = resolved_model.id_on_provider
     model_fallback_due_to_429 = False
 
     try:
         if use_gemini:
-            if is_subscribed or is_admin:
-                primary_model = gemini_model
+            primary_model = resolved_model.id_on_provider
+            if is_subscribed:
                 fallback_model = (
                     global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
                 )
@@ -1620,10 +1602,10 @@ async def generate_chat_image(
                         message_content=message_content,
                         user_id=user_id,
                         history_count=history_count,
-                        model=gemini_model,
+                        model=primary_model,
                     )
                 )
-                actual_model = gemini_model
+                actual_model = primary_model
         else:
             image_generation_result = (
                 await image_generation_service.generate_chat_image_with_fal(
@@ -1632,12 +1614,12 @@ async def generate_chat_image(
                     message_id=message_id,
                     agent_data=agent_data,
                     message_content=message_content,
-                    model=selected_model,
+                    model=resolved_model.id_on_provider,
                     user_id=user_id,
                     history_count=history_count,
                 )
             )
-            actual_model = selected_model
+            actual_model = resolved_model.id_on_provider
         # 计算生成耗时
         generation_time_ms = int((time.time() - generation_start_time) * 1000)
         image_generation_result["model"] = actual_model
