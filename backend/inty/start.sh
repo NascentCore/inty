@@ -83,7 +83,7 @@ if [ "$DEV" = true ]; then
     ./evaluation/build.sh
   fi
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
-  DEV_EMAIL_USER_PASSWORD="${INTY_DEV_EMAIL_USER_PASSWORD:-TestPassword123}"
+  DEV_EMAIL_USER_PASSWORD="${INTY_DEV_EMAIL_USER_PASSWORD:-sxwl666!}"
   echo "Creating dev email users..."
   python scripts/create_email_password_superuser.py --email test1@sxwl.ai --password "$DEV_EMAIL_USER_PASSWORD" --nickname "test1" --is-superuser=false --yes
   python scripts/create_email_password_superuser.py --email test2@sxwl.ai --password "$DEV_EMAIL_USER_PASSWORD" --nickname "test2" --is-superuser=false --yes
