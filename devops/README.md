@@ -48,7 +48,3 @@ dev 环境预制了 3 个测试用户（使用`python scripts/create_email_passw
 同样的提示词，Cursor 搞定了，Copilot 搞不定：
 * Copilot 搞不定，引入新的错误：https://github.com/NascentCore/inty/pull/2246
 * Cursor 搞定，未引入新的错误：https://github.com/NascentCore/inty/pull/2249
-
-## 参考资料
-
-[Google GenAI pricing](https://cloud.google.com/vertex-ai/generative-ai/pricing#modality-based-pricing)
