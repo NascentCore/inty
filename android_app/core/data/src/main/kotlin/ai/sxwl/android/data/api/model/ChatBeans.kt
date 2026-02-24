@@ -101,6 +101,9 @@ data class MsgInfo(
     val userFeedback: UserFeedback? = null,
     val type: String? = null,
     @Json(name = "festival_memory_id") val festivalMemoryId: Long? = null,
+    @Json(name = "media_url") val mediaUrl: String? = null,
+    val price: Int = 0,
+    @Json(name = "is_locked") val unPurchased: Boolean = true
 ) {
 
     fun isOpening(): Boolean {

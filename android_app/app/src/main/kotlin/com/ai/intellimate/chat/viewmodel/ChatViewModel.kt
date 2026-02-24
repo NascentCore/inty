@@ -1458,15 +1458,12 @@ class ChatViewModel : BaseVM() {
         )
     }
 
-    suspend fun purchaseForMoment(messageEntity: MessageEntity): Boolean {
-        return runCatching {
-                chatMessageRepository.purchaseForMoment(
-                    messageEntity.metaData.agentId,
-                    messageEntity.id,
-                    messageEntity.momentExtra?.price ?: 0,
-                )
-            }
-            .getOrDefault(false)
+    suspend fun purchaseForMoment(messageEntity: MessageEntity) {
+        chatMessageRepository.purchaseForMoment(
+            messageEntity.metaData.agentId,
+            messageEntity.id,
+            messageEntity.momentExtra?.price ?: 0,
+        )
     }
 
     suspend fun reset() {

@@ -5,6 +5,8 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.SurpriseSnapUnlockReq
+import ai.sxwl.android.data.api.model.SurpriseSnapUnlockResp
 import ai.sxwl.android.data.api.model.UserTimeContext
 import ai.sxwl.android.data.api.model.VoteMessageReq
 import ai.sxwl.android.data.api.model.VoteMessageRsp
@@ -22,6 +24,10 @@ import kotlinx.coroutines.withContext
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
+    suspend fun unlockSurpriseSnap(messageId: Long): HttpResult<SurpriseSnapUnlockResp> {
+        return NetServiceMgr.getChatApi().unlockSurpriseSnap(SurpriseSnapUnlockReq(messageId))
+    }
+
     suspend fun getMessages(
         agentId: String,
         pageSize: Int,

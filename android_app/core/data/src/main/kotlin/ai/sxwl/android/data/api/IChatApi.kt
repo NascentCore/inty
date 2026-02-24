@@ -8,6 +8,8 @@ import ai.sxwl.android.data.api.model.MsgVoiceRsp
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.SurpriseSnapUnlockReq
+import ai.sxwl.android.data.api.model.SurpriseSnapUnlockResp
 import ai.sxwl.android.data.api.model.VoteMessageReq
 import ai.sxwl.android.data.api.model.VoteMessageRsp
 import com.architecture.httplib.core.HttpResult
@@ -19,6 +21,12 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface IChatApi {
+
+    @POST("/api/v1/chats/surprise-snap/unlock")
+    suspend fun unlockSurpriseSnap(
+        @Body req: SurpriseSnapUnlockReq
+    ): HttpResult<SurpriseSnapUnlockResp>
+
     @POST("/api/v1/chat/completions/{agent_id}")
     suspend fun sendMsg(
         @Path("agent_id") agent_id: String,
