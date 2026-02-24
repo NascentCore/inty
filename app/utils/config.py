@@ -450,6 +450,7 @@ class GeminiLiveConfig:
     audio_temp_dir: Optional[str] = None
 
 
+@dataclass
 class TTSConfig:
     """语音播报配置"""
 
