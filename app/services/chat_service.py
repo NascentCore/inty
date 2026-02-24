@@ -1705,7 +1705,7 @@ async def generate_chat_image(
                         "failure_type": failure_type,
                         "session_id": session_id,
                         "message_id": message_id,
-                        "model": selected_model,
+                        "model": resolved_model.id_on_provider,
                         "prompt": current_prompt,
                     },
                 )
@@ -1782,7 +1782,7 @@ async def generate_chat_image(
                     "failure_type": failure_type,
                     "session_id": session_id,
                     "message_id": message_id,
-                    "model": selected_model,
+                    "model": resolved_model.id_on_provider,
                     "prompt": current_prompt,
                 },
             )

@@ -779,8 +779,15 @@ class ImageGenerationService:
         )
         chat_history = messages_data.get("messages", [])
         user_info = ""
+        user_photo_url = None
         if user_id:
             user_info = await build_user_info_prompt_block(db, user_id)
+            from app.models.user import User
+
+            user_result = await db.execute(
+                select(User.user_photo).where(User.id == user_id)
+            )
+            user_photo_url = user_result.scalar_one_or_none()
         char_name, user_name = await self.get_char_user_names_for_image_prompt(
             db, user_id, agent_data
         )
@@ -800,7 +807,7 @@ class ImageGenerationService:
         if not reference_url.startswith("http"):
             if reference_url.startswith("gs://"):
                 reference_url = reference_url.replace(
-                    "gs://", "https://storage.googleapis.com/"
+                    GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
                 )
             else:
                 raise ValueError(f"Invalid reference image path: {reference_url}")
@@ -824,9 +831,21 @@ class ImageGenerationService:
             result = await z_image_turbo_image_to_image(args)
         else:
             assert model == SEEDREAM_V4_5_EDIT.id_on_provider
+            # Seedream accepts multiple reference images: iMate (agent) first, user profile second
+            seedream_image_urls: list[str] = [reference_url]
+            if user_photo_url and user_photo_url.strip():
+                if user_photo_url.startswith(GCS_GS_PREFIX):
+                    user_photo_url = user_photo_url.replace(
+                        GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
+                    )
+                if user_photo_url.startswith("http"):
+                    seedream_image_urls.append(user_photo_url)
+                    logger.info("Seedream 使用用户自拍作为第二参考图: {}", user_photo_url)
+            if len(seedream_image_urls) < 2:
+                seedream_image_urls.append(reference_url)
             args = FalSeedreamV4_5EditInput(
                 prompt=prompt,
-                image_urls=[reference_url, reference_url],
+                image_urls=seedream_image_urls,
             )
             result = await seedream_v4_5_edit(args)
 
