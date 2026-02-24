@@ -141,6 +141,9 @@ export const ChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const isSurpriseSnapMessage = (m: ChatMessage) =>
+    m.type === "surprise_snap" || m.meta_data?.messageType === "surprise_snap";
+
   const { isApiKeyValid } = useApiKeyContext();
 
   // 获取当前用户 profile 与订阅状态（用于 Surprise Snap 前端展示：订阅/管理员仍显示图片）
@@ -1698,8 +1701,11 @@ export const ChatPage: React.FC = () => {
                                         : "none",
                                   }}
                                 >
-                                  {message.type === "surprise_snap" ? (
+                                  {isSurpriseSnapMessage(message) ? (
                                     <div style={{ marginTop: 0 }}>
+                                      <div style={{ marginBottom: 6 }}>
+                                        <Tag color="purple">Fun Moment</Tag>
+                                      </div>
                                       {!message.is_locked ||
                                       subscriptionStatus?.is_subscribed ||
                                       userProfile?.is_superuser ? (
@@ -1937,7 +1943,7 @@ export const ChatPage: React.FC = () => {
                                       {message.role === "assistant" &&
                                         message.type !==
                                           "festival_memory_prompt" &&
-                                        message.type !== "surprise_snap" &&
+                                        !isSurpriseSnapMessage(message) &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",
@@ -1967,7 +1973,7 @@ export const ChatPage: React.FC = () => {
                                       {/* 图片生成按钮 - 只在最后一条AI文本消息显示（排除节日记忆提示） */}
                                       {message.role === "assistant" &&
                                         message.type !== "image" &&
-                                        message.type !== "surprise_snap" &&
+                                        !isSurpriseSnapMessage(message) &&
                                         message.type !==
                                           "festival_memory_prompt" &&
                                         message.remoteId &&
@@ -2036,11 +2042,11 @@ export const ChatPage: React.FC = () => {
                                           />
                                         )}
 
-                                      {/* 点赞/点踩按钮 - 仅对 AI 消息显示（排除节日记忆提示） */}
+                                      {/* 点赞/点踩按钮 - 仅对 AI 消息显示（排除节日记忆提示、Surprise Snap） */}
                                       {message.role === "assistant" &&
                                         message.type !==
                                           "festival_memory_prompt" &&
-                                        message.type !== "surprise_snap" &&
+                                        !isSurpriseSnapMessage(message) &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",
