@@ -275,9 +275,7 @@ FIELDS_TO_SYNC = [
     # 主提示词和模式提示词字段
     "main_prompt",
     "mode_prompt",
-    # 角色卡相关字段
-    "character_card_spec",
-    "character_card_data",
+    # 角色设定相关字段
     "personality",
     "scenario",
     "message_example",
