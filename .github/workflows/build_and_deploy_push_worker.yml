@@ -6,16 +6,18 @@ on:
     branches:
       - main
     paths:
+      # 数据库版本变动
+      - "alembic/**/*.py"
       # 后端代码
       - "app/**/*.py"
-      - "backend/**"
-      - "alembic/**/*.py"
-      - "scripts/**/*.py"
-      - "devops/docker/Dockerfile.push-worker"
+      - "backend/push_worker/*.py"
       - "backend/push_worker/start.sh"
+      - "requirements.txt"
+      # 运维部署
+      - "devops/docker/Dockerfile.push-worker"
       - "devops/config.yaml.dev"
       - "devops/config.yaml.prod"
-      - "requirements.txt"
+      # 本文件
       - ".github/workflows/build_and_deploy_push_worker.yml"
   workflow_dispatch:
     inputs:
