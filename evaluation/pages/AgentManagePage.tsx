@@ -45,7 +45,7 @@ import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
 import ScoreSelector from "../components/common/ScoreSelector";
 import { useAgents } from "../hooks/useAgents";
-import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
+import AgentDetailModal from "../components/common/AgentDetailModal";
 import { generateRandomName } from "../utils/nameGenerator";
 import { hasAgentChanged } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
@@ -2302,38 +2302,19 @@ export const AgentManagePage: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 智能体详情模态框 */}
-      <Modal
-        title="角色详情"
+      <AgentDetailModal
         open={detailModalVisible}
-        onCancel={() => {
+        agent={currentAgent}
+        onClose={() => {
           setDetailModalVisible(false);
           setCurrentAgent(null);
         }}
-        footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            关闭
-          </Button>,
-          <Button
-            key="edit"
-            type="primary"
-            onClick={() => {
-              setDetailModalVisible(false);
-              if (currentAgent) showEditModal(currentAgent);
-            }}
-          >
-            编辑
-          </Button>,
-        ]}
-        width={800}
-      >
-        {currentAgent && (
-          <AgentInfoDisplay
-            agent={currentAgent}
-            onDeleteBackgroundImage={handleDeleteBackgroundImage}
-          />
-        )}
-      </Modal>
+        onEdit={(agent) => {
+          setDetailModalVisible(false);
+          showEditModal(agent);
+        }}
+        onDeleteBackgroundImage={handleDeleteBackgroundImage}
+      />
 
       {/* 生成背景视频模态框 */}
       <Modal

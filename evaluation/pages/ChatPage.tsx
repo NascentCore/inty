@@ -50,6 +50,7 @@ import type { Agent, FestivalMemoryItem } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
+import AgentDetailModal from "../components/common/AgentDetailModal";
 import { MessageToImageIcon } from "../components/MessageToImageIcon";
 import { filterAgentsByName } from "../utils/agentFilters";
 import {
@@ -119,6 +120,7 @@ export const ChatPage: React.FC = () => {
   const [agentWithFestivalMemories, setAgentWithFestivalMemories] =
     useState<Agent | null>(null);
   const [festivalMemoriesLoading, setFestivalMemoriesLoading] = useState(false);
+  const [agentDetailModalVisible, setAgentDetailModalVisible] = useState(false);
   const backgroundImageUrl = selectedAgent?.background;
   const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
@@ -1261,7 +1263,23 @@ export const ChatPage: React.FC = () => {
               <Card
                 title={
                   <Space>
-                    <AvatarDisplay agent={selectedAgent} size={32} />
+                    <Tooltip title="查看角色详情">
+                      <Button
+                        type="text"
+                        onClick={() => setAgentDetailModalVisible(true)}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          padding: 0,
+                          borderRadius: "50%",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <AvatarDisplay agent={selectedAgent} size={32} />
+                      </Button>
+                    </Tooltip>
                     <div>
                       <Text strong>{selectedAgent.name}</Text>
                       <Text
@@ -2037,6 +2055,12 @@ export const ChatPage: React.FC = () => {
             )}
           </Col>
         </Row>
+
+        <AgentDetailModal
+          open={agentDetailModalVisible}
+          agent={selectedAgent}
+          onClose={() => setAgentDetailModalVisible(false)}
+        />
 
         {/* 聊天历史模态框 */}
         <Modal
