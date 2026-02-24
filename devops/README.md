@@ -12,6 +12,14 @@
   python scripts/<...>.py <flags>
   ```
 
+### dev 环境测试用户
+
+dev 环境预制了 3 个测试用户：
+
+- test1@sxwl.ai sxwl666!
+- test2@sxwl.ai sxwl666!
+- test3@sxwl.ai sxwl666!
+
 ## 链接
 
 - [prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
