@@ -67,12 +67,11 @@ def _handle_subscription_limit_error(
 
 def _build_surprise_snap_choice_message(
     info: dict,
-    is_subscribed: bool,
     unlocked_message_ids: set,
 ) -> dict:
-    """构建单条 Surprise Snap choice 的 message 字典，与消息列表中 surprise_snap 项结构一致。"""
+    """构建单条 Surprise Snap choice 的 message 字典，与消息列表中 surprise_snap 项结构一致。is_locked 仅根据是否在 unlock 表中。"""
     message_id = info.get("id")
-    is_locked = not (is_subscribed or (message_id in unlocked_message_ids))
+    is_locked = not (message_id in unlocked_message_ids)
     return {
         "role": None,
         "content": "",
@@ -443,15 +442,11 @@ async def agent_chat_completions(
                 db, surprise_snap_message_id
             )
             if info is not None:
-                subscription = await subscription_service.get_user_current_subscription(
-                    db, current_user.id
-                )
                 unlocked_ids = await get_unlocked_surprise_snap_message_ids(
                     db, current_user.id
                 )
                 message = _build_surprise_snap_choice_message(
                     info,
-                    is_subscribed=bool(subscription),
                     unlocked_message_ids=unlocked_ids,
                 )
                 idx = len(data["choices"])

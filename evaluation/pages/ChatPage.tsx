@@ -43,8 +43,10 @@ import {
   DeleteOutlined,
   LikeOutlined,
   DislikeOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
+import { useApiKeyContext } from "../hooks/useApiKey";
 import api from "../services/api";
 import type { Agent, FestivalMemoryItem } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
@@ -77,9 +79,14 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
-  type?: "text" | "image" | "festival_memory_prompt"; // 消息类型：文本、图片、节日记忆提示
+  type?: "text" | "image" | "festival_memory_prompt" | "surprise_snap"; // 消息类型：文本、图片、节日记忆提示、Surprise Snap
   festival_memory_id?: number; // 节日记忆提示消息对应的 memory 记录 id（仅 type=festival_memory_prompt 时）
   image_url?: string; // 图片URL（仅图片消息）
+  // Surprise Snap 专属角色照（仅 type=surprise_snap 时）
+  media_url?: string;
+  caption?: string;
+  price?: number;
+  is_locked?: boolean;
   user_vote?: "like" | "dislike" | null; // 用户投票：点赞/点踩
   meta_data?: {
     messageType?: string;
@@ -121,12 +128,52 @@ export const ChatPage: React.FC = () => {
     useState<Agent | null>(null);
   const [festivalMemoriesLoading, setFestivalMemoriesLoading] = useState(false);
   const [agentDetailModalVisible, setAgentDetailModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    is_superuser?: boolean;
+  } | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    is_subscribed?: boolean;
+  } | null>(null);
   const backgroundImageUrl = selectedAgent?.background;
   const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const { isApiKeyValid } = useApiKeyContext();
+
+  // 获取当前用户 profile 与订阅状态（用于 Surprise Snap 前端展示：订阅/管理员仍显示图片）
+  useEffect(() => {
+    if (!isApiKeyValid) {
+      setUserProfile(null);
+      setSubscriptionStatus(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const client = api.getIntyClient();
+        const [profileRes, subRes] = await Promise.all([
+          client.api.v1.users.profile.me(),
+          client.api.v1.subscription.getStatus(),
+        ]);
+        if (cancelled) return;
+        const data = (profileRes as { data?: { is_superuser?: boolean } })?.data;
+        const subData = (subRes as { data?: { is_subscribed?: boolean } })?.data;
+        setUserProfile(data ? { is_superuser: data.is_superuser } : null);
+        setSubscriptionStatus(subData ? { is_subscribed: subData.is_subscribed } : null);
+      } catch {
+        if (!cancelled) {
+          setUserProfile(null);
+          setSubscriptionStatus(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isApiKeyValid]);
 
   // 智能体数据
   const {
@@ -268,6 +315,10 @@ export const ChatPage: React.FC = () => {
             type: msg.type || "text",
             festival_memory_id: msg.festival_memory_id,
             image_url: msg.image_url,
+            media_url: msg.media_url,
+            caption: msg.caption,
+            price: msg.price,
+            is_locked: msg.is_locked,
             user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }),
@@ -434,6 +485,59 @@ export const ChatPage: React.FC = () => {
     [selectedAgent?.id],
   );
 
+  const [unlockingSurpriseSnapId, setUnlockingSurpriseSnapId] = useState<
+    number | null
+  >(null);
+
+  const handleSurpriseSnapUnlock = useCallback(
+    async (messageId: number) => {
+      if (!selectedAgent) return;
+      setUnlockingSurpriseSnapId(messageId);
+      try {
+        await api.chat.surpriseSnapUnlock(messageId);
+        const messagesResponse = await api.chat.getMessages(selectedAgent.id, {
+          limit: 100,
+          offset: 0,
+        });
+        const msgList = messagesResponse.messages ?? [];
+        const converted: ChatMessage[] = msgList.map((msg, i) => ({
+          id: `msg_${selectedAgent.id}_${i}_${Date.now()}`,
+          role:
+            msg.type === "festival_memory_prompt" &&
+            (msg.role == null || String(msg.role) === "")
+              ? "assistant"
+              : (msg.role ??
+                (msg.sender_type === "USER" ? "user" : "assistant")),
+          content: msg.content || "",
+          timestamp:
+            msg.timestamp || msg.created_at || new Date().toISOString(),
+          remoteId: msg.id ? msg.id.toString() : undefined,
+          type: msg.type || "text",
+          festival_memory_id: msg.festival_memory_id,
+          image_url: msg.image_url,
+          media_url: msg.media_url,
+          caption: msg.caption,
+          price: msg.price,
+          is_locked: msg.is_locked,
+          user_vote: msg.user_vote || null,
+          meta_data: msg.meta_data,
+        }));
+        const unique = converted.filter(
+          (msg, index, self) =>
+            msg.remoteId &&
+            index === self.findIndex((m) => m.remoteId === msg.remoteId),
+        );
+        setMessages(unique);
+      } catch (e) {
+        console.error("Surprise Snap 解锁失败:", e);
+        message.error("解锁失败，请重试");
+      } finally {
+        setUnlockingSurpriseSnapId(null);
+      }
+    },
+    [selectedAgent],
+  );
+
   // 选择智能体 - 从后端获取真实会话记录
   const handleSelectAgent = useCallback(
     async (agent: Agent) => {
@@ -469,6 +573,10 @@ export const ChatPage: React.FC = () => {
           type: msg.type || "text",
           festival_memory_id: msg.festival_memory_id,
           image_url: msg.image_url,
+          media_url: msg.media_url,
+          caption: msg.caption,
+          price: msg.price,
+          is_locked: msg.is_locked,
           user_vote: msg.user_vote || null,
           meta_data: msg.meta_data,
         }));
@@ -570,6 +678,10 @@ export const ChatPage: React.FC = () => {
                 type: msg.type || "text",
                 festival_memory_id: msg.festival_memory_id,
                 image_url: msg.image_url,
+                media_url: msg.media_url,
+                caption: msg.caption,
+                price: msg.price,
+                is_locked: msg.is_locked,
                 user_vote: msg.user_vote || null,
                 meta_data: msg.meta_data,
               }),
@@ -672,6 +784,10 @@ export const ChatPage: React.FC = () => {
               type: msg.type || "text",
               festival_memory_id: msg.festival_memory_id,
               image_url: msg.image_url,
+              media_url: msg.media_url,
+              caption: msg.caption,
+              price: msg.price,
+              is_locked: msg.is_locked,
               user_vote: msg.user_vote || null,
               meta_data: msg.meta_data,
             }),
@@ -802,6 +918,10 @@ export const ChatPage: React.FC = () => {
             type: msg.type || "text",
             festival_memory_id: msg.festival_memory_id,
             image_url: msg.image_url,
+            media_url: msg.media_url,
+            caption: msg.caption,
+            price: msg.price,
+            is_locked: msg.is_locked,
             user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }));
@@ -1577,20 +1697,107 @@ export const ChatPage: React.FC = () => {
                                         : "none",
                                   }}
                                 >
-                                  {/* 显示文本消息 */}
-                                  <Paragraph
-                                    style={{
-                                      margin: 0,
-                                      color:
-                                        message.role === "user"
-                                          ? "#fff"
-                                          : "#000",
-                                      whiteSpace: "pre-wrap",
-                                      wordBreak: "break-word",
-                                    }}
-                                  >
-                                    {message.type ===
-                                    "festival_memory_prompt" ? (
+                                  {message.type === "surprise_snap" ? (
+                                    <div style={{ marginTop: 0 }}>
+                                      {!message.is_locked ||
+                                      subscriptionStatus?.is_subscribed ||
+                                      userProfile?.is_superuser ? (
+                                        <>
+                                          {message.media_url && (
+                                            <Image
+                                              src={message.media_url}
+                                              alt="Surprise Snap"
+                                              style={{
+                                                maxWidth: "300px",
+                                                borderRadius: "8px",
+                                              }}
+                                              placeholder={
+                                                <Spin size="small" />
+                                              }
+                                            />
+                                          )}
+                                          {message.caption && (
+                                            <div style={{ marginTop: 8 }}>
+                                              {message.caption}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div
+                                            style={{
+                                              position: "relative",
+                                              display: "inline-block",
+                                            }}
+                                          >
+                                            {message.media_url && (
+                                              <Image
+                                                src={message.media_url}
+                                                alt=""
+                                                style={{
+                                                  maxWidth: 300,
+                                                  borderRadius: 8,
+                                                  filter: "blur(12px)",
+                                                  pointerEvents: "none",
+                                                }}
+                                              />
+                                            )}
+                                            <div
+                                              style={{
+                                                position: "absolute",
+                                                top: "50%",
+                                                left: "50%",
+                                                transform:
+                                                  "translate(-50%,-50%)",
+                                                fontSize: 32,
+                                                color: "#722ed1",
+                                              }}
+                                            >
+                                              <CrownOutlined />
+                                            </div>
+                                          </div>
+                                          {message.caption && (
+                                            <div style={{ marginTop: 8 }}>
+                                              {message.caption}
+                                            </div>
+                                          )}
+                                          <Button
+                                            type="primary"
+                                            size="small"
+                                            loading={
+                                              unlockingSurpriseSnapId ===
+                                              Number(message.remoteId)
+                                            }
+                                            onClick={() =>
+                                              message.remoteId &&
+                                              handleSurpriseSnapUnlock(
+                                                Number(message.remoteId),
+                                              )
+                                            }
+                                            style={{ marginTop: 8 }}
+                                          >
+                                            用 Credits 解锁（
+                                            {message.price ?? 0}）
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      {/* 显示文本消息 */}
+                                      <Paragraph
+                                        style={{
+                                          margin: 0,
+                                          color:
+                                            message.role === "user"
+                                              ? "#fff"
+                                              : "#000",
+                                          whiteSpace: "pre-wrap",
+                                          wordBreak: "break-word",
+                                        }}
+                                      >
+                                        {message.type ===
+                                        "festival_memory_prompt" ? (
                                       <>
                                         {(message.content || "")
                                           .replace(
@@ -1694,6 +1901,8 @@ export const ChatPage: React.FC = () => {
                                           )}
                                       </div>
                                     )}
+                                    </>
+                                  )}
                                   <div
                                     style={{
                                       fontSize: "10px",
@@ -1723,10 +1932,11 @@ export const ChatPage: React.FC = () => {
                                         alignItems: "center",
                                       }}
                                     >
-                                      {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示（排除节日记忆提示） */}
+                                      {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示（排除节日记忆提示、Surprise Snap） */}
                                       {message.role === "assistant" &&
                                         message.type !==
                                           "festival_memory_prompt" &&
+                                        message.type !== "surprise_snap" &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",
@@ -1756,6 +1966,7 @@ export const ChatPage: React.FC = () => {
                                       {/* 图片生成按钮 - 只在最后一条AI文本消息显示（排除节日记忆提示） */}
                                       {message.role === "assistant" &&
                                         message.type !== "image" &&
+                                        message.type !== "surprise_snap" &&
                                         message.type !==
                                           "festival_memory_prompt" &&
                                         message.remoteId &&
@@ -1828,6 +2039,7 @@ export const ChatPage: React.FC = () => {
                                       {message.role === "assistant" &&
                                         message.type !==
                                           "festival_memory_prompt" &&
+                                        message.type !== "surprise_snap" &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",

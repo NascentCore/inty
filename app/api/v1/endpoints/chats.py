@@ -187,9 +187,6 @@ async def get_agent_chat_messages(
             except Exception as e:
                 logger.warning(f"投递节日记忆提示失败: {e}")
 
-        subscription = await subscription_service.get_user_current_subscription(
-            db, current_user.id
-        )
         unlocked_ids = await get_unlocked_surprise_snap_message_ids(
             db, current_user.id
         )
@@ -198,7 +195,6 @@ async def get_agent_chat_messages(
             limit=limit,
             offset=offset,
             user_id=current_user.id,
-            is_subscribed=bool(subscription),
             unlocked_surprise_snap_message_ids=unlocked_ids,
         )
 

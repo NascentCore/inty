@@ -1156,8 +1156,8 @@ def get_messages_paginated(
         limit: 每页消息数量
         offset: 偏移量（跳过的消息数量）
         user_id: 用户ID（保留以保持API兼容性，但不再用于过滤反馈）
-        is_subscribed: 当前用户是否订阅，用于 Surprise Snap 是否已解锁
-        unlocked_surprise_snap_message_ids: 当前用户已解锁的 surprise_snap 消息 ID 集合
+        is_subscribed: 保留以兼容调用方，不参与 is_locked 计算
+        unlocked_surprise_snap_message_ids: 当前用户已解锁的 surprise_snap 消息 ID 集合；is_locked 仅据此计算，订阅状态由 App 端判断
 
     Returns:
         包含消息列表和分页信息的字典
@@ -1299,9 +1299,7 @@ def get_messages_paginated(
                         message_obj["caption"] = data.get("caption") or ""
                         message_obj["price"] = data.get("credits_required", 0)
                         unlocked_ids = unlocked_surprise_snap_message_ids or set()
-                        message_obj["is_locked"] = not (
-                            is_subscribed is True or message_id in unlocked_ids
-                        )
+                        message_obj["is_locked"] = not (message_id in unlocked_ids)
                     else:
                         message_obj["type"] = "text"
 

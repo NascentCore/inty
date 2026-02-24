@@ -1077,9 +1077,13 @@ export const chatApi = {
       content: string;
       timestamp: string;
       created_at?: string;
-      type?: "text" | "image" | "festival_memory_prompt";
+      type?: "text" | "image" | "festival_memory_prompt" | "surprise_snap";
       festival_memory_id?: number;
       image_url?: string;
+      media_url?: string;
+      caption?: string;
+      price?: number;
+      is_locked?: boolean;
       user_vote?: "like" | "dislike" | null;
       meta_data?: {
         generated_image?: {
@@ -1128,6 +1132,10 @@ export const chatApi = {
       message_id: messageId,
       vote,
     }),
+
+  // Surprise Snap 解锁（免费用户用 credit 解锁，扣费在 App 端；后端仅记录解锁状态）
+  surpriseSnapUnlock: (messageId: number): Promise<{ data?: { unlocked?: boolean } }> =>
+    apiClient.post(`/chats/surprise-snap/unlock`, { message_id: messageId }),
 
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
   clearMessages: (
