@@ -29,7 +29,7 @@ _SEEDREAM_EXAMPLE_IMAGE_URLS = [
 async def test_seedream_v4_5_edit_trace_with_real_fal():
     """使用实际的 FAL_KEY 测试 seedream_v4_5_edit 的 tracing；通过 LangSmith list_runs 查询确认 trace 含本次随机字符串。"""
     random_suffix = str(uuid.uuid4())
-    random_prompt = _SEEDREAM_EXAMPLE_PROMPT + f" {random_suffix}"
+    random_prompt = _SEEDREAM_EXAMPLE_PROMPT + "output jpeg format" + f" {random_suffix}"
     start_time = datetime.datetime.now(datetime.timezone.utc)
     args = FalSeedreamV4_5EditArgs(
         prompt=random_prompt,

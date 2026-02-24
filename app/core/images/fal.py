@@ -48,11 +48,12 @@ from langsmith import traceable
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.config import global_config_loaded_from_config_yaml as global_config
 from app.external_services.gcs import upload_to_gcs
-from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize, parse_image_data_uri
+from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize, compress_png_to_jpeg, parse_image_data_uri
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
 from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO
+
 
 # ImageFormat to MIME content_type for GCS upload.
 _IMAGE_FORMAT_TO_CONTENT_TYPE: dict[ImageFormat, str] = {
@@ -202,18 +203,17 @@ class ZImageTurboResult(BaseModel):
     prompt: str
 
 
-def _upload_data_uri_to_gcs_and_return_url(data_uri: str) -> str:
+def _upload_data_uri_to_gcs_and_return_url(data_uri: str, enable_compress_png_to_jpeg: bool = True) -> str:
     """Parse image data URI, upload to GCS with correct suffix, return public HTTP URL."""
-    parsed = parse_image_data_uri(data_uri)
-    ext = parsed.image_format.value
-    content_type = _IMAGE_FORMAT_TO_CONTENT_TYPE[parsed.image_format]
+    file_data, image_format = parse_image_data_uri(data_uri)
+    if enable_compress_png_to_jpeg and image_format == ImageFormat.PNG:
+        file_data, image_format = compress_png_to_jpeg(file_data), ImageFormat.JPEG
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
-    gcs_path = f"fal_images/{timestamp}_{uuid.uuid4().hex[:8]}.{ext}"
-    bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+    gcs_path = f"fal_images/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
     return upload_to_gcs(
-        file_data=parsed.data,
-        content_type=content_type,
-        bucket_name=bucket_name,
+        file_data=file_data,
+        content_type=_IMAGE_FORMAT_TO_CONTENT_TYPE[image_format],
+        bucket_name=global_config.gcs.bucket,
         path=gcs_path,
     )
 
