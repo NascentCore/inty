@@ -5,17 +5,15 @@
 ### 产品概述
 
 - IntelliMate 定位为面向 35+、有较好社会地位与自我认知的美国男性用户的长期 AI 陪伴产品，提供可持续进化的情感陪伴。
-- IntelliMate 产品形态基于 Chat 界面，用户通过手机屏幕、与 iMate 交流，使用文字、图片、
-声音（语音消息、通话、音乐）、视频（动图、视频、背景声音等）。
+- IntelliMate 产品形态基于 Chat 界面，用户通过手机屏幕、与 iMate 交流，使用文字、图片、声音（语音消息、通话、音乐）、视频（动图、视频、背景声音等）。
   - iMate 是所有角色的总称，如”这是为您推荐的 iMates“。
   - iMate 是提供情感陪伴体验的主体，IntelliMate 无法通过人工设计来满足用户需求，只能通过 iMate 让用户通过与其互动来持续获得和优化的情感陪伴体验
   - Character/Agent/iMate 通常指同一概念，Agent 沿用自后端、指一个独立的逻辑概念来指代一个独立的抽象角色
   - Character（角色）沿用自业界的统称，一般来自 Character.ai
 - **用户手册**：IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
-  - app/（后端）改动不改动[用户手册](docs/INTELLIMATE.md)
-  - 使用 jinja2 template 编写提示词模版：`{{ <变量名> }}`
-    使用 `prompt_template.py:render_prompt_jinja2_template` 来生成最终提示词
-    - 生产环境代码禁止使用 python `f""` 字符串、测试中可以使用
+  - app/（后端）改动不影响[用户手册](docs/INTELLIMATE.md)
+- **提示词模版**：使用 jinja2 template 编写提示词模版：`{{ <变量名> }}` 使用 `prompt_template.py:render_prompt_jinja2_template` 来生成最终提示词
+  - 生产环境代码禁止使用 python `f""` 字符串、测试中可以使用
    
 ### 代码库概述
 
@@ -32,6 +30,8 @@
     - 该指令仅适用于可以使用中文的场景；若内容不能使用中文（如代码），则不适用。
 - **评测数据**:
   - 采集要放在功能开发的核心需求里：原始数据收集（在功能设计过程中可以考虑将重要数据写入日志、数据库）、数据筛选清洗等等
+- **代码**：
+  - Do not both with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
 
 ## 软件工程规范
 
