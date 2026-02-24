@@ -1,11 +1,12 @@
 import json
-from datetime import date
-from typing import Any, Dict, List, Optional, Union
+import uuid
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional, Set, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import and_, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.prompt_template import (
@@ -382,6 +383,7 @@ FESTIVAL_MEMORY_PROMPT_CONTENT = (
     "{char} wrote you a secret heartbeat diary. Take a quiet look."
 )
 META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
+META_MESSAGE_TYPE_SURPRISE_SNAP = "surprise_snap"
 
 
 def get_festival_memory_prompt_content_for_agent_sync(agent_id: str) -> str:
@@ -546,6 +548,66 @@ async def add_ai_message(
         logger.error(f"添加AI消息失败 {session_id}: {str(e)}")
         await db.rollback()
         raise
+
+
+async def add_surprise_snap_message(
+    db: AsyncSession,
+    session_id: str,
+    agent_id: str,
+    image_url: str,
+    caption: str,
+    credits_required: int,
+    exclusive_photo_index: int,
+) -> Optional[int]:
+    """插入一条 Surprise Snap 专属照消息，返回消息 ID。"""
+    try:
+        message_data = {
+            "type": META_MESSAGE_TYPE_SURPRISE_SNAP,
+            "data": {
+                "image_url": image_url,
+                "caption": caption,
+                "credits_required": credits_required,
+            },
+        }
+        meta_data = {
+            "messageType": META_MESSAGE_TYPE_SURPRISE_SNAP,
+            "agentId": agent_id,
+            "exclusive_photo_index": exclusive_photo_index,
+        }
+        sid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+        ch = ChatHistory(
+            session_id=sid,
+            message=message_data,
+            meta_data=meta_data,
+        )
+        db.add(ch)
+        await db.commit()
+        await db.refresh(ch)
+        return ch.id
+    except Exception as e:
+        logger.error(f"添加 Surprise Snap 消息失败 session_id={session_id}: {e}")
+        await db.rollback()
+        raise
+
+
+async def count_user_messages_since(
+    db: AsyncSession,
+    session_id: str,
+    since_at: datetime,
+) -> int:
+    """统计该会话中自 since_at 以来的用户（human）消息条数。"""
+    sid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+    stmt = select(func.count()).select_from(ChatHistory).where(
+        ChatHistory.session_id == sid,
+        ChatHistory.deleted_at.is_(None),
+        ChatHistory.created_at >= since_at,
+        or_(
+            ChatHistory.message["type"].astext == "human",
+            ChatHistory.message["type"].astext == "HumanMessage",
+        ),
+    )
+    result = await db.execute(stmt)
+    return result.scalar() or 0
 
 
 async def update_message_metadata(
@@ -1024,8 +1086,67 @@ async def get_ai_message_infos_by_ids(
         return {}
 
 
+async def get_surprise_snap_message_display_info(
+    db: AsyncSession, message_id: int
+) -> Optional[Dict[str, Any]]:
+    """
+    根据消息 ID 获取单条 surprise_snap 消息的展示信息（与 get_messages_paginated 中
+    surprise_snap 项结构一致），供聊天接口作为 choice 返回。未找到或非 surprise_snap 返回 None。
+    """
+    try:
+        stmt = (
+            select(ChatHistory)
+            .where(
+                ChatHistory.id == message_id,
+                ChatHistory.message["type"].astext == META_MESSAGE_TYPE_SURPRISE_SNAP,
+                ChatHistory.deleted_at.is_(None),
+            )
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+        msg = row.message
+        if isinstance(msg, str):
+            msg = json.loads(msg) if msg else {}
+        elif not isinstance(msg, dict):
+            msg = {}
+        data = msg.get("data") or {}
+        if not isinstance(data, dict):
+            data = {}
+        image_url_raw = data.get("image_url")
+        media_url = None
+        if image_url_raw:
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
+            media_url = image_transform_service.transform_desktop(image_url_raw)
+        return {
+            "id": row.id,
+            "timestamp": (
+                row.created_at.isoformat() if row.created_at else None
+            ),
+            "meta_data": row.meta_data,
+            "media_url": media_url,
+            "caption": data.get("caption") or "",
+            "price": int(data.get("credits_required", 0)),
+        }
+    except Exception as e:
+        logger.error(
+            f"获取 Surprise Snap 展示信息失败 message_id={message_id}: {str(e)}"
+        )
+        return None
+
+
 def get_messages_paginated(
-    session_id: str, limit: int = 20, offset: int = 0, user_id: Optional[str] = None
+    session_id: str,
+    limit: int = 20,
+    offset: int = 0,
+    user_id: Optional[str] = None,
+    *,
+    is_subscribed: Optional[bool] = None,
+    unlocked_surprise_snap_message_ids: Optional[Set[int]] = None,
 ) -> Dict[str, Any]:
     """
     分页获取聊天消息
@@ -1035,6 +1156,8 @@ def get_messages_paginated(
         limit: 每页消息数量
         offset: 偏移量（跳过的消息数量）
         user_id: 用户ID（保留以保持API兼容性，但不再用于过滤反馈）
+        is_subscribed: 当前用户是否订阅，用于 Surprise Snap 是否已解锁
+        unlocked_surprise_snap_message_ids: 当前用户已解锁的 surprise_snap 消息 ID 集合
 
     Returns:
         包含消息列表和分页信息的字典
@@ -1158,6 +1281,27 @@ def get_messages_paginated(
                                 message_obj["festival_memory_id"] = int(raw_id)
                             except (TypeError, ValueError):
                                 pass
+                    elif message_type == META_MESSAGE_TYPE_SURPRISE_SNAP:
+                        message_obj["type"] = META_MESSAGE_TYPE_SURPRISE_SNAP
+                        message_obj["role"] = None
+                        message_obj["sender_type"] = None
+                        data = message_data.get("data") or {}
+                        image_url_raw = data.get("image_url")
+                        if image_url_raw:
+                            from app.services.image_transform_service import (
+                                image_transform_service,
+                            )
+                            message_obj["media_url"] = (
+                                image_transform_service.transform_desktop(image_url_raw)
+                            )
+                        else:
+                            message_obj["media_url"] = None
+                        message_obj["caption"] = data.get("caption") or ""
+                        message_obj["price"] = data.get("credits_required", 0)
+                        unlocked_ids = unlocked_surprise_snap_message_ids or set()
+                        message_obj["is_locked"] = not (
+                            is_subscribed is True or message_id in unlocked_ids
+                        )
                     else:
                         message_obj["type"] = "text"
 

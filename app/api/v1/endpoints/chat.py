@@ -28,6 +28,10 @@ from app.services import agent_service, chat_history_service, chat_service
 from app.services.memory_service import deliver_festival_memories_for_user_agent
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
+from app.services.surprise_snap_service import (
+    get_unlocked_surprise_snap_message_ids,
+    try_trigger_surprise_snap,
+)
 from app.services.push_notification_service import mark_user_push_notifications_as_read
 from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
@@ -59,6 +63,28 @@ def _handle_subscription_limit_error(
             error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
             extra_data={"used_count": used_count, "daily_limit": daily_limit},
         )
+
+
+def _build_surprise_snap_choice_message(
+    info: dict,
+    is_subscribed: bool,
+    unlocked_message_ids: set,
+) -> dict:
+    """构建单条 Surprise Snap choice 的 message 字典，与消息列表中 surprise_snap 项结构一致。"""
+    message_id = info.get("id")
+    is_locked = not (is_subscribed or (message_id in unlocked_message_ids))
+    return {
+        "role": None,
+        "content": "",
+        "type": "surprise_snap",
+        "id": message_id,
+        "media_url": info.get("media_url"),
+        "caption": info.get("caption") or "",
+        "price": info.get("price", 0),
+        "is_locked": is_locked,
+        "meta_data": info.get("meta_data"),
+        "timestamp": info.get("timestamp"),
+    }
 
 
 def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> dict:
@@ -332,6 +358,14 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
+        surprise_snap_message_id = None
+        try:
+            surprise_snap_message_id = await try_trigger_surprise_snap(
+                db, session_id, current_user.id, agent_id
+            )
+        except Exception as e:
+            logger.warning(f"Surprise Snap 触发失败: {e}")
+
         # 获取 AI 消息完整信息：插入时已拿到 message id 则按 id 查，否则查最新一条
         latest_message_info = None
         try:
@@ -399,6 +433,28 @@ async def agent_chat_completions(
                 msg_id = item.get("message_id")
                 info = infos_map.get(msg_id) if msg_id is not None else None
                 message = _build_festival_prompt_choice_message(item, info)
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
+                )
+
+        # 若本次触发了 Surprise Snap，追加一条 choice 与消息列表结构一致
+        if surprise_snap_message_id is not None:
+            info = await chat_history_service.get_surprise_snap_message_display_info(
+                db, surprise_snap_message_id
+            )
+            if info is not None:
+                subscription = await subscription_service.get_user_current_subscription(
+                    db, current_user.id
+                )
+                unlocked_ids = await get_unlocked_surprise_snap_message_ids(
+                    db, current_user.id
+                )
+                message = _build_surprise_snap_choice_message(
+                    info,
+                    is_subscribed=bool(subscription),
+                    unlocked_message_ids=unlocked_ids,
+                )
+                idx = len(data["choices"])
                 data["choices"].append(
                     {"index": idx, "message": message, "finish_reason": "stop"}
                 )
