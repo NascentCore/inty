@@ -9,7 +9,6 @@ on:
       # 后端代码
       - "app/**/*.py"
       - "alembic/**/*.py"
-      - "scripts/**/*.py"
       # 开发环境配置文件
       - "devops/config.yaml.dev"
       - "devops/config.yaml.prod"
