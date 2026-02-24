@@ -251,6 +251,13 @@ class TestClient:
 
         return response_data["data"]["urls"]
 
+    def surprise_snap_unlock(self, message_id: int):
+        """POST /api/v1/chats/surprise-snap/unlock. Returns the response; caller asserts response.status_code and response.json()."""
+        return self.client.post(
+            f"{self.base_url}/api/v1/chats/surprise-snap/unlock",
+            json={"message_id": message_id},
+        )
+
     def close(self):
         """Close the HTTP client."""
         self.client.close()

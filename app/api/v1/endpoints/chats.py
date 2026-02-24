@@ -24,6 +24,7 @@ from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
 from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
+from app.schemas.evaluation import SurpriseSnapUnlockRequest
 from app.schemas.response import (
     APIResponse,
     BizError,
@@ -35,6 +36,10 @@ from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
 from app.services.memory_service import deliver_festival_memories_for_user_agent
 from app.services.global_services import subscription_service
+from app.services.surprise_snap_service import (
+    get_unlocked_surprise_snap_message_ids,
+    record_surprise_snap_unlock,
+)
 from app.services.voice_service import voice_service
 
 # TODO: Prefix should be /chat instead of /chats.
@@ -182,9 +187,19 @@ async def get_agent_chat_messages(
             except Exception as e:
                 logger.warning(f"投递节日记忆提示失败: {e}")
 
-        # 获取分页消息
+        subscription = await subscription_service.get_user_current_subscription(
+            db, current_user.id
+        )
+        unlocked_ids = await get_unlocked_surprise_snap_message_ids(
+            db, current_user.id
+        )
         messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
+            session_id=session_id,
+            limit=limit,
+            offset=offset,
+            user_id=current_user.id,
+            is_subscribed=bool(subscription),
+            unlocked_surprise_snap_message_ids=unlocked_ids,
         )
 
         # 如果客户端版本不支持节日记忆，则不返回节日记忆消息，即便数据库中有节日记忆消息。
@@ -201,6 +216,30 @@ async def get_agent_chat_messages(
         raise HTTPException(
             status_code=500, detail=f"Failed to get message records: {str(e)}"
         )
+
+
+@router.post(
+    "/surprise-snap/unlock",
+    response_model=schemas.APIResponse[dict],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    summary="Record Surprise Snap unlock",
+    description="Free user uses credit to unlock a surprise_snap message (credit deduction on app). Backend only records unlock state.",
+)
+async def surprise_snap_unlock(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    body: SurpriseSnapUnlockRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    ok = await record_surprise_snap_unlock(
+        db, current_user.id, body.message_id
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=403,
+            detail="Message not found or not a surprise_snap or not your chat",
+        )
+    return schemas.APIResponse.success(data={"unlocked": True})
 
 
 @router.post(

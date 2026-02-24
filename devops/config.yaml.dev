@@ -115,3 +115,6 @@ fal:
 tts:
   use_gemini_prompted_tts: true
 
+surprise_snap:
+  enabled_since: "2026-02-24T08:00:00"
+  trigger_rounds: [1,3]

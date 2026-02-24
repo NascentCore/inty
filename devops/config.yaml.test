@@ -63,3 +63,8 @@ gemini_live:
   sub_user_agent_limit: 20
   free_user_max_session_duration: 60
   sub_user_max_session_duration: 120
+
+# Surprise Snap E2E：第 1 条用户消息即触发
+surprise_snap:
+  enabled_since: "2020-01-01T00:00:00"
+  trigger_rounds: [1]

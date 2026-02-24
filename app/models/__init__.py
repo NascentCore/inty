@@ -39,6 +39,8 @@ from app.models.push_notification import (
 from app.models.report import Report as Report
 from app.models.resource import Resource as Resource
 from app.models.settings import Settings as Settings
+from app.models.surprise_snap import SurpriseSnapProgress as SurpriseSnapProgress
+from app.models.surprise_snap import SurpriseSnapUnlock as SurpriseSnapUnlock
 from app.models.subscription import SubscriptionPlan as SubscriptionPlan
 from app.models.subscription import SubscriptionPlanType as SubscriptionPlanType
 from app.models.subscription import SubscriptionStatus as SubscriptionStatus

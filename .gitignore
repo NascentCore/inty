@@ -85,7 +85,7 @@ yarn.lock
 .coverage
 htmlcov/
 .pytest_cache/
-config.yaml
+config.yaml*
 
 # google key
 inty-backend-key.json

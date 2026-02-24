@@ -1,5 +1,6 @@
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional
@@ -366,6 +367,32 @@ class MemoryExtractionConfig:
     )
 
 
+def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
+    raw = data.get("surprise_snap") or {}
+    enabled_since = raw.get("enabled_since")
+    if isinstance(enabled_since, str):
+        try:
+            enabled_since = datetime.fromisoformat(enabled_since.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            enabled_since = None
+    elif not isinstance(enabled_since, datetime):
+        enabled_since = None
+    trigger_rounds = raw.get("trigger_rounds")
+    if not isinstance(trigger_rounds, list):
+        trigger_rounds = [3, 8, 15]
+    return SurpriseSnapConfig(enabled_since=enabled_since, trigger_rounds=trigger_rounds)
+
+
+@dataclass
+class SurpriseSnapConfig:
+    """Surprise Snap：用户与角色对话达到指定轮数时插入专属照消息。"""
+
+    enabled_since: Optional[datetime] = None  # 只统计此时间之后的用户消息；None 则不触发
+    trigger_rounds: List[int] = field(
+        default_factory=lambda: [3, 8, 15]
+    )  # 用户消息数达到这些轮数时触发
+
+
 @dataclass
 class UserAnalyticsReportConfig:
     """用户数据分析日报周报定时任务配置"""
@@ -484,6 +511,9 @@ class Config:
     fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
+    surprise_snap: SurpriseSnapConfig = field(
+        default_factory=lambda: SurpriseSnapConfig()
+    )
 
 
 def load_config(path: str) -> Config:
@@ -537,6 +567,7 @@ def load_config(path: str) -> Config:
         fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
         tts=TTSConfig(**data.get("tts", {})),
+        surprise_snap=_parse_surprise_snap_config(data),
     )
 
 
