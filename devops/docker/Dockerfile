@@ -13,6 +13,7 @@ RUN ./evaluation/build.sh
 FROM python:3.12-slim AS base
 
 WORKDIR /
+ENV PYTHONPATH=.
 
 # Check platform compatibility
 RUN if [ "$(uname -m)" != "x86_64" ]; then \
