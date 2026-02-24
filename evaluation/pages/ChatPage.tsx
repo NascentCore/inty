@@ -305,8 +305,8 @@ export const ChatPage: React.FC = () => {
           (msg, index) => ({
             id: `msg_history_${index}_${Date.now()}`,
             role:
-              msg.type === "festival_memory_prompt" &&
-              (msg.role == null || String(msg.role) === "")
+              msg.type === "festival_memory_prompt" ||
+              msg.type === "surprise_snap"
                 ? "assistant"
                 : (msg.role ?? "assistant"),
             content: msg.content || "",
@@ -561,11 +561,11 @@ export const ChatPage: React.FC = () => {
         const convertedMessages: ChatMessage[] = msgList.map((msg, index) => ({
           id: `msg_${agent.id}_${index}_${Date.now()}`,
           role:
-            msg.type === "festival_memory_prompt" &&
-            (msg.role == null || String(msg.role) === "")
+            msg.type === "festival_memory_prompt" ||
+            msg.type === "surprise_snap"
               ? "assistant"
               : (msg.role ??
-                (msg.sender_type === "USER" ? "user" : "assistant")), // 优先使用 role，fallback 到 sender_type
+                (msg.sender_type === "USER" ? "user" : "assistant")), // 后端 surprise_snap 返回 role=null，前端强制为 assistant 以正确展示
           content: msg.content || "",
           timestamp:
             msg.timestamp || msg.created_at || new Date().toISOString(),
@@ -667,11 +667,11 @@ export const ChatPage: React.FC = () => {
             const convertedMessages: ChatMessage[] = historyData.messages.map(
               (msg, index) => ({
                 id: `msg_history_${index}_${Date.now()}`,
-                role:
-                  msg.type === "festival_memory_prompt" &&
-                  (msg.role == null || String(msg.role) === "")
-                    ? "assistant"
-                    : (msg.role ?? "assistant"), // 直接使用API返回的role字段（'user' 或 'assistant'）
+          role:
+            msg.type === "festival_memory_prompt" ||
+            msg.type === "surprise_snap"
+              ? "assistant"
+              : (msg.role ?? "assistant"),
                 content: msg.content || "",
                 timestamp: msg.timestamp,
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
@@ -774,8 +774,8 @@ export const ChatPage: React.FC = () => {
             (msg, index) => ({
               id: `msg_refreshed_${index}_${Date.now()}`,
               role:
-                msg.type === "festival_memory_prompt" &&
-                (msg.role == null || String(msg.role) === "")
+                msg.type === "festival_memory_prompt" ||
+                msg.type === "surprise_snap"
                   ? "assistant"
                   : (msg.role ?? "assistant"),
               content: msg.content || "",
@@ -908,8 +908,8 @@ export const ChatPage: React.FC = () => {
           ).map((msg) => ({
             id: msg.id.toString(), // 转换number到string
             role:
-              msg.type === "festival_memory_prompt" &&
-              (msg.role == null || String(msg.role) === "")
+              msg.type === "festival_memory_prompt" ||
+              msg.type === "surprise_snap"
                 ? "assistant"
                 : (msg.role ?? "assistant"),
             content: msg.content,
@@ -1637,6 +1637,7 @@ export const ChatPage: React.FC = () => {
                     {messages.length > 0 && (
                       <List
                         dataSource={messages}
+                        rowKey={(msg: ChatMessage) => msg.remoteId ?? msg.id}
                         renderItem={(message: ChatMessage, index: number) => (
                           <div>
                             <List.Item
