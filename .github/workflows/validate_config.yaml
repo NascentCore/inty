@@ -9,6 +9,7 @@ on:
       - ".github/workflows/validate_config.yaml"
       - "devops/validate_configs.py"
       - "app/core/config.py"
+      - "app/utils/config.py"
 
   pull_request:
     branches:
@@ -18,6 +19,7 @@ on:
       - ".github/workflows/validate_config.yaml"
       - "devops/validate_configs.py"
       - "app/core/config.py"
+      - "app/utils/config.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
