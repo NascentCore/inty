@@ -141,15 +141,13 @@ jobs:
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }} backend/inty/start.sh ${{ env.DEV_FLAG }}
-            echo "Waiting for application startup..."
-            while ! sudo docker logs inty-backend-${{ steps.prep.outputs.environment }} 2>&1 | grep -q "Application startup complete"
-            do
-              sleep 1
-            done
-            if [ $? -eq 0 ]; then
+            echo "Waiting for application startup and streaming container logs..."
+            if timeout 300 bash -o pipefail -lc 'sudo docker logs --follow inty-backend-${{ steps.prep.outputs.environment }} 2>&1 | tee /tmp/inty-backend-${{ steps.prep.outputs.environment }}-startup.log | grep -m 1 "Application startup complete"'; then
               echo "Application startup complete detected!"
             else
               echo "Timeout waiting for application startup"
+              echo "Latest container logs:"
+              sudo docker logs inty-backend-${{ steps.prep.outputs.environment }} 2>&1 || true
               exit 1
             fi
 
