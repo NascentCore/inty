@@ -37,6 +37,10 @@ output format:
     }
   ]
 }
+
+NOTES:
+- partner model's safety tolerance does not seem get loosened on fal.ai.
+  "safety_tolerance": "6" for https://fal.ai/models/fal-ai/nano-banana/api is still rejected.
 """
 
 import datetime
