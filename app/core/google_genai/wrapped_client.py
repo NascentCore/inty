@@ -51,7 +51,7 @@ import uuid
 # See: app/core/google_genai/todos/LangSmith_full_model_requests_investigation.md
 #
 # generate_image 已用 LangSmith @traceable 追踪输入与输出摘要（见 AsyncClient.generate_image）。
-#
+# GenAI SDK 结束原因解释：https://ai.google.dev/api/generate-content#FinishReason
 
 
 import PIL
