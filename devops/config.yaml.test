@@ -33,6 +33,9 @@ agent:
   sub_user_chat_image_model: "gemini"
   sub_user_chat_image_gemini_model: "gemini-2.5-flash-image"
   free_user_chat_image_gemini_model: "gemini-2.5-flash-image"
+  # 免费模型用于测试
+  sub_user_chat_model: "z-ai/glm-4.5-air:free"
+  free_user_chat_model: "z-ai/glm-4.5-air:free"
 
 gcs:
   use_fake_gcs: true
