@@ -104,7 +104,8 @@
 
 - **处理**:
   - 提取 Agent 的 `scenario`（背景设定），若无则使用 `intro`
-  - 提取 Agent 的 `personality`（性格）
+  - 提取 Agent 的 `personality`（性格与说话习惯等）
+  - 当调用方传入 `char_name`、`user_name` 时，对 personality 与 scenario（及 fallback 的 intro）使用 `render_prompt_jinja2_template` 渲染，填充 `{{ char }}`、`{{ user }}`，与聊天侧行为一致
   - 格式化聊天历史为文本（用户/AI 对话）
   - 使用 `app/core/agent/prompts.py` 中维护的提示词模板进行变量替换
 
