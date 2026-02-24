@@ -52,7 +52,7 @@ from app.core.config import global_config_loaded_from_config_yaml as global_conf
 from app.external_services.gcs import upload_to_gcs
 from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize, compress_png_to_jpeg, parse_image_data_uri
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
-from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO
+from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO, Z_IMAGE_TURBO_IMAGE_TO_IMAGE
 
 
 # ImageFormat to MIME content_type for GCS upload.
@@ -86,7 +86,7 @@ class EnhancePromptModeEnum(StrEnum):
     FAST = "fast"
 
 
-class FalSeedreamV4_5EditArgs(BaseModel):
+class FalSeedreamV4_5EditInput(BaseModel):
     """
     https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-input
     """
@@ -116,7 +116,7 @@ class Image(BaseModel):
     width: int | None = None
     height: int | None = None
 
-class FalSeedreamV4_5EditResult(BaseModel):
+class FalSeedreamV4_5EditOutput(BaseModel):
     """
     https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-output
     """
@@ -124,12 +124,12 @@ class FalSeedreamV4_5EditResult(BaseModel):
 
 
 @traceable
-async def seedream_v4_5_edit(args: FalSeedreamV4_5EditArgs) -> FalSeedreamV4_5EditResult:
+async def seedream_v4_5_edit(args: FalSeedreamV4_5EditInput) -> FalSeedreamV4_5EditOutput:
     handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
     attach_provider_response_to_langsmith_run(raw_result)
-    result = FalSeedreamV4_5EditResult(**raw_result)
+    result = FalSeedreamV4_5EditOutput(**raw_result)
     if not result.images:
         raise ValueError("No images returned from SeedreamV4_5Edit")
 
@@ -153,7 +153,7 @@ class AccelerationEnum(StrEnum):
     HIGH = "high"
 
 
-class ImgGenArgs(BaseModel):
+class ZImageTurboInput(BaseModel):
     """
     https://fal.ai/models/fal-ai/z-image/turbo/api#schema-input
     """
@@ -219,7 +219,7 @@ def _upload_data_uri_to_gcs_and_return_url(data_uri: str, enable_compress_png_to
 
 
 @traceable
-async def z_image_turbo(args: ImgGenArgs) -> ZImageTurboResult:
+async def z_image_turbo(args: ZImageTurboInput) -> ZImageTurboResult:
     handler = await fal_client.submit_async(Z_IMAGE_TURBO.id_on_provider, arguments=args.model_dump())
     raw_result = await handler.get()
     raw_result["handler"] = handler
@@ -240,4 +240,93 @@ async def z_image_turbo(args: ImgGenArgs) -> ZImageTurboResult:
             "file_data": None,
         }))
     logger.debug(f"ZImageTurboResult after processing and uploading to GCS: {result}")
+    return result.model_copy(update={"images": new_images})
+
+
+class ZImageTurboImageToImageImageSizeEnum(StrEnum):
+    """Preset names for image_size; use ImageSize(width=..., height=...) for custom."""
+    SQUARE_HD = "square_hd"
+    SQUARE = "square"
+    PORTRAIT_4_3 = "portrait_4_3"
+    PORTRAIT_16_9 = "portrait_16_9"
+    LANDSCAPE_4_3 = "landscape_4_3"
+    LANDSCAPE_16_9 = "landscape_16_9"
+    AUTO = "auto"
+
+
+class ZImageTurboImageToImageInput(BaseModel):
+    """
+    https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api
+    https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api#schema-input
+    """
+    prompt: str = Field(description="The prompt to generate an image from.")
+    image_url: str = Field(description="URL of Image for Image-to-Image generation.")
+    image_size: ImageSize | ZImageTurboImageToImageImageSizeEnum = (
+        ZImageTurboImageToImageImageSizeEnum.PORTRAIT_16_9
+    )
+    num_inference_steps: int = 8
+    seed: int | None = None
+    sync_mode: bool = Field(
+        default=True,
+        description="If True, the media will be returned as a data URI and the output data won't be available in the request history.",
+    )
+    num_images: int = 1
+    enable_safety_checker: bool = False
+    output_format: ImageFormat = ImageFormat.PNG
+    acceleration: AccelerationEnum = AccelerationEnum.REGULAR
+    enable_prompt_expansion: bool = Field(
+        default=False,
+        description="Whether to enable prompt expansion. Note: this will increase the price by 0.0025 credits per request.",
+    )
+    strength: float = Field(
+        default=0.6,
+        description="The strength of the image-to-image conditioning.",
+    )
+
+
+class ZImageTurboImageToImageOutput(BaseModel):
+    """
+    https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api#schema-output
+    """
+    images: list[ImageFile] | None = Field(
+        default=None,
+        description="The generated image files info.",
+    )
+    timings: dict[str, float] | None = Field(
+        default=None,
+        description="The timings of the generation process.",
+    )
+    seed: int | None = Field(
+        default=None,
+        description="Seed of the generated Image. It will be the same value of the one passed in the input or the randomly generated that was used in case none was passed.",
+    )
+    has_nsfw_concepts: list[bool] | None = Field(
+        default=None,
+        description="Whether the generated images contain NSFW concepts.",
+    )
+    prompt: str = Field(description="The prompt used for generating the image.")
+
+
+@traceable
+async def z_image_turbo_image_to_image(args: ZImageTurboImageToImageInput) -> ZImageTurboImageToImageOutput:
+    handler = await fal_client.submit_async(Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider, arguments=args.model_dump())
+    raw_result = await handler.get()
+    raw_result["handler"] = handler
+    attach_provider_response_to_langsmith_run(raw_result)
+    result = ZImageTurboImageToImageOutput(**raw_result)
+    logger.debug(f"ZImageTurboImageToImage raw result before processing and uploading to GCS: {raw_result}")
+    if not result.images:
+        raise ValueError("No images returned from ZImageTurboImageToImage")
+
+    new_images: list[ImageFile] = []
+    for img in result.images:
+        if not img.url.startswith("data:"):
+            raise ValueError(f"Image URL is not a data URI: {img.url}")
+        gcs_url = _upload_data_uri_to_gcs_and_return_url(img.url)
+        logger.debug(f"Uploaded ZImageTurbo data URI to GCS: {gcs_url}")
+        new_images.append(img.model_copy(update={
+            "url": gcs_url,
+            "file_data": None,
+        }))
+    logger.debug(f"ZImageTurboImageToImageResult after processing and uploading to GCS: {result}")
     return result.model_copy(update={"images": new_images})
