@@ -59,4 +59,4 @@ logger.debug(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
 logger.debug(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")
 
 os.environ["FAL_KEY"] = global_config_loaded_from_config_yaml.fal.api_key
-logger.debug(f"Setting FAL_KEY environment variable: {os.getenv('FAL_KEY')}")
+logger.debug(f"fal_client 读取环境变量：Setting FAL_KEY environment variable: {os.getenv('FAL_KEY')}")
