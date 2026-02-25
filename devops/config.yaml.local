@@ -97,5 +97,6 @@ gemini_live:
   sub_user_max_session_duration: 120  # 订阅用户单次会话最大时长（秒）
 
 fal:
+  # inty-test API KEY, Fal.AI
   api_key: 00390a52-cf59-46de-99c6-498f6b916807:a45acbb8f83ecd037a567ca952d557ef
 
