@@ -621,118 +621,112 @@ class ImageGenerationService:
             model,
         )
 
-        try:
-            # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
-            # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
-            test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
-            if test_fail_mode == "safety_filter":
-                logger.warning("测试模式：模拟安全过滤器阻止")
-                raise ValueError(
-                    "Image generation blocked by safety filter: test mode trigger"
-                )
-            elif test_fail_mode == "network_error":
-                logger.warning("测试模式：模拟网络错误")
-                raise ConnectionError("Connection timeout: test mode trigger")
-
-            prepared = await self._prepare_chat_image_inputs(
-                db, session_id, agent_data, message_content,
-                user_id=user_id, history_count=history_count,
+        # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
+        # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
+        test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
+        if test_fail_mode == "safety_filter":
+            logger.warning("测试模式：模拟安全过滤器阻止")
+            raise ValueError(
+                "Image generation blocked by safety filter: test mode trigger"
             )
-            reference_url = prepared.reference_url
-            logger.info(
-                "开始生成图片，session_id={}, 使用{}: {}",
-                session_id,
-                prepared.reference_type,
-                prepared.reference_url,
-            )
+        elif test_fail_mode == "network_error":
+            logger.warning("测试模式：模拟网络错误")
+            raise ConnectionError("Connection timeout: test mode trigger")
 
-            # 复用现有的 Gemini 客户端（自动从 service account 读取配置）
-            client = WrappedClient(client=get_genai_client())
-            contents = []
-            contents.append(prepared.reference_url)
-            if prepared.user_photo_url:
-                contents.append(prepared.user_photo_url)
-                logger.info("添加用户自拍照片作为参考图: {}", prepared.user_photo_url)
-            contents.append(prepared.prompt)
+        prepared = await self._prepare_chat_image_inputs(
+            db, session_id, agent_data, message_content,
+            user_id=user_id, history_count=history_count,
+        )
+        reference_url = prepared.reference_url
+        logger.info(
+            "开始生成图片，session_id={}, 使用{}: {}",
+            session_id,
+            prepared.reference_type,
+            prepared.reference_url,
+        )
 
-            agent_id = agent_data["id"]
-            gcs_uri_base = f"chat_images/{agent_id}"
-            result = await client.async_generate_image(
-                model=model, contents=contents, gcs_uri_base=gcs_uri_base,
-                system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
-            )
+        # 复用现有的 Gemini 客户端（自动从 service account 读取配置）
+        client = WrappedClient(client=get_genai_client())
+        contents = []
+        contents.append(prepared.reference_url)
+        if prepared.user_photo_url:
+            contents.append(prepared.user_photo_url)
+            logger.info("添加用户自拍照片作为参考图: {}", prepared.user_photo_url)
+        contents.append(prepared.prompt)
 
-            cdn_url = image_transform_service.transform_desktop(gcs_uri)
+        agent_id = agent_data["id"]
+        gcs_uri_base = f"chat_images/{agent_id}"
+        result = await client.async_generate_image(
+            model=model, contents=contents, gcs_uri_base=gcs_uri_base,
+            system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
+        )
 
-            metadata_update = {
-                "generated_image": {
-                    "image_url": result.gcs_uri,
-                    "width": result.size.width,
-                    "height": result.size.height,
-                    "format": result.format.value,
-                    "prompt": prepared.prompt,
-                    "generated_at": result.generated_at.isoformat(),
-                }
-            }
-            success = await chat_history_service.update_message_metadata(
-                db=db,
-                session_id=session_id,
-                message_id=message_id,
-                metadata_update=metadata_update,
-            )
+        cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
-            if not success:
-                raise ValueError(f"Failed to update meta_data for message {message_id}")
-
-            await agent_service.append_agent_background_image(
-                db=db, agent_id=agent_id, image_url=result.gcs_uri
-            )
-
-            # 保存到resources表（用于后续匹配查询）
-            try:
-                # 保存到resources表（使用GCS URI作为url）
-                await async_create_image_resource(
-                    async_db=db,
-                    user_id=user_id,
-                    url=result.gcs_uri,  # 使用GCS URI作为主键
-                    size=result.size,
-                    format=result.format,
-                    byte_size=len(result.raw_data),
-                    compressed=False,
-                    cropped=False,
-                    gcs_url=result.gcs_uri,
-                    generation_prompt=prepared.prompt,
-                    reference_image_url=reference_url,
-                    agent_id=agent_id,
-                )
-
-                logger.info("图片已保存到resources表: {}", gcs_uri)
-            except Exception as e:
-                # 不影响主流程，继续执行
-                logger.warning("保存图片到resources表失败: {}", str(e))
-                traceback.print_exc()
-
-            logger.info(
-                "图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
-                message_id,
-                cdn_url,
-            )
-
-            return {
-                "message_id": message_id,
-                "image_url": cdn_url,  # 返回 CDN URL
-                "image_metadata": {
-                    "width": result.size.width,
-                    "height": result.size.height,
-                    "format": result.format.value,
-                },
+        metadata_update = {
+            "generated_image": {
+                "image_url": result.gcs_uri,
+                "width": result.size.width,
+                "height": result.size.height,
+                "format": result.format.value,
                 "prompt": prepared.prompt,
+                "generated_at": result.generated_at.isoformat(),
             }
+        }
+        success = await chat_history_service.update_message_metadata(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            metadata_update=metadata_update,
+        )
 
+        if not success:
+            raise ValueError(f"Failed to update meta_data for message {message_id}")
+
+        await agent_service.append_agent_background_image(
+            db=db, agent_id=agent_id, image_url=result.gcs_uri
+        )
+
+        # 保存到resources表（用于后续匹配查询）
+        try:
+            # 保存到resources表（使用GCS URI作为url）
+            await async_create_image_resource(
+                async_db=db,
+                user_id=user_id,
+                url=result.gcs_uri,  # 使用GCS URI作为主键
+                size=result.size,
+                format=result.format,
+                byte_size=len(result.raw_data),
+                compressed=False,
+                cropped=False,
+                gcs_url=result.gcs_uri,
+                generation_prompt=prepared.prompt,
+                reference_image_url=reference_url,
+                agent_id=agent_id,
+            )
+
+            logger.info("图片已保存到resources表: {}", gcs_uri)
         except Exception as e:
-            logger.error("使用 Gemini 生成聊天图片失败: {}", str(e))
+            # 不影响主流程，继续执行
+            logger.warning("保存图片到resources表失败: {}", str(e))
             traceback.print_exc()
-            raise
+
+        logger.info(
+            "图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
+            message_id,
+            cdn_url,
+        )
+
+        return {
+            "message_id": message_id,
+            "image_url": cdn_url,  # 返回 CDN URL
+            "image_metadata": {
+                "width": result.size.width,
+                "height": result.size.height,
+                "format": result.format.value,
+            },
+            "prompt": prepared.prompt,
+        }
 
     async def generate_chat_image_with_fal(
         self,
