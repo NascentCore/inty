@@ -1225,6 +1225,58 @@ def _is_429_resource_exhausted(exception: Exception) -> bool:
     return "429" in msg and "RESOURCE_EXHAUSTED" in msg.upper()
 
 
+async def _record_chat_image_failure(
+    db: AsyncSession,
+    subscription_service: SubscriptionService,
+    session_id: str,
+    message_id: int,
+    user_id: str,
+    agent_id: str,
+    message_content: str,
+    resolved_model_id: str,
+    current_prompt: Optional[str],
+    failure_reason: str,
+    failure_type: str,
+) -> None:
+    """记录生图失败：更新消息 meta_data（generated_image_attempt）并记录用量（0）。"""
+    try:
+        await chat_history_service.update_message_metadata(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            metadata_update={
+                "generated_image_attempt": {
+                    "prompt": current_prompt,
+                    "failure_reason": failure_reason,
+                    "failure_type": failure_type,
+                }
+            },
+        )
+    except Exception as meta_err:
+        logger.warning(f"更新失败尝试元数据失败: {meta_err}")
+    try:
+        await subscription_service.record_usage(
+            db,
+            user_id,
+            "image_generation",
+            0,
+            extra_data={
+                "agent_id": agent_id,
+                "message_content": message_content[:100],
+                "success": False,
+                "failure_reason": failure_reason,
+                "failure_type": failure_type,
+                "session_id": session_id,
+                "message_id": message_id,
+                "model": resolved_model_id,
+                "prompt": current_prompt,
+            },
+        )
+        logger.debug(f"图片生成失败记录成功: user_id={user_id}")
+    except Exception as e:
+        logger.warning(f"记录图片生成失败信息失败: {str(e)}")
+
+
 async def _try_match_existing_image(
     db: AsyncSession,
     agent_id: str,
@@ -1359,7 +1411,7 @@ async def generate_chat_image(
     message_id: int,
     subscription_service: SubscriptionService,
     history_count: Optional[int] = None,
-    model: Optional[str] = None,
+    model: Optional[str] = None,  # TODO: 移除未使用的 model 参数，与 schema/API 一并清理
 ) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
     """
     基于聊天上下文生成图片（公共函数）
@@ -1379,7 +1431,7 @@ async def generate_chat_image(
         user_id: 用户ID
         message_id: 要生成图片的消息ID
         history_count: 使用的历史消息数量
-        model: 可选，指定生图模型（"gemini" 或 fal 模型名），订阅用户强制使用 gemini
+        model: 未使用；模型仅按订阅状态选择。保留仅为 API 兼容，待清理。
 
     Returns:
         成功时返回 `ChatImageGenerationResponse`，业务限制错误时返回 `UsageLimitExceeded` 或 `BizError`
@@ -1642,6 +1694,7 @@ async def generate_chat_image(
                 session_id=session_id,
                 current_prompt=current_prompt,
                 message_content=message_content,
+                subscription_service=subscription_service,
                 is_network_error=is_network_error,
             )
             if fallback_result:
@@ -1673,45 +1726,19 @@ async def generate_chat_image(
                 f"图片生成被安全过滤器阻止 - Agent ID: {agent_id}, "
                 f"Message ID: {message_id}, Reason: {failure_reason}"
             )
-
-            try:
-                await chat_history_service.update_message_metadata(
-                    db=db,
-                    session_id=session_id,
-                    message_id=message_id,
-                    metadata_update={
-                        "generated_image_attempt": {
-                            "prompt": current_prompt,
-                            "failure_reason": failure_reason,
-                            "failure_type": failure_type,
-                        }
-                    },
-                )
-            except Exception as meta_err:
-                logger.warning(f"更新失败尝试元数据失败: {meta_err}")
-
-            try:
-                await subscription_service.record_usage(
-                    db,
-                    user_id,
-                    "image_generation",
-                    0,  # 失败不计入用量
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_content": message_content[:100],  # 只记录前100个字符
-                        "success": False,
-                        "failure_reason": failure_reason,
-                        "failure_type": failure_type,
-                        "session_id": session_id,
-                        "message_id": message_id,
-                        "model": resolved_model.id_on_provider,
-                        "prompt": current_prompt,
-                    },
-                )
-                logger.debug(f"图片生成失败记录成功: user_id={user_id}")
-            except Exception as e:
-                logger.warning(f"记录图片生成失败信息失败: {str(e)}")
-
+            await _record_chat_image_failure(
+                db=db,
+                subscription_service=subscription_service,
+                session_id=session_id,
+                message_id=message_id,
+                user_id=user_id,
+                agent_id=agent_id,
+                message_content=message_content,
+                resolved_model_id=resolved_model.id_on_provider,
+                current_prompt=current_prompt,
+                failure_reason=failure_reason,
+                failure_type=failure_type,
+            )
             return BizError(
                 code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
                 error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
@@ -1750,46 +1777,19 @@ async def generate_chat_image(
             f"Message ID: {message_id}, Error Type: {failure_type}, "
             f"Reason: {failure_reason}"
         )
-
-        try:
-            await chat_history_service.update_message_metadata(
-                db=db,
-                session_id=session_id,
-                message_id=message_id,
-                metadata_update={
-                    "generated_image_attempt": {
-                        "prompt": current_prompt,
-                        "failure_reason": failure_reason,
-                        "failure_type": failure_type,
-                    }
-                },
-            )
-        except Exception as meta_err:
-            logger.warning(f"更新失败尝试元数据失败: {meta_err}")
-
-        try:
-            await subscription_service.record_usage(
-                db,
-                user_id,
-                "image_generation",
-                0,  # 失败不计入用量
-                extra_data={
-                    "agent_id": agent_id,
-                    "message_content": message_content[:100],  # 只记录前100个字符
-                    "success": False,
-                    "failure_reason": failure_reason,
-                    "failure_type": failure_type,
-                    "session_id": session_id,
-                    "message_id": message_id,
-                    "model": resolved_model.id_on_provider,
-                    "prompt": current_prompt,
-                },
-            )
-            logger.debug(f"图片生成失败记录成功: user_id={user_id}")
-        except Exception as e:
-            logger.warning(f"记录图片生成失败信息失败: {str(e)}")
-
-        # 重新抛出异常，让上层处理
+        await _record_chat_image_failure(
+            db=db,
+            subscription_service=subscription_service,
+            session_id=session_id,
+            message_id=message_id,
+            user_id=user_id,
+            agent_id=agent_id,
+            message_content=message_content,
+            resolved_model_id=resolved_model.id_on_provider,
+            current_prompt=current_prompt,
+            failure_reason=failure_reason,
+            failure_type=failure_type,
+        )
         raise
 
     # 记录成功用量

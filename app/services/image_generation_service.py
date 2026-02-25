@@ -591,8 +591,8 @@ class ImageGenerationService:
         agent_data: dict,
         message_content: str,
         user_id: str,
-        history_count: Optional[int] = None,
-        model: Optional[str] = None,
+        history_count: int,
+        model: str,
     ) -> Dict:
         """
         使用 Gemini 模型（generate_content）生成聊天图片并更新到消息 meta_data。
@@ -620,9 +620,7 @@ class ImageGenerationService:
             session_id,
             model,
         )
-        # prompt、reference_url 来自 prepared；response 仅在异常时用于日志序列化
-        prompt: Optional[str] = None
-        response: Any = None
+
         try:
             # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
             # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
@@ -640,7 +638,6 @@ class ImageGenerationService:
                 db, session_id, agent_data, message_content,
                 user_id=user_id, history_count=history_count,
             )
-            prompt = prepared.prompt
             reference_url = prepared.reference_url
             logger.info(
                 "开始生成图片，session_id={}, 使用{}: {}",
@@ -658,30 +655,23 @@ class ImageGenerationService:
                 logger.info("添加用户自拍照片作为参考图: {}", prepared.user_photo_url)
             contents.append(prepared.prompt)
 
-            gemini_model = model or NANO_BANANA.id_on_provider
             agent_id = agent_data["id"]
             gcs_uri_base = f"chat_images/{agent_id}"
             result = await client.async_generate_image(
-                model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base,
+                model=model, contents=contents, gcs_uri_base=gcs_uri_base,
                 system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
             )
-            image_data = result.raw_data
-            gcs_uri = result.gcs_uri
-            width = result.size.width
-            height = result.size.height
-            image_format = result.format.value
-            generated_at = result.generated_at.isoformat()
 
             cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
             metadata_update = {
                 "generated_image": {
-                    "image_url": gcs_uri,
-                    "width": width,
-                    "height": height,
-                    "format": image_format,
-                    "prompt": prompt,
-                    "generated_at": generated_at,
+                    "image_url": result.gcs_uri,
+                    "width": result.size.width,
+                    "height": result.size.height,
+                    "format": result.format.value,
+                    "prompt": prepared.prompt,
+                    "generated_at": result.generated_at.isoformat(),
                 }
             }
             success = await chat_history_service.update_message_metadata(
@@ -695,7 +685,7 @@ class ImageGenerationService:
                 raise ValueError(f"Failed to update meta_data for message {message_id}")
 
             await agent_service.append_agent_background_image(
-                db=db, agent_id=agent_id, image_url=gcs_uri
+                db=db, agent_id=agent_id, image_url=result.gcs_uri
             )
 
             # 保存到resources表（用于后续匹配查询）
@@ -704,14 +694,14 @@ class ImageGenerationService:
                 await async_create_image_resource(
                     async_db=db,
                     user_id=user_id,
-                    url=gcs_uri,  # 使用GCS URI作为主键
+                    url=result.gcs_uri,  # 使用GCS URI作为主键
                     size=result.size,
                     format=result.format,
-                    byte_size=len(image_data),
+                    byte_size=len(result.raw_data),
                     compressed=False,
                     cropped=False,
-                    gcs_url=gcs_uri,
-                    generation_prompt=prompt,
+                    gcs_url=result.gcs_uri,
+                    generation_prompt=prepared.prompt,
                     reference_image_url=reference_url,
                     agent_id=agent_id,
                 )
@@ -732,11 +722,11 @@ class ImageGenerationService:
                 "message_id": message_id,
                 "image_url": cdn_url,  # 返回 CDN URL
                 "image_metadata": {
-                    "width": width,
-                    "height": height,
-                    "format": image_format.lower(),
+                    "width": result.size.width,
+                    "height": result.size.height,
+                    "format": result.format.value,
                 },
-                "prompt": prompt,
+                "prompt": prepared.prompt,
             }
 
         except Exception as e:
