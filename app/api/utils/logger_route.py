@@ -289,7 +289,7 @@ class LoggerRoute(APIRoute):
             "body": self._truncate_body(body, max_length=1000),
             "timestamp": datetime.utcnow().isoformat() + "Z",
         }
-        logger.info(json.dumps(log_data, ensure_ascii=False))
+        logger.debug(json.dumps(log_data, ensure_ascii=False))
 
     def _log_response_json(
         self,
