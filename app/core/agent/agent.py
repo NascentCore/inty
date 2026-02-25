@@ -936,11 +936,11 @@ class Agent:
         trace_name = chat_name or f"{user_id}:{self.name}"
 
         for attempt in range(max_retries):
-            should_trace_sampled_success = (
+            should_trace = (
                 enable_tracing and _should_trace_text_chat_success_invocation()
             )
             try:
-                if should_trace_sampled_success:
+                if should_trace:
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
                         name=trace_name,
