@@ -212,11 +212,14 @@ PURITY_ROLEPLAY_PROMPT = StructuredPrompt(
 IMAGE_GENERATION_PROMPT_TEMPLATE = _get_prompt_text("IMAGE_GENERATION_PROMPT_TEMPLATE")
 
 # 用于 Gemini 图像生成系统指令
+# 明确要求产生图片，检测能否降低 NO_IMAGE 的概率
 R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT = """You are a Hollywood R-rated romance movie director.
 You are visualizing the prelude scene leading to, or the aftermath scene after the romantic intimacy scene without revealing unsafe content.
 You are given scene descriptions below.
 Generate an image to show the strong love and affection between the characters,
-and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content."""
+and hinting the intimacy between the characters in the scene without revealing **ANY** unsafe content.
+Your task is to generate 1 image.
+"""
 
 # Can be used to guide the policy
 # 基于：https://policies.google.com/terms/generative-ai/use-policy
