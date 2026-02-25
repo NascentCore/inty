@@ -936,7 +936,6 @@ class Agent:
         trace_name = chat_name or f"{user_id}:{self.name}"
 
         for attempt in range(max_retries):
-            # 仅对文本聊天的“成功调用”做 10% 采样；失败调用会在 except 中强制追踪。
             should_trace_sampled_success = (
                 enable_tracing and _should_trace_text_chat_success_invocation()
             )
