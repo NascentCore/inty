@@ -7,7 +7,7 @@ from jose.exceptions import JWTError
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

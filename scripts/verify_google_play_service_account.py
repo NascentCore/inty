@@ -31,7 +31,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 # Test purchase token from the error logs
 TEST_PURCHASE_TOKEN = "ccdjlaolioidnhfbjgknfdip.AO-J1OzF2In1NkiyhGz_uPjYqjxHUa0_jQknEb8e-b__DfSspV8xSVl5v78pkREr_Ivebve4oJ3BSDyzZlMrZLuFcPfswHQIAA"

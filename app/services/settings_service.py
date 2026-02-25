@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 def get_settings(db: Session, user_id: str) -> Optional[models.Settings]:

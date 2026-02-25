@@ -33,7 +33,7 @@ from app.schemas.subscription import (
 from app.services.global_services import subscription_service
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 @router.get(

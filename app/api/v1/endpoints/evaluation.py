@@ -14,7 +14,7 @@ from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
 from app.services.scoring_service import ScoringService
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 

@@ -42,7 +42,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class GeneratedCharacter(BaseModel):

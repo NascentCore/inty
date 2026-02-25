@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 from fastapi import UploadFile
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class QuestionParserService:

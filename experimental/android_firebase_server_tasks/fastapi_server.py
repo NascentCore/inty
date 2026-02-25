@@ -13,7 +13,7 @@ from .models import (
 from .firebase_client import send_message_to_token
 from .tasks import create_task, get_task, run_task_and_notify
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 app = FastAPI(title="Android Firebase Server Tasks Demo")
 
