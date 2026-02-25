@@ -1,7 +1,8 @@
 """
-聊天生图功能集成测试 - 使用 Gemini 2.5 Flash Image
+聊天生图功能集成测试 - 使用 Gemini 2.5 Flash Image 与 Fal（z_image_turbo、seedream）
 """
 
+import datetime
 import uuid
 
 import pytest
@@ -11,11 +12,14 @@ from sqlalchemy.orm import sessionmaker
 
 from app import models
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.fakes.gemini import FakeGeminiClient
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
 from app.services.image_generation_service import image_generation_service
+from app.utils.image import ImageFormat, ImageSize
+from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO_IMAGE_TO_IMAGE
 
 
 @pytest.fixture
@@ -213,8 +217,268 @@ class TestImageGenerationService:
             models.Resource.url == gen["image_url"]
         )
         resource = (await session.execute(res_stmt)).scalar_one_or_none()
+        assert resource is not None, "Chat-generated image should be saved to resources table"
+        assert resource.agent_id == agent_id
+        assert resource.user_id == user_id
+        stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
+        assert len(stored_prompt) > 0
+        assert "给我画一张图片" in stored_prompt
+        assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
+
         if resource is not None:
             await session.delete(resource)
+        await session.delete(chat_msg)
+        await session.delete(agent)
+        await session.delete(user)
+        await session.commit()
+
+    def _make_fake_fal_result(self, gcs_uri_base: str, suffix: str) -> GeneratedImageProcessResult:
+        """Build a deterministic GeneratedImageProcessResult for Fal path tests (no real Fal/GCS)."""
+        bucket = global_config_loaded_from_config_yaml.gcs.bucket
+        gcs_uri = f"gs://{bucket}/{gcs_uri_base}/fal_test_{suffix}.jpg"
+        gcs_http_url = f"https://storage.googleapis.com/{bucket}/{gcs_uri_base}/fal_test_{suffix}.jpg"
+        return GeneratedImageProcessResult(
+            size=ImageSize(width=64, height=64),
+            format=ImageFormat.JPEG,
+            raw_data=b"",
+            raw_data_total_bytes=100,
+            gcs_uri=gcs_uri,
+            gcs_http_url=gcs_http_url,
+            generated_at=datetime.datetime.now(datetime.timezone.utc),
+            raw_response_from_provider=None,
+        )
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_with_fal_z_image_turbo_saves_to_resources(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        db_session: AsyncSession,
+    ):
+        """Fal z_image_turbo/image-to-image 生成的聊天图片应保存到 resources 表（真实 DB）。"""
+        session = db_session
+        session_uuid = uuid.uuid4()
+        session_id_str = str(session_uuid)
+        user_id = f"user-{uuid.uuid4().hex[:8]}"
+        agent_id = f"agent-{uuid.uuid4().hex[:8]}"
+
+        user = models.User(
+            id=user_id,
+            readable_id=uuid.uuid4().hex[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Fal Tester",
+            email="fal@example.com",
+            system_language="en",
+        )
+        session.add(user)
+        await session.commit()
+
+        agent = models.Agent(
+            id=agent_id,
+            readable_id=uuid.uuid4().hex[:8],
+            name="Fal Chat Agent",
+            gender=Gender.FEMALE,
+            avatar="https://storage.googleapis.com/test-bucket/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="gentle",
+            scenario="cafe",
+            intro="intro",
+            opening="hello",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+            background_images=[],
+        )
+        session.add(agent)
+        await session.commit()
+        await session.refresh(agent)
+
+        chat_msg = models.ChatHistory(
+            session_id=session_uuid,
+            message={"type": "user", "data": {"content": "draw me a portrait"}},
+            meta_data=None,
+        )
+        session.add(chat_msg)
+        await session.commit()
+        await session.refresh(chat_msg)
+        message_id = chat_msg.id
+
+        async def fake_z_image_turbo_image_to_image(args, gcs_uri_base=None):
+            return self._make_fake_fal_result(gcs_uri_base or "", "z")
+
+        monkeypatch.setattr(
+            "app.services.image_generation_service.z_image_turbo_image_to_image",
+            fake_z_image_turbo_image_to_image,
+        )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.image_transform_service.transform_desktop",
+            lambda url: "https://cdn.example.com/" + url.split("/", 3)[-1],
+        )
+
+        agent_data = {
+            "id": agent_id,
+            "personality": agent.personality,
+            "scenario": agent.scenario,
+            "intro": agent.intro,
+            "background": agent.background,
+        }
+        message_content = "draw me a portrait"
+
+        result = await image_generation_service.generate_chat_image_with_fal(
+            db=session,
+            session_id=session_id_str,
+            message_id=message_id,
+            agent_data=agent_data,
+            message_content=message_content,
+            model=Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider,
+            user_id=user_id,
+            history_count=5,
+        )
+
+        assert result["message_id"] == message_id
+        assert "image_url" in result
+
+        row = (
+            await session.execute(
+                select(models.ChatHistory).where(
+                    models.ChatHistory.session_id == session_uuid,
+                    models.ChatHistory.id == message_id,
+                )
+            )
+        ).scalar_one_or_none()
+        assert row is not None
+        gen = row.meta_data.get("generated_image")
+        assert gen is not None
+        assert gen.get("image_url", "").startswith("gs://")
+
+        res_stmt = select(models.Resource).where(models.Resource.url == gen["image_url"])
+        resource = (await session.execute(res_stmt)).scalar_one_or_none()
+        assert resource is not None, "Fal z_image_turbo chat image should be saved to resources table"
+        assert resource.agent_id == agent_id
+        assert resource.user_id == user_id
+        stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
+        assert len(stored_prompt) > 0
+        assert "draw me a portrait" in stored_prompt
+        assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
+
+        await session.delete(resource)
+        await session.delete(chat_msg)
+        await session.delete(agent)
+        await session.delete(user)
+        await session.commit()
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_with_fal_seedream_saves_to_resources(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        db_session: AsyncSession,
+    ):
+        """Fal seedream v4.5 edit 生成的聊天图片应保存到 resources 表（真实 DB）。"""
+        session = db_session
+        session_uuid = uuid.uuid4()
+        session_id_str = str(session_uuid)
+        user_id = f"user-{uuid.uuid4().hex[:8]}"
+        agent_id = f"agent-{uuid.uuid4().hex[:8]}"
+
+        user = models.User(
+            id=user_id,
+            readable_id=uuid.uuid4().hex[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Seedream Tester",
+            email="seedream@example.com",
+            system_language="en",
+        )
+        session.add(user)
+        await session.commit()
+
+        agent = models.Agent(
+            id=agent_id,
+            readable_id=uuid.uuid4().hex[:8],
+            name="Seedream Chat Agent",
+            gender=Gender.FEMALE,
+            avatar="https://storage.googleapis.com/test-bucket/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="warm",
+            scenario="park",
+            intro="intro",
+            opening="hello",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+            background_images=[],
+        )
+        session.add(agent)
+        await session.commit()
+        await session.refresh(agent)
+
+        chat_msg = models.ChatHistory(
+            session_id=session_uuid,
+            message={"type": "user", "data": {"content": "generate a scene with us"}},
+            meta_data=None,
+        )
+        session.add(chat_msg)
+        await session.commit()
+        await session.refresh(chat_msg)
+        message_id = chat_msg.id
+
+        async def fake_seedream_v4_5_edit(args, gcs_uri_base=None):
+            return self._make_fake_fal_result(gcs_uri_base or "", "s")
+
+        monkeypatch.setattr(
+            "app.services.image_generation_service.seedream_v4_5_edit",
+            fake_seedream_v4_5_edit,
+        )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.image_transform_service.transform_desktop",
+            lambda url: "https://cdn.example.com/" + url.split("/", 3)[-1],
+        )
+
+        agent_data = {
+            "id": agent_id,
+            "personality": agent.personality,
+            "scenario": agent.scenario,
+            "intro": agent.intro,
+            "background": agent.background,
+        }
+        message_content = "generate a scene with us"
+
+        result = await image_generation_service.generate_chat_image_with_fal(
+            db=session,
+            session_id=session_id_str,
+            message_id=message_id,
+            agent_data=agent_data,
+            message_content=message_content,
+            model=SEEDREAM_V4_5_EDIT.id_on_provider,
+            user_id=user_id,
+            history_count=5,
+        )
+
+        assert result["message_id"] == message_id
+        assert "image_url" in result
+
+        row = (
+            await session.execute(
+                select(models.ChatHistory).where(
+                    models.ChatHistory.session_id == session_uuid,
+                    models.ChatHistory.id == message_id,
+                )
+            )
+        ).scalar_one_or_none()
+        assert row is not None
+        gen = row.meta_data.get("generated_image")
+        assert gen is not None
+        assert gen.get("image_url", "").startswith("gs://")
+
+        res_stmt = select(models.Resource).where(models.Resource.url == gen["image_url"])
+        resource = (await session.execute(res_stmt)).scalar_one_or_none()
+        assert resource is not None, "Fal seedream chat image should be saved to resources table"
+        assert resource.agent_id == agent_id
+        assert resource.user_id == user_id
+        stored_prompt = resource.resource_metadata.get("generation_prompt") or ""
+        assert len(stored_prompt) > 0
+        assert "generate a scene with us" in stored_prompt
+        assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
+
+        await session.delete(resource)
         await session.delete(chat_msg)
         await session.delete(agent)
         await session.delete(user)
