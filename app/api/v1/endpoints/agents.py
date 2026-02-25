@@ -663,7 +663,7 @@ async def _generate_with_fal_ai(
 @router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
-    summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
+    summary="Generate images based on text description, 用于支持 dify 角色产线",
     deprecated=True,
     include_in_schema=True,
     tags=[INTY_EVAL_TAG],
