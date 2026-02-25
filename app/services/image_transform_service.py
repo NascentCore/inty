@@ -112,8 +112,6 @@ class ImageTransformService:
             # 构建Cloudflare CDN代理URL，简单的代理模式
             # 格式: https://domain.com/bucket/path (直接代理，无图片处理)
             cloudflare_url = f"https://{self.config.domain}/{gcs_path}"
-
-            logger.debug(f"Transformed URL: {original_url} -> {cloudflare_url}")
             return cloudflare_url
 
         except Exception as e:

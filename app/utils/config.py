@@ -348,7 +348,7 @@ class SentryConfig:
     # Sentry DSN，例如: "https://examplePublicKey@o0.ingest.sentry.io/0"
     dsn: str = ""
     # 是否启用 Sentry
-    enabled: bool = True
+    enabled: bool = False
     # Traces 采样率，0.0-1.0，用于性能监控
     # 1.0 表示 100% 采样，0.1 表示 10% 采样
     traces_sample_rate: float = 1.0
