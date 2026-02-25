@@ -829,11 +829,21 @@ export type ReportTargetType = "USER" | "AGENT";
 export type ReportStatus = "PENDING" | "PROCESSING" | "RESOLVED" | "REJECTED";
 export type ReportType = "REPORT" | "FEEDBACK";
 
+export interface ReporterUserInfo {
+  id: string;
+  readable_id: string | null;
+  nickname: string | null;
+  email: string | null;
+  phone: string | null;
+  created_at: string | null;
+}
+
 export interface ReportItem {
   id: string;
   target_id: string;
   target_type: ReportTargetType;
   reporter_id: string;
+  reporter_user_info: ReporterUserInfo | null;
   reason_codes: string[];
   image_urls: string[];
   description: string | null;

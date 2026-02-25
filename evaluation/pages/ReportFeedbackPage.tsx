@@ -31,6 +31,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { reportApi } from "../services/api";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
+import { buildReporterInfoRows } from "../utils/reportReporterInfo";
 import type {
   ReportItem,
   ReportTargetType,
@@ -557,6 +558,18 @@ export const ReportFeedbackPage: React.FC = () => {
             </Descriptions.Item>
             <Descriptions.Item label="举报人ID" span={2}>
               {selectedItem.reporter_id}
+            </Descriptions.Item>
+            <Descriptions.Item label="举报人信息" span={2}>
+              <Space direction="vertical" size={2}>
+                {buildReporterInfoRows(selectedItem.reporter_user_info).map(
+                  (row) => (
+                    <div key={row.label}>
+                      <span style={{ color: "#666" }}>{row.label}：</span>
+                      <span>{row.value}</span>
+                    </div>
+                  ),
+                )}
+              </Space>
             </Descriptions.Item>
             <Descriptions.Item label="原因" span={2}>
               <Space wrap>

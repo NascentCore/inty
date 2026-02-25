@@ -12,6 +12,7 @@ from app.models.report import (
     Report,
     ReportType,
 )
+from app.models.user import User
 from app.schemas.report import ReportCreate, ReportQuery, ReportReason
 
 GITHUB_ISSUE_URL_PATTERN = re.compile(
@@ -30,6 +31,25 @@ def list_report_reasons() -> List[ReportReason]:
         )
         for id, code in REASON_ID_TO_CODE.items()
     ]
+
+
+async def _get_users_by_ids(
+    db: AsyncSession, user_ids: List[str]
+) -> dict[str, User]:
+    unique_user_ids = list({user_id for user_id in user_ids if user_id})
+    if not unique_user_ids:
+        return {}
+
+    result = await db.execute(select(User).where(User.id.in_(unique_user_ids)))
+    users = result.scalars().all()
+    return {user.id: user for user in users}
+
+
+def _attach_reporter_user_info(
+    reports: List[Report], users_by_id: dict[str, User]
+) -> None:
+    for report in reports:
+        report.reporter_user_info = users_by_id.get(report.reporter_id)
 
 
 async def create_report(
@@ -181,6 +201,12 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
         if item.report_type is None:
             item.report_type = ReportType.REPORT
 
+    users_by_id = await _get_users_by_ids(
+        db,
+        [item.reporter_id for item in items],
+    )
+    _attach_reporter_user_info(items, users_by_id)
+
     return items, total
 
 
@@ -205,6 +231,9 @@ async def get_report(db: AsyncSession, report_id: str) -> Report:
         report.reason_codes = []
     if report.report_type is None:
         report.report_type = ReportType.REPORT
+
+    users_by_id = await _get_users_by_ids(db, [report.reporter_id])
+    _attach_reporter_user_info([report], users_by_id)
     return report
 
 

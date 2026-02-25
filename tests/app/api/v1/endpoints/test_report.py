@@ -103,6 +103,15 @@ def _find_feedback(db_session, reporter_id):
     )
 
 
+def _set_reporter_profile_for_detail_check(db_session, reporter_id):
+    """更新举报人信息，便于断言详情接口返回完整用户信息。"""
+    db_user = db_session.query(User).filter(User.id == reporter_id).first()
+    assert db_user is not None
+    db_user.nickname = "ReportDetailTester"
+    db_user.email = "report-detail-tester@example.com"
+    db_session.commit()
+
+
 def test_create_report_as_non_superuser(integration_client, db_session):
     """验证非管理员（已登录）用户可以成功提交举报。"""
     _ensure_user_is_not_superuser(integration_client, db_session)
@@ -453,6 +462,93 @@ def test_delete_report_by_reporter(integration_client, db_session, report_superu
 
     deleted = db_session.query(Report).filter(Report.id == report.id).first()
     assert deleted is None, "Report should be deleted from database"
+
+
+def test_get_report_detail_includes_reporter_user_info(
+    integration_client, db_session, report_superuser
+):
+    """验证举报详情接口返回举报人详细信息。"""
+    agent_id = integration_client.create_agent(
+        name="Test Report Detail With Reporter Info",
+        visibility="PUBLIC",
+    )
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["SENSITIVE_CONTENT"],
+        "description": "Test report detail should include reporter info",
+        "image_urls": [],
+    }
+    create_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+    assert create_resp.status_code == 200, create_resp.text
+    assert create_resp.json().get("code") == 200, create_resp.text
+
+    reporter_id = _get_reporter_id(integration_client)
+    _set_reporter_profile_for_detail_check(db_session, reporter_id)
+    report = _find_report(db_session, agent_id, reporter_id)
+    assert report is not None, "Report should exist before querying detail API"
+
+    detail_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/report/{report.id}"
+    )
+    assert detail_resp.status_code == 200, detail_resp.text
+    detail_data = detail_resp.json()
+
+    reporter_user_info = detail_data.get("reporter_user_info")
+    assert reporter_user_info is not None
+    assert reporter_user_info["id"] == reporter_id
+    assert reporter_user_info["nickname"] == "ReportDetailTester"
+    assert reporter_user_info["email"] == "report-detail-tester@example.com"
+    assert reporter_user_info["created_at"] is not None
+
+
+def test_list_reports_includes_reporter_user_info(
+    integration_client, db_session, report_superuser
+):
+    """验证举报列表接口返回举报人详细信息。"""
+    agent_id = integration_client.create_agent(
+        name="Test Report List With Reporter Info",
+        visibility="PUBLIC",
+    )
+    report_payload = {
+        "target_id": agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["MISINFORMATION"],
+        "description": "Test report list should include reporter info",
+        "image_urls": [],
+    }
+    create_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=report_payload,
+    )
+    assert create_resp.status_code == 200, create_resp.text
+    assert create_resp.json().get("code") == 200, create_resp.text
+
+    reporter_id = _get_reporter_id(integration_client)
+    _set_reporter_profile_for_detail_check(db_session, reporter_id)
+    report = _find_report(db_session, agent_id, reporter_id)
+    assert report is not None, "Report should exist before querying list API"
+
+    list_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/report/",
+        params={"skip": 0, "limit": 50, "order_by": "created_at_desc"},
+    )
+    assert list_resp.status_code == 200, list_resp.text
+    list_data = list_resp.json()
+
+    report_item = next(
+        (item for item in list_data["items"] if item["id"] == report.id),
+        None,
+    )
+    assert report_item is not None, "Expected report item to be present in report list"
+    reporter_user_info = report_item.get("reporter_user_info")
+    assert reporter_user_info is not None
+    assert reporter_user_info["id"] == reporter_id
+    assert reporter_user_info["nickname"] == "ReportDetailTester"
+    assert reporter_user_info["email"] == "report-detail-tester@example.com"
 
 
 def test_update_report_github_issue_success(
