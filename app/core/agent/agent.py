@@ -11,14 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple, TypedDict
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
 
-# LangSmith 导入 - 如果失败则禁用追踪
-try:
-    import langsmith as ls
+import langsmith as ls
 
-    LANGSMITH_AVAILABLE = True
-except ImportError:
-    ls = None
-    LANGSMITH_AVAILABLE = False
 from loguru import logger
 from openai import (
     APIConnectionError,
@@ -39,7 +33,7 @@ from app.core.agent.agent_prompt_configs import (
     INTELLIMATE_AGENT_NAME,
     get_agent_prompt_override,
 )
-from app.core.config import Environment, global_config_loaded_from_config_yaml
+from app.core.config import Environment, global_config_loaded_from_config_yaml as global_config
 from app.models import chat_history
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
@@ -74,31 +68,11 @@ CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
 _TEXT_CHAT_LANGSMITH_MAX_SAMPLE_RATE = 0.1
 
 
-def _resolve_text_chat_langsmith_sample_rate(configured_rate: Any) -> float:
-    """Resolve sample rate for text chat and cap it at 10%."""
-    try:
-        sample_rate = float(configured_rate)
-    except (TypeError, ValueError):
-        sample_rate = _TEXT_CHAT_LANGSMITH_MAX_SAMPLE_RATE
 
-    sample_rate = max(0.0, min(1.0, sample_rate))
-    return min(sample_rate, _TEXT_CHAT_LANGSMITH_MAX_SAMPLE_RATE)
-
-
-def _get_text_chat_langsmith_sample_rate() -> float:
-    configured_rate = getattr(
-        global_config_loaded_from_config_yaml.agent,
-        "langsmith_text_chat_sample_rate",
-        1.0,
-    )
-    return _resolve_text_chat_langsmith_sample_rate(configured_rate)
-
-
-def _should_trace_text_chat_success_invocation(
-    random_value: Optional[float] = None,
-) -> bool:
-    sample_rate = _get_text_chat_langsmith_sample_rate()
-    rand = random_value if random_value is not None else random.random()
+def _should_trace_text_chat_success_invocation() -> bool:
+    sample_rate = global_config.agent.langsmith_text_chat_success_sample_rate
+    rand = random.random()
+    logger.debug(f"LangSmith text chat sample rate: {sample_rate}, random: {rand}")
     return rand < sample_rate
 
 
@@ -302,21 +276,21 @@ def get_sync_engine():
         from sqlalchemy import create_engine
 
         _sync_engine = create_engine(
-            global_config_loaded_from_config_yaml.database.url,
-            pool_size=global_config_loaded_from_config_yaml.database.pool_size
+            global_config.database.url,
+            pool_size=global_config.database.pool_size
             // 2,  # 同步引擎使用一半的连接池
-            max_overflow=global_config_loaded_from_config_yaml.database.max_overflow,
-            pool_timeout=global_config_loaded_from_config_yaml.database.pool_timeout,
-            pool_recycle=global_config_loaded_from_config_yaml.database.pool_recycle,
-            pool_pre_ping=global_config_loaded_from_config_yaml.database.pool_pre_ping,
+            max_overflow=global_config.database.max_overflow,
+            pool_timeout=global_config.database.pool_timeout,
+            pool_recycle=global_config.database.pool_recycle,
+            pool_pre_ping=global_config.database.pool_pre_ping,
             connect_args={
-                "connect_timeout": global_config_loaded_from_config_yaml.database.connect_timeout,
+                "connect_timeout": global_config.database.connect_timeout,
                 "options": "-c jit=off -c application_name=inty_sync",
             },
             echo=False,  # 禁用SQL日志
         )
         logger.info(
-            f"全局同步数据库引擎已初始化 - pool_size: {global_config_loaded_from_config_yaml.database.pool_size // 2}"
+            f"全局同步数据库引擎已初始化 - pool_size: {global_config.database.pool_size // 2}"
         )
     return _sync_engine
 
@@ -326,15 +300,15 @@ def get_connection_pool():
     global _connection_pool
     if _connection_pool is None:
         _connection_pool = ConnectionPool(
-            global_config_loaded_from_config_yaml.database.url,
-            min_size=global_config_loaded_from_config_yaml.database.pool_size
+            global_config.database.url,
+            min_size=global_config.database.pool_size
             // 4,  # 最小连接数
-            max_size=global_config_loaded_from_config_yaml.database.pool_size,  # 最大连接数
+            max_size=global_config.database.pool_size,  # 最大连接数
             max_idle=300,  # 连接最大空闲时间（秒）
             max_lifetime=1800,  # 连接最大生命周期（秒）
         )
         logger.info(
-            f"初始化数据库连接池: min_size={global_config_loaded_from_config_yaml.database.pool_size // 4}, max_size={global_config_loaded_from_config_yaml.database.pool_size}"
+            f"初始化数据库连接池: min_size={global_config.database.pool_size // 4}, max_size={global_config.database.pool_size}"
         )
     return _connection_pool
 
@@ -419,7 +393,7 @@ class Agent:
         self._executor = ThreadPoolExecutor(
             max_workers=min(
                 32,
-                (global_config_loaded_from_config_yaml.database.pool_size or 20) // 2,
+                (global_config.database.pool_size or 20) // 2,
             ),
             thread_name_prefix=f"agent-{agent_id}",
         )
@@ -435,7 +409,7 @@ class Agent:
         if override is not None and override.main_prompt is not None:
             return override.main_prompt
         # 如果配置为强制使用默认提示词，则直接返回默认值
-        if global_config_loaded_from_config_yaml.agent.force_default_prompts:
+        if global_config.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
         # 否则优先使用Agent配置的提示词
         if self.main_prompt:
@@ -453,7 +427,7 @@ class Agent:
         if override is not None and override.mode_prompt is not None:
             return override.mode_prompt
         # 如果配置为强制使用默认提示词，则直接返回默认值
-        if global_config_loaded_from_config_yaml.agent.force_default_prompts:
+        if global_config.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
         # 否则优先使用Agent配置的提示词
         if self.mode_prompt:
@@ -524,7 +498,7 @@ class Agent:
 
         if (
             user_time_context
-            and global_config_loaded_from_config_yaml.app.features.experimental_enable_chat_with_user_time_context
+            and global_config.app.features.experimental_enable_chat_with_user_time_context
         ):
             user_time_context_prompt = _build_user_time_context_prompt(
                 user_time_context
@@ -532,7 +506,7 @@ class Agent:
             if user_time_context_prompt:
                 system_messages.append(SystemMessage(content=user_time_context_prompt))
 
-        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+        if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
             )
@@ -583,7 +557,7 @@ class Agent:
 
         if (
             user_time_context
-            and global_config_loaded_from_config_yaml.app.features.experimental_enable_chat_with_user_time_context
+            and global_config.app.features.experimental_enable_chat_with_user_time_context
         ):
             user_time_context_prompt = _build_user_time_context_prompt(
                 user_time_context
@@ -591,7 +565,7 @@ class Agent:
             if user_time_context_prompt:
                 system_messages.append(SystemMessage(content=user_time_context_prompt))
 
-        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+        if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
             )
@@ -643,7 +617,7 @@ class Agent:
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
-        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+        if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, char=self.name, user=user_name
             )
@@ -959,14 +933,8 @@ class Agent:
         last_error = None
 
         # 检查是否启用 LangSmith 追踪（测试环境禁用，或 langsmith 不可用时禁用）
-        enable_tracing = (
-            LANGSMITH_AVAILABLE
-            and global_config_loaded_from_config_yaml.app.environment
-            != Environment.TEST
-        )
-        normalized_labels = (
-            normalize_langsmith_metadata(labels) if enable_tracing else {}
-        )
+        enable_tracing = global_config.app.environment != Environment.TEST
+        normalized_labels = normalize_langsmith_metadata(labels) if enable_tracing else {}
         trace_name = chat_name or f"{user_id}:{self.name}"
 
         for attempt in range(max_retries):
@@ -1196,12 +1164,12 @@ class Agent:
 
                 chat_name = f"{user_name}:{self.name}"
                 default_temperature = (
-                    global_config_loaded_from_config_yaml.agent.temperature
+                    global_config.agent.temperature
                 )
                 default_max_tokens = (
-                    global_config_loaded_from_config_yaml.agent.max_tokens
+                    global_config.agent.max_tokens
                 )
-                default_top_p = global_config_loaded_from_config_yaml.agent.top_p
+                default_top_p = global_config.agent.top_p
 
                 # 获取或创建wrapped client（性能优化：复用客户端）
                 client_start = time.time()
@@ -1491,12 +1459,12 @@ class Agent:
 
                 chat_name = f"{user_name}:{self.name}"
                 default_temperature = (
-                    global_config_loaded_from_config_yaml.agent.temperature
+                    global_config.agent.temperature
                 )
                 default_max_tokens = (
-                    global_config_loaded_from_config_yaml.agent.max_tokens
+                    global_config.agent.max_tokens
                 )
-                default_top_p = global_config_loaded_from_config_yaml.agent.top_p
+                default_top_p = global_config.agent.top_p
 
                 # 获取或创建wrapped client（性能优化：复用客户端）
                 client_start = time.time()

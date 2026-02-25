@@ -238,7 +238,7 @@ class AgentConfig:
     # LangSmith 文本聊天追踪采样率（0.0-1.0）。
     # 实际生效值在调用处会被限制到 <=10%，避免文本聊天成功请求过量追踪。
     # 图片生成不使用该采样率限制，保持全量追踪。
-    langsmith_text_chat_sample_rate: float = 0.1
+    langsmith_text_chat_success_sample_rate: float = 0.1
 
     # TODO: 这是做什么的？
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
