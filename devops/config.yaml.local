@@ -61,9 +61,10 @@ agent:
   langchain_api_key: "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"
   # 本地测试时使用免费模型，还可以在 openrouter 上找其他的免费模型：
   # https://openrouter.ai/models?fmt=cards&q=%3Afree
+  # 这些模型经常出错，不太好用
   # 但是，目前没有免费的生图、生语音、生视频模型
-  sub_user_chat_model: "z-ai/glm-4.5-air:free"
-  free_user_chat_model: "z-ai/glm-4.5-air:free"
+  sub_user_chat_model: "google/gemini-2.5-flash-lite"
+  free_user_chat_model: "google/gemini-2.5-flash-lite"
 
 google_play:
   package_name: "com.ai.intellimate"

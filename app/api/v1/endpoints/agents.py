@@ -26,7 +26,7 @@ from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_text_to_image_model
 from app.core.user_privilege.superuser_check import is_superuser
-from app.external_services.fal import is_fal_model
+from app.utils.models_catalog import is_fal_model
 from app.external_services.gcs import upload_to_gcs
 from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
