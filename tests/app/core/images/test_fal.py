@@ -98,7 +98,7 @@ async def test_z_image_turbo_image_to_image_trace_with_real_fal():
         image_url="https://images.sxwl.dev/inty-static/chat_images/af9a674f-11b8-47ff-a253-34aceab3a13e/20260223_164446_6ea49c7a.jpg",
         strength=0.7,
     )
-    result = await z_image_turbo_image_to_image(args)
+    result = await z_image_turbo_image_to_image(args, gcs_uri_base="fal_images")
     assert result is not None
     assert result.images is not None
     assert len(result.images) >= 1

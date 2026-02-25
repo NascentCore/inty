@@ -1592,7 +1592,7 @@ async def generate_chat_image(
                 user_name=user_name,
             )
         except Exception as e:
-            logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
+            logger.warning(f"构建提示词失败，将无法匹配已生成图片: {e}")
 
     generation_start_time = time.time()
     actual_model = resolved_model.id_on_provider

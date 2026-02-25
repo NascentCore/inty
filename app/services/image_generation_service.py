@@ -21,12 +21,18 @@ import PIL.Image
 from pydantic import BaseModel
 from app.core.google_genai.wrapped_client import WrappedClient
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
 from app.core.agent.prompt_template import render_prompt_jinja2_template
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.images.fal import (
+    FalSeedreamV4_5EditInput,
+    ZImageTurboImageToImageInput,
+    seedream_v4_5_edit,
+    z_image_turbo_image_to_image,
+)
 from app.external_services.gcs import GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app import models as app_models
 from app.models.resource import ResourceType
@@ -743,13 +749,6 @@ class ImageGenerationService:
         使用 app/core/images/fal.py 中的 API 生成聊天图片并更新到消息 meta_data。
         仅支持 Z_IMAGE_TURBO_IMAGE_TO_IMAGE 与 SEEDREAM_V4_5_EDIT（id_on_provider）。
         """
-        from app.core.images.fal import (
-            FalSeedreamV4_5EditInput,
-            ZImageTurboImageToImageInput,
-            seedream_v4_5_edit,
-            z_image_turbo_image_to_image,
-        )
-
         if model not in CHAT_IMAGE_FAL_IDS:
             raise ValueError(
                 f"Chat image fal model {model!r} not allowed; "
@@ -772,6 +771,8 @@ class ImageGenerationService:
         if not agent_id:
             raise ValueError("Agent data missing ID; cannot generate image path")
 
+        gcs_uri_base = f"chat_images/{agent_id}"
+
         if model == Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider:
             args = ZImageTurboImageToImageInput(
                 prompt=prepared.prompt,
@@ -779,7 +780,7 @@ class ImageGenerationService:
                 strength=0.75,
                 num_images=1,
             )
-            result = await z_image_turbo_image_to_image(args)
+            result = await z_image_turbo_image_to_image(args, gcs_uri_base=gcs_uri_base)
             if not result.images:
                 raise ValueError("fal returned no images")
             img = result.images[0]
@@ -811,7 +812,7 @@ class ImageGenerationService:
                 prompt=prepared.prompt,
                 image_urls=seedream_image_urls,
             )
-            result = await seedream_v4_5_edit(args, gcs_uri_base=f"chat_images/{agent_id}")
+            result = await seedream_v4_5_edit(args, gcs_uri_base=gcs_uri_base)
             gcs_uri = result.gcs_uri
             width = result.size.width
             height = result.size.height
@@ -867,13 +868,8 @@ class ImageGenerationService:
                     gcs_url=gcs_uri,
                     generation_prompt=prepared.prompt,
                     reference_image_url=prepared.reference_url,
+                    agent_id=agent_id,
                 )
-                update_stmt = (
-                    update(app_models.Resource)
-                    .where(app_models.Resource.url == gcs_uri)
-                    .values(agent_id=agent_id)
-                )
-                await db.execute(update_stmt)
                 await db.commit()
                 logger.info("图片已保存到resources表: {}", gcs_uri)
             except Exception as e:

@@ -70,7 +70,7 @@ from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
-from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
+from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 # LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
 _LANGSMITH_RAW_DATA_TRACE_BYTES = 100
@@ -121,8 +121,6 @@ class WrappedClient:
         model: Literal[
             NANO_BANANA.id_on_provider,
             NANO_BANANA_PRO.id_on_provider,
-            IMAGEN_4_FAST.id_on_provider,
-            IMAGEN_4.id_on_provider,
         ],
         contents: list[str],
         gcs_uri_base: str,
@@ -284,7 +282,7 @@ def _process_image_part_to_generated_image(
     else:
         logger.error("未知的数据类型: {}", type(raw_data))
         raise ValueError(
-            "Unsupported image data type: {}".format(type(raw_data))
+            f"Unsupported image data type: {type(raw_data)}"
         )
 
     logger.info("成功提取图片数据，大小: {} bytes", len(image_data))
@@ -323,7 +321,7 @@ def _process_image_part_to_generated_image(
         except (UnicodeDecodeError, ValueError, AttributeError):
             # 仅避免 decode 失败掩盖主异常，不改变主流程
             pass
-        raise ValueError("Unable to parse image data: {}".format(str(e))) from e
+        raise ValueError(f"Unable to parse image data: {e}") from e
 
     # 按实际格式设置 content_type 与扩展名，避免将 PNG 等误标为 JPEG
     _FORMAT_TO_MIME = {
@@ -338,9 +336,7 @@ def _process_image_part_to_generated_image(
     ext = _FORMAT_TO_EXT.get(fmt_upper, "jpg")
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
-    gcs_path = "{}/{}_{}.{}".format(
-        gcs_uri_base, timestamp, uuid.uuid4().hex[:8], ext
-    )
+    gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{ext}"
     bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
     upload_to_gcs(
         file_data=image_data,
@@ -348,7 +344,7 @@ def _process_image_part_to_generated_image(
         bucket_name=bucket_name,
         path=gcs_path,
     )
-    gcs_uri = "gs://{}/{}".format(bucket_name, gcs_path)
+    gcs_uri = f"gs://{bucket_name}/{gcs_path}"
     gcs_http_url = f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket_name}/{gcs_path}"
     logger.info("图片已上传到 GCS: {}", gcs_uri)
 
