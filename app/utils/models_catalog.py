@@ -466,3 +466,14 @@ def resolve_chat_image_model(nickname: str) -> GenAIModel:
     raise ValueError(
         f"Chat image model nickname {nickname!r} not allowed; allowed: {allowed}"
     )
+
+
+def is_fal_model(model: str) -> bool:
+    """
+    Check if a model is a fal model.
+    拷贝自老的 API，要重构到使用 GenAIModel 对象。
+    """
+    if not model:
+        return False
+    normalized = model.strip().lower()
+    return normalized.startswith("fal-ai/") or normalized.startswith("fal/")
