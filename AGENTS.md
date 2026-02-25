@@ -32,6 +32,7 @@
   - 采集要放在功能开发的核心需求里：原始数据收集（在功能设计过程中可以考虑将重要数据写入日志、数据库）、数据筛选清洗等等
 - **代码**：
   - Do not both with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
+  - Do not do defensive programming, let failure appear early and loud.
 
 ## 软件工程规范
 
