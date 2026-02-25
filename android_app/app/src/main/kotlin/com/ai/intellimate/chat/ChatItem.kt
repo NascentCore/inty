@@ -196,13 +196,24 @@ fun ChatItem(
                         )
                     },
                 )
-            "surprise_snap" ->
+            "surprise_snap" -> {
+                val messageKey =
+                    item.id.takeIf { it.isNotBlank() } ?: "${item.metaData.agentId}-${item.indexId}"
+                LaunchedEffect(messageKey, isCurrentPage) {
+                    if (isCurrentPage) {
+                        chatViewModel.reportForMomentExposureIfNeeded(
+                            messageKey,
+                            item.metaData.agentId.orEmpty(),
+                        )
+                    }
+                }
                 ChatItemForMoment(
                     navController = navController,
                     chatViewModel = chatViewModel,
                     message = item,
                     modifier = Modifier.width(200.dp)
                 )
+            }
             else -> {
                 ChatItemVersionSupport()
             }
@@ -264,6 +275,7 @@ private fun ChatItemForMoment(
     if (showConfirmDialog) {
         PurchaseForMomentDialog(
             price = message.momentExtra?.price ?: 0,
+            agentId = message.metaData.agentId.orEmpty(),
             onConfirm = {
                 showConfirmDialog = false
 
@@ -293,8 +305,21 @@ private fun ChatItemForMoment(
         image = message.momentExtra?.image.orEmpty(),
         text = message.content,
         isLocked = isLocked,
-        unlockByVip = { navController.navigate(Routes.Me.vipCenter("for_moment")) },
-        unlockByCredits = { showConfirmDialog = true },
+        agentId = message.metaData.agentId.orEmpty(),
+        unlockByVip = {
+                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                        "click_type" to "for_moment_go_premium",
+                        "agent_id" to (message.metaData.agentId.orEmpty()),
+                    )
+                    navController.navigate(Routes.Me.vipCenter("for_moment"))
+                },
+                unlockByCredits = {
+                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                        "click_type" to "for_moment_unlock_credits",
+                        "agent_id" to (message.metaData.agentId.orEmpty()),
+                    )
+                    showConfirmDialog = true
+                },
         modifier = modifier,
     )
 }
@@ -304,7 +329,7 @@ private fun ChatItemForMoment(
  *
  * 使用场景：用户点击「Unlock with Credits」后，在扣费前确认是否使用积分解锁该条秘密时刻。 预期效果：居中对话框，标题 + 说明文案（含所需积分数量），取消 / 解锁 双按钮。
  *
- * 可配置项：price 所需积分、onConfirm 确认解锁、onCancel 取消。
+ * 可配置项：price 所需积分、agentId 用于埋点、onConfirm 确认解锁、onCancel 取消。
  */
 @Composable
 private fun PurchaseForMomentDialog(
@@ -312,6 +337,7 @@ private fun PurchaseForMomentDialog(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    agentId: String = "",
 ) {
     Dialog(
         onDismissRequest = onCancel,
@@ -351,14 +377,29 @@ private fun PurchaseForMomentDialog(
                         text = stringResource(R.string.cancel),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.noRippleClickable(onClick = onCancel),
+                        modifier =
+                            Modifier.noRippleClickable(onClick = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "for_moment_purchase_dialog_cancel",
+                                    "agent_id" to agentId,
+                                )
+                                onCancel()
+                            }),
                     )
                     Spacer(modifier = Modifier.width(dimensionResource(R.dimen.padding_medium)))
                     Text(
                         text = stringResource(R.string.moment_purchase_confirm),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.noRippleClickable(onClick = onConfirm),
+                        modifier =
+                            Modifier.noRippleClickable(onClick = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "for_moment_purchase_dialog_confirm",
+                                    "agent_id" to agentId,
+                                    "price" to price,
+                                )
+                                onConfirm()
+                            }),
                     )
                 }
             }
@@ -382,6 +423,7 @@ private fun ChatItemForMoment(
     unlockByVip: () -> Unit,
     unlockByCredits: () -> Unit,
     modifier: Modifier = Modifier,
+    agentId: String = "",
 ) {
     val context = LocalContext.current
     val borderWidth = dimensionResource(R.dimen.moment_border_width)
@@ -432,7 +474,13 @@ private fun ChatItemForMoment(
                             if (isLocked) {
                                 Modifier.blur(20.dp, 20.dp)
                             } else {
-                                Modifier.clickable { showFullScreenImage = true }
+                                Modifier.clickable {
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "for_moment_view_image",
+                                        "agent_id" to agentId,
+                                    )
+                                    showFullScreenImage = true
+                                }
                             },
                     model =
                         ImageRequest.Builder(context)

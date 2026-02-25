@@ -167,6 +167,9 @@ class ChatViewModel : BaseVM() {
     // 会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
     private var sessionMessageCount = 0
 
+    /** For Moment 曝光周期：当前 ChatPage 周期内已上报过曝光的 message 标识，离开页面时清空 */
+    private val forMomentExposedInCycle = mutableSetOf<String>()
+
     private var currentOffset = 0
     private val PAGE_SIZE = 20
 
@@ -763,6 +766,24 @@ class ChatViewModel : BaseVM() {
     /** 重置语音播放状态（页面切换时调用） */
     fun resetVoicePlayback() {
         audioManager?.resetForPageChange()
+    }
+
+    /** 清空 For Moment 曝光周期（ChatPage 不可见时调用，下次进入同一 ChatPage 视为新周期） */
+    fun clearForMomentExposureCycle() {
+        forMomentExposedInCycle.clear()
+    }
+
+    /**
+     * For Moment 消息曝光：当前 ChatPage 周期内仅上报一次。
+     * 消息展示时调用，若本周期已上报过该 messageKey 则不再上报。
+     */
+    fun reportForMomentExposureIfNeeded(messageKey: String, agentId: String) {
+        if (messageKey in forMomentExposedInCycle) return
+        forMomentExposedInCycle.add(messageKey)
+        FirebaseManager.Events.FOR_MOMENT_MESSAGE_EXPOSURE.logEvent(
+            "agent_id" to agentId,
+            "message_key" to messageKey,
+        )
     }
 
     /** 停止非当前Agent的音频播放 */
