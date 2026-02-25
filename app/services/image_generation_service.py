@@ -590,7 +590,7 @@ class ImageGenerationService:
         message_id: int,
         agent_data: dict,
         message_content: str,
-        user_id: Optional[str] = None,
+        user_id: str,
         history_count: Optional[int] = None,
         model: Optional[str] = None,
     ) -> Dict:
@@ -699,31 +699,28 @@ class ImageGenerationService:
             )
 
             # 保存到resources表（用于后续匹配查询）
-            if user_id:
-                try:
-                    # 保存到resources表（使用GCS URI作为url）
-                    await async_create_image_resource(
-                        async_db=db,
-                        user_id=user_id,
-                        url=gcs_uri,  # 使用GCS URI作为主键
-                        size=result.size,
-                        format=result.format,
-                        byte_size=len(image_data),
-                        compressed=False,
-                        cropped=False,
-                        gcs_url=gcs_uri,
-                        generation_prompt=prompt,
-                        reference_image_url=reference_url,
-                        agent_id=agent_id,
-                    )
+            try:
+                # 保存到resources表（使用GCS URI作为url）
+                await async_create_image_resource(
+                    async_db=db,
+                    user_id=user_id,
+                    url=gcs_uri,  # 使用GCS URI作为主键
+                    size=result.size,
+                    format=result.format,
+                    byte_size=len(image_data),
+                    compressed=False,
+                    cropped=False,
+                    gcs_url=gcs_uri,
+                    generation_prompt=prompt,
+                    reference_image_url=reference_url,
+                    agent_id=agent_id,
+                )
 
-                    logger.info("图片已保存到resources表: {}", gcs_uri)
-                except Exception as e:
-                    logger.warning("保存图片到resources表失败: {}", str(e))
-                    traceback.print_exc()
-                    # 不影响主流程，继续执行
-            else:
-                logger.warning("未传入user_id，无法保存到resources表")
+                logger.info("图片已保存到resources表: {}", gcs_uri)
+            except Exception as e:
+                # 不影响主流程，继续执行
+                logger.warning("保存图片到resources表失败: {}", str(e))
+                traceback.print_exc()
 
             logger.info(
                 "图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
