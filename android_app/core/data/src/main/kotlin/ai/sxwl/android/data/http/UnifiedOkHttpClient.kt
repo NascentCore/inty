@@ -29,11 +29,29 @@ object UnifiedOkHttpClient {
             Thread(r, "PerformanceMonitor").apply { isDaemon = true }
         }
 
+    /**
+     * 聊天生图接口专用超时：POST /api/v1/chat/images/{agent_id} 使用 60 秒读超时。
+     * 其他请求仍使用 NetworkConfig 的默认 readTimeout。
+     */
+    private object ChatImageTimeoutInterceptor : Interceptor {
+        private const val CHAT_IMAGES_PATH = "chat/images"
+        private const val READ_TIMEOUT_SECONDS = 60
+
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request = chain.request()
+            return if (request.url.encodedPath.contains(CHAT_IMAGES_PATH)) {
+                chain.withReadTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS).proceed(request)
+            } else {
+                chain.proceed(request)
+            }
+        }
+    }
+
     /** 创建统一的 OkHttpClient 实例 包含所有必要的拦截器：设备信息、认证、性能监控、调试等 */
     fun create(): OkHttpClient {
         val environmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
 
-        return OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             // 超时配置（根据环境配置）
             .connectTimeout(environmentConfig.timeout.connectTimeoutMs, TimeUnit.MILLISECONDS)
             .writeTimeout(environmentConfig.timeout.writeTimeoutMs, TimeUnit.MILLISECONDS)
@@ -48,17 +66,17 @@ object UnifiedOkHttpClient {
             )
             // DNS缓存（如果启用）
             .dns(if (environmentConfig.connection.enableDnsCache) CachedDns() else Dns.SYSTEM)
-            // 拦截器（注意顺序：性能监控 -> 设备信息 -> 认证 -> 调试）
+            // 拦截器（注意顺序：性能监控 -> 聊天生图超时 -> 设备信息 -> 认证 -> 调试）
             .addInterceptor(PerformanceInterceptor())
+            .addInterceptor(ChatImageTimeoutInterceptor)
             .addInterceptor(DeviceInfoInterceptor())
             .addInterceptor(AuthInterceptor())
-            .apply {
-                // Chucker 调试工具（根据配置）
-                if (environmentConfig.logging.enableChuckerLogging) {
-                    addInterceptor(ChuckerInterceptor(Utils.getApp()))
-                }
-            }
-            .build()
+
+        if (environmentConfig.logging.enableChuckerLogging) {
+            builder.addInterceptor(ChuckerInterceptor(Utils.getApp()))
+        }
+
+        return builder.build()
     }
 }
 
