@@ -66,7 +66,7 @@ def test_get_final_prompt_returns_combined_prompt_when_set(monkeypatch):
     from app.core.agent import agent as agent_module
 
     monkeypatch.setattr(
-        agent_module.global_config_loaded_from_config_yaml.agent,
+        agent_module.global_config.agent,
         "force_default_prompts",
         False,
     )
@@ -94,7 +94,7 @@ def test_get_final_prompt_returns_ai_assistant_when_all_empty(monkeypatch):
     from app.core.agent import agent as agent_module
 
     monkeypatch.setattr(
-        agent_module.global_config_loaded_from_config_yaml.agent,
+        agent_module.global_config.agent,
         "force_default_prompts",
         False,
     )
@@ -128,7 +128,7 @@ def test_get_final_prompt_personality_only(monkeypatch):
     from app.core.agent import agent as agent_module
 
     monkeypatch.setattr(
-        agent_module.global_config_loaded_from_config_yaml.agent,
+        agent_module.global_config.agent,
         "force_default_prompts",
         False,
     )
