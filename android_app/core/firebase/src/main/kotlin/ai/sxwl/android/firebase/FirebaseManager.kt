@@ -125,6 +125,7 @@ object FirebaseManager {
 
                     // 🔴 页面曝光事件 - 100%采样
                     Events.CHAT_PAGE_VIEW to 1.0, // ChatPage 页面曝光
+                    Events.FOR_MOMENT_MESSAGE_EXPOSURE to 1.0, // For Moment 消息曝光
 
                     // 🔴 图片生成相关事件 - 100%采样
                     Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED to 1.0, // 图片生成开始
@@ -553,6 +554,9 @@ object FirebaseManager {
 
         // 页面曝光事件
         const val CHAT_PAGE_VIEW = "chat_page_view" // ChatPage 页面曝光
+
+        // For Moment 消息曝光（以 ChatPage 为周期，每条消息每周期上报一次）
+        const val FOR_MOMENT_MESSAGE_EXPOSURE = "for_moment_message_exposure"
 
         // 推送通知相关事件
         const val PUSH_NOTIFICATION_CLICK = "push_notification_click" // 推送通知点击

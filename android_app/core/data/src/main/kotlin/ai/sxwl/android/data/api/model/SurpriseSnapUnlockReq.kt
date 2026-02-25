@@ -10,5 +10,5 @@ data class SurpriseSnapUnlockReq(
 
 @JsonClass(generateAdapter = true)
 data class SurpriseSnapUnlockResp(
-    val additionalProp1: List<String>
+    val unlocked: Boolean = true
 )

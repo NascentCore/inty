@@ -379,9 +379,12 @@ internal fun ChatPage(
     LifecycleResumeEffect(isCurrentPage) { onPauseOrDispose { chatViewModel.pauseVoicePlayback() } }
 
     DisposableEffect(chatViewModel, isCurrentPage) {
+        val wasCurrentPage = isCurrentPage
         onDispose {
-            if (!isCurrentPage) {
+            if (!wasCurrentPage) {
                 chatViewModel.resetVoicePlayback()
+            } else {
+                chatViewModel.clearForMomentExposureCycle()
             }
         }
     }

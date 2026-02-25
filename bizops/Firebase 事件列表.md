@@ -102,7 +102,8 @@
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
 |---------|---------|------|---------|--------|
 | `agent_switch` | ChatViewModel.kt | `from_agent_id`, `from_agent_name`, `to_agent_id`, `to_agent_name`, `switch_method`, `user_type`, `timestamp` | Agent切换 | 🔴 100% |
-| `chat_page_click` | ChatViewModel.kt, ChatPage.kt, ChatItem.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`、`message_sent`、`message_to_image`、`image speed up`、`call`、`sidebar`、`more`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `message`（可选）, `has_generated_image`（可选）, `generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `is_auto_play`（可选）, `timestamp` | 聊天页面点击 | 🔴 100% |
+| `chat_page_click` | ChatViewModel.kt, ChatPage.kt, ChatItem.kt, AudioManager.kt | `click_type`（`voice_play`、`keep_talking`、`message_like`、`message_dislike`、`message_sent`、`message_to_image`、`image speed up`、`call`、`sidebar`、`more`、**For Moment**：`for_moment_go_premium`、`for_moment_unlock_credits`、`for_moment_view_image`、`for_moment_purchase_dialog_cancel`、`for_moment_purchase_dialog_confirm`）, `agent_id`, `agent_name`, `message_id`（可选）, `message_length`（可选）, `message`（可选）, `has_generated_image`（可选）, `generated_image`（可选）, `is_opening`（可选）, `user_type`（可选）, `is_auto_play`（可选）, `timestamp`, `price`（可选，for_moment_purchase_dialog_confirm 时所需积分） | 聊天页面点击 | 🔴 100% |
+| `for_moment_message_exposure` | ChatItem.kt（surprise_snap 消息展示时由 ChatViewModel.reportForMomentExposureIfNeeded） | `agent_id`, `message_key`（消息唯一标识，优先 message.id 否则 agentId-indexId） | For Moment 消息曝光（以 ChatPage 为周期，每条消息每周期上报一次；离开 ChatPage 后再次进入视为新周期） | 🔴 100% |
 | `chat_sidebar_click` | ChatSettingsDrawer.kt | `click_type`（`edit_name`、`edit_pronouns`、`edit_persona`、`toggle_keep_talking`、`toggle_auto_play_voice`、`toggle_chat_list_full_screen`、`toggle_auto_play_animation`、`toggle_text_streaming`、`toggle_show_scene_action_button`、`open_models_menu`、`select_model`、`open_font_size_slider`、`user_manual`、`feedback`、`report`、`font_size_reset`、`font_size_cancel`、`update_font_size`）, `agent_id`（可选）, `enabled`（可选，开关操作时）, `timestamp` | 聊天侧边栏点击 | 🔴 100% |
 | `chat_more_click` | ChatMorePanel.kt | `click_type`（`reply_style`、`report`、`reset`、`change_outfit`、`feedback`、`call`（语音通话，代码常量 CHAT_MORE_CALL））, `agent_id`, `timestamp` | 聊天更多面板点击 | 🔴 100% |
 | `conversations_page_click` | MessagesPage.kt | `click_type`（`MessagesSubscriptionBanner` 等）, `timestamp`（可选） | 会话列表页点击 | 🔴 100% |
@@ -111,6 +112,10 @@
 
 **消息点赞/点踩（Thumb up / Thumb down）**  
 使用事件 `chat_page_click`，通过参数 `click_type` 区分：`message_like`（点赞）、`message_dislike`（点踩）。触发位置：ChatViewModel.setMessageVote（likeMessage / dislikeMessage）。参数：`click_type`、`agent_id`、`agent_name`、`message_id`、`message_length`、`message`、`has_generated_image`、`generated_image`、`is_opening`、`user_type`、`timestamp`。无论本地/远程投票成功与否均上报（统计用户点击行为）。
+
+**For Moment（秘密时刻）**  
+- **曝光**：事件 `for_moment_message_exposure`。触发位置：ChatItem.kt 中 `item.type == "surprise_snap"` 时，LaunchedEffect 调用 ChatViewModel.reportForMomentExposureIfNeeded。以 ChatPage 为周期，每条消息在周期内首次展示时上报一次；离开页面时 ViewModel.clearForMomentExposureCycle() 清空周期。参数：`agent_id`、`message_key`。  
+- **点击**：使用事件 `chat_page_click`，通过参数 `click_type` 区分：`for_moment_go_premium`（Go Premium 按钮）、`for_moment_unlock_credits`（Unlock with Credits 按钮）、`for_moment_view_image`（点击已解锁图片进入全屏）、`for_moment_purchase_dialog_cancel`（积分支付确认弹窗取消）、`for_moment_purchase_dialog_confirm`（积分支付确认弹窗确认解锁，含参数 `price`）。触发位置：ChatItem.kt 内 ChatItemForMoment、PurchaseForMomentDialog。
 
 ### 1.9 订阅与计费事件
 
@@ -312,7 +317,8 @@
 - `generation_time_ms`：图片生成耗时（从发起请求到收到图片URL的完整耗时，毫秒）
 - `error_code`、`error_message`：错误信息（失败时），统一使用 `error_` 前缀，错误类型和异常类型信息在 `error_message` 中
 - `enabled`：开关状态（chat_sidebar_click 事件中开关操作时）
-- `click_type`：点击类型，用于 chat_page_click/chat_sidebar_click/chat_more_click/conversations_page_click；chat_page_click 含 `message_like`、`message_dislike` 等（详见 1.8）
+- `click_type`：点击类型，用于 chat_page_click/chat_sidebar_click/chat_more_click/conversations_page_click；chat_page_click 含 `message_like`、`message_dislike` 等（详见 1.8）；**For Moment** 含 `for_moment_go_premium`、`for_moment_unlock_credits`、`for_moment_view_image`、`for_moment_purchase_dialog_cancel`、`for_moment_purchase_dialog_confirm`
+- `message_key`：For Moment 消息唯一标识（for_moment_message_exposure 事件），优先 message.id，否则 agentId-indexId
 - `unlock_method`、`owed_credits`：VIP 角色解锁方式（subscription/close_dialog/credits）与 credits 解锁时当前积分（vip_agent_unlock 事件）
 - `config_key`、`config_value`、`source`：Remote Config 应用记录（remote_config_applied 事件），用于验证配置下发
 
