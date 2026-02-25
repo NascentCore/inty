@@ -27,12 +27,6 @@ export const DAILY_USAGE_CHART_METRICS = [
     axis: "y",
   },
   {
-    key: "total_image_generation_requests",
-    label: "生图请求数",
-    color: "#52c41a",
-    axis: "y",
-  },
-  {
     key: "total_live_chat_sessions",
     label: "语音通话次数",
     color: "#faad14",
