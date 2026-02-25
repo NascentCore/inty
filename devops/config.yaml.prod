@@ -113,4 +113,4 @@ gemini_live:
   sub_user_max_session_duration: 120  # 订阅用户单次会话最大时长（秒）
   
 fal:
-  api_key: c5403f4b-1171-4b13-80ef-684802b2c3c9:26b324871f439642e5a375481e01cd25
+  api_key: 0b135fdb-8e5c-46ee-971a-3694410d98d2:3881993c5f3268bf109fbbfd505f1991
