@@ -6,6 +6,7 @@ import traceback
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
+import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,11 +27,13 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_text_to_image_model
 from app.core.user_privilege.superuser_check import is_superuser
 from app.external_services.fal import is_fal_model
+from app.external_services.gcs import upload_to_gcs
 from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
     TextToImageProvider,
     generate_text_to_image,
 )
+from app.schemas.agent import AgentUpdate
 from app.schemas.response import (
     APIResponse,
     BusinessErrorCode,
@@ -39,9 +42,19 @@ from app.schemas.response import (
 from app.services import agent_service
 from app.services.global_services import subscription_service
 from app.services import memory_service
+from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
-from app.utils.gemini import ImagenGeneratedImage, text_to_image
-from app.utils.image import AspectRatio, ImageFormat
+from app.services.scoring_service import ScoringService
+from app.services.video_generation_service import video_generation_service
+from app.utils.gemini import (
+    ImagenGeneratedImage,
+    generate_image_description,
+    text_to_image,
+)
+from app.utils.image import AspectRatio, ImageFormat, ImageSize
+from app.utils.video_to_animated_image import (
+    convert_video_to_animated_image_and_upload,
+)
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
@@ -366,10 +379,6 @@ async def generate_background_animated(
         )
 
     try:
-        from app.services.image_transform_service import image_transform_service
-        from app.services.video_generation_service import video_generation_service
-        from app.utils.gemini import generate_image_description
-
         # 1. 将背景图 URL 转换为 GCS URI 格式
         background_url = agent.background
         background_gcs_uri = None
@@ -428,10 +437,6 @@ async def generate_background_animated(
 
         # 4. 将视频转换为 webp 动图
         logger.info(f"开始将视频转换为 webp 动图: {video_gcs_uri}")
-        from app.utils.video_to_animated_image import (
-            convert_video_to_animated_image_and_upload,
-        )
-
         # 将 GCS URI 转换为 CDN URL 用于下载
         video_url = image_transform_service.transform_desktop(video_gcs_uri)
 
@@ -445,8 +450,6 @@ async def generate_background_animated(
         )
 
         # 5. 更新 Agent 的 background_animated 字段
-        from app.schemas.agent import AgentUpdate
-
         agent_update = AgentUpdate(background_animated=webp_url)
         updated_agent = await agent_service.update_agent(
             db, db_agent=agent, agent_in=agent_update
@@ -480,8 +483,6 @@ async def generate_background_animated(
             )
         raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
-        import traceback
-
         error_trace = traceback.format_exc()
         logger.error(f"生成背景动图失败: {str(e)}\n{error_trace}")
         raise HTTPException(
@@ -543,10 +544,6 @@ async def _download_and_upload_to_gcs(
     Returns:
         (gcs_uri, byte_size) 元组
     """
-    import httpx
-
-    from app.external_services.gcs import upload_to_gcs
-
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.get(url)
         response.raise_for_status()
@@ -589,8 +586,6 @@ async def _generate_with_fal_ai(
     Returns:
         (generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict) 元组
     """
-    from app.utils.image import ImageSize
-
     fal_api_key = global_config_loaded_from_config_yaml.fal.api_key
 
     fal_request = TextToImageGenerationRequest(
@@ -652,9 +647,12 @@ async def _generate_with_fal_ai(
             gcs_urls.append(gcs_uri)
             gcs_url_to_img_dict[gcs_uri] = imagen_image
 
-        except Exception as e:
+        except (httpx.HTTPError, OSError) as e:
             logger.error(f"Failed to download/upload fal.ai image {i}: {e}")
             continue
+        except Exception as e:
+            logger.error(f"Unexpected error processing fal.ai image {i}: {e}")
+            raise
 
     if not gcs_urls:
         raise Exception("No images were generated from fal.ai")
@@ -764,8 +762,6 @@ async def generate_background(
             rai_reasons = result["rai_reasons"]
 
         # Convert GCS URLs to CDN URLs
-        from app.services.image_transform_service import image_transform_service
-
         cdn_urls = []
         cdn_url_to_img_dict = {}
         for gcs_url in gcs_urls:
@@ -836,6 +832,7 @@ async def generate_background(
         return APIResponse.success(data=response_data)
 
     except Exception as e:
+        # API boundary: 将任意未处理异常转为结构化错误响应，避免向客户端泄露堆栈
         logger.error(f"Background image generation failed: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
 
@@ -879,8 +876,6 @@ async def get_openrouter_models(
         return schemas.APIResponse.error(message="Unauthorized access")
 
     try:
-        from app.services.scoring_service import ScoringService
-
         scoring_service = ScoringService()
         models = await scoring_service._fetch_openrouter_models()
 
@@ -945,8 +940,6 @@ async def get_image_generation_config(
             "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
             "free_user_chat_image_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_model,
             "sub_user_chat_image_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_model,
-            "free_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model,
-            "sub_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model,
         }
 
         logger.debug(f"用户 {current_user.id} 获取图片生成配置")
@@ -972,9 +965,6 @@ async def get_available_prompts(
 ) -> Any:
     """获取可用的 prompt 列表"""
     try:
-        from app.core.agent import prompts as agent_prompts
-        from app.core.config import global_config_loaded_from_config_yaml
-
         main_prompts = [
             {
                 "id": prompt.id,
@@ -1050,16 +1040,6 @@ async def update_image_generation_config(
                 config["sub_user_chat_image_model"]
             )
 
-        if "free_user_chat_image_gemini_model" in config:
-            global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model = config[
-                "free_user_chat_image_gemini_model"
-            ]
-
-        if "sub_user_chat_image_gemini_model" in config:
-            global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model = config[
-                "sub_user_chat_image_gemini_model"
-            ]
-
         logger.info(f"超级用户 {current_user.id} 更新了图片生成配置")
 
         # 返回更新后的配置
@@ -1068,8 +1048,6 @@ async def update_image_generation_config(
             "default_history_count": global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
             "free_user_chat_image_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_model,
             "sub_user_chat_image_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_model,
-            "free_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.free_user_chat_image_gemini_model,
-            "sub_user_chat_image_gemini_model": global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_model,
         }
 
         return schemas.APIResponse.success(data=updated_config)

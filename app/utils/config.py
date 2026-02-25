@@ -1,3 +1,4 @@
+import dataclasses
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -246,16 +247,12 @@ class AgentConfig:
     image_generation_default_history_count: int = 10
     # 消息生图失败时是否匹配已生成图片作为兜底
     enable_chat_image_match_fallback: bool = False
-    # 消息生图（chat image）模型配置
-    # "gemini" 表示使用 Gemini，其他值为 fal.ai 模型名
-    free_user_chat_image_model: str = "gemini"
-    sub_user_chat_image_model: str = "gemini"
+    # 消息生图（chat image）模型配置：使用 models_catalog 中模型的 nickname
+    free_user_chat_image_model: str = "Nano Banana"
+    sub_user_chat_image_model: str = "Nano Banana"
     # 用户自拍画像推断模型（用于生成简短用户画像结论）
     selfie_persona_gemini_model: str = "gemini-2.5-flash"
-    # 当 chat_image_model 为 "gemini" 时，使用的 Vertex AI 模型 ID
-    sub_user_chat_image_gemini_model: str = "gemini-2.5-flash-image"
-    free_user_chat_image_gemini_model: str = "gemini-2.5-flash-image"
-    # 订阅/管理员用户首轮生图遇 429 时重试使用的 Vertex 模型 ID
+    # 订阅用户首轮生图遇 429 时重试使用的 Vertex 模型 ID
     sub_user_chat_image_gemini_fallback_model: str = "gemini-2.5-flash-image"
     # Vertex AI 区域，用于 get_genai_client（消息生图、记忆抽取等）
     # 设为 "global" 可改善 gemini-3-pro-image-preview 等 Preview 模型的可用性
@@ -550,7 +547,13 @@ def load_config(path: str) -> Config:
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig(**data.get("logging", {})),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
-        agent=AgentConfig(**data.get("agent", {})),
+        agent=AgentConfig(
+            **{
+                k: v
+                for k, v in data.get("agent", {}).items()
+                if k in {f.name for f in dataclasses.fields(AgentConfig)}
+            }
+        ),
         gcs=GCSConfig(**data.get("gcs", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
@@ -585,6 +588,12 @@ def _validate_config(config: Config):
         raise ValueError("firebase.service_account_path is required")
     if not config.elevenlabs.api_key:
         raise ValueError("elevenlabs.api_key is required")
+
+    # 消息生图模型 nickname 必须能解析为允许的模型
+    from app.utils.models_catalog import resolve_chat_image_model
+
+    resolve_chat_image_model(config.agent.free_user_chat_image_model)
+    resolve_chat_image_model(config.agent.sub_user_chat_image_model)
 
     # 校验并自动修正 limits 配置
     limits = config.app.limits

@@ -11,10 +11,10 @@ from PIL import Image
 
 from app.core.google_genai.create import create_genai_client
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.fakes.gcs import FakeGCSClient
 from app.external_services.gcs import get_bucket_and_path_from_gcs_url
 from app.core.google_genai.wrapped_client import (
-    GeneratedImageProcessResult,
     LangSmithTraceRunType,
     WrappedClient,
     _langsmith_process_outputs_generate_image,

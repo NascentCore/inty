@@ -440,3 +440,29 @@ Z_IMAGE_TURBO_IMAGE_TO_IMAGE = GenAIModel(
     ),
     playground_url="https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/playground",
 )
+
+# Chat image (message-to-image): only these four models are allowed; config uses nickname.
+CHAT_IMAGE_MODELS = [
+    NANO_BANANA,
+    NANO_BANANA_PRO,
+    SEEDREAM_V4_5_EDIT,
+    Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+]
+
+# Subset of CHAT_IMAGE_MODELS that use fal (app/core/images/fal.py). Used by generate_chat_image_with_fal.
+CHAT_IMAGE_FAL_MODELS = [SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO_IMAGE_TO_IMAGE]
+CHAT_IMAGE_FAL_IDS = tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
+
+
+def resolve_chat_image_model(nickname: str) -> GenAIModel:
+    """
+    Resolve chat image model by exact nickname match among CHAT_IMAGE_MODELS.
+    Callers use model.id_on_provider when they need the provider ID.
+    """
+    for model in CHAT_IMAGE_MODELS:
+        if model.nickname == nickname:
+            return model
+    allowed = [m.nickname for m in CHAT_IMAGE_MODELS]
+    raise ValueError(
+        f"Chat image model nickname {nickname!r} not allowed; allowed: {allowed}"
+    )

@@ -18,6 +18,7 @@ class ResourceCreate(ResourceBase):
     """创建资源"""
 
     request_id: Optional[str] = None
+    agent_id: Optional[str] = None
 
 
 class ResourceUpdate(BaseModel):

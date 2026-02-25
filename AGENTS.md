@@ -12,9 +12,9 @@
   - Character（角色）沿用自业界的统称，一般来自 Character.ai
 - **用户手册**：IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
   - app/（后端）改动不影响[用户手册](docs/INTELLIMATE.md)
-- **提示词模版**：使用 jinja2 template 编写提示词模版：`{{ <变量名> }}` 使用 `prompt_template.py:render_prompt_jinja2_template` 来生成最终提示词
-  - 生产环境代码禁止使用 python `f""` 字符串、测试中可以使用
-   
+- 使用 jinja2 template 编写提示词模版：`{{ <变量名> }}`
+  使用 `prompt_template.py:render_prompt_jinja2_template` 来生成最终提示词
+
 ### 代码库概述
 
 - TASKS.md 管理 IntelliMate 项目中应该要完成的任务，用于明确的需要完成的任务列表

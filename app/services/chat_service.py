@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import datetime
 from typing import List, Optional, Union
@@ -1224,6 +1225,58 @@ def _is_429_resource_exhausted(exception: Exception) -> bool:
     return "429" in msg and "RESOURCE_EXHAUSTED" in msg.upper()
 
 
+async def _record_chat_image_failure(
+    db: AsyncSession,
+    subscription_service: SubscriptionService,
+    session_id: str,
+    message_id: int,
+    user_id: str,
+    agent_id: str,
+    message_content: str,
+    resolved_model_id: str,
+    current_prompt: Optional[str],
+    failure_reason: str,
+    failure_type: str,
+) -> None:
+    """记录生图失败：更新消息 meta_data（generated_image_attempt）并记录用量（0）。"""
+    try:
+        await chat_history_service.update_message_metadata(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            metadata_update={
+                "generated_image_attempt": {
+                    "prompt": current_prompt,
+                    "failure_reason": failure_reason,
+                    "failure_type": failure_type,
+                }
+            },
+        )
+    except Exception as meta_err:
+        logger.warning(f"更新失败尝试元数据失败: {meta_err}")
+    try:
+        await subscription_service.record_usage(
+            db,
+            user_id,
+            "image_generation",
+            0,
+            extra_data={
+                "agent_id": agent_id,
+                "message_content": message_content[:100],
+                "success": False,
+                "failure_reason": failure_reason,
+                "failure_type": failure_type,
+                "session_id": session_id,
+                "message_id": message_id,
+                "model": resolved_model_id,
+                "prompt": current_prompt,
+            },
+        )
+        logger.debug(f"图片生成失败记录成功: user_id={user_id}")
+    except Exception as e:
+        logger.warning(f"记录图片生成失败信息失败: {str(e)}")
+
+
 async def _try_match_existing_image(
     db: AsyncSession,
     agent_id: str,
@@ -1358,7 +1411,7 @@ async def generate_chat_image(
     message_id: int,
     subscription_service: SubscriptionService,
     history_count: Optional[int] = None,
-    model: Optional[str] = None,
+    model: Optional[str] = None,  # TODO: 移除未使用的 model 参数，与 schema/API 一并清理
 ) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
     """
     基于聊天上下文生成图片（公共函数）
@@ -1378,7 +1431,7 @@ async def generate_chat_image(
         user_id: 用户ID
         message_id: 要生成图片的消息ID
         history_count: 使用的历史消息数量
-        model: 可选，指定生图模型（"gemini" 或 fal 模型名），订阅用户强制使用 gemini
+        model: 未使用；模型仅按订阅状态选择。保留仅为 API 兼容，待清理。
 
     Returns:
         成功时返回 `ChatImageGenerationResponse`，业务限制错误时返回 `UsageLimitExceeded` 或 `BizError`
@@ -1480,41 +1533,23 @@ async def generate_chat_image(
             detail="Only the latest AI reply can be used to generate an image",
         )
 
-    # 确定使用的模型：订阅用户和超级用户强制使用 gemini，免费用户使用配置或请求指定的模型
+    # 模型选择仅按订阅状态，使用 config 中的 nickname 解析为 GenAIModel（无请求覆盖）
     from app.core.model_selection import select_chat_image_model
-    from app.core.user_privilege.superuser_check import is_superuser
+    from app.utils.models_catalog import ModelAPIProvider
 
     subscription_status = await subscription_service.get_user_subscription_status(
         db, user.id
     )
     is_subscribed = subscription_status.is_subscribed
-    is_admin = is_superuser(user)
 
-    # 确定最终使用的模型
-    if is_subscribed or is_admin:
-        # 订阅用户和超级用户强制使用 gemini
-        selected_model = "gemini"
-    elif model:
-        # 免费用户使用请求指定的模型
-        selected_model = model
-    else:
-        # 免费用户使用配置默认模型
-        selected_model = select_chat_image_model(user=user, is_subscribed=False)
+    try:
+        resolved_model = select_chat_image_model(user=user, is_subscribed=is_subscribed)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    use_gemini = selected_model == "gemini"
-    if use_gemini:
-        agent_config = global_config_loaded_from_config_yaml.agent
-        # 订阅用户和超级用户使用 sub_user_chat_image_gemini_model（如 gemini-3-pro-image-preview）
-        gemini_model = (
-            agent_config.sub_user_chat_image_gemini_model
-            if (is_subscribed or is_admin)
-            else agent_config.free_user_chat_image_gemini_model
-        )
-    else:
-        gemini_model = None
+    use_gemini = resolved_model.provider == ModelAPIProvider.GOOGLE_VERTEX_AI
     logger.info(
-        f"消息生图模型选择 - 订阅用户: {is_subscribed}, 超级用户: {is_admin}, "
-        f"请求模型: {model}, 最终模型: {selected_model}"
+        f"消息生图模型选择 - 订阅: {is_subscribed}, 模型: {resolved_model.nickname} ({resolved_model.id_on_provider})"
     )
 
     # 调用图片生成服务
@@ -1557,18 +1592,16 @@ async def generate_chat_image(
                 user_name=user_name,
             )
         except Exception as e:
-            logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
-
-    import time
+            logger.warning(f"构建提示词失败，将无法匹配已生成图片: {e}")
 
     generation_start_time = time.time()
-    actual_model = gemini_model if use_gemini else selected_model
+    actual_model = resolved_model.id_on_provider
     model_fallback_due_to_429 = False
 
     try:
         if use_gemini:
-            if is_subscribed or is_admin:
-                primary_model = gemini_model
+            primary_model = resolved_model.id_on_provider
+            if is_subscribed:
                 fallback_model = (
                     global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
                 )
@@ -1620,10 +1653,10 @@ async def generate_chat_image(
                         message_content=message_content,
                         user_id=user_id,
                         history_count=history_count,
-                        model=gemini_model,
+                        model=primary_model,
                     )
                 )
-                actual_model = gemini_model
+                actual_model = primary_model
         else:
             image_generation_result = (
                 await image_generation_service.generate_chat_image_with_fal(
@@ -1632,12 +1665,12 @@ async def generate_chat_image(
                     message_id=message_id,
                     agent_data=agent_data,
                     message_content=message_content,
-                    model=selected_model,
+                    model=resolved_model.id_on_provider,
                     user_id=user_id,
                     history_count=history_count,
                 )
             )
-            actual_model = selected_model
+            actual_model = resolved_model.id_on_provider
         # 计算生成耗时
         generation_time_ms = int((time.time() - generation_start_time) * 1000)
         image_generation_result["model"] = actual_model
@@ -1661,6 +1694,7 @@ async def generate_chat_image(
                 session_id=session_id,
                 current_prompt=current_prompt,
                 message_content=message_content,
+                subscription_service=subscription_service,
                 is_network_error=is_network_error,
             )
             if fallback_result:
@@ -1692,45 +1726,19 @@ async def generate_chat_image(
                 f"图片生成被安全过滤器阻止 - Agent ID: {agent_id}, "
                 f"Message ID: {message_id}, Reason: {failure_reason}"
             )
-
-            try:
-                await chat_history_service.update_message_metadata(
-                    db=db,
-                    session_id=session_id,
-                    message_id=message_id,
-                    metadata_update={
-                        "generated_image_attempt": {
-                            "prompt": current_prompt,
-                            "failure_reason": failure_reason,
-                            "failure_type": failure_type,
-                        }
-                    },
-                )
-            except Exception as meta_err:
-                logger.warning(f"更新失败尝试元数据失败: {meta_err}")
-
-            try:
-                await subscription_service.record_usage(
-                    db,
-                    user_id,
-                    "image_generation",
-                    0,  # 失败不计入用量
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_content": message_content[:100],  # 只记录前100个字符
-                        "success": False,
-                        "failure_reason": failure_reason,
-                        "failure_type": failure_type,
-                        "session_id": session_id,
-                        "message_id": message_id,
-                        "model": selected_model,
-                        "prompt": current_prompt,
-                    },
-                )
-                logger.debug(f"图片生成失败记录成功: user_id={user_id}")
-            except Exception as e:
-                logger.warning(f"记录图片生成失败信息失败: {str(e)}")
-
+            await _record_chat_image_failure(
+                db=db,
+                subscription_service=subscription_service,
+                session_id=session_id,
+                message_id=message_id,
+                user_id=user_id,
+                agent_id=agent_id,
+                message_content=message_content,
+                resolved_model_id=resolved_model.id_on_provider,
+                current_prompt=current_prompt,
+                failure_reason=failure_reason,
+                failure_type=failure_type,
+            )
             return BizError(
                 code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
                 error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
@@ -1769,46 +1777,19 @@ async def generate_chat_image(
             f"Message ID: {message_id}, Error Type: {failure_type}, "
             f"Reason: {failure_reason}"
         )
-
-        try:
-            await chat_history_service.update_message_metadata(
-                db=db,
-                session_id=session_id,
-                message_id=message_id,
-                metadata_update={
-                    "generated_image_attempt": {
-                        "prompt": current_prompt,
-                        "failure_reason": failure_reason,
-                        "failure_type": failure_type,
-                    }
-                },
-            )
-        except Exception as meta_err:
-            logger.warning(f"更新失败尝试元数据失败: {meta_err}")
-
-        try:
-            await subscription_service.record_usage(
-                db,
-                user_id,
-                "image_generation",
-                0,  # 失败不计入用量
-                extra_data={
-                    "agent_id": agent_id,
-                    "message_content": message_content[:100],  # 只记录前100个字符
-                    "success": False,
-                    "failure_reason": failure_reason,
-                    "failure_type": failure_type,
-                    "session_id": session_id,
-                    "message_id": message_id,
-                    "model": selected_model,
-                    "prompt": current_prompt,
-                },
-            )
-            logger.debug(f"图片生成失败记录成功: user_id={user_id}")
-        except Exception as e:
-            logger.warning(f"记录图片生成失败信息失败: {str(e)}")
-
-        # 重新抛出异常，让上层处理
+        await _record_chat_image_failure(
+            db=db,
+            subscription_service=subscription_service,
+            session_id=session_id,
+            message_id=message_id,
+            user_id=user_id,
+            agent_id=agent_id,
+            message_content=message_content,
+            resolved_model_id=resolved_model.id_on_provider,
+            current_prompt=current_prompt,
+            failure_reason=failure_reason,
+            failure_type=failure_type,
+        )
         raise
 
     # 记录成功用量
