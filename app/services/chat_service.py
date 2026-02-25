@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import datetime
 from typing import List, Optional, Union
@@ -1540,8 +1541,6 @@ async def generate_chat_image(
             )
         except Exception as e:
             logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
-
-    import time
 
     generation_start_time = time.time()
     actual_model = resolved_model.id_on_provider

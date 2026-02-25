@@ -699,7 +699,6 @@ class ImageGenerationService:
             if not success:
                 raise ValueError(f"Failed to update meta_data for message {message_id}")
 
-            # agent_id 已在上面获取
             if agent_id:
                 await agent_service.append_agent_background_image(
                     db=db, agent_id=agent_id, image_url=gcs_uri
@@ -710,41 +709,21 @@ class ImageGenerationService:
             # 保存到resources表（用于后续匹配查询）
             if user_id:
                 try:
-                    # 确定图片格式
-                    image_format_enum = ImageFormat.JPEG
-                    if image_format.lower() == "png":
-                        image_format_enum = ImageFormat.PNG
-                    elif image_format.lower() == "gif":
-                        image_format_enum = ImageFormat.GIF
-                    elif image_format.lower() == "webp":
-                        image_format_enum = ImageFormat.WEBP
-
-                    # 创建ImageSize对象
-                    image_size = ImageSize(width=width, height=height)
-
                     # 保存到resources表（使用GCS URI作为url）
                     await async_create_image_resource(
                         async_db=db,
                         user_id=user_id,
                         url=gcs_uri,  # 使用GCS URI作为主键
-                        size=image_size,
-                        format=image_format_enum,
+                        size=result.size,
+                        format=result.format,
                         byte_size=len(image_data),
                         compressed=False,
                         cropped=False,
                         gcs_url=gcs_uri,
                         generation_prompt=prompt,
                         reference_image_url=reference_url,
+                        agent_id=agent_id,
                     )
-
-                    # 设置agent_id（async_create_image_resource没有agent_id参数）
-                    update_stmt = (
-                        update(app_models.Resource)
-                        .where(app_models.Resource.url == gcs_uri)
-                        .values(agent_id=agent_id)
-                    )
-                    await db.execute(update_stmt)
-                    await db.commit()
 
                     logger.info("图片已保存到resources表: {}", gcs_uri)
                 except Exception as e:
