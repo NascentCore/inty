@@ -225,7 +225,7 @@ def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypa
 
 def test_build_system_messages_includes_time_context(monkeypatch):
     monkeypatch.setattr(
-        agent_module.global_config_loaded_from_config_yaml.app.features,
+        agent_module.global_config.app.features,
         "experimental_enable_chat_with_user_time_context",
         True,
     )

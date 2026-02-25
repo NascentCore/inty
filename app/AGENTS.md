@@ -6,6 +6,7 @@
 - 禁止直接使用 httpx 等 http 调用任何第三方 API
 - API endpoints 返回给调用方的信息必须用英文，因为用户都是美国用户
 - 新增或修改 API endpoints 必须添加端到端测试，假设测试用后端可在 localhost:8000 访问
+- Avoid using monkepatch in tests
 
 ## AI 生成内容元数据
 
