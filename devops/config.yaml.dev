@@ -66,6 +66,8 @@ agent:
   free_user_chat_image_model: "Z Image Turbo Image to Image"
   sub_user_chat_image_model: "Z Image Turbo Image to Image"
   vertex_ai_location: "global"
+  # 测试环境量小，就全部追踪
+  langsmith_text_chat_sample_rate: 1.0
 
 google_play:
   package_name: "com.ai.intellimate"
