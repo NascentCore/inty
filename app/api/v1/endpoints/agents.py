@@ -59,18 +59,6 @@ from app.utils.video_to_animated_image import (
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
 
 
-async def get_current_superuser(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> schemas.User:
-    """验证当前用户是否为超级管理员"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="Only superusers can access this endpoint",
-        )
-    return current_user
-
-
 @router.get(
     "/me",
     response_model=schemas.APIResponse[List[schemas.Agent]],
@@ -107,13 +95,8 @@ async def admin_list_all_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(1000, ge=1, le=1000),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
-    if not is_superuser(current_user):
-        raise HTTPException(
-            status_code=403, detail="Only superusers can access this endpoint"
-        )
-
     agents = await agent_service.get_all_agents_for_admin(db, skip=skip, limit=limit)
     return schemas.APIResponse.success(data=agents)
 
@@ -866,14 +849,11 @@ async def generate_background(
     tags=[INTY_EVAL_TAG],
 )
 async def get_openrouter_models(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ):
     """
     获取OpenRouter模型列表
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         scoring_service = ScoringService()
         models = await scoring_service._fetch_openrouter_models()
@@ -1011,7 +991,7 @@ async def get_available_prompts(
 )
 async def update_image_generation_config(
     config: Dict[str, Any],
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     更新图片生成配置（仅超级用户）

@@ -62,16 +62,13 @@ async def create_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_in: schemas.EvaluationSessionCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建评测会话
 
     用于评测当前聊天系统的智能体对话效果
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
@@ -106,16 +103,13 @@ async def start_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     启动评测会话
 
     开始执行对智能体的批量测试和评分
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
@@ -153,16 +147,13 @@ async def get_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取评测会话详情
 
     包含完整的测试结果和交互记录
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
@@ -192,16 +183,13 @@ async def get_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取评测结果
 
     返回指定会话的所有测试结果
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
@@ -234,16 +222,13 @@ async def cancel_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     取消评测会话
 
     停止正在进行的评测任务
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
@@ -278,16 +263,13 @@ async def cancel_evaluation_session(
 async def parse_questions_file(
     *,
     file: UploadFile = File(...),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     解析问题文件
 
     支持txt、csv、json格式的问题文件上传和解析
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 验证文件大小（最大10MB）
         if file.size and file.size > 10 * 1024 * 1024:
@@ -335,14 +317,11 @@ async def parse_questions_file(
 )
 async def get_scoring_models(
     *,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取可用模型列表
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         scoring_service = ScoringService()
         models = await scoring_service.get_available_models()
@@ -360,16 +339,13 @@ async def get_scoring_models(
 async def validate_scoring_criteria(
     *,
     criteria: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     验证评分标准
 
     检查评分标准的格式和完整性
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         scoring_service = ScoringService()
         validation = scoring_service.validate_scoring_criteria(criteria)
@@ -390,7 +366,7 @@ async def validate_scoring_criteria(
 async def get_evaluation_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     days: int = Query(30, ge=1, le=365, description="统计天数"),
 ) -> Any:
     """
@@ -398,9 +374,6 @@ async def get_evaluation_stats(
 
     显示用户的评测历史和统计数据
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里可以实现统计逻辑
         # 暂时返回模拟数据
@@ -426,16 +399,13 @@ async def monitor_evaluation_session(
     websocket,
     session_id: str,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ):
     """
     实时监控评测会话进度
 
     通过WebSocket推送评测进度和结果
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     await websocket.accept()
 
     try:
@@ -490,7 +460,7 @@ async def monitor_evaluation_session(
 async def get_evaluation_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     type: str = Query("public", pattern="^(public|private)$", description="智能体类型"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -500,9 +470,6 @@ async def get_evaluation_agents(
 
     支持获取公开和私有智能体，用于评测系统选择测试对象
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
@@ -534,16 +501,13 @@ async def create_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_in: schemas.AgentCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建用于评测的智能体
 
     在评测系统中创建新的智能体用于测试
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
@@ -569,16 +533,13 @@ async def update_evaluation_agent(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     agent_in: schemas.AgentUpdate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     更新评测智能体
 
     修改智能体的配置和提示词等信息
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
@@ -614,16 +575,13 @@ async def delete_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     删除评测智能体
 
     删除用户创建的私有智能体
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
@@ -657,16 +615,13 @@ async def check_background_aspect_ratio(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     检查背景图是否为 9:16 比例
 
     用于生成背景动图前验证背景图比例
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         import io
 
@@ -752,16 +707,13 @@ async def upload_cropped_background(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     file: UploadFile = File(...),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     上传裁剪后的背景图
 
     替换智能体的背景图为裁剪后的 9:16 比例图片
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.schemas.agent import AgentUpdate
         from app.services import agent_service
@@ -818,16 +770,13 @@ async def deploy_agent_to_production(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     admin_password: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     将智能体部署到生产环境
 
     需要管理员权限，将测试智能体上线到生产环境
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里应该实现实际的部署逻辑
         # 暂时返回模拟响应
@@ -859,16 +808,13 @@ async def create_evaluation_template(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     template_in: schemas.EvaluationTemplateCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建评测模板
 
     保存常用的问题集和评分标准为模板
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         import uuid
 
@@ -911,7 +857,7 @@ async def create_evaluation_template(
 async def get_evaluation_templates(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     include_public: bool = Query(True, description="是否包含公开模板"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -921,9 +867,6 @@ async def get_evaluation_templates(
 
     返回用户的模板和公开模板
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import or_, select
 
@@ -964,16 +907,13 @@ async def create_batch_evaluation(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     batch_request: schemas.BatchEvaluationRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     批量创建评测会话
 
     一次性创建多个评测会话
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
         sessions = []
@@ -1009,16 +949,13 @@ async def export_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     export_request: schemas.EvaluationExportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     导出评测结果
 
     将评测结果导出为CSV、JSON或Excel格式
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里应该实现实际的导出逻辑
         # 暂时返回下载链接
@@ -1048,16 +985,13 @@ async def compare_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_ids: List[str],
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     对比评测会话结果
 
     分析多个会话的结果差异
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里应该实现实际的对比逻辑
         # 暂时返回模拟数据
@@ -1182,7 +1116,7 @@ async def _find_user_info_by_identifier(
 async def get_new_users(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1194,9 +1128,6 @@ async def get_new_users(
     ),
 ) -> Any:
     """获取用户注册统计（按注册日期范围）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1228,7 +1159,7 @@ async def get_new_users(
 async def get_user_activity(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1240,9 +1171,6 @@ async def get_user_activity(
     ),
 ) -> Any:
     """获取用户聊天活动原始数据（按注册日期范围筛选用户）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1274,7 +1202,7 @@ async def get_user_activity(
 async def get_conversation_rounds(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1295,9 +1223,6 @@ async def get_conversation_rounds(
     ),
 ) -> Any:
     """获取对话轮数分布（按Session）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1333,7 +1258,7 @@ async def get_conversation_rounds(
 async def get_user_rounds_distribution(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1354,9 +1279,6 @@ async def get_user_rounds_distribution(
     ),
 ) -> Any:
     """获取对话轮数分布（按用户）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1392,7 +1314,7 @@ async def get_user_rounds_distribution(
 async def get_popular_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1413,9 +1335,6 @@ async def get_popular_agents(
     ),
 ) -> Any:
     """获取热门角色排行"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1448,7 +1367,7 @@ async def get_popular_agents(
 async def get_users_hitting_limit(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1460,9 +1379,6 @@ async def get_users_hitting_limit(
     ),
 ) -> Any:
     """获取达到聊天限制的用户（使用活跃日期范围）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1506,7 +1422,7 @@ async def get_users_hitting_limit(
 async def get_agent_analytics(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1527,9 +1443,6 @@ async def get_agent_analytics(
     ),
 ) -> Any:
     """获取角色数据分析"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1561,7 +1474,7 @@ async def get_agent_analytics(
 async def get_user_sessions_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1582,9 +1495,6 @@ async def get_user_sessions_detail(
     ),
 ) -> Any:
     """获取用户会话详情"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1620,7 +1530,7 @@ async def get_user_sessions_detail(
 async def get_conversations_detail(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1641,9 +1551,6 @@ async def get_conversations_detail(
     ),
 ) -> Any:
     """获取对话详情（包含消息内容）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from collections import defaultdict
 
@@ -1724,7 +1631,7 @@ async def get_conversations_detail(
 async def get_user_analytics_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1745,9 +1652,6 @@ async def get_user_analytics_stats(
     ),
 ) -> Any:
     """获取用户数据分析统计概览"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1779,7 +1683,7 @@ async def get_user_analytics_stats(
 async def get_user_analytics_reports(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     report_type: Optional[str] = Query(
         None, description="daily | weekly，不传则返回全部"
     ),
@@ -1787,9 +1691,6 @@ async def get_user_analytics_reports(
     include_charts: bool = Query(True, description="是否返回图表数据"),
 ) -> Any:
     """获取用户数据分析预计算报告列表（日报/周报）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import desc, select
 
@@ -1934,7 +1835,7 @@ async def get_user_analytics_reports(
 async def get_llm_latency_trend(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1946,9 +1847,6 @@ async def get_llm_latency_trend(
     ),
 ) -> Any:
     """获取 LLM 调用延迟趋势（按小时聚合）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1993,7 +1891,7 @@ async def get_llm_latency_trend(
 async def get_image_generation_latency_trend(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2005,9 +1903,6 @@ async def get_image_generation_latency_trend(
     ),
 ) -> Any:
     """获取生图耗时趋势（按小时和模型聚合）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -2056,7 +1951,7 @@ async def get_image_generation_latency_trend(
 async def get_image_generation_failure_analytics(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2069,9 +1964,6 @@ async def get_image_generation_failure_analytics(
     top_n_reasons: int = Query(20, ge=1, le=100, description="失败原因 Top N"),
 ) -> Any:
     """获取生图失败与兜底分析（只读 replica：失败类型、失败原因、兜底占比、按 Agent、按日趋势）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -2120,7 +2012,7 @@ async def get_image_generation_failure_analytics(
 async def get_live_chat_latency_trend(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2132,9 +2024,6 @@ async def get_live_chat_latency_trend(
     ),
 ) -> Any:
     """获取 Live Chat 延迟趋势（按小时聚合）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -2181,7 +2070,7 @@ async def get_live_chat_latency_trend(
 async def get_live_chat_basic_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -2193,9 +2082,6 @@ async def get_live_chat_basic_stats(
     ),
 ) -> Any:
     """获取 Live Chat 基础统计"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -2242,16 +2128,13 @@ async def get_live_chat_basic_stats(
 async def get_user_daily_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
     start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
 ) -> Any:
     """获取用户每日消息统计"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -2315,14 +2198,11 @@ async def get_user_daily_messages(
 async def get_user_today_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
     """获取用户当日统计"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -2355,7 +2235,7 @@ async def get_user_today_stats(
 async def get_user_generated_images(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
     skip: int = Query(0, ge=0, description="跳过的记录数"),
@@ -2366,9 +2246,6 @@ async def get_user_generated_images(
 
     从 resources 表查询带有 generation_prompt 的图片资源
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import select
 
@@ -2481,14 +2358,11 @@ async def get_user_generated_images(
 async def get_user_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
     """获取用户的所有会话列表"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -2519,15 +2393,12 @@ async def get_user_sessions(
 async def get_session_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_replica_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     chat_id: str = Query(..., description="会话ID (chat_id)"),
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(50, ge=1, le=200, description="每页数量"),
 ) -> Any:
     """获取指定会话的对话历史"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -2555,16 +2426,13 @@ async def get_session_messages(
 async def get_all_agents_image_counts(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取所有角色的生成图片数量
 
     返回格式: {"agent_id_1": 5, "agent_id_2": 10, ...}
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import func, select
 
@@ -2604,7 +2472,7 @@ async def get_all_agents_image_counts(
 async def get_agent_generated_images(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     agent_id: str,
     skip: int = Query(0, ge=0, description="跳过的记录数"),
     limit: int = Query(50, ge=1, le=200, description="返回的记录数"),
@@ -2614,9 +2482,6 @@ async def get_agent_generated_images(
 
     从 resources 表查询带有 generation_prompt 的图片资源
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import select
 

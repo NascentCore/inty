@@ -342,14 +342,11 @@ async def create_subscription_plan(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     plan_data: schemas.subscription.SubscriptionPlanCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建订阅计划（管理员接口）
     """
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-
     try:
         plan = await subscription_service.create_subscription_plan(db, plan_data)
         # 将 SQLAlchemy 模型转换为 Pydantic 模型
@@ -372,15 +369,12 @@ async def create_subscription_plan(
 async def get_all_subscription_plans(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     include_inactive: bool = False,
 ) -> Any:
     """
     获取所有订阅计划（管理员接口）
     """
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-
     try:
         plans = await subscription_service.get_subscription_plans(db, include_inactive)
         return APIResponse.success(data=plans)
@@ -399,14 +393,11 @@ async def get_user_subscription_status_admin(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     user_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取指定用户的订阅状态（管理员接口）
     """
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-
     try:
         status = await subscription_service.get_user_subscription_status(db, user_id)
         return APIResponse.success(data=status)
@@ -425,14 +416,11 @@ async def get_user_usage_statistics_admin(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     user_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取指定用户的使用统计（管理员接口）
     """
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-
     try:
         usage_stats = await subscription_service.get_user_usage_statistics(db, user_id)
         return APIResponse.success(data=usage_stats)
@@ -452,14 +440,11 @@ async def process_manual_refund(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     refund_request: RefundRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     手动处理退款（管理员接口）
     """
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-
     try:
         success = await subscription_service.manual_refund(
             db,
