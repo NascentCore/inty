@@ -65,6 +65,7 @@ from google.genai import types as gemini_types
 from langsmith.run_helpers import get_current_run_tree, traceable
 
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
@@ -83,21 +84,6 @@ class LangSmithTraceRunType(StrEnum):
     EMBEDDING = "embedding"
     PROMPT = "prompt"
     PARSER = "parser"
-
-
-class GeneratedImageProcessResult(BaseModel):
-    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI.
-    raw_data 正常为 bytes；LangSmith trace 副本中为 base64 字符串以缩小 trace 体积。
-    """
-
-    size: ImageSize
-    format: ImageFormat
-    raw_data: bytes | str | None = None
-    raw_data_total_bytes: int = 0
-    gcs_uri: str
-    gcs_http_url: str
-    generated_at: datetime.datetime
-    raw_response_from_google: gemini_types.GenerateContentResponse | None = None
 
 
 def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResult | None) -> GeneratedImageProcessResult | None:
@@ -185,14 +171,14 @@ class WrappedClient:
                 logger.debug("Gemini generate_content response: {}", response)
                 # 这里会把图片数据也写入 LangSmith Trace 的 metadata 中，
                 # 暂时不处理，如有需要，再想办法把图片数据从 langsmith trace 数据中删掉。
-                # 这个跟返回值的 raw_response_from_google 是重复的。
+                # 这个跟返回值的 raw_response_from_provider 是重复的。
                 # 这个是必要的，因为发生异常时，返回值为 None，无法记录响应摘要。
-                # 如果有需要，可以考虑把返回值内的 raw_response_from_google 删除。
-                # 返回值中的 raw_response_from_google 是为了方便访问。
+                # 如果有需要，可以考虑把返回值内的 raw_response_from_provider 删除。
+                # 返回值中的 raw_response_from_provider 是为了方便访问。
                 attach_provider_response_to_langsmith_run(response)
                 image_part = _extract_image_part_from_gemini_response(response)
                 result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
-                result.raw_response_from_google = response
+                result.raw_response_from_provider = response
                 return result
             case _:
                 raise ValueError(f"Unsupported model: {model}")

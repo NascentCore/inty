@@ -44,15 +44,18 @@ NOTES:
 """
 
 import datetime
+import io
 import uuid
 from enum import StrEnum
 
 import fal_client
+import PIL
 from langsmith import traceable
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml as global_config
+from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.gcs import upload_to_gcs
 from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize, compress_png_to_jpeg, parse_image_data_uri
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
@@ -127,8 +130,50 @@ class FalSeedreamV4_5EditOutput(BaseModel):
     images: list[Image] | None = None
 
 
+def _data_uri_to_generated_image_process_result(
+    data_uri: str,
+    gcs_uri_base: str,
+    raw_response_from_provider: object,
+    width_hint: int | None = None,
+    height_hint: int | None = None,
+) -> GeneratedImageProcessResult:
+    """Parse data URI, upload to GCS, return GeneratedImageProcessResult. Used by FAL entrypoints."""
+    file_data, image_format = parse_image_data_uri(data_uri)
+    if image_format == ImageFormat.PNG:
+        file_data, image_format = compress_png_to_jpeg(file_data), ImageFormat.JPEG
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+    gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
+    gcs_http_url = upload_to_gcs(
+        file_data=file_data,
+        content_type=_IMAGE_FORMAT_TO_CONTENT_TYPE[image_format],
+        bucket_name=global_config.gcs.bucket,
+        path=gcs_path,
+    )
+    bucket_name = global_config.gcs.bucket
+    gcs_uri = f"gs://{bucket_name}/{gcs_path}"
+    if width_hint is not None and height_hint is not None:
+        width, height = width_hint, height_hint
+    else:
+        pil_image = PIL.Image.open(io.BytesIO(file_data))
+        width, height = pil_image.size
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    return GeneratedImageProcessResult(
+        size=ImageSize(width=width, height=height),
+        format=image_format,
+        raw_data=file_data,
+        raw_data_total_bytes=len(file_data),
+        gcs_uri=gcs_uri,
+        gcs_http_url=gcs_http_url,
+        generated_at=now_utc,
+        raw_response_from_provider=raw_response_from_provider,
+    )
+
+
 @traceable
-async def seedream_v4_5_edit(args: FalSeedreamV4_5EditInput) -> FalSeedreamV4_5EditOutput:
+async def seedream_v4_5_edit(
+    args: FalSeedreamV4_5EditInput,
+    gcs_uri_base: str,
+) -> GeneratedImageProcessResult:
     handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
@@ -136,19 +181,17 @@ async def seedream_v4_5_edit(args: FalSeedreamV4_5EditInput) -> FalSeedreamV4_5E
     result = FalSeedreamV4_5EditOutput(**raw_result)
     if not result.images:
         raise ValueError("No images returned from SeedreamV4_5Edit")
-
-    new_images: list[Image] = []
-    for img in result.images:
-        if not img.url.startswith("data:"):
-            raise ValueError(f"Image URL is not a data URI: {img.url}")
-        gcs_url = _upload_data_uri_to_gcs_and_return_url(img.url)
-        logger.debug(f"Uploaded SeedreamV4_5Edit data URI to GCS: {gcs_url}")
-        new_images.append(img.model_copy(update={
-            "url": gcs_url,
-            "file_data": None,
-        }))
-    logger.debug(f"SeedreamV4_5EditResult after processing and uploading to GCS: {result}")
-    return result.model_copy(update={"images": new_images})
+    first_img = result.images[0]
+    if not first_img.url.startswith("data:"):
+        raise ValueError(f"Image URL is not a data URI: {first_img.url}")
+    logger.debug("Uploaded SeedreamV4_5Edit data URI to GCS (first image)")
+    return _data_uri_to_generated_image_process_result(
+        data_uri=first_img.url,
+        gcs_uri_base=gcs_uri_base,
+        raw_response_from_provider=raw_result,
+        width_hint=first_img.width,
+        height_hint=first_img.height,
+    )
 
 
 class AccelerationEnum(StrEnum):
@@ -207,13 +250,17 @@ class ZImageTurboResult(BaseModel):
     prompt: str
 
 
-def _upload_data_uri_to_gcs_and_return_url(data_uri: str, enable_compress_png_to_jpeg: bool = True) -> str:
-    """Parse image data URI, upload to GCS with correct suffix, return public HTTP URL."""
+def _upload_data_uri_to_gcs_and_return_url(
+    data_uri: str,
+    gcs_uri_base: str,
+    enable_compress_png_to_jpeg: bool = True,
+) -> str:
+    """Parse image data URI, upload to GCS with gcs_uri_base as path prefix, return public HTTP URL."""
     file_data, image_format = parse_image_data_uri(data_uri)
     if enable_compress_png_to_jpeg and image_format == ImageFormat.PNG:
         file_data, image_format = compress_png_to_jpeg(file_data), ImageFormat.JPEG
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
-    gcs_path = f"fal_images/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
+    gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
     return upload_to_gcs(
         file_data=file_data,
         content_type=_IMAGE_FORMAT_TO_CONTENT_TYPE[image_format],
@@ -223,28 +270,29 @@ def _upload_data_uri_to_gcs_and_return_url(data_uri: str, enable_compress_png_to
 
 
 @traceable
-async def z_image_turbo(args: ZImageTurboInput) -> ZImageTurboResult:
+async def z_image_turbo(
+    args: ZImageTurboInput,
+    gcs_uri_base: str,
+) -> GeneratedImageProcessResult:
     handler = await fal_client.submit_async(Z_IMAGE_TURBO.id_on_provider, arguments=args.model_dump())
     raw_result = await handler.get()
     raw_result["handler"] = handler
     attach_provider_response_to_langsmith_run(raw_result)
     result = ZImageTurboResult(**raw_result)
-    logger.debug(f"ZImageTurbo raw result before processing and uploading to GCS: {raw_result}")
+    logger.debug("ZImageTurbo raw result before processing and uploading to GCS: {}", raw_result)
     if not result.images:
         raise ValueError("No images returned from ZImageTurbo")
-
-    new_images: list[ImageFile] = []
-    for img in result.images:
-        if not img.url.startswith("data:"):
-            raise ValueError(f"Image URL is not a data URI: {img.url}")
-        gcs_url = _upload_data_uri_to_gcs_and_return_url(img.url)
-        logger.debug(f"Uploaded ZImageTurbo data URI to GCS: {gcs_url}")
-        new_images.append(img.model_copy(update={
-            "url": gcs_url,
-            "file_data": None,
-        }))
-    logger.debug(f"ZImageTurboResult after processing and uploading to GCS: {result}")
-    return result.model_copy(update={"images": new_images})
+    first_img = result.images[0]
+    if not first_img.url.startswith("data:"):
+        raise ValueError(f"Image URL is not a data URI: {first_img.url}")
+    logger.debug("Uploaded ZImageTurbo data URI to GCS (first image)")
+    return _data_uri_to_generated_image_process_result(
+        data_uri=first_img.url,
+        gcs_uri_base=gcs_uri_base,
+        raw_response_from_provider=raw_result,
+        width_hint=first_img.width,
+        height_hint=first_img.height,
+    )
 
 
 class ZImageTurboImageToImageImageSizeEnum(StrEnum):
@@ -326,11 +374,11 @@ async def z_image_turbo_image_to_image(args: ZImageTurboImageToImageInput) -> ZI
     for img in result.images:
         if not img.url.startswith("data:"):
             raise ValueError(f"Image URL is not a data URI: {img.url}")
-        gcs_url = _upload_data_uri_to_gcs_and_return_url(img.url)
-        logger.debug(f"Uploaded ZImageTurbo data URI to GCS: {gcs_url}")
+        gcs_url = _upload_data_uri_to_gcs_and_return_url(img.url, gcs_uri_base="fal_images")
+        logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", gcs_url)
         new_images.append(img.model_copy(update={
             "url": gcs_url,
             "file_data": None,
         }))
-    logger.debug(f"ZImageTurboImageToImageResult after processing and uploading to GCS: {result}")
+    logger.debug("ZImageTurboImageToImageResult after processing and uploading to GCS: {}", result)
     return result.model_copy(update={"images": new_images})

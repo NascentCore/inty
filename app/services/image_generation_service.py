@@ -768,6 +768,10 @@ class ImageGenerationService:
             prepared.reference_url,
         )
 
+        agent_id = agent_data.get("id")
+        if not agent_id:
+            raise ValueError("Agent data missing ID; cannot generate image path")
+
         if model == Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider:
             args = ZImageTurboImageToImageInput(
                 prompt=prepared.prompt,
@@ -776,9 +780,27 @@ class ImageGenerationService:
                 num_images=1,
             )
             result = await z_image_turbo_image_to_image(args)
+            if not result.images:
+                raise ValueError("fal returned no images")
+            img = result.images[0]
+            public_url = img.url
+            gcs_uri = public_url.replace(
+                "https://storage.googleapis.com/", "gs://", 1
+            )
+            width = getattr(img, "width", None) or 0
+            height = getattr(img, "height", None) or 0
+            content_type = getattr(img, "content_type", "image/jpeg") or "image/jpeg"
+            image_format = "jpeg"
+            if "png" in content_type.lower():
+                image_format = "png"
+            elif "webp" in content_type.lower():
+                image_format = "webp"
+            elif "gif" in content_type.lower():
+                image_format = "gif"
+            byte_size = getattr(img, "file_size", None) or 0
+            generated_at_iso = datetime.now(timezone.utc).isoformat()
         else:
             assert model == SEEDREAM_V4_5_EDIT.id_on_provider
-            # Seedream accepts multiple reference images: iMate (agent) first, user profile second
             seedream_image_urls: list[str] = [prepared.reference_url]
             if prepared.user_photo_url:
                 seedream_image_urls.append(prepared.user_photo_url)
@@ -789,32 +811,15 @@ class ImageGenerationService:
                 prompt=prepared.prompt,
                 image_urls=seedream_image_urls,
             )
-            result = await seedream_v4_5_edit(args)
-
-        if not result.images:
-            raise ValueError("fal returned no images")
-        img = result.images[0]
-        # fal.py 已上传到 GCS，url 为 public HTTP URL
-        public_url = img.url
-        gcs_uri = public_url.replace(
-            "https://storage.googleapis.com/", "gs://", 1
-        )
-        width = getattr(img, "width", None) or 0
-        height = getattr(img, "height", None) or 0
-        content_type = getattr(img, "content_type", "image/jpeg") or "image/jpeg"
-        image_format = "jpeg"
-        if "png" in content_type.lower():
-            image_format = "png"
-        elif "webp" in content_type.lower():
-            image_format = "webp"
-        elif "gif" in content_type.lower():
-            image_format = "gif"
-        byte_size = getattr(img, "file_size", None) or 0
+            result = await seedream_v4_5_edit(args, gcs_uri_base=f"chat_images/{agent_id}")
+            gcs_uri = result.gcs_uri
+            width = result.size.width
+            height = result.size.height
+            image_format = result.format.value
+            byte_size = result.raw_data_total_bytes
+            generated_at_iso = result.generated_at.isoformat()
 
         cdn_url = image_transform_service.transform_desktop(gcs_uri)
-        agent_id = agent_data.get("id")
-        if not agent_id:
-            raise ValueError("Agent data missing ID; cannot generate image path")
 
         metadata_update = {
             "generated_image": {
@@ -824,7 +829,7 @@ class ImageGenerationService:
                 "format": image_format,
                 "prompt": prepared.prompt,
                 "model": model,
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": generated_at_iso,
             }
         }
         success = await chat_history_service.update_message_metadata(
