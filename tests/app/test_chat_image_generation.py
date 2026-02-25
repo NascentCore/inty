@@ -178,7 +178,9 @@ class TestImageGenerationService:
             message_id=message_id,
             agent_data=agent_data,
             message_content=message_content,
+            user_id=user_id,
             history_count=10,
+            model="gemini-2.5-flash-image",
         )
 
         assert "image_url" in result
@@ -361,7 +363,9 @@ class TestChatHistoryService:
             message_id=message_id,
             agent_data=agent_data,
             message_content="please draw an image",
+            user_id=user_id,
             history_count=5,
+            model="gemini-2.5-flash-image",
         )
 
         assert result["message_id"] == message_id
@@ -485,6 +489,7 @@ class TestChatHistoryService:
             message_content="please draw an image",
             user_id=user_id,
             history_count=5,
+            model="gemini-2.5-flash-image",
         )
 
         assert result["message_id"] == message_id

@@ -661,7 +661,7 @@ class ImageGenerationService:
             system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
         )
 
-        cdn_url = image_transform_service.transform_desktop(gcs_uri)
+        cdn_url = image_transform_service.transform_desktop(result.gcs_uri)
 
         metadata_update = {
             "generated_image": {
@@ -705,7 +705,7 @@ class ImageGenerationService:
                 agent_id=agent_id,
             )
 
-            logger.info("图片已保存到resources表: {}", gcs_uri)
+            logger.info("图片已保存到resources表: {}", result.gcs_uri)
         except Exception as e:
             # 不影响主流程，继续执行
             logger.warning("保存图片到resources表失败: {}", str(e))
