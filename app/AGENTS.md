@@ -1,8 +1,8 @@
 # AGENTS.md · app/（后端服务）
 
 - `__init__.py` 必须为空
-- 使用 OpenAI SDK 进行 text LLM API 调用
-- 使用 Google GenAI SDK 调用 multimodal 生成 API 调用
+- 使用 `app/core/google_genai/wrapped_client.py` 调用 Google 生图模型
+- 使用 `app/core/images/fal.py` 来调用 Fal
 - 禁止直接使用 httpx 等 http 调用任何第三方 API
 - API endpoints 返回给调用方的信息必须用英文，因为用户都是美国用户
 - 新增或修改 API endpoints 必须添加端到端测试，假设测试用后端可在 localhost:8000 访问
