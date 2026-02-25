@@ -547,13 +547,7 @@ def load_config(path: str) -> Config:
         verification=VerificationConfig(**data.get("verification", {})),
         logging=LoggingConfig(**data.get("logging", {})),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
-        agent=AgentConfig(
-            **{
-                k: v
-                for k, v in data.get("agent", {}).items()
-                if k in {f.name for f in dataclasses.fields(AgentConfig)}
-            }
-        ),
+        agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig(**data.get("gcs", {})),
         firebase=FirebaseConfig(**data.get("firebase", {})),
         google_play=GooglePlayConfig(**data.get("google_play", {})),
