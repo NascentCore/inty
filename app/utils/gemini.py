@@ -19,6 +19,7 @@ import io
 import json
 import os
 from enum import StrEnum
+import threading
 from typing import List, Optional
 
 import google.genai as genai
@@ -45,80 +46,63 @@ from app.utils.google_genai_client import wrap_google_genai_client_with_langsmit
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
-client = None  # Will be initialized when needed
+_google_genai_client = None  # Will be initialized when needed
+_google_genai_client_lock = threading.Lock()
+
+
+def create_google_genai_client():
+    """
+    使用 Vertex AI 配置创建并返回包装后的 Google Gen AI 客户端。
+    使用与 GCS 相同的 service account 凭证；可抛出 ValueError 或 genai 相关异常。
+    """
+    credentials_path = (
+        global_config_loaded_from_config_yaml.app.gcp_service_account_key
+    )
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+
+    location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
+    project_id = None
+    if os.path.exists(credentials_path):
+        with open(credentials_path, "r") as f:
+            creds = json.load(f)
+            project_id = creds.get("project_id")
+
+    if not project_id:
+        raise ValueError(
+            f"Project ID not found in credentials file: {credentials_path}"
+        )
+
+    if hasattr(genai, "_client_cache"):
+        genai._client_cache.clear()
+
+    tracing_metadata = {
+        "source": "app.utils.gemini",
+        "project_id": project_id,
+        "location": location,
+    }
+    return genai.Client(
+        vertexai=True,
+        project=project_id,
+        location=location,
+    )
 
 
 def get_genai_client():
-    """Get or create Google Gen AI client with proper configuration"""
-    global client
-    if client is None:
-        # Check if we're in test environment
-        from app.core.config import Environment
+    """
+    获取或创建 Google Gen AI 客户端。
+    """
+    global _google_genai_client
+    with _google_genai_client_lock:
+        if _google_genai_client is None:
+            from app.core.config import Environment
 
-        if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
-            logger.info("Using FakeGeminiClient in test environment")
-            client = FakeGeminiClient()
-            return client
-
-        try:
-            # Initialize with Vertex AI configuration
-            # This will use the same service account credentials as GCS
-
-            # Set environment variable for proper authentication
-            credentials_path = (
-                global_config_loaded_from_config_yaml.app.gcp_service_account_key
-            )
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-            # Try to get project ID from credentials file
-            project_id = None
-            location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
-
-            if os.path.exists(credentials_path):
-                with open(credentials_path, "r") as f:
-                    creds = json.load(f)
-                    project_id = creds.get("project_id")
-
-            if not project_id:
-                raise ValueError(
-                    f"Project ID not found in credentials file: {credentials_path}"
-                )
-
-            # Clear any cached client to ensure fresh authentication
-            if hasattr(genai, "_client_cache"):
-                genai._client_cache.clear()
-
-            tracing_metadata = {
-                "source": "app.utils.gemini",
-                "project_id": project_id,
-                "location": location,
-            }
-            base_client = genai.Client(
-                vertexai=True,
-                project=project_id,
-                location=location,
-            )
-            client = wrap_google_genai_client_with_langsmith(
-                base_client,
-                tags=["google-genai", "vertex-ai", "app-utils-gemini"],
-                metadata=tracing_metadata,
-                chat_name="Inty_GoogleGenAI",
-            )
-            logger.debug(
-                f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
-            )
-        except Exception as e:
-            logger.error(f"Error initializing Google Gen AI client: {e}")
-            # Fallback to basic initialization with environment variable set
-            fallback_client = genai.Client(vertexai=True)
-            client = wrap_google_genai_client_with_langsmith(
-                fallback_client,
-                tags=["google-genai", "vertex-ai", "app-utils-gemini"],
-                metadata={"source": "app.utils.gemini", "location": location},
-                chat_name="Inty_GoogleGenAI",
-            )
-
-    return client
+            if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+                logger.info("Using FakeGeminiClient in test environment")
+                _google_genai_client = FakeGeminiClient()
+            else:
+                logger.info("Creating Google Gen AI client")
+                _google_genai_client = create_google_genai_client()
+    return _google_genai_client
 
 
 def enhance_prompt(prompt: str, gender: str) -> str:

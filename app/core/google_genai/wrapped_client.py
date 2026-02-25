@@ -11,7 +11,8 @@ import datetime
 from enum import StrEnum
 import io
 import tempfile
-from typing import Any, Literal, Optional, TypedDict
+import threading
+from typing import Literal
 import uuid
 
 # -----------------------------------------------------------------------------
@@ -64,10 +65,12 @@ from google.genai import types as gemini_types
 from langsmith.run_helpers import get_current_run_tree, traceable
 
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
+from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
-from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
+from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 # LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
 _LANGSMITH_RAW_DATA_TRACE_BYTES = 100
@@ -81,21 +84,6 @@ class LangSmithTraceRunType(StrEnum):
     EMBEDDING = "embedding"
     PROMPT = "prompt"
     PARSER = "parser"
-
-
-class GeneratedImageProcessResult(BaseModel):
-    """Result of processing a Gemini image_part: metadata dict plus raw data and GCS URI.
-    raw_data 正常为 bytes；LangSmith trace 副本中为 base64 字符串以缩小 trace 体积。
-    """
-
-    size: ImageSize
-    format: ImageFormat
-    raw_data: bytes | str | None = None
-    raw_data_total_bytes: int = 0
-    gcs_uri: str
-    gcs_http_url: str
-    generated_at: datetime.datetime
-    raw_response_from_google: gemini_types.GenerateContentResponse | None = None
 
 
 def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResult | None) -> GeneratedImageProcessResult | None:
@@ -133,8 +121,6 @@ class WrappedClient:
         model: Literal[
             NANO_BANANA.id_on_provider,
             NANO_BANANA_PRO.id_on_provider,
-            IMAGEN_4_FAST.id_on_provider,
-            IMAGEN_4.id_on_provider,
         ],
         contents: list[str],
         gcs_uri_base: str,
@@ -183,14 +169,14 @@ class WrappedClient:
                 logger.debug("Gemini generate_content response: {}", response)
                 # 这里会把图片数据也写入 LangSmith Trace 的 metadata 中，
                 # 暂时不处理，如有需要，再想办法把图片数据从 langsmith trace 数据中删掉。
-                # 这个跟返回值的 raw_response_from_google 是重复的。
+                # 这个跟返回值的 raw_response_from_provider 是重复的。
                 # 这个是必要的，因为发生异常时，返回值为 None，无法记录响应摘要。
-                # 如果有需要，可以考虑把返回值内的 raw_response_from_google 删除。
-                # 返回值中的 raw_response_from_google 是为了方便访问。
+                # 如果有需要，可以考虑把返回值内的 raw_response_from_provider 删除。
+                # 返回值中的 raw_response_from_provider 是为了方便访问。
                 attach_provider_response_to_langsmith_run(response)
                 image_part = _extract_image_part_from_gemini_response(response)
                 result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
-                result.raw_response_from_google = response
+                result.raw_response_from_provider = response
                 return result
             case _:
                 raise ValueError(f"Unsupported model: {model}")
@@ -296,7 +282,7 @@ def _process_image_part_to_generated_image(
     else:
         logger.error("未知的数据类型: {}", type(raw_data))
         raise ValueError(
-            "Unsupported image data type: {}".format(type(raw_data))
+            f"Unsupported image data type: {type(raw_data)}"
         )
 
     logger.info("成功提取图片数据，大小: {} bytes", len(image_data))
@@ -335,7 +321,7 @@ def _process_image_part_to_generated_image(
         except (UnicodeDecodeError, ValueError, AttributeError):
             # 仅避免 decode 失败掩盖主异常，不改变主流程
             pass
-        raise ValueError("Unable to parse image data: {}".format(str(e))) from e
+        raise ValueError(f"Unable to parse image data: {e}") from e
 
     # 按实际格式设置 content_type 与扩展名，避免将 PNG 等误标为 JPEG
     _FORMAT_TO_MIME = {
@@ -350,9 +336,7 @@ def _process_image_part_to_generated_image(
     ext = _FORMAT_TO_EXT.get(fmt_upper, "jpg")
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
-    gcs_path = "{}/{}_{}.{}".format(
-        gcs_uri_base, timestamp, uuid.uuid4().hex[:8], ext
-    )
+    gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{ext}"
     bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
     upload_to_gcs(
         file_data=image_data,
@@ -360,7 +344,7 @@ def _process_image_part_to_generated_image(
         bucket_name=bucket_name,
         path=gcs_path,
     )
-    gcs_uri = "gs://{}/{}".format(bucket_name, gcs_path)
+    gcs_uri = f"gs://{bucket_name}/{gcs_path}"
     gcs_http_url = f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket_name}/{gcs_path}"
     logger.info("图片已上传到 GCS: {}", gcs_uri)
 
@@ -373,3 +357,17 @@ def _process_image_part_to_generated_image(
         gcs_http_url=gcs_http_url,
         generated_at=now_utc,
     )
+
+
+_wrapped_client = None
+_wrapped_client_lock = threading.Lock()
+def get_wrapped_client() -> WrappedClient:
+    """
+    获取 wrapped client。
+    """
+    global _wrapped_client
+    with _wrapped_client_lock:
+        if _wrapped_client is None:
+            base_client = get_genai_client()
+            _wrapped_client = WrappedClient(client=base_client)
+    return _wrapped_client

@@ -31,10 +31,8 @@ agent:
   # 测试环境使用 Gemini 模型，避免调用真实 FAL API（需要 FAL_KEY）
   free_user_text_to_image_model: "imagen-3.0-generate-002"
   sub_user_text_to_image_model: "imagen-3.0-generate-002"
-  free_user_chat_image_model: "gemini"
-  sub_user_chat_image_model: "gemini"
-  sub_user_chat_image_gemini_model: "gemini-2.5-flash-image"
-  free_user_chat_image_gemini_model: "gemini-2.5-flash-image"
+  free_user_chat_image_model: "Nano Banana"
+  sub_user_chat_image_model: "Nano Banana Pro"
   # 免费模型用于测试
   sub_user_chat_model: "z-ai/glm-4.5-air:free"
   free_user_chat_model: "z-ai/glm-4.5-air:free"

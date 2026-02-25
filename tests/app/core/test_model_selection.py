@@ -9,7 +9,17 @@ from app.core.config import (
     AgentConfig,
     global_config_loaded_from_config_yaml as global_config,
 )
-from app.core.model_selection import select_chat_model, select_text_to_image_model
+from app.core.model_selection import (
+    select_chat_image_model,
+    select_chat_model,
+    select_text_to_image_model,
+)
+from app.utils.models_catalog import (
+    NANO_BANANA,
+    NANO_BANANA_PRO,
+    SEEDREAM_V4_5_EDIT,
+    Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+)
 
 
 def test_select_chat_model_free_user_uses_free_model():
@@ -64,3 +74,33 @@ def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_free_u
     with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
         model = select_text_to_image_model(user=user, is_subscribed=False)
         assert model == "fallback-vertex-model"
+
+
+def test_select_chat_image_model_returns_gen_ai_model():
+    """select_chat_image_model 按订阅状态读 config nickname，返回 GenAIModel。"""
+    user = SimpleNamespace()
+    mock_agent = SimpleNamespace(
+        free_user_chat_image_model=NANO_BANANA.nickname,
+        sub_user_chat_image_model=NANO_BANANA_PRO.nickname,
+    )
+    mock_config = SimpleNamespace(agent=mock_agent)
+    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+        model_free = select_chat_image_model(user=user, is_subscribed=False)
+        assert model_free is NANO_BANANA
+        model_sub = select_chat_image_model(user=user, is_subscribed=True)
+        assert model_sub is NANO_BANANA_PRO
+
+
+def test_select_chat_image_model_uses_fal_nickname():
+    """select_chat_image_model 支持 fal 模型 nickname。"""
+    user = SimpleNamespace()
+    mock_agent = SimpleNamespace(
+        free_user_chat_image_model=Z_IMAGE_TURBO_IMAGE_TO_IMAGE.nickname,
+        sub_user_chat_image_model=SEEDREAM_V4_5_EDIT.nickname,
+    )
+    mock_config = SimpleNamespace(agent=mock_agent)
+    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+        model_free = select_chat_image_model(user=user, is_subscribed=False)
+        assert model_free is Z_IMAGE_TURBO_IMAGE_TO_IMAGE
+        model_sub = select_chat_image_model(user=user, is_subscribed=True)
+        assert model_sub is SEEDREAM_V4_5_EDIT

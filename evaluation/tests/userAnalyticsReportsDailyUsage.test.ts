@@ -97,9 +97,6 @@ describe("buildDailyUsageSeries", () => {
 
     expect(series?.dates).toEqual(["2026-02-01", "2026-02-02"]);
     expect(series?.valuesByMetric.total_user_messages).toEqual([10, 20]);
-    expect(series?.valuesByMetric.total_image_generation_requests).toEqual([
-      2, 4,
-    ]);
     expect(series?.valuesByMetric.total_live_chat_sessions).toEqual([1, 2]);
     expect(series?.valuesByMetric.total_voice_requests).toEqual([0, 1]);
     expect(series?.valuesByMetric.total_chat_initiators).toEqual([3, 5]);

@@ -172,7 +172,7 @@ async def generate_chat_image_with_gemini(
 
 5. **调用 Gemini 模型**
    - 使用 `google.genai` SDK（通过 `get_genai_client()` 获取客户端）
-   - 模型：由 `model` 参数指定，默认 `gemini-2.5-flash-image`。订阅用户通常使用 `gemini-3-pro-image-preview`，由配置 `sub_user_chat_image_gemini_model` 控制
+   - 模型：由配置中的 **nickname**（`free_user_chat_image_model` / `sub_user_chat_image_model`）经 `resolve_chat_image_model` 解析为 GenAIModel，仅允许四款（Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
    - 输入格式：
      - 参考图（`types.Part.from_uri()`，MIME 类型为 `image/jpeg`）
      - 文字提示词（`types.Part.from_text()`）
@@ -286,9 +286,8 @@ async def generate_chat_image_with_gemini(
 
 - 图片生成提示词模板：`IMAGE_GENERATION_PROMPT_TEMPLATE`（在代码中维护，可通过 `/api/v1/ai/agents/image-generation/config` 运行时更新）
 - 默认历史消息数量：`agent.image_generation_default_history_count`（`config.yaml` 中配置，默认 10）
-- 消息生图模型：`free_user_chat_image_model`、`sub_user_chat_image_model`（"gemini" 或 fal 模型名）
-- Gemini 模型 ID：`sub_user_chat_image_gemini_model`、`free_user_chat_image_gemini_model`（默认均为 `gemini-2.5-flash-image`）
-- 订阅用户 429 备用模型：`sub_user_chat_image_gemini_fallback_model`（默认 `gemini-2.5-flash-image`）；仅当订阅/管理员用户首轮生图遇 429 时用于重试一次，见下文「429 重试」
+- 消息生图模型：`free_user_chat_image_model`、`sub_user_chat_image_model`（**nickname**，来自 `app/utils/models_catalog.py`）。仅允许四款：Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image；其他值在加载配置时校验失败。
+- 订阅用户 429 备用模型：`sub_user_chat_image_gemini_fallback_model`（Vertex 模型 ID，默认 `gemini-2.5-flash-image`）；仅当**订阅用户**首轮生图遇 429 时用于重试一次，见下文「429 重试」
 - Vertex AI 区域：`agent.vertex_ai_location`（默认 `us-central1`，设为 `global` 可改善 Preview 模型可用性）
 - 应用限额：`app.limits.free_user_image_gen_24h_limit`、`app.limits.subscribed_user_image_gen_24h_limit`
 - GCS 配置：`gcs.bucket`
@@ -308,7 +307,7 @@ async def generate_chat_image_with_gemini(
 
 6. **重复生成**: 重复生成会直接覆盖 `meta_data.generated_image` 字段。
 
-7. **429 重试（仅订阅/管理员 + Gemini）**：首轮使用主模型（如 `gemini-3-pro-image-preview`）生图时，若 API 返回 429（RESOURCE_EXHAUSTED），则自动用备用模型（`sub_user_chat_image_gemini_fallback_model`，默认 `gemini-2.5-flash-image`）再试一次；仅重试一次，第二次失败则按现有错误与兜底逻辑处理。成功时会在 `generated_image` 与用量 `extra_data` 中记录实际使用的模型及 `model_fallback_due_to_429`（是否因 429 使用了备用模型）。
+7. **429 重试（仅订阅用户 + Gemini）**：首轮使用主模型生图时，若 API 返回 429（RESOURCE_EXHAUSTED），则自动用备用模型（`sub_user_chat_image_gemini_fallback_model`，默认 `gemini-2.5-flash-image`）再试一次；仅重试一次，第二次失败则按现有错误与兜底逻辑处理。成功时会在 `generated_image` 与用量 `extra_data` 中记录实际使用的模型及 `model_fallback_due_to_429`（是否因 429 使用了备用模型）。
 
 ## 错误处理
 

@@ -14,33 +14,12 @@ import {
 import { SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import { chatImageApi } from "../services/api";
 
-// 消息生图模型选项：第一级选择提供商（Gemini 或 fal.ai），选 Gemini 时具体型号由下方「Gemini 模型 ID」决定
+// 消息生图模型：仅允许 models_catalog 中的四个 nickname
 const CHAT_IMAGE_MODEL_OPTIONS = [
-  {
-    value: "gemini",
-    label: "Gemini（Vertex AI）",
-    description: "由下方 Gemini 模型 ID 指定具体型号",
-  },
-  {
-    value: "fal-ai/z-image/turbo/image-to-image",
-    label: "fal-ai/z-image/turbo/image-to-image",
-    description: "Tongyi-MAI 超快速 6B 参数模型",
-  },
-  {
-    value: "fal-ai/flux/dev/image-to-image",
-    label: "FLUX Dev (fal.ai)",
-    description: "FLUX 开发版 image-to-image 模型",
-  },
-  {
-    value: "fal-ai/stable-diffusion-v3-medium/image-to-image",
-    label: "SD v3 Medium (fal.ai)",
-    description: "Stable Diffusion v3 中型模型",
-  },
-  {
-    value: "fal-ai/gpt-image-1.5/edit",
-    label: "fal-ai/gpt-image-1.5/edit",
-    description: "GPT Image 1.5 编辑模型",
-  },
+  { value: "Nano Banana", label: "Nano Banana", description: "Gemini 2.5 Flash Image" },
+  { value: "Nano Banana Pro", label: "Nano Banana Pro", description: "Gemini 3 Pro Image Preview" },
+  { value: "Seedream V4.5 Edit", label: "Seedream V4.5 Edit", description: "fal.ai Seedream 编辑" },
+  { value: "Z Image Turbo Image to Image", label: "Z Image Turbo Image to Image", description: "fal.ai Z-Image image-to-image" },
 ];
 
 const { Title, Text } = Typography;
@@ -81,10 +60,6 @@ export const SettingsPage: React.FC = () => {
           default_history_count: response.default_history_count,
           free_user_chat_image_model: response.free_user_chat_image_model,
           sub_user_chat_image_model: response.sub_user_chat_image_model,
-          free_user_chat_image_gemini_model:
-            response.free_user_chat_image_gemini_model,
-          sub_user_chat_image_gemini_model:
-            response.sub_user_chat_image_gemini_model,
         });
         message.success("配置加载成功");
       }
@@ -109,10 +84,6 @@ export const SettingsPage: React.FC = () => {
           default_history_count: response.default_history_count,
           free_user_chat_image_model: response.free_user_chat_image_model,
           sub_user_chat_image_model: response.sub_user_chat_image_model,
-          free_user_chat_image_gemini_model:
-            response.free_user_chat_image_gemini_model,
-          sub_user_chat_image_gemini_model:
-            response.sub_user_chat_image_gemini_model,
         });
       }
     } catch (error: unknown) {
@@ -204,21 +175,13 @@ export const SettingsPage: React.FC = () => {
               type="secondary"
               style={{ display: "block", marginBottom: 16 }}
             >
-              先选提供商（Gemini 或 fal.ai），选 Gemini 时由下方「Gemini 模型
-              ID」指定具体型号（如
-              gemini-2.5-flash-image、gemini-3-pro-image-preview）
+              使用 models_catalog 中的模型 nickname（仅允许：Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
             </Text>
 
             <Form.Item
               name="free_user_chat_image_model"
-              label="免费用户 - 模型提供商"
-              rules={[{ required: true, message: "请选择模型提供商" }]}
-              extra={
-                <Text type="secondary">
-                  选 Gemini 时使用下方「免费用户 Gemini 模型 ID」；选 fal.ai
-                  时直接使用对应模型
-                </Text>
-              }
+              label="免费用户 - 模型"
+              rules={[{ required: true, message: "请选择模型" }]}
             >
               <Select
                 placeholder="选择免费用户模型"
@@ -238,14 +201,8 @@ export const SettingsPage: React.FC = () => {
 
             <Form.Item
               name="sub_user_chat_image_model"
-              label="订阅用户 - 模型提供商"
-              rules={[{ required: true, message: "请选择模型提供商" }]}
-              extra={
-                <Text type="secondary">
-                  选 Gemini 时使用下方「订阅用户 Gemini 模型 ID」；默认
-                  gemini-2.5-flash-image
-                </Text>
-              }
+              label="订阅用户 - 模型"
+              rules={[{ required: true, message: "请选择模型" }]}
             >
               <Select
                 placeholder="选择订阅用户模型"
@@ -261,34 +218,6 @@ export const SettingsPage: React.FC = () => {
                   ),
                 }))}
               />
-            </Form.Item>
-
-            <Form.Item
-              name="free_user_chat_image_gemini_model"
-              label="免费用户 Gemini 模型 ID"
-              rules={[{ required: true, message: "请输入 Vertex AI 模型 ID" }]}
-              extra={
-                <Text type="secondary">
-                  仅当上方「免费用户 - 模型提供商」选 Gemini 时生效，如
-                  gemini-2.5-flash-image
-                </Text>
-              }
-            >
-              <Input placeholder="例如：gemini-2.5-flash-image" />
-            </Form.Item>
-
-            <Form.Item
-              name="sub_user_chat_image_gemini_model"
-              label="订阅用户 Gemini 模型 ID"
-              rules={[{ required: true, message: "请输入 Vertex AI 模型 ID" }]}
-              extra={
-                <Text type="secondary">
-                  仅当上方「订阅用户 - 模型提供商」选 Gemini 时生效，如
-                  gemini-3-pro-image-preview
-                </Text>
-              }
-            >
-              <Input placeholder="例如：gemini-2.5-flash-image" />
             </Form.Item>
 
             <Form.Item>
