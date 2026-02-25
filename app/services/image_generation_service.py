@@ -529,6 +529,15 @@ class ImageGenerationService:
                 select(User.user_photo).where(User.id == user_id)
             )
             user_photo_url = user_result.scalar_one_or_none()
+            # 归一化为可用的 HTTPS URL，与 reference_url 一致；无效则置为 None
+            if user_photo_url:
+                if user_photo_url.startswith(GCS_GS_PREFIX):
+                    user_photo_url = user_photo_url.replace(
+                        GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
+                    )
+                if not user_photo_url.startswith("http"):
+                    logger.error("用户自拍照片不是完整URL: {}", user_photo_url)
+                    user_photo_url = None
 
         char_name, user_name = await self.get_char_user_names_for_image_prompt(
             db, user_id, agent_data
@@ -644,21 +653,9 @@ class ImageGenerationService:
             client = WrappedClient(client=get_genai_client())
             contents = []
             contents.append(prepared.reference_url)
-
-            # 如果用户有自拍照片，添加为额外参考图
-            user_photo_url = prepared.user_photo_url
-            if user_photo_url:
-                # 确保用户照片是完整 URL（与 reference_url 一致，使用 GCS 常量）
-                if user_photo_url.startswith(GCS_GS_PREFIX):
-                    user_photo_url = user_photo_url.replace(
-                        GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
-                    )
-                if user_photo_url.startswith("http"):
-                    contents.append(user_photo_url)
-                    logger.info("添加用户自拍照片作为参考图: {}", user_photo_url)
-                else:
-                    logger.error("用户自拍照片不是完整URL: {}", user_photo_url)
-
+            if prepared.user_photo_url:
+                contents.append(prepared.user_photo_url)
+                logger.info("添加用户自拍照片作为参考图: {}", prepared.user_photo_url)
             contents.append(prepared.prompt)
 
             gemini_model = model or NANO_BANANA.id_on_provider
@@ -807,16 +804,9 @@ class ImageGenerationService:
             assert model == SEEDREAM_V4_5_EDIT.id_on_provider
             # Seedream accepts multiple reference images: iMate (agent) first, user profile second
             seedream_image_urls: list[str] = [prepared.reference_url]
-            user_photo_url = prepared.user_photo_url
-            if user_photo_url and user_photo_url.strip():
-                photo_url = user_photo_url
-                if photo_url.startswith(GCS_GS_PREFIX):
-                    photo_url = photo_url.replace(
-                        GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
-                    )
-                if photo_url.startswith("http"):
-                    seedream_image_urls.append(photo_url)
-                    logger.info("Seedream 使用用户自拍作为第二参考图: {}", photo_url)
+            if prepared.user_photo_url:
+                seedream_image_urls.append(prepared.user_photo_url)
+                logger.info("Seedream 使用用户自拍作为第二参考图: {}", prepared.user_photo_url)
             if len(seedream_image_urls) < 2:
                 seedream_image_urls.append(prepared.reference_url)
             args = FalSeedreamV4_5EditInput(
