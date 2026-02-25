@@ -7,7 +7,7 @@ on:
     paths:
       - "devops/config.yaml.*"
       - ".github/workflows/validate_config.yaml"
-      - "devops/validate_configs.py"
+      - "devops/test_config_yaml_configs.py"
       - "app/core/config.py"
       - "app/utils/config.py"
 
@@ -17,7 +17,7 @@ on:
     paths:
       - "devops/config.yaml.*"
       - ".github/workflows/validate_config.yaml"
-      - "devops/validate_configs.py"
+      - "devops/test_config_yaml_configs.py"
       - "app/core/config.py"
       - "app/utils/config.py"
 
@@ -62,4 +62,4 @@ jobs:
         run: |
           # config.py 默认加载 config.yaml 文件，因此需要创建一份
           cp devops/config.yaml.test config.yaml
-          pytest -v -s devops/validate_configs.py
+          pytest -v -s devops/test_config_yaml_configs.py
