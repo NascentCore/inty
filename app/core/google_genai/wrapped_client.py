@@ -11,7 +11,8 @@ import datetime
 from enum import StrEnum
 import io
 import tempfile
-from typing import Any, Literal, Optional, TypedDict
+import threading
+from typing import Literal
 import uuid
 
 # -----------------------------------------------------------------------------
@@ -65,6 +66,7 @@ from langsmith.run_helpers import get_current_run_tree, traceable
 
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
+from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
 from app.utils.models_catalog import IMAGEN_4, IMAGEN_4_FAST, NANO_BANANA, NANO_BANANA_PRO
@@ -373,3 +375,17 @@ def _process_image_part_to_generated_image(
         gcs_http_url=gcs_http_url,
         generated_at=now_utc,
     )
+
+
+_wrapped_client = None
+_wrapped_client_lock = threading.Lock()
+def get_wrapped_client() -> WrappedClient:
+    """
+    获取 wrapped client。
+    """
+    global _wrapped_client
+    with _wrapped_client_lock:
+        if _wrapped_client is None:
+            base_client = get_genai_client()
+            _wrapped_client = WrappedClient(client=base_client)
+    return _wrapped_client

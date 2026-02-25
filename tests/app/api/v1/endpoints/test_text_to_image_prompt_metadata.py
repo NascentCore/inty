@@ -35,7 +35,6 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
             await session.commit()
 
         fake_client = FakeGeminiClient()
-        monkeypatch.setattr(gemini_utils, "client", fake_client)
         monkeypatch.setattr(gemini_utils, "get_genai_client", lambda: fake_client)
         monkeypatch.setattr(gemini_utils, "download_from_gcs", fake_client.download_image)
 
