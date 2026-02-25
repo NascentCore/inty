@@ -27,7 +27,7 @@ router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 async def get_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     skip: int = Query(0, ge=0, description="跳过的记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回的记录数"),
     status: Optional[str] = Query(None, description="按状态过滤"),
@@ -37,9 +37,6 @@ async def get_evaluation_sessions(
 
     返回当前用户创建的评测会话列表
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 

@@ -106,6 +106,18 @@ async def get_current_active_user(
     return current_user
 
 
+async def get_current_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """要求当前用户为超级用户，否则抛出 403。"""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superusers can access this endpoint",
+        )
+    return current_user
+
+
 async def get_user_from_token(token: str, db: AsyncSession) -> User:
     """
     从 token 获取用户（供 WebSocket 使用）
