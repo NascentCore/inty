@@ -67,75 +67,11 @@ USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
 CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
 
 
-def _should_trace_text_chat_success_invocation() -> bool:
+def _should_trace() -> bool:
     sample_rate = global_config.agent.langsmith_text_chat_sample_rate
     rand = random.random()
     logger.debug(f"LangSmith text chat sample rate: {sample_rate}, random: {rand}")
     return rand < sample_rate
-
-
-def _build_failed_llm_trace_outputs(
-    error: Exception,
-    is_retryable: bool,
-    attempt: int,
-    max_retries: int,
-) -> Dict[str, Any]:
-    outputs: Dict[str, Any] = {
-        "error_type": type(error).__name__,
-        "error_message": str(error),
-        "is_retryable": is_retryable,
-        "attempt": attempt,
-        "max_retries": max_retries,
-    }
-    if isinstance(error, APIError):
-        outputs["status_code"] = getattr(error, "status_code", None)
-        outputs["error_body"] = getattr(error, "body", None)
-    return outputs
-
-
-def _trace_failed_llm_invocation(
-    *,
-    trace_name: str,
-    model: str,
-    openai_messages: List[Dict[str, Any]],
-    metadata: Dict[str, Any],
-    error: Exception,
-    is_retryable: bool,
-    attempt: int,
-    max_retries: int,
-) -> None:
-    """Always trace failed LLM invocations, even when success sampling skips tracing."""
-    if ls is None:
-        return
-    failure_metadata: Dict[str, Any] = dict(metadata)
-    failure_metadata.update(
-        {
-            "force_trace_reason": "failed_llm_invocation",
-            "attempt": attempt,
-            "max_retries": max_retries,
-            "is_retryable": is_retryable,
-        }
-    )
-    try:
-        with ls.trace(
-            name=trace_name,
-            run_type="llm",
-            inputs={"messages": openai_messages, "model": model},
-            metadata=failure_metadata,
-        ) as run:
-            run.end(
-                outputs=_build_failed_llm_trace_outputs(
-                    error=error,
-                    is_retryable=is_retryable,
-                    attempt=attempt,
-                    max_retries=max_retries,
-                )
-            )
-    except Exception as tracing_error:
-        logger.warning(
-            "Failed to write LangSmith failure trace: {}",
-            str(tracing_error),
-        )
 
 
 class UserTimeContext(TypedDict, total=False):
@@ -937,7 +873,7 @@ class Agent:
 
         for attempt in range(max_retries):
             should_trace = (
-                enable_tracing and _should_trace_text_chat_success_invocation()
+                enable_tracing and _should_trace()
             )
             try:
                 if should_trace:
