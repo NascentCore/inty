@@ -664,7 +664,6 @@ async def _generate_with_fal_ai(
     "/text-to-image",
     response_model=APIResponse[dict],
     summary="Generate images based on text description, 用于支持 dify 角色产线",
-    deprecated=True,
     include_in_schema=True,
     tags=[INTY_EVAL_TAG],
 )

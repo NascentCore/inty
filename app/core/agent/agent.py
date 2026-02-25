@@ -1,4 +1,5 @@
 import asyncio
+import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -70,6 +71,99 @@ USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
     "- Do not claim to need sleep or be offline.",
 ]
 CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
+_TEXT_CHAT_LANGSMITH_MAX_SAMPLE_RATE = 0.1
+
+
+def _resolve_text_chat_langsmith_sample_rate(configured_rate: Any) -> float:
+    """Resolve sample rate for text chat and cap it at 10%."""
+    try:
+        sample_rate = float(configured_rate)
+    except (TypeError, ValueError):
+        sample_rate = _TEXT_CHAT_LANGSMITH_MAX_SAMPLE_RATE
+
+    sample_rate = max(0.0, min(1.0, sample_rate))
+    return min(sample_rate, _TEXT_CHAT_LANGSMITH_MAX_SAMPLE_RATE)
+
+
+def _get_text_chat_langsmith_sample_rate() -> float:
+    configured_rate = getattr(
+        global_config_loaded_from_config_yaml.agent,
+        "langsmith_text_chat_sample_rate",
+        1.0,
+    )
+    return _resolve_text_chat_langsmith_sample_rate(configured_rate)
+
+
+def _should_trace_text_chat_success_invocation(
+    random_value: Optional[float] = None,
+) -> bool:
+    sample_rate = _get_text_chat_langsmith_sample_rate()
+    rand = random_value if random_value is not None else random.random()
+    return rand < sample_rate
+
+
+def _build_failed_llm_trace_outputs(
+    error: Exception,
+    is_retryable: bool,
+    attempt: int,
+    max_retries: int,
+) -> Dict[str, Any]:
+    outputs: Dict[str, Any] = {
+        "error_type": type(error).__name__,
+        "error_message": str(error),
+        "is_retryable": is_retryable,
+        "attempt": attempt,
+        "max_retries": max_retries,
+    }
+    if isinstance(error, APIError):
+        outputs["status_code"] = getattr(error, "status_code", None)
+        outputs["error_body"] = getattr(error, "body", None)
+    return outputs
+
+
+def _trace_failed_llm_invocation(
+    *,
+    trace_name: str,
+    model: str,
+    openai_messages: List[Dict[str, Any]],
+    metadata: Dict[str, Any],
+    error: Exception,
+    is_retryable: bool,
+    attempt: int,
+    max_retries: int,
+) -> None:
+    """Always trace failed LLM invocations, even when success sampling skips tracing."""
+    if ls is None:
+        return
+    failure_metadata: Dict[str, Any] = dict(metadata)
+    failure_metadata.update(
+        {
+            "force_trace_reason": "failed_llm_invocation",
+            "attempt": attempt,
+            "max_retries": max_retries,
+            "is_retryable": is_retryable,
+        }
+    )
+    try:
+        with ls.trace(
+            name=trace_name,
+            run_type="llm",
+            inputs={"messages": openai_messages, "model": model},
+            metadata=failure_metadata,
+        ) as run:
+            run.end(
+                outputs=_build_failed_llm_trace_outputs(
+                    error=error,
+                    is_retryable=is_retryable,
+                    attempt=attempt,
+                    max_retries=max_retries,
+                )
+            )
+    except Exception as tracing_error:
+        logger.warning(
+            "Failed to write LangSmith failure trace: {}",
+            str(tracing_error),
+        )
 
 
 class UserTimeContext(TypedDict, total=False):
@@ -870,14 +964,21 @@ class Agent:
             and global_config_loaded_from_config_yaml.app.environment
             != Environment.TEST
         )
+        normalized_labels = (
+            normalize_langsmith_metadata(labels) if enable_tracing else {}
+        )
+        trace_name = chat_name or f"{user_id}:{self.name}"
 
         for attempt in range(max_retries):
+            # 仅对文本聊天的“成功调用”做 10% 采样；失败调用会在 except 中强制追踪。
+            should_trace_sampled_success = (
+                enable_tracing and _should_trace_text_chat_success_invocation()
+            )
             try:
-                if enable_tracing:
-                    normalized_labels = normalize_langsmith_metadata(labels)
+                if should_trace_sampled_success:
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
-                        name=chat_name or f"{user_id}:{self.name}",
+                        name=trace_name,
                         run_type="llm",
                         inputs={"messages": openai_messages, "model": model},
                         metadata=normalized_labels,
@@ -921,7 +1022,7 @@ class Agent:
                                 }
                             )
                 else:
-                    # 测试环境：直接调用 API，不使用 LangSmith 追踪
+                    # 未采样或 tracing 关闭时，直接调用 API。
                     response = client.chat.completions.create(
                         messages=openai_messages,
                         model=model,
@@ -942,6 +1043,17 @@ class Agent:
             except Exception as e:
                 last_error = e
                 is_retryable = self._is_retryable_error(e)
+                if enable_tracing and not should_trace_sampled_success:
+                    _trace_failed_llm_invocation(
+                        trace_name=trace_name,
+                        model=model,
+                        openai_messages=openai_messages,
+                        metadata=normalized_labels,
+                        error=e,
+                        is_retryable=is_retryable,
+                        attempt=attempt + 1,
+                        max_retries=max_retries,
+                    )
 
                 # 记录错误详情
                 error_details = {
