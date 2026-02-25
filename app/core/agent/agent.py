@@ -68,7 +68,7 @@ CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
 
 
 def _should_trace_text_chat_success_invocation() -> bool:
-    sample_rate = global_config.agent.langsmith_text_chat_success_sample_rate
+    sample_rate = global_config.agent.langsmith_text_chat_sample_rate
     rand = random.random()
     logger.debug(f"LangSmith text chat sample rate: {sample_rate}, random: {rand}")
     return rand < sample_rate
