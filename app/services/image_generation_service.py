@@ -659,9 +659,7 @@ class ImageGenerationService:
             contents.append(prepared.prompt)
 
             gemini_model = model or NANO_BANANA.id_on_provider
-            agent_id = agent_data.get("id")
-            if not agent_id:
-                raise ValueError("Agent data missing ID; cannot generate image path")
+            agent_id = agent_data["id"]
             gcs_uri_base = f"chat_images/{agent_id}"
             result = await client.async_generate_image(
                 model=gemini_model, contents=contents, gcs_uri_base=gcs_uri_base,
@@ -696,12 +694,9 @@ class ImageGenerationService:
             if not success:
                 raise ValueError(f"Failed to update meta_data for message {message_id}")
 
-            if agent_id:
-                await agent_service.append_agent_background_image(
-                    db=db, agent_id=agent_id, image_url=gcs_uri
-                )
-            else:
-                logger.warning("Agent数据缺少ID，无法追加生成图片到背景图历史")
+            await agent_service.append_agent_background_image(
+                db=db, agent_id=agent_id, image_url=gcs_uri
+            )
 
             # 保存到resources表（用于后续匹配查询）
             if user_id:
