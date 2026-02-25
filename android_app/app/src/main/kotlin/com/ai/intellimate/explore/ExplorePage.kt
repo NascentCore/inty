@@ -125,7 +125,7 @@ fun ExplorePage(
 
             CreateIMateEntryBanner(
                 modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-                onClick = { navController.navigate(Routes.Creat.CreateRole) },
+                onClick = { navController.navigate(Routes.Creat.createRole("")) },
             )
             Spacer(modifier = Modifier.height(UiConfigs.Spacing.Small))
 
