@@ -65,8 +65,6 @@ USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
     "- Do not claim to need sleep or be offline.",
 ]
 CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
-_TEXT_CHAT_LANGSMITH_MAX_SAMPLE_RATE = 0.1
-
 
 
 def _should_trace_text_chat_success_invocation() -> bool:
