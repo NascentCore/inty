@@ -17,3 +17,5 @@ https://applink.feishu.cn/client/message/link/open?token=AmkX08%2BiwAy9aZ5x5KcBD
 类似问题是否在 IM 系统更容易解决：
 
 - https://applink.feishu.cn/client/message/link/open?token=AmfpyocKAMADaZ5x%2FXJBTNU%3D
+
+- [ ] 生图耗时过长，在应用层面比较难控制线性执行
