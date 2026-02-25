@@ -1,9 +1,15 @@
 # DevOps - 运维（目录索引）
 
-Playground:
+**Playground:**
+
 - https://platform.openai.com/playground/images
 - https://console.cloud.google.com/vertex-ai/studio/multimodal?project=alien-paratext-461204-i9
 - https://fal.ai/models/fal-ai/z-image/turbo
+
+**LangSmith**
+
+- dev 环境 100% 追踪
+- prod 环境 10% 追踪文本 100% 其他
 
 ## IntelliMate & Inty dev 与 prod 环境
 
