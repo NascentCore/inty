@@ -28,7 +28,7 @@ app.add_middleware(
 
 # Initialize multistage generator
 multistage_generator = None
-logger = logging.getLogger(__name__)
+from loguru import logger
 WEBUI_PATH = Path(__file__).with_name("webui.html")
 
 

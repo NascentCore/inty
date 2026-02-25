@@ -61,16 +61,6 @@ agent = Agent(
 )
 ```
 
-### 3. 获取最终提示词
-
-```python
-# 获取最终渲染的提示词
-final_prompt = agent.get_final_prompt()
-
-# 获取模版信息
-template_info = agent.get_template_info()
-```
-
 ## API 接口
 
 ### 1. 获取 Agent 提示词

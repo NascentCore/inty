@@ -12,7 +12,7 @@ from app.api.deps import get_async_db
 from app import models
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 async def analyze_debug_messages():

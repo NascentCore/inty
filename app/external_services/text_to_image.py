@@ -31,7 +31,7 @@ DEFAULT_GCS_BASE_DIR = "tmp/image_generation_wrapper"
 FORMAT_JPEG = "jpeg"
 FORMAT_PNG = "png"
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class TextToImageProvider(StrEnum):

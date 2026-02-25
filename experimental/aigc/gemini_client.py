@@ -32,7 +32,7 @@ class GeminiClient:
 
     def __init__(self):
         """Initialize the Gemini client"""
-        self.logger = logging.getLogger(__name__)
+        self.from loguru import logger
         self.logger.info("Initializing Gemini client...")
 
         try:

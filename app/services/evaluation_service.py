@@ -20,7 +20,7 @@ from app.models.evaluation import (
 from app.services import agent_service, chat_service
 from app.services.scoring_service import ScoringService
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class EvaluationService:

@@ -14,7 +14,6 @@ from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
 from app.api.types.llm_config import LLMConfig
 from app.api.utils.logger_route import LoggerRoute
-from app.core.user_privilege.superuser_check import is_superuser
 from app.models.memory import FestivalMemoryConfig
 from app.schemas.festival_memory import (
     FestivalMemoryConfigCreate,
@@ -30,16 +29,6 @@ router = APIRouter(
 )
 
 
-async def get_current_superuser(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> schemas.User:
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="Only superusers can access this endpoint"
-        )
-    return current_user
-
-
 @router.get(
     "/festival-memory-configs",
     response_model=schemas.APIResponse[List[FestivalMemoryConfigInDB]],
@@ -49,7 +38,7 @@ async def list_festival_memory_configs(
     db: AsyncSession = Depends(deps.get_async_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     result = await db.execute(
         select(FestivalMemoryConfig)
@@ -71,7 +60,7 @@ async def list_festival_memory_configs(
 async def create_festival_memory_config(
     body: FestivalMemoryConfigCreate,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     config = FestivalMemoryConfig(
         festival_name=body.festival_name,
@@ -102,7 +91,7 @@ async def create_festival_memory_config(
 async def delete_festival_memory_config(
     config_id: int,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     result = await db.execute(
         select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id)
@@ -124,7 +113,7 @@ async def update_festival_memory_config(
     config_id: int,
     body: FestivalMemoryConfigUpdate,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     result = await db.execute(
         select(FestivalMemoryConfig).where(FestivalMemoryConfig.id == config_id)
@@ -176,7 +165,7 @@ async def update_festival_memory_config(
 async def run_festival_memory_extraction(
     body: FestivalMemoryExtractionRunRequest,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     if body.config_id is not None:
         result = await db.execute(

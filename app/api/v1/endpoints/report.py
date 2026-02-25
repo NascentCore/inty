@@ -25,17 +25,6 @@ from app.services import report_service
 router = APIRouter(prefix="/report", route_class=LoggerRoute)
 
 
-async def get_current_superuser(
-    current_user: User = Depends(deps.get_current_active_user),
-) -> User:
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="Report and feedback endpoints are restricted to superusers",
-        )
-    return current_user
-
-
 @router.get("/", response_model=ReportsList, tags=[WEB_APP_TAG])
 async def list_reports(
     target_type: Optional[TargetType] = None,
@@ -45,7 +34,7 @@ async def list_reports(
     skip: int = 0,
     limit: int = 50,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(deps.get_current_superuser),
 ):
     """查询 Report/Feedback 列表，支持按创建时间排序（order_by: created_at_desc 或 created_at_asc）"""
     query = ReportQuery(
@@ -64,7 +53,7 @@ async def list_reports(
 async def get_report(
     report_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(deps.get_current_superuser),
 ):
     """按 id 获取单条举报详情（用于永久链接打开）。"""
     report = await report_service.get_report(db, report_id)
@@ -76,7 +65,7 @@ async def update_report_github_issue(
     report_id: str,
     payload: ReportGithubIssueUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(deps.get_current_superuser),
 ):
     """更新举报记录关联的 GitHub issue URL。"""
     try:
@@ -110,7 +99,7 @@ async def create_report(
 async def delete_report(
     report_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(deps.get_current_superuser),
 ):
     try:
         await report_service.delete_report(

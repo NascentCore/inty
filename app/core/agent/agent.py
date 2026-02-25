@@ -40,7 +40,6 @@ from app.services.cache_service import cache_service
 from app.utils.openai_client import (
     get_base_openai_client,
     langchain_message_to_openai_message,
-    wrap_client_with_langsmith,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
 
@@ -596,25 +595,6 @@ class Agent:
         with self._last_used_lock:
             self.last_used = time.time()
 
-    def _get_wrapped_client(self, chat_name: str, labels: dict) -> OpenAI:
-        """
-        为每次请求创建带 LangSmith 包装的 OpenAI 客户端
-
-        注意：不缓存 wrapped client，因为：
-        1. chat_name 包含用户名，每个用户不同
-        2. LangSmith wrapper 持有 trace 上下文，缓存会导致 trace 嵌套污染
-        3. 底层 HTTP 连接池在 base_client 中复用，性能不受影响
-
-        Args:
-            chat_name: 聊天名称，用于LangSmith追踪
-            labels: 元数据标签
-
-        Returns:
-            包装后的OpenAI客户端
-        """
-        base_client = get_base_openai_client()
-        return wrap_client_with_langsmith(base_client, chat_name, labels)
-
     def _chat_extra_body(self, user_id: str) -> Dict[str, Any]:
         """OpenAI/OpenRouter chat completion extra_body: thinking_budget (Gemini), user (tracking)."""
         return {
@@ -1093,13 +1073,7 @@ class Agent:
                 )
                 default_top_p = global_config.agent.top_p
 
-                # 获取或创建wrapped client（性能优化：复用客户端）
-                client_start = time.time()
-                client = self._get_wrapped_client(chat_name, labels)
-                client_time = time.time() - client_start
-                logger.debug(
-                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                client = get_base_openai_client()
 
                 # API调用（带重试机制）
                 # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
@@ -1388,13 +1362,7 @@ class Agent:
                 )
                 default_top_p = global_config.agent.top_p
 
-                # 获取或创建wrapped client（性能优化：复用客户端）
-                client_start = time.time()
-                client = self._get_wrapped_client(chat_name, labels)
-                client_time = time.time() - client_start
-                logger.debug(
-                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                client = get_base_openai_client()
 
                 # API调用（使用统一的重试和 trace 逻辑）
                 # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
@@ -1549,23 +1517,6 @@ class Agent:
         except Exception as e:
             logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
             raise
-
-    def get_final_prompt(self) -> str:
-        """
-        获取最终渲染的提示词（用于调试/展示）。
-
-        当前通过 effective main/mode/personality 组合而成；未使用 prompt_runnable。
-        """
-        parts = []
-        main_prompt = self._get_effective_main_prompt()
-        if main_prompt:
-            parts.append(main_prompt)
-        if self.personality:
-            parts.append(f"[角色性格]\n{self.personality}")
-        mode_prompt = self._get_effective_mode_prompt()
-        if mode_prompt:
-            parts.append(mode_prompt)
-        return "\n\n".join(parts) if parts else "AI助手"
 
     def cleanup(self):
         """清理资源"""
@@ -1880,22 +1831,6 @@ class AgentManager:
                 except Exception as e:
                     logger.error(f"重新加载Agent失败 {agent_id}: {str(e)}")
                     return False
-
-    def get_agent_prompt(self, agent_id: str) -> Optional[str]:
-        """
-        获取指定Agent的最终提示词
-
-        Args:
-            agent_id: Agent ID
-
-        Returns:
-            最终渲染的提示词，如果Agent不存在则返回None
-        """
-        with self._read_lock:
-            if agent_id in self.agents:
-                agent = self.agents[agent_id]
-                return agent.get_final_prompt()
-        return None
 
     def stop(self):
         """停止Agent管理器并清理所有资源"""

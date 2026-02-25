@@ -4,7 +4,7 @@ import time
 from threading import RLock
 from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class InMemoryCache:

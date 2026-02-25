@@ -199,5 +199,4 @@
 
 - `first_message` 字段已移除；若仍需在数据库中持久化该信息，需要评估是否放入 `extensions` 或 `character_card_data`。
 - 聊天流程仍是同步阻塞 OpenAI API，后续可在 `_chat_sync_optimized` 中接入流式接口或重构为 Runnable 管线。
-- `Agent.get_final_prompt` 仍引用 `self.prompt_runnable`（尚未完全实现），如需调试完整提示词可进一步补强该逻辑。
 - 语音系统依赖 `opening` 文本，在导入角色卡后建议触发 `generate_agent_opening_voice` 以保持体验一致。

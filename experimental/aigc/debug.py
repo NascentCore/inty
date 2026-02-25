@@ -140,7 +140,7 @@ def check_logging():
         # Setup verbose logging for testing
         setup_verbose_logging()
 
-        logger = logging.getLogger(__name__)
+        from loguru import logger
         logger.info("Test log message - INFO level")
         logger.debug("Test log message - DEBUG level")
         logger.warning("Test log message - WARNING level")

@@ -26,7 +26,7 @@ from typing import Annotated, Optional
 
 import cyclopts
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 # 在解析 CLI 后、导入 app 前设置 config.yaml
 CONFIG_YAML = "config.yaml"

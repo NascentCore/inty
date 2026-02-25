@@ -89,7 +89,7 @@ class AgentMigrator:
     def __init__(self, config_path: str):
         self.config = self._load_config(config_path)
         self._setup_logging()
-        self.logger = logging.getLogger(__name__)
+        self.from loguru import logger
 
     def _load_config(self, config_path: str) -> MigrationConfig:
         """加载配置文件"""

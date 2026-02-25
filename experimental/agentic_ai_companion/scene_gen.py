@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 SCENE_MODEL = "gemini-2.0-flash"
 RECENT_MESSAGES_LIMIT = 10
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 def _format_messages_as_context(messages: list[dict[str, Any]], recent_n: int) -> str:

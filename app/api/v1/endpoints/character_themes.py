@@ -19,18 +19,6 @@ from app.services import character_theme_service
 router = APIRouter(prefix="/character-themes", route_class=LoggerRoute)
 
 
-async def get_current_superuser(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> schemas.User:
-    """验证当前用户是否为超级管理员"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="Only superusers can access this endpoint",
-        )
-    return current_user
-
-
 @router.post(
     "/",
     response_model=schemas.APIResponse[character_theme_schemas.CharacterTheme],
@@ -43,7 +31,7 @@ async def create_theme(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     theme_in: character_theme_schemas.CharacterThemeCreate,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """创建角色主题专区"""
     try:
@@ -167,7 +155,7 @@ async def update_theme(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     theme_in: character_theme_schemas.CharacterThemeUpdate,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """更新角色主题专区"""
     try:
@@ -197,7 +185,7 @@ async def delete_theme(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """删除角色主题专区"""
     try:
@@ -227,7 +215,7 @@ async def add_agent_to_theme(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     request: character_theme_schemas.AddAgentToThemeRequest,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """添加角色到专区"""
     try:
@@ -260,7 +248,7 @@ async def remove_agent_from_theme(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     agent_id: str,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """从专区移除角色"""
     try:
@@ -296,7 +284,7 @@ async def reorder_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     request: character_theme_schemas.ReorderAgentsRequest,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """调整角色顺序"""
     try:

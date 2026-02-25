@@ -8,7 +8,7 @@ from typing import Dict
 
 from .firebase_client import send_message_to_token
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 @dataclass

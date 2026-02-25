@@ -10,7 +10,7 @@ import httpx
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class ScoringService:

@@ -14,7 +14,7 @@ from app.api.deps import get_async_db
 from app import models
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 def analyze_prompt_content(prompt: str) -> Dict[str, str]:

@@ -1,11 +1,13 @@
 """
-Wrapper of OpenAI API, used to wrap the OpenAI API with LangSmith.
+OpenAI API client helpers and shared client singleton.
+
+LangSmith tracing is done at call site (e.g. agent._call_openai_api_with_retry),
+not via client wrapping.
 """
 
 # TODO: 写一个 Wrapper 来完成常见功能，包括：
-# 1. langsmith tracing
-# 2. structured output
-# 3. system_prompt, prompt, 单一 text 输出及结构和输出
+# 1. structured output
+# 2. system_prompt, prompt, 单一 text 输出及结构和输出
 # 之前尝试：https://github.com/NascentCore/inty/pull/2310 没有完成
 
 import os
@@ -14,10 +16,8 @@ from enum import StrEnum
 from typing import Optional, Tuple
 
 from langchain_core.messages import BaseMessage
-from langsmith import traceable, wrappers
 from loguru import logger
 from openai import AsyncOpenAI, OpenAI
-from typing_extensions import deprecated
 
 from app.api.types.llm_config import LLMConfig
 from app.core.config import Environment, global_config_loaded_from_config_yaml
@@ -185,55 +185,6 @@ async def chat_completion_for_extraction(
     return (content, prompt_tokens, completion_tokens)
 
 
-def wrap_client_with_langsmith(
-    client: OpenAI, chat_name: str, labels: dict[str, str]
-) -> OpenAI:
-    """
-    已废弃：直接返回基础客户端，不再使用 wrap_openai
-
-    wrap_openai 会创建多层嵌套的 trace，导致 LangSmith 显示混乱。
-    现在改用 langsmith.trace context manager 在 API 调用处手动创建单个 trace。
-
-    Args:
-        client: 基础OpenAI客户端
-        chat_name: 聊天名称（不再使用）
-        labels: 元数据标签（不再使用）
-
-    Returns:
-        基础OpenAI客户端（不包装）
-    """
-    # 直接返回基础客户端，不再使用 wrap_openai
-    # trace 在 agent.py 的 _call_openai_api_with_retry 中手动创建
-    return client
-
-
-@deprecated(
-    "Demo function do not use, this is only for demo @traceable "
-    "This also mapps user->Human and assistant->AI"
-    "We want to have it logging the raw messages, but langsmith insists on"
-    "mapping user->Human and assistant->AI"
-)
-@traceable
-def chat_completions(messages: list[dict[str, str]], **kwargs):
-    """
-    Return an OpenAI client without LangSmith tracing.
-    """
-    return _create_openai_client().chat.completions.create(messages=messages, **kwargs)
-
-
-def create_openai_client(chat_name: str, labels: dict[str, str]):
-    """
-    Return an OpenAI client with LangSmith tracing.
-    The ENV vars are required by langsmith.
-    This maps the role of the messages: user->Human and assistant->AI.
-
-    Note: 该函数保留用于向后兼容，但推荐在Agent类中使用缓存的客户端。
-    对于需要在Agent外部使用的场景，该函数仍然有效。
-    """
-    base_client = get_base_openai_client()
-    return wrap_client_with_langsmith(base_client, chat_name, labels)
-
-
 def langchain_message_to_openai_message(
     message: BaseMessage, user_name: str, agent_name: str
 ) -> dict[str, str]:
@@ -262,7 +213,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
 
     load_dotenv()
-    client = create_openai_client()
+    client = get_base_openai_client()
     response = client.chat.completions.create(
         model="openai/gpt-3.5-turbo",
         messages=[{"role": "user", "content": "Hello, world!"}],
