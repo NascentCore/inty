@@ -12,6 +12,9 @@ from loguru import logger
 import pytest
 from PIL import Image
 
+# 用于倒入 config.yaml 中的 FAL_KEY 到环境变量。
+from app.core.config import global_config_loaded_from_config_yaml as _
+
 from app.core.images.fal import (
     FalSeedreamV4_5EditInput,
     ZImageTurboInput,
