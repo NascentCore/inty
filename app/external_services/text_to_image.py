@@ -22,6 +22,9 @@ from types import SimpleNamespace
 from typing import Any, Optional
 
 import PIL.Image
+from langsmith import traceable
+
+from app.utils.langsmith import attach_provider_response_to_langsmith_run
 
 
 GOOGLE_MODEL_PREFIX = "google/"
@@ -90,6 +93,7 @@ class TextToImageGenerationRequest:
     provider_args: dict[str, Any] = field(default_factory=dict)
 
 
+@traceable(name="unified_text_to_image", run_type="tool")
 def generate_text_to_image(
     request: TextToImageGenerationRequest,
 ) -> TextToImageGenerationResult:
@@ -148,6 +152,7 @@ def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
     )
 
 
+@traceable(name="google_imagen_generate_images", run_type="tool")
 def _generate_google_imagen(
     *,
     provider_model: str,
@@ -186,6 +191,7 @@ def _generate_google_imagen(
         prompt=request.prompt,
         config=config,
     )
+    attach_provider_response_to_langsmith_run(response)
 
     images: list[TextToImageGeneratedImage] = []
     for generated in getattr(response, "generated_images", []) or []:
@@ -222,6 +228,7 @@ def _generate_google_imagen(
     )
 
 
+@traceable(name="openai_generate_images", run_type="tool")
 def _generate_openai_image(
     *,
     provider_model: str,
@@ -248,6 +255,7 @@ def _generate_openai_image(
         n=int(request.num_images),
         response_format="b64_json",
     )
+    attach_provider_response_to_langsmith_run(response)
 
     images: list[TextToImageGeneratedImage] = []
     for item in getattr(response, "data", []) or []:

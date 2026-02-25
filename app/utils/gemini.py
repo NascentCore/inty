@@ -25,6 +25,7 @@ from typing import List, Optional
 import google.genai as genai
 import PIL
 from google.genai import types
+from langsmith import traceable
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -43,6 +44,7 @@ from app.utils.image import (
     get_jpg_bytes_from_pil_image,
 )
 from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
+from app.utils.langsmith import attach_provider_response_to_langsmith_run
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
@@ -278,6 +280,7 @@ def generate_image_description(image_uri: str) -> str:
         raise
 
 
+@traceable(name="google_imagen_text_to_image", run_type="tool")
 def text_to_image(
     prompt: str,
     negative_prompt: str,
@@ -342,6 +345,7 @@ def text_to_image(
             prompt=prompt,
             config=config,
         )
+        attach_provider_response_to_langsmith_run(response)
 
         logger.debug(f"Image generation response: {response}")
 

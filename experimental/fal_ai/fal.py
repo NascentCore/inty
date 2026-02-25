@@ -16,6 +16,9 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import fal_client
+from langsmith import traceable
+
+from app.utils.langsmith import attach_provider_response_to_langsmith_run
 
 FAL_API_KEY_ENV_VAR = "FAL_KEY"
 
@@ -81,6 +84,7 @@ class FalAIClient:
             raise TypeError(f"fal_client.subscribe returned non-dict: {type(result)}")
         return result
 
+    @traceable(name="fal_text_to_image", run_type="tool")
     def text_to_image(
         self,
         *,
@@ -88,9 +92,13 @@ class FalAIClient:
         arguments: dict[str, Any],
         with_logs: bool = False,
     ) -> FalTextToImageResult:
-        return _parse_fal_text_to_image_result(
-            self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
+        raw_result = self.subscribe(
+            model=model,
+            arguments=arguments,
+            with_logs=with_logs,
         )
+        attach_provider_response_to_langsmith_run(raw_result)
+        return _parse_fal_text_to_image_result(raw_result)
 
     def text_to_speech(
         self,
@@ -114,6 +122,7 @@ class FalAIClient:
             self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
         )
 
+    @traceable(name="fal_image_to_image", run_type="tool")
     def image_to_image(
         self,
         *,
@@ -157,9 +166,13 @@ class FalAIClient:
         if extra_args:
             arguments.update(extra_args)
 
-        return _parse_fal_text_to_image_result(
-            self.subscribe(model=model, arguments=arguments, with_logs=with_logs)
+        raw_result = self.subscribe(
+            model=model,
+            arguments=arguments,
+            with_logs=with_logs,
         )
+        attach_provider_response_to_langsmith_run(raw_result)
+        return _parse_fal_text_to_image_result(raw_result)
 
 
 def is_fal_model(model: Optional[str]) -> bool:
