@@ -1,6 +1,11 @@
 # DevOps - 运维（目录索引）
 
-## dev 与 prod 环境
+Playground:
+- https://platform.openai.com/playground/images
+- https://console.cloud.google.com/vertex-ai/studio/multimodal?project=alien-paratext-461204-i9
+- https://fal.ai/models/fal-ai/z-image/turbo
+
+## IntelliMate & Inty dev 与 prod 环境
 
 - 共享同一台 gcp VM
 - 差别在配置文件：[dev](config.yaml.dev) [prod](config.yaml.prod)
