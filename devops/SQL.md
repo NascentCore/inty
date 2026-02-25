@@ -1,5 +1,18 @@
 # SQL 查询用于支持开发和运营
 
+```sql:更新用户和某角色的聊天中国的 chat-style
+UPDATE chat_settings
+   SET style_prompt = 'write very detailed and elaborate descriptions of actions and thoughts'
+   WHERE chat_id = (
+     SELECT id FROM chats
+     WHERE user_id = 'user-testing'
+       AND agent_id = 'agent-b0b86fda'
+       AND is_active = true
+     LIMIT 1
+   );
+UPDATE 1
+```
+
 ```sql:
 -- Requires: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Find agents with the most chage mssages
