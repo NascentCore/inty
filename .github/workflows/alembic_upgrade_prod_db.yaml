@@ -26,4 +26,5 @@ jobs:
       - name: Upgrade production database
         run: |
           export PYTHONPATH=.
+          export ALEMBIC_CONFIG=alembic/alembic.ini
           alembic -x "config=devops/config.yaml.prod" upgrade head
