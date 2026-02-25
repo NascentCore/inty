@@ -1009,17 +1009,6 @@ class Agent:
             except Exception as e:
                 last_error = e
                 is_retryable = self._is_retryable_error(e)
-                if enable_tracing and not should_trace_sampled_success:
-                    _trace_failed_llm_invocation(
-                        trace_name=trace_name,
-                        model=model,
-                        openai_messages=openai_messages,
-                        metadata=normalized_labels,
-                        error=e,
-                        is_retryable=is_retryable,
-                        attempt=attempt + 1,
-                        max_retries=max_retries,
-                    )
 
                 # 记录错误详情
                 error_details = {
