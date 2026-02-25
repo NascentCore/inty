@@ -781,25 +781,12 @@ class ImageGenerationService:
                 num_images=1,
             )
             result = await z_image_turbo_image_to_image(args, gcs_uri_base=gcs_uri_base)
-            if not result.images:
-                raise ValueError("fal returned no images")
-            img = result.images[0]
-            public_url = img.url
-            gcs_uri = public_url.replace(
-                "https://storage.googleapis.com/", "gs://", 1
-            )
-            width = getattr(img, "width", None) or 0
-            height = getattr(img, "height", None) or 0
-            content_type = getattr(img, "content_type", "image/jpeg") or "image/jpeg"
-            image_format = "jpeg"
-            if "png" in content_type.lower():
-                image_format = "png"
-            elif "webp" in content_type.lower():
-                image_format = "webp"
-            elif "gif" in content_type.lower():
-                image_format = "gif"
-            byte_size = getattr(img, "file_size", None) or 0
-            generated_at_iso = datetime.now(timezone.utc).isoformat()
+            gcs_uri = result.gcs_uri
+            width = result.size.width
+            height = result.size.height
+            image_format = result.format.value
+            byte_size = result.raw_data_total_bytes
+            generated_at_iso = result.generated_at.isoformat()
         else:
             assert model == SEEDREAM_V4_5_EDIT.id_on_provider
             seedream_image_urls: list[str] = [prepared.reference_url]

@@ -100,8 +100,10 @@ async def test_z_image_turbo_image_to_image_trace_with_real_fal():
     )
     result = await z_image_turbo_image_to_image(args, gcs_uri_base="fal_images")
     assert result is not None
-    assert result.images is not None
-    assert len(result.images) >= 1
+    assert result.gcs_uri
+    assert result.gcs_http_url
+    assert result.size.width >= 1
+    assert result.size.height >= 1
 
     for attempt in range(3):
         logger.info(f"Checking LangSmith trace for this run (attempt {attempt + 1}): {random_suffix}")

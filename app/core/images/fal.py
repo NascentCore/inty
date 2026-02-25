@@ -366,25 +366,29 @@ class ZImageTurboImageToImageOutput(BaseModel):
 async def z_image_turbo_image_to_image(
     args: ZImageTurboImageToImageInput,
     gcs_uri_base: str,
-) -> ZImageTurboImageToImageOutput:
+) -> GeneratedImageProcessResult:
     handler = await fal_client.submit_async(Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider, arguments=args.model_dump())
     raw_result = await handler.get()
     raw_result["handler"] = handler
     attach_provider_response_to_langsmith_run(raw_result)
     result = ZImageTurboImageToImageOutput(**raw_result)
-    logger.debug(f"ZImageTurboImageToImage raw result before processing and uploading to GCS: {raw_result}")
+    logger.debug("ZImageTurboImageToImage raw result before processing and uploading to GCS: {}", raw_result)
     if not result.images:
         raise ValueError("No images returned from ZImageTurboImageToImage")
-
-    new_images: list[ImageFile] = []
-    for img in result.images:
-        if not img.url.startswith("data:"):
-            raise ValueError(f"Image URL is not a data URI: {img.url}")
-        upload_result = _upload_image_file_to_gcs_and_return_url(img, gcs_uri_base=gcs_uri_base)
-        logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", upload_result.gcs_http_url)
-        new_images.append(img.model_copy(update={
-            "url": upload_result.gcs_http_url,
-            "file_data": None,
-        }))
-    logger.debug("ZImageTurboImageToImageResult after processing and uploading to GCS: {}", result)
-    return result.model_copy(update={"images": new_images})
+    first_img = result.images[0]
+    if not first_img.url.startswith("data:"):
+        raise ValueError(f"Image URL is not a data URI: {first_img.url}")
+    upload_result = _upload_image_file_to_gcs_and_return_url(
+        first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
+    )
+    logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", upload_result.gcs_http_url)
+    return GeneratedImageProcessResult(
+        size=upload_result.image_size,
+        format=upload_result.image_format,
+        raw_data=upload_result.file_data,
+        raw_data_total_bytes=len(upload_result.file_data),
+        gcs_uri=upload_result.gcs_uri,
+        gcs_http_url=upload_result.gcs_http_url,
+        generated_at=datetime.datetime.now(datetime.timezone.utc),
+        raw_response_from_provider=raw_result,
+    )
