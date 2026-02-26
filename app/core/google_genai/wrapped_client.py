@@ -268,20 +268,31 @@ def _extract_image_part_from_gemini_response(
 
     # 检查 finish_reason（完成原因）
     finish_reason = getattr(candidate, "finish_reason", None)
+    finish_reason_text = str(finish_reason) if finish_reason is not None else ""
+    normalized_finish_reason = (
+        finish_reason_text.split(".")[-1].upper() if finish_reason_text else ""
+    )
     if finish_reason:
         logger.warning("候选结果完成原因: {}", finish_reason)
-        if finish_reason == "SAFETY":
+        if normalized_finish_reason in {
+            "SAFETY",
+            "IMAGE_SAFETY",
+            "IMAGE_PROHIBITED_CONTENT",
+        }:
             safety_ratings = getattr(candidate, "safety_ratings", None) or []
             safety_details = [
                 f"{r.category}={r.probability}(blocked={r.blocked})"
                 for r in safety_ratings
             ]
-            error_msg = "Image generation blocked by safety filter"
+            error_msg = (
+                "Image generation blocked by safety filter "
+                f"(finish_reason: {finish_reason_text})"
+            )
             if safety_details:
                 error_msg += f"; details: {', '.join(safety_details)}"
             logger.error(error_msg)
             raise ValueError(error_msg)
-        elif finish_reason not in ("STOP", None):
+        elif normalized_finish_reason not in {"STOP", ""}:
             logger.warning("候选结果以非正常原因结束: {}", finish_reason)
 
     # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
