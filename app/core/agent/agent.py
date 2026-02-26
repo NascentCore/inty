@@ -1153,6 +1153,16 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
+                if (
+                    response is None
+                    or not getattr(response, "choices", None)
+                    or len(response.choices) == 0
+                ):
+                    logger.error(
+                        f"LLM 返回无 choices - Agent: {self.agent_id}, User: {user_id}, "
+                        f"Session: {session_id}, Model: {model_name}"
+                    )
+                    raise ValueError("LLM returned no choices")
                 finish_reason = response.choices[0].finish_reason
                 response_text = response.choices[0].message.content
 
@@ -1182,6 +1192,16 @@ class Agent:
                         chat_name=chat_name,
                         labels=labels,
                     )
+                    if (
+                        retry_response is None
+                        or not getattr(retry_response, "choices", None)
+                        or len(retry_response.choices) == 0
+                    ):
+                        logger.error(
+                            f"LLM 重试返回无 choices - Agent: {self.agent_id}, "
+                            f"Session: {session_id}, Model: {model_name}"
+                        )
+                        raise ValueError("LLM returned no choices on retry")
                     retry_finish_reason = retry_response.choices[0].finish_reason
                     retry_response_text = retry_response.choices[0].message.content
 
@@ -1409,6 +1429,16 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
+                if (
+                    response is None
+                    or not getattr(response, "choices", None)
+                    or len(response.choices) == 0
+                ):
+                    logger.error(
+                        f"LLM 返回无 choices（推送消息） - Agent: {self.agent_id}, "
+                        f"Session: {session_id}"
+                    )
+                    raise ValueError("LLM returned no choices")
                 response_text = response.choices[0].message.content
                 response_process_time = time.time() - response_process_start
                 logger.debug(

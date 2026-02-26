@@ -285,7 +285,17 @@ async def agent_chat_completions(
                     else (chat_result, None)
                 )
 
-            logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")
+                if response_content is None:
+                    logger.error(
+                        f"Chat 返回无内容 - agent_id={agent_id}, user_id={current_user.id}"
+                    )
+                    raise HTTPException(
+                        status_code=500, detail="Chat returned no content"
+                    )
+
+            logger.debug(
+                f"Agent聊天响应成功: {(response_content or '')[:100]}..."
+            )
 
             # 用户发送消息后，标记该用户的所有未读推送为已读
             try:
