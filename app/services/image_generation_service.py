@@ -84,6 +84,7 @@ class ChatImageModelInput(BaseModel):
     message_history: List[Dict[str, Any]] = Field(default_factory=list)
     model: str
     user_reference_image_url: Optional[str] = None
+    append_history_to_prompt: bool = True
 
 
 def _truncate_trace_text(value: Any) -> str:
@@ -473,10 +474,13 @@ class ImageGenerationService:
         - 适配：转换为各 provider 需要的输入参数
         """
         resolved_model_id = self._resolve_chat_image_model_id(chat_input.model)
-        prompt_for_model = self._build_chat_image_prompt_for_model(
-            prompt=chat_input.prompt,
-            message_history=chat_input.message_history,
-        )
+        if chat_input.append_history_to_prompt:
+            prompt_for_model = self._build_chat_image_prompt_for_model(
+                prompt=chat_input.prompt,
+                message_history=chat_input.message_history,
+            )
+        else:
+            prompt_for_model = chat_input.prompt
 
         if resolved_model_id in CHAT_IMAGE_FAL_IDS:
             return await self._generate_chat_image_with_resolved_fal_model(
@@ -871,6 +875,7 @@ class ImageGenerationService:
                 message_history=prepared.chat_history,
                 model=resolved_model_id,
                 user_reference_image_url=prepared.user_photo_url,
+                append_history_to_prompt=False,
             ),
             gcs_uri_base=gcs_uri_base,
             system_instructions=system_instructions,

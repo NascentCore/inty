@@ -199,9 +199,34 @@ class TestImageGenerationService:
         db_session: AsyncSession,
     ):
         """测试统一入口使用 Gemini 生成聊天图片（真实 DB 读写，仅 mock 外部服务）。"""
+        captured = {"prompt": None}
+
+        async def fake_async_generate_image(
+            wrapped_client_self,
+            model,
+            contents,
+            gcs_uri_base,
+            system_instructions=None,
+        ):
+            captured["prompt"] = contents[-1]
+            return GeneratedImageProcessResult(
+                size=ImageSize(width=64, height=64),
+                format=ImageFormat.JPEG,
+                raw_data=b"fake-image",
+                raw_data_total_bytes=len(b"fake-image"),
+                gcs_uri="gs://test-bucket/chat_images/agent-prompt/no_duplicate.jpg",
+                gcs_http_url="https://storage.googleapis.com/test-bucket/chat_images/agent-prompt/no_duplicate.jpg",
+                generated_at=datetime.datetime.now(datetime.timezone.utc),
+                raw_response_from_provider=None,
+            )
+
         monkeypatch.setattr(
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
+        )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.WrappedClient.async_generate_image",
+            fake_async_generate_image,
         )
         monkeypatch.setattr(
             "app.core.google_genai.wrapped_client.upload_to_gcs",
@@ -286,6 +311,8 @@ class TestImageGenerationService:
         assert "prompt" in result
         assert "message_id" in result
         assert result["message_id"] == message_id
+        assert isinstance(captured["prompt"], str)
+        assert "Recent conversation context:" not in captured["prompt"]
 
         row = (
             await session.execute(
