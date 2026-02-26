@@ -802,7 +802,7 @@ async def get_or_create_chat_by_agent(
         raise
     except IntegrityError as e:
         await db.rollback()
-        logger.error(f"数据完整性错误 - 获取或创建聊天: {str(e)}")
+        logger.warning(f"数据完整性错误 - 获取或创建聊天（并发冲突已重试）: {str(e)}")
         # 可能是并发创建导致的重复，尝试再次查询
         try:
             result = await db.execute(
