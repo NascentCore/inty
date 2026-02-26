@@ -81,7 +81,7 @@
 
 4. **调用图片生成服务**
    - 传入 `message_id`、Agent 数据、消息内容、历史数量
-   - 调用 `image_generation_service.generate_chat_image_with_gemini()`
+   - 调用 `image_generation_service.generate_chat_image_for_message()`
 
 5. **记录用量**
    - 使用 `subscription_service.record_usage()` 记录图片生成用量
@@ -136,20 +136,20 @@
 
 #### 3.2 图片生成流程
 
-`generate_chat_image_with_gemini()` 方法实现完整的图片生成流程：
+`generate_chat_image_for_message()` 方法实现完整的图片生成流程：
 
 **方法签名**:
 ```python
-async def generate_chat_image_with_gemini(
+async def generate_chat_image_for_message(
     self,
     db: AsyncSession,
     session_id: str,
     message_id: int,  # 必需参数：要更新的消息ID
     agent_data: dict,
     message_content: str,
+    model: str,  # 可传 nickname 或 provider model id
     user_id: Optional[str] = None,
     history_count: Optional[int] = None,
-    model: Optional[str] = None,  # Vertex AI 模型 ID，如 gemini-3-pro-image-preview
 ) -> Dict
 ```
 
@@ -170,18 +170,10 @@ async def generate_chat_image_with_gemini(
    - 将参考图 URL 转换为完整 HTTP URL（支持 `gs://` 到 HTTPS 的转换）
    - 如果两者都不存在，抛出 `ValueError`
 
-5. **调用 Gemini 模型**
-   - 使用 `google.genai` SDK（通过 `get_genai_client()` 获取客户端）
-   - 模型：由配置中的 **nickname**（`free_user_chat_image_model` / `sub_user_chat_image_model`）经 `resolve_chat_image_model` 解析为 GenAIModel，仅允许四款（Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
-   - 输入格式：
-     - 参考图（`types.Part.from_uri()`，MIME 类型为 `image/jpeg`）
-     - 文字提示词（`types.Part.from_text()`）
-   - 配置参数：
-     - `temperature`: 1.0
-     - `top_p`: 0.95
-     - `max_output_tokens`: 8192
-     - `response_modalities`: ["IMAGE"]（只返回图片）
-     - 安全设置：各种有害内容类别设置为 `BLOCK_MEDIUM_AND_ABOVE`
+5. **根据模型路由到对应 provider**
+   - 模型：支持配置中的 nickname（`free_user_chat_image_model` / `sub_user_chat_image_model`）或 provider model id，仅允许四款（Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
+   - 当模型为 Gemini（Nano Banana / Nano Banana Pro）时，使用 `WrappedClient.async_generate_image()`，输入为参考图 +（可选）用户自拍 + 提示词
+   - 当模型为 fal（Seedream / Z Image Turbo I2I）时，自动转换为各自 API 所需输入（`image_url` 或 `image_urls`）
 
 6. **提取图片数据**
    - 从响应中提取 `candidate.content.parts` 中的 `inline_data`

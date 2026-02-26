@@ -60,7 +60,7 @@ class TestChatService:
     """测试聊天服务"""
 
     @pytest.mark.asyncio
-    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image_with_gemini")
+    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image_for_message")
     async def test_generate_chat_image_success(
         self,
         mock_generate_image: AsyncMock,
@@ -388,7 +388,7 @@ class TestChatService:
     @pytest.mark.asyncio
     @patch("app.services.chat_service.chat_history_service.update_message_metadata")
     @patch(
-        "app.services.image_generation_service.image_generation_service.generate_chat_image_with_gemini"
+        "app.services.image_generation_service.image_generation_service.generate_chat_image_for_message"
     )
     async def test_generate_chat_image_429_fallback_success(
         self,

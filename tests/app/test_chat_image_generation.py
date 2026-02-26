@@ -193,12 +193,12 @@ class TestImageGenerationService:
         assert "Age: 25-30" in prompt
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_gemini(
+    async def test_generate_chat_image_for_message_with_gemini(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
     ):
-        """测试使用 Gemini 生成聊天图片（真实 DB 读写，仅 mock 外部服务）。"""
+        """测试统一入口使用 Gemini 生成聊天图片（真实 DB 读写，仅 mock 外部服务）。"""
         monkeypatch.setattr(
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
@@ -270,15 +270,15 @@ class TestImageGenerationService:
         }
         message_content = "给我画一张图片"
 
-        result = await image_generation_service.generate_chat_image_with_gemini(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
             agent_data=agent_data,
             message_content=message_content,
+            model="gemini-2.5-flash-image",
             user_id=user_id,
             history_count=10,
-            model="gemini-2.5-flash-image",
         )
 
         assert "image_url" in result
@@ -343,7 +343,7 @@ class TestImageGenerationService:
         )
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_fal_z_image_turbo_saves_to_resources(
+    async def test_generate_chat_image_for_message_fal_z_image_turbo_saves_to_resources(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
@@ -417,7 +417,7 @@ class TestImageGenerationService:
         }
         message_content = "draw me a portrait"
 
-        result = await image_generation_service.generate_chat_image_with_fal(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -461,7 +461,7 @@ class TestImageGenerationService:
         await session.commit()
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_fal_seedream_saves_to_resources(
+    async def test_generate_chat_image_for_message_fal_seedream_saves_to_resources(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
@@ -535,7 +535,7 @@ class TestImageGenerationService:
         }
         message_content = "generate a scene with us"
 
-        result = await image_generation_service.generate_chat_image_with_fal(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -715,15 +715,15 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_with_gemini(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
             agent_data=agent_data,
             message_content="please draw an image",
+            model="gemini-2.5-flash-image",
             user_id=user_id,
             history_count=5,
-            model="gemini-2.5-flash-image",
         )
 
         assert result["message_id"] == message_id
@@ -760,12 +760,12 @@ class TestChatHistoryService:
         await session.commit()
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_gemini_writes_db_records_as_expected(
+    async def test_generate_chat_image_for_message_writes_db_records_as_expected(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
     ):
-        """generate_chat_image_with_gemini 写入的 DB 记录符合预期：消息 meta_data、Agent background_images、Resource 表（真实 DB 读写）。"""
+        """generate_chat_image_for_message 写入的 DB 记录符合预期：消息 meta_data、Agent background_images、Resource 表（真实 DB 读写）。"""
         monkeypatch.setattr(
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
@@ -839,15 +839,15 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_with_gemini(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
             agent_data=agent_data,
             message_content="please draw an image",
+            model="gemini-2.5-flash-image",
             user_id=user_id,
             history_count=5,
-            model="gemini-2.5-flash-image",
         )
 
         assert result["message_id"] == message_id

@@ -679,7 +679,7 @@ class ImageGenerationService:
     ) -> ChatImagePreparedInputs:
         """
         准备聊天生图所需输入：历史消息、用户信息、提示词、参考图 URL 等。
-        由 generate_chat_image_with_gemini 与 generate_chat_image_with_fal 共用。
+        由 generate_chat_image_for_message 共用。
         """
         if history_count is None:
             history_count = (
@@ -754,163 +754,7 @@ class ImageGenerationService:
             reference_type=reference_type,
         )
 
-    async def generate_chat_image_with_gemini(
-        self,
-        db: AsyncSession,
-        session_id: str,
-        message_id: int,
-        agent_data: dict,
-        message_content: str,
-        user_id: str,
-        history_count: int,
-        model: str,
-    ) -> Dict:
-        """
-        使用 Gemini 模型（generate_content）生成聊天图片并更新到消息 meta_data。
-
-        与 Imagen generate_images 不同：本路径使用 generate_content，返回内联图片
-        (candidate.content.parts[].inline_data)，无 output_gcs_uri；应用侧从响应中
-        取出图片字节后调用 upload_to_gcs 上传到 GCS。
-
-        Args:
-            db: 数据库会话
-            session_id: 聊天会话ID
-            message_id: 要更新的消息ID
-            agent_data: Agent数据
-            message_content: 触发生图的消息内容
-            user_id: 用户ID
-            history_count: 要使用的历史消息数量
-            model: Vertex AI 模型 ID，如 gemini-3-pro-image-preview、gemini-2.5-flash-image。
-                   None 时使用 gemini-2.5-flash-image 以保持向后兼容。
-
-        Returns:
-            包含图片信息的字典
-        """
-        logger.debug(
-            "使用 Gemini 模型及 Google GenAI SDK 生成图片，session_id={}, model={}",
-            session_id,
-            model,
-        )
-
-        # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
-        # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
-        test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
-        if test_fail_mode == "safety_filter":
-            logger.warning("测试模式：模拟安全过滤器阻止")
-            raise ValueError(
-                "Image generation blocked by safety filter: test mode trigger"
-            )
-        elif test_fail_mode == "network_error":
-            logger.warning("测试模式：模拟网络错误")
-            raise ConnectionError("Connection timeout: test mode trigger")
-
-        prepared = await self._prepare_chat_image_inputs(
-            db, session_id, agent_data, message_content,
-            user_id=user_id, history_count=history_count,
-        )
-        reference_url = prepared.reference_url
-        logger.info(
-            "开始生成图片，session_id={}, 使用{}: {}",
-            session_id,
-            prepared.reference_type,
-            prepared.reference_url,
-        )
-
-        resolved_model_id = self._resolve_chat_image_model_id(model)
-        if resolved_model_id in CHAT_IMAGE_FAL_IDS:
-            raise ValueError(
-                f"Model {model!r} resolves to fal model {resolved_model_id!r}; "
-                "generate_chat_image_with_gemini only accepts Gemini models"
-            )
-
-        agent_id = agent_data["id"]
-        gcs_uri_base = f"chat_images/{agent_id}"
-        result = await self.generate_chat_image_by_model(
-            chat_input=ChatImageModelInput(
-                prompt=prepared.prompt,
-                reference_image_url=prepared.reference_url,
-                message_history=prepared.chat_history,
-                model=resolved_model_id,
-                user_reference_image_url=prepared.user_photo_url,
-            ),
-            gcs_uri_base=gcs_uri_base,
-            system_instructions=[
-                agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
-            ],
-        )
-
-        cdn_url = image_transform_service.transform_desktop(result.gcs_uri)
-
-        metadata_update = {
-            "generated_image": {
-                "image_url": result.gcs_uri,
-                "width": result.size.width,
-                "height": result.size.height,
-                "format": result.format.value,
-                "prompt": prepared.prompt,
-                "generated_at": result.generated_at.isoformat(),
-            }
-        }
-        success = await chat_history_service.update_message_metadata(
-            db=db,
-            session_id=session_id,
-            message_id=message_id,
-            metadata_update=metadata_update,
-        )
-
-        if not success:
-            raise ValueError(f"Failed to update meta_data for message {message_id}")
-
-        await agent_service.append_agent_background_image(
-            db=db, agent_id=agent_id, image_url=result.gcs_uri
-        )
-
-        # 保存到resources表（用于后续匹配查询）
-        try:
-            # 保存到resources表（使用GCS URI作为url）
-            await async_create_image_resource(
-                async_db=db,
-                user_id=user_id,
-                url=result.gcs_uri,  # 使用GCS URI作为主键
-                size=result.size,
-                format=result.format,
-                byte_size=(
-                    len(result.raw_data)
-                    if isinstance(result.raw_data, bytes)
-                    else result.raw_data_total_bytes
-                ),
-                compressed=False,
-                cropped=False,
-                gcs_url=result.gcs_uri,
-                generation_prompt=prepared.prompt,
-                reference_image_url=reference_url,
-                agent_id=agent_id,
-            )
-
-            logger.info("图片已保存到resources表: {}", result.gcs_uri)
-        except Exception as e:
-            # 不影响主流程，继续执行
-            logger.warning("保存图片到resources表失败: {}", str(e))
-            traceback.print_exc()
-
-        logger.info(
-            "图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
-            message_id,
-            cdn_url,
-        )
-
-        return {
-            "message_id": message_id,
-            "image_url": cdn_url,  # 返回 CDN URL
-            "image_metadata": {
-                "width": result.size.width,
-                "height": result.size.height,
-                "format": result.format.value,
-            },
-            "prompt": prepared.prompt,
-        }
-
-    async def generate_chat_image_with_fal(
+    async def generate_chat_image_for_message(
         self,
         db: AsyncSession,
         session_id: str,
@@ -920,24 +764,47 @@ class ImageGenerationService:
         model: str,
         user_id: Optional[str] = None,
         history_count: Optional[int] = None,
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """
-        使用 app/core/images/fal.py 中的 API 生成聊天图片并更新到消息 meta_data。
-        仅支持 Z_IMAGE_TURBO_IMAGE_TO_IMAGE 与 SEEDREAM_V4_5_EDIT（id_on_provider）。
+        统一聊天生图入口（替代 generate_chat_image_with_gemini / generate_chat_image_with_fal）：
+        1) 准备聊天生图输入（prompt/reference/history）
+        2) 基于 model 路由并适配 provider 输入
+        3) 回写消息 meta_data / agent background_images / resources
+        4) 返回前端需要的响应结构
         """
+        logger.debug(
+            "统一聊天生图入口，session_id={}, model={}",
+            session_id,
+            model,
+        )
+
         resolved_model_id = self._resolve_chat_image_model_id(model)
+
+        # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
+        # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
+        # 仅对 Gemini 路径生效，保持与历史行为一致。
         if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
-            raise ValueError(
-                f"Chat image fal model {model!r} (resolved={resolved_model_id!r}) not allowed; "
-                f"allowed: {', '.join(CHAT_IMAGE_FAL_IDS)}"
-            )
+            test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
+            if test_fail_mode == "safety_filter":
+                logger.warning("测试模式：模拟安全过滤器阻止")
+                raise ValueError(
+                    "Image generation blocked by safety filter: test mode trigger"
+                )
+            if test_fail_mode == "network_error":
+                logger.warning("测试模式：模拟网络错误")
+                raise ConnectionError("Connection timeout: test mode trigger")
 
         prepared = await self._prepare_chat_image_inputs(
-            db, session_id, agent_data, message_content,
-            user_id=user_id, history_count=history_count,
+            db=db,
+            session_id=session_id,
+            agent_data=agent_data,
+            message_content=message_content,
+            user_id=user_id,
+            history_count=history_count,
         )
+
         logger.info(
-            "开始使用 fal 生成图片，session_id={}, model={}, 使用{}: {}",
+            "开始生成图片，session_id={}, model={}, 使用{}: {}",
             session_id,
             resolved_model_id,
             prepared.reference_type,
@@ -947,9 +814,13 @@ class ImageGenerationService:
         agent_id = agent_data.get("id")
         if not agent_id:
             raise ValueError("Agent data missing ID; cannot generate image path")
-
         gcs_uri_base = f"chat_images/{agent_id}"
 
+        system_instructions: Optional[List[str]] = None
+        if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
+            system_instructions = [
+                agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
+            ]
         result = await self.generate_chat_image_by_model(
             chat_input=ChatImageModelInput(
                 prompt=prepared.prompt,
@@ -959,14 +830,14 @@ class ImageGenerationService:
                 user_reference_image_url=prepared.user_photo_url,
             ),
             gcs_uri_base=gcs_uri_base,
+            system_instructions=system_instructions,
         )
+
         gcs_uri = result.gcs_uri
         width = result.size.width
         height = result.size.height
         image_format = result.format.value
-        byte_size = result.raw_data_total_bytes
         generated_at_iso = result.generated_at.isoformat()
-
         cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
         metadata_update = {
@@ -995,20 +866,15 @@ class ImageGenerationService:
 
         if user_id:
             try:
-                image_format_enum = ImageFormat.JPEG
-                if image_format == "png":
-                    image_format_enum = ImageFormat.PNG
-                elif image_format == "gif":
-                    image_format_enum = ImageFormat.GIF
-                elif image_format == "webp":
-                    image_format_enum = ImageFormat.WEBP
-                image_size = ImageSize(width=width, height=height)
+                byte_size = result.raw_data_total_bytes
+                if byte_size <= 0 and isinstance(result.raw_data, bytes):
+                    byte_size = len(result.raw_data)
                 await async_create_image_resource(
                     async_db=db,
                     user_id=user_id,
                     url=gcs_uri,
-                    size=image_size,
-                    format=image_format_enum,
+                    size=result.size,
+                    format=result.format,
                     byte_size=byte_size,
                     compressed=False,
                     cropped=False,
@@ -1017,14 +883,13 @@ class ImageGenerationService:
                     reference_image_url=prepared.reference_url,
                     agent_id=agent_id,
                 )
-                await db.commit()
                 logger.info("图片已保存到resources表: {}", gcs_uri)
             except Exception as e:
                 logger.warning("保存图片到resources表失败: {}", str(e))
                 traceback.print_exc()
 
         logger.info(
-            "fal 图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
+            "图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",
             message_id,
             cdn_url,
         )
