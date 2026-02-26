@@ -26,6 +26,28 @@ from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
 _GCS_URI_BASE = "test-gcs-uri-base"
 
 
+def _make_gemini_response_payload_with_inline_data(image_bytes: bytes, mime_type: str) -> dict:
+    return {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {
+                            "inline_data": {
+                                "data": image_bytes,
+                                "mime_type": mime_type,
+                            }
+                        }
+                    ]
+                },
+                "finish_reason": "STOP",
+                "safety_ratings": [],
+            }
+        ],
+        "prompt_feedback": None,
+    }
+
+
 def _make_gemini_image_response():
     """构建可供 _extract_image_part_from_gemini_response 和 _process_image_part_to_generated_image 使用的 mock 响应。"""
     img = Image.new("RGB", (1, 1), color="red")
@@ -46,6 +68,10 @@ def _make_gemini_image_response():
     response = Mock()
     response.candidates = [candidate]
     response.prompt_feedback = None
+    response.model_dump.return_value = _make_gemini_response_payload_with_inline_data(
+        jpeg_bytes,
+        "image/jpeg",
+    )
     return response
 
 
@@ -69,6 +95,10 @@ def _make_gemini_image_response_png():
     response = Mock()
     response.candidates = [candidate]
     response.prompt_feedback = None
+    response.model_dump.return_value = _make_gemini_response_payload_with_inline_data(
+        png_bytes,
+        "image/png",
+    )
     return response
 
 
@@ -234,6 +264,34 @@ async def test_generate_image_with_system_instruction_uses_config_copy(mock_uplo
 @pytest.mark.asyncio
 @patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+@patch("app.core.google_genai.wrapped_client.attach_provider_response_to_langsmith_run")
+async def test_generate_image_attaches_sanitized_provider_response_after_gcs_upload(
+    mock_attach_provider_response_to_langsmith_run,
+    _mock_upload,
+):
+    mock_models = Mock()
+    mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = mock_models
+
+    wrapper = WrappedClient(client=client)
+    await wrapper.async_generate_image(
+        model="gemini-2.5-flash-image",
+        contents=["hello"],
+        gcs_uri_base=_GCS_URI_BASE,
+    )
+
+    mock_attach_provider_response_to_langsmith_run.assert_called_once()
+    attached_response = mock_attach_provider_response_to_langsmith_run.call_args.args[0]
+    inline_data = attached_response["candidates"][0]["content"]["parts"][0]["inline_data"]
+    assert "omitted raw image data after GCS upload" in inline_data["data"]
+    assert inline_data["mime_type"] == "image/jpeg"
+
+
+@pytest.mark.asyncio
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_returns_generated_image_process_result(mock_upload):
     """Gemini 路径返回 GeneratedImageProcessResult（含 size, format, raw_data, gcs_uri, generated_at）。"""
     mock_models = Mock()
@@ -352,6 +410,29 @@ def test_process_outputs_generate_image_handles_short_raw_data():
     assert traced is not None
     assert traced.raw_data_total_bytes == 50
     assert len(base64.b64decode(traced.raw_data)) == 50
+
+
+def test_process_outputs_generate_image_redacts_inline_data_from_raw_response():
+    """上传 GCS 成功时，trace 输出中的 raw_response_from_provider 不保留原始图片数据。"""
+    provider_response = _make_gemini_response_payload_with_inline_data(
+        image_bytes=b"z" * 120,
+        mime_type="image/jpeg",
+    )
+    output = GeneratedImageProcessResult(
+        size=ImageSize(width=1, height=1),
+        format=ImageFormat.PNG,
+        raw_data=b"a",
+        gcs_uri="gs://b/p.png",
+        gcs_http_url="https://storage.googleapis.com/b/p.png",
+        generated_at=datetime.now(timezone.utc),
+        raw_response_from_provider=provider_response,
+    )
+    traced = _langsmith_process_outputs_generate_image(output)
+    assert traced is not None
+    trace_inline_data = traced.raw_response_from_provider["candidates"][0]["content"]["parts"][0]["inline_data"]["data"]
+    assert "omitted raw image data after GCS upload" in trace_inline_data
+    # 确保原始返回值中的 provider response 不被就地修改。
+    assert provider_response["candidates"][0]["content"]["parts"][0]["inline_data"]["data"] == b"z" * 120
 
 
 def test_generate_image_has_traceable_decorator_configured():

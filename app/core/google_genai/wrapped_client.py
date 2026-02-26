@@ -12,7 +12,7 @@ from enum import StrEnum
 import io
 import tempfile
 import threading
-from typing import Literal
+from typing import Any, Literal
 import uuid
 
 # -----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ from pydantic import BaseModel
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_text_part, get_text_parts
 from google.genai import types as gemini_types
-from langsmith.run_helpers import get_current_run_tree, traceable
+from langsmith.run_helpers import traceable
 
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.core.images.types import GeneratedImageProcessResult
@@ -74,6 +74,59 @@ from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
 
 # LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
 _LANGSMITH_RAW_DATA_TRACE_BYTES = 100
+_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT = "[omitted raw image data after GCS upload]"
+
+
+def _build_omitted_raw_image_data_marker(raw_value: Any) -> str:
+    if isinstance(raw_value, bytes):
+        return f"{_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT} ({len(raw_value)} bytes)"
+    if isinstance(raw_value, str):
+        return f"{_LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT} ({len(raw_value)} chars)"
+    return _LANGSMITH_OMITTED_RAW_IMAGE_DATA_TEXT
+
+
+def _remove_raw_image_data_inplace(payload: dict[str, Any] | list[Any]) -> None:
+    if isinstance(payload, list):
+        for item in payload:
+            if isinstance(item, (dict, list)):
+                _remove_raw_image_data_inplace(item)
+        return
+
+    inline_data = payload.get("inline_data")
+    if isinstance(inline_data, dict) and "data" in inline_data:
+        inline_data["data"] = _build_omitted_raw_image_data_marker(inline_data["data"])
+
+    for value in payload.values():
+        if isinstance(value, (dict, list)):
+            _remove_raw_image_data_inplace(value)
+
+
+def _sanitize_provider_response_for_trace(response: Any) -> Any:
+    """
+    LangSmith trace 里不保留 provider raw response 内的图片原始数据，
+    避免 trace 记录体积过大。
+    """
+    if response is None:
+        return None
+
+    if isinstance(response, dict):
+        payload: Any = copy.deepcopy(response)
+    elif isinstance(response, BaseModel):
+        payload = response.model_dump(mode="python")
+    else:
+        model_dump = getattr(response, "model_dump", None)
+        if callable(model_dump):
+            dumped = model_dump(mode="python")
+            if isinstance(dumped, dict):
+                payload = dumped
+            else:
+                return response
+        else:
+            return response
+
+    if isinstance(payload, (dict, list)):
+        _remove_raw_image_data_inplace(payload)
+    return payload
 
 
 class LangSmithTraceRunType(StrEnum):
@@ -97,10 +150,15 @@ def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResul
     raw_data = result.raw_data if isinstance(result.raw_data, bytes) else b""
     total = len(raw_data)
     truncated = raw_data[:_LANGSMITH_RAW_DATA_TRACE_BYTES]
+    if result.gcs_uri:
+        trace_raw_response = _sanitize_provider_response_for_trace(result.raw_response_from_provider)
+    else:
+        trace_raw_response = result.raw_response_from_provider
     return result.model_copy(
         update={
             "raw_data_total_bytes": total,
             "raw_data": base64.b64encode(truncated).decode("ascii"),
+            "raw_response_from_provider": trace_raw_response,
         }
     )
 
@@ -167,15 +225,17 @@ class WrappedClient:
                     config=config,
                 )
                 logger.debug("Gemini generate_content response: {}", response)
-                # 这里会把图片数据也写入 LangSmith Trace 的 metadata 中，
-                # 暂时不处理，如有需要，再想办法把图片数据从 langsmith trace 数据中删掉。
-                # 这个跟返回值的 raw_response_from_provider 是重复的。
-                # 这个是必要的，因为发生异常时，返回值为 None，无法记录响应摘要。
-                # 如果有需要，可以考虑把返回值内的 raw_response_from_provider 删除。
-                # 返回值中的 raw_response_from_provider 是为了方便访问。
-                attach_provider_response_to_langsmith_run(response)
-                image_part = _extract_image_part_from_gemini_response(response)
-                result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                try:
+                    image_part = _extract_image_part_from_gemini_response(response)
+                    result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                except Exception:
+                    # 失败路径保留完整响应，便于排障；成功路径会在 trace 中脱敏图片数据。
+                    attach_provider_response_to_langsmith_run(response)
+                    raise
+
+                # 上传 GCS 成功后，在 trace metadata 中去除 raw image data，降低 trace 体积。
+                trace_response = _sanitize_provider_response_for_trace(response)
+                attach_provider_response_to_langsmith_run(trace_response)
                 result.raw_response_from_provider = response
                 return result
             case _:
