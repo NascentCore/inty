@@ -101,7 +101,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
     return MessageUpdate(
         id = id,
         role = role,
-        content = content,
+        content = content.ifBlank { caption },
         timestamp = timestamp,
         audioUrl = audio_url,
         metaData =
@@ -137,7 +137,7 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
     return MessageEntity(
         id = id,
         role = role,
-        content = content,
+        content = content.ifBlank { caption.orEmpty() },
         timestamp = timestamp,
         audioUrl = audio_url,
         userVote = user_vote?.let { runCatching { UserVote.valueOf(it) }.getOrNull() },
