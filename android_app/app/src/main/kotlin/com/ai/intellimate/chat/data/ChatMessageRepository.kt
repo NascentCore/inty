@@ -17,10 +17,12 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.boost.BoostStorage
 import com.ai.intellimate.boost.PointSource
 import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 /**
@@ -249,7 +251,7 @@ class ChatMessageRepository(
     fun userMessageCountFlow(agentId: String) = localDataSource.userMessageCountFlow(agentId)
 
     suspend fun purchaseForMoment(agentId: String, messageId: String, price: Int) {
-        if (BoostManager.boostState.value.availablePoints >= price) {
+        if (BoostStorage.boostState.first().availablePoints >= price) {
             when (val result = remoteDataSource.unlockSurpriseSnap(messageId.toLong())) {
                 is HttpResult.Success -> {
                     if (BoostManager.consume(price, PointSource.ForMoment)) {
