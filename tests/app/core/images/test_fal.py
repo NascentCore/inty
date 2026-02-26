@@ -19,6 +19,7 @@ from app.core.images.fal import (
     FalSeedreamV4_5EditInput,
     ZImageTurboInput,
     ZImageTurboImageToImageInput,
+    _sanitize_provider_response_for_trace,
     seedream_v4_5_edit,
     z_image_turbo,
     z_image_turbo_image_to_image,
@@ -217,3 +218,66 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
     blob = fake_gcs_fal.bucket(bucket_name).blob(gcs_path)
     assert blob.exists()
     assert blob.download_as_bytes() == result.raw_data
+
+
+def test_sanitize_provider_response_for_trace_redacts_data_uri_without_mutating_input():
+    """trace 脱敏副本应替换 data URI，且不应就地修改原始 provider response。"""
+    data_uri = _make_minimal_jpeg_data_uri()
+    provider_response = {
+        "images": [
+            {
+                "url": data_uri,
+                "content_type": "image/jpeg",
+                "file_name": "out.jpg",
+            }
+        ],
+        "cdn_images": [{"url": "https://example.com/already-public.jpg"}],
+    }
+    sanitized = _sanitize_provider_response_for_trace(provider_response)
+    assert sanitized is not None
+    assert isinstance(sanitized, dict)
+    assert "omitted data URI after GCS upload" in sanitized["images"][0]["url"]
+    assert sanitized["cdn_images"][0]["url"] == "https://example.com/already-public.jpg"
+    assert provider_response["images"][0]["url"] == data_uri
+
+
+@pytest.mark.asyncio
+async def test_z_image_turbo_attaches_redacted_trace_payload_after_successful_gcs_upload(
+    fake_gcs_fal: FakeGCSClient,
+):
+    """上传成功后，LangSmith metadata 中的 provider response 应去除 data URI 原文。"""
+    data_uri = _make_minimal_jpeg_data_uri()
+    raw_result = {
+        "images": [
+            {
+                "url": data_uri,
+                "content_type": "image/jpeg",
+                "file_name": "out.jpg",
+                "file_size": 123,
+                "width": 1,
+                "height": 1,
+            }
+        ],
+        "timings": {},
+        "seed": 42,
+        "prompt": "test",
+    }
+    mock_handler = Mock()
+    mock_handler.get = AsyncMock(return_value=raw_result)
+
+    with (
+        patch("app.core.images.fal.fal_client") as mock_fal,
+        patch("app.core.images.fal.attach_provider_response_to_langsmith_run") as mock_attach,
+    ):
+        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
+        args = ZImageTurboInput(prompt="test prompt")
+        _ = await z_image_turbo(args, gcs_uri_base="fal_test")
+
+    attached_payload = None
+    for call in mock_attach.call_args_list:
+        if call.kwargs.get("key") == "handler":
+            continue
+        attached_payload = call.args[0]
+    assert attached_payload is not None
+    assert "omitted data URI after GCS upload" in attached_payload["images"][0]["url"]
+    assert raw_result["images"][0]["url"] == data_uri

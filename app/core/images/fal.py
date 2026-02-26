@@ -44,10 +44,11 @@ NOTES:
 """
 
 import datetime
+import copy
 import io
 import uuid
 from enum import StrEnum
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import fal_client
 import PIL
@@ -83,6 +84,56 @@ _IMAGE_FORMAT_TO_CONTENT_TYPE: dict[ImageFormat, str] = {
     ImageFormat.GIF: "image/gif",
     ImageFormat.AVIF: "image/avif",
 }
+
+_LANGSMITH_OMITTED_DATA_URI_TEXT = "[omitted data URI after GCS upload]"
+
+
+def _build_omitted_data_uri_marker(raw_value: str) -> str:
+    return f"{_LANGSMITH_OMITTED_DATA_URI_TEXT} ({len(raw_value)} chars)"
+
+
+def _remove_data_uri_inplace(payload: dict[str, Any] | list[Any]) -> None:
+    if isinstance(payload, list):
+        for item in payload:
+            if isinstance(item, (dict, list)):
+                _remove_data_uri_inplace(item)
+        return
+
+    url = payload.get("url")
+    if isinstance(url, str) and url.startswith("data:"):
+        payload["url"] = _build_omitted_data_uri_marker(url)
+
+    for value in payload.values():
+        if isinstance(value, (dict, list)):
+            _remove_data_uri_inplace(value)
+
+
+def _sanitize_provider_response_for_trace(response: Any) -> Any:
+    """
+    上传 GCS 成功后，LangSmith trace 内不保留 provider response 中的 data URI 原文，
+    避免 trace 体积被 base64 图片放大。
+    """
+    if response is None:
+        return None
+
+    if isinstance(response, dict):
+        payload: Any = copy.deepcopy(response)
+    elif isinstance(response, BaseModel):
+        payload = response.model_dump(mode="python")
+    else:
+        model_dump = getattr(response, "model_dump", None)
+        if callable(model_dump):
+            dumped = model_dump(mode="python")
+            if isinstance(dumped, dict):
+                payload = dumped
+            else:
+                return response
+        else:
+            return response
+
+    if isinstance(payload, (dict, list)):
+        _remove_data_uri_inplace(payload)
+    return payload
 
 
 class ImageSizeEnum(StrEnum):
@@ -150,7 +201,6 @@ async def seedream_v4_5_edit(
     handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
-    attach_provider_response_to_langsmith_run(raw_result)
     result = FalSeedreamV4_5EditOutput(**raw_result)
     if not result.images:
         raise ValueError("No images returned from SeedreamV4_5Edit")
@@ -161,6 +211,9 @@ async def seedream_v4_5_edit(
     upload_result = _upload_image_file_to_gcs_and_return_url(
         first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
     )
+    # GCS 上传成功后，trace 中脱敏 data URI，减少 LangSmith 存储压力。
+    trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
+    attach_provider_response_to_langsmith_run(trace_raw_result)
     return GeneratedImageProcessResult(
         size=upload_result.image_size,
         format=upload_result.image_format,
@@ -272,9 +325,8 @@ async def z_image_turbo(
     gcs_uri_base: str,
 ) -> GeneratedImageProcessResult:
     handler = await fal_client.submit_async(Z_IMAGE_TURBO.id_on_provider, arguments=args.model_dump())
+    attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
-    raw_result["handler"] = handler
-    attach_provider_response_to_langsmith_run(raw_result)
     result = ZImageTurboOutput(**raw_result)
     logger.debug("ZImageTurbo raw result before processing and uploading to GCS: {}", raw_result)
     if not result.images:
@@ -286,6 +338,8 @@ async def z_image_turbo(
     upload_result = _upload_image_file_to_gcs_and_return_url(
         first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
     )
+    trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
+    attach_provider_response_to_langsmith_run(trace_raw_result)
     return GeneratedImageProcessResult(
         size=upload_result.image_size,
         format=upload_result.image_format,
@@ -368,9 +422,8 @@ async def z_image_turbo_image_to_image(
     gcs_uri_base: str,
 ) -> GeneratedImageProcessResult:
     handler = await fal_client.submit_async(Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider, arguments=args.model_dump())
+    attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
-    raw_result["handler"] = handler
-    attach_provider_response_to_langsmith_run(raw_result)
     result = ZImageTurboImageToImageOutput(**raw_result)
     logger.debug("ZImageTurboImageToImage raw result before processing and uploading to GCS: {}", raw_result)
     if not result.images:
@@ -382,6 +435,8 @@ async def z_image_turbo_image_to_image(
         first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
     )
     logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", upload_result.gcs_http_url)
+    trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
+    attach_provider_response_to_langsmith_run(trace_raw_result)
     return GeneratedImageProcessResult(
         size=upload_result.image_size,
         format=upload_result.image_format,
