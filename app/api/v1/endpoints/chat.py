@@ -475,8 +475,17 @@ async def agent_chat_completions(
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
+class ChatImageBizErrorData(BizError):
+    description: Optional[str] = None
+    suggestion: Optional[str] = None
+
+
 ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[
-    Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]
+    Union[
+        schemas.ChatImageGenerationResponse,
+        UsageLimitExceeded,
+        ChatImageBizErrorData,
+    ]
 ]
 
 
@@ -544,6 +553,8 @@ async def generate_chat_image(
                     "message": result.message,
                 },
                 extra_data={
+                    "code": result.code,
+                    "message": result.message,
                     "suggestion": "Please modify your prompt and try again.",
                 },
             )

@@ -17,7 +17,7 @@ from app.core.agent import agent as agent_module
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
-from app.schemas.response import BusinessErrorCode, UsageLimitExceeded
+from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
 from tests.app.api.test_client import TestClient
@@ -130,6 +130,17 @@ def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(chat_service, "generate_chat_image", fake_generate_chat_image)
 
 
+def _stub_generate_chat_image_blocked(monkeypatch: pytest.MonkeyPatch):
+    async def fake_generate_chat_image(*args, **kwargs):
+        return BizError(
+            code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
+            error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
+            message=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"],
+        )
+
+    monkeypatch.setattr(chat_service, "generate_chat_image", fake_generate_chat_image)
+
+
 def test_v1_chat_completions_guest_requires_login(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -211,6 +222,36 @@ def test_v1_chat_generate_image_wraps_business_error(
     )
     assert body["data"]["used_count"] == 4
     assert body["data"]["daily_limit"] == 4
+
+
+def test_v1_chat_generate_image_biz_error_matches_response_model(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_generate_chat_image_blocked(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/chat/images/agent-1",
+            json={"message_id": 1},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"]
+    )
+    assert body["data"]["message"] == BusinessErrorCode.IMAGE_GENERATION_BLOCKED[
+        "message"
+    ]
+    assert body["data"]["description"] == BusinessErrorCode.IMAGE_GENERATION_BLOCKED[
+        "message"
+    ]
+    assert body["data"]["suggestion"] == "Please modify your prompt and try again."
 
 
 @pytest.mark.noci
