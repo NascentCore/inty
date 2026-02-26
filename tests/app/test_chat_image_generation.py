@@ -4,6 +4,7 @@
 
 import datetime
 import uuid
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import select
@@ -17,9 +18,13 @@ from app.external_services.fakes.gemini import FakeGeminiClient
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
-from app.services.image_generation_service import image_generation_service
+from app.services.image_generation_service import ChatImageModelInput, image_generation_service
 from app.utils.image import ImageFormat, ImageSize
-from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO_IMAGE_TO_IMAGE
+from app.utils.models_catalog import (
+    NANO_BANANA,
+    SEEDREAM_V4_5_EDIT,
+    Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+)
 
 
 @pytest.fixture
@@ -38,6 +43,95 @@ async def db_session():
 
 class TestImageGenerationService:
     """测试图片生成服务"""
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_by_model_routes_nano_banana_nickname(self):
+        """统一函数应支持 nickname，并自动路由到 Gemini 输入格式。"""
+        captured = {}
+
+        async def fake_async_generate_image(
+            wrapped_client_self,
+            model,
+            contents,
+            gcs_uri_base,
+            system_instructions=None,
+        ):
+            captured["model"] = model
+            captured["contents"] = contents
+            captured["gcs_uri_base"] = gcs_uri_base
+            captured["system_instructions"] = system_instructions
+            return GeneratedImageProcessResult(
+                size=ImageSize(width=64, height=64),
+                format=ImageFormat.JPEG,
+                raw_data=b"fake-image",
+                raw_data_total_bytes=len(b"fake-image"),
+                gcs_uri="gs://test-bucket/chat_images/agent-nickname/output.jpg",
+                gcs_http_url="https://storage.googleapis.com/test-bucket/chat_images/agent-nickname/output.jpg",
+                generated_at=datetime.datetime.now(datetime.timezone.utc),
+                raw_response_from_provider=None,
+            )
+
+        with patch(
+            "app.services.image_generation_service.WrappedClient.async_generate_image",
+            new=fake_async_generate_image,
+        ), patch(
+            "app.services.image_generation_service.get_genai_client",
+            return_value=FakeGeminiClient(),
+        ):
+            result = await image_generation_service.generate_chat_image_by_model(
+                chat_input=ChatImageModelInput(
+                    prompt="draw us in a cafe",
+                    reference_image_url="https://example.com/reference.jpg",
+                    message_history=[
+                        {"role": "user", "content": "hello"},
+                        {"role": "assistant", "content": "hi there"},
+                    ],
+                    model=NANO_BANANA.nickname,
+                    user_reference_image_url="https://example.com/user-selfie.jpg",
+                ),
+                gcs_uri_base="chat_images/agent-nickname",
+            )
+
+        assert captured["model"] == NANO_BANANA.id_on_provider
+        assert captured["contents"][0] == "https://example.com/reference.jpg"
+        assert captured["contents"][1] == "https://example.com/user-selfie.jpg"
+        assert "draw us in a cafe" in captured["contents"][2]
+        assert captured["gcs_uri_base"] == "chat_images/agent-nickname"
+        assert result.gcs_uri.startswith("gs://")
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_by_model_seedream_auto_fill_second_reference(self):
+        """Seedream 在无自拍参考图时应自动补齐第二张参考图。"""
+        captured = {}
+
+        async def fake_seedream_v4_5_edit(args, gcs_uri_base=None):
+            captured["args"] = args
+            captured["gcs_uri_base"] = gcs_uri_base
+            return self._make_fake_fal_result(gcs_uri_base or "", "seedream")
+
+        with patch(
+            "app.services.image_generation_service.seedream_v4_5_edit",
+            new=fake_seedream_v4_5_edit,
+        ):
+            result = await image_generation_service.generate_chat_image_by_model(
+                chat_input=ChatImageModelInput(
+                    prompt="draw a romantic evening",
+                    reference_image_url="https://example.com/reference.jpg",
+                    message_history=[
+                        {"role": "assistant", "content": "let's watch the sunset"},
+                    ],
+                    model=SEEDREAM_V4_5_EDIT.nickname,
+                ),
+                gcs_uri_base="chat_images/agent-seedream",
+            )
+
+        args = captured["args"]
+        assert args.prompt.startswith("draw a romantic evening")
+        assert len(args.image_urls) == 2
+        assert args.image_urls[0] == "https://example.com/reference.jpg"
+        assert args.image_urls[1] == "https://example.com/reference.jpg"
+        assert captured["gcs_uri_base"] == "chat_images/agent-seedream"
+        assert result.gcs_uri.startswith("gs://")
 
     @pytest.mark.asyncio
     async def test_build_image_prompt(self):
@@ -99,15 +193,40 @@ class TestImageGenerationService:
         assert "Age: 25-30" in prompt
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_gemini(
+    async def test_generate_chat_image_for_message_with_gemini(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
     ):
-        """测试使用 Gemini 生成聊天图片（真实 DB 读写，仅 mock 外部服务）。"""
+        """测试统一入口使用 Gemini 生成聊天图片（真实 DB 读写，仅 mock 外部服务）。"""
+        captured = {"prompt": None}
+
+        async def fake_async_generate_image(
+            wrapped_client_self,
+            model,
+            contents,
+            gcs_uri_base,
+            system_instructions=None,
+        ):
+            captured["prompt"] = contents[-1]
+            return GeneratedImageProcessResult(
+                size=ImageSize(width=64, height=64),
+                format=ImageFormat.JPEG,
+                raw_data=b"fake-image",
+                raw_data_total_bytes=len(b"fake-image"),
+                gcs_uri="gs://test-bucket/chat_images/agent-prompt/no_duplicate.jpg",
+                gcs_http_url="https://storage.googleapis.com/test-bucket/chat_images/agent-prompt/no_duplicate.jpg",
+                generated_at=datetime.datetime.now(datetime.timezone.utc),
+                raw_response_from_provider=None,
+            )
+
         monkeypatch.setattr(
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
+        )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.WrappedClient.async_generate_image",
+            fake_async_generate_image,
         )
         monkeypatch.setattr(
             "app.core.google_genai.wrapped_client.upload_to_gcs",
@@ -176,15 +295,15 @@ class TestImageGenerationService:
         }
         message_content = "给我画一张图片"
 
-        result = await image_generation_service.generate_chat_image_with_gemini(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
             agent_data=agent_data,
             message_content=message_content,
+            model="gemini-2.5-flash-image",
             user_id=user_id,
             history_count=10,
-            model="gemini-2.5-flash-image",
         )
 
         assert "image_url" in result
@@ -192,6 +311,8 @@ class TestImageGenerationService:
         assert "prompt" in result
         assert "message_id" in result
         assert result["message_id"] == message_id
+        assert isinstance(captured["prompt"], str)
+        assert "Recent conversation context:" not in captured["prompt"]
 
         row = (
             await session.execute(
@@ -249,7 +370,7 @@ class TestImageGenerationService:
         )
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_fal_z_image_turbo_saves_to_resources(
+    async def test_generate_chat_image_for_message_fal_z_image_turbo_saves_to_resources(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
@@ -323,7 +444,7 @@ class TestImageGenerationService:
         }
         message_content = "draw me a portrait"
 
-        result = await image_generation_service.generate_chat_image_with_fal(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -367,7 +488,7 @@ class TestImageGenerationService:
         await session.commit()
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_fal_seedream_saves_to_resources(
+    async def test_generate_chat_image_for_message_fal_seedream_saves_to_resources(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
@@ -441,7 +562,7 @@ class TestImageGenerationService:
         }
         message_content = "generate a scene with us"
 
-        result = await image_generation_service.generate_chat_image_with_fal(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -621,15 +742,15 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_with_gemini(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
             agent_data=agent_data,
             message_content="please draw an image",
+            model="gemini-2.5-flash-image",
             user_id=user_id,
             history_count=5,
-            model="gemini-2.5-flash-image",
         )
 
         assert result["message_id"] == message_id
@@ -666,12 +787,12 @@ class TestChatHistoryService:
         await session.commit()
 
     @pytest.mark.asyncio
-    async def test_generate_chat_image_with_gemini_writes_db_records_as_expected(
+    async def test_generate_chat_image_for_message_writes_db_records_as_expected(
         self,
         monkeypatch: pytest.MonkeyPatch,
         db_session: AsyncSession,
     ):
-        """generate_chat_image_with_gemini 写入的 DB 记录符合预期：消息 meta_data、Agent background_images、Resource 表（真实 DB 读写）。"""
+        """generate_chat_image_for_message 写入的 DB 记录符合预期：消息 meta_data、Agent background_images、Resource 表（真实 DB 读写）。"""
         monkeypatch.setattr(
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
@@ -745,15 +866,15 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_with_gemini(
+        result = await image_generation_service.generate_chat_image_for_message(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
             agent_data=agent_data,
             message_content="please draw an image",
+            model="gemini-2.5-flash-image",
             user_id=user_id,
             history_count=5,
-            model="gemini-2.5-flash-image",
         )
 
         assert result["message_id"] == message_id

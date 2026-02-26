@@ -1535,7 +1535,7 @@ async def generate_chat_image(
 
     # 模型选择仅按订阅状态，使用 config 中的 nickname 解析为 GenAIModel（无请求覆盖）
     from app.core.model_selection import select_chat_image_model
-    from app.utils.models_catalog import ModelAPIProvider
+    from app.utils.models_catalog import CHAT_IMAGE_FAL_IDS
 
     subscription_status = await subscription_service.get_user_subscription_status(
         db, user.id
@@ -1547,7 +1547,6 @@ async def generate_chat_image(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    use_gemini = resolved_model.provider == ModelAPIProvider.GOOGLE_VERTEX_AI
     logger.info(
         f"消息生图模型选择 - 订阅: {is_subscribed}, 模型: {resolved_model.nickname} ({resolved_model.id_on_provider})"
     )
@@ -1574,7 +1573,7 @@ async def generate_chat_image(
                 offset=0,
             )
             chat_history = messages_data.get("messages", [])
-            # 获取用户信息（与 generate_chat_image_with_gemini 保持一致）
+            # 获取用户信息（与 image_generation_service 的统一生图入口保持一致）
             user_info = (
                 await build_user_info_prompt_block(db, user_id) if user_id else ""
             )
@@ -1599,53 +1598,14 @@ async def generate_chat_image(
     model_fallback_due_to_429 = False
 
     try:
-        if use_gemini:
-            primary_model = resolved_model.id_on_provider
-            if is_subscribed:
-                fallback_model = (
-                    global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
-                )
-                try:
-                    image_generation_result = (
-                        await image_generation_service.generate_chat_image_with_gemini(
-                            db=db,
-                            session_id=session_id,
-                            message_id=message_id,
-                            agent_data=agent_data,
-                            message_content=message_content,
-                            user_id=user_id,
-                            history_count=history_count,
-                            model=primary_model,
-                        )
-                    )
-                    actual_model = primary_model
-                    model_fallback_due_to_429 = False
-                except Exception as e:
-                    if _is_429_resource_exhausted(e):
-                        logger.info(
-                            "消息生图 429，重试备用模型 - agent_id=%s message_id=%s primary=%s fallback=%s",
-                            agent_id,
-                            message_id,
-                            primary_model,
-                            fallback_model,
-                        )
-                        image_generation_result = await image_generation_service.generate_chat_image_with_gemini(
-                            db=db,
-                            session_id=session_id,
-                            message_id=message_id,
-                            agent_data=agent_data,
-                            message_content=message_content,
-                            user_id=user_id,
-                            history_count=history_count,
-                            model=fallback_model,
-                        )
-                        actual_model = fallback_model
-                        model_fallback_due_to_429 = True
-                    else:
-                        raise
-            else:
+        primary_model = resolved_model.id_on_provider
+        if is_subscribed and primary_model not in CHAT_IMAGE_FAL_IDS:
+            fallback_model = (
+                global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
+            )
+            try:
                 image_generation_result = (
-                    await image_generation_service.generate_chat_image_with_gemini(
+                    await image_generation_service.generate_chat_image_for_message(
                         db=db,
                         session_id=session_id,
                         message_id=message_id,
@@ -1657,20 +1617,46 @@ async def generate_chat_image(
                     )
                 )
                 actual_model = primary_model
+                model_fallback_due_to_429 = False
+            except Exception as e:
+                if _is_429_resource_exhausted(e):
+                    logger.info(
+                        "消息生图 429，重试备用模型 - agent_id=%s message_id=%s primary=%s fallback=%s",
+                        agent_id,
+                        message_id,
+                        primary_model,
+                        fallback_model,
+                    )
+                    image_generation_result = (
+                        await image_generation_service.generate_chat_image_for_message(
+                            db=db,
+                            session_id=session_id,
+                            message_id=message_id,
+                            agent_data=agent_data,
+                            message_content=message_content,
+                            user_id=user_id,
+                            history_count=history_count,
+                            model=fallback_model,
+                        )
+                    )
+                    actual_model = fallback_model
+                    model_fallback_due_to_429 = True
+                else:
+                    raise
         else:
             image_generation_result = (
-                await image_generation_service.generate_chat_image_with_fal(
+                await image_generation_service.generate_chat_image_for_message(
                     db=db,
                     session_id=session_id,
                     message_id=message_id,
                     agent_data=agent_data,
                     message_content=message_content,
-                    model=resolved_model.id_on_provider,
                     user_id=user_id,
                     history_count=history_count,
+                    model=primary_model,
                 )
             )
-            actual_model = resolved_model.id_on_provider
+            actual_model = primary_model
         # 计算生成耗时
         generation_time_ms = int((time.time() - generation_start_time) * 1000)
         image_generation_result["model"] = actual_model

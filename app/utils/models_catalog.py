@@ -449,7 +449,7 @@ CHAT_IMAGE_MODELS = [
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
 ]
 
-# Subset of CHAT_IMAGE_MODELS that use fal (app/core/images/fal.py). Used by generate_chat_image_with_fal.
+# Subset of CHAT_IMAGE_MODELS that use fal (app/core/images/fal.py). Used by unified chat image routing.
 CHAT_IMAGE_FAL_MODELS = [SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO_IMAGE_TO_IMAGE]
 CHAT_IMAGE_FAL_IDS = tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
 
