@@ -1,4 +1,4 @@
-name: dev-prod 同步 AI 角色
+name: dev-prod 同步 AI 角色及主题专区
 
 on:
   schedule:
