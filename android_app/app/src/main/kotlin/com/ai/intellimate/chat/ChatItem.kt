@@ -472,7 +472,7 @@ private fun ChatItemForMoment(
                     modifier =
                         Modifier.fillMaxSize() then
                             if (isLocked) {
-                                Modifier.blur(5.dp, 5.dp)
+                                Modifier.blur(10.dp, 10.dp)
                             } else {
                                 Modifier.clickable {
                                     FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
