@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 import PIL.Image
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.core.google_genai.wrapped_client import WrappedClient
 from loguru import logger
 from sqlalchemy import select
@@ -33,6 +33,7 @@ from app.core.images.fal import (
     seedream_v4_5_edit,
     z_image_turbo_image_to_image,
 )
+from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.gcs import GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
 from app import models as app_models
 from app.models.resource import ResourceType
@@ -49,8 +50,10 @@ from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import (
     CHAT_IMAGE_FAL_IDS,
     NANO_BANANA,
+    NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+    resolve_chat_image_model,
 )
 
 # 生图失败时日志中提示词最大长度，避免泄露过多用户内容并控制日志体积
@@ -69,6 +72,16 @@ class ChatImagePreparedInputs(BaseModel):
     prompt: str
     reference_url: str
     reference_type: Literal["背景图", "头像"]
+
+
+class ChatImageModelInput(BaseModel):
+    """统一聊天生图模型输入：用于模型路由与 provider 输入适配。"""
+
+    prompt: str
+    reference_image_url: str
+    message_history: List[Dict[str, Any]] = Field(default_factory=list)
+    model: str
+    user_reference_image_url: Optional[str] = None
 
 
 def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
@@ -293,6 +306,158 @@ class ImageGenerationService:
 
         similarity = intersection / union
         return similarity
+
+    def _resolve_chat_image_model_id(self, model: Optional[str]) -> str:
+        """
+        解析聊天生图模型：支持直接传 provider model id，也支持传模型 nickname。
+        """
+        if model is None:
+            return NANO_BANANA.id_on_provider
+
+        normalized_model = model.strip()
+        if not normalized_model:
+            raise ValueError("Chat image model is required")
+
+        direct_ids = {
+            NANO_BANANA.id_on_provider,
+            NANO_BANANA_PRO.id_on_provider,
+            *CHAT_IMAGE_FAL_IDS,
+        }
+        if normalized_model in direct_ids:
+            return normalized_model
+
+        return resolve_chat_image_model(normalized_model).id_on_provider
+
+    def _format_message_history_for_model_prompt(
+        self, message_history: List[Dict[str, Any]]
+    ) -> str:
+        lines: list[str] = []
+        for message in message_history:
+            role = str(message.get("role", "")).lower()
+            content = str(message.get("content", "")).strip()
+            if not content:
+                continue
+            if role == "user":
+                lines.append(f"User: {content}")
+            elif role == "assistant":
+                lines.append(f"Assistant: {content}")
+            else:
+                lines.append(content)
+        return "\n".join(lines)
+
+    def _build_chat_image_prompt_for_model(
+        self, prompt: str, message_history: List[Dict[str, Any]]
+    ) -> str:
+        history_text = self._format_message_history_for_model_prompt(message_history)
+        if not history_text:
+            return prompt
+        if history_text in prompt:
+            return prompt
+        return f"{prompt}\n\nRecent conversation context:\n{history_text}"
+
+    async def _generate_chat_image_with_resolved_gemini_model(
+        self,
+        model_id: str,
+        prompt: str,
+        reference_image_url: str,
+        user_reference_image_url: Optional[str],
+        gcs_uri_base: str,
+        system_instructions: Optional[List[str]] = None,
+    ) -> GeneratedImageProcessResult:
+        if model_id not in (
+            NANO_BANANA.id_on_provider,
+            NANO_BANANA_PRO.id_on_provider,
+        ):
+            raise ValueError(
+                f"Chat image Gemini model {model_id!r} not supported by WrappedClient"
+            )
+
+        client = WrappedClient(client=get_genai_client())
+        contents = [reference_image_url]
+        if user_reference_image_url:
+            contents.append(user_reference_image_url)
+            logger.info("添加用户自拍照片作为参考图: {}", user_reference_image_url)
+        contents.append(prompt)
+
+        return await client.async_generate_image(
+            model=model_id,
+            contents=contents,
+            gcs_uri_base=gcs_uri_base,
+            system_instructions=system_instructions,
+        )
+
+    async def _generate_chat_image_with_resolved_fal_model(
+        self,
+        model_id: str,
+        prompt: str,
+        reference_image_url: str,
+        user_reference_image_url: Optional[str],
+        gcs_uri_base: str,
+    ) -> GeneratedImageProcessResult:
+        if model_id == Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider:
+            args = ZImageTurboImageToImageInput(
+                prompt=prompt,
+                image_url=reference_image_url,
+                strength=0.75,
+                num_images=1,
+            )
+            return await z_image_turbo_image_to_image(args, gcs_uri_base=gcs_uri_base)
+
+        if model_id == SEEDREAM_V4_5_EDIT.id_on_provider:
+            seedream_image_urls = [reference_image_url]
+            if user_reference_image_url:
+                seedream_image_urls.append(user_reference_image_url)
+                logger.info(
+                    "Seedream 使用用户自拍作为第二参考图: {}", user_reference_image_url
+                )
+            if len(seedream_image_urls) < 2:
+                seedream_image_urls.append(reference_image_url)
+            args = FalSeedreamV4_5EditInput(
+                prompt=prompt,
+                image_urls=seedream_image_urls,
+            )
+            return await seedream_v4_5_edit(args, gcs_uri_base=gcs_uri_base)
+
+        raise ValueError(
+            f"Chat image fal model {model_id!r} not allowed; "
+            f"allowed: {', '.join(CHAT_IMAGE_FAL_IDS)}"
+        )
+
+    async def generate_chat_image_by_model(
+        self,
+        chat_input: ChatImageModelInput,
+        gcs_uri_base: str,
+        system_instructions: Optional[List[str]] = None,
+    ) -> GeneratedImageProcessResult:
+        """
+        统一聊天生图模型入口：
+        - 输入：prompt + reference image + message history + model
+        - 逻辑：解析模型并自动路由（Gemini/fal）
+        - 适配：转换为各 provider 需要的输入参数
+        """
+        resolved_model_id = self._resolve_chat_image_model_id(chat_input.model)
+        prompt_for_model = self._build_chat_image_prompt_for_model(
+            prompt=chat_input.prompt,
+            message_history=chat_input.message_history,
+        )
+
+        if resolved_model_id in CHAT_IMAGE_FAL_IDS:
+            return await self._generate_chat_image_with_resolved_fal_model(
+                model_id=resolved_model_id,
+                prompt=prompt_for_model,
+                reference_image_url=chat_input.reference_image_url,
+                user_reference_image_url=chat_input.user_reference_image_url,
+                gcs_uri_base=gcs_uri_base,
+            )
+
+        return await self._generate_chat_image_with_resolved_gemini_model(
+            model_id=resolved_model_id,
+            prompt=prompt_for_model,
+            reference_image_url=chat_input.reference_image_url,
+            user_reference_image_url=chat_input.user_reference_image_url,
+            gcs_uri_base=gcs_uri_base,
+            system_instructions=system_instructions,
+        )
 
     async def get_generated_images_for_agent(
         self,
@@ -651,20 +816,27 @@ class ImageGenerationService:
             prepared.reference_url,
         )
 
-        # 复用现有的 Gemini 客户端（自动从 service account 读取配置）
-        client = WrappedClient(client=get_genai_client())
-        contents = []
-        contents.append(prepared.reference_url)
-        if prepared.user_photo_url:
-            contents.append(prepared.user_photo_url)
-            logger.info("添加用户自拍照片作为参考图: {}", prepared.user_photo_url)
-        contents.append(prepared.prompt)
+        resolved_model_id = self._resolve_chat_image_model_id(model)
+        if resolved_model_id in CHAT_IMAGE_FAL_IDS:
+            raise ValueError(
+                f"Model {model!r} resolves to fal model {resolved_model_id!r}; "
+                "generate_chat_image_with_gemini only accepts Gemini models"
+            )
 
         agent_id = agent_data["id"]
         gcs_uri_base = f"chat_images/{agent_id}"
-        result = await client.async_generate_image(
-            model=model, contents=contents, gcs_uri_base=gcs_uri_base,
-            system_instructions=[agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT]
+        result = await self.generate_chat_image_by_model(
+            chat_input=ChatImageModelInput(
+                prompt=prepared.prompt,
+                reference_image_url=prepared.reference_url,
+                message_history=prepared.chat_history,
+                model=resolved_model_id,
+                user_reference_image_url=prepared.user_photo_url,
+            ),
+            gcs_uri_base=gcs_uri_base,
+            system_instructions=[
+                agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
+            ],
         )
 
         cdn_url = image_transform_service.transform_desktop(result.gcs_uri)
@@ -702,7 +874,11 @@ class ImageGenerationService:
                 url=result.gcs_uri,  # 使用GCS URI作为主键
                 size=result.size,
                 format=result.format,
-                byte_size=len(result.raw_data),
+                byte_size=(
+                    len(result.raw_data)
+                    if isinstance(result.raw_data, bytes)
+                    else result.raw_data_total_bytes
+                ),
                 compressed=False,
                 cropped=False,
                 gcs_url=result.gcs_uri,
@@ -749,9 +925,10 @@ class ImageGenerationService:
         使用 app/core/images/fal.py 中的 API 生成聊天图片并更新到消息 meta_data。
         仅支持 Z_IMAGE_TURBO_IMAGE_TO_IMAGE 与 SEEDREAM_V4_5_EDIT（id_on_provider）。
         """
-        if model not in CHAT_IMAGE_FAL_IDS:
+        resolved_model_id = self._resolve_chat_image_model_id(model)
+        if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
             raise ValueError(
-                f"Chat image fal model {model!r} not allowed; "
+                f"Chat image fal model {model!r} (resolved={resolved_model_id!r}) not allowed; "
                 f"allowed: {', '.join(CHAT_IMAGE_FAL_IDS)}"
             )
 
@@ -762,7 +939,7 @@ class ImageGenerationService:
         logger.info(
             "开始使用 fal 生成图片，session_id={}, model={}, 使用{}: {}",
             session_id,
-            model,
+            resolved_model_id,
             prepared.reference_type,
             prepared.reference_url,
         )
@@ -773,39 +950,22 @@ class ImageGenerationService:
 
         gcs_uri_base = f"chat_images/{agent_id}"
 
-        if model == Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider:
-            args = ZImageTurboImageToImageInput(
+        result = await self.generate_chat_image_by_model(
+            chat_input=ChatImageModelInput(
                 prompt=prepared.prompt,
-                image_url=prepared.reference_url,
-                strength=0.75,
-                num_images=1,
-            )
-            result = await z_image_turbo_image_to_image(args, gcs_uri_base=gcs_uri_base)
-            gcs_uri = result.gcs_uri
-            width = result.size.width
-            height = result.size.height
-            image_format = result.format.value
-            byte_size = result.raw_data_total_bytes
-            generated_at_iso = result.generated_at.isoformat()
-        else:
-            assert model == SEEDREAM_V4_5_EDIT.id_on_provider
-            seedream_image_urls: list[str] = [prepared.reference_url]
-            if prepared.user_photo_url:
-                seedream_image_urls.append(prepared.user_photo_url)
-                logger.info("Seedream 使用用户自拍作为第二参考图: {}", prepared.user_photo_url)
-            if len(seedream_image_urls) < 2:
-                seedream_image_urls.append(prepared.reference_url)
-            args = FalSeedreamV4_5EditInput(
-                prompt=prepared.prompt,
-                image_urls=seedream_image_urls,
-            )
-            result = await seedream_v4_5_edit(args, gcs_uri_base=gcs_uri_base)
-            gcs_uri = result.gcs_uri
-            width = result.size.width
-            height = result.size.height
-            image_format = result.format.value
-            byte_size = result.raw_data_total_bytes
-            generated_at_iso = result.generated_at.isoformat()
+                reference_image_url=prepared.reference_url,
+                message_history=prepared.chat_history,
+                model=resolved_model_id,
+                user_reference_image_url=prepared.user_photo_url,
+            ),
+            gcs_uri_base=gcs_uri_base,
+        )
+        gcs_uri = result.gcs_uri
+        width = result.size.width
+        height = result.size.height
+        image_format = result.format.value
+        byte_size = result.raw_data_total_bytes
+        generated_at_iso = result.generated_at.isoformat()
 
         cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
@@ -816,7 +976,7 @@ class ImageGenerationService:
                 "height": height,
                 "format": image_format,
                 "prompt": prepared.prompt,
-                "model": model,
+                "model": resolved_model_id,
                 "generated_at": generated_at_iso,
             }
         }
