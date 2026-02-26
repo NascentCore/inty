@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 from typing import Any, Dict, List, Optional, Union
@@ -190,7 +191,8 @@ async def get_agent_chat_messages(
         unlocked_ids = await get_unlocked_surprise_snap_message_ids(
             db, current_user.id
         )
-        messages_data = chat_history_service.get_messages_paginated(
+        messages_data = await asyncio.to_thread(
+            chat_history_service.get_messages_paginated,
             session_id=session_id,
             limit=limit,
             offset=offset,
@@ -209,6 +211,7 @@ async def get_agent_chat_messages(
         return messages_data
 
     except Exception as e:
+        logger.exception("Failed to get message records: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get message records: {str(e)}"
         )
