@@ -65,6 +65,8 @@ agent:
   # 但是，目前没有免费的生图、生语音、生视频模型
   sub_user_chat_model: "google/gemini-2.5-flash-lite"
   free_user_chat_model: "google/gemini-2.5-flash-lite"
+  # 本地开发环境流量小也需要完整追踪方便测试
+  langsmith_text_chat_sample_rate: 1.0
 
 google_play:
   package_name: "com.ai.intellimate"

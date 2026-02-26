@@ -424,6 +424,7 @@ class Agent:
             system_messages.append(SystemMessage(content=rendered_mode_prompt))
 
         if chat_settings and chat_settings.style_prompt:
+            logger.debug(f"Using style prompt: {chat_settings.style_prompt} for agent: {self.agent_id} user: {user_name}")
             system_messages.append(SystemMessage(content=chat_settings.style_prompt))
 
         if user_profile:
