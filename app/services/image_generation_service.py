@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Literal, Optional
 import PIL.Image
 from pydantic import BaseModel, Field
 from app.core.google_genai.wrapped_client import WrappedClient
+from langsmith.run_helpers import traceable
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,6 +59,7 @@ from app.utils.models_catalog import (
 
 # 生图失败时日志中提示词最大长度，避免泄露过多用户内容并控制日志体积
 _MAX_PROMPT_LOG_LEN = 800000
+_MAX_TRACE_TEXT_PREVIEW_LEN = 500
 
 
 class ChatImagePreparedInputs(BaseModel):
@@ -82,6 +84,41 @@ class ChatImageModelInput(BaseModel):
     message_history: List[Dict[str, Any]] = Field(default_factory=list)
     model: str
     user_reference_image_url: Optional[str] = None
+
+
+def _truncate_trace_text(value: Any) -> str:
+    text = str(value)
+    if len(text) <= _MAX_TRACE_TEXT_PREVIEW_LEN:
+        return text
+    return text[:_MAX_TRACE_TEXT_PREVIEW_LEN] + "…"
+
+
+def _process_inputs_generate_chat_image_for_message(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    agent_data = inputs.get("agent_data") or {}
+    message_content = inputs.get("message_content") or ""
+    output: Dict[str, Any] = {
+        "session_id": inputs.get("session_id"),
+        "message_id": inputs.get("message_id"),
+        "agent_id": agent_data.get("id"),
+        "model": inputs.get("model"),
+        "user_id": inputs.get("user_id"),
+        "history_count": inputs.get("history_count"),
+        "message_content_len": len(message_content),
+        "message_content_preview": _truncate_trace_text(message_content),
+    }
+    return output
+
+
+def _process_outputs_generate_chat_image_for_message(outputs: Any) -> Any:
+    if not isinstance(outputs, dict):
+        return outputs
+    prompt = outputs.get("prompt")
+    out = dict(outputs)
+    if isinstance(prompt, str):
+        out["prompt_len"] = len(prompt)
+        out["prompt_preview"] = _truncate_trace_text(prompt)
+        out["prompt"] = "[omitted in trace, see prompt_preview]"
+    return out
 
 
 def _serialize_gemini_response_for_log(response: Any) -> Dict[str, Any]:
@@ -754,6 +791,12 @@ class ImageGenerationService:
             reference_type=reference_type,
         )
 
+    @traceable(
+        name="generate_chat_image_for_message",
+        run_type="chain",
+        process_inputs=_process_inputs_generate_chat_image_for_message,
+        process_outputs=_process_outputs_generate_chat_image_for_message,
+    )
     async def generate_chat_image_for_message(
         self,
         db: AsyncSession,
