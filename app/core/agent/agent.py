@@ -424,6 +424,10 @@ class Agent:
             system_messages.append(SystemMessage(content=rendered_mode_prompt))
 
         if chat_settings and chat_settings.style_prompt:
+            # chat_style_prompt = "write very detailed and elaborate descriptions of actions and thoughts"
+            # logger.debug(f"Using style prompt: {chat_style_prompt}")
+            # system_messages.append(SystemMessage(content=chat_style_prompt))
+            logger.debug(f"Using style prompt: {chat_settings.style_prompt}")
             system_messages.append(SystemMessage(content=chat_settings.style_prompt))
 
         if user_profile:

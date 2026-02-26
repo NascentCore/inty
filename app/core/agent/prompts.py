@@ -13,6 +13,10 @@ from pydantic import BaseModel, Field
 
 PROMPTS_DATA_PATH = Path(__file__).with_name("prompts_data.yaml")
 
+# 从主提示词里提取的，用于构建模式提示词
+# 考虑将主提示词中的字数限制提取出来，作为可选，从而支持用户在 chat style 中设定 words limit，避免冲突
+# https://github.com/NascentCore/inty/issues/2418
+WORDS_LIMIT_PROMPT_TEMPLATE = "Each reply must not exceed {{ words_limit }} words."
 
 @lru_cache(maxsize=1)
 def _load_prompts_data() -> dict[str, str]:
