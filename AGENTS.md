@@ -131,12 +131,17 @@ AGENTS.md        AI
 
 The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL 16** (Docker, port 5432). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
 
+### Update script
+
+The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and** test dependencies from `requirements.txt` + `tests/requirements.txt` (covers pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.) and auto-provisions `config.yaml` from `devops/config.yaml.test` when the file is missing, so future agents always have a working test config on first boot.
+
 ### Starting services
 
 1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
    - Verify readiness: `sudo docker exec pg-inty pg_isready -U postgres`
    - The CI uses plain `postgres:16` (not `pgvector/pgvector:pg16`); both work. Plain postgres:16 is sufficient for all tests.
-2. **Backend**: `source .venv/bin/activate && cp devops/config.yaml.test config.yaml && ./backend/inty/start.sh --test`
+2. **Backend**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
+   - `config.yaml` is auto-provisioned by the update script; no manual copy needed.
    - `--test` = dev mode minus evaluation frontend build (fast startup)
    - `--dev` = full dev mode including evaluation frontend build
    - The server runs on `http://localhost:8000`
