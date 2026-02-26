@@ -672,8 +672,8 @@ object UiConfigs {
         /** 聊天消息面板垂直内边距 */
         val PaddingVertical = 13.dp
 
-        /** 用户消息气泡垂直内边距（小于 PaddingVertical，使气泡更紧凑） */
-        val UserMessagePaddingVertical = 0.dp
+        /** 用户消息气泡垂直内边距（与 AI 消息保持一致） */
+        val UserMessagePaddingVertical = PaddingVertical
 
         /** AI 消息宽度比例（相对于父容器） */
         const val AI_WIDTH_RATIO = 0.9f

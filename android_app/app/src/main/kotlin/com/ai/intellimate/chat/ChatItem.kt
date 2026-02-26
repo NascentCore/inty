@@ -1124,64 +1124,76 @@ private fun ChatItemUser(
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.Bottom,
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
             ) {
-                val context = LocalContext.current
-
-                Box(
-                    modifier =
-                        Modifier
-                            .background(
-                                Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
-                            )
-                            .padding(
-                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
-                            )
-                            .widthIn(
-                                min = 1.dp,
-                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                            )
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    StyledMessageText(
-                        text = item.content,
-                        fontSize = messageFontSize,
-                        fontWeight = FontWeight.Normal,
-                        normalColor = Color(0xff090909),
-                        actionColor = Color(0xff090909).copy(0.6f),
-                        useDoubleAsteriskActionMarker = useDoubleAsteriskActionMarker,
-                    )
-                }
-            }
-        }
-        .also {
-            if (isDebugMode) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    DebugMessageMetadata(
-                        item = item,
+                    val context = LocalContext.current
+
+                    Box(
                         modifier =
-                            Modifier.widthIn(
-                                min = 1.dp,
-                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                            ),
-                    )
+                            Modifier
+                                .background(
+                                    Color.White.copy(alpha = 0.6f),
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .padding(
+                                    horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                    vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
+                                )
+                                .widthIn(
+                                    min = 1.dp,
+                                    max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                                )
+                                .pointerInput(item.content) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            debugOnlyCopyToClipboard(context, item.content)
+                                        }
+                                    )
+                                }
+                    ) {
+                        StyledMessageText(
+                            text = item.content,
+                            fontSize = messageFontSize,
+                            fontWeight = FontWeight.Normal,
+                            normalColor = Color(0xff090909),
+                            actionColor = Color(0xff090909).copy(0.6f),
+                            useDoubleAsteriskActionMarker = useDoubleAsteriskActionMarker,
+                        )
+                    }
+                }
+
+                if (isDebugMode) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        DebugMessageMetadata(
+                            item = item,
+                            modifier =
+                                Modifier.widthIn(
+                                    min = 1.dp,
+                                    max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                                ),
+                        )
+                    }
                 }
             }
         }
         .onFailure {
             // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
                 val context = LocalContext.current
                 Box(
                     modifier =
