@@ -6,6 +6,10 @@
 
 Only user-visible changes are recorded
 
+## 2026-02-26
+
+- Standardized chat bubble spacing on the chat page: user message bubbles now use the same vertical spacing as AI messages to improve readability.
+
 ## 2026-02-24
 
 - Updated the middle icon in the bottom navigation bar: tapping it now opens chat with the IntelliMate official assistant.
