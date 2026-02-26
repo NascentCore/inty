@@ -124,3 +124,40 @@ AGENTS.md        AI
 - @<https://developers.cloudflare.com/developer-platform/llms-full.txt>
 
 来自官方文档链接 https://developers.cloudflare.com/stream/changelog/
+
+## Cursor Cloud specific instructions
+
+### Service overview
+
+The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL 16** (Docker, port 5432). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
+
+### Starting services
+
+1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
+   - Verify readiness: `sudo docker exec pg-inty pg_isready -U postgres`
+   - The CI uses plain `postgres:16` (not `pgvector/pgvector:pg16`); both work. Plain postgres:16 is sufficient for all tests.
+2. **Backend**: `source .venv/bin/activate && cp devops/config.yaml.test config.yaml && ./backend/inty/start.sh --test`
+   - `--test` = dev mode minus evaluation frontend build (fast startup)
+   - `--dev` = full dev mode including evaluation frontend build
+   - The server runs on `http://localhost:8000`
+
+### Running tests
+
+```bash
+source .venv/bin/activate
+pytest -m "not noci" -v -s tests/
+```
+
+Tests are functional/E2E against a running backend (not unit-style mocks). The backend must be running first. See `tests/AGENTS.md`.
+
+### Lint / formatting
+
+- `black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
+- No strict linter is enforced in CI for the backend currently
+
+### Gotchas
+
+- Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
+- `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
+- The venv **must** be activated before running `start.sh` — the script does not activate it.
+- Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
