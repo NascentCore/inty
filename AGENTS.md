@@ -164,5 +164,7 @@ Tests are functional/E2E against a running backend (not unit-style mocks). The b
 
 - Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
 - `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
+- Creating the venv requires `python3.12-venv` system package (not pre-installed in Cloud Agent VMs).
+- `black` is not in `requirements.txt`; install separately: `pip install black`.
 - The venv **must** be activated before running `start.sh` — the script does not activate it.
 - Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
