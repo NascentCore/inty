@@ -1,7 +1,9 @@
 package com.ai.intellimate.explore
 
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.http.services.AgentService
+import ai.sxwl.android.data.api.model.CharacterThemeAgentItem
+import ai.sxwl.android.data.api.model.CharacterThemeItem
+import ai.sxwl.android.data.api.model.CharacterThemeVisibility
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -11,11 +13,19 @@ class ExploreThemeSectionsTest {
     fun `buildExploreThemeSections - no newly agents keeps original themes`() {
         val themes =
             listOf(
-                AgentService.CharacterThemeItem(
+                CharacterThemeItem(
                     id = "theme_1",
                     name = "Theme 1",
                     description = "desc",
-                    agents = listOf(AgentInfo(id = "a1", name = "A1")),
+                    visibility = CharacterThemeVisibility.PRIMARY,
+                    agents =
+                        listOf(
+                            CharacterThemeAgentItem(
+                                agentId = "a1",
+                                orderIndex = 0,
+                                agent = AgentInfo(id = "a1", name = "A1"),
+                            )
+                        ),
                 )
             )
 
@@ -27,18 +37,30 @@ class ExploreThemeSectionsTest {
                 newlyImatesSubtitle = "Newly crafted based on your preference",
             )
 
-        assertEquals(themes, result)
+        assertEquals(1, result.size)
+        assertEquals("theme_1", result.first().id)
+        assertEquals("Theme 1", result.first().name)
+        assertEquals(1, result.first().agents.size)
+        assertEquals("a1", result.first().agents.first().id)
     }
 
     @Test
     fun `buildExploreThemeSections - prepends newly section and limits to ten`() {
         val themes =
             listOf(
-                AgentService.CharacterThemeItem(
+                CharacterThemeItem(
                     id = "theme_1",
                     name = "Theme 1",
                     description = "desc",
-                    agents = listOf(AgentInfo(id = "a1", name = "A1")),
+                    visibility = CharacterThemeVisibility.PRIMARY,
+                    agents =
+                        listOf(
+                            CharacterThemeAgentItem(
+                                agentId = "a1",
+                                orderIndex = 0,
+                                agent = AgentInfo(id = "a1", name = "A1"),
+                            )
+                        ),
                 )
             )
         val newlyAgents = (1..12).map { index -> AgentInfo(id = "new_$index", name = "New $index") }

@@ -1,7 +1,6 @@
 package com.ai.intellimate.boost
 
-import ai.sxwl.android.data.http.ApiResult
-import ai.sxwl.android.data.http.services.AgentService
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.store.BoostLeaderboardRankCache
 import ai.sxwl.android.data.store.BoostLeaderboardRankStore
 import androidx.compose.foundation.layout.Box
@@ -39,6 +38,7 @@ import com.ai.intellimate.boost.ui.BoostPointsHelpSheet
 import com.ai.intellimate.ui.components.EmptyStateComponent
 import com.ai.intellimate.ui.components.EmptyStateType
 import com.ai.intellimate.xb.navigation.Routes
+import com.architecture.httplib.core.HttpResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,16 +59,15 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
         val previousCache = BoostLeaderboardRankStore.readCache(context)
         when (
             val result =
-                AgentService.getRecommendAgents(
+                NetServiceMgr.getAgentApi().boostLeaderboardAgents(
                     page = 1,
                     pageSize = 10,
-                    sort = "energy_points",
                     sortSeed = "",
                 )
         ) {
-            is ApiResult.Success -> {
+            is HttpResult.Success -> {
                 val baseEntries =
-                    result.data.mapIndexed { index, agent ->
+                    result.data.list.orEmpty().mapIndexed { index, agent ->
                         val energyPoints = agent.energyPoints
                         // 使用 energyPoints / BOOST_STEP_POINTS 估算 boost 次数
                         val estimatedBoostCount =
@@ -106,7 +105,7 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
 
                 isLoading = false
             }
-            is ApiResult.Error -> {
+            is HttpResult.Failure -> {
                 errorMessage = result.message
                 isLoading = false
             }

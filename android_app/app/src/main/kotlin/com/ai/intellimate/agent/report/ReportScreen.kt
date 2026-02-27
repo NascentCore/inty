@@ -29,13 +29,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.sxwl.android.data.api.model.ReportReasonCode
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ReportDescriptionContainer
 import com.ai.intellimate.ui.components.ReportImageEvidenceContainer
 import com.ai.intellimate.ui.components.ReportItem as ReportItemComponent
 import com.ai.intellimate.ui.components.ReportReasonsContainer
 import com.ai.intellimate.ui.components.SaveBtn
-import com.inty.api.models.api.v1.report.ReportCreateParams
 
 /** 举报屏幕 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,8 +43,8 @@ import com.inty.api.models.api.v1.report.ReportCreateParams
 fun ReportScreen(
     onBack: () -> Unit = {},
     reasons: List<ReportReasonItem>,
-    selectedReasonCodes: Set<ReportCreateParams.ReasonCode>,
-    onClickReason: (ReportCreateParams.ReasonCode, Boolean) -> Unit,
+    selectedReasonCodes: Set<ReportReasonCode>,
+    onClickReason: (ReportReasonCode, Boolean) -> Unit,
     description: String,
     onDescriptionChange: (String) -> Unit,
     images: List<String>,
@@ -171,15 +171,15 @@ fun ReportScreenPreview() {
     val mockReasons =
         listOf(
             ReportReasonItem(
-                ReportCreateParams.ReasonCode.SENSITIVE_CONTENT,
+                ReportReasonCode.SENSITIVE_CONTENT,
                 R.string.report_reason_sensitive_content,
             ),
             ReportReasonItem(
-                ReportCreateParams.ReasonCode.MISINFORMATION,
+                ReportReasonCode.MISINFORMATION,
                 R.string.report_reason_misinformation,
             ),
             ReportReasonItem(
-                ReportCreateParams.ReasonCode.FRAUD_SCAMS,
+                ReportReasonCode.FRAUD_SCAMS,
                 R.string.report_reason_fraud_scams,
             ),
         )
@@ -187,7 +187,7 @@ fun ReportScreenPreview() {
     ReportScreen(
         onBack = {},
         reasons = mockReasons,
-        selectedReasonCodes = setOf(ReportCreateParams.ReasonCode.SENSITIVE_CONTENT),
+        selectedReasonCodes = setOf(ReportReasonCode.SENSITIVE_CONTENT),
         onClickReason = { _, _ -> },
         description = "这是一条举报描述",
         onDescriptionChange = {},

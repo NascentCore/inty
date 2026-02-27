@@ -1,8 +1,11 @@
 package com.ai.intellimate.agent.report
 
 import ai.sxwl.android.common.base.BaseVM
-import ai.sxwl.android.data.http.ApiResult
-import ai.sxwl.android.data.http.services.ReportService
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.ReportCreateRequest
+import ai.sxwl.android.data.api.model.ReportReasonCode
+import ai.sxwl.android.data.api.model.ReportRequestType
+import ai.sxwl.android.data.api.model.ReportTargetType
 import ai.sxwl.android.utils.ImageCompressUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -14,9 +17,8 @@ import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
 import com.ai.intellimate.ViewModelEvent
-import com.inty.api.models.api.v1.report.ReportCreateParams
+import com.architecture.httplib.core.HttpResult
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.LinkedHashSet
 import kotlinx.coroutines.Dispatchers
@@ -27,9 +29,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 
-/** 举报原因项，包含 SDK 的 ReasonCode 和对应的字符串资源ID */
-data class ReportReasonItem(val reasonCode: ReportCreateParams.ReasonCode, val stringResId: Int)
+/** 举报原因项，包含本地 `ReportReasonCode` 和对应的字符串资源ID */
+data class ReportReasonItem(val reasonCode: ReportReasonCode, val stringResId: Int)
 
 private const val REPORT_DESCRIPTION_APP_VERSION_MARKER = "[INTY_APP_VERSION]"
 
@@ -89,13 +94,13 @@ class ReportViewModel : BaseVM() {
     var targetID: String = ""
     var targetType: String = "USER"
 
-    // 使用 SDK 的 ReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
+    // 使用本地 ReportReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
     private val reportReasons =
         ReportReasonMappings.REPORT_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
             ReportReasonItem(reasonCode, stringResId)
         }
 
-    // 使用 SDK 的 ReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
+    // 使用本地 ReportReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
     private val feedbackReasons =
         ReportReasonMappings.FEEDBACK_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
             ReportReasonItem(reasonCode, stringResId)
@@ -113,8 +118,8 @@ class ReportViewModel : BaseVM() {
             }
     }
 
-    // 使用 ReasonCode 而不是 Int ID
-    var selectedReasonCodes = mutableStateSetOf<ReportCreateParams.ReasonCode>()
+    // 使用本地 ReasonCode 而不是 Int ID
+    var selectedReasonCodes = mutableStateSetOf<ReportReasonCode>()
 
     private val _description = MutableStateFlow("")
     val description = _description.asStateFlow()
@@ -173,11 +178,16 @@ class ReportViewModel : BaseVM() {
                     }
                 }
 
-                val result =
-                    ReportService.createReport(
+                val request =
+                    ReportCreateRequest(
+                        targetId = if (isFeedbackMode) "" else targetID,
+                        targetType =
+                            if (!isFeedbackMode && targetType == ReportTargetType.USER.name) {
+                                ReportTargetType.USER
+                            } else {
+                                ReportTargetType.AGENT
+                            },
                         reasonCodes = selectedReasonCodes.toList(),
-                        targetId = if (isFeedbackMode) null else targetID,
-                        targetType = if (isFeedbackMode) null else targetType,
                         description =
                             buildReportDescriptionWithAppVersion(
                                 userDescription = trimmedDescription,
@@ -187,22 +197,36 @@ class ReportViewModel : BaseVM() {
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                         reportType =
                             if (isFeedbackMode) {
-                                ReportService.ReportType.FEEDBACK
+                                ReportRequestType.FEEDBACK
                             } else {
-                                ReportService.ReportType.REPORT
+                                ReportRequestType.REPORT
                             },
                     )
 
-                when (result) {
-                    is ApiResult.Success -> {
-                        if (isFeedbackMode) {
-                            ToastUtils.showShort(R.string.toast_feedback_submitted)
+                when (val result = NetServiceMgr.getReportApi().createReport(request)) {
+                    is HttpResult.Success -> {
+                        val responseCode = result.data.code ?: 200
+                        if (responseCode == 200) {
+                            if (isFeedbackMode) {
+                                ToastUtils.showShort(R.string.toast_feedback_submitted)
+                            } else {
+                                ToastUtils.showShort(R.string.toast_submitted_successfully)
+                            }
+                            sendEvent(ViewModelEvent.ReportSubmitted)
                         } else {
-                            ToastUtils.showShort(R.string.toast_submitted_successfully)
+                            val errorMessage =
+                                result.data.message
+                                    ?: Utils.getApp()
+                                        ?.getString(R.string.toast_report_creation_failed)
+                                    ?: "Report creation failed"
+                            LogUtils.e(
+                                "Report creation failed: code=$responseCode, message=$errorMessage"
+                            )
+                            ToastUtils.showShort(errorMessage)
                         }
-                        sendEvent(ViewModelEvent.ReportSubmitted)
                     }
-                    is ApiResult.Error -> {
+
+                    is HttpResult.Failure -> {
                         LogUtils.e("Report creation failed: ${result.message}")
                         ToastUtils.showShort(
                             result.message
@@ -240,22 +264,11 @@ class ReportViewModel : BaseVM() {
                 val originalSizeKB = tempFile.length() / 1024
                 if (originalSizeKB <= 1024) {
                     // 原文件已经小于 1024KB，直接上传
-                    val inputStream = FileInputStream(tempFile)
-                    val result = ReportService.uploadImage(inputStream, "report-image.jpg")
-                    inputStream.close()
-
-                    return@withContext when (result) {
-                        is ApiResult.Success -> {
-                            val url = result.data
-                            LogUtils.i("Image uploaded successfully (no compression needed): $url")
-                            url
-                        }
-
-                        is ApiResult.Error -> {
-                            LogUtils.e("Image upload failed: ${result.message}")
-                            null
-                        }
+                    val uploadedUrl = uploadReportImage(tempFile, "report-image.jpg")
+                    if (uploadedUrl != null) {
+                        LogUtils.i("Image uploaded successfully (no compression needed): $uploadedUrl")
                     }
+                    return@withContext uploadedUrl
                 }
 
                 // 先尝试转换为 WebP 格式（通常能获得更好的压缩率）
@@ -347,24 +360,13 @@ class ReportViewModel : BaseVM() {
                     } else {
                         "report-image.jpg"
                     }
-                val inputStream = FileInputStream(compressedFile)
-                val result = ReportService.uploadImage(inputStream, filename)
-                inputStream.close()
-
-                when (result) {
-                    is ApiResult.Success -> {
-                        val url = result.data
-                        LogUtils.i(
-                            "Image uploaded successfully (compressed from ${originalSizeKB}KB to ${compressedFile.length() / 1024}KB): $url"
-                        )
-                        url
-                    }
-
-                    is ApiResult.Error -> {
-                        LogUtils.e("Image upload failed: ${result.message}")
-                        null
-                    }
+                val uploadedUrl = uploadReportImage(compressedFile, filename)
+                if (uploadedUrl != null) {
+                    LogUtils.i(
+                        "Image uploaded successfully (compressed from ${originalSizeKB}KB to ${compressedFile.length() / 1024}KB): $uploadedUrl"
+                    )
                 }
+                uploadedUrl
             } catch (e: Exception) {
                 LogUtils.e("Error uploading image: ${e.message}", e)
                 null
@@ -372,6 +374,29 @@ class ReportViewModel : BaseVM() {
                 // 清理临时文件
                 tempFile?.delete()
                 compressedFile?.delete()
+            }
+        }
+    }
+
+    private suspend fun uploadReportImage(file: File, filename: String): String? {
+        return withContext(Dispatchers.IO) {
+            val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
+            val multipart = MultipartBody.Part.createFormData("file", filename, requestBody)
+            when (val result = NetServiceMgr.getUserApi().uploadAvatar(multipart)) {
+                is HttpResult.Success -> {
+                    val resolvedUrl = result.data.url.ifBlank { result.data.avatar_url }
+                    if (resolvedUrl.isBlank()) {
+                        LogUtils.e("Image upload failed: empty url in response")
+                        null
+                    } else {
+                        resolvedUrl
+                    }
+                }
+
+                is HttpResult.Failure -> {
+                    LogUtils.e("Image upload failed: ${result.message}")
+                    null
+                }
             }
         }
     }

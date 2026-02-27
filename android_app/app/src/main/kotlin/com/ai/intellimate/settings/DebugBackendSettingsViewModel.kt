@@ -1,7 +1,6 @@
 package com.ai.intellimate.settings
 
-import ai.sxwl.android.data.api.NetServiceMgr
-import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.NetworkStackCoordinator
 import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
@@ -85,18 +84,16 @@ class DebugBackendSettingsViewModel : ViewModel() {
                 return
             }
 
-        // 清除 Inty SDK 和 Retrofit 的客户端缓存
-        IntyNetworkManager.clearClientCache()
-        NetServiceMgr.clearCache()
+        // 统一清除两套网络栈缓存，确保切换地址后使用新客户端
+        NetworkStackCoordinator.clearAllRuntimeCaches()
 
         _uiState.update { it.copy(activeBaseUrl = NetworkConfig.getBaseUrl()) }
     }
 
     fun resetOverride() {
         DebugBackendEndpointStore.clearOverride()
-        // 清除 Inty SDK 和 Retrofit 的客户端缓存
-        IntyNetworkManager.clearClientCache()
-        NetServiceMgr.clearCache()
+        // 统一清除两套网络栈缓存，确保重置地址后使用新客户端
+        NetworkStackCoordinator.clearAllRuntimeCaches()
 
         val active = NetworkConfig.getBaseUrl()
         _uiState.update { it.copy(activeBaseUrl = active) }

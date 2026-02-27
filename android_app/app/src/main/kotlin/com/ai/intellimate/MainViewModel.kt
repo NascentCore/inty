@@ -4,13 +4,12 @@ import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.common.event.EventBus
 import ai.sxwl.android.common.event.EventSubscriber
 import ai.sxwl.android.common.event.PushNotificationEvent
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.api.model.VersionReminderAction
 import ai.sxwl.android.data.billing.BillingRepository
-import ai.sxwl.android.data.http.ApiResult
-import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
@@ -23,6 +22,7 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
+import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -401,14 +401,10 @@ class MainViewModel : BaseVM() {
             when (
                 val result =
                     withTimeout(timeoutMs) {
-                        IntyNetworkManager.version.checkAppUpgrade(
-                            appVersionCode = BuildConfig.VERSION_CODE.toLong(),
-                            // 这个可以取消了，对后端没有意义，后端已经不根据 version name 判断是否更新了。
-                            appVersionName = BuildConfig.VERSION_NAME,
-                        )
+                        NetServiceMgr.getCommonApi().checkAppUpgrade()
                     }
             ) {
-                is ApiResult.Success -> {
+                is HttpResult.Success -> {
                     val rsp = result.data
                     LogUtils.d("版本升级信息:$rsp")
                     when (rsp.reminder_action) {
@@ -436,7 +432,7 @@ class MainViewModel : BaseVM() {
                     }
                 }
 
-                is ApiResult.Error -> {
+                is HttpResult.Failure -> {
                     LogUtils.w("MainViewModel", "checkAppVersion: 版本检查失败 - ${result.message}")
                     // 版本检查失败时，不清除更新提示（保持之前的状态，避免误清除）
                     // 如果确实需要清除，应该等待下次成功的版本检查返回 NONE
