@@ -317,5 +317,5 @@ def test_gemini_live_language_defaults():
 def test_chat_messages_window_limit_defaults():
     limits = AppConfig.LimitsConfig()
 
-    assert limits.free_user_chat_messages_limit == 20
-    assert limits.sub_user_chat_messages_limit == 40
+    assert limits.free_user_chat_messages_limit == 10
+    assert limits.sub_user_chat_messages_limit == 1000
