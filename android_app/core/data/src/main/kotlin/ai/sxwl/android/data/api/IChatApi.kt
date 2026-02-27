@@ -1,8 +1,12 @@
 package ai.sxwl.android.data.api
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.ChatImageGenerationApiResponse
+import ai.sxwl.android.data.api.model.ChatImageGenerationRequest
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
+import ai.sxwl.android.data.api.model.ClearMessagesRequest
+import ai.sxwl.android.data.api.model.ClearMessagesResponse
 import ai.sxwl.android.data.api.model.ConversationItem
 import ai.sxwl.android.data.api.model.MsgVoiceRsp
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
@@ -69,4 +73,16 @@ interface IChatApi {
 
     @POST("/api/v1/chats/messages/vote")
     suspend fun voteMessage(@Body req: VoteMessageReq): HttpResult<VoteMessageRsp>
+
+    @POST("/api/v1/chat/images/{agent_id}")
+    suspend fun generateMessageImage(
+        @Path("agent_id") agent_id: String,
+        @Body req: ChatImageGenerationRequest,
+    ): HttpResult<ChatImageGenerationApiResponse>
+
+    @POST("/api/v1/chats/agents/{agent_id}/clear-messages")
+    suspend fun clearMessages(
+        @Path("agent_id") agent_id: String,
+        @Body req: ClearMessagesRequest,
+    ): HttpResult<ClearMessagesResponse>
 }

@@ -269,6 +269,61 @@ data class MsgVoiceRsp(
     )
 }
 
+/**
+ * 聊天消息生图请求（Retrofit 目标类型）。
+ */
+@JsonClass(generateAdapter = true)
+data class ChatImageGenerationRequest(
+    @Json(name = "message_id") val messageId: Long,
+    @Json(name = "history_count") val historyCount: Int? = null,
+    val model: String? = null,
+)
+
+/**
+ * 聊天消息生图数据载荷（兼容成功与业务失败两类 data 结构）。
+ */
+@JsonClass(generateAdapter = true)
+data class ChatImageGenerationPayload(
+    @Json(name = "image_url") val imageUrl: String? = null,
+    @Json(name = "image_metadata") val imageMetadata: Map<String, Any?> = emptyMap(),
+    val prompt: String? = null,
+    @Json(name = "message_id") val messageId: Long? = null,
+    val model: String? = null,
+    @Json(name = "generation_time_ms") val generationTimeMs: Int? = null,
+    @Json(name = "model_fallback_due_to_429") val modelFallbackDueTo429: Boolean? = null,
+    val code: Int? = null,
+    @Json(name = "error_code") val errorCode: String? = null,
+    val message: String? = null,
+    @Json(name = "daily_limit") val dailyLimit: Int? = null,
+    @Json(name = "used_count") val usedCount: Int? = null,
+)
+
+/**
+ * 聊天消息生图响应（保留 `code/message/data` 包装，供 no-wrapper Retrofit 解析）。
+ */
+@JsonClass(generateAdapter = true)
+data class ChatImageGenerationApiResponse(
+    val code: Int? = null,
+    val message: String? = null,
+    val data: ChatImageGenerationPayload? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ClearMessagesRequest(
+    @Json(name = "message_id") val messageId: Long? = null,
+    val timestamp: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ClearMessagesResponse(
+    val success: Boolean = false,
+    val message: String = "",
+    @Json(name = "deleted_count") val deletedCount: Int = 0,
+    @Json(name = "target_message") val targetMessage: Map<String, Any?>? = null,
+    @Json(name = "deleted_time_range") val deletedTimeRange: Map<String, Any?>? = null,
+    @Json(name = "cutoff_timestamp") val cutoffTimestamp: String? = null,
+)
+
 /** 消息投票常量 */
 object VoteConstants {
     const val LIKE = "like"

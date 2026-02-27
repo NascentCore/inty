@@ -2,6 +2,8 @@ package ai.sxwl.android.data.api
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
+import ai.sxwl.android.data.api.model.AgentEnergyPointsUpdateRequest
+import ai.sxwl.android.data.api.model.CharacterThemeItem
 import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundResponse
@@ -44,6 +46,14 @@ interface IAgentApi {
             "score_based_random", // 四种排序 created_asc, created_desc, random, score_based_random
     ): HttpResult<AgentInfoResponse>
 
+    @GET("api/v1/ai/agents/recommend")
+    suspend fun boostLeaderboardAgents(
+        @Query("page") page: Int,
+        @Query("page_size") pageSize: Int,
+        @Query("sort_seed") sortSeed: String,
+        @Query("sort") sort: String = "energy_points",
+    ): HttpResult<AgentInfoResponse>
+
     @POST("/api/v1/ai/agents")
     suspend fun createAgent(@Body request: CreateAgentRequest): HttpResult<AgentInfo>
 
@@ -67,10 +77,22 @@ interface IAgentApi {
         @Body request: CreateAgentRequest,
     ): HttpResult<AgentInfo>
 
+    @PUT("/api/v1/ai/agents/{agentId}")
+    suspend fun updateAgentEnergyPoints(
+        @Path("agentId") agentId: String,
+        @Body request: AgentEnergyPointsUpdateRequest,
+    ): HttpResult<AgentInfo>
+
     @DELETE("/api/v1/ai/agents/{agentId}")
     suspend fun deleteAgent(@Path("agentId") agentId: String): HttpResult<AgentInfo>
 
     @Multipart
     @POST("/api/v1/images")
     suspend fun uploadAvatar(@Part file: MultipartBody.Part): HttpResult<UploadAvatarResponse>
+
+    @GET("/api/v1/character-themes/")
+    suspend fun getCharacterThemes(
+        @Query("skip") skip: Int,
+        @Query("limit") limit: Int,
+    ): HttpResult<List<CharacterThemeItem>>
 }

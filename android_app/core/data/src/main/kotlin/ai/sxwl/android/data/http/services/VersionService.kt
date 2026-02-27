@@ -1,6 +1,7 @@
 package ai.sxwl.android.data.http.services
 
 import ai.sxwl.android.data.api.model.AppVersionRsp
+import ai.sxwl.android.data.api.model.VersionReminderAction
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
 import com.inty.api.models.api.v1.version.VersionCheckParams
@@ -47,8 +48,18 @@ object VersionService {
                 minimum_version = data.minimumVersion(),
                 update_required = data.updateRequired() == true,
                 // TODO: 只需要保留这个字段，其他都可以删除，已经无用了。
-                reminder_action = data.reminderAction(),
+                reminder_action = mapReminderAction(data.reminderAction()?.toString()),
             )
+        }
+    }
+
+    private fun mapReminderAction(rawAction: String?): VersionReminderAction {
+        return when (rawAction) {
+            VersionReminderAction.BLOCK_ACCESS.name -> VersionReminderAction.BLOCK_ACCESS
+            VersionReminderAction.POP_UP_REMINDER.name -> VersionReminderAction.POP_UP_REMINDER
+            VersionReminderAction.SETTINGS_REMINDER.name ->
+                VersionReminderAction.SETTINGS_REMINDER
+            else -> VersionReminderAction.NONE
         }
     }
 }

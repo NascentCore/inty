@@ -171,3 +171,45 @@ data class UploadAvatarResponse(
     @Json(name = "url") val url: String = "",
     @Json(name = "avatar_url") val avatar_url: String = "",
 )
+
+/**
+ * 主题专区中的角色项。
+ *
+ * 该 DTO 用于替代旧的 `AgentService.CharacterThemeItem` 内部嵌套模型依赖，后续迁移时统一使用
+ * `core/data/api/model` 下的类型来源。
+ */
+@JsonClass(generateAdapter = true)
+data class CharacterThemeAgentItem(
+    @Json(name = "agent_id") val agentId: String = "",
+    @Json(name = "order_index") val orderIndex: Int = 0,
+    val agent: AgentInfo? = null,
+)
+
+enum class CharacterThemeVisibility {
+    @Json(name = "PRIMARY")
+    PRIMARY,
+
+    @Json(name = "SECONDARY")
+    SECONDARY,
+
+    @Json(name = "HIDDEN")
+    HIDDEN,
+}
+
+/**
+ * 主题专区数据项（Phase 1 Retrofit 迁移目标类型）。
+ */
+@JsonClass(generateAdapter = true)
+data class CharacterThemeItem(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    @Json(name = "background_image_url") val backgroundImageUrl: String? = null,
+    val visibility: CharacterThemeVisibility = CharacterThemeVisibility.HIDDEN,
+    val agents: List<CharacterThemeAgentItem> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+data class AgentEnergyPointsUpdateRequest(
+    @Json(name = "energy_points") val energyPoints: Int
+)

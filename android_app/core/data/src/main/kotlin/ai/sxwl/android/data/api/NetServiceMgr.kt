@@ -221,6 +221,13 @@ object NetServiceMgr {
             as IChatApi
     }
 
+    fun getReportApi(): IReportApi {
+        val cacheKey = "${baseUrl()}_IReportApi"
+        @Suppress("UNCHECKED_CAST")
+        return apiCache.getOrPut(cacheKey) { getRetrofitNoWrapper().create(IReportApi::class.java) }
+            as IReportApi
+    }
+
     fun getSubscriptionApi(): ISubscriptionApi {
         val cacheKey = "${baseUrl()}_ISubscriptionApi"
         @Suppress("UNCHECKED_CAST")
