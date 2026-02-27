@@ -117,3 +117,6 @@ inty-firebase-key.json
 
 # 临时文件目录
 tmp/
+
+# Cursor plans
+.cursor/plans/
