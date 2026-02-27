@@ -131,6 +131,8 @@ AGENTS.md        AI
 
 The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL 16** (Docker, port 5432). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
 
+The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI workflow: `.github/workflows/ci_android_app.yaml`.
+
 ### Update script
 
 The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and** test dependencies from `requirements.txt` + `tests/requirements.txt` (covers pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.) and auto-provisions `config.yaml` from `devops/config.yaml.test` when the file is missing, so future agents always have a working test config on first boot.
@@ -148,6 +150,8 @@ The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and*
 
 ### Running tests
 
+**Backend (Python):**
+
 ```bash
 source .venv/bin/activate
 pytest -m "not noci" -v -s tests/
@@ -155,10 +159,29 @@ pytest -m "not noci" -v -s tests/
 
 Tests are functional/E2E against a running backend (not unit-style mocks). The backend must be running first. See `tests/AGENTS.md`.
 
+**Android app unit tests (mirrors CI):**
+
+```bash
+cd android_app
+./gradlew :app:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest \
+  :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest \
+  :library:utils:testDebugUnitTest :library:network:testDebugUnitTest
+```
+
+For targeted testing after changing specific modules, see the module-to-task mapping in `.github/workflows/ci_android_app.yaml`.
+
 ### Lint / formatting
 
 - `black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
 - No strict linter is enforced in CI for the backend currently
+
+### Android SDK
+
+Pre-installed at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` set in `~/.bashrc`. Packages: `platform-tools`, `emulator`, `build-tools;35.0.0`, `build-tools;36.0.0`, `platforms;android-36`, `system-images;android-36;google_apis;x86_64`. Java 21 (OpenJDK) is the system JDK.
+
+- `android_app/local.properties` is gitignored; the update script auto-generates it with `sdk.dir=/opt/android-sdk`.
+- Git submodules must be initialized for the Android build: `git submodule update --init --recursive` (the update script handles this).
+- The SDK directory must be owned by the current user (not root) so Gradle can auto-install additional SDK components.
 
 ### Gotchas
 
