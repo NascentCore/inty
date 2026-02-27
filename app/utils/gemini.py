@@ -58,6 +58,8 @@ def create_google_genai_client():
     credentials_path = (
         global_config_loaded_from_config_yaml.app.gcp_service_account_key
     )
+    if not os.path.exists(credentials_path):
+        raise ValueError(f"Service account credentials file not found at: {credentials_path}")
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
     location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
