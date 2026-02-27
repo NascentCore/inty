@@ -184,8 +184,8 @@ class AppConfig:
         free_user_chat_total_limit: int = 100
         free_user_chat_24h_limit: int = 100
         # LLM 对话时写入消息窗口（history window）的最大消息数（不包含 system messages）
-        free_user_chat_messages_limit: int = 20
-        sub_user_chat_messages_limit: int = 40
+        free_user_chat_messages_limit: int = 10
+        sub_user_chat_messages_limit: int = 1000
         guest_user_chat_24h_limit: int = 10
         free_user_voice_24h_limit: int = 100
         guest_user_voice_24h_limit: int = 10
