@@ -38,6 +38,12 @@
 - Compose/Recycler 需避免无意义重组；图片与音频加载注意内存与缓存策略。
 - 现有并行网络栈：Retrofit/Moshi 与 Inty SDK；避免新增第三套；复用统一鉴权/环境/日志配置，避免重复创建 `OkHttpClient`。
 
+## Stainless 迁移冻结规则（FR_REMOVE_STAINLESS_SDK_MIGRATION_PLAN / Phase 0）
+
+- 迁移期间禁止新增 `IntyNetworkManager`、`core/data/http/services/*`、`com.inty.api.*` 的运行时代码引用（`app` 与 `core` 模块均适用）。
+- 新增或修改网络调用时，必须优先接入 `NetServiceMgr` + `I*Api` + `core/data/api/model` 本地 DTO。
+- Code review 发现上述新增引用时，按阻断项处理，除非在同一变更中明确完成对应 Phase 的“迁移后删除”闭环。
+
 ## Explore 页面交互
 
 - Explore 顶部栏支持双击手势，用于回到推荐列表第一页：需要同时滚动 `LazyVerticalGrid` 到索引 0 并触发 Paging 刷新，以确保展示第一屏数据。

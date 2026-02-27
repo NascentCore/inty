@@ -56,6 +56,14 @@
 
 ## 分阶段计划
 
+### 阶段状态总览（截至 2026-02-27）
+
+- ✅ Phase 0：已执行（本次提交补齐盘点清单、迁移映射、冻结规则）。
+- ✅ Phase 1：已完成（`93f881d8771e5db21fe391eb9baa4ef73ed23957`）。
+- ✅ Phase 2：已完成（`a6a5bfd5604949f850be73584c9060adc4cae35c`）。
+- ⏳ Phase 3：进行中（聊天域残留 Stainless 依赖待迁移）。
+- ⏳ Phase 4：未开始（构建依赖与死代码清理）。
+
 ## Phase 0 - 盘点与冻结（准备阶段）
 
 ### 目标
@@ -72,6 +80,12 @@
 ### 交付物
 
 - 引用清单与迁移映射表（本文件附录可维护）。
+
+### TODO（Phase 0）
+
+- [x] 盘点所有 `IntyNetworkManager`、`core/data/http/services/*`、`com.inty.api.*` 引用（见附录 A）。
+- [x] 输出迁移映射表（调用点 -> 目标 Retrofit 接口/本地模型，见附录 B）。
+- [x] 在评审约定中明确冻结：迁移期间不允许新增 Stainless 调用（见 `android_app/AGENTS.md` 新增规则）。
 
 ---
 
@@ -100,6 +114,13 @@
 - Retrofit 接口可覆盖当前所有 Stainless 运行时能力；
 - app/core/data 编译通过（不改业务调用点也能通过）。
 
+### TODO（Phase 1）
+
+- [x] 补齐 `core/data/api/model` 中 Character Theme / Report / Chat Image / Version Reminder Action 相关 DTO。
+- [x] 补齐 `IUserApi`、`IChatApi`、`IReportApi`、`IAgentApi` 的迁移所需接口。
+- [x] `NetServiceMgr` 暴露完整 API 入口并接入 `IReportApi`。
+- [x] 对应实现已落地并合入：`93f881d8771e5db21fe391eb9baa4ef73ed23957`。
+
 ---
 
 ## Phase 2 - app 层调用迁移（先迁 UI/VM 主流程）
@@ -120,6 +141,13 @@
 - `android_app/app` 模块无 `IntyNetworkManager` 调用；
 - `android_app/app` 模块无 `com.inty.api.*` 引用；
 - 关键业务流程可用（登录、Explore、Report、Boost）。
+
+### TODO（Phase 2）
+
+- [x] 登录/版本检查路径迁移到 Retrofit 侧调用链。
+- [x] Explore/Theme、Boost、Report、UserProfile 等 app 层主流程迁移。
+- [x] app 模块移除 `com.inty.api.*` 直接 import，`IntyNetworkManager` 直接引用迁出到 core/data 协调层。
+- [x] 对应实现已落地并合入：`a6a5bfd5604949f850be73584c9060adc4cae35c`。
 
 ---
 
@@ -143,6 +171,13 @@
 
 - `core/data/chat/**` 无 Stainless 引用；
 - 聊天生图与清消息功能行为与迁移前一致。
+
+### TODO（Phase 3）
+
+- [ ] `ChatRemoteDataSource.messageGenerateImage()` 不再调用 `core/data/http/services/ChatService`，改为直接走 `NetServiceMgr.getChatApi().generateMessageImage(...)`。
+- [ ] `ChatRepository` / `ChatUseCases` / `RoomImpl` 类型签名从 `ChatService.ChatImageGenerationResult` 迁移为 `core/data/api/model` 本地 DTO。
+- [ ] 聊天域统一错误模型到 `HttpResult`，移除 `ApiResult` 桥接逻辑。
+- [ ] 清理 `core/data/http/services/ChatService.kt` 与相关异常类型引用。
 
 ---
 
@@ -169,6 +204,14 @@
 - 工程无 `com.inty.api` 依赖；
 - 工程无 `IntyNetworkManager` 与 `core/data/http/services/*` 引用；
 - 全量编译通过。
+
+### TODO（Phase 4）
+
+- [ ] 构建层移除 `libs.inty.kotlin` 与 `includeBuild("library/inty_sdk")`。
+- [ ] 删除 `IntyNetworkManager`、`core/data/http/services/*`、`ModelConverters` 等 Stainless 专用代码。
+- [ ] 删除 `proguard-rules.pro` 中 `com.inty.api.*` keep 规则。
+- [ ] 清理 `NetServiceMgr` 与其他文档中的“双栈并行/新功能优先 IntyNetworkManager”过时描述。
+- [ ] 以 `rg "IntyNetworkManager|com\\.inty\\.api\\." android_app/{app,core}` 作为收尾门禁，确保运行时代码零引用。
 
 ---
 
@@ -235,10 +278,66 @@
 
 ---
 
+## 附录 A - Phase 0 引用清单（2026-02-27 快照）
+
+### A.1 app 模块运行时
+
+- `android_app/app/src/main`：`IntyNetworkManager` / `com.inty.api.*` 引用为 0（符合 Phase 2 验收）。
+
+### A.2 core/data 模块运行时残留（待 Phase 3/4）
+
+- 网络栈与协调：
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/IntyNetworkManager.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/NetworkStackCoordinator.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/store/IntySetting.kt`
+- Stainless 服务门面：
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/AuthService.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/UserService.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/AgentService.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/SubscriptionService.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/VersionService.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/ChatService.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/ReportService.kt`
+- 类型桥接与注释残留：
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/models/ModelConverters.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/api/NetServiceMgr.kt`（注释仍描述双栈并行）
+- 聊天域类型耦合（待 Phase 3）：
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/data/ChatRemoteDataSource.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/domain/ChatRepository.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/domain/ChatUseCases.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/repository/ChatRepositoryImpl.kt`
+  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/repository/RoomImpl.kt`
+
+### A.3 构建层残留（待 Phase 4）
+
+- `android_app/settings.gradle.kts`：`includeBuild("library/inty_sdk")`
+- `android_app/app/build.gradle.kts`：`implementation(libs.inty.kotlin)`
+- `android_app/core/data/build.gradle.kts`：`implementation(libs.inty.kotlin)`
+- `android_app/app/proguard-rules.pro`：`com.inty.api.*` keep 规则
+
+## 附录 B - Phase 0 迁移映射表（调用点 -> Retrofit / 本地模型）
+
+| 当前调用点（Stainless） | 目标 Retrofit 接口 | 目标本地模型 | 归属阶段 |
+| --- | --- | --- | --- |
+| `AuthService.googleLogin` | `IUserApi.loginByGoogle` | `GoogleLoginRequest/GoogleLoginResponse` | Phase 4（删除旧服务层） |
+| `UserService.getUserProfile / updateUserProfile` | `IUserApi.getMe / updateProfile` | `UserProfile`、`UserProfileUpdateRequest` | Phase 4 |
+| `UserService.uploadAvatar`、`ReportService.uploadImage` | 统一到 Retrofit 上传接口（现有 `IUserApi.uploadAvatar`，必要时抽 `ICommonApi`） | `UploadAvatarResponse` 或统一上传响应 DTO | Phase 4 |
+| `AgentService.*`（推荐/详情/创建/更新/榜单/主题） | `IAgentApi.*` | `AgentInfo`、`CharacterThemeItem`、`AgentEnergyPointsUpdateRequest` | Phase 4 |
+| `SubscriptionService.*` | `ISubscriptionApi.getSubscriptionPlans / verifySubscription` | `SubscriptionPlansResponse`、`SubscriptionVerifyRequest/Response` | Phase 4 |
+| `VersionService.checkAppUpgrade` | `ICommonApi.checkAppUpgrade`（必要时补齐请求参数） | `AppVersionRsp.AppVersionData`、`VersionReminderAction` | Phase 4 |
+| `ReportService.createReport`（旧签名） | `IReportApi.createReport`（已具备） | `ReportCreateRequest`、`ReportReasonCode`、`ReportTargetType`、`ReportRequestType` | Phase 4（删除旧签名） |
+| `ChatService.messageGenerateImage` | `IChatApi.generateMessageImage` | `ChatImageGenerationRequest/ApiResponse/Payload` | Phase 3 |
+| `ChatRepository/UseCases/RoomImpl` 对 `ChatService.ChatImageGenerationResult` 的类型依赖 | `ChatRemoteDataSource` 直接返回本地 DTO（由 `IChatApi` 结果映射） | 新增/复用 `core/data/api/model` 聊天生图结果 DTO | Phase 3 |
+| `NetworkStackCoordinator` / `IntySetting` 调 `IntyNetworkManager.clearClientCache` | 仅保留 `NetServiceMgr.clearCache`（及必要的统一协调入口） | 无 | Phase 4 |
+| `ModelConverters` 中 `IntyAgent/IntyUser` 转换 | 删除（迁移完成后不再需要） | 统一使用 `core/data/api/model` | Phase 4 |
+
+---
+
 ## 任务拆分建议（可直接用于 issue）
 
-1. `[Phase1] Retrofit 模型与接口补齐`
-2. `[Phase2] app 层调用迁移（登录/版本/Explore/Report/Boost）`
-3. `[Phase3] 聊天域迁移（生图/清消息/类型签名）`
-4. `[Phase4] 移除 Stainless 依赖与死代码`
-5. `[Docs] 更新 android_app/docs 与 AGENTS 说明`
+1. `[Phase0][Done] 盘点与冻结（引用清单 + 迁移映射 + 评审规则）`
+2. `[Phase1][Done] Retrofit 模型与接口补齐`
+3. `[Phase2][Done] app 层调用迁移（登录/版本/Explore/Report/Boost）`
+4. `[Phase3][Todo] 聊天域迁移（生图/清消息/类型签名）`
+5. `[Phase4][Todo] 移除 Stainless 依赖与死代码`
+6. `[Docs][Todo] 清理双栈历史文档，统一为 Retrofit 单栈描述`
