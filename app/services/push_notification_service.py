@@ -1656,6 +1656,7 @@ async def generate_agent_message(
             user_profile=None,
             chat_settings=chat_settings,
             model_override=model_override,
+            is_subscribed=bool(subscription),
         )
 
         if not response_content:

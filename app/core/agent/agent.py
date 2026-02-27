@@ -671,6 +671,21 @@ class Agent:
     # 特殊值，表示返回全部消息
     MAX_MESSAGES_ALL = 0
 
+    def _get_chat_messages_limit(self, *, is_subscribed: bool) -> int:
+        limits = global_config.app.limits
+        if is_subscribed:
+            return limits.sub_user_chat_messages_limit
+        return limits.free_user_chat_messages_limit
+
+    def _get_relevant_history_for_user_tier(
+        self, *, history_messages: List[BaseMessage], is_subscribed: bool
+    ) -> List[BaseMessage]:
+        max_messages = self._get_chat_messages_limit(is_subscribed=is_subscribed)
+        return self._get_relevant_history(
+            history_messages=history_messages,
+            max_messages=max_messages,
+        )
+
     def _get_relevant_history(
         self, history_messages: List[BaseMessage], max_messages: int = MAX_MESSAGES_ALL
     ) -> List[BaseMessage]:
@@ -985,6 +1000,7 @@ class Agent:
         chat_settings: models.chat_settings.ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
+        is_subscribed: bool = False,
     ) -> str:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -1014,7 +1030,10 @@ class Agent:
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
                 history_messages = chat_history_service.get_history_messages(session_id)
-                recent_history = self._get_relevant_history(history_messages)
+                recent_history = self._get_relevant_history_for_user_tier(
+                    history_messages=history_messages,
+                    is_subscribed=is_subscribed,
+                )
                 get_history_time = time.time() - get_history_start
                 logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
@@ -1297,6 +1316,7 @@ class Agent:
         chat_settings: models.chat_settings.ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
+        is_subscribed: bool = False,
     ) -> str:
         """
         生成消息但不保存用户消息到历史记录（用于推送消息）
@@ -1326,7 +1346,10 @@ class Agent:
                 # 获取相关的历史消息（排除已软删除的）
                 get_history_start = time.time()
                 history_messages = chat_history_service.get_history_messages(session_id)
-                recent_history = self._get_relevant_history(history_messages)
+                recent_history = self._get_relevant_history_for_user_tier(
+                    history_messages=history_messages,
+                    is_subscribed=is_subscribed,
+                )
                 get_history_time = time.time() - get_history_start
                 logger.debug(
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
@@ -1467,6 +1490,7 @@ class Agent:
         chat_settings: models.chat_settings.ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
+        is_subscribed: bool = False,
     ) -> str:
         """
         异步封装：生成消息但不保存用户消息到历史记录（用于推送消息）
@@ -1500,6 +1524,7 @@ class Agent:
                 chat_settings,
                 user_time_context,
                 model_override,
+                is_subscribed,
             )
             return result
         except Exception as e:
@@ -1517,6 +1542,7 @@ class Agent:
         chat_settings: models.chat_settings.ChatSettings = None,
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
+        is_subscribed: bool = False,
     ) -> Tuple[str, Optional[int]]:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里。
         成功时返回 (响应文本, 插入的 AI 消息 ID)；异常时抛出。
@@ -1543,6 +1569,7 @@ class Agent:
                 chat_settings,
                 user_time_context,
                 model_override,
+                is_subscribed,
             )
             return result
         except Exception as e:

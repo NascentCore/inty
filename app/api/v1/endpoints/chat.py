@@ -265,11 +265,12 @@ async def agent_chat_completions(
                 subscription = await subscription_service.get_user_current_subscription(
                     db, current_user.id
                 )
+                is_subscribed = bool(subscription)
                 model_override = select_chat_model(
-                    user=current_user, is_subscribed=bool(subscription)
+                    user=current_user, is_subscribed=is_subscribed
                 )
                 logger.debug(
-                    f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={bool(subscription)}"
+                    f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
                 )
                 chat_result = await agent.chat(
                     user_id=current_user.id,
@@ -278,6 +279,7 @@ async def agent_chat_completions(
                     chat_settings=chat_settings,
                     user_time_context=user_time_context,
                     model_override=model_override,
+                    is_subscribed=is_subscribed,
                 )
                 response_content, ai_message_id = (
                     (chat_result[0], chat_result[1])

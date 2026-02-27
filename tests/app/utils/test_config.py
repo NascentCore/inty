@@ -312,3 +312,10 @@ def test_gemini_live_language_defaults():
 
     assert config.speech_language_code == "en-US"
     assert config.response_language_name == "English"
+
+
+def test_chat_messages_window_limit_defaults():
+    limits = AppConfig.LimitsConfig()
+
+    assert limits.free_user_chat_messages_limit == 20
+    assert limits.sub_user_chat_messages_limit == 40
