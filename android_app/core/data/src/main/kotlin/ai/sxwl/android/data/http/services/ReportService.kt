@@ -93,7 +93,7 @@ object ReportService {
     }
 
     private fun mapLegacyReasonCode(reasonCode: ReportCreateParams.ReasonCode): ReportReasonCode {
-        return ReportReasonCode.valueOf(reasonCode.name)
+        return ReportReasonCode.valueOf(reasonCode.toString())
     }
 
     /** 上传图片 */
