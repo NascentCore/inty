@@ -7,6 +7,7 @@ from typing import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -53,8 +54,13 @@ async def get_current_user(
             raise credentials_exception
 
     except JWTError as jwt_error:
-        logger.error(f"JWT解码失败: {str(jwt_error)}")
-        logger.error(f"JWT错误类型: {type(jwt_error).__name__}")
+        if isinstance(jwt_error, ExpiredSignatureError):
+            logger.warning(
+                f"JWT已过期: {str(jwt_error)} (类型: {type(jwt_error).__name__})"
+            )
+        else:
+            logger.error(f"JWT解码失败: {str(jwt_error)}")
+            logger.error(f"JWT错误类型: {type(jwt_error).__name__}")
         raise credentials_exception
     except ValidationError as validation_error:
         logger.error(f"Token验证失败: {str(validation_error)}")

@@ -85,6 +85,48 @@ TriggeredBy: ● docker.socket
              └─1198907 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 8100 -container-ip 172.17.0.4 -container-port 8000
 ```
 
+## 手动修改 chat settings（SQL）
+
+聊天风格等设置存于表 `chat_settings`，按 `chat_id` 唯一。若需绕过 API（如订阅校验）直接改库，可按以下步骤操作。
+
+**表与字段**（见 `app/models/chat_settings.py`）：
+
+- `chat_settings.chat_id`：关联 `chats.id`，一个 chat 对应一行 settings
+- `chat_settings.user_id`、`chat_settings.agent_id`：与 chat 一致
+- `chat_settings.style_prompt`：风格提示词，可为空；有值时会在 `app/core/agent/agent.py` 的 `build_system_messages` 中注入为系统消息
+- 其他：`language`、`voice_enabled`、`keep_talking`、`premium_mode` 等
+
+**步骤：**
+
+1. 确认该用户与该 agent 的 chat 已存在（若无，需先通过 API 或业务创建一条 chat）。
+2. 根据 `user_id`、`agent_id` 找到 `chat_id`，再更新或确认存在对应的 `chat_settings` 行。
+3. 执行更新 SQL。
+
+**示例：为指定用户与 agent 设置 style_prompt**
+
+```sql
+-- 先查 chat_id（user_id / agent_id 按实际替换）
+SELECT id AS chat_id FROM chats
+WHERE user_id = 'user-testing'
+  AND agent_id = 'agent-52cfa352'
+  AND is_active = true
+LIMIT 1;
+
+-- 若该 chat 尚无 chat_settings，需先插入一行（id 用 UUID，其余字段按需填）
+-- 若已有行，则直接更新 style_prompt：
+UPDATE chat_settings
+SET style_prompt = 'write very detailed and elaborate descriptions of actions and thoughts'
+WHERE chat_id = (
+  SELECT id FROM chats
+  WHERE user_id = 'user-testing'
+    AND agent_id = 'agent-52cfa352'
+    AND is_active = true
+  LIMIT 1
+);
+```
+
+**注意：** 直接改库不经过 API，因此不会做订阅/超级用户校验；仅运维或调试时使用。
+
 ## 迁移已有后端数据库到一个新的服务器
 
 大体流程：
