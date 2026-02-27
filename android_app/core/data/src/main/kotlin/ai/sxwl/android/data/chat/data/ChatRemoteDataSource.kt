@@ -1,6 +1,8 @@
 package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.ChatImageGenerationRequest
+import ai.sxwl.android.data.api.model.ChatImageGenerationResult
 import ai.sxwl.android.data.api.model.ClearMessagesRequest
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
@@ -93,46 +95,55 @@ class ChatRemoteDataSource {
     suspend fun messageGenerateImage(
         agentId: String,
         messageId: String,
-    ): HttpResult<ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult> {
+    ): HttpResult<ChatImageGenerationResult> {
         return try {
             LogUtils.i("ChatRemoteDataSource.generateImage: agentId=$agentId, messageId=$messageId")
-            val result =
-                ai.sxwl.android.data.http.services.ChatService.messageGenerateImage(
-                    agentId,
-                    messageId,
-                )
-            when (result) {
-                is ai.sxwl.android.data.http.ApiResult.Success -> {
-                    HttpResult.Success(result.data)
-                }
-
-                is ai.sxwl.android.data.http.ApiResult.Error -> {
-                    // 检查是否是业务错误（限制异常）
-                    val exception = result.exception
-                    if (
-                        exception
-                            is ai.sxwl.android.data.http.services.ChatImageGenerationLimitException
-                    ) {
-                        // 返回业务错误，包含错误码信息
-                        HttpResult.Failure(
-                            exception.error.message ?: "Image generation limit reached",
-                            exception.error.code.toInt(),
-                        )
+            when (
+                val result =
+                    NetServiceMgr.getChatApi().generateMessageImage(
+                        agentId,
+                        ChatImageGenerationRequest(messageId = messageId.toLongOrNull() ?: 0L),
+                    )
+            ) {
+                is HttpResult.Success -> {
+                    val responseCode = result.data.code ?: 200
+                    if (responseCode != 200) {
+                        val errorMessage =
+                            result.data.data?.message ?: result.data.message ?: "Image generation failed"
+                        HttpResult.Failure(errorMessage, responseCode)
                     } else {
-                        HttpResult.Failure(result.message ?: "Unknown error", result.code)
+                        val payload = result.data.data
+                        if (payload == null || payload.imageUrl.isNullOrEmpty()) {
+                            HttpResult.Failure("Image generation response is empty", -1)
+                        } else {
+                            HttpResult.Success(
+                                ChatImageGenerationResult(
+                                    imageUrl = payload.imageUrl,
+                                    width = payload.imageMetadata.toDimension("width"),
+                                    height = payload.imageMetadata.toDimension("height"),
+                                    messageId = payload.messageId ?: (messageId.toLongOrNull() ?: 0L),
+                                )
+                            )
+                        }
                     }
                 }
+
+                is HttpResult.Failure -> {
+                    HttpResult.Failure(result.message, result.code)
+                }
             }
-        } catch (e: ai.sxwl.android.data.http.services.ChatImageGenerationLimitException) {
-            // 捕获业务错误，返回包含错误码的失败结果
-            LogUtils.e("ChatRemoteDataSource.generateImage limit exception: ${e.error.message}")
-            HttpResult.Failure(
-                e.error.message ?: "Image generation limit reached",
-                e.error.code.toInt(),
-            )
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.generateImage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
+        }
+    }
+
+    private fun Map<String, Any?>?.toDimension(key: String): Int {
+        val value = this?.get(key) ?: return 0
+        return when (value) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull() ?: 0
+            else -> 0
         }
     }
 

@@ -1,7 +1,7 @@
 package ai.sxwl.android.data.chat.domain
 
 import ai.sxwl.android.data.api.model.MsgInfo
-import ai.sxwl.android.data.http.services.ChatService
+import ai.sxwl.android.data.api.model.ChatImageGenerationResult
 import com.architecture.httplib.core.HttpResult
 
 /** Chat领域层接口 定义聊天相关的业务逻辑接口 来完成与后端服务的交互，并写入数据到本地存储中 */
@@ -31,7 +31,7 @@ interface ChatRepository {
     suspend fun generateImageForMessage(
         agentId: String,
         messageId: String,
-    ): HttpResult<ChatService.ChatImageGenerationResult>
+    ): HttpResult<ChatImageGenerationResult>
 
     /** 清理指定agent的聊天数据 这个函数在 RoomDataSource 中实现是异步，因此需要是 suspend 函数 */
     suspend fun clearChatData(agentId: String)
