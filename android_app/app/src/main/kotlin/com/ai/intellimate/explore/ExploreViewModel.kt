@@ -375,8 +375,12 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             try {
                 val cachedThemes = AgentCacheManager.getCachedCharacterThemes()
                 if (cachedThemes.isNotEmpty()) {
-                    LogUtils.d("ExploreViewModel - 从缓存加载主题专区列表: ${cachedThemes.size} 条")
-                    _characterThemes.value = cachedThemes
+                    if (hasDisplayableThemeAgents(cachedThemes)) {
+                        LogUtils.d("ExploreViewModel - 从缓存加载主题专区列表: ${cachedThemes.size} 条")
+                        _characterThemes.value = cachedThemes
+                    } else {
+                        LogUtils.w("ExploreViewModel - 检测到无效主题缓存（flatten 后无 agent），将立即回源")
+                    }
                 } else {
                     LogUtils.d("ExploreViewModel - 缓存中没有主题专区数据")
                 }

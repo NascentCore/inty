@@ -18,6 +18,10 @@ internal fun CharacterThemeItem.flattenAgents(): List<AgentInfo> {
     return agents.sortedBy { it.orderIndex }.mapNotNull { it.agent }
 }
 
+internal fun hasDisplayableThemeAgents(characterThemes: List<CharacterThemeItem>): Boolean {
+    return characterThemes.any { theme -> theme.flattenAgents().isNotEmpty() }
+}
+
 internal fun CharacterThemeItem.isChristmasTheme(): Boolean {
     val loweredName = name.lowercase()
     val loweredDescription = description.lowercase()

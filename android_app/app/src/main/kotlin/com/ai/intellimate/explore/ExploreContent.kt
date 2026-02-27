@@ -165,7 +165,7 @@ fun ExploreContent(
         }
 
         val currentThemes = vm.characterThemes.value
-        if (currentThemes.isEmpty()) {
+        if (currentThemes.isEmpty() || !hasDisplayableThemeAgents(currentThemes)) {
             // 缓存为空，从网络加载
             vm.loadCharacterThemes(skip = 0, limit = 100)
         } else {

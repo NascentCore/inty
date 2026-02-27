@@ -5,6 +5,8 @@ import ai.sxwl.android.data.api.model.CharacterThemeAgentItem
 import ai.sxwl.android.data.api.model.CharacterThemeItem
 import ai.sxwl.android.data.api.model.CharacterThemeVisibility
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExploreThemeSectionsTest {
@@ -87,5 +89,56 @@ class ExploreThemeSectionsTest {
     fun `getExploreThemeClickSource - newly section returns dedicated source`() {
         assertEquals("newly_imates", getExploreThemeClickSource(NEWLY_IMATES_THEME_ID))
         assertEquals("theme", getExploreThemeClickSource("theme_x"))
+    }
+
+    @Test
+    fun `hasDisplayableThemeAgents - false when all flattened agents are empty`() {
+        val invalidThemes =
+            listOf(
+                CharacterThemeItem(
+                    id = "legacy_theme",
+                    name = "Legacy Theme",
+                    description = "legacy cache",
+                    visibility = CharacterThemeVisibility.PRIMARY,
+                    agents =
+                        listOf(
+                            CharacterThemeAgentItem(
+                                agentId = "missing",
+                                orderIndex = 0,
+                                agent = null,
+                            )
+                        ),
+                )
+            )
+
+        assertFalse(hasDisplayableThemeAgents(invalidThemes))
+    }
+
+    @Test
+    fun `hasDisplayableThemeAgents - true when at least one flattened agent exists`() {
+        val validThemes =
+            listOf(
+                CharacterThemeItem(
+                    id = "valid_theme",
+                    name = "Valid Theme",
+                    description = "valid cache",
+                    visibility = CharacterThemeVisibility.PRIMARY,
+                    agents =
+                        listOf(
+                            CharacterThemeAgentItem(
+                                agentId = "a1",
+                                orderIndex = 0,
+                                agent = AgentInfo(id = "a1", name = "A1"),
+                            ),
+                            CharacterThemeAgentItem(
+                                agentId = "missing",
+                                orderIndex = 1,
+                                agent = null,
+                            ),
+                        ),
+                )
+            )
+
+        assertTrue(hasDisplayableThemeAgents(validThemes))
     }
 }
