@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-nginx-${{ github.ref }}
+  group: deploy-nginx-conf-to-inty-prod-server
   cancel-in-progress: true
 
 jobs:
@@ -23,6 +23,7 @@ jobs:
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           source: "devops/nginx/conf.d/sxwl.ai.conf"
           target: "/tmp"
+          strip_components: 3  # devops/nginx/conf.d → file lands at /tmp/sxwl.ai.conf
 
       - name: Install config and restart nginx
         uses: appleboy/ssh-action@master
@@ -33,7 +34,7 @@ jobs:
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
             sudo mv /tmp/sxwl.ai.conf /etc/nginx/conf.d/sxwl.ai.conf
-            sudo nginx -t # 验证配置
+            sudo nginx -t # 验证配置；失败则立即退出，不重启
             sudo systemctl restart nginx
             sudo systemctl status nginx
 
