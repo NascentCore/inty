@@ -68,6 +68,8 @@ agent:
   vertex_ai_location: "global"
   # 测试环境量小，就全部追踪
   langsmith_text_chat_sample_rate: 1.0
+  # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
+  enable_chat_image_match_fallback: true
 
 google_play:
   package_name: "com.ai.intellimate"
