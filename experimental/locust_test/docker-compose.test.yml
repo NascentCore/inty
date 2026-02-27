@@ -3,7 +3,7 @@ version: "3.8"
 services:
   # PostgreSQL 数据库服务 (带 vector 扩展支持)
   postgres:
-    image: pgvector/pgvector:pg15
+    image: postgres:16
     container_name: inty-postgres-test
     environment:
       POSTGRES_DB: inty_test
