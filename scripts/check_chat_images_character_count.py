@@ -163,14 +163,13 @@ async def main(
         else:
             https_url = gcs_url
 
-        # Download https_url with wget or curl
-        import subprocess
-        filename = f"image_{message_id}.{https_url.split('/')[-1].split('.')[-1]}"
-        subprocess.run(["wget", https_url, "-O", filename])
-        image_bytes = open(filename, "rb").read()
-
         if not no_preview:
             try:
+                # Download https_url with wget or curl
+                import subprocess
+                filename = f"image_{message_id}.{https_url.split('/')[-1].split('.')[-1]}"
+                subprocess.run(["wget", https_url, "-O", filename])
+                image_bytes = open(filename, "rb").read()
                 img = Image.open(io.BytesIO(image_bytes))
                 img.show()
             except Exception as e:
@@ -185,21 +184,32 @@ async def main(
             gemini_types.Content(
                 role="user",
                 parts=[
-                    gemini_types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                    gemini_types.Part.from_uri(file_uri=https_url, mime_type=mime_type),
                     gemini_types.Part.from_text(text=prompt_text),
                 ],
             )
         ]
 
-        try:
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model="gemini-2.5-flash-lite",
-                contents=contents,
-                config=config_gemini,
-            )
-        except Exception as e:
-            logger.warning("Gemini call failed for message_id={}: {}", message_id, e)
+        response = None
+        for attempt in range(3):
+            try:
+                response = await asyncio.to_thread(
+                    client.models.generate_content,
+                    model="gemini-2.5-flash-lite",
+                    contents=contents,
+                    config=config_gemini,
+                )
+                break
+            except Exception as e:
+                logger.warning(
+                    "Gemini call failed for message_id={} (attempt {}/3): {}",
+                    message_id,
+                    attempt + 1,
+                    e,
+                )
+                if attempt == 2:
+                    continue
+        if response is None:
             continue
 
         count_val: Optional[int] = None
@@ -233,7 +243,7 @@ async def main(
         results.append(record)
 
         print(
-            f"[{idx + 1}/{len(rows)}] message_id={message_id} session_id={session_id} "
+            f"[{idx + 1}/{len(rows)}] message_id={message_id} session_id={session_id} https_url={https_url} "
             f"count={count_val} one_character={one_character}"
         )
 
