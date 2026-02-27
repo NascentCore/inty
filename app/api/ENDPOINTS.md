@@ -2,15 +2,22 @@
 
 本文档列出了 `app/` 目录下实现的所有 API 端点及其对应的实现文件。
 
+## 双应用说明
+
+- **backend/inty**（主后端）：面向 Android 的 `/api/v1`；可选 `INTY_API_ONLY=true` 时不提供 evaluation Web UI。
+- **backend/ops**（运营平台）：提供 evaluation Web UI 与完整 `/api/v1`（含 evaluation、festival_memory 与所有 shared 端点）。部署后通过 ops.inty.cc / dev.ops.inty.cc 访问。
+
+Evaluation 与 festival_memory 的实现位于 `backend/ops/api/v1/`，主应用通过 re-export 继续挂载直至 ops 部署完成。
+
 ## 根路径端点
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/` | GET | `backend/inty/main.py` |
-| `/evaluation` | GET | `backend/inty/main.py` |
-| `/evaluation/{path:path}` | GET | `backend/inty/main.py` |
+| `/` | GET | `backend/inty/main.py` 或 `backend/ops/main.py` |
+| `/evaluation` | GET | `backend/inty/main.py` 或 `backend/ops/main.py` |
+| `/evaluation/{path:path}` | GET | `backend/inty/main.py` 或 `backend/ops/main.py` |
 
-> 注：当设置 `INTY_API_ONLY=true`（例如使用 `backend/inty/start.sh --api-only`）时，不会注册 `/evaluation` 与 `/evaluation/{path:path}` 这两个 web UI 端点。
+> 注：当设置 `INTY_API_ONLY=true`（例如使用 `backend/inty/start.sh --api-only`）时，主应用不会注册 `/evaluation` 与 `/evaluation/{path:path}`。Ops 应用始终提供上述端点。
 
 ## API v1 端点 (`/api/v1`)
 

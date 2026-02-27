@@ -8,6 +8,7 @@ Based on [AGENTS.md](https://agents.md/)
 - 启动后端服务：`./backend/inty/start.sh --dev`
 - 启动推送服务：`./backend/push_worker/start.sh`
 - 本地服务启动成功后，可通过 `https://localhost:8000/` 访问并供测试调用
+- **Ops 平台**（evaluation）：`./backend/ops/start.sh --dev`，默认 `http://localhost:8001`；生产部署见 ops.inty.cc、dev.ops.inty.cc（Cloud Run 或同 VM nginx 反代）
 
 ## Agent 架构概览
 

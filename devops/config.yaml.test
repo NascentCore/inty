@@ -1,5 +1,5 @@
-# Overrides values defined in app/core/config.py
-# All values are intended to be used in testing environment on CI.
+# Used for running backend server in tests.
+# External services are fakes. Tracing is disabled.
 
 app:
   debug: true

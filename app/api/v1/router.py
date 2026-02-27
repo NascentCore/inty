@@ -44,10 +44,7 @@ api_router.include_router(settings.router, tags=["settings"])
 
 api_router.include_router(subscription.router, tags=["subscription"])
 
-# TODO: Consider remove /evaluation endpoint.
-# This is used for evaluating AI characters, and is not part of the app's runtime.
-# Instead, we should have an internal service to evaluate AI characters.
-# Still keep the endpoint for now, as it's used for evaluating AI characters.
+# Evaluation endpoints: implementation in backend/ops; re-exported here so main app still serves evaluation until ops is deployed. Follow-up: see TASKS.md (ops platform task) — remove these two includes and re-export modules after ops is verified; optionally set INTY_API_ONLY=true for main app.
 api_router.include_router(
     evaluation.router,
     tags=["evaluation"],

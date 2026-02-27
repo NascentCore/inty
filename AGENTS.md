@@ -18,6 +18,7 @@
 ### 代码库概述
 
 - TASKS.md 管理 IntelliMate 项目中应该要完成的任务，用于明确的需要完成的任务列表
+- 后端有两个 FastAPI 应用：`backend/inty`（主 API，面向 Android）、`backend/ops`（运营与 evaluation）；见 [backend/README.md](backend/README.md) 与 [backend/ops/AGENTS.md](backend/ops/AGENTS.md)
 
 ## 代码库内的一般性约定
 
@@ -144,7 +145,6 @@ The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and*
 
 1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
    - Verify readiness: `sudo docker exec pg-inty pg_isready -U postgres`
-   - The CI uses plain `postgres:16` (not `pgvector/pgvector:pg16`); both work. Plain postgres:16 is sufficient for all tests.
 2. **Backend**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
    - `config.yaml` is auto-provisioned by the update script; no manual copy needed.
    - `--test` = dev mode minus evaluation frontend build (fast startup)

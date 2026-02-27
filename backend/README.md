@@ -1,11 +1,16 @@
 # InTy 后端服务
 
+本仓库包含两个 FastAPI 应用：
+
+- **backend/inty**：主后端，面向 IntelliMate Android 的 API；可选 `--api-only` 时不提供 evaluation Web UI。默认端口 8000。
+- **backend/ops**：运营平台，提供 evaluation Web UI 与完整 `/api/v1`（evaluation、festival_memory + 与 Android 共用的 shared 端点）。默认端口 8001，Cloud Run 下使用 `PORT`（默认 8080）。部署域名：ops.inty.cc、dev.ops.inty.cc。
+
 ## 本地启动后端服务
 
 ```bash
 # 启动数据库服务
 docker run --rm --name pg-vec-inty -p 5432:5432 \
-   -e POSTGRES_PASSWORD=sxwl666! -e POSTGRES_DB='inty' -d pgvector/pgvector:pg16
+   -e POSTGRES_PASSWORD=sxwl666! -e POSTGRES_DB='inty' -d postgres:16
 
 # 安装后端 Python 服务依赖
 uv venv
@@ -16,6 +21,17 @@ uv pip install -r requirements.txt
 cp devops/config.yaml.test config.yaml
 ./backend/inty/start.sh --dev
 ```
+
+启动 Ops（evaluation 专用，可与 inty 同时运行）：
+
+```bash
+./backend/ops/start.sh --dev
+# 默认 http://localhost:8001，Cloud Run 下 PORT=8080
+```
+
+## Follow-ups
+
+- **After ops is deployed and verified**: Remove evaluation/festival_memory from main app router and re-export modules; optionally set main app to API-only in prod. See [TASKS.md](../TASKS.md) (ops platform task).
 
 ## GCS 配置
 

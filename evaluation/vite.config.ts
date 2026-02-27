@@ -55,7 +55,7 @@ export default defineConfig(() => {
       proxy: {
         // 代理API请求到后端
         "/api": {
-          target: "http://localhost:8000",
+          target: "http://localhost:8001",
           changeOrigin: true,
           secure: false,
           // 启用 WebSocket 代理
