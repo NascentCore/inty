@@ -301,6 +301,8 @@ async def generate_chat_image_for_message(
 
 7. **429 重试（仅订阅用户 + Gemini）**：首轮使用主模型生图时，若 API 返回 429（RESOURCE_EXHAUSTED），则自动用备用模型（`sub_user_chat_image_gemini_fallback_model`，默认 `gemini-2.5-flash-image`）再试一次；仅重试一次，第二次失败则按现有错误与兜底逻辑处理。成功时会在 `generated_image` 与用量 `extra_data` 中记录实际使用的模型及 `model_fallback_due_to_429`（是否因 429 使用了备用模型）。
 
+8. **only_include_ai_character 与兜底**：当生成图片时**没有用户参考图**（无自拍），会在写入 Resource 的 `resource_metadata` 中记录标签 `only_include_ai_character: true`。生图失败且启用 `enable_chat_image_match_fallback` 时，仅从带该标签的角色生图中按提示词相似度选取兜底图；不带该标签的图不能作为兜底候选。已展示的兜底图会记录在该 chat 的 `sent_fallback_images`（Chat 表 JSONB 列）中，按**图片 id**（Resource.url，即 GCS URI）去重，避免同一张图重复展示及 CDN 路径前缀不同导致的重复。
+
 ## 错误处理
 
 1. **Agent 不存在**: 返回 404

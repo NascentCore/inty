@@ -201,6 +201,9 @@ class TestImageGenerationService:
         """测试统一入口使用 Gemini 生成聊天图片（真实 DB 读写，仅 mock 外部服务）。"""
         captured = {"prompt": None}
 
+        unique_suffix = uuid.uuid4().hex[:8]
+        gcs_path = f"chat_images/agent-prompt/gemini_test_{unique_suffix}.jpg"
+
         async def fake_async_generate_image(
             wrapped_client_self,
             model,
@@ -214,8 +217,8 @@ class TestImageGenerationService:
                 format=ImageFormat.JPEG,
                 raw_data=b"fake-image",
                 raw_data_total_bytes=len(b"fake-image"),
-                gcs_uri="gs://test-bucket/chat_images/agent-prompt/no_duplicate.jpg",
-                gcs_http_url="https://storage.googleapis.com/test-bucket/chat_images/agent-prompt/no_duplicate.jpg",
+                gcs_uri=f"gs://test-bucket/{gcs_path}",
+                gcs_http_url=f"https://storage.googleapis.com/test-bucket/{gcs_path}",
                 generated_at=datetime.datetime.now(datetime.timezone.utc),
                 raw_response_from_provider=None,
             )
