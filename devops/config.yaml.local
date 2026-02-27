@@ -63,8 +63,10 @@ agent:
   # https://openrouter.ai/models?fmt=cards&q=%3Afree
   # 这些模型经常出错，不太好用
   # 但是，目前没有免费的生图、生语音、生视频模型
-  sub_user_chat_model: "google/gemini-2.5-flash-lite"
-  free_user_chat_model: "google/gemini-2.5-flash-lite"
+  # sub_user_chat_model: "google/gemini-2.5-flash-lite"
+  # free_user_chat_model: "google/gemini-2.5-flash-lite"
+  free_user_chat_model: "google/gemma-3n-e4b-it"
+  sub_user_chat_model: "google/gemma-3n-e4b-it"
   # 本地开发环境流量小也需要完整追踪方便测试
   langsmith_text_chat_sample_rate: 1.0
 
