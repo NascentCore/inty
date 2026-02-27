@@ -3,9 +3,24 @@ package ai.sxwl.android.data.store
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import androidx.datastore.core.DataStore
+import androidx.datastore.dataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.tencent.mmkv.MMKV
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.Serializable
+import java.lang.ref.WeakReference
 import kotlin.random.Random
 
 private const val KEY_RESUB_REMINDER_LAST_TIME = "resub_reminder_last_time"
@@ -14,60 +29,229 @@ private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
-private const val KEY_TOTAL_MESSAGE_COUNT = "total_message_count"
 private const val KEY_INTELLIMATE_TIP_LAST_SHOW_TIME = "intellimate_tip_last_show_time"
 
 // IntelliMate Tips 展示频率：最多每 8 小时一次（降低打扰）
 private const val INTELLIMATE_TIP_MIN_INTERVAL_MILLIS = 8 * 60 * 60 * 1000L
 
+private val Context.intySettingsCache by jsonDataStore("IntySetting", IntySettingsCache())
+
 object IntySetting {
-
-    // App级通用标记的存储 使用的对象
-    // MKKV.initialize(app) 已经在 IntelliMateApp.onCreate() 中调用
-    private val allUserSetting: MMKV =
-        MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
-
-    // 当前用户级别的数据存储
-    private var curUserSetting: MMKV
-
     // 当前UserId
-    private var curUid: String = ""
+    private var contextRef: WeakReference<Context>? = null
 
-    // 用于同步 incrementTotalMessageCount 操作的锁对象
-    private val messageCountLock = Any()
+    fun initialize(context: Context) {
+        this.contextRef = WeakReference(context)
 
-    init {
+        runBlocking {
+            if (!context.intySettingsCache.data.first().isMigrateFinished) {
+                // 初始化 MMKV（必须在所有使用 MMKV 的代码之前）
+                // 使用 MKKV 的代码包括：IntySetting, BoostManager, BoostRepository
+                MMKV.initialize(context)
 
-        curUid = getCurUserID()
-        curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
+                val allUserSetting: MMKV =
+                    MMKV.defaultMMKV(MMKV.SINGLE_PROCESS_MODE, AppUtils.getPackageName())
+                val curUidFromMmkv = allUserSetting.decodeString("cur_uid") ?: ""
+                val curUserSetting =
+                    MMKV.mmkvWithID("user_$curUidFromMmkv", MMKV.MULTI_PROCESS_MODE)
+
+                val appData =
+                    allUserSetting.allKeys()
+                        ?.filter { it.startsWith("app_data_") }
+                        ?.mapNotNull { key ->
+                            allUserSetting.decodeString(key)?.let { key.removePrefix("app_data_") to it }
+                        }
+                        ?.toMap()
+                        ?: emptyMap()
+
+                val conversationHasPush =
+                    curUserSetting.allKeys()
+                        ?.filter { it.startsWith(KEY_CONVERSATION_PUSH_PREFIX) }
+                        ?.mapNotNull { key ->
+                            key.removePrefix(KEY_CONVERSATION_PUSH_PREFIX).takeIf { it.isNotEmpty() }
+                                ?.takeIf { curUserSetting.decodeBool(key, false) }
+                                ?.let { it to true }
+                        }
+                        ?.toMap()
+                        ?: emptyMap()
+                val exploreFavorite =
+                    curUserSetting.allKeys()
+                        ?.filter { it.startsWith(KEY_PREFIX_EXPLORE_FAVORITE) }
+                        ?.mapNotNull { key ->
+                            key.removePrefix(KEY_PREFIX_EXPLORE_FAVORITE).takeIf { it.isNotBlank() }
+                                ?.takeIf { curUserSetting.decodeBool(key, false) }
+                                ?.let { it to true }
+                        }
+                        ?.toMap()
+                        ?: emptyMap()
+                val conversationPinned =
+                    curUserSetting.allKeys()
+                        ?.filter { it.startsWith("conversation_pinned_") }
+                        ?.mapNotNull { key ->
+                            key.removePrefix("conversation_pinned_").takeIf { it.isNotEmpty() }
+                                ?.let { it to curUserSetting.decodeBool(key, false) }
+                        }
+                        ?.toMap()
+                        ?: emptyMap()
+                val conversationHidden =
+                    curUserSetting.allKeys()
+                        ?.filter { it.startsWith("conversation_hidden_") && !it.startsWith("conversation_hidden_time_") }
+                        ?.mapNotNull { key ->
+                            key.removePrefix("conversation_hidden_").takeIf { it.isNotEmpty() }
+                                ?.let { it to curUserSetting.decodeBool(key, false) }
+                        }
+                        ?.toMap()
+                        ?: emptyMap()
+                val conversationHiddenTime =
+                    curUserSetting.allKeys()
+                        ?.filter { it.startsWith("conversation_hidden_time_") }
+                        ?.mapNotNull { key ->
+                            key.removePrefix("conversation_hidden_time_").takeIf { it.isNotEmpty() }
+                                ?.let { it to curUserSetting.decodeLong(key, 0L) }
+                        }
+                        ?.toMap()
+                        ?: emptyMap()
+                val userProfile =
+                    curUserSetting.allKeys()
+                        ?.filter { it.startsWith("user_profile_") }
+                        ?.mapNotNull { key ->
+                            curUserSetting.decodeString(key)?.takeIf { it.isNotEmpty() }
+                                ?.let { key.removePrefix("user_profile_") to it }
+                        }
+                        ?.toMap()
+                        ?: emptyMap()
+
+                val migrated =
+                    IntySettingsCache(
+                        isMigrateFinished = true,
+                        curUID = curUidFromMmkv,
+                        keyboardHeight = allUserSetting.getFloat("keyboardHeight", 0f),
+                        showGuest = allUserSetting.decodeBool("show_guest", false),
+                        appData = appData,
+                        userCache =
+                            IntySettingsCache.UserCache(
+                                token = curUserSetting.decodeString("token") ?: "",
+                                userSetKeepTalking =
+                                    curUserSetting.decodeBool("user_set_keep_talking", false),
+                                userSetAutoPlayVoice =
+                                    curUserSetting.decodeBool("user_set_auto_play_voice", false),
+                                vibeModeEnabled =
+                                    curUserSetting.decodeBool("vibe_mode_enabled", false),
+                                tipsDisabled = curUserSetting.decodeBool("tips_disabled", false),
+                                intellimateTipLastShowTimeMillis =
+                                    curUserSetting.decodeLong(
+                                        KEY_INTELLIMATE_TIP_LAST_SHOW_TIME,
+                                        -1L
+                                    ),
+                                userSetAutoPlayAnimation =
+                                    curUserSetting.decodeBool(
+                                        "user_set_auto_play_animation",
+                                        false
+                                    ),
+                                userSetTextStreaming =
+                                    curUserSetting.decodeBool("user_set_text_streaming", false),
+                                userSetSceneActionButton =
+                                    curUserSetting.decodeBool(
+                                        "user_set_scene_action_button",
+                                        false
+                                    ),
+                                resubReminderLastTime =
+                                    curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L),
+                                resubReminderShowCount =
+                                    curUserSetting.decodeInt(KEY_RESUB_REMINDER_SHOW_COUNT, 0),
+                                feedbackDialogLastShowTime =
+                                    curUserSetting.decodeLong(
+                                        KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME,
+                                        -1L
+                                    ),
+                                messagesTabHasPush =
+                                    curUserSetting.decodeBool(KEY_MESSAGES_TAB_HAS_PUSH, false),
+                                conversationHasPush = conversationHasPush,
+                                hasAppUpdateTips =
+                                    curUserSetting.getBoolean("has_app_update_tips", false),
+                                currentSortSeed =
+                                    curUserSetting.getInt("current_sort_seed", 0),
+                                exploreFavorite = exploreFavorite,
+                                conversationPinned = conversationPinned,
+                                conversationHidden = conversationHidden,
+                                conversationHiddenTime = conversationHiddenTime,
+                                userProfile = userProfile,
+                            ),
+                    )
+                context.intySettingsCache.updateData { _ -> migrated }
+            }
+        }
+
     }
 
+    private fun getIntySettingCache(): IntySettingsCache? {
+        return runBlocking {
+            contextRef?.get()?.intySettingsCache?.data?.first()
+        }
+    }
+
+    private suspend fun updateIntySetting(update: (IntySettingsCache) -> IntySettingsCache) {
+        contextRef?.get()?.intySettingsCache?.updateData(update)
+    }
+
+//    private fun getUserDataStore(): Flow<DataStore<Preferences>> {
+//        return getCurUserIDFlow().map { dataStore("user_$it") }
+//    }
+//
+//    fun getCurUserIDFlow(): Flow<String> {
+//        return dataStore().data.map { it[STORE_KEY_CUR_UID] ?: getCurUserID() }
+//    }
+//
+//    fun getTokenFlow(): Flow<String> {
+//        return getUserDataStore().flatMapLatest {
+//            it.data.map { data -> data[STORE_KEY_TOKEN] ?: getCurToken()}
+//        }
+//    }
+
     fun getCurUserID(): String {
-        return allUserSetting.decodeString("cur_uid") ?: ""
+        //return allUserSetting.decodeString("cur_uid") ?: ""
+        return getIntySettingCache()?.curUID ?: ""
     }
 
     /** 切换用户 对应Guest登录Google账户 Google账户退出登录，到Guest账户 */
-    fun changeUser(uid: String) {
-        curUid = uid
-        curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
-        allUserSetting.putString("cur_uid", uid)
+    suspend fun changeUser(uid: String) {
+        //curUid = uid
+        //curUserSetting = MMKV.mmkvWithID("user_$curUid", MMKV.MULTI_PROCESS_MODE)
+        //allUserSetting.putString("cur_uid", uid)
+        //dataStore().edit { it[STORE_KEY_CUR_UID] = uid }
+        updateIntySetting {
+            it.copy(
+                curUID = uid
+            )
+        }
         IntySettingsDataStore.onUserChanged()
     }
 
-    fun setToken(token: String) {
-        curUserSetting.putString("token", token)
+    suspend fun setToken(token: String) {
+        //getUserDataStore().first().edit { it[STORE_KEY_TOKEN] = token }
+        updateIntySetting {
+            it.copy(
+                userCache = it.userCache.copy(
+                    token = token
+                )
+            )
+        }
     }
 
     fun getCurToken(): String {
-        return curUserSetting.decodeString("token") ?: ""
+        //return curUserSetting.decodeString("token") ?: ""
+        return getIntySettingCache()?.userCache?.token ?: ""
     }
 
     fun isLogin(): Boolean {
-        return getCurUserID().isNotEmpty() && getCurToken().isNotEmpty()
+        //return getCurUserID().isNotEmpty() && getCurToken().isNotEmpty()
+        return getIntySettingCache()?.let {
+            it.curUID.isNotBlank() && it.userCache.token.isNotBlank()
+        } ?: false
     }
 
     /** 登录接口后，本地处理登录业务的数据逻辑 */
-    fun login(uid: String, token: String) {
+    suspend fun login(uid: String, token: String) {
         // 先清除客户端缓存，确保旧客户端不会残留
         // 这样可以避免token更新和客户端获取之间的竞态条件
         IntyNetworkManager.clearClientCache()
@@ -84,11 +268,13 @@ object IntySetting {
     }
 
     fun setKeyboardHeight(height: Float) {
-        allUserSetting.putFloat("keyboardHeight", height)
+        runBlocking {
+            updateIntySetting { it.copy(keyboardHeight = height) }
+        }
     }
 
     fun getKeyboardHeight(): Float {
-        return allUserSetting.getFloat("keyboardHeight", 0f)
+        return getIntySettingCache()?.keyboardHeight ?: 0f
     }
 
     /** 记录是否显示keepTalking按钮（全局设置） */
@@ -102,12 +288,16 @@ object IntySetting {
 
     /** 检查用户是否手动设置过 Keep Talking（用于判断是否使用 Remote Config 默认值） */
     fun hasUserSetKeepTalking(): Boolean {
-        return curUserSetting.decodeBool("user_set_keep_talking", false)
+        return getIntySettingCache()?.userCache?.userSetKeepTalking ?: false
     }
 
     /** 标记用户已手动设置过 Keep Talking */
     fun markUserSetKeepTalking() {
-        curUserSetting.putBoolean("user_set_keep_talking", true)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(userSetKeepTalking = true))
+            }
+        }
     }
 
     /** 自动播放语音消息（全局设置，默认开启） */
@@ -121,12 +311,16 @@ object IntySetting {
 
     /** 检查用户是否手动设置过 Auto Play Voice（用于判断是否使用 Remote Config 默认值） */
     fun hasUserSetAutoPlayVoice(): Boolean {
-        return curUserSetting.decodeBool("user_set_auto_play_voice", false)
+        return getIntySettingCache()?.userCache?.userSetAutoPlayVoice ?: false
     }
 
     /** 标记用户已手动设置过 Auto Play Voice */
     fun markUserSetAutoPlayVoice() {
-        curUserSetting.putBoolean("user_set_auto_play_voice", true)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(userSetAutoPlayVoice = true))
+            }
+        }
     }
 
     /** 自动播放背景动画（全局设置，默认开启） */
@@ -150,31 +344,42 @@ object IntySetting {
 
     /** Vibe Mode 开关状态（仅限订阅用户） */
     fun setVibeModeEnabled(enabled: Boolean) {
-        curUserSetting.putBoolean("vibe_mode_enabled", enabled)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(vibeModeEnabled = enabled))
+            }
+        }
     }
 
     fun isVibeModeEnabled(): Boolean {
-        return curUserSetting.decodeBool("vibe_mode_enabled", false)
+        return getIntySettingCache()?.userCache?.vibeModeEnabled ?: false
     }
 
     /** 禁用 IntelliMate tips 弹窗（用户偏好设置） */
     fun setTipsDisabled(disabled: Boolean) {
-        curUserSetting.putBoolean("tips_disabled", disabled)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(tipsDisabled = disabled))
+            }
+        }
     }
 
     fun isTipsDisabled(): Boolean {
-        return curUserSetting.decodeBool("tips_disabled", false)
+        return getIntySettingCache()?.userCache?.tipsDisabled ?: false
     }
 
     /** 获取 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
     fun getIntelliMateTipLastShowTimeMillis(): Long {
-        // 默认值为很小的值，确保首次检查一定可以展示。
-        return curUserSetting.decodeLong(KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, -1L)
+        return getIntySettingCache()?.userCache?.intellimateTipLastShowTimeMillis ?: -1L
     }
 
     /** 设置 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
     fun setIntelliMateTipLastShowTimeMillis(timestampMillis: Long) {
-        curUserSetting.putLong(KEY_INTELLIMATE_TIP_LAST_SHOW_TIME, timestampMillis)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(intellimateTipLastShowTimeMillis = timestampMillis))
+            }
+        }
     }
 
     /**
@@ -188,19 +393,22 @@ object IntySetting {
         return nowMillis - lastShownMillis >= INTELLIMATE_TIP_MIN_INTERVAL_MILLIS
     }
 
-    /** 检查用户是否手动设置过 Auto Play Animation */
-    fun hasUserSetAutoPlayAnimation(): Boolean {
-        return curUserSetting.decodeBool("user_set_auto_play_animation", false)
-    }
-
     /** 标记用户已手动设置过 Auto Play Animation */
     fun markUserSetAutoPlayAnimation() {
-        curUserSetting.putBoolean("user_set_auto_play_animation", true)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(userSetAutoPlayAnimation = true))
+            }
+        }
     }
 
     /** 标记用户已手动设置过 Text Streaming */
     fun markUserTextStreaming() {
-        curUserSetting.putBoolean("user_set_text_streaming", true)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(userSetTextStreaming = true))
+            }
+        }
     }
 
     /** 显示场景动作输入按钮（全局设置，默认关闭） */
@@ -214,12 +422,16 @@ object IntySetting {
 
     /** 检查用户是否手动设置过 Show Scene Action Button（用于判断是否使用 Remote Config 默认值） */
     fun hasUserSetSceneActionButton(): Boolean {
-        return curUserSetting.decodeBool("user_set_scene_action_button", false)
+        return getIntySettingCache()?.userCache?.userSetSceneActionButton ?: false
     }
 
     /** 标记用户已手动设置过 Show Scene Action Button */
     fun markUserSetSceneActionButton() {
-        curUserSetting.putBoolean("user_set_scene_action_button", true)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(userSetSceneActionButton = true))
+            }
+        }
     }
 
     /** 消息列表是否全屏（全局设置，默认关闭） */
@@ -250,87 +462,91 @@ object IntySetting {
     }
 
     fun getLastResubReminderDialogShowTime(): Long {
-        return curUserSetting.decodeLong(KEY_RESUB_REMINDER_LAST_TIME, 0L)
+        return getIntySettingCache()?.userCache?.resubReminderLastTime ?: 0L
     }
 
     fun setLastResubReminderDialogShowTime(timestampSeconds: Long) {
-        curUserSetting.putLong(KEY_RESUB_REMINDER_LAST_TIME, timestampSeconds)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(resubReminderLastTime = timestampSeconds))
+            }
+        }
     }
 
     fun getResubReminderDialogShowCount(): Int {
-        return curUserSetting.decodeInt(KEY_RESUB_REMINDER_SHOW_COUNT, 0)
+        return getIntySettingCache()?.userCache?.resubReminderShowCount ?: 0
     }
 
     fun setResubReminderDialogShowCount(count: Int) {
-        curUserSetting.putInt(KEY_RESUB_REMINDER_SHOW_COUNT, count)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(resubReminderShowCount = count))
+            }
+        }
     }
 
     fun getFeedbackDialogLastShowTime(): Long {
-        // 默认值为很大的负值，保证第一次检查一定超出显示时长阈值。
-        return curUserSetting.decodeLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, -1L)
+        return getIntySettingCache()?.userCache?.feedbackDialogLastShowTime ?: -1L
     }
 
     fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
-        curUserSetting.putLong(KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME, timestampMillis)
-    }
-
-    /** 获取总消息数（跨所有AI角色） */
-    fun getTotalMessageCount(): Int {
-        return curUserSetting.decodeInt(KEY_TOTAL_MESSAGE_COUNT, 0)
-    }
-
-    /**
-     * 增加总消息数并返回新的计数
-     *
-     * 使用同步锁确保读-改-写操作的原子性，防止并发调用时丢失增量。 这对于反馈对话框触发逻辑至关重要，因为它依赖于消息计数达到100的倍数。
-     */
-    fun incrementTotalMessageCount(): Int {
-        synchronized(messageCountLock) {
-            // TODO: DataStore 是否能提供同步？
-            val currentCount = getTotalMessageCount()
-            val newCount = currentCount + 1
-            curUserSetting.putInt(KEY_TOTAL_MESSAGE_COUNT, newCount)
-            return newCount
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(feedbackDialogLastShowTime = timestampMillis))
+            }
         }
     }
 
     /** 记录消息Tab是否需要显示推送红点 */
     fun setMessagesTabHasPush(hasPush: Boolean) {
-        curUserSetting.putBoolean(KEY_MESSAGES_TAB_HAS_PUSH, hasPush)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(messagesTabHasPush = hasPush))
+            }
+        }
     }
 
     fun hasMessagesTabPush(): Boolean {
-        return curUserSetting.decodeBool(KEY_MESSAGES_TAB_HAS_PUSH, false)
+        return getIntySettingCache()?.userCache?.messagesTabHasPush ?: false
     }
 
     /** 记录特定会话是否有推送未读 */
     fun setConversationHasPush(agentId: String, hasPush: Boolean) {
-        val key = "$KEY_CONVERSATION_PUSH_PREFIX$agentId"
-        if (hasPush) {
-            curUserSetting.putBoolean(key, true)
-        } else {
-            curUserSetting.removeValueForKey(key)
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    userCache = it.userCache.copy(
+                        conversationHasPush = it.userCache.conversationHasPush.toMutableMap().also { map ->
+                            if (hasPush) map[agentId] = true else map.remove(agentId)
+                        }
+                    )
+                )
+            }
         }
     }
 
     fun hasConversationPush(agentId: String): Boolean {
-        return curUserSetting.decodeBool("$KEY_CONVERSATION_PUSH_PREFIX$agentId", false)
+        return getIntySettingCache()?.userCache?.conversationHasPush?.get(agentId) == true
     }
 
     // 标记是否已经有可用的App更新，用于红点标记
     fun hasAppUpdateTips(): Boolean {
-        return curUserSetting.getBoolean("has_app_update_tips", false)
+        return getIntySettingCache()?.userCache?.hasAppUpdateTips ?: false
     }
 
     fun setAppUpdateTips(showed: Boolean) {
-        curUserSetting.putBoolean("has_app_update_tips", showed)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(hasAppUpdateTips = showed))
+            }
+        }
     }
 
     private var isLoggingOut = false
 
     fun logout() {
         isLoggingOut = true
-        setToken("")
+        runBlocking { setToken("") }
         // 延迟重置标志，确保401处理器有时间识别
         Handler(Looper.getMainLooper()).postDelayed({ isLoggingOut = false }, 2000)
     }
@@ -341,7 +557,7 @@ object IntySetting {
 
     // 用于推荐接口后端sort随机排序的seed种子
     fun sortSeed(): Int {
-        return curUserSetting.getInt("current_sort_seed", 0)
+        return getIntySettingCache()?.userCache?.currentSortSeed ?: 0
     }
 
     // 用于首页chat的页面请求数据的seed，每次app启动时生成固定值
@@ -355,114 +571,94 @@ object IntySetting {
     }
 
     fun updateSortSeed(seed: Int) {
-        curUserSetting.putInt("current_sort_seed", seed)
+        runBlocking {
+            updateIntySetting {
+                it.copy(userCache = it.userCache.copy(currentSortSeed = seed))
+            }
+        }
     }
 
     // region 通用的用户信息存储方法（不依赖具体的 UserProfile 类）
     fun setUserProfileData(key: String, value: String) {
-        curUserSetting.putString("user_profile_$key", value)
+        //curUserSetting.putString("user_profile_$key", value)
+        runBlocking {
+            //getUserDataStore().first().putString("user_profile_$key", value)
+            updateIntySetting {
+                it.copy(
+                    userCache = it.userCache.copy(
+                        userProfile = it.userCache.userProfile.toMutableMap().also { map ->
+                            map[key] = value
+                        }
+                    )
+                )
+            }
+        }
     }
 
     fun getUserProfileData(key: String): String? {
-        return curUserSetting.decodeString("user_profile_$key")
-    }
-
-    fun setUserProfileBoolean(key: String, value: Boolean) {
-        curUserSetting.putBoolean("user_profile_$key", value)
-    }
-
-    fun getUserProfileBoolean(key: String, defaultValue: Boolean = false): Boolean {
-        return curUserSetting.decodeBool("user_profile_$key", defaultValue)
-    }
-
-    fun setUserProfileInt(key: String, value: Int) {
-        curUserSetting.putInt("user_profile_$key", value)
-    }
-
-    fun getUserProfileInt(key: String, defaultValue: Int = 0): Int {
-        return curUserSetting.decodeInt("user_profile_$key", defaultValue)
-    }
-
-    fun hasUserProfileData(key: String): Boolean {
-        return curUserSetting.decodeString("user_profile_$key")?.isNotEmpty() == true
+        //return curUserSetting.decodeString("user_profile_$key")
+//        return runBlocking {
+//            getUserDataStore().first().getString("user_profile_$key").first()
+//        }
+        return getIntySettingCache()?.userCache?.userProfile?.get(key)
     }
 
     fun clearUserProfileData(key: String) {
-        curUserSetting.removeValueForKey("user_profile_$key")
-    }
-
-    fun clearAllUserProfileData() {
-        // 清除所有以 user_profile_ 开头的键
-        val keys = curUserSetting.allKeys()
-        keys?.forEach { key ->
-            if (key.startsWith("user_profile_")) {
-                curUserSetting.removeValueForKey(key)
+        //curUserSetting.removeValueForKey("user_profile_$key")
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    userCache = it.userCache.copy(
+                        userProfile = it.userCache.userProfile.toMutableMap().also { map ->
+                            map.remove(key)
+                        }
+                    )
+                )
             }
         }
     }
 
     fun hasShowGuest(): Boolean {
-        return allUserSetting.decodeBool("show_guest", false)
+        return getIntySettingCache()?.showGuest ?: false
     }
 
     fun setShowGuested() {
-        allUserSetting.putBoolean("show_guest", true)
+        runBlocking {
+            updateIntySetting { it.copy(showGuest = true) }
+        }
     }
 
     // region 应用级别的通用存储方法（不依赖用户）
     /** 设置应用级别的数据（所有用户共享） */
     fun setAppData(key: String, value: String) {
-        allUserSetting.putString("app_data_$key", value)
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    appData = it.appData.toMutableMap().also { map -> map[key] = value }
+                )
+            }
+        }
     }
 
     /** 获取应用级别的数据 */
     fun getAppData(key: String): String? {
-        return allUserSetting.decodeString("app_data_$key")
-    }
-
-    /** 检查应用级别的数据是否存在 */
-    fun hasAppData(key: String): Boolean {
-        return allUserSetting.decodeString("app_data_$key")?.isNotEmpty() == true
+        return getIntySettingCache()?.appData?.get(key)
     }
 
     /** 清除应用级别的数据 */
     fun clearAppData(key: String) {
-        allUserSetting.removeValueForKey("app_data_$key")
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    appData = it.appData.toMutableMap().also { map -> map.remove(key) }
+                )
+            }
+        }
     }
 
     /** 获取所有应用级别的数据键（用于批量操作） */
     fun getAllAppDataKeys(): Set<String> {
-        val allKeys = allUserSetting.allKeys()
-        return allKeys?.filter { it.startsWith("app_data_") }?.toSet() ?: emptySet()
-    }
-
-    // endregion
-
-    // endregion
-
-    // region 聊天数据持久化相关方法
-
-    /** 清除指定agent的聊天数据（清理可能存在的旧数据） */
-    fun clearChatData(agentId: String) {
-        curUserSetting.removeValueForKey("chat_messages_$agentId")
-        curUserSetting.removeValueForKey("chat_offset_$agentId")
-        curUserSetting.removeValueForKey("chat_has_more_$agentId")
-        curUserSetting.removeValueForKey("chat_initial_loaded_$agentId")
-    }
-
-    /** 清除所有聊天数据 */
-    fun clearAllChatData() {
-        val keys = curUserSetting.allKeys()
-        keys?.forEach { key: String ->
-            if (
-                key.startsWith("chat_messages_") ||
-                    key.startsWith("chat_offset_") ||
-                    key.startsWith("chat_has_more_") ||
-                    key.startsWith("chat_initial_loaded_")
-            ) {
-                curUserSetting.removeValueForKey(key)
-            }
-        }
+        return getIntySettingCache()?.appData?.keys ?: emptySet()
     }
 
     // endregion
@@ -472,33 +668,29 @@ object IntySetting {
     /** 设置 Explore 页面角色卡的收藏状态 */
     fun setExploreAgentFavorite(agentId: String, favorite: Boolean) {
         if (agentId.isBlank()) return
-        val key = "$KEY_PREFIX_EXPLORE_FAVORITE$agentId"
-        if (favorite) {
-            curUserSetting.putBoolean(key, true)
-        } else {
-            curUserSetting.removeValueForKey(key)
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    userCache = it.userCache.copy(
+                        exploreFavorite = it.userCache.exploreFavorite.toMutableMap().also { map ->
+                            if (favorite) map[agentId] = true else map.remove(agentId)
+                        }
+                    )
+                )
+            }
         }
     }
 
     /** 获取 Explore 页面角色卡的收藏状态 */
     fun isExploreAgentFavorite(agentId: String): Boolean {
         if (agentId.isBlank()) return false
-        return curUserSetting.decodeBool("$KEY_PREFIX_EXPLORE_FAVORITE$agentId", false)
+        return getIntySettingCache()?.userCache?.exploreFavorite?.get(agentId) == true
     }
 
     /** 获取所有已收藏的 Explore 角色ID */
     fun getExploreFavoriteAgentIds(): List<String> {
-        val keys = curUserSetting.allKeys() ?: return emptyList()
-        return keys
-            .asSequence()
-            .filter { it.startsWith(KEY_PREFIX_EXPLORE_FAVORITE) }
-            .mapNotNull { key ->
-                val agentId = key.removePrefix(KEY_PREFIX_EXPLORE_FAVORITE)
-                if (curUserSetting.decodeBool(key, false)) agentId else null
-            }
-            .distinct()
-            .sorted()
-            .toList()
+        val fromCache = getIntySettingCache()?.userCache?.exploreFavorite ?: return emptyList()
+        return fromCache.filter { it.value }.keys.sorted()
     }
 
     // endregion
@@ -520,44 +712,93 @@ object IntySetting {
         clearUserProfileData("chat_background_$agentId")
     }
 
-    /** 检查指定agent是否有自定义聊天背景图片 */
-    fun hasCustomChatBackground(agentId: String): Boolean {
-        return hasUserProfileData("chat_background_$agentId")
-    }
-
     // endregion
 
     // region 会话Pin/Hide相关设置
-
     /** 设置会话置顶状态 */
     fun setConversationPinned(agentId: String, pinned: Boolean) {
-        curUserSetting.putBoolean("conversation_pinned_$agentId", pinned)
+        //curUserSetting.putBoolean("conversation_pinned_$agentId", pinned)
+//        runBlocking {
+//            getUserDataStore().first().putBoolean("conversation_pinned_$agentId", pinned)
+//        }
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    userCache = it.userCache.copy(
+                        conversationPinned = it.userCache.conversationPinned.toMutableMap().also { map ->
+                            map[agentId] = pinned
+                        }
+                    )
+                )
+            }
+        }
     }
 
     /** 获取会话置顶状态 */
     fun isConversationPinned(agentId: String): Boolean {
-        return curUserSetting.decodeBool("conversation_pinned_$agentId", false)
+        //return curUserSetting.decodeBool("conversation_pinned_$agentId", false)
+//        return runBlocking {
+//            getUserDataStore().first().getBoolean("conversation_pinned_$agentId").first() ?: false
+//        }
+        return getIntySettingCache()?.userCache?.conversationPinned?.get(agentId) ?: false
     }
 
     /** 设置会话隐藏状态 */
     fun setConversationHidden(agentId: String, hidden: Boolean) {
-        curUserSetting.putBoolean("conversation_hidden_$agentId", hidden)
-        if (hidden) {
-            // 记录隐藏时的时间戳，用于判断是否有新消息
-            curUserSetting.putLong("conversation_hidden_time_$agentId", System.currentTimeMillis())
-        } else {
-            curUserSetting.removeValueForKey("conversation_hidden_time_$agentId")
+//        curUserSetting.putBoolean("conversation_hidden_$agentId", hidden)
+//        if (hidden) {
+//            // 记录隐藏时的时间戳，用于判断是否有新消息
+//            curUserSetting.putLong("conversation_hidden_time_$agentId", System.currentTimeMillis())
+//        } else {
+//            curUserSetting.removeValueForKey("conversation_hidden_time_$agentId")
+//        }
+//        runBlocking {
+//            getUserDataStore().first().let {
+//                it.putBoolean("conversation_hidden_$agentId", hidden)
+//
+//                // 记录隐藏时的时间戳，用于判断是否有新消息
+//                it.putLong(
+//                    "conversation_hidden_time_$agentId",
+//                    if (hidden) System.currentTimeMillis() else 0L
+//                )
+//            }
+//        }
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    userCache = it.userCache.copy(
+                        conversationHidden = it.userCache.conversationHidden.toMutableMap().also { map ->
+                            map[agentId] = hidden
+                        },
+                        conversationHiddenTime = it.userCache.conversationHiddenTime.toMutableMap().also { map ->
+                            map[agentId] = if (hidden) System.currentTimeMillis() else 0L
+                        }
+                    )
+                )
+            }
         }
     }
 
     /** 获取会话隐藏状态 */
     fun isConversationHidden(agentId: String): Boolean {
-        return curUserSetting.decodeBool("conversation_hidden_$agentId", false)
+        //return curUserSetting.decodeBool("conversation_hidden_$agentId", false)
+//        return runBlocking {
+//            getUserDataStore().flatMapLatest { userDataStore ->
+//                userDataStore.getBoolean("conversation_hidden_$agentId")
+//            }.first() ?: false
+//        }
+        return getIntySettingCache()?.userCache?.conversationHidden?.get(agentId) ?: false
     }
 
     /** 获取会话隐藏时间（用于判断是否应该恢复显示） */
     fun getConversationHiddenTime(agentId: String): Long {
-        return curUserSetting.decodeLong("conversation_hidden_time_$agentId", 0L)
+        //return curUserSetting.decodeLong("conversation_hidden_time_$agentId", 0L)
+//        return runBlocking {
+//            getUserDataStore().flatMapLatest { userDataStore ->
+//                userDataStore.getLong("conversation_hidden_time_$agentId")
+//            }.first() ?: 0L
+//        }
+        return getIntySettingCache()?.userCache?.conversationHiddenTime?.get(agentId) ?: 0L
     }
 
     /** 检查会话是否有新消息（用于自动取消隐藏） */
@@ -576,5 +817,39 @@ object IntySetting {
     }
 
     // endregion
+}
 
+@Serializable
+data class IntySettingsCache(
+    val isMigrateFinished: Boolean = false,
+    val curUID: String = "",
+    val userCache: UserCache = UserCache(),
+    val keyboardHeight: Float = 0f,
+    val showGuest: Boolean = false,
+    val appData: Map<String, String> = emptyMap()
+) {
+    @Serializable
+    data class UserCache(
+        val token: String = "",
+        val conversationHiddenTime: Map<String, Long> = emptyMap(),
+        val conversationHidden: Map<String, Boolean> = emptyMap(),
+        val conversationPinned: Map<String, Boolean> = emptyMap(),
+        val userProfile: Map<String, String> = emptyMap(),
+        val userSetKeepTalking: Boolean = false,
+        val userSetAutoPlayVoice: Boolean = false,
+        val vibeModeEnabled: Boolean = false,
+        val tipsDisabled: Boolean = false,
+        val intellimateTipLastShowTimeMillis: Long = -1L,
+        val userSetAutoPlayAnimation: Boolean = false,
+        val userSetTextStreaming: Boolean = false,
+        val userSetSceneActionButton: Boolean = false,
+        val resubReminderLastTime: Long = 0L,
+        val resubReminderShowCount: Int = 0,
+        val feedbackDialogLastShowTime: Long = -1L,
+        val messagesTabHasPush: Boolean = false,
+        val conversationHasPush: Map<String, Boolean> = emptyMap(),
+        val hasAppUpdateTips: Boolean = false,
+        val currentSortSeed: Int = 0,
+        val exploreFavorite: Map<String, Boolean> = emptyMap()
+    )
 }

@@ -33,9 +33,7 @@ class IntelliMateApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // 初始化 MMKV（必须在所有使用 MMKV 的代码之前）
-        // 使用 MKKV 的代码包括：IntySetting, BoostManager, BoostRepository
-        MMKV.initialize(this)
+        IntySetting.initialize(this)
 
         NetworkStackCoordinator.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 

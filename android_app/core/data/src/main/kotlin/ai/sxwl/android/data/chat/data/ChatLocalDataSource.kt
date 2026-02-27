@@ -169,13 +169,11 @@ class ChatLocalDataSource {
 
     fun clearChatData(agentId: String) {
         agentIdToSession.remove(agentId)
-        IntySetting.clearChatData(agentId)
         LogUtils.i("ChatLocalDataSource cleared chat data for agent $agentId")
     }
 
     fun clearAllChatData() {
         agentIdToSession.clear()
-        IntySetting.clearAllChatData()
         LogUtils.i("ChatLocalDataSource cleared all chat data")
     }
 
