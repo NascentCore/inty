@@ -15,6 +15,7 @@
 
 - 共享同一台 gcp VM
 - 差别在配置文件：[dev](config.yaml.dev) [prod](config.yaml.prod)
+- **Ops 平台**：evaluation Web UI 与完整 `/api/v1`，独立镜像与工作流部署；workflow [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)，dev 与 prod 同 VM、不同 host 端口（8001 / 8011），nginx 将 ops.inty.cc → 8011、dev.ops.inty.cc → 8001。
 - 操作这两个环境必须先写 python 脚本，严禁直接操作数据库、或者直接调用管理员权限的 API Endpoint，步骤如下（以 dev 为例）：
   ```bash
   ssh <gcp-vm>

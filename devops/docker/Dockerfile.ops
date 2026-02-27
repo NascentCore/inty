@@ -1,0 +1,58 @@
+# Ops 平台镜像：evaluation Web UI + 完整 /api/v1，与主后端分离部署。
+# 第一阶段：构建前端
+FROM node:18-slim AS frontend-builder
+
+WORKDIR /
+
+COPY evaluation/ evaluation/
+
+RUN ./evaluation/build.sh
+
+# 第二阶段：构建后端
+FROM python:3.12-slim AS base
+
+WORKDIR /
+ENV PYTHONPATH=.
+
+RUN if [ "$(uname -m)" != "x86_64" ]; then \
+    echo "ERROR: This Dockerfile requires AMD64 platform (x86_64) due to animeface dependency" && \
+    echo "Current architecture: $(uname -m)" && \
+    exit 1; \
+fi
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
+
+COPY scripts/requirements.txt scripts_requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r scripts_requirements.txt
+
+FROM base
+
+ARG CONFIG_FILE
+
+RUN if [ -z "$CONFIG_FILE" ]; then \
+    echo "ERROR: CONFIG_FILE build argument is required but not provided" && \
+    echo "Usage: docker build --build-arg CONFIG_FILE=path/to/config.yaml -f devops/docker/Dockerfile.ops -t inty-ops ." && \
+    exit 1; \
+fi
+
+COPY app/ app/
+COPY backend/ backend/
+COPY alembic/ alembic/
+COPY scripts/ scripts/
+COPY docs/INTELLIMATE.md docs/INTELLIMATE.md
+COPY android_app/docs/CHANGE_LOGS.md android_app/docs/CHANGE_LOGS.md
+
+COPY ${CONFIG_FILE} config.yaml
+
+COPY --from=frontend-builder /app/static/evaluation/ app/static/evaluation/
+
+EXPOSE 8001
+
+CMD ["/backend/ops/start.sh"]
