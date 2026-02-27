@@ -1,6 +1,10 @@
 """
 OpenAI API client helpers and shared client singleton.
 
+Chat LLM (e.g. google/gemini-2.5-flash-lite) is invoked via this client against the
+OpenRouter endpoint (agent.base_url, agent.api_key). Do not use Vertex/genai client
+for chat; use get_base_openai_client() and pass OpenRouter model ids.
+
 LangSmith tracing is done at call site (e.g. agent._call_openai_api_with_retry),
 not via client wrapping.
 """

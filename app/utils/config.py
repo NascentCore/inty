@@ -25,6 +25,8 @@ from app.utils import models_catalog
 # 3. 【如有必要】删除该配置项在 app 客户端相关的使用，部署、发布验证一切正常。
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Chat LLM is invoked via OpenAI client (app.utils.openai_client) against OpenRouter (agent.base_url / agent.api_key).
+# Model IDs are OpenRouter model names, e.g. google/gemini-2.5-flash-lite (GEMINI_2_5_FLASH_LITE), google/gemini-2.5-flash (GEMINI_2_5_FLASH).
 
 GEMINI_2_5_FLASH = models_catalog.GEMINI_2_5_FLASH.id_on_provider
 GEMINI_2_5_FLASH_LITE = models_catalog.GEMINI_2_5_FLASH_LITE.id_on_provider
@@ -216,19 +218,21 @@ class EmbeddingConfig:
 
 @dataclass
 class AgentConfig:
+    # OpenRouter API key; chat is invoked via OpenAI client (app.utils.openai_client) against base_url.
     api_key: str
     langchain_api_key: str
     # DEPRECATED: Do not use. Use free_user_chat_model and sub_user_chat_model instead.
     model: str = GEMINI_2_5_FLASH
-    # Free users use this model by default to reduce cost.
+    # Free users: default chat model (OpenRouter model id), invoked via OpenAI client + OpenRouter.
     free_user_chat_model: str = GEMINI_2_5_FLASH_LITE
-    # Subscribed users and superusers use this model by default.
+    # Subscribed users: default chat model (OpenRouter model id), invoked via OpenAI client + OpenRouter.
     sub_user_chat_model: str = GEMINI_2_5_FLASH
     # Note: Model selection is handled by app.core.model_selection.select_chat_model(),
     # which automatically chooses between free_user_chat_model and sub_user_chat_model
     # based on user subscription status and superuser privileges.
     # 下面的代码文件不需要检测订阅状态，因为 evaluation 是做评测，不部面向用户
     # - app/services/evaluation_service.py (updated to use select_chat_model)
+    # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
     base_url: str = OPENROUTER_BASE_URL
     temperature: float = 0.7
     max_tokens: int = 1000
@@ -287,7 +291,7 @@ class GCSConfig:
 
 @dataclass
 class FirebaseConfig:
-    service_account_path: str
+    service_account_path: str = ".secrets/inty-backend-key.json"
 
 
 @dataclass
@@ -296,7 +300,7 @@ class GooglePlayConfig:
 
     # DEPRECATED: 保留作为兼容；被 app.gcp_service_account_key 取代
     # 删除部署环境中的配置文件使用，然后删除这个代码。
-    service_account_key: str = "inty-backend-key.json"
+    service_account_key: str = ".secrets/inty-backend-key.json"
     package_name: str = "com.ai.intellimate"
     webhook_secret: Optional[str] = None  # Webhook密钥（可选）
     # 版本检查相关配置
