@@ -135,8 +135,11 @@ jobs:
             fi
 
       - name: Sanity check
+        env:
+          OPS_URL: ${{ vars.OPS_SERVICE_PUBLIC_URL }}
         run: |
-          curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.OPS_SERVICE_PUBLIC_URL }}
+          url="$(printf '%s' "$OPS_URL" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          curl --verbose --fail --retry 5 --retry-delay 5 "$url"
 
       - name: Write summary
         run: |
