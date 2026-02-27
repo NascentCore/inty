@@ -323,6 +323,51 @@ async def test_get_balanced_score_based_agents_stable_with_sort_seed(db_session)
 
 
 @pytest.mark.asyncio
+async def test_get_balanced_score_based_agents_female_user_opposite_gender_first(db_session):
+    """
+    女性用户时，所有男性角色排在任意女性/OTHER 之前（确定性）。
+    """
+    test_id = str(uuid.uuid4())[:4]
+    for i in range(4):
+        db_session.add(
+            models.Agent(
+                id=f"test-male-{test_id}-{i}",
+                readable_id=f"m{test_id}{i:02d}"[:8],
+                name=f"Male Agent {i}",
+                gender=models.Gender.MALE,
+                meta_data={"score": 5},
+                visibility=AgentVisibility.PUBLIC,
+                creator_id=admin_user.id,
+            )
+        )
+    for i in range(4):
+        db_session.add(
+            models.Agent(
+                id=f"test-female-{test_id}-{i}",
+                readable_id=f"f{test_id}{i:02d}"[:8],
+                name=f"Female Agent {i}",
+                gender=models.Gender.FEMALE,
+                meta_data={"score": 5},
+                visibility=AgentVisibility.PUBLIC,
+                creator_id=admin_user.id,
+            )
+        )
+    await db_session.commit()
+
+    agents = await get_balanced_score_based_agents(
+        db_session, 1, 20, "gender-seed", None, models.Gender.FEMALE
+    )
+    male_indices = [i for i, a in enumerate(agents) if a.gender == models.Gender.MALE]
+    female_other_indices = [
+        i for i, a in enumerate(agents) if a.gender != models.Gender.MALE
+    ]
+    if male_indices and female_other_indices:
+        assert max(male_indices) < min(
+            female_other_indices
+        ), "All MALE agents must appear before any FEMALE/OTHER when user is FEMALE"
+
+
+@pytest.mark.asyncio
 async def test_get_recommended_agents_paginated_excludes_private_always(db_session):
     """推荐列表始终只返回公开角色，超级用户也不会看到私有角色。"""
     test_id = str(uuid.uuid4())[:6]

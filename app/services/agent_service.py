@@ -10,7 +10,7 @@ from typing import Any, List, Optional
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import Integer, and_, desc, func, or_, select, text
+from sqlalchemy import Integer, and_, case, desc, func, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -619,28 +619,35 @@ async def get_balanced_score_based_agents(
     page_size: int,
     sort_seed: str = "",
     current_user_id: Optional[str] = None,  # pylint: disable=unused-argument
+    current_user_gender: Optional[Gender] = None,
 ) -> List[models.Agent]:
     """
     简化的平衡权重排序：score * 2 + random(0-100)
-    既保持高分优先，又确保各页面有多样性
+    既保持高分优先，又确保各页面有多样性。
+    当用户性别为 FEMALE/MALE 时，先展示所有异性角色（再展示同性/OTHER），保证确定性。
     """
     offset = (page - 1) * page_size
 
-    # 平衡权重排序查询，同时获取头像和背景图的尺寸信息
+    base_score = (
+        func.coalesce(
+            models.Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
+        )
+        * 2
+        + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
+    )
+    order_by_clauses = []
+    if current_user_gender == Gender.FEMALE:
+        is_opposite = case((models.Agent.gender == Gender.MALE, 1), else_=0)
+        order_by_clauses = [is_opposite.desc(), base_score.desc(), models.Agent.id.asc()]
+    elif current_user_gender == Gender.MALE:
+        is_opposite = case((models.Agent.gender == Gender.FEMALE, 1), else_=0)
+        order_by_clauses = [is_opposite.desc(), base_score.desc(), models.Agent.id.asc()]
+    else:
+        order_by_clauses = [base_score.desc(), models.Agent.id.asc()]
+
     query = (
         _select_agents_with_sizes()
-        .order_by(
-            (
-                # score * 2 + random(0-100)
-                func.coalesce(
-                    models.Agent.meta_data.op("->>")(text("'score'")).cast(Integer), 0
-                )
-                * 2
-                + func.abs(func.hashtext(func.concat(models.Agent.id, sort_seed))) % 100
-            ).desc(),
-            # 添加agent.id作为第二排序字段，确保排序稳定性，避免分页重复
-            models.Agent.id.asc(),
-        )
+        .order_by(*order_by_clauses)
         .offset(offset)
         .limit(page_size)
     )
@@ -696,13 +703,14 @@ async def get_recommended_agents_paginated(
 
         # 基于评分的推荐算法：使用简化的平衡权重排序
         if sort_by == AgentSortOption.SCORE_BASED_RANDOM:
-            # 使用新的平衡权重排序算法
+            # 使用新的平衡权重排序算法（含性别因子：异性全部优先）
             agents_list = await get_balanced_score_based_agents(
                 db,
                 page,
                 page_size,
                 sort_seed,
                 current_user.id,
+                current_user.gender,
             )
             # 保持使用原来的总数计算（基于基础查询条件）
         else:
