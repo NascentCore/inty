@@ -13,6 +13,7 @@ import ai.sxwl.android.data.api.model.SurpriseSnapUnlockResp
 import ai.sxwl.android.data.api.model.UserTimeContext
 import ai.sxwl.android.data.api.model.VoteMessageReq
 import ai.sxwl.android.data.api.model.VoteMessageRsp
+import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
@@ -106,26 +107,7 @@ class ChatRemoteDataSource {
                     )
             ) {
                 is HttpResult.Success -> {
-                    val responseCode = result.data.code ?: 200
-                    if (responseCode != 200) {
-                        val errorMessage =
-                            result.data.data?.message ?: result.data.message ?: "Image generation failed"
-                        HttpResult.Failure(errorMessage, responseCode)
-                    } else {
-                        val payload = result.data.data
-                        if (payload == null || payload.imageUrl.isNullOrEmpty()) {
-                            HttpResult.Failure("Image generation response is empty", -1)
-                        } else {
-                            HttpResult.Success(
-                                ChatImageGenerationResult(
-                                    imageUrl = payload.imageUrl,
-                                    width = payload.imageMetadata.toDimension("width"),
-                                    height = payload.imageMetadata.toDimension("height"),
-                                    messageId = payload.messageId ?: (messageId.toLongOrNull() ?: 0L),
-                                )
-                            )
-                        }
-                    }
+                    mapGenerateImageResponse(messageId, result.data)
                 }
 
                 is HttpResult.Failure -> {
@@ -138,12 +120,70 @@ class ChatRemoteDataSource {
         }
     }
 
+    internal fun mapGenerateImageResponse(
+        requestedMessageId: String,
+        response: ai.sxwl.android.data.api.model.ChatImageGenerationApiResponse,
+    ): HttpResult<ChatImageGenerationResult> {
+        val payload = response.data
+        val responseCode = response.code
+        val hasBusinessError = (responseCode != null && responseCode != 200) || !payload?.errorCode.isNullOrBlank()
+
+        if (hasBusinessError) {
+            val mappedCode = mapBusinessErrorCode(payload?.errorCode, responseCode)
+            val mappedMessage =
+                payload?.message
+                    ?: response.message
+                    ?: BusinessErrorCodes.BUSINESS_ERROR_MESSAGES[mappedCode]
+                    ?: "Image generation failed"
+            return HttpResult.Failure(mappedMessage, mappedCode)
+        }
+
+        if (responseCode != 200) {
+            return HttpResult.Failure(response.message ?: "Image generation failed", -1)
+        }
+
+        if (payload == null || payload.imageUrl.isNullOrEmpty()) {
+            return HttpResult.Failure("Image generation response is empty", -1)
+        }
+
+        return HttpResult.Success(
+            ChatImageGenerationResult(
+                imageUrl = payload.imageUrl,
+                width = payload.imageMetadata.toDimension("width"),
+                height = payload.imageMetadata.toDimension("height"),
+                messageId = payload.messageId ?: (requestedMessageId.toLongOrNull() ?: 0L),
+            )
+        )
+    }
+
     private fun Map<String, Any?>?.toDimension(key: String): Int {
         val value = this?.get(key) ?: return 0
         return when (value) {
             is Number -> value.toInt()
             is String -> value.toIntOrNull() ?: 0
             else -> 0
+        }
+    }
+
+    private fun mapBusinessErrorCode(errorCode: String?, responseCode: Int?): Int {
+        return when (errorCode) {
+            BusinessErrorCodes.SUBSCRIPTION_REQUIRED_ERROR_CODE ->
+                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+            BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_ERROR_CODE ->
+                BusinessErrorCodes.IMAGE_GENERATION_LIMIT_REACHED_CODE
+            BusinessErrorCodes.AGENT_CREATION_LIMIT_REACHED_ERROR_CODE ->
+                BusinessErrorCodes.AGENT_CREATION_LIMIT_REACHED_CODE
+            BusinessErrorCodes.VOICE_GENERATION_LIMIT_REACHED_ERROR_CODE ->
+                BusinessErrorCodes.VOICE_GENERATION_LIMIT_REACHED_CODE
+            BusinessErrorCodes.GUEST_LOGIN_REQUIRED_ERROR_CODE ->
+                BusinessErrorCodes.GUEST_LOGIN_REQUIRED_CODE
+            BusinessErrorCodes.IMAGE_GENERATION_BLOCKED_ERROR_CODE ->
+                BusinessErrorCodes.IMAGE_GENERATION_BLOCKED_CODE
+            BusinessErrorCodes.LIVE_CHAT_AGENT_LIMIT_REACHED_ERROR_CODE ->
+                BusinessErrorCodes.LIVE_CHAT_AGENT_LIMIT_REACHED_CODE
+            BusinessErrorCodes.LIVE_CHAT_DURATION_LIMIT_REACHED_ERROR_CODE ->
+                BusinessErrorCodes.LIVE_CHAT_DURATION_LIMIT_REACHED_CODE
+            else -> responseCode ?: -1
         }
     }
 
