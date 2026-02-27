@@ -2,12 +2,12 @@ package com.ai.intellimate
 
 import ai.sxwl.android.common.analytics.GlobalExceptionHandler
 import ai.sxwl.android.common.fcm.FCMessageHandlerImpl
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.DeviceTokenRegisterRequest
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.di.DataModule
-import ai.sxwl.android.data.http.ApiResult
-import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.config.NetworkConfig
-import ai.sxwl.android.data.http.services.UserService
+import ai.sxwl.android.data.http.NetworkStackCoordinator
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FCMTokenUploadCallback
@@ -21,6 +21,7 @@ import com.ai.intellimate.tips.IntelliMateTipsForegroundSessionTracker
 import com.ai.intellimate.utils.AgentCacheProviderImpl
 import com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl
 import com.ai.intellimate.utils.UnifiedStartupManager
+import com.architecture.httplib.core.HttpResult
 import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,7 @@ class IntelliMateApp : Application() {
         // 使用 MKKV 的代码包括：IntySetting, BoostManager, BoostRepository
         MMKV.initialize(this)
 
-        IntyNetworkManager.initialize(this, buildType = BuildConfig.BUILD_TYPE)
+        NetworkStackCoordinator.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 
         // 验证 baseUrl 配置（必须在其他初始化之前，如果失败会退出应用）
         if (!logAndValidateBaseUrl()) {
@@ -130,9 +131,10 @@ class IntelliMateApp : Application() {
                         return
                     }
 
-                    when (val result = UserService.registerDeviceToken(token)) {
-                        is ApiResult.Success -> {}
-                        is ApiResult.Error -> {
+                    val request = DeviceTokenRegisterRequest(token = token)
+                    when (val result = NetServiceMgr.getUserApi().registerDeviceToken(request)) {
+                        is HttpResult.Success -> {}
+                        is HttpResult.Failure -> {
                             LogUtils.e("IntelliMateApp", "FCM Token 上传失败: ${result.message}")
                         }
                     }

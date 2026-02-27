@@ -4,8 +4,8 @@ import ai.sxwl.android.common.startup.ImagePreloadManager
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.CharacterThemeVisibility
 import ai.sxwl.android.data.billing.VipStatusHelper
-import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
@@ -419,14 +419,18 @@ object UnifiedStartupManager {
                 return
             }
 
-            when (val result = AgentService.getCharacterThemes(skip = 0, limit = 100)) {
-                is ai.sxwl.android.data.http.ApiResult.Success -> {
-                    val themes = result.data
+            when (val result = NetServiceMgr.getAgentApi().getCharacterThemes(skip = 0, limit = 100)) {
+                is HttpResult.Success -> {
+                    val themes =
+                        result.data.filter { theme ->
+                            theme.visibility == CharacterThemeVisibility.PRIMARY ||
+                                theme.visibility == CharacterThemeVisibility.SECONDARY
+                        }
                     LogUtils.d("UnifiedStartupManager - 主题专区同步成功: ${themes.size} 个主题")
                     // 缓存主题专区数据，用于快速显示
                     AgentCacheManager.cacheCharacterThemes(themes)
                 }
-                is ai.sxwl.android.data.http.ApiResult.Error -> {
+                is HttpResult.Failure -> {
                     LogUtils.w(
                         "UnifiedStartupManager - 主题专区同步失败: code=${result.code}, message=${result.message}"
                     )

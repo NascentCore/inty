@@ -65,6 +65,8 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.call.voiceCallModule
 import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
+import com.ai.intellimate.explore.flattenAgents
+import com.ai.intellimate.explore.isChristmasTheme
 import com.ai.intellimate.tips.IntelliMateTipsRepository
 import com.ai.intellimate.tips.IntelliMateTipsSessionGate
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
@@ -530,8 +532,8 @@ class MainActivity : BaseActivity() {
 
                     // 设计决策：使用 isChristmas 标志筛选，而非字符串匹配
                     // 原因：更可靠、性能更好，且由服务端控制，便于维护
-                    val christmasThemes = themeAgents.filter { it.isChristmas }
-                    val allChristmasAgents = christmasThemes.flatMap { it.agents }
+                    val christmasThemes = themeAgents.filter { it.isChristmasTheme() }
+                    val allChristmasAgents = christmasThemes.flatMap { it.flattenAgents() }
 
                     if (allChristmasAgents.isNotEmpty()) {
                         // 设计决策：随机选择而非固定选择

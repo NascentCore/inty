@@ -1,7 +1,7 @@
 package com.ai.intellimate.agent.report
 
 import com.ai.intellimate.R
-import com.inty.api.models.api.v1.report.ReportCreateParams
+import ai.sxwl.android.data.api.model.ReportReasonCode
 
 /**
  * 举报和反馈原因代码到字符串资源ID的映射
@@ -16,17 +16,15 @@ object ReportReasonMappings {
      *
      * 注意：使用 val 而非 const val，因为 const val 仅支持基本类型和 String，不支持 Map 类型
      */
-    val REPORT_REASON_CODE_TO_STRING_RES: Map<ReportCreateParams.ReasonCode, Int> =
+    val REPORT_REASON_CODE_TO_STRING_RES: Map<ReportReasonCode, Int> =
         mapOf(
-            ReportCreateParams.ReasonCode.SENSITIVE_CONTENT to
-                R.string.report_reason_sensitive_content,
-            ReportCreateParams.ReasonCode.MISINFORMATION to R.string.report_reason_misinformation,
-            ReportCreateParams.ReasonCode.FRAUD_SCAMS to R.string.report_reason_fraud_scams,
-            ReportCreateParams.ReasonCode.PRIVACY_VIOLATION to
-                R.string.report_reason_privacy_violation,
-            ReportCreateParams.ReasonCode.HARMFUL_MINORS to R.string.report_reason_harmful_minors,
-            ReportCreateParams.ReasonCode.IP_VIOLATION to R.string.report_reason_ip_violation,
-            ReportCreateParams.ReasonCode.OTHER to R.string.report_reason_other,
+            ReportReasonCode.SENSITIVE_CONTENT to R.string.report_reason_sensitive_content,
+            ReportReasonCode.MISINFORMATION to R.string.report_reason_misinformation,
+            ReportReasonCode.FRAUD_SCAMS to R.string.report_reason_fraud_scams,
+            ReportReasonCode.PRIVACY_VIOLATION to R.string.report_reason_privacy_violation,
+            ReportReasonCode.HARMFUL_MINORS to R.string.report_reason_harmful_minors,
+            ReportReasonCode.IP_VIOLATION to R.string.report_reason_ip_violation,
+            ReportReasonCode.OTHER to R.string.report_reason_other,
         )
 
     /**
@@ -34,18 +32,14 @@ object ReportReasonMappings {
      *
      * 注意：使用 val 而非 const val，因为 const val 仅支持基本类型和 String，不支持 Map 类型
      */
-    val FEEDBACK_REASON_CODE_TO_STRING_RES: Map<ReportCreateParams.ReasonCode, Int> =
+    val FEEDBACK_REASON_CODE_TO_STRING_RES: Map<ReportReasonCode, Int> =
         mapOf(
-            ReportCreateParams.ReasonCode.CHAT_NOT_NATURAL to
-                R.string.feedback_reason_chat_not_natural,
-            ReportCreateParams.ReasonCode.CHARACTER_MISMATCH to
-                R.string.feedback_reason_character_mismatch,
-            ReportCreateParams.ReasonCode.APP_SLOW to R.string.feedback_reason_app_slow,
-            ReportCreateParams.ReasonCode.FEATURE_HARD_TO_FIND to
-                R.string.feedback_reason_feature_hard_to_find,
-            ReportCreateParams.ReasonCode.UI_INCONVENIENT to
-                R.string.feedback_reason_ui_inconvenient,
-            ReportCreateParams.ReasonCode.NEW_FEATURE to R.string.feedback_reason_new_feature,
-            ReportCreateParams.ReasonCode.OTHER to R.string.feedback_reason_other,
+            ReportReasonCode.CHAT_NOT_NATURAL to R.string.feedback_reason_chat_not_natural,
+            ReportReasonCode.CHARACTER_MISMATCH to R.string.feedback_reason_character_mismatch,
+            ReportReasonCode.APP_SLOW to R.string.feedback_reason_app_slow,
+            ReportReasonCode.FEATURE_HARD_TO_FIND to R.string.feedback_reason_feature_hard_to_find,
+            ReportReasonCode.UI_INCONVENIENT to R.string.feedback_reason_ui_inconvenient,
+            ReportReasonCode.NEW_FEATURE to R.string.feedback_reason_new_feature,
+            ReportReasonCode.OTHER to R.string.feedback_reason_other,
         )
 }

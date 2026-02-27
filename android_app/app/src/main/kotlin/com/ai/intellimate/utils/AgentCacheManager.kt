@@ -1,7 +1,7 @@
 package com.ai.intellimate.utils
 
 import ai.sxwl.android.data.api.model.AgentInfo
-import ai.sxwl.android.data.http.services.AgentService
+import ai.sxwl.android.data.api.model.CharacterThemeItem
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.squareup.moshi.Moshi
@@ -30,11 +30,11 @@ object AgentCacheManager {
     private val agentListAdapter = moshi.adapter<List<AgentInfo>>(agentListType)
 
     private val characterThemeListType =
-        Types.newParameterizedType(List::class.java, AgentService.CharacterThemeItem::class.java)
+        Types.newParameterizedType(List::class.java, CharacterThemeItem::class.java)
     private val characterThemeListAdapter =
-        moshi.adapter<List<AgentService.CharacterThemeItem>>(characterThemeListType)
+        moshi.adapter<List<CharacterThemeItem>>(characterThemeListType)
 
-    private val _themeAgentCache = MutableStateFlow(emptyList<AgentService.CharacterThemeItem>())
+    private val _themeAgentCache = MutableStateFlow(emptyList<CharacterThemeItem>())
     val themeAgentCache = _themeAgentCache.asStateFlow()
 
     /** 缓存推荐agents */
@@ -191,7 +191,7 @@ object AgentCacheManager {
     }
 
     /** 缓存主题专区列表 */
-    fun cacheCharacterThemes(themes: List<AgentService.CharacterThemeItem>) {
+    fun cacheCharacterThemes(themes: List<CharacterThemeItem>) {
         try {
             val themesJson = characterThemeListAdapter.toJson(themes)
             IntySetting.setUserProfileData(KEY_CHARACTER_THEMES, themesJson)
@@ -207,7 +207,7 @@ object AgentCacheManager {
     }
 
     /** 获取缓存的主题专区列表 */
-    fun getCachedCharacterThemes(): List<AgentService.CharacterThemeItem> {
+    fun getCachedCharacterThemes(): List<CharacterThemeItem> {
         return try {
             val themesJson = IntySetting.getUserProfileData(KEY_CHARACTER_THEMES)
             if (themesJson.isNullOrEmpty()) {

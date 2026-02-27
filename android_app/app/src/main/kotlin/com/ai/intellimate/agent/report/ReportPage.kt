@@ -57,7 +57,7 @@ internal fun ReportPage(
         reasons = reasons.value,
         selectedReasonCodes = selectedReasonCodes,
         onClickReason = { reasonCode, isSelect ->
-            LogUtils.i("onClickReason reasonCode = ${reasonCode.asString()}, isSelect = $isSelect")
+            LogUtils.i("onClickReason reasonCode = ${reasonCode.name}, isSelect = $isSelect")
             if (isSelect) {
                 viewModel.selectedReasonCodes.add(reasonCode)
             } else {

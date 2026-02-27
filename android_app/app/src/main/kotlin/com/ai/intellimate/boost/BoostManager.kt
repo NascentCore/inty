@@ -3,13 +3,14 @@
  */
 package com.ai.intellimate.boost
 
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentEnergyPointsUpdateRequest
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.billing.VipStatusHelper
-import ai.sxwl.android.data.http.ApiResult
-import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
+import com.architecture.httplib.core.HttpResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -179,12 +180,12 @@ object BoostManager {
         scope.launch {
             try {
                 val updateResult =
-                    AgentService.updateAgentEnergyPoints(
+                    NetServiceMgr.getAgentApi().updateAgentEnergyPoints(
                         agentId = agentInfo.id,
-                        energyPointsDelta = normalized,
+                        request = AgentEnergyPointsUpdateRequest(energyPoints = normalized),
                     )
                 when (updateResult) {
-                    is ApiResult.Success -> {
+                    is HttpResult.Success -> {
                         LogUtils.d(
                             "BoostManager",
                             "Successfully synced boost to backend: agentId=${agentInfo.id}, points=$normalized",
@@ -198,7 +199,7 @@ object BoostManager {
                             ),
                         )
                     }
-                    is ApiResult.Error -> {
+                    is HttpResult.Failure -> {
                         LogUtils.w(
                             "BoostManager",
                             "Failed to sync boost to backend: agentId=${agentInfo.id}, error=${updateResult.message}",
