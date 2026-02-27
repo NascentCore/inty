@@ -1,0 +1,44 @@
+# 手动部署 nginx 站点配置到 inty 服务器；dev/prod 同机，environment 仅用于审批与审计
+name: Deploy nginx config (sxwl.ai)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-nginx-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-nginx:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy nginx config to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          source: "devops/nginx/conf.d/sxwl.ai.conf"
+          target: "/tmp"
+
+      - name: Install config and restart nginx
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 2
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            sudo mv /tmp/sxwl.ai.conf /etc/nginx/conf.d/sxwl.ai.conf
+            sudo nginx -t # 验证配置
+            sudo systemctl restart nginx
+            sudo systemctl status nginx
+
+      - name: Write summary
+        run: |
+          echo "## Deploy nginx config" >> $GITHUB_STEP_SUMMARY
+          echo "Ref: ${{ github.ref }} @ ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "Target: \`/etc/nginx/conf.d/sxwl.ai.conf\` on inty server" >> $GITHUB_STEP_SUMMARY
