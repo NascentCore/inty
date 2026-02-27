@@ -29,6 +29,11 @@ class Chat(Base):
         nullable=True,
         comment="最新一次发送给大模型的完整messages列表（JSON格式）",
     )
+    sent_fallback_images = Column(
+        JSON,
+        nullable=True,
+        comment="当前 chat 已发送过的兜底图片 image_id 列表（用于去重）",
+    )
 
     # 关系
     user = relationship("User", back_populates="chats")

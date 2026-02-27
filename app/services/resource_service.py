@@ -84,6 +84,8 @@ def create_image_resource(
     uncropped_image_url: Optional[str] = None,
     gcs_url: Optional[str] = None,
     generation_prompt: Optional[str] = None,
+    image_id: Optional[str] = None,
+    metadata_tags: Optional[List[str]] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数
@@ -103,6 +105,8 @@ def create_image_resource(
         uncropped_image_url=uncropped_image_url,
         gcs_url=gcs_url,
         generation_prompt=generation_prompt,
+        image_id=image_id,
+        tags=metadata_tags,
     )
 
     # Convert to dict for database storage
@@ -150,6 +154,8 @@ async def async_create_image_resource(
     generation_prompt: Optional[str] = None,
     reference_image_url: Optional[str] = None,
     agent_id: Optional[str] = None,
+    image_id: Optional[str] = None,
+    metadata_tags: Optional[List[str]] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
@@ -170,6 +176,8 @@ async def async_create_image_resource(
         gcs_url=gcs_url,
         generation_prompt=generation_prompt,
         reference_image_url=reference_image_url,
+        image_id=image_id,
+        tags=metadata_tags,
     )
 
     # Convert to dict for database storage

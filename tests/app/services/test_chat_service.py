@@ -599,6 +599,141 @@ class TestChatService:
         await db_session.delete(test_user)
         await db_session.commit()
 
+    @pytest.mark.asyncio
+    @patch("app.services.chat_service.chat_history_service.update_message_metadata")
+    @patch("app.services.image_transform_service.image_transform_service.transform_desktop")
+    @patch("app.services.image_generation_service.image_generation_service.find_most_similar_image")
+    async def test_try_match_existing_image_records_sent_fallback_images_by_image_id(
+        self,
+        mock_find_most_similar_image: AsyncMock,
+        mock_transform_desktop: AsyncMock,
+        mock_update_metadata: AsyncMock,
+        db_session: AsyncSession,
+    ):
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Test User",
+            email="test@example.com",
+            system_language="en",
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔",
+            scenario="咖啡厅",
+            intro="AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+        session_id = chat_service.generate_session_id(chat.id)
+
+        ai_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "ai", "data": {"content": "画一张图"}},
+            meta_data={},
+        )
+        db_session.add(ai_message)
+        await db_session.commit()
+        await db_session.refresh(ai_message)
+
+        bucket = global_config_loaded_from_config_yaml.gcs.bucket
+        target_image_id = f"{bucket}/chat_images/{agent_id}/fallback_target.jpg"
+
+        excluded_ids_history = []
+
+        async def _fake_find_most_similar_image(**kwargs):
+            excluded_ids = kwargs.get("excluded_image_ids") or set()
+            excluded_ids_history.append(set(excluded_ids))
+            if target_image_id in excluded_ids:
+                return None
+            return {
+                "image_url": f"https://cdn.example.com/cdn-cgi/image/width=512/{target_image_id}",
+                "image_id": target_image_id,
+                "prompt": "fallback prompt",
+                "width": 1024,
+                "height": 1024,
+                "format": "jpeg",
+                "user_id": "another-user",
+                "similarity": 0.91,
+            }
+
+        mock_find_most_similar_image.side_effect = _fake_find_most_similar_image
+        mock_transform_desktop.side_effect = lambda url: f"https://cdn.example.com/{url}"
+        mock_update_metadata.return_value = None
+
+        mock_subscription_svc = AsyncMock()
+        mock_subscription_svc.record_usage.return_value = None
+
+        first_result = await chat_service._try_match_existing_image(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            chat_id=chat.id,
+            message_id=ai_message.id,
+            session_id=session_id,
+            current_prompt="draw a coffee shop portrait",
+            message_content="画一张图",
+            subscription_service=mock_subscription_svc,
+            is_network_error=False,
+        )
+
+        assert first_result is not None
+        assert first_result.image_metadata.get("matched_image_id") == target_image_id
+        chat_after_first = (
+            await db_session.execute(select(models.Chat).where(models.Chat.id == chat.id))
+        ).scalar_one()
+        assert chat_after_first.sent_fallback_images == [target_image_id]
+
+        second_result = await chat_service._try_match_existing_image(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            chat_id=chat.id,
+            message_id=ai_message.id,
+            session_id=session_id,
+            current_prompt="draw a coffee shop portrait",
+            message_content="画一张图",
+            subscription_service=mock_subscription_svc,
+            is_network_error=True,
+        )
+        assert second_result is None
+
+        chat_after_second = (
+            await db_session.execute(select(models.Chat).where(models.Chat.id == chat.id))
+        ).scalar_one()
+        assert chat_after_second.sent_fallback_images == [target_image_id]
+        assert excluded_ids_history[0] == set()
+        assert excluded_ids_history[1] == {target_image_id}
+
+        await db_session.delete(ai_message)
+        await db_session.delete(chat_after_second)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
 
 class TestIs429ResourceExhausted:
     """测试 _is_429_resource_exhausted 辅助函数"""

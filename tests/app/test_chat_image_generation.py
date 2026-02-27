@@ -345,6 +345,12 @@ class TestImageGenerationService:
         assert len(stored_prompt) > 0
         assert "给我画一张图片" in stored_prompt
         assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
+        assert resource.resource_metadata.get("image_id") == gen["image_url"].replace(
+            "gs://", ""
+        )
+        assert "only_include_ai_character" in (
+            resource.resource_metadata.get("tags") or []
+        )
 
         if resource is not None:
             await session.delete(resource)
@@ -480,6 +486,12 @@ class TestImageGenerationService:
         assert len(stored_prompt) > 0
         assert "draw me a portrait" in stored_prompt
         assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
+        assert resource.resource_metadata.get("image_id") == gen["image_url"].replace(
+            "gs://", ""
+        )
+        assert "only_include_ai_character" in (
+            resource.resource_metadata.get("tags") or []
+        )
 
         await session.delete(resource)
         await session.delete(chat_msg)
@@ -598,6 +610,12 @@ class TestImageGenerationService:
         assert len(stored_prompt) > 0
         assert "generate a scene with us" in stored_prompt
         assert resource.resource_metadata.get("gcs_url") == gen["image_url"]
+        assert resource.resource_metadata.get("image_id") == gen["image_url"].replace(
+            "gs://", ""
+        )
+        assert "only_include_ai_character" in (
+            resource.resource_metadata.get("tags") or []
+        )
 
         await session.delete(resource)
         await session.delete(chat_msg)

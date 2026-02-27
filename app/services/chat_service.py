@@ -1225,6 +1225,64 @@ def _is_429_resource_exhausted(exception: Exception) -> bool:
     return "429" in msg and "RESOURCE_EXHAUSTED" in msg.upper()
 
 
+def _normalize_sent_fallback_images(raw_value: Optional[object]) -> List[str]:
+    """将 sent_fallback_images 规范为去重后的 image_id 列表。"""
+    if not isinstance(raw_value, list):
+        return []
+
+    normalized_ids: List[str] = []
+    seen_ids: set[str] = set()
+    for item in raw_value:
+        image_id: Optional[str] = None
+        if isinstance(item, str):
+            image_id = item
+        elif isinstance(item, dict):
+            candidate = item.get("image_id")
+            if isinstance(candidate, str):
+                image_id = candidate
+
+        if not image_id or image_id in seen_ids:
+            continue
+        seen_ids.add(image_id)
+        normalized_ids.append(image_id)
+
+    return normalized_ids
+
+
+async def _get_chat_sent_fallback_image_ids(
+    db: AsyncSession, chat_id: str
+) -> set[str]:
+    result = await db.execute(
+        select(models.Chat.sent_fallback_images).where(models.Chat.id == chat_id)
+    )
+    raw_value = result.scalar_one_or_none()
+    return set(_normalize_sent_fallback_images(raw_value))
+
+
+async def _record_chat_sent_fallback_image_id(
+    db: AsyncSession, chat_id: str, image_id: Optional[str]
+) -> None:
+    if not image_id:
+        return
+
+    result = await db.execute(select(models.Chat).where(models.Chat.id == chat_id))
+    chat = result.scalar_one_or_none()
+    if not chat:
+        logger.warning("记录兜底图失败：chat 不存在，chat_id={}", chat_id)
+        return
+
+    existing_ids = _normalize_sent_fallback_images(chat.sent_fallback_images)
+    if image_id in existing_ids:
+        return
+
+    existing_ids.append(image_id)
+    chat.sent_fallback_images = existing_ids
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(chat, "sent_fallback_images")
+    await db.commit()
+
+
 async def _record_chat_image_failure(
     db: AsyncSession,
     subscription_service: SubscriptionService,
@@ -1281,6 +1339,7 @@ async def _try_match_existing_image(
     db: AsyncSession,
     agent_id: str,
     user_id: str,
+    chat_id: str,
     message_id: int,
     session_id: str,
     current_prompt: str,
@@ -1290,12 +1349,14 @@ async def _try_match_existing_image(
 ) -> Optional[schemas.ChatImageGenerationResponse]:
     """
     尝试匹配已生成的图片
-    优先匹配其他用户生成的图片，其次匹配当前用户的图片
+    优先匹配资源 metadata 带 only_include_ai_character 标签的图片，
+    并排除当前 chat 已发送过的 fallback image_id
 
     Args:
         db: 数据库会话
         agent_id: Agent ID
         user_id: 用户ID
+        chat_id: 聊天ID
         message_id: 消息ID
         session_id: 会话ID
         current_prompt: 当前提示词
@@ -1314,19 +1375,25 @@ async def _try_match_existing_image(
             f"尝试匹配已生成图片 - Agent ID: {agent_id}, User ID: {user_id}"
         )
 
+        sent_fallback_image_ids = await _get_chat_sent_fallback_image_ids(
+            db=db, chat_id=chat_id
+        )
         similar_image = await image_generation_service.find_most_similar_image(
             db=db,
             agent_id=agent_id,
             current_prompt=current_prompt,
             current_user_id=user_id,
+            excluded_image_ids=sent_fallback_image_ids,
         )
 
         if similar_image:
             matched_user_id = similar_image.get("user_id")
+            matched_image_id = similar_image.get("image_id")
             is_other_user = matched_user_id != user_id
             logger.info(
                 f"找到匹配图片，相似度: {similar_image.get('similarity', 0):.3f}, "
-                f"来自{'其他用户' if is_other_user else '当前用户'}: {matched_user_id}"
+                f"来自{'其他用户' if is_other_user else '当前用户'}: {matched_user_id}, "
+                f"image_id: {matched_image_id}"
             )
 
             # 获取GCS URI并转换为CDN URL
@@ -1345,6 +1412,7 @@ async def _try_match_existing_image(
                     "is_matched": True,
                     "similarity": similar_image.get("similarity", 0),
                     "matched_from_user_id": matched_user_id,
+                    "matched_from_image_id": matched_image_id,
                     "matched_from_image_url": gcs_uri,
                 }
             }
@@ -1355,6 +1423,15 @@ async def _try_match_existing_image(
                 message_id=message_id,
                 metadata_update=metadata_update,
             )
+            try:
+                await _record_chat_sent_fallback_image_id(
+                    db=db, chat_id=chat_id, image_id=matched_image_id
+                )
+            except Exception as sent_fallback_images_err:
+                logger.warning(
+                    "记录 chat sent_fallback_images 失败: {}",
+                    sent_fallback_images_err,
+                )
 
             # 记录成功用量（匹配的图片也计入用量）
             try:
@@ -1370,6 +1447,7 @@ async def _try_match_existing_image(
                         "is_matched": True,
                         "similarity": similar_image.get("similarity", 0),
                         "matched_from_user_id": matched_user_id,
+                        "matched_from_image_id": matched_image_id,
                         "is_from_other_user": is_other_user,
                         "session_id": session_id,
                         "message_id": message_id,
@@ -1389,6 +1467,7 @@ async def _try_match_existing_image(
                     "format": similar_image.get("format", "jpeg"),
                     "is_matched": True,
                     "similarity": similar_image.get("similarity", 0),
+                    "matched_image_id": matched_image_id,
                 },
                 prompt=current_prompt,
             )
@@ -1676,6 +1755,7 @@ async def generate_chat_image(
                 db=db,
                 agent_id=agent_id,
                 user_id=user_id,
+                chat_id=chat.id,
                 message_id=message_id,
                 session_id=session_id,
                 current_prompt=current_prompt,
@@ -1751,6 +1831,7 @@ async def generate_chat_image(
                 db=db,
                 agent_id=agent_id,
                 user_id=user_id,
+                chat_id=chat.id,
                 message_id=message_id,
                 session_id=session_id,
                 current_prompt=current_prompt,

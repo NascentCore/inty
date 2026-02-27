@@ -1,5 +1,5 @@
 import enum
-from typing import Optional
+from typing import List, Optional
 
 import sqlalchemy as sa
 from pydantic import BaseModel
@@ -61,6 +61,8 @@ class ImageResourceMetadata(BaseModel):
     gcs_url: Optional[str] = None
     generation_prompt: Optional[str] = None
     reference_image_url: Optional[str] = None  # 生成图片时使用的参考图
+    image_id: Optional[str] = None  # 图片唯一标识（通常为 bucket/path）
+    tags: Optional[List[str]] = None  # 资源标签（如 only_include_ai_character）
 
     class Config:
         from_attributes = True

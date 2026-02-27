@@ -16,6 +16,7 @@ import traceback
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
+from urllib.parse import urlparse
 
 import PIL.Image
 from pydantic import BaseModel, Field
@@ -60,6 +61,7 @@ from app.utils.models_catalog import (
 # 生图失败时日志中提示词最大长度，避免泄露过多用户内容并控制日志体积
 _MAX_PROMPT_LOG_LEN = 800000
 _MAX_TRACE_TEXT_PREVIEW_LEN = 500
+ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG = "only_include_ai_character"
 
 
 class ChatImagePreparedInputs(BaseModel):
@@ -345,6 +347,58 @@ class ImageGenerationService:
         similarity = intersection / union
         return similarity
 
+    def _extract_image_id(self, image_url: Optional[str]) -> Optional[str]:
+        """
+        提取稳定图片 ID（bucket/path），用于跨 CDN 前缀去重。
+        """
+        if not image_url:
+            return None
+
+        normalized_url = image_transform_service.normalize_image_url_for_storage(image_url)
+        gcs_path = image_transform_service.extract_gcs_path(normalized_url)
+        if gcs_path and not gcs_path.startswith("cdn-cgi/"):
+            return gcs_path
+
+        parsed = urlparse(image_url)
+        raw_path = parsed.path.lstrip("/")
+        if not raw_path:
+            return None
+
+        bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
+        bucket_marker = f"{bucket_name}/"
+        marker_index = raw_path.find(bucket_marker)
+        if marker_index >= 0:
+            return raw_path[marker_index:]
+
+        return raw_path
+
+    def _metadata_has_required_tag(
+        self, metadata: Dict[str, Any], required_tag: Optional[str]
+    ) -> bool:
+        if not required_tag:
+            return True
+        tags = metadata.get("tags")
+        if tags is None:
+            return False
+        if isinstance(tags, str):
+            return tags == required_tag
+        if isinstance(tags, list):
+            return required_tag in tags
+        return False
+
+    def _filter_images_by_excluded_ids(
+        self,
+        images: List[Dict[str, Any]],
+        excluded_image_ids: Optional[set[str]],
+    ) -> List[Dict[str, Any]]:
+        if not excluded_image_ids:
+            return images
+        return [
+            image
+            for image in images
+            if image.get("image_id") not in excluded_image_ids
+        ]
+
     def _resolve_chat_image_model_id(self, model: Optional[str]) -> str:
         """
         解析聊天生图模型：支持直接传 provider model id，也支持传模型 nickname。
@@ -506,6 +560,7 @@ class ImageGenerationService:
         agent_id: str,
         exclude_user_id: Optional[str] = None,
         only_user_id: Optional[str] = None,
+        required_metadata_tag: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         查询指定agent的已生成图片（从resources表查询）
@@ -515,6 +570,7 @@ class ImageGenerationService:
             agent_id: Agent ID
             exclude_user_id: 排除指定用户的图片（用于优先匹配其他用户）
             only_user_id: 仅查询指定用户的图片
+            required_metadata_tag: 仅返回包含该 metadata 标签的图片
 
         Returns:
             包含图片信息的列表，每个元素包含：
@@ -557,6 +613,11 @@ class ImageGenerationService:
                     if not metadata:
                         continue
 
+                    if not self._metadata_has_required_tag(
+                        metadata, required_metadata_tag
+                    ):
+                        continue
+
                     prompt = metadata.get("generation_prompt")
                     if not prompt:
                         continue
@@ -570,10 +631,16 @@ class ImageGenerationService:
                     format_str = (
                         content_type.split("/")[-1] if "/" in content_type else "jpeg"
                     )
+                    image_id = metadata.get("image_id")
+                    if not image_id:
+                        image_id = self._extract_image_id(
+                            metadata.get("gcs_url") or resource.url
+                        )
 
                     images.append(
                         {
                             "image_url": resource.url,  # GCS URI
+                            "image_id": image_id,
                             "prompt": prompt,
                             "width": width,
                             "height": height,
@@ -595,11 +662,12 @@ class ImageGenerationService:
                     continue
 
             logger.debug(
-                "查询到 Agent {} 的 {} 张已生成图片（exclude_user_id={}, only_user_id={}）",
+                "查询到 Agent {} 的 {} 张已生成图片（exclude_user_id={}, only_user_id={}, required_metadata_tag={}）",
                 agent_id,
                 len(images),
                 exclude_user_id,
                 only_user_id,
+                required_metadata_tag,
             )
             return images
 
@@ -648,25 +716,53 @@ class ImageGenerationService:
         agent_id: str,
         current_prompt: str,
         current_user_id: Optional[str] = None,
+        excluded_image_ids: Optional[set[str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         根据提示词相似度找到最匹配的图片
-        优先匹配其他用户生成的图片，其次匹配当前用户的图片
+        优先匹配带 only_include_ai_character 标签的图片（全用户可复用），
+        其次回退到历史策略（其他用户优先，再当前用户）
 
         Args:
             db: 数据库会话
             agent_id: Agent ID
             current_prompt: 当前提示词
             current_user_id: 当前用户ID（用于优先级匹配）
+            excluded_image_ids: 需要排除的图片ID集合（如当前 chat 已发送过的兜底图）
 
         Returns:
             最相似的图片信息，如果未找到则返回None
         """
         try:
-            # 第一步：优先匹配其他用户的图片
+            # 第一步：优先匹配带 only_include_ai_character 标签的图片（全用户可用）
+            tagged_images = await self.get_generated_images_for_agent(
+                db,
+                agent_id,
+                required_metadata_tag=ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG,
+            )
+            tagged_images = self._filter_images_by_excluded_ids(
+                tagged_images, excluded_image_ids
+            )
+            if tagged_images:
+                tagged_best_match = self._find_best_match_in_images(
+                    tagged_images, current_prompt
+                )
+                if tagged_best_match:
+                    logger.info(
+                        "找到带标签 {} 的匹配图片，相似度: {:.3f}, image_id: {}",
+                        ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG,
+                        tagged_best_match.get("similarity", 0),
+                        tagged_best_match.get("image_id"),
+                    )
+                    return tagged_best_match
+
+            # 第二步：优先匹配其他用户的图片（兼容旧数据）
             if current_user_id:
                 other_users_images = await self.get_generated_images_for_agent(
                     db, agent_id, exclude_user_id=current_user_id
+                )
+                other_users_images = self._filter_images_by_excluded_ids(
+                    other_users_images, excluded_image_ids
                 )
                 if other_users_images:
                     best_match = self._find_best_match_in_images(
@@ -679,7 +775,7 @@ class ImageGenerationService:
                         )
                         return best_match
 
-            # 第二步：匹配当前用户的图片
+            # 第三步：匹配当前用户的图片（兼容旧数据）
             if current_user_id:
                 current_user_images = await self.get_generated_images_for_agent(
                     db, agent_id, only_user_id=current_user_id
@@ -689,6 +785,9 @@ class ImageGenerationService:
                 current_user_images = await self.get_generated_images_for_agent(
                     db, agent_id
                 )
+            current_user_images = self._filter_images_by_excluded_ids(
+                current_user_images, excluded_image_ids
+            )
 
             if current_user_images:
                 best_match = self._find_best_match_in_images(
@@ -886,6 +985,7 @@ class ImageGenerationService:
         height = result.size.height
         image_format = result.format.value
         generated_at_iso = result.generated_at.isoformat()
+        generated_image_id = self._extract_image_id(gcs_uri)
         cdn_url = image_transform_service.transform_desktop(gcs_uri)
 
         metadata_update = {
@@ -930,6 +1030,8 @@ class ImageGenerationService:
                     generation_prompt=prepared.prompt,
                     reference_image_url=prepared.reference_url,
                     agent_id=agent_id,
+                    image_id=generated_image_id,
+                    metadata_tags=[ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG],
                 )
                 logger.info("图片已保存到resources表: {}", gcs_uri)
             except Exception as e:

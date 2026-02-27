@@ -214,7 +214,12 @@ async def generate_chat_image_for_message(
     - 调用 `chat_history_service.update_message_metadata()` 更新（合并现有 meta_data）
     - 如果更新失败，抛出 `ValueError`
 
-11. **返回结果**
+11. **写入 resources metadata 标签（用于兜底池）**
+   - 聊天生图写入 `resources.resource_metadata.tags=["only_include_ai_character"]`
+   - 同时写入稳定 `image_id`（`bucket/path`），避免同图在不同 CDN 前缀下被识别为不同图片
+   - 兜底匹配优先从该标签池检索，且所有用户可复用
+
+12. **返回结果**
    - 返回 `ChatImageGenerationResponse` 模型，字段包括 `message_id`、`image_url`（CDN URL）、`image_metadata`、`prompt`
 
 ### 4. 消息元数据存储与检索
@@ -239,6 +244,14 @@ async def generate_chat_image_for_message(
 - 自动识别消息的 `meta_data.generated_image` 字段
 - 将 GCS URI 转换为 CDN URL 后返回给客户端
 - 返回的图片信息不包含 `prompt` 字段
+
+### 4.1 兜底图片去重状态
+
+位置: `app/models/chat.py`、`app/services/chat_service.py`
+
+- `chats.sent_fallback_images` 保存当前 chat 已发送过的兜底图 `image_id` 列表
+- 每次兜底命中后写入该列表，并以 `image_id` 去重（不是 URL 去重）
+- 下次兜底检索会排除该列表中的图片，避免同图重复返回
 
 ### 5. 用量记录
 

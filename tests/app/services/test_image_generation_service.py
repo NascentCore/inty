@@ -4,6 +4,8 @@ image_generation_service 模块级函数单元测试（如 _serialize_gemini_res
 build_image_prompt 单元测试验证提示词拼接与 fallback 逻辑。
 """
 
+from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -12,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.external_services.fakes.gemini import FakeGeminiClient
 from app.services.image_generation_service import (
+    ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG,
     _serialize_gemini_response_for_log,
     image_generation_service,
 )
@@ -297,3 +300,101 @@ class TestSerializeGeminiResponseForLog:
 
         assert len(result["candidates"]) == 1
         assert result["candidates"][0].get("content") is None
+
+
+class TestFallbackImageLookup:
+    @pytest.mark.asyncio
+    async def test_get_generated_images_for_agent_filters_required_metadata_tag(self):
+        class _FakeScalars:
+            def __init__(self, resources):
+                self._resources = resources
+
+            def all(self):
+                return self._resources
+
+        class _FakeResult:
+            def __init__(self, resources):
+                self._resources = resources
+
+            def scalars(self):
+                return _FakeScalars(self._resources)
+
+        tagged_resource = SimpleNamespace(
+            resource_metadata={
+                "generation_prompt": "draw me",
+                "size": {"width": 1024, "height": 1024},
+                "content_type": "image/jpeg",
+                "tags": [ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG],
+                "gcs_url": "gs://test-bucket/chat_images/agent-1/with_tag.jpg",
+            },
+            url="https://cdn.example.com/cdn-cgi/image/width=320/test-bucket/chat_images/agent-1/with_tag.jpg",
+            user_id="u1",
+            created_at=datetime.now(timezone.utc),
+        )
+        untagged_resource = SimpleNamespace(
+            resource_metadata={
+                "generation_prompt": "draw me too",
+                "size": {"width": 1024, "height": 1024},
+                "content_type": "image/jpeg",
+                "gcs_url": "gs://test-bucket/chat_images/agent-1/without_tag.jpg",
+            },
+            url="https://cdn.example.com/cdn-cgi/image/width=320/test-bucket/chat_images/agent-1/without_tag.jpg",
+            user_id="u2",
+            created_at=datetime.now(timezone.utc),
+        )
+        mock_db = AsyncMock()
+        mock_db.execute.return_value = _FakeResult([tagged_resource, untagged_resource])
+
+        images = await image_generation_service.get_generated_images_for_agent(
+            db=mock_db,
+            agent_id="agent-1",
+            required_metadata_tag=ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG,
+        )
+
+        assert len(images) == 1
+        assert images[0]["image_id"] == "test-bucket/chat_images/agent-1/with_tag.jpg"
+        assert images[0]["user_id"] == "u1"
+
+    @pytest.mark.asyncio
+    async def test_find_most_similar_image_excludes_sent_image_ids(self):
+        tagged_images = [
+            {
+                "image_id": "test-bucket/chat_images/agent-1/seen.jpg",
+                "image_url": "gs://test-bucket/chat_images/agent-1/seen.jpg",
+                "prompt": "draw cat",
+                "user_id": "u1",
+            }
+        ]
+        fallback_other_user_images = [
+            {
+                "image_id": "test-bucket/chat_images/agent-1/new.jpg",
+                "image_url": "gs://test-bucket/chat_images/agent-1/new.jpg",
+                "prompt": "draw cat and coffee",
+                "user_id": "u2",
+            }
+        ]
+
+        with patch.object(
+            image_generation_service,
+            "get_generated_images_for_agent",
+            new=AsyncMock(
+                side_effect=[
+                    tagged_images,
+                    fallback_other_user_images,
+                    [],
+                ]
+            ),
+        ) as mock_get_images:
+            result = await image_generation_service.find_most_similar_image(
+                db=AsyncMock(),
+                agent_id="agent-1",
+                current_prompt="draw cat",
+                current_user_id="current-user",
+                excluded_image_ids={"test-bucket/chat_images/agent-1/seen.jpg"},
+            )
+
+        assert result is not None
+        assert result["image_id"] == "test-bucket/chat_images/agent-1/new.jpg"
+        assert mock_get_images.call_args_list[0][1]["required_metadata_tag"] == (
+            ONLY_INCLUDE_AI_CHARACTER_METADATA_TAG
+        )
