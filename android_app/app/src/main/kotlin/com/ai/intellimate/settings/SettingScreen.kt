@@ -56,6 +56,7 @@ import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
@@ -158,6 +159,9 @@ fun SettingScreen(
 
                 Spacer(Modifier.height(16.dp))
                 DebugFcmTokenEntry()
+
+                Spacer(Modifier.height(16.dp))
+                DebugClearLastRankDateEntry(chatViewModel = chatViewModel)
             }
 
             // 对话框
@@ -537,6 +541,25 @@ private fun DebugBoostPointsEntry() {
                 BoostManager.requestManualPoints(10000)
                 ToastUtils.showShort("Added 10000 credits!")
             },
+        )
+    }
+}
+
+/**
+ * Debug 下清除 KEY_LAST_RANK_DATE 缓存入口。
+ * 使用范围：仅 build type 为 debug 时在 Me → Settings 页展示。点击后直接调用 ChatViewModel.testRank()。
+ */
+@Composable
+private fun DebugClearLastRankDateEntry(chatViewModel: ChatViewModel) {
+    SettingsItemGroup {
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(
+                title = stringResource(R.string.settings_debug_clear_last_rank_date),
+                content = stringResource(R.string.settings_debug_clear_last_rank_date_hint),
+                arrow = false,
+            ),
+            isInGroup = true,
+            onItemClick = { chatViewModel.testRank() },
         )
     }
 }

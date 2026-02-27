@@ -104,8 +104,11 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
+import com.ai.intellimate.ui.components.RankDialog
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
+import com.google.android.play.core.review.ReviewInfo
+import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -267,6 +270,7 @@ internal fun ChatPage(
     val lastReportedKey = remember(agentInfo?.id) { mutableStateOf<String?>(null) }
     // 记录上一个 Agent ID，用于判断是否从其他 agent 滑动而来（HorizontalPager 场景）
     val previousAgentId = remember { mutableStateOf<String?>(null) }
+
 
     LaunchedEffect(Unit) {
         chatViewModel.vipRequest.collect {

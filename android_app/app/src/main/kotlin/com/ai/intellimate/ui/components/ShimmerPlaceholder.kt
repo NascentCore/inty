@@ -136,7 +136,7 @@ fun ShimmerPlaceholder(
 private fun SpeedUpButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        border = BorderStroke(width = 1.dp, brush = MaterialTheme.brushes.gradientBrush4),
+        border = BorderStroke(width = 1.dp, brush = MaterialTheme.brushes.horizontal.gradientBrush4),
         shape = MaterialTheme.shapes.extraLarge,
         color = Color.Transparent,
         modifier = modifier,

@@ -5,6 +5,7 @@ import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.MessageUpdate
 import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
+import ai.sxwl.android.utils.LogUtils
 import kotlinx.coroutines.flow.Flow
 
 class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatabase.getInstance()) {
@@ -103,5 +104,11 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
 
     suspend fun setForMomentPurchased(agentId: String, messageId: String) {
         chatMessageDao.setForMomentPurchaseState(agentId, messageId, true)
+    }
+
+    suspend fun getYesterdaySendCount(): Int {
+        return chatMessageDao.getYesterdayMessageCount().also {
+            LogUtils.d("Chat:Yesterday send message count = $it")
+        }
     }
 }

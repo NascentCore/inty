@@ -14,6 +14,7 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.firebase.FCMConstants
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
+import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.Intent
@@ -77,6 +78,7 @@ import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.IntelliMateTipDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.ui.components.PolicyText
+import com.ai.intellimate.ui.components.RankDialog
 import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.BillingErrorHandler
 import com.ai.intellimate.utils.UnifiedStartupManager
@@ -85,6 +87,9 @@ import com.ai.intellimate.xb.helper.AppConstants.Companion.PUSH_NOTIFICATION
 import com.ai.intellimate.xb.navigation.AppNavHost
 import com.ai.intellimate.xb.navigation.Routes
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.android.play.core.review.ReviewInfo
+import com.google.android.play.core.review.ReviewManagerFactory
+import com.google.android.play.core.review.testing.FakeReviewManager
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -487,6 +492,56 @@ class MainActivity : BaseActivity() {
         // 通过传递 NavController，MainActivity 可以控制导航，而 AppNavHost 仍然可以在
         // 没有外部 NavController 时创建自己的实例（向后兼容）
         val navController = rememberNavController()
+        val reviewManager = remember {
+            if (AppUtils.isAppDebug()) {
+                FakeReviewManager(context)
+            } else {
+                ReviewManagerFactory.create(context)
+            }
+
+        }
+        var reviewInfo by remember { mutableStateOf<ReviewInfo?>(null) }
+
+        LaunchedEffect(Unit) {
+            chatViewModel.showRankDialog
+                .collect {
+                    LogUtils.d("InAPPReview:ShouldRankRequest")
+                    reviewManager.requestReviewFlow()
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                reviewInfo = task.result
+                            } else {
+                                LogUtils.e(task.exception?.message)
+                            }
+                        }
+                }
+        }
+
+
+        reviewInfo?.let { info ->
+            RankDialog(
+                onCancel = {
+                    reviewInfo = null
+                },
+                onSubmit = { rank ->
+                    if (rank >= 4) {
+                        LogUtils.d("InAPPReview:ShouldShowReview")
+                        reviewManager.launchReviewFlow(this@MainActivity, info)
+                            .addOnCompleteListener {
+                                if (it.isSuccessful) {
+                                    FirebaseManager.Events.RANK_DIALOG_REVIEW_COMPLETED.logEvent(
+                                        "user_id" to IntySetting.getCurUserID(),
+                                    )
+                                }
+                            }
+                    } else {
+                        navController.navigate(Routes.Me.reportPage(isFeedback = true))
+                    }
+                    reviewInfo = null
+                }
+            )
+        }
+
         AppNavHost(
             page,
             mainViewModel,
@@ -950,7 +1005,9 @@ fun SplashLoginUI(
                             textAlign = TextAlign.Center,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
                         )
                     }
 
@@ -987,7 +1044,8 @@ fun SplashLoginUI(
                     Box(
                         contentAlignment = Alignment.BottomCenter,
                         modifier =
-                            Modifier.height(150.dp)
+                            Modifier
+                                .height(150.dp)
                                 .windowInsetsPadding(WindowInsets.navigationBars)
                                 .padding(bottom = 16.dp),
                     ) {

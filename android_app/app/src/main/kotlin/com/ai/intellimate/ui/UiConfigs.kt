@@ -1108,6 +1108,14 @@ object UiConfigs {
         const val CDN_IMAGE_QUALITY = 70
     }
 
+    /** 评分弹窗配置 - 适用于 RankDialog 的星级颜色等 */
+    object RankDialog {
+        /** 已选中星级的填充颜色（黄色） */
+        val StarFilledTint = Color(0xFFFFD54F)
+        /** 未选中星级的轮廓颜色（白色半透明） */
+        val StarOutlinedTint = Color(0x59FFFFFF)
+    }
+
     /** 反馈对话框配置 - 适用于反馈请求对话框的随机阈值等设置 */
     object FeedbackDialog {
         /** 消息数阈值 - 当前使用期内（app 打开未退出/未后台挂起）发送消息数每达到此阈值时显示对话框 */

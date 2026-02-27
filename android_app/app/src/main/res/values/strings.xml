@@ -40,6 +40,9 @@
     <string name="settings_debug_user_time_context_off">Disabled</string>
     <string name="settings_debug_fcm_token">FCM Token</string>
     <string name="settings_debug_fcm_token_loading">Loading…</string>
+    <string name="settings_debug_clear_last_rank_date">测试评分</string>
+    <string name="settings_debug_clear_last_rank_date_hint">点击触发评分测试弹窗</string>
+    <string name="settings_debug_clear_last_rank_date_toast">已触发评分测试</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="introduction">Introduction</string>
@@ -228,6 +231,9 @@
     <string name="feedback_description_placeholder">Please describe your experience or suggestions…</string>
     <string name="toast_feedback_submitted">Thanks for helping improve the experience.</string>
     <string name="feedback_request_content">We ❤️ your feedback! Is everything working as expected? Do you have any suggestions for improvement? Let us know, and we\'ll get back to you soon!</string>
+    <!-- RankDialog 评分弹窗 / Rating dialog -->
+    <string name="rank_dialog_title">Enjoy the chats so far? ✨</string>
+    <string name="rank_dialog_subtitle">Your encouragement can help us do well.</string>
     <string name="send_suggestions">Send Suggestions</string>
 
     <!-- Settings -->
