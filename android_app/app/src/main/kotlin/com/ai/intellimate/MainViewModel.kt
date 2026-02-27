@@ -7,6 +7,7 @@ import ai.sxwl.android.common.event.PushNotificationEvent
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AppVersionRsp
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.api.model.VersionReminderAction
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
@@ -22,7 +23,6 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
-import com.inty.api.models.api.v1.version.VersionCheckResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -412,20 +412,21 @@ class MainViewModel : BaseVM() {
                     val rsp = result.data
                     LogUtils.d("版本升级信息:$rsp")
                     when (rsp.reminder_action) {
-                        VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS,
-                        VersionCheckResponse.Data.ReminderAction.POP_UP_REMINDER -> {
+                        VersionReminderAction.BLOCK_ACCESS,
+                        VersionReminderAction.POP_UP_REMINDER -> {
                             // 设置更新提示（仅内存状态）
                             _appUpdateTips.value = true
                             _appUpdateTipsRedDot.value = true
                             // 需要显示更新弹窗（强制拦截或弹窗提醒）
                             _needForceUpgrade.send(rsp)
                         }
-                        VersionCheckResponse.Data.ReminderAction.SETTINGS_REMINDER -> {
+                        VersionReminderAction.SETTINGS_REMINDER -> {
                             // 设置更新提示（仅内存状态）
                             _appUpdateTips.value = true
                             _appUpdateTipsRedDot.value = true
                         }
-                        VersionCheckResponse.Data.ReminderAction.NONE -> {
+                        VersionReminderAction.NONE,
+                        null -> {
                             // 当版本不需要更新时（reminder_action 为 NONE），清除更新提示
                             if (_appUpdateTips.value) {
                                 _appUpdateTips.value = false

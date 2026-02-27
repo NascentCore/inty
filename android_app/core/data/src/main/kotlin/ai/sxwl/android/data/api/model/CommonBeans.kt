@@ -1,11 +1,25 @@
 package ai.sxwl.android.data.api.model
 
 import androidx.annotation.Keep
-import com.inty.api.models.api.v1.version.VersionCheckResponse
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class ReportItem(val code: String = "", val description: String = "", val id: Int = 0)
+
+enum class VersionReminderAction {
+    @Json(name = "NONE")
+    NONE,
+
+    @Json(name = "SETTINGS_REMINDER")
+    SETTINGS_REMINDER,
+
+    @Json(name = "POP_UP_REMINDER")
+    POP_UP_REMINDER,
+
+    @Json(name = "BLOCK_ACCESS")
+    BLOCK_ACCESS,
+}
 
 /** 检查App版本号，判断更新与否，强制更新与否的接口返回 */
 // TODO: 删除此封装，对于生成的 SDK 这个没有意义
@@ -29,6 +43,6 @@ data class AppVersionRsp(
         val message: String? = null, // 描述文案
         val minimum_version: String? = null,
         val update_required: Boolean = false, // 是否有新版，需要更新
-        val reminder_action: VersionCheckResponse.Data.ReminderAction?,
+        val reminder_action: VersionReminderAction? = null,
     )
 }

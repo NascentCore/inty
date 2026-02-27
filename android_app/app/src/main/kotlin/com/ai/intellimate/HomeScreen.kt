@@ -3,6 +3,7 @@ package com.ai.intellimate
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.UserProfile
+import ai.sxwl.android.data.api.model.VersionReminderAction
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.store.IntySetting
@@ -53,7 +54,6 @@ import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
-import com.inty.api.models.api.v1.version.VersionCheckResponse
 import java.util.concurrent.TimeUnit
 
 /** 主页面，包含五个tab */
@@ -226,7 +226,7 @@ private fun AppVersionLogic(mainViewModel: MainViewModel) {
         }
     }
 
-    val isForced = rsp?.reminder_action == VersionCheckResponse.Data.ReminderAction.BLOCK_ACCESS
+    val isForced = rsp?.reminder_action == VersionReminderAction.BLOCK_ACCESS
     val title =
         if (isForced) {
             stringResource(id = R.string.str_force_upgrade)

@@ -1,7 +1,14 @@
 package ai.sxwl.android.data.http.services
 
+import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.ReportCreateApiResponse
+import ai.sxwl.android.data.api.model.ReportCreateRequest
+import ai.sxwl.android.data.api.model.ReportReasonCode
+import ai.sxwl.android.data.api.model.ReportRequestType
+import ai.sxwl.android.data.api.model.ReportTargetType
 import ai.sxwl.android.data.http.ApiResult
 import ai.sxwl.android.data.http.IntyNetworkManager
+import com.architecture.httplib.core.HttpResult
 import com.inty.api.core.MultipartField
 import com.inty.api.models.api.v1.report.ReportCreateParams
 import java.io.InputStream
@@ -18,7 +25,29 @@ object ReportService {
         FEEDBACK,
     }
 
-    /** 创建举报 */
+    /**
+     * 新的 Retrofit 举报创建入口（Phase 1）。
+     *
+     * 该入口使用 `core/data/api/model` 下的本地 DTO，避免业务层继续透出 `com.inty.api.*` 类型。
+     */
+    suspend fun createReport(request: ReportCreateRequest): ApiResult<Unit> {
+        return IntyNetworkManager.executeRequest("Create Report") {
+            when (val result = NetServiceMgr.getReportApi().createReport(request)) {
+                is HttpResult.Success -> validateReportCreateResponse(result.data)
+                is HttpResult.Failure -> {
+                    throw IllegalStateException(
+                        "Report creation failed: code=${result.code}, message=${result.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * 旧签名保留用于平滑迁移（调用点暂不改动）。
+     *
+     * Phase 2 将逐步改为直接传 `ReportCreateRequest`。
+     */
     suspend fun createReport(
         reasonCodes: List<ReportCreateParams.ReasonCode>,
         targetId: String?,
@@ -27,39 +56,44 @@ object ReportService {
         imageUrls: List<String>,
         reportType: ReportType = ReportType.REPORT,
     ): ApiResult<Unit> {
-        return IntyNetworkManager.executeRequest("Create Report") {
-            // 如果 targetId 和 targetType 为 null（Feedback 模式），使用空字符串和默认类型
-            val finalTargetId = targetId ?: ""
-            val finalTargetType =
-                if (targetType == "USER") {
-                    ReportCreateParams.TargetType.USER
-                } else {
-                    ReportCreateParams.TargetType.AGENT
-                }
+        val request =
+            ReportCreateRequest(
+                targetId = targetId ?: "",
+                targetType = mapTargetType(targetType),
+                reasonCodes = reasonCodes.map(::mapLegacyReasonCode),
+                description = description.trim(),
+                imageUrls = imageUrls,
+                reportType = mapReportType(reportType),
+            )
+        return createReport(request)
+    }
 
-            // 将桥接层的 ReportType 转换为 SDK 的 ReportType
-            val sdkReportType =
-                when (reportType) {
-                    ReportType.REPORT -> ReportCreateParams.ReportType.REPORT
-                    ReportType.FEEDBACK -> ReportCreateParams.ReportType.FEEDBACK
-                }
-
-            val reportParams =
-                ReportCreateParams.builder()
-                    .reasonCodes(reasonCodes)
-                    .targetId(finalTargetId)
-                    .targetType(finalTargetType)
-                    .description(description.trim())
-                    .imageUrls(imageUrls)
-                    .reportType(sdkReportType)
-                    .build()
-
-            val response = IntyNetworkManager.getClient().api().v1().report().create(reportParams)
-
-            if (response.code() != 200L) {
-                throw Exception("Report creation failed with code: ${response.code()}")
-            }
+    private fun validateReportCreateResponse(response: ReportCreateApiResponse) {
+        val responseCode = response.code ?: 200
+        if (responseCode != 200) {
+            throw IllegalStateException(
+                "Report creation failed with code: $responseCode, message=${response.message}"
+            )
         }
+    }
+
+    private fun mapTargetType(targetType: String?): ReportTargetType {
+        return if (targetType == ReportTargetType.USER.name) {
+            ReportTargetType.USER
+        } else {
+            ReportTargetType.AGENT
+        }
+    }
+
+    private fun mapReportType(reportType: ReportType): ReportRequestType {
+        return when (reportType) {
+            ReportType.REPORT -> ReportRequestType.REPORT
+            ReportType.FEEDBACK -> ReportRequestType.FEEDBACK
+        }
+    }
+
+    private fun mapLegacyReasonCode(reasonCode: ReportCreateParams.ReasonCode): ReportReasonCode {
+        return ReportReasonCode.valueOf(reasonCode.name)
     }
 
     /** 上传图片 */

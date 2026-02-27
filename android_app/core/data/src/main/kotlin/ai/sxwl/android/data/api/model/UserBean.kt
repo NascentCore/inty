@@ -67,6 +67,18 @@ data class GoogleLoginRequest(
 @JsonClass(generateAdapter = true)
 data class GoogleLoginResponse(val token: String, val user: UserProfile)
 
+@JsonClass(generateAdapter = true)
+data class UserProfileUpdateRequest(
+    val nickname: String? = null,
+    val avatar: String? = null,
+    @param:Json(name = "user_photo") val userPhoto: String? = null,
+    val phone: String? = null,
+    val gender: String? = null,
+    @param:Json(name = "age_group") val ageGroup: String? = null,
+    val description: String? = null,
+    @param:Json(name = "system_language") val systemLanguage: String? = null,
+)
+
 /** 检查账号删除的接口返回 */
 @JsonClass(generateAdapter = true)
 data class UserDeletionCheckResponse(
